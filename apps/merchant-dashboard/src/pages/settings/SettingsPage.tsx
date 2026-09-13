@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Alert, Button, Label, cn } from "@store-builder/ui";
+import { Alert, Button, Label, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
   WorkspaceInvite,
@@ -28,18 +28,48 @@ import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { CheckoutSettingsTab } from "./CheckoutSettingsTab";
+import { DomainsTab } from "./DomainsTab";
+import { CamouflageTab } from "./CamouflageTab";
+import { PlanTab } from "./PlanTab";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="max-w-5xl">
       <PageHeader
         title="Settings"
-        description="Your store profile and the people who can manage it."
+        description="Store profile, team, checkout, domains, ad review shield and your plan."
       />
-      <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <TeamSection key={`team-${workspaceId}`} />
+      <Tabs defaultValue="general">
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="checkout">Checkout</TabsTrigger>
+          <TabsTrigger value="domains">Domains</TabsTrigger>
+          <TabsTrigger value="camouflage">Ad review shield</TabsTrigger>
+          <TabsTrigger value="plan">Plan &amp; billing</TabsTrigger>
+        </TabsList>
+        <TabsContent value="general" className="max-w-3xl pt-4">
+          <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="team" className="max-w-3xl pt-4">
+          <TeamSection key={`team-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="checkout" className="pt-4">
+          <CheckoutSettingsTab key={`checkout-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="domains" className="pt-4">
+          <DomainsTab key={`domains-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="camouflage" className="pt-4">
+          <CamouflageTab key={`camo-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="plan" className="pt-4">
+          <PlanTab key={`plan-${workspaceId}`} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

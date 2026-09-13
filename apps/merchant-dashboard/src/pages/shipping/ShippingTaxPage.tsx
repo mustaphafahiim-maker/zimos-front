@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
+import { Alert, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
 import type {
   ShippingRate,
   ShippingRateType,
@@ -29,6 +29,7 @@ import { TextField, Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { CarriersSection } from "./CarriersSection";
 
 const RATE_TYPE_LABEL: Record<ShippingRateType, string> = {
   flat: "Flat",
@@ -160,12 +161,24 @@ function ShippingTaxBody() {
   }
 
   return (
-    <div className="max-w-5xl space-y-12">
+    <div className="max-w-5xl space-y-8">
       <PageHeader
-        title="Shipping & Tax"
-        description="Shipping zones and their rates, plus the tax rates applied at checkout."
+        title="Shipping & carriers"
+        description="Carrier accounts, shipping zones and their rates, plus the tax rates applied at checkout."
       />
 
+      <Tabs defaultValue="carriers">
+        <TabsList>
+          <TabsTrigger value="carriers">Carriers</TabsTrigger>
+          <TabsTrigger value="zones">Zones &amp; rates</TabsTrigger>
+          <TabsTrigger value="tax">Tax</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="carriers" className="pt-4">
+          <CarriersSection />
+        </TabsContent>
+
+        <TabsContent value="zones" className="space-y-12 pt-4">
       <StoreShippingTaxSettings
         workspace={currentWorkspace}
         taxEnabled={taxEnabled}
@@ -203,7 +216,9 @@ function ShippingTaxBody() {
           </div>
         </DataState>
       </section>
+        </TabsContent>
 
+        <TabsContent value="tax" className="pt-4">
       <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -211,7 +226,7 @@ function ShippingTaxBody() {
             {!taxEnabled && (
               <p className="mt-1 text-xs text-ink-soft">
                 Tax is turned off for this store — these rates aren&rsquo;t applied at checkout.
-                Turn it on above to use them.
+                Turn it on under Zones &amp; rates to use them.
               </p>
             )}
           </div>
@@ -265,6 +280,8 @@ function ShippingTaxBody() {
           </div>
         </DataState>
       </section>
+        </TabsContent>
+      </Tabs>
 
       <Modal
         open={zoneForm !== null}
