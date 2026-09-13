@@ -69,15 +69,15 @@ export const mockApi2 = {
   getPnl: (_ws: string, range: "7d" | "30d" | "90d") => delay(seed.seedPnl(range), 350),
 
   // ----------------------------------------------------- Call center --
-  // BACKEND: GET /workspaces/:id/confirmation-tasks (exists) — extend with customer history, priority, attempts, nextAttemptAt
+  // BACKEND: WIRED — CallCenterPage uses GET /workspaces/:id/confirmation-tasks (+ getOrder/getCustomer) via pages/callcenter/queueAdapter.ts. Mock kept for NotificationsDrawer.
   listConfirmationQueue: (ws: string) => delay(col<ConfirmationItem[]>(ws, "cq", seed.seedConfirmationQueue).get()),
-  // BACKEND: POST /confirmation-tasks/:id/claim (exists)
+  // BACKEND: WIRED — CallCenterPage uses POST /workspaces/:id/confirmation-tasks/:taskId/claim
   claimConfirmation: (ws: string, id: string, agentId: string) => {
     const c = col<ConfirmationItem[]>(ws, "cq", seed.seedConfirmationQueue);
     c.set(c.get().map((x) => (x.id === id ? { ...x, assignedAgentId: agentId } : x)));
     return delay(true);
   },
-  // BACKEND: POST /confirmation-tasks/:id/outcome (exists) + POST /calls (NEW — VoIP call log with recording)
+  // BACKEND: WIRED — CallCenterPage uses POST /workspaces/:id/confirmation-tasks/:taskId/outcome. Call logs (POST /calls, VoIP recording) still NEW/mock.
   recordCallOutcome: (ws: string, id: string, input: { agentId: string; agentName: string; outcome: CallOutcome; note: string | null; durationSeconds: number; postponeMinutes?: number }) => {
     const c = col<ConfirmationItem[]>(ws, "cq", seed.seedConfirmationQueue);
     const logs = col<CallLog[]>(ws, "callLogs", seed.seedCallLogs);
@@ -153,7 +153,7 @@ export const mockApi2 = {
   },
 
   // ------------------------------------------------------------- Reviews --
-  // BACKEND: GET /workspaces/:id/reviews?status= + PATCH /reviews/:id  (EXISTS — reviews module)
+  // BACKEND: WIRED — ReviewsPage uses reviewsList/reviewsModerate (@store-builder/api-client).
   listReviews: (ws: string) => delay(col<ProductReview[]>(ws, "reviews.v2", seed.seedReviews).get()),
   setReviewStatus: (ws: string, id: string, status: ProductReview["status"]) => {
     const c = col<ProductReview[]>(ws, "reviews.v2", seed.seedReviews);
@@ -162,7 +162,7 @@ export const mockApi2 = {
   },
 
   // ------------------------------------------------------------- Returns --
-  // BACKEND: GET /workspaces/:id/returns + PATCH /returns/:id (EXISTS) — add kind rto + carrier + restock step
+  // BACKEND: WIRED — ReturnsPage uses apiClient.listReturns/moderateReturn/restockReturn. No RTO kind/carrier/refund endpoint.
   listReturns: (ws: string) => delay(col<ReturnRequest[]>(ws, "returns", seed.seedReturns).get()),
   setReturnStatus: (ws: string, id: string, status: ReturnRequest["status"]) => {
     const c = col<ReturnRequest[]>(ws, "returns", seed.seedReturns);

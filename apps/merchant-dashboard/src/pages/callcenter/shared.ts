@@ -79,7 +79,10 @@ export function formatDuration(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
-export function isDueNow(item: ConfirmationItem, now: number = Date.now()): boolean {
+/** Anything with a next-attempt time: the mock ConfirmationItem or the real queue item. */
+type Schedulable = Pick<ConfirmationItem, "nextAttemptAt">;
+
+export function isDueNow(item: Schedulable, now: number = Date.now()): boolean {
   return item.nextAttemptAt === null || new Date(item.nextAttemptAt).getTime() <= now;
 }
 
@@ -87,7 +90,7 @@ export function isDueNow(item: ConfirmationItem, now: number = Date.now()): bool
  * en: "due now" / "due in 12m" / "due in 2h 05m"
  * ar: "مستحق الآن" / "مستحق خلال 12 د" / "مستحق خلال 2 س 05 د"
  */
-export function dueLabel(item: ConfirmationItem, locale: Locale, now: number = Date.now()): string {
+export function dueLabel(item: Schedulable,locale: Locale, now: number = Date.now()): string {
   const dueNow = locale === "ar" ? "مستحق الآن" : "due now";
   if (item.nextAttemptAt === null) return dueNow;
   const diff = new Date(item.nextAttemptAt).getTime() - now;

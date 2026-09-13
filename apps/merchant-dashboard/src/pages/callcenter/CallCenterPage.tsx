@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Clock,
   Copy,
+  ExternalLink,
   Headphones,
+  Lock,
   MapPin,
   MessageCircle,
   Package,
@@ -20,10 +22,19 @@ import {
   SkipForward,
   User,
 } from "lucide-react";
-import type { Agent, CallCenterSettings, CallOutcome, ConfirmationItem } from "@/mock/types2";
+import {
+  confirmationIsLockedError,
+  confirmationListDoneTasks,
+  confirmationListOpenTasks,
+  type ConfirmationOutcome,
+  type ConfirmationTaskRow,
+} from "@store-builder/api-client";
+import type { CallCenterSettings } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
+import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatMoney } from "@/lib/format";
@@ -38,20 +49,22 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
-import { OUTCOME_TONE, agentStatusLabel, avgHandleSeconds, dueLabel, formatDuration, isDueNow, isToday, outcomeLabel } from "./shared";
+import { agentStatusLabel, dueLabel, isDueNow, isToday, outcomeLabel, type BadgeTone } from "./shared";
 import { CANCEL_REASON_LABELS, STRINGS, riskFlagLabel, type CancelReason } from "./CallCenterPage.strings";
+import { createDetailsLoader, internationalDigits, toOutcomePayload, toQueueItem, type QueueItem, type UiOutcome } from "./queueAdapter";
 
 type QueueFilter = "all" | "due" | "flagged" | "mine";
 type MyStatus = "online" | "break" | "offline";
 type Strings = (typeof STRINGS)["en"];
 
 interface OutcomeDef {
-  key: CallOutcome;
+  key: UiOutcome;
   shortcut: string;
   className: string;
   icon: ReactNode;
 }
 
+// "duplicate" is intentionally not offered — see queueAdapter.ts for the mapping rationale.
 const OUTCOMES: OutcomeDef[] = [
   { key: "confirmed", shortcut: "1", className: "border-success/40 bg-success-soft text-success hover:bg-success/15", icon: <CheckCircle2 className="size-4" /> },
   { key: "no_answer", shortcut: "2", className: "border-warning/40 bg-warning-soft text-warning hover:bg-warning/15", icon: <PhoneMissed className="size-4" /> },
@@ -59,26 +72,30 @@ const OUTCOMES: OutcomeDef[] = [
   { key: "postponed", shortcut: "4", className: "border-primary/30 bg-primary-soft text-primary-dark hover:bg-primary/15", icon: <Clock className="size-4" /> },
   { key: "cancelled", shortcut: "5", className: "border-danger/30 bg-danger-soft text-danger hover:bg-danger/15", icon: <Ban className="size-4" /> },
   { key: "wrong_number", shortcut: "6", className: "border-danger/30 bg-danger-soft text-danger hover:bg-danger/15", icon: <AlertTriangle className="size-4" /> },
-  { key: "duplicate", shortcut: "7", className: "border-line bg-paper text-ink-soft hover:bg-paper-raised", icon: <Copy className="size-4" /> },
 ];
+
+const BACKEND_OUTCOME_TONE: Record<ConfirmationOutcome, BadgeTone> = {
+  confirmed: "success",
+  rejected: "danger",
+  unreachable: "warning",
+  postponed: "info",
+};
 
 const CANCEL_REASONS: CancelReason[] = ["price", "changed_mind", "found_cheaper", "ordered_by_mistake", "other"];
 
-const POSTPONE_OPTIONS: Array<{ labelKey: "postpone1h" | "postpone3h" | "postponeTomorrow"; minutes: () => number }> = [
-  { labelKey: "postpone1h", minutes: () => 60 },
-  { labelKey: "postpone3h", minutes: () => 180 },
-  {
-    labelKey: "postponeTomorrow",
-    minutes: () => {
-      const t = new Date();
-      t.setDate(t.getDate() + 1);
-      t.setHours(10, 0, 0, 0);
-      return Math.max(1, Math.round((t.getTime() - Date.now()) / 60000));
-    },
-  },
+const POSTPONE_OPTIONS: Array<{ labelKey: "postpone1h" | "postpone3h" | "postponeTomorrow"; note: string }> = [
+  { labelKey: "postpone1h", note: "customer asked for a call back in 1 hour" },
+  { labelKey: "postpone3h", note: "customer asked for a call back in 3 hours" },
+  { labelKey: "postponeTomorrow", note: "customer asked for a call back tomorrow 10:00" },
 ];
 
 const QUEUE_FILTERS: QueueFilter[] = ["all", "due", "flagged", "mine"];
+
+interface OutcomeInput {
+  outcome: UiOutcome;
+  note: string | null;
+  cancelReason?: string | null;
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -86,8 +103,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
-function sortQueue(items: ConfirmationItem[], now: number): ConfirmationItem[] {
-  const rank = (p: ConfirmationItem["priority"]) => (p === "flagged" ? 0 : p === "high" ? 1 : 2);
+function sortQueue(items: QueueItem[], now: number): QueueItem[] {
+  const rank = (p: QueueItem["priority"]) => (p === "flagged" ? 0 : p === "high" ? 1 : 2);
   return [...items].sort((a, b) => {
     const dueA = isDueNow(a, now) ? 0 : 1;
     const dueB = isDueNow(b, now) ? 0 : 1;
@@ -105,71 +122,142 @@ export function CallCenterPage() {
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const storeName = currentWorkspace?.name ?? "Zimos";
   const toast = useToast();
 
-  const queue = useAsync(() => mockApi.listConfirmationQueue(workspaceId), [workspaceId]);
-  const logs = useAsync(() => mockApi.listCallLogs(workspaceId), [workspaceId]);
+  // Real queue: queued + in_progress tasks. Done tasks only feed the "confirmed today" stat.
+  const tasks = useAsync(() => confirmationListOpenTasks(apiClient, workspaceId), [workspaceId]);
+  const doneTasks = useAsync(() => confirmationListDoneTasks(apiClient, workspaceId), [workspaceId]);
+  // Still mock: agent presence toggle and call-center settings (no backend yet).
   const agents = useAsync(() => mockApi.listAgents(workspaceId), [workspaceId]);
   const settings = useAsync(() => mockApi.getCallCenterSettings(workspaceId), [workspaceId]);
+  const me = agents.data?.[0] ?? null;
 
-  const me: Agent | null = agents.data?.[0] ?? null;
+  const [detailsVersion, setDetailsVersion] = useState(0);
+  const loader = useMemo(
+    () =>
+      createDetailsLoader(
+        (orderId) => apiClient.getOrder(workspaceId, orderId),
+        (customerId) => apiClient.getCustomer(workspaceId, customerId),
+        () => setDetailsVersion((v) => v + 1),
+        4
+      ),
+    [workspaceId]
+  );
 
   const [filter, setFilter] = useState<QueueFilter>("all");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  // Tick every 30s so "due in" labels stay fresh.
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const items = useMemo(() => sortQueue(queue.data ?? [], now), [queue.data, now]);
-  const logRows = logs.data ?? [];
+  const toItems = useCallback((rows: ConfirmationTaskRow[]) => rows.map((row) => toQueueItem(row, loader.get(row.id))), [loader]);
+
+  const items = useMemo(
+    () => sortQueue(toItems(tasks.data ?? []), now),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tasks.data, detailsVersion, now, toItems]
+  );
 
   const stats = useMemo(() => {
-    const today = logRows.filter((l) => isToday(l.startedAt));
+    const done = doneTasks.data;
     return {
       inQueue: items.length,
       dueNow: items.filter((i) => isDueNow(i, now)).length,
-      confirmedToday: today.filter((l) => l.outcome === "confirmed").length,
-      noAnswerToday: today.filter((l) => l.outcome === "no_answer").length,
-      avgHandle: avgHandleSeconds(today.length > 0 ? today : logRows),
+      // Tasks carry only their latest outcome + updatedAt (no per-attempt history route),
+      // so these are "tasks whose latest result today was X".
+      confirmedToday: done ? done.filter((d) => d.outcome === "confirmed" && d.updatedAt && isToday(d.updatedAt)).length : null,
+      noAnswerToday: items.filter((i) => i.lastOutcome === "unreachable" && i.updatedAt && isToday(i.updatedAt)).length,
     };
-  }, [items, logRows, now]);
+  }, [items, doneTasks.data, now]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
       if (filter === "due" && !isDueNow(i, now)) return false;
       if (filter === "flagged" && i.priority !== "flagged") return false;
-      if (filter === "mine" && i.assignedAgentId !== me?.id) return false;
+      if (filter === "mine" && (!userId || i.lockedByUserId !== userId)) return false;
       if (q && !i.phone.includes(q) && !(i.alternatePhone ?? "").includes(q) && !i.orderNumber.toLowerCase().includes(q) && !i.customerName.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [items, filter, search, now, me?.id]);
+  }, [items, filter, search, now, userId]);
+
+  // Lazily load order + customer for visible rows (and the selected one).
+  useEffect(() => {
+    const byId = new Map((tasks.data ?? []).map((row) => [row.id, row]));
+    const want = visible.slice(0, 60).map((i) => i.id);
+    if (selectedId) want.unshift(selectedId);
+    for (const id of want) {
+      const row = byId.get(id);
+      if (row) loader.request(row.id, row.orderId, row.order?.customerId ?? null);
+    }
+  }, [visible, selectedId, tasks.data, loader]);
 
   const selected = items.find((i) => i.id === selectedId) ?? null;
 
-  const queueClearMessage = t.toastQueueClear;
-  const claimNext = useCallback(
-    async (exclude?: string) => {
-      if (!me) return;
-      const next = items.find((i) => i.id !== exclude && isDueNow(i, now) && (i.assignedAgentId === null || i.assignedAgentId === me.id)) ?? items.find((i) => i.id !== exclude);
-      if (!next) {
-        setSelectedId(null);
-        toast.success(queueClearMessage);
-        return;
-      }
-      setSelectedId(next.id);
-      if (next.assignedAgentId !== me.id) {
-        await mockApi.claimConfirmation(workspaceId, next.id, me.id);
-        queue.setData((prev) => (prev ?? []).map((x) => (x.id === next.id ? { ...x, assignedAgentId: me.id } : x)));
+  const reloadTasks = useCallback(async () => {
+    const fresh = await confirmationListOpenTasks(apiClient, workspaceId);
+    tasks.setData(fresh);
+    return fresh;
+  }, [tasks, workspaceId]);
+
+  /** Claims `item` for the current user. Returns false if someone else holds it. */
+  const claimItem = useCallback(
+    async (item: QueueItem): Promise<boolean> => {
+      if (!userId) return false;
+      if (item.lockedByUserId === userId) return true;
+      try {
+        const claimed = await apiClient.claimConfirmationTask(workspaceId, item.id);
+        tasks.setData((prev) => (prev ?? []).map((row) => (row.id === item.id ? ({ ...row, ...claimed, order: row.order } as ConfirmationTaskRow) : row)));
+        return true;
+      } catch (err) {
+        if (confirmationIsLockedError(err)) {
+          toast.error(fmt(t.toastLocked, { order: item.orderNumber }));
+        } else {
+          toast.error(getErrorMessage(err));
+        }
+        return false;
       }
     },
-    [items, me, now, queue, toast, workspaceId, queueClearMessage]
+    [userId, workspaceId, tasks, toast, t.toastLocked]
+  );
+
+  const claimNext = useCallback(
+    async (list: QueueItem[] = items, exclude?: string) => {
+      if (!userId || claiming) return;
+      setClaiming(true);
+      try {
+        const ts = Date.now();
+        const mine = list.find((i) => i.id !== exclude && i.lockedByUserId === userId);
+        if (mine) {
+          setSelectedId(mine.id);
+          return;
+        }
+        const candidates = list.filter((i) => i.id !== exclude && i.lockedByUserId === null && isDueNow(i, ts));
+        let lostRace = false;
+        for (const next of candidates) {
+          if (await claimItem(next)) {
+            setSelectedId(next.id);
+            if (lostRace) void reloadTasks().catch(() => undefined);
+            return;
+          }
+          lostRace = true;
+        }
+        if (lostRace) await reloadTasks().catch(() => undefined);
+        setSelectedId(null);
+        toast.success(t.toastQueueClear);
+      } finally {
+        setClaiming(false);
+      }
+    },
+    [items, userId, claiming, claimItem, reloadTasks, toast, t.toastQueueClear]
   );
 
   async function setMyStatus(status: MyStatus) {
@@ -184,17 +272,53 @@ export function CallCenterPage() {
     }
   }
 
-  async function handleOutcome(item: ConfirmationItem, input: { outcome: CallOutcome; note: string | null; durationSeconds: number; postponeMinutes?: number }) {
-    if (!me) return;
+  async function handleOutcome(item: QueueItem, input: OutcomeInput) {
+    if (!userId) return;
+    // The backend only accepts an outcome from the lock holder — claim first if needed.
+    if (item.lockedByUserId !== userId) {
+      const ok = await claimItem(item);
+      if (!ok) {
+        const fresh = await reloadTasks().catch(() => null);
+        if (fresh) await claimNext(sortQueue(toItems(fresh), Date.now()), item.id);
+        return;
+      }
+    }
     try {
-      await mockApi.recordCallOutcome(workspaceId, item.id, { agentId: me.id, agentName: me.name, ...input });
+      await apiClient.recordConfirmationOutcome(workspaceId, item.id, toOutcomePayload(input.outcome, input));
       toast.success(fmt(t.toastOutcome, { order: item.orderNumber, outcome: outcomeLabel(input.outcome, locale) }));
-      await Promise.all([queue.refresh({ silent: true }), logs.refresh({ silent: true })]);
-      const remaining = sortQueue((queue.data ?? []).filter((x) => x.id !== item.id), Date.now());
-      const next = remaining.find((i) => isDueNow(i, Date.now())) ?? null;
-      setSelectedId(next?.id ?? null);
     } catch (err) {
       toast.error(getErrorMessage(err));
+      void reloadTasks().catch(() => undefined);
+      return;
+    }
+    loader.invalidate(item.id);
+    void doneTasks.refresh({ silent: true });
+    try {
+      const fresh = await reloadTasks();
+      await claimNext(sortQueue(toItems(fresh), Date.now()), item.id);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function handleAddressSave(item: QueueItem, next: { governorate: string; address: string }) {
+    try {
+      await apiClient.updateOrder(workspaceId, item.orderId, {
+        shippingAddress: {
+          country: item.country,
+          province: next.governorate,
+          city: item.city || next.governorate,
+          addressLine: next.address,
+        },
+      });
+      loader.invalidate(item.id);
+      const row = (tasks.data ?? []).find((r) => r.id === item.id);
+      if (row) loader.request(row.id, row.orderId, row.order?.customerId ?? null);
+      toast.success(t.toastAddress);
+      return true;
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+      return false;
     }
   }
 
@@ -206,6 +330,8 @@ export function CallCenterPage() {
     flagged: t.filterFlagged,
     mine: t.filterMine,
   };
+
+  const queueEmpty = !tasks.loading && !tasks.error && items.length === 0;
 
   return (
     <div className="flex min-w-0 flex-col lg:h-[calc(100vh-7rem)] lg:min-h-[640px]">
@@ -230,19 +356,19 @@ export function CallCenterPage() {
       {/* Stats bar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper-raised px-4 py-3">
         <div className="flex flex-wrap gap-6">
-          <Stat label={t.statInQueue} value={stats.inQueue} />
-          <Stat label={t.statDueNow} value={stats.dueNow} tone={stats.dueNow > 0 ? "text-warning" : undefined} />
-          <Stat label={t.statConfirmedToday} value={stats.confirmedToday} tone="text-success" />
-          <Stat label={t.statNoAnswerToday} value={stats.noAnswerToday} />
-          <Stat label={t.statAvgHandle} value={<span dir="ltr">{formatDuration(stats.avgHandle)}</span>} />
+          <Stat label={t.statInQueue} value={tasks.data ? stats.inQueue : "—"} />
+          <Stat label={t.statDueNow} value={tasks.data ? stats.dueNow : "—"} tone={stats.dueNow > 0 ? "text-warning" : undefined} />
+          <Stat label={t.statConfirmedToday} value={stats.confirmedToday ?? "—"} tone="text-success" />
+          <Stat label={t.statNoAnswerToday} value={tasks.data ? stats.noAnswerToday : "—"} />
+          <Stat label={t.statAvgHandle} value="—" />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs text-ink-soft">
             {t.myStatus}
-            {me ? ` · ` : ""}
-            {me && (
+            {user ? ` · ` : ""}
+            {user && (
               <span className="text-ink" dir="auto">
-                {me.name}
+                {user.fullName ?? user.email}
               </span>
             )}
           </span>
@@ -288,35 +414,58 @@ export function CallCenterPage() {
                 <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-soft" />
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchPlaceholder} aria-label={t.searchLabel} className="h-8 ps-8 text-sm" />
               </div>
-              <Button size="sm" onClick={() => claimNext()} disabled={!me || items.length === 0} title={t.nextTitle}>
+              <Button size="sm" onClick={() => claimNext()} disabled={!userId || items.length === 0 || claiming} title={t.nextTitle}>
                 <SkipForward className="rtl:rotate-180" /> {t.next}
               </Button>
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <DataState loading={queue.loading} error={queue.error} empty={visible.length === 0} emptyMessage={t.emptyFilter} onRetry={() => queue.refresh()}>
-              <ul>
-                {visible.map((item) => (
-                  <li key={item.id}>
-                    <QueueRow item={item} now={now} active={item.id === selectedId} mine={item.assignedAgentId === me?.id} onSelect={() => setSelectedId(item.id)} />
-                  </li>
-                ))}
-              </ul>
-            </DataState>
+            {queueEmpty ? (
+              <EmptyState icon={<Headphones />} title={t.emptyQueue} description={t.emptyQueueHint} className="m-3 border-0" />
+            ) : (
+              <DataState loading={tasks.loading} error={tasks.error} empty={visible.length === 0} emptyMessage={t.emptyFilter} onRetry={() => tasks.refresh()}>
+                <ul>
+                  {visible.map((item) => (
+                    <li key={item.id}>
+                      {item.detailsLoaded ? (
+                        <QueueRow item={item} now={now} active={item.id === selectedId} mine={!!userId && item.lockedByUserId === userId} onSelect={() => setSelectedId(item.id)} />
+                      ) : (
+                        <SkeletonRow />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </DataState>
+            )}
           </div>
         </aside>
 
         {/* END: call panel */}
         <section className="min-h-0 min-w-0 flex-1 lg:overflow-y-auto">
-          {selected && me ? (
-            <CallPanel key={selected.id} item={selected} agent={me} storeName={storeName} settings={settings.data} onOutcome={(input) => handleOutcome(selected, input)} />
+          {selected && userId ? (
+            <CallPanel
+              key={selected.id}
+              item={selected}
+              userId={userId}
+              storeName={storeName}
+              settings={settings.data}
+              claiming={claiming}
+              onClaim={async () => {
+                if (!(await claimItem(selected))) {
+                  const fresh = await reloadTasks().catch(() => null);
+                  if (fresh) await claimNext(sortQueue(toItems(fresh), Date.now()), selected.id);
+                }
+              }}
+              onOutcome={(input) => handleOutcome(selected, input)}
+              onAddressSave={(next) => handleAddressSave(selected, next)}
+            />
           ) : (
             <EmptyState
               icon={<Headphones />}
-              title={queue.loading ? t.loadingQueue : t.pickOrder}
-              description={t.pickOrderHint}
+              title={tasks.loading ? t.loadingQueue : queueEmpty ? t.emptyQueue : t.pickOrder}
+              description={queueEmpty ? t.emptyQueueHint : t.pickOrderHint}
               action={
-                <Button onClick={() => claimNext()} disabled={!me || items.length === 0}>
+                <Button onClick={() => claimNext()} disabled={!userId || items.length === 0 || claiming}>
                   <SkipForward className="rtl:rotate-180" /> {t.nextDue}
                 </Button>
               }
@@ -340,10 +489,27 @@ function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 
 
 // -------------------------------------------------------------- Queue row --
 
-function QueueRow({ item, now, active, mine, onSelect }: { item: ConfirmationItem; now: number; active: boolean; mine: boolean; onSelect: () => void }) {
+function SkeletonRow() {
+  return (
+    <div className="animate-pulse border-b border-line px-3 py-3" aria-hidden>
+      <div className="flex justify-between gap-2">
+        <div className="h-3.5 w-28 rounded bg-line/70" />
+        <div className="h-3.5 w-10 rounded bg-line/70" />
+      </div>
+      <div className="mt-2 flex justify-between gap-2">
+        <div className="h-3 w-40 rounded bg-line/60" />
+        <div className="h-3 w-16 rounded bg-line/60" />
+      </div>
+      <div className="mt-2 h-2.5 w-20 rounded bg-line/50" />
+    </div>
+  );
+}
+
+function QueueRow({ item, now, active, mine, onSelect }: { item: QueueItem; now: number; active: boolean; mine: boolean; onSelect: () => void }) {
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const due = isDueNow(item, now);
+  const lockedByOther = item.lockedByUserId !== null && !mine;
   return (
     <button
       type="button"
@@ -356,6 +522,7 @@ function QueueRow({ item, now, active, mine, onSelect }: { item: ConfirmationIte
           {item.priority === "flagged" && <span className="rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-medium text-danger">{t.priorityFlagged}</span>}
           {item.priority === "high" && <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">{t.priorityHigh}</span>}
           {mine && <span className="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary-dark">{t.mine}</span>}
+          {lockedByOther && <Lock className="size-3 text-ink-soft" aria-label={t.lockedByOther} />}
         </span>
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
@@ -371,7 +538,7 @@ function QueueRow({ item, now, active, mine, onSelect }: { item: ConfirmationIte
               <span key={i} className={cn("size-1.5 rounded-full", i < item.attempts ? "bg-warning" : "bg-line")} />
             ))}
           </span>
-          {item.lastOutcome && <StatusBadge value={item.lastOutcome} tone={OUTCOME_TONE[item.lastOutcome]} className="px-1.5 py-0 text-[10px]" />}
+          {item.lastOutcome && <StatusBadge value={item.lastOutcome} tone={BACKEND_OUTCOME_TONE[item.lastOutcome]} className="px-1.5 py-0 text-[10px]" />}
         </span>
         <span className={cn("text-[11px]", due ? "font-medium text-warning" : "text-ink-soft")}>{dueLabel(item, locale, now)}</span>
       </div>
@@ -382,77 +549,74 @@ function QueueRow({ item, now, active, mine, onSelect }: { item: ConfirmationIte
 // -------------------------------------------------------------- Call panel --
 
 interface CallPanelProps {
-  item: ConfirmationItem;
-  agent: Agent;
+  item: QueueItem;
+  userId: string;
   storeName: string;
   settings: CallCenterSettings | null;
-  onOutcome: (input: { outcome: CallOutcome; note: string | null; durationSeconds: number; postponeMinutes?: number }) => Promise<void>;
+  claiming: boolean;
+  onClaim: () => Promise<void>;
+  onOutcome: (input: OutcomeInput) => Promise<void>;
+  onAddressSave: (next: { governorate: string; address: string }) => Promise<boolean>;
 }
 
-function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelProps) {
+function CallPanel({ item, userId, storeName, settings, claiming, onClaim, onOutcome, onAddressSave }: CallPanelProps) {
   const t = useT(STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
   const toast = useToast();
   const [calling, setCalling] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const durationRef = useRef(0);
   const startRef = useRef<number | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [postponeOpen, setPostponeOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(true);
-  const [address, setAddress] = useState({ governorate: item.governorate, address: item.address });
   const [editingAddress, setEditingAddress] = useState(false);
+
+  const mine = item.lockedByUserId === userId;
+  const lockedByOther = item.lockedByUserId !== null && !mine;
 
   useEffect(() => {
     if (!calling) return;
     const timer = window.setInterval(() => {
-      if (startRef.current !== null) {
-        const s = Math.round((Date.now() - startRef.current) / 1000);
-        durationRef.current = s;
-        setElapsed(s);
-      }
+      if (startRef.current !== null) setElapsed(Math.round((Date.now() - startRef.current) / 1000));
     }, 500);
     return () => window.clearInterval(timer);
   }, [calling]);
 
   function startCall() {
     startRef.current = Date.now();
-    durationRef.current = 0;
     setElapsed(0);
     setCalling(true);
   }
-  function hangUp() {
-    setCalling(false);
-  }
 
   const submit = useCallback(
-    async (outcome: CallOutcome, extra?: { note?: string; postponeMinutes?: number }) => {
-      if (busy) return;
+    async (outcome: UiOutcome, extra?: { note?: string; cancelReason?: string }) => {
+      if (busy || lockedByOther) return;
       setBusy(true);
       setCalling(false);
       const combined = [note.trim(), extra?.note].filter((s): s is string => Boolean(s)).join(" · ");
       try {
-        await onOutcome({ outcome, note: combined || null, durationSeconds: durationRef.current, postponeMinutes: extra?.postponeMinutes });
+        await onOutcome({ outcome, note: combined || null, cancelReason: extra?.cancelReason ?? null });
       } finally {
         setBusy(false);
       }
     },
-    [busy, note, onOutcome]
+    [busy, lockedByOther, note, onOutcome]
   );
 
   const trigger = useCallback(
-    (outcome: CallOutcome) => {
+    (outcome: UiOutcome) => {
+      if (lockedByOther) return;
       if (outcome === "postponed") setPostponeOpen(true);
       else if (outcome === "cancelled") setCancelOpen(true);
       else void submit(outcome);
     },
-    [submit]
+    [submit, lockedByOther]
   );
 
-  // Keyboard shortcuts 1–7.
+  // Keyboard shortcuts 1–6.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (postponeOpen || cancelOpen || busy) return;
@@ -476,13 +640,15 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
     }
   }
 
+  const phoneDigits = internationalDigits(item.phone);
   const voipConnected = settings !== null && settings.voipProvider !== "none";
   const firstName = item.customerName.split(" ")[0] ?? item.customerName;
-  const totalMajor = (item.totalAmount / 100).toLocaleString("en-EG", { maximumFractionDigits: 0 });
+  const totalMajor = (Number(item.totalAmount) / 100).toLocaleString("en-EG", { maximumFractionDigits: 0 });
   const script = `أهلاً ${firstName}، معاك ${storeName} بخصوص طلبك رقم ${item.orderNumber} بقيمة ${totalMajor} جنيه، هيتوصل خلال 2-3 أيام، نأكد الطلب؟`;
 
-  const reliability = item.customerHistory.reliabilityScore;
-  const reliabilityColor = reliability >= 75 ? "bg-success" : reliability >= 50 ? "bg-warning" : "bg-danger";
+  const history = item.customerHistory;
+  const reliability = history?.reliabilityScore ?? null;
+  const reliabilityColor = reliability === null ? "bg-line" : reliability >= 75 ? "bg-success" : reliability >= 50 ? "bg-warning" : "bg-danger";
 
   return (
     <div className="space-y-4">
@@ -496,39 +662,43 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
               </h2>
               <bdi className="text-sm text-ink-soft">{item.orderNumber}</bdi>
               {item.priority !== "normal" && <StatusBadge value={item.priority} tone={item.priority === "flagged" ? "danger" : "warning"} />}
-              {item.assignedAgentId === agent.id && (
-                <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">{t.assignedToYou}</span>
-              )}
+              {mine && <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">{t.assignedToYou}</span>}
+              {item.lastOutcome && <StatusBadge label={t.lastOutcome} value={item.lastOutcome} tone={BACKEND_OUTCOME_TONE[item.lastOutcome]} />}
             </div>
             <p className="mt-2 break-all font-mono text-2xl font-medium tracking-wide text-ink sm:text-3xl" dir="ltr">
-              <span className="inline-block">{item.phone}</span>
+              <span className="inline-block">{item.phone || "—"}</span>
             </p>
             {item.alternatePhone && (
               <p className="mt-0.5 text-sm text-ink-soft">
                 {t.alt}{" "}
-                <span className="font-mono" dir="ltr">
+                <a href={`tel:+${internationalDigits(item.alternatePhone)}`} className="font-mono hover:text-primary" dir="ltr">
                   {item.alternatePhone}
-                </span>
+                </a>
               </p>
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {!mine && !lockedByOther && (
+                <Button variant="outline" onClick={() => void onClaim()} disabled={claiming}>
+                  <Lock /> {t.claim}
+                </Button>
+              )}
               {calling ? (
-                <Button variant="danger" onClick={hangUp}>
+                <Button variant="danger" onClick={() => setCalling(false)}>
                   <PhoneOff /> {t.hangUp}
                 </Button>
               ) : (
-                <Button onClick={startCall} disabled={busy}>
+                <Button onClick={startCall} disabled={busy || !item.phone}>
                   <Phone /> {t.call}
                 </Button>
               )}
-              <Button variant="outline" onClick={() => window.open(`https://wa.me/2${item.phone}`, "_blank", "noopener")}>
+              <Button variant="outline" disabled={!phoneDigits} onClick={() => window.open(`https://wa.me/${phoneDigits}`, "_blank", "noopener")}>
                 <MessageCircle /> WhatsApp
               </Button>
-              <Button variant="ghost" onClick={copyPhone}>
+              <Button variant="ghost" onClick={copyPhone} disabled={!item.phone}>
                 <Copy /> {c.copy}
               </Button>
-              {!voipConnected && (
-                <a href={`tel:+2${item.phone}`} className="text-sm text-primary underline-offset-4 hover:underline">
+              {!voipConnected && phoneDigits && (
+                <a href={`tel:+${phoneDigits}`} className="text-sm text-primary underline-offset-4 hover:underline">
                   {t.openDialer}
                 </a>
               )}
@@ -537,11 +707,17 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
           <div className={cn("rounded-lg border px-4 py-3 text-center", calling ? "border-success/40 bg-success-soft" : "border-line bg-paper")}>
             <p className="text-[11px] font-medium uppercase tracking-wide text-ink-soft">{calling ? t.onCall : t.callTimer}</p>
             <p className={cn("font-mono text-3xl tabular-nums", calling ? "text-success" : "text-ink")} dir="ltr">
-              {formatDuration(elapsed)}
+              {`${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`}
             </p>
             {calling && <span className="mx-auto mt-1 block size-2 animate-pulse rounded-full bg-success" />}
           </div>
         </div>
+        {lockedByOther && (
+          <Alert variant="warning" className="mt-4 text-sm">
+            <Lock />
+            <span>{t.lockedByOther}</span>
+          </Alert>
+        )}
         {!voipConnected && (
           <Alert variant="info" className="mt-4 border-accent/40 bg-accent-soft/40 text-sm">
             <AlertTriangle />
@@ -564,20 +740,32 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Order card */}
-        <Card title={t.cardOrder} icon={<Package />}>
-          <ul className="divide-y divide-line">
-            {item.items.map((line, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="min-w-0 truncate text-ink" dir="auto">
-                  {line.productName}
-                  {line.variant && <span className="text-ink-soft"> · {line.variant}</span>}
-                </span>
-                <span className="shrink-0 tabular-nums text-ink-soft" dir="ltr">
-                  {line.quantity} × {formatMoney(line.unitPriceAmount, item.currency)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <Card
+          title={t.cardOrder}
+          icon={<Package />}
+          action={
+            <Link to={`/orders/${item.orderId}`} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              {t.viewOrder} <ExternalLink className="size-3 rtl:-scale-x-100" />
+            </Link>
+          }
+        >
+          {item.items === null ? (
+            <p className="py-2 text-sm text-ink-soft">{t.loadingDetails}</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {item.items.map((line, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="min-w-0 truncate text-ink" dir="auto">
+                    {line.productName}
+                    {line.variant && <span className="text-ink-soft"> · {line.variant}</span>}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-ink-soft" dir="ltr">
+                    {line.quantity} × {formatMoney(line.unitPriceAmount, item.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           <dl className="mt-2 space-y-1 border-t border-line pt-2 text-sm">
             <Row label={t.shipping} value={<bdi>{formatMoney(item.shippingAmount, item.currency)}</bdi>} />
             <Row label={t.totalCod} value={<bdi className="font-medium text-ink">{formatMoney(item.totalAmount, item.currency)}</bdi>} />
@@ -601,21 +789,19 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
         >
           {editingAddress ? (
             <AddressForm
-              initial={address}
+              initial={{ governorate: item.governorate === "—" ? "" : item.governorate, address: item.addressLine }}
               onCancel={() => setEditingAddress(false)}
-              onSave={(next) => {
-                setAddress(next);
-                setEditingAddress(false);
-                toast.success(t.toastAddress);
+              onSave={async (next) => {
+                if (await onAddressSave(next)) setEditingAddress(false);
               }}
             />
           ) : (
             <div className="text-sm">
               <p className="font-medium text-ink" dir="auto">
-                {address.governorate}
+                {item.governorate}
               </p>
               <p className="mt-1 text-ink-soft" dir="auto">
-                {address.address}
+                {item.address || "—"}
               </p>
             </div>
           )}
@@ -623,20 +809,19 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
 
         {/* Customer history */}
         <Card title={t.cardHistory} icon={<User />}>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <Mini label={t.histOrders} value={item.customerHistory.totalOrders} />
-            <Mini label={t.histDelivered} value={item.customerHistory.delivered} tone="text-success" />
-            <Mini label={t.histReturned} value={item.customerHistory.returned} tone={item.customerHistory.returned > 0 ? "text-danger" : undefined} />
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <Mini label={t.histOrders} value={history?.totalOrders ?? "—"} />
+            <Mini label={t.histRejected} value={history?.rejected ?? "—"} tone={history && history.rejected > 0 ? "text-danger" : undefined} />
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs">
               <span className="text-ink-soft">{t.reliability}</span>
               <span className="font-medium tabular-nums text-ink" dir="ltr">
-                {reliability}%
+                {reliability === null ? "—" : `${reliability}%`}
               </span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-line/60">
-              <div className={cn("h-full rounded-full", reliabilityColor)} style={{ width: `${reliability}%` }} />
+              <div className={cn("h-full rounded-full", reliabilityColor)} style={{ width: `${reliability ?? 0}%` }} />
             </div>
           </div>
           {item.riskFlags.length > 0 ? (
@@ -678,12 +863,12 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
           <p className="text-sm font-medium text-ink">{t.outcome}</p>
           <p className="text-xs text-ink-soft">{t.outcomeHint}</p>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {OUTCOMES.map((o) => (
             <button
               key={o.key}
               type="button"
-              disabled={busy}
+              disabled={busy || lockedByOther}
               onClick={() => trigger(o.key)}
               className={cn("flex flex-col items-center gap-1 rounded-lg border px-2 py-3 text-sm font-medium transition-colors disabled:opacity-50", o.className)}
             >
@@ -697,10 +882,10 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
           <Label htmlFor="cc-note" className="text-xs text-ink-soft">
             {t.note}
           </Label>
-          <Textarea id="cc-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} dir="auto" placeholder="العميل طلب التوصيل بعد 6 مساءً…" className="mt-1" />
+          <Textarea id="cc-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} dir="auto" maxLength={900} placeholder="العميل طلب التوصيل بعد 6 مساءً…" className="mt-1" />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => submit("no_answer", { note: "whatsapp sent" })}>
+          <Button variant="outline" size="sm" disabled={busy || lockedByOther} onClick={() => submit("no_answer", { note: "whatsapp sent" })}>
             <MessageCircle /> {t.sendWhatsapp}
           </Button>
           <span className="text-xs text-ink-soft">{t.autoAdvance}</span>
@@ -708,7 +893,7 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
       </div>
 
       {/* Postpone chooser */}
-      <Modal open={postponeOpen} onClose={() => setPostponeOpen(false)} title={t.postponeTitle}>
+      <Modal open={postponeOpen} onClose={() => setPostponeOpen(false)} title={t.postponeTitle} description={t.postponeServerNote}>
         <div className="grid gap-2 sm:grid-cols-3">
           {POSTPONE_OPTIONS.map((opt) => (
             <Button
@@ -716,7 +901,7 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
               variant="outline"
               onClick={() => {
                 setPostponeOpen(false);
-                void submit("postponed", { postponeMinutes: opt.minutes() });
+                void submit("postponed", { note: opt.note });
               }}
             >
               <Clock /> {t[opt.labelKey]}
@@ -729,19 +914,21 @@ function CallPanel({ item, agent, storeName, settings, onOutcome }: CallPanelPro
       <CancelDialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
-        onConfirm={(reason, downsell) => {
+        onConfirm={(reason, downsellOffered) => {
           setCancelOpen(false);
-          // Notes are stored with the call log, so they stay in English regardless of UI language.
+          // Stored server-side, so kept in English regardless of UI language.
           const reasonText = CANCEL_REASON_LABELS.en[reason];
-          if (downsell) void submit("confirmed", { note: `downsell applied (15% off) · reason: ${reasonText}` });
-          else void submit("cancelled", { note: `reason: ${reasonText}` });
+          void submit("cancelled", {
+            cancelReason: reasonText,
+            note: downsellOffered ? `offered 15% discount (not applied) · reason: ${reasonText}` : `reason: ${reasonText}`,
+          });
         }}
       />
     </div>
   );
 }
 
-function CancelDialog({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (reason: CancelReason, downsell: boolean) => void }) {
+function CancelDialog({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (reason: CancelReason, downsellOffered: boolean) => void }) {
   const t = useT(STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
@@ -758,8 +945,8 @@ function CancelDialog({ open, onClose, onConfirm }: { open: boolean; onClose: ()
           <Button variant="outline" onClick={onClose}>
             {c.back}
           </Button>
-          <Button variant={downsell ? "primary" : "danger"} onClick={() => onConfirm(reason, downsell)}>
-            {downsell ? t.confirmDownsell : t.cancelTitle}
+          <Button variant="danger" onClick={() => onConfirm(reason, downsell)}>
+            {t.cancelTitle}
           </Button>
         </>
       }
@@ -782,17 +969,31 @@ function CancelDialog({ open, onClose, onConfirm }: { open: boolean; onClose: ()
   );
 }
 
-function AddressForm({ initial, onSave, onCancel }: { initial: { governorate: string; address: string }; onSave: (v: { governorate: string; address: string }) => void; onCancel: () => void }) {
+function AddressForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial: { governorate: string; address: string };
+  onSave: (v: { governorate: string; address: string }) => Promise<void>;
+  onCancel: () => void;
+}) {
   const t: Strings = useT(STRINGS);
   const c = useCommon();
   const [gov, setGov] = useState(initial.governorate);
   const [addr, setAddr] = useState(initial.address);
+  const [saving, setSaving] = useState(false);
   return (
     <form
       className="space-y-3"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        onSave({ governorate: gov.trim() || initial.governorate, address: addr.trim() || initial.address });
+        setSaving(true);
+        try {
+          await onSave({ governorate: gov.trim() || initial.governorate, address: addr.trim() || initial.address });
+        } finally {
+          setSaving(false);
+        }
       }}
     >
       <Field label={t.governorate}>{({ id }) => <Input id={id} value={gov} onChange={(e) => setGov(e.target.value)} dir="auto" className="h-9" />}</Field>
@@ -801,7 +1002,7 @@ function AddressForm({ initial, onSave, onCancel }: { initial: { governorate: st
         <Button type="button" size="sm" variant="outline" onClick={onCancel}>
           {c.cancel}
         </Button>
-        <Button type="submit" size="sm">
+        <Button type="submit" size="sm" disabled={saving}>
           {c.save}
         </Button>
       </div>
@@ -833,7 +1034,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function Mini({ label, value, tone }: { label: string; value: number; tone?: string }) {
+function Mini({ label, value, tone }: { label: string; value: ReactNode; tone?: string }) {
   return (
     <div className="rounded-lg bg-paper p-2">
       <p className={cn("font-display text-lg font-semibold tabular-nums text-ink", tone)}>{value}</p>
