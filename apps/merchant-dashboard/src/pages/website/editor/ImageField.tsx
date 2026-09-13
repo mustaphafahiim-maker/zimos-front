@@ -5,6 +5,26 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    prepareFailed: "Could not prepare the selected image.",
+    removeImage: "Remove image",
+    replace: "Replace",
+    upload: "Upload",
+    addImages: "Add images",
+    clear: "Clear",
+  },
+  ar: {
+    prepareFailed: "تعذّر تجهيز الصورة المحددة.",
+    removeImage: "إزالة الصورة",
+    replace: "استبدال",
+    upload: "رفع صورة",
+    addImages: "إضافة صور",
+    clear: "مسح الكل",
+  },
+} satisfies Messages;
 
 /**
  * Image picker for a page element's props. Uploads through the same R2 flow the
@@ -16,6 +36,7 @@ import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from 
 
 function useUpload() {
   const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +51,7 @@ function useUpload() {
       for (const file of files) prepared.push(await compressImageIfNeeded(file));
     } catch {
       setBusy(false);
-      setError("Could not prepare the selected image.");
+      setError(t.prepareFailed);
       return [];
     }
 
@@ -65,11 +86,12 @@ function useUpload() {
 }
 
 function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
+  const t = useT(STRINGS);
   const [broken, setBroken] = useState(false);
   return (
-    <div className="group relative size-20 shrink-0 overflow-hidden rounded-[0.5rem] border border-line bg-paper">
+    <div className="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-line bg-paper">
       {broken ? (
-        <div className="flex size-full items-center justify-center text-ink-soft">
+        <div className="flex size-full items-center justify-center text-ink-muted">
           <ImageIcon className="size-5" aria-hidden />
         </div>
       ) : (
@@ -78,8 +100,9 @@ function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Remove image"
-        className="cursor-pointer absolute right-1 top-1 rounded-full bg-ink/70 p-1 text-paper opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={t.removeImage}
+        title={t.removeImage}
+        className="cursor-pointer absolute end-1 top-1 rounded-full bg-zimos-navy/75 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
         <X className="size-3" aria-hidden />
       </button>
@@ -99,6 +122,7 @@ export function ImageField({
   hint?: string;
   onChange: (url: string) => void;
 }) {
+  const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
 
@@ -115,7 +139,7 @@ export function ImageField({
         {value ? (
           <Thumb src={value} onRemove={() => onChange("")} />
         ) : (
-          <div className="flex size-20 shrink-0 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-ink-soft">
+          <div className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-line bg-zimos-ice/40 text-ink-muted">
             <ImageIcon className="size-5" aria-hidden />
           </div>
         )}
@@ -128,7 +152,7 @@ export function ImageField({
             onClick={() => inputRef.current?.click()}
           >
             {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-            {value ? "Replace" : "Upload"}
+            {value ? t.replace : t.upload}
           </Button>
           {hint && <p className="text-xs text-ink-soft">{hint}</p>}
         </div>
@@ -160,6 +184,7 @@ export function ImageListField({
   hint?: string;
   onChange: (urls: string[]) => void;
 }) {
+  const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
 
@@ -183,7 +208,7 @@ export function ImageListField({
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           size="sm"
@@ -192,12 +217,12 @@ export function ImageListField({
           onClick={() => inputRef.current?.click()}
         >
           {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-          Add images
+          {t.addImages}
         </Button>
         {value.length > 0 && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange([])}>
             <Trash2 className="size-4" aria-hidden />
-            Clear
+            {t.clear}
           </Button>
         )}
       </div>

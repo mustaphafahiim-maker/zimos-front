@@ -7,6 +7,7 @@ import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { mockApi } from "@/mock/api";
 import type { ProductEconomics } from "@/mock/types2";
 import { computeBreakEven, fmtX } from "@/lib/adMetrics";
+import { useCommon, useLocale, useT, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
@@ -14,21 +15,141 @@ import { LineAreaChart } from "@/components/charts";
 import { RangeSwitch, type AnalyticsRange } from "@/components/RangeSwitch";
 import { useToast } from "@/components/Toast";
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const STRINGS = {
+  en: {
+    title: "Profit & loss",
+    description: "What you actually keep after ads, goods, shipping and returns — on delivered orders only.",
+    alertA: "Net profit is computed on",
+    alertDelivered: "DELIVERED",
+    alertB: "orders only. COD orders that were never delivered count as cost (shipping + return), not revenue.",
+    netProfit: "Net profit",
+    netMargin: "{pct}% net margin",
+    revenue: "Revenue",
+    deliveredOrders: "Delivered orders",
+    adSpend: "Ad spend",
+    ofRevenue: "{pct}% of revenue",
+    cogs: "COGS",
+    returnsCost: "Returns cost",
+    returnsHint: "Shipping both ways on RTO",
+    waterfall: "Waterfall",
+    waterfallDesc: "Revenue at the top, every cost as a share of it.",
+    daily: "Daily",
+    dailyDesc: "Revenue, ad spend and net profit per day.",
+    deliveredRevenue: "Delivered revenue",
+    breakdown: "Breakdown",
+    breakdownDesc: "Profit per product, and the cost assumptions behind every break-even number.",
+    byProduct: "By product",
+    costAssumptions: "Cost assumptions",
+    colProduct: "Product",
+    colDelivered: "Delivered",
+    colShipping: "Shipping",
+    colReturns: "Returns",
+    colMargin: "Margin",
+    colPrice: "Price",
+    colCarrierFee: "Carrier fee",
+    colPaymentFee: "Payment fee",
+    colPackaging: "Packaging",
+    colReturnCost: "Return cost",
+    colConf: "Conf %",
+    colDeliv: "Deliv %",
+    colRto: "RTO %",
+    colBeCpd: "BE CPD",
+    colBeRoas: "BE ROAS",
+    fieldAria: "{field} for {product}",
+    savedToast: "Cost assumptions saved. Break-even CPDs are updated across the dashboard.",
+    saveError: "Could not save cost assumptions.",
+    assumptionsNote: "Amounts in {currency}. Confirmation, delivery and RTO rates are read-only — computed from the last 90 days of orders.",
+    saveAssumptions: "Save assumptions",
+  },
+  ar: {
+    title: "الأرباح والخسائر",
+    description: "ما تحتفظ به فعلًا بعد الإعلانات والبضاعة والشحن والمرتجعات — على الطلبات المسلَّمة فقط.",
+    alertA: "يُحسب صافي الربح على الطلبات",
+    alertDelivered: "المسلَّمة",
+    alertB: "فقط. طلبات الدفع عند الاستلام التي لم تُسلَّم تُحسب كتكلفة (شحن + مرتجع) وليست إيرادًا.",
+    netProfit: "صافي الربح",
+    netMargin: "هامش صافي {pct}%",
+    revenue: "الإيرادات",
+    deliveredOrders: "الطلبات المسلَّمة",
+    adSpend: "الإنفاق الإعلاني",
+    ofRevenue: "{pct}% من الإيرادات",
+    cogs: "تكلفة البضاعة",
+    returnsCost: "تكلفة المرتجعات",
+    returnsHint: "الشحن ذهابًا وإيابًا للمرتجعات",
+    waterfall: "تفصيل الأرباح",
+    waterfallDesc: "الإيرادات في الأعلى، وكل تكلفة كنسبة منها.",
+    daily: "يوميًا",
+    dailyDesc: "الإيرادات والإنفاق الإعلاني وصافي الربح لكل يوم.",
+    deliveredRevenue: "إيرادات الطلبات المسلَّمة",
+    breakdown: "التفاصيل",
+    breakdownDesc: "الربح لكل منتج، وافتراضات التكلفة وراء كل رقم لنقطة التعادل.",
+    byProduct: "حسب المنتج",
+    costAssumptions: "افتراضات التكلفة",
+    colProduct: "المنتج",
+    colDelivered: "المسلَّمة",
+    colShipping: "الشحن",
+    colReturns: "المرتجعات",
+    colMargin: "الهامش",
+    colPrice: "السعر",
+    colCarrierFee: "رسوم شركة الشحن",
+    colPaymentFee: "رسوم الدفع",
+    colPackaging: "التغليف",
+    colReturnCost: "تكلفة المرتجع",
+    colConf: "نسبة التأكيد",
+    colDeliv: "نسبة التسليم",
+    colRto: "نسبة المرتجع",
+    colBeCpd: "تكلفة الطلب المسلَّم للتعادل",
+    colBeRoas: "ROAS للتعادل",
+    fieldAria: "{field} لـ {product}",
+    savedToast: "تم حفظ افتراضات التكلفة. تم تحديث تكلفة الطلب المسلَّم للتعادل في كل لوحة التحكم.",
+    saveError: "تعذّر حفظ افتراضات التكلفة.",
+    assumptionsNote: "المبالغ بعملة {currency}. نسب التأكيد والتسليم والمرتجع للقراءة فقط — محسوبة من طلبات آخر 90 يومًا.",
+    saveAssumptions: "حفظ الافتراضات",
+  },
+} satisfies Messages;
+
+/** P&L line labels keyed by line key; unknown keys fall back to the API label. */
+const PNL_LINE_LABEL: Record<Locale, Record<string, string>> = {
+  en: {
+    revenue: "Delivered revenue",
+    cogs: "Cost of goods",
+    ads: "Ad spend",
+    shipping: "Shipping paid to carriers",
+    carrier_fees: "COD collection fees",
+    returns: "Returns & RTO cost",
+    packaging: "Packaging",
+    platform: "Platform & payment fees",
+    team: "Confirmation team",
+  },
+  ar: {
+    revenue: "إيرادات الطلبات المسلَّمة",
+    cogs: "تكلفة البضاعة",
+    ads: "الإنفاق الإعلاني",
+    shipping: "رسوم الشحن المدفوعة لشركات الشحن",
+    carrier_fees: "رسوم تحصيل الدفع عند الاستلام",
+    returns: "تكلفة المرتجعات",
+    packaging: "التغليف",
+    platform: "رسوم المنصة والدفع",
+    team: "فريق التأكيد",
+  },
+};
+
+function shortDate(iso: string, intlLocale: string): string {
+  return new Date(iso).toLocaleDateString(intlLocale, { month: "short", day: "numeric" });
 }
 
-const thClass = "px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wide text-ink-soft whitespace-nowrap";
-const tdNum = "px-3 py-2.5 text-right tabular-nums whitespace-nowrap";
+const thClass = "px-3 py-2.5 text-start text-[11px] font-medium uppercase tracking-wide text-ink-soft whitespace-nowrap";
+const tdNum = "px-3 py-2.5 text-end tabular-nums whitespace-nowrap";
 
 type MoneyField = "cogsAmount" | "shippingCostAmount" | "carrierFeeAmount" | "paymentFeeAmount" | "packagingAmount" | "returnCostAmount";
-const MONEY_FIELDS: Array<{ key: MoneyField; label: string }> = [
-  { key: "cogsAmount", label: "COGS" },
-  { key: "shippingCostAmount", label: "Shipping" },
-  { key: "carrierFeeAmount", label: "Carrier fee" },
-  { key: "paymentFeeAmount", label: "Payment fee" },
-  { key: "packagingAmount", label: "Packaging" },
-  { key: "returnCostAmount", label: "Return cost" },
+type StringKey = keyof (typeof STRINGS)["en"];
+const MONEY_FIELDS: Array<{ key: MoneyField; labelKey: StringKey }> = [
+  { key: "cogsAmount", labelKey: "cogs" },
+  { key: "shippingCostAmount", labelKey: "colShipping" },
+  { key: "carrierFeeAmount", labelKey: "colCarrierFee" },
+  { key: "paymentFeeAmount", labelKey: "colPaymentFee" },
+  { key: "packagingAmount", labelKey: "colPackaging" },
+  { key: "returnCostAmount", labelKey: "colReturnCost" },
 ];
 
 type Draft = Record<string, Record<MoneyField, string>>;
@@ -49,6 +170,8 @@ function toDraft(rows: ProductEconomics[]): Draft {
 }
 
 function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]; currency: string; onSaved: (rows: ProductEconomics[]) => void }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [draft, setDraft] = useState<Draft>(() => toDraft(rows));
@@ -82,9 +205,9 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
     try {
       await mockApi.saveEconomics(workspaceId, merged);
       onSaved(merged);
-      toast.success("Cost assumptions saved. Break-even CPDs are updated across the dashboard.");
+      toast.success(t.savedToast);
     } catch {
-      toast.error("Could not save cost assumptions.");
+      toast.error(t.saveError);
     } finally {
       setBusy(false);
     }
@@ -92,22 +215,22 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
             <tr className="border-b border-line bg-paper-raised">
-              <th className={thClass}>Product</th>
-              <th className={cn(thClass, "text-right")}>Price</th>
+              <th className={thClass}>{t.colProduct}</th>
+              <th className={cn(thClass, "text-end")}>{t.colPrice}</th>
               {MONEY_FIELDS.map((f) => (
-                <th key={f.key} className={cn(thClass, "text-right")}>
-                  {f.label}
+                <th key={f.key} className={cn(thClass, "text-end")}>
+                  {t[f.labelKey]}
                 </th>
               ))}
-              <th className={cn(thClass, "text-right")}>Conf %</th>
-              <th className={cn(thClass, "text-right")}>Deliv %</th>
-              <th className={cn(thClass, "text-right")}>RTO %</th>
-              <th className={cn(thClass, "text-right")}>BE CPD</th>
-              <th className={cn(thClass, "text-right")}>BE ROAS</th>
+              <th className={cn(thClass, "text-end")}>{t.colConf}</th>
+              <th className={cn(thClass, "text-end")}>{t.colDeliv}</th>
+              <th className={cn(thClass, "text-end")}>{t.colRto}</th>
+              <th className={cn(thClass, "text-end")}>{t.colBeCpd}</th>
+              <th className={cn(thClass, "text-end")}>{t.colBeRoas}</th>
             </tr>
           </thead>
           <tbody>
@@ -115,9 +238,13 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
               const live = merged?.find((m) => m.productId === r.productId) ?? r;
               const be = computeBreakEven(live);
               return (
-                <tr key={r.productId} className="border-b border-line last:border-0">
-                  <td className="max-w-[220px] truncate px-3 py-2 text-ink">{r.productName}</td>
-                  <td className={cn(tdNum, "text-ink-soft")}>{formatMoney(r.sellingPriceAmount, currency)}</td>
+                <tr key={r.productId} className="border-b border-line bg-paper last:border-0">
+                  <td className="max-w-[220px] truncate px-3 py-2 text-start text-ink" dir="auto">
+                    {r.productName}
+                  </td>
+                  <td className={cn(tdNum, "text-ink-soft")}>
+                    <bdi>{formatMoney(r.sellingPriceAmount, currency)}</bdi>
+                  </td>
                   {MONEY_FIELDS.map((f) => (
                     <td key={f.key} className="px-2 py-1.5">
                       <Input
@@ -125,18 +252,29 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
                         min={0}
                         step="0.01"
                         inputMode="decimal"
-                        aria-label={`${f.label} for ${r.productName}`}
+                        dir="ltr"
+                        aria-label={fmt(t.fieldAria, { field: t[f.labelKey], product: r.productName })}
                         value={draft[r.productId]?.[f.key] ?? ""}
                         onChange={(e) => setDraft((prev) => ({ ...prev, [r.productId]: { ...prev[r.productId], [f.key]: e.target.value } }))}
-                        className="h-8 w-24 text-right text-xs"
+                        className="h-8 w-24 text-end text-xs tabular-nums"
                       />
                     </td>
                   ))}
-                  <td className={cn(tdNum, "text-ink-soft")}>{(r.confirmationRateBp / 100).toFixed(1)}%</td>
-                  <td className={cn(tdNum, "text-ink-soft")}>{(r.deliveryRateBp / 100).toFixed(1)}%</td>
-                  <td className={cn(tdNum, "text-ink-soft")}>{(r.returnRateBp / 100).toFixed(1)}%</td>
-                  <td className={cn(tdNum, "font-medium text-ink")}>{formatMoney(Math.round(be.cpd), currency)}</td>
-                  <td className={cn(tdNum, "text-ink-soft")}>{fmtX(be.roas)}</td>
+                  <td className={cn(tdNum, "text-ink-soft")}>
+                    <span dir="ltr">{(r.confirmationRateBp / 100).toFixed(1)}%</span>
+                  </td>
+                  <td className={cn(tdNum, "text-ink-soft")}>
+                    <span dir="ltr">{(r.deliveryRateBp / 100).toFixed(1)}%</span>
+                  </td>
+                  <td className={cn(tdNum, "text-ink-soft")}>
+                    <span dir="ltr">{(r.returnRateBp / 100).toFixed(1)}%</span>
+                  </td>
+                  <td className={cn(tdNum, "font-medium text-ink")}>
+                    <bdi>{formatMoney(Math.round(be.cpd), currency)}</bdi>
+                  </td>
+                  <td className={cn(tdNum, "text-ink-soft")}>
+                    <span dir="ltr">{fmtX(be.roas)}</span>
+                  </td>
                 </tr>
               );
             })}
@@ -144,10 +282,10 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
         </table>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-ink-soft">Amounts in {currency}. Confirmation, delivery and RTO rates are read-only — computed from the last 90 days of orders.</p>
+        <p className="min-w-0 text-xs text-ink-soft">{fmt(t.assumptionsNote, { currency })}</p>
         <Button size="sm" disabled={!dirty || !merged || busy} onClick={() => void save()}>
           <Save />
-          {busy ? "Saving…" : "Save assumptions"}
+          {busy ? c.saving : t.saveAssumptions}
         </Button>
       </div>
     </div>
@@ -155,6 +293,8 @@ function CostAssumptions({ rows, currency, onSaved }: { rows: ProductEconomics[]
 }
 
 export function ProfitPage() {
+  const t = useT(STRINGS);
+  const { locale, intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [tab, setTab] = useState("products");
@@ -167,13 +307,14 @@ export function ProfitPage() {
   const revenue = revenueLine?.amount ?? 0;
   const line = (key: string) => p?.lines.find((l) => l.key === key)?.amount ?? 0;
   const byProduct = useMemo(() => (p ? [...p.byProduct].sort((a, b) => b.netProfitAmount - a.netProfitAmount) : []), [p]);
+  const pctOfRevenue = (amount: number) => (revenue > 0 ? fmt(t.ofRevenue, { pct: ((amount / revenue) * 100).toFixed(1) }) : "—");
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader title="Profit & loss" description="What you actually keep after ads, goods, shipping and returns — on delivered orders only." actions={<RangeSwitch value={range} onChange={setRange} />} />
+    <div className="min-w-0 max-w-6xl">
+      <PageHeader title={t.title} description={t.description} actions={<RangeSwitch value={range} onChange={setRange} />} />
 
       <Alert variant="info" className="mb-6 text-sm">
-        Net profit is computed on <strong>DELIVERED</strong> orders only. COD orders that were never delivered count as cost (shipping + return), not revenue.
+        {t.alertA} <strong>{t.alertDelivered}</strong> {t.alertB}
       </Alert>
 
       <DataState loading={pnl.loading && !p} error={pnl.error} onRetry={() => pnl.refresh()}>
@@ -182,21 +323,23 @@ export function ProfitPage() {
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               <KpiCard
                 className="col-span-2 lg:col-span-1"
-                label="Net profit"
-                value={<span className={p.netProfitAmount < 0 ? "text-danger" : "text-success"}>{formatMoney(p.netProfitAmount, currency)}</span>}
-                hint={`${(p.netMarginBp / 100).toFixed(1)}% net margin`}
+                label={t.netProfit}
+                value={
+                  <bdi className={p.netProfitAmount < 0 ? "text-danger" : "text-success"}>{formatMoney(p.netProfitAmount, currency)}</bdi>
+                }
+                hint={fmt(t.netMargin, { pct: (p.netMarginBp / 100).toFixed(1) })}
               />
-              <KpiCard label="Revenue" value={formatMoney(revenue, currency)} hint="Delivered orders" />
-              <KpiCard label="Ad spend" value={formatMoney(line("ads"), currency)} hint={revenue > 0 ? `${((line("ads") / revenue) * 100).toFixed(1)}% of revenue` : "—"} to="/ads" />
-              <KpiCard label="COGS" value={formatMoney(line("cogs"), currency)} hint={revenue > 0 ? `${((line("cogs") / revenue) * 100).toFixed(1)}% of revenue` : "—"} />
-              <KpiCard label="Returns cost" value={formatMoney(line("returns"), currency)} hint="Shipping both ways on RTO" to="/returns" />
+              <KpiCard label={t.revenue} value={<bdi>{formatMoney(revenue, currency)}</bdi>} hint={t.deliveredOrders} />
+              <KpiCard label={t.adSpend} value={<bdi>{formatMoney(line("ads"), currency)}</bdi>} hint={pctOfRevenue(line("ads"))} to="/ads" />
+              <KpiCard label={t.cogs} value={<bdi>{formatMoney(line("cogs"), currency)}</bdi>} hint={pctOfRevenue(line("cogs"))} />
+              <KpiCard label={t.returnsCost} value={<bdi>{formatMoney(line("returns"), currency)}</bdi>} hint={t.returnsHint} to="/returns" />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-5">
-              <Card className="lg:col-span-2">
+              <Card className="min-w-0 rounded-2xl lg:col-span-2">
                 <CardHeader>
-                  <CardTitle>Waterfall</CardTitle>
-                  <CardDescription>Revenue at the top, every cost as a share of it.</CardDescription>
+                  <CardTitle>{t.waterfall}</CardTitle>
+                  <CardDescription>{t.waterfallDesc}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
@@ -205,11 +348,15 @@ export function ProfitPage() {
                       return (
                         <li key={l.key}>
                           <div className="flex items-center justify-between gap-3 text-sm">
-                            <span className={l.sign === 1 ? "font-medium text-ink" : "text-ink-soft"}>{l.label}</span>
+                            <span className={cn("min-w-0", l.sign === 1 ? "font-medium text-ink" : "text-ink-soft")}>{PNL_LINE_LABEL[locale][l.key] ?? l.label}</span>
                             <span className={cn("shrink-0 tabular-nums", l.sign === 1 ? "text-ink" : "text-danger")}>
-                              {l.sign === -1 && "− "}
-                              {formatMoney(l.amount, currency)}
-                              <span className="ml-1 text-xs text-ink-soft">({share.toFixed(1)}%)</span>
+                              <bdi>
+                                {l.sign === -1 && "− "}
+                                {formatMoney(l.amount, currency)}
+                              </bdi>
+                              <span className="ms-1 text-xs text-ink-soft" dir="ltr">
+                                ({share.toFixed(1)}%)
+                              </span>
                             </span>
                           </div>
                           <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-line/60">
@@ -220,10 +367,12 @@ export function ProfitPage() {
                     })}
                     <li className="border-t border-line pt-3">
                       <div className="flex items-center justify-between gap-3 text-sm font-semibold">
-                        <span className="text-ink">Net profit</span>
+                        <span className="text-ink">{t.netProfit}</span>
                         <span className={cn("tabular-nums", p.netProfitAmount < 0 ? "text-danger" : "text-success")}>
-                          {formatMoney(p.netProfitAmount, currency)}
-                          <span className="ml-1 text-xs font-normal text-ink-soft">({(p.netMarginBp / 100).toFixed(1)}%)</span>
+                          <bdi>{formatMoney(p.netProfitAmount, currency)}</bdi>
+                          <span className="ms-1 text-xs font-normal text-ink-soft" dir="ltr">
+                            ({(p.netMarginBp / 100).toFixed(1)}%)
+                          </span>
                         </span>
                       </div>
                       <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-line/60">
@@ -234,52 +383,54 @@ export function ProfitPage() {
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-3">
+              <Card className="min-w-0 rounded-2xl lg:col-span-3">
                 <CardHeader>
-                  <CardTitle>Daily</CardTitle>
-                  <CardDescription>Revenue, ad spend and net profit per day.</CardDescription>
+                  <CardTitle>{t.daily}</CardTitle>
+                  <CardDescription>{t.dailyDesc}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
-                    { label: "Delivered revenue", color: "var(--color-primary)", pick: (d: (typeof p.byDay)[number]) => d.revenueAmount },
-                    { label: "Ad spend", color: "var(--color-accent)", pick: (d: (typeof p.byDay)[number]) => d.adSpendAmount },
-                    { label: "Net profit", color: "var(--color-success)", pick: (d: (typeof p.byDay)[number]) => Math.max(d.netProfitAmount, 0) },
+                    { id: "revenue", label: t.deliveredRevenue, color: "var(--color-primary)", pick: (d: (typeof p.byDay)[number]) => d.revenueAmount },
+                    { id: "ads", label: t.adSpend, color: "var(--color-accent)", pick: (d: (typeof p.byDay)[number]) => d.adSpendAmount },
+                    { id: "net", label: t.netProfit, color: "var(--color-success)", pick: (d: (typeof p.byDay)[number]) => Math.max(d.netProfitAmount, 0) },
                   ].map((s) => (
-                    <div key={s.label}>
+                    <div key={s.id}>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-soft">{s.label}</p>
-                      <LineAreaChart points={p.byDay.map((d) => ({ label: shortDate(d.date), value: s.pick(d) }))} color={s.color} format={(v) => formatMoney(v, currency)} height={110} />
+                      <div dir="ltr">
+                        <LineAreaChart points={p.byDay.map((d) => ({ label: shortDate(d.date, intlLocale), value: s.pick(d) }))} color={s.color} format={(v) => formatMoney(v, currency)} height={110} />
+                      </div>
                     </div>
                   ))}
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
+            <Card className="min-w-0 rounded-2xl">
               <CardHeader>
-                <CardTitle>Breakdown</CardTitle>
-                <CardDescription>Profit per product, and the cost assumptions behind every break-even number.</CardDescription>
+                <CardTitle>{t.breakdown}</CardTitle>
+                <CardDescription>{t.breakdownDesc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
                   <TabsList>
-                    <TabsTrigger value="products">By product</TabsTrigger>
-                    <TabsTrigger value="assumptions">Cost assumptions</TabsTrigger>
+                    <TabsTrigger value="products">{t.byProduct}</TabsTrigger>
+                    <TabsTrigger value="assumptions">{t.costAssumptions}</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="products" className="pt-4">
-                    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                    <div className="max-h-[70vh] overflow-auto rounded-2xl border border-line bg-paper-raised">
                       <table className="w-full min-w-[900px] text-sm">
-                        <thead>
-                          <tr className="border-b border-line bg-paper-raised">
-                            <th className={thClass}>Product</th>
-                            <th className={cn(thClass, "text-right")}>Delivered</th>
-                            <th className={cn(thClass, "text-right")}>Revenue</th>
-                            <th className={cn(thClass, "text-right")}>Ad spend</th>
-                            <th className={cn(thClass, "text-right")}>COGS</th>
-                            <th className={cn(thClass, "text-right")}>Shipping</th>
-                            <th className={cn(thClass, "text-right")}>Returns</th>
-                            <th className={cn(thClass, "text-right")}>Net profit</th>
-                            <th className={cn(thClass, "text-right")}>Margin</th>
+                        <thead className="sticky top-0 z-10 bg-paper-raised">
+                          <tr className="border-b border-line">
+                            <th className={thClass}>{t.colProduct}</th>
+                            <th className={cn(thClass, "text-end")}>{t.colDelivered}</th>
+                            <th className={cn(thClass, "text-end")}>{t.revenue}</th>
+                            <th className={cn(thClass, "text-end")}>{t.adSpend}</th>
+                            <th className={cn(thClass, "text-end")}>{t.cogs}</th>
+                            <th className={cn(thClass, "text-end")}>{t.colShipping}</th>
+                            <th className={cn(thClass, "text-end")}>{t.colReturns}</th>
+                            <th className={cn(thClass, "text-end")}>{t.netProfit}</th>
+                            <th className={cn(thClass, "text-end")}>{t.colMargin}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -287,16 +438,32 @@ export function ProfitPage() {
                             const neg = r.netProfitAmount < 0;
                             const margin = r.revenueAmount > 0 ? (r.netProfitAmount / r.revenueAmount) * 100 : null;
                             return (
-                              <tr key={r.productId} className={cn("border-b border-line last:border-0", neg ? "bg-danger-soft/40" : "hover:bg-paper-raised")}>
-                                <td className="max-w-[260px] truncate px-3 py-2.5 text-ink">{r.productName}</td>
+                              <tr key={r.productId} className={cn("border-b border-line last:border-0", neg ? "bg-danger-soft/40" : "bg-paper hover:bg-paper-raised")}>
+                                <td className="max-w-[260px] truncate px-3 py-2.5 text-start text-ink" dir="auto">
+                                  {r.productName}
+                                </td>
                                 <td className={cn(tdNum, "text-ink-soft")}>{r.deliveredOrders.toLocaleString()}</td>
-                                <td className={cn(tdNum, "text-ink")}>{formatMoney(r.revenueAmount, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{formatMoney(r.adSpendAmount, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{formatMoney(r.cogsAmount, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{formatMoney(r.shippingAmount, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{formatMoney(r.returnsAmount, currency)}</td>
-                                <td className={cn(tdNum, "font-semibold", neg ? "text-danger" : "text-success")}>{formatMoney(r.netProfitAmount, currency)}</td>
-                                <td className={cn(tdNum, neg ? "text-danger" : "text-ink-soft")}>{margin === null ? "—" : `${margin.toFixed(1)}%`}</td>
+                                <td className={cn(tdNum, "text-ink")}>
+                                  <bdi>{formatMoney(r.revenueAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <bdi>{formatMoney(r.adSpendAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <bdi>{formatMoney(r.cogsAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <bdi>{formatMoney(r.shippingAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <bdi>{formatMoney(r.returnsAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, "font-semibold", neg ? "text-danger" : "text-success")}>
+                                  <bdi>{formatMoney(r.netProfitAmount, currency)}</bdi>
+                                </td>
+                                <td className={cn(tdNum, neg ? "text-danger" : "text-ink-soft")}>
+                                  <span dir="ltr">{margin === null ? "—" : `${margin.toFixed(1)}%`}</span>
+                                </td>
                               </tr>
                             );
                           })}

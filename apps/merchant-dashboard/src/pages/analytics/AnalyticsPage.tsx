@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Download } from "lucide-react";
+import { BarChart3, Download } from "lucide-react";
 import {
   Button,
   Card,
@@ -21,11 +21,128 @@ import type { AnalyticsOverview } from "@/mock/types";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
 import { BarChart, FunnelBars, HBarList, LineAreaChart } from "@/components/charts";
 import { RangeSwitch, type AnalyticsRange } from "@/components/RangeSwitch";
 import { CompactCampaignsTable } from "@/pages/ads/adsShared";
 import { sumStats } from "@/lib/adMetrics";
 import type { Campaign, PnlReport } from "@/mock/types2";
+import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Analytics",
+    description: "Revenue, orders, conversion and delivery performance across your store and funnels.",
+    revenue: "Revenue",
+    orders: "Orders",
+    visitors: "Visitors",
+    conversionRate: "Conversion rate",
+    avgOrderValue: "Avg order value",
+    avgOrderHint: "Revenue ÷ orders",
+    confirmationRate: "Confirmation rate",
+    confirmationHint: "Orders confirmed by phone / WhatsApp",
+    deliveryRate: "Delivery rate",
+    deliveryHint: "Of shipped orders, delivered",
+    returnRate: "Return rate",
+    returnHint: "Delivered orders returned",
+    revenueChartDesc: "Daily revenue, {currency}.",
+    ordersChartDesc: "Orders placed per day.",
+    ordersCount: "{n} orders",
+    funnelTitle: "Conversion funnel",
+    funnelDesc: "Add-to-cart and checkout stages are estimated from pixel events; the rest come from orders.",
+    stageVisitors: "Visitors",
+    stageAddToCart: "Add to cart",
+    stageCheckout: "Checkout started",
+    stageOrders: "Orders",
+    stageConfirmed: "Confirmed",
+    stageDelivered: "Delivered",
+    breakdownsTitle: "Breakdowns",
+    breakdownsDesc: "Where revenue and orders come from.",
+    tabProducts: "Products",
+    tabSources: "Sources",
+    tabGovernorates: "Governorates",
+    tabCampaigns: "Campaigns",
+    tabCohorts: "Cohorts",
+    colProduct: "Product",
+    colUnits: "Units",
+    colRevenue: "Revenue",
+    colShare: "Share",
+    colGovernorate: "Governorate",
+    colOrders: "Orders",
+    colDeliveryRate: "Delivery rate",
+    colWeek: "Week",
+    colConfirmed: "Confirmed %",
+    colDelivered: "Delivered %",
+    colRto: "RTO %",
+    colAdSpend: "Ad spend",
+    colCpd: "CPD",
+    colNetProfit: "Net profit",
+    noProducts: "No product sales yet",
+    noProductsDesc: "Top-selling products will appear here once orders come in.",
+    noSources: "No traffic sources yet",
+    noGovernorates: "No governorate data yet",
+    campaignsNoteBefore: "Last 30 days per campaign. Manage budgets, pause and drill into ad sets on the",
+    campaignsNoteLink: "Ads page",
+    campaignsNoteAfter: ".",
+    cohortsNote: "Weekly cohorts by order date over the last 8 ISO weeks. Delivery and RTO for the most recent weeks are still settling.",
+  },
+  ar: {
+    title: "التحليلات",
+    description: "أداء المبيعات والطلبات ومعدل التحويل والتسليم عبر متجرك ومسارات البيع.",
+    revenue: "المبيعات",
+    orders: "الطلبات",
+    visitors: "الزوار",
+    conversionRate: "معدل التحويل",
+    avgOrderValue: "متوسط قيمة الطلب",
+    avgOrderHint: "المبيعات ÷ الطلبات",
+    confirmationRate: "معدل التأكيد",
+    confirmationHint: "طلبات مؤكدة بالهاتف / WhatsApp",
+    deliveryRate: "معدل التسليم",
+    deliveryHint: "نسبة المُسلَّم من الطلبات المشحونة",
+    returnRate: "معدل المرتجعات",
+    returnHint: "طلبات مُسلَّمة تم إرجاعها",
+    revenueChartDesc: "المبيعات اليومية بعملة {currency}.",
+    ordersChartDesc: "عدد الطلبات يوميًا.",
+    ordersCount: "{n} طلب",
+    funnelTitle: "مسار التحويل",
+    funnelDesc: "مرحلتا الإضافة إلى السلة وبدء الدفع تقديريتان من أحداث البكسل؛ وباقي المراحل من الطلبات الفعلية.",
+    stageVisitors: "الزوار",
+    stageAddToCart: "إضافة إلى السلة",
+    stageCheckout: "بدء إتمام الطلب",
+    stageOrders: "الطلبات",
+    stageConfirmed: "مؤكدة",
+    stageDelivered: "مُسلَّمة",
+    breakdownsTitle: "التفاصيل",
+    breakdownsDesc: "مصادر المبيعات والطلبات.",
+    tabProducts: "المنتجات",
+    tabSources: "المصادر",
+    tabGovernorates: "المحافظات",
+    tabCampaigns: "الحملات",
+    tabCohorts: "الأسابيع",
+    colProduct: "المنتج",
+    colUnits: "الوحدات",
+    colRevenue: "المبيعات",
+    colShare: "الحصة",
+    colGovernorate: "المحافظة",
+    colOrders: "الطلبات",
+    colDeliveryRate: "معدل التسليم",
+    colWeek: "الأسبوع",
+    colConfirmed: "نسبة التأكيد",
+    colDelivered: "نسبة التسليم",
+    colRto: "نسبة المرتجع",
+    colAdSpend: "الإنفاق الإعلاني",
+    colCpd: "تكلفة الطلب المُسلَّم",
+    colNetProfit: "صافي الربح",
+    noProducts: "لا توجد مبيعات منتجات بعد",
+    noProductsDesc: "ستظهر المنتجات الأكثر مبيعًا هنا بمجرد وصول الطلبات.",
+    noSources: "لا توجد مصادر زيارات بعد",
+    noGovernorates: "لا توجد بيانات للمحافظات بعد",
+    campaignsNoteBefore: "آخر 30 يومًا لكل حملة. يمكنك إدارة الميزانيات وإيقاف الحملات وتفاصيل المجموعات الإعلانية من",
+    campaignsNoteLink: "صفحة الإعلانات",
+    campaignsNoteAfter: ".",
+    cohortsNote: "تجميع أسبوعي حسب تاريخ الطلب لآخر 8 أسابيع (ISO). أرقام التسليم والمرتجعات للأسابيع الأخيرة لم تكتمل بعد.",
+  },
+} satisfies Messages;
 
 interface CohortRow {
   week: string;
@@ -94,8 +211,12 @@ function pct(bp: number): string {
   return `${(bp / 100).toFixed(1)}%`;
 }
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function ratePct(r: number | null): string {
+  return r === null ? "—" : `${(r * 100).toFixed(1)}%`;
+}
+
+function shortDate(iso: string, intlLocale: string): string {
+  return new Date(iso).toLocaleDateString(intlLocale, { month: "short", day: "numeric" });
 }
 
 function csvCell(v: string | number): string {
@@ -118,7 +239,17 @@ function downloadCsv(data: AnalyticsOverview) {
   URL.revokeObjectURL(url);
 }
 
+const tableWrap = "overflow-x-auto rounded-2xl border border-line bg-paper-raised";
+const headRow = "border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft";
+const th = "px-4 py-3 text-start font-medium";
+const thNum = "px-4 py-3 text-end font-medium";
+const tdNum = "px-4 py-3 text-end tabular-nums";
+const bodyRow = "border-b border-line last:border-0 hover:bg-paper";
+
 export function AnalyticsPage() {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [tab, setTab] = useState<string>("products");
@@ -131,29 +262,30 @@ export function AnalyticsPage() {
   const cohorts = useMemo(() => (ads.data ? buildCohorts(ads.data.pnl90, ads.data.campaigns) : []), [ads.data]);
   const a = analytics.data;
   const currency = a?.currency ?? "EGP";
+  const num = (n: number) => n.toLocaleString(intlLocale);
 
   const funnel = a
     ? [
-        { label: "Visitors", value: a.totals.visitors },
-        { label: "Add to cart", value: Math.round(a.totals.visitors * 0.18) },
-        { label: "Checkout started", value: Math.round(a.totals.visitors * 0.09) },
-        { label: "Orders", value: a.totals.orders },
-        { label: "Confirmed", value: Math.round((a.totals.orders * a.totals.confirmationRateBasisPoints) / 10000) },
-        { label: "Delivered", value: Math.round((a.totals.orders * a.totals.deliveryRateBasisPoints) / 10000) },
+        { label: t.stageVisitors, value: a.totals.visitors },
+        { label: t.stageAddToCart, value: Math.round(a.totals.visitors * 0.18) },
+        { label: t.stageCheckout, value: Math.round(a.totals.visitors * 0.09) },
+        { label: t.stageOrders, value: a.totals.orders },
+        { label: t.stageConfirmed, value: Math.round((a.totals.orders * a.totals.confirmationRateBasisPoints) / 10000) },
+        { label: t.stageDelivered, value: Math.round((a.totals.orders * a.totals.deliveryRateBasisPoints) / 10000) },
       ]
     : [];
 
   return (
     <div className="max-w-6xl">
       <PageHeader
-        title="Analytics"
-        description="Revenue, orders, conversion and delivery performance across your store and funnels."
+        title={t.title}
+        description={t.description}
         actions={
           <>
             <RangeSwitch value={range} onChange={setRange} />
             <Button variant="outline" size="sm" disabled={!a} onClick={() => a && downloadCsv(a)}>
-              <Download />
-              Export CSV
+              <Download aria-hidden />
+              {c.exportCsv}
             </Button>
           </>
         }
@@ -163,133 +295,164 @@ export function AnalyticsPage() {
         {a && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <KpiCard label="Revenue" value={formatMoney(a.totals.revenueAmount, currency)} deltaBasisPoints={deltaBp(a.totals.revenueAmount, a.previous.revenueAmount)} />
-              <KpiCard label="Orders" value={a.totals.orders.toLocaleString()} deltaBasisPoints={deltaBp(a.totals.orders, a.previous.orders)} />
-              <KpiCard label="Visitors" value={a.totals.visitors.toLocaleString()} deltaBasisPoints={deltaBp(a.totals.visitors, a.previous.visitors)} />
-              <KpiCard label="Conversion rate" value={pct(a.totals.conversionBasisPoints)} deltaBasisPoints={deltaBp(a.totals.conversionBasisPoints, a.previous.conversionBasisPoints)} />
-              <KpiCard label="Avg order value" value={formatMoney(a.totals.averageOrderAmount, currency)} hint="Revenue ÷ orders" />
-              <KpiCard label="Confirmation rate" value={pct(a.totals.confirmationRateBasisPoints)} hint="Orders confirmed by phone / WhatsApp" to="/confirmation-queue" />
-              <KpiCard label="Delivery rate" value={pct(a.totals.deliveryRateBasisPoints)} hint="Of shipped orders, delivered" to="/shipping" />
-              <KpiCard label="Return rate" value={pct(a.totals.returnRateBasisPoints)} hint="Delivered orders returned" to="/returns" />
+              <KpiCard label={t.revenue} value={<bdi dir="ltr">{formatMoney(a.totals.revenueAmount, currency)}</bdi>} deltaBasisPoints={deltaBp(a.totals.revenueAmount, a.previous.revenueAmount)} />
+              <KpiCard label={t.orders} value={<bdi dir="ltr">{num(a.totals.orders)}</bdi>} deltaBasisPoints={deltaBp(a.totals.orders, a.previous.orders)} />
+              <KpiCard label={t.visitors} value={<bdi dir="ltr">{num(a.totals.visitors)}</bdi>} deltaBasisPoints={deltaBp(a.totals.visitors, a.previous.visitors)} />
+              <KpiCard label={t.conversionRate} value={<bdi dir="ltr">{pct(a.totals.conversionBasisPoints)}</bdi>} deltaBasisPoints={deltaBp(a.totals.conversionBasisPoints, a.previous.conversionBasisPoints)} />
+              <KpiCard label={t.avgOrderValue} value={<bdi dir="ltr">{formatMoney(a.totals.averageOrderAmount, currency)}</bdi>} hint={t.avgOrderHint} />
+              <KpiCard label={t.confirmationRate} value={<bdi dir="ltr">{pct(a.totals.confirmationRateBasisPoints)}</bdi>} hint={t.confirmationHint} to="/confirmation-queue" />
+              <KpiCard label={t.deliveryRate} value={<bdi dir="ltr">{pct(a.totals.deliveryRateBasisPoints)}</bdi>} hint={t.deliveryHint} to="/shipping" />
+              <KpiCard label={t.returnRate} value={<bdi dir="ltr">{pct(a.totals.returnRateBasisPoints)}</bdi>} hint={t.returnHint} to="/returns" />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
+              <Card className="rounded-2xl">
                 <CardHeader>
-                  <CardTitle>Revenue</CardTitle>
-                  <CardDescription>Daily revenue, {currency}.</CardDescription>
+                  <CardTitle className="font-semibold">{t.revenue}</CardTitle>
+                  <CardDescription>{fmt(t.revenueChartDesc, { currency })}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <LineAreaChart points={a.daily.map((d) => ({ label: shortDate(d.date), value: d.revenueAmount }))} format={(v) => formatMoney(v, currency)} height={200} />
+                  <div dir="ltr">
+                    <LineAreaChart points={a.daily.map((d) => ({ label: shortDate(d.date, intlLocale), value: d.revenueAmount }))} format={(v) => formatMoney(v, currency)} height={200} />
+                  </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="rounded-2xl">
                 <CardHeader>
-                  <CardTitle>Orders</CardTitle>
-                  <CardDescription>Orders placed per day.</CardDescription>
+                  <CardTitle className="font-semibold">{t.orders}</CardTitle>
+                  <CardDescription>{t.ordersChartDesc}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BarChart points={a.daily.map((d) => ({ label: shortDate(d.date), value: d.orders }))} format={(v) => `${v} orders`} height={200} />
+                  <div dir="ltr">
+                    <BarChart
+                      points={a.daily.map((d) => ({ label: shortDate(d.date, intlLocale), value: d.orders }))}
+                      format={(v) => fmt(t.ordersCount, { n: v.toLocaleString(intlLocale) })}
+                      color="var(--color-primary)"
+                      height={200}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
+            <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Conversion funnel</CardTitle>
-                <CardDescription>Add-to-cart and checkout stages are estimated from pixel events; the rest come from orders.</CardDescription>
+                <CardTitle className="font-semibold">{t.funnelTitle}</CardTitle>
+                <CardDescription>{t.funnelDesc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <FunnelBars stages={funnel} />
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Breakdowns</CardTitle>
-                <CardDescription>Where revenue and orders come from.</CardDescription>
+                <CardTitle className="font-semibold">{t.breakdownsTitle}</CardTitle>
+                <CardDescription>{t.breakdownsDesc}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-w-0">
                 <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
-                  <TabsList>
-                    <TabsTrigger value="products">Products</TabsTrigger>
-                    <TabsTrigger value="sources">Sources</TabsTrigger>
-                    <TabsTrigger value="governorates">Governorates</TabsTrigger>
-                    <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-                    <TabsTrigger value="cohorts">Cohorts</TabsTrigger>
-                  </TabsList>
+                  <div className="-mx-1 overflow-x-auto px-1">
+                    <TabsList>
+                      <TabsTrigger value="products">{t.tabProducts}</TabsTrigger>
+                      <TabsTrigger value="sources">{t.tabSources}</TabsTrigger>
+                      <TabsTrigger value="governorates">{t.tabGovernorates}</TabsTrigger>
+                      <TabsTrigger value="campaigns">{t.tabCampaigns}</TabsTrigger>
+                      <TabsTrigger value="cohorts">{t.tabCohorts}</TabsTrigger>
+                    </TabsList>
+                  </div>
 
                   <TabsContent value="products" className="pt-4">
-                    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-                      <table className="w-full min-w-[560px] text-sm">
-                        <thead>
-                          <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
-                            <th className="px-4 py-3 font-medium">Product</th>
-                            <th className="px-4 py-3 text-right font-medium">Units</th>
-                            <th className="px-4 py-3 text-right font-medium">Revenue</th>
-                            <th className="px-4 py-3 text-right font-medium">Share</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {a.topProducts.map((p) => (
-                            <tr key={p.productId} className="border-b border-line last:border-0 hover:bg-paper-raised">
-                              <td className="px-4 py-3 text-ink">{p.name}</td>
-                              <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{p.units.toLocaleString()}</td>
-                              <td className="px-4 py-3 text-right tabular-nums text-ink">{formatMoney(p.revenueAmount, currency)}</td>
-                              <td className="px-4 py-3 text-right tabular-nums text-ink-soft">
-                                {a.totals.revenueAmount > 0 ? `${((p.revenueAmount / a.totals.revenueAmount) * 100).toFixed(1)}%` : "—"}
-                              </td>
+                    {a.topProducts.length === 0 ? (
+                      <EmptyState icon={<BarChart3 />} title={t.noProducts} description={t.noProductsDesc} />
+                    ) : (
+                      <div className={tableWrap}>
+                        <table className="w-full min-w-[560px] text-sm">
+                          <thead>
+                            <tr className={headRow}>
+                              <th className={th}>{t.colProduct}</th>
+                              <th className={thNum}>{t.colUnits}</th>
+                              <th className={thNum}>{t.colRevenue}</th>
+                              <th className={thNum}>{t.colShare}</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {a.topProducts.map((p) => (
+                              <tr key={p.productId} className={bodyRow}>
+                                <td className="px-4 py-3 text-ink">{p.name}</td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{num(p.units)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink`}>
+                                  <bdi dir="ltr">{formatMoney(p.revenueAmount, currency)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{a.totals.revenueAmount > 0 ? `${((p.revenueAmount / a.totals.revenueAmount) * 100).toFixed(1)}%` : "—"}</bdi>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="sources" className="pt-4">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div>
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">Orders</p>
-                        <HBarList rows={a.bySource.map((s) => ({ label: s.source, value: s.orders, caption: `${s.orders.toLocaleString()} orders` }))} />
+                    {a.bySource.length === 0 ? (
+                      <EmptyState icon={<BarChart3 />} title={t.noSources} />
+                    ) : (
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div>
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">{t.orders}</p>
+                          <HBarList rows={a.bySource.map((s) => ({ label: s.source, value: s.orders, caption: fmt(t.ordersCount, { n: num(s.orders) }) }))} />
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">{t.revenue}</p>
+                          <HBarList color="var(--color-accent)" rows={a.bySource.map((s) => ({ label: s.source, value: s.revenueAmount, caption: formatMoney(s.revenueAmount, currency) }))} />
+                        </div>
                       </div>
-                      <div>
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-soft">Revenue</p>
-                        <HBarList color="var(--color-accent)" rows={a.bySource.map((s) => ({ label: s.source, value: s.revenueAmount, caption: formatMoney(s.revenueAmount, currency) }))} />
-                      </div>
-                    </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="governorates" className="pt-4">
-                    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-                      <table className="w-full min-w-[520px] text-sm">
-                        <thead>
-                          <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
-                            <th className="px-4 py-3 font-medium">Governorate</th>
-                            <th className="px-4 py-3 text-right font-medium">Orders</th>
-                            <th className="px-4 py-3 font-medium">Delivery rate</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {a.byGovernorate.map((g) => (
-                            <tr key={g.name} className="border-b border-line last:border-0 hover:bg-paper-raised">
-                              <td className="px-4 py-3 text-ink">{g.name}</td>
-                              <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{g.orders.toLocaleString()}</td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-1.5 w-40 overflow-hidden rounded-full bg-line/60">
-                                    <div
-                                      className={g.deliveryRateBasisPoints >= 7000 ? "h-full rounded-full bg-success" : "h-full rounded-full bg-accent"}
-                                      style={{ width: `${g.deliveryRateBasisPoints / 100}%` }}
-                                    />
-                                  </div>
-                                  <span className="tabular-nums text-ink-soft">{pct(g.deliveryRateBasisPoints)}</span>
-                                </div>
-                              </td>
+                    {a.byGovernorate.length === 0 ? (
+                      <EmptyState icon={<BarChart3 />} title={t.noGovernorates} />
+                    ) : (
+                      <div className={tableWrap}>
+                        <table className="w-full min-w-[520px] text-sm">
+                          <thead>
+                            <tr className={headRow}>
+                              <th className={th}>{t.colGovernorate}</th>
+                              <th className={thNum}>{t.colOrders}</th>
+                              <th className={th}>{t.colDeliveryRate}</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {a.byGovernorate.map((g) => (
+                              <tr key={g.name} className={bodyRow}>
+                                <td className="px-4 py-3 text-ink">{g.name}</td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{num(g.orders)}</bdi>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-1.5 w-40 overflow-hidden rounded-full bg-line/60">
+                                      <div
+                                        className={g.deliveryRateBasisPoints >= 7000 ? "h-full rounded-full bg-success" : "h-full rounded-full bg-warning"}
+                                        style={{ width: `${g.deliveryRateBasisPoints / 100}%` }}
+                                      />
+                                    </div>
+                                    <bdi dir="ltr" className="tabular-nums text-ink-soft">
+                                      {pct(g.deliveryRateBasisPoints)}
+                                    </bdi>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="campaigns" className="pt-4">
@@ -298,11 +461,11 @@ export function AnalyticsPage() {
                         <div className="space-y-3">
                           <CompactCampaignsTable campaigns={ads.data.campaigns} economics={ads.data.economics} currency={currency} />
                           <p className="text-xs text-ink-soft">
-                            Last 30 days per campaign. Manage budgets, pause and drill into ad sets on the{" "}
+                            {t.campaignsNoteBefore}{" "}
                             <Link to="/ads" className="text-primary hover:underline">
-                              Ads page
+                              {t.campaignsNoteLink}
                             </Link>
-                            .
+                            {t.campaignsNoteAfter}
                           </p>
                         </div>
                       )}
@@ -311,37 +474,53 @@ export function AnalyticsPage() {
 
                   <TabsContent value="cohorts" className="pt-4">
                     <DataState loading={ads.loading && !ads.data} error={ads.error} onRetry={() => ads.refresh()} empty={!ads.loading && cohorts.length === 0}>
-                      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                      <div className={tableWrap}>
                         <table className="w-full min-w-[760px] text-sm">
                           <thead>
-                            <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
-                              <th className="px-4 py-3 font-medium">Week</th>
-                              <th className="px-4 py-3 text-right font-medium">Orders</th>
-                              <th className="px-4 py-3 text-right font-medium">Confirmed %</th>
-                              <th className="px-4 py-3 text-right font-medium">Delivered %</th>
-                              <th className="px-4 py-3 text-right font-medium">RTO %</th>
-                              <th className="px-4 py-3 text-right font-medium">Ad spend</th>
-                              <th className="px-4 py-3 text-right font-medium">CPD</th>
-                              <th className="px-4 py-3 text-right font-medium">Net profit</th>
+                            <tr className={headRow}>
+                              <th className={th}>{t.colWeek}</th>
+                              <th className={thNum}>{t.colOrders}</th>
+                              <th className={thNum}>{t.colConfirmed}</th>
+                              <th className={thNum}>{t.colDelivered}</th>
+                              <th className={thNum}>{t.colRto}</th>
+                              <th className={thNum}>{t.colAdSpend}</th>
+                              <th className={thNum}>{t.colCpd}</th>
+                              <th className={thNum}>{t.colNetProfit}</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {cohorts.map((c) => (
-                              <tr key={c.week} className="border-b border-line last:border-0 hover:bg-paper-raised">
-                                <td className="px-4 py-3 text-ink">{c.week}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.orders.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.confirmedRate === null ? "—" : `${(c.confirmedRate * 100).toFixed(1)}%`}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.deliveredRate === null ? "—" : `${(c.deliveredRate * 100).toFixed(1)}%`}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.rtoRate === null ? "—" : `${(c.rtoRate * 100).toFixed(1)}%`}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink">{formatMoney(c.adSpend, currency)}</td>
-                                <td className="px-4 py-3 text-right tabular-nums text-ink">{c.cpd === null ? "—" : formatMoney(Math.round(c.cpd), currency)}</td>
-                                <td className={c.netProfit < 0 ? "px-4 py-3 text-right font-medium tabular-nums text-danger" : "px-4 py-3 text-right font-medium tabular-nums text-success"}>{formatMoney(c.netProfit, currency)}</td>
+                            {cohorts.map((row) => (
+                              <tr key={row.week} className={bodyRow}>
+                                <td className="px-4 py-3 text-ink">
+                                  <bdi dir="ltr">{row.week}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{num(row.orders)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{ratePct(row.confirmedRate)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{ratePct(row.deliveredRate)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink-soft`}>
+                                  <bdi dir="ltr">{ratePct(row.rtoRate)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink`}>
+                                  <bdi dir="ltr">{formatMoney(row.adSpend, currency)}</bdi>
+                                </td>
+                                <td className={`${tdNum} text-ink`}>
+                                  <bdi dir="ltr">{row.cpd === null ? "—" : formatMoney(Math.round(row.cpd), currency)}</bdi>
+                                </td>
+                                <td className={`${tdNum} font-medium ${row.netProfit < 0 ? "text-danger" : "text-success"}`}>
+                                  <bdi dir="ltr">{formatMoney(row.netProfit, currency)}</bdi>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      <p className="mt-3 text-xs text-ink-soft">Weekly cohorts by order date over the last 8 ISO weeks. Delivery and RTO for the most recent weeks are still settling.</p>
+                      <p className="mt-3 text-xs text-ink-soft">{t.cohortsNote}</p>
                     </DataState>
                   </TabsContent>
                 </Tabs>

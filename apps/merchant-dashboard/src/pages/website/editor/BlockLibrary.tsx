@@ -1,5 +1,17 @@
 import { Plus } from "lucide-react";
-import { BLOCK_GROUPS, BLOCK_PRESETS, type BlockPreset } from "./blocks";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { BLOCK_GROUPS, BLOCK_GROUP_LABELS, BLOCK_PRESETS, tr, type BlockPreset } from "./blocks";
+
+const STRINGS = {
+  en: {
+    title: "Add a block",
+    subtitle: "Appended to the bottom of the page.",
+  },
+  ar: {
+    title: "إضافة قسم",
+    subtitle: "يُضاف في أسفل الصفحة.",
+  },
+} satisfies Messages;
 
 /**
  * Left sidebar. Every entry maps onto element types the backend actually
@@ -8,11 +20,15 @@ import { BLOCK_GROUPS, BLOCK_PRESETS, type BlockPreset } from "./blocks";
  * BLOCK_PRESETS rather than hand-written here.
  */
 export function BlockLibrary({ onAdd }: { onAdd: (preset: BlockPreset) => void }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  const groupLabels = BLOCK_GROUP_LABELS[locale];
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-line px-4 py-3">
-        <h2 className="font-display text-sm font-medium text-ink">Add a block</h2>
-        <p className="text-xs text-ink-soft">Appended to the bottom of the page.</p>
+        <h2 className="font-display text-sm font-semibold text-ink">{t.title}</h2>
+        <p className="text-xs text-ink-soft">{t.subtitle}</p>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -21,24 +37,26 @@ export function BlockLibrary({ onAdd }: { onAdd: (preset: BlockPreset) => void }
           if (presets.length === 0) return null;
           return (
             <div key={group} className="mb-4 last:mb-0">
-              <p className="px-1 pb-1.5 text-xs font-medium uppercase tracking-wide text-ink-soft">
-                {group}
+              <p className="px-1 pb-1.5 text-xs font-medium uppercase tracking-wide text-ink-muted rtl:tracking-normal">
+                {groupLabels[group]}
               </p>
               <div className="space-y-0.5">
                 {presets.map((preset) => {
                   const Icon = preset.icon;
+                  const label = tr(preset.label, locale);
+                  const description = tr(preset.description, locale);
                   return (
                     <button
                       key={preset.key}
                       type="button"
                       onClick={() => onAdd(preset)}
-                      title={preset.description}
-                      className="cursor-pointer group flex w-full items-center gap-2 rounded-[0.5rem] px-2 py-2 text-left text-sm text-ink transition-colors hover:bg-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      title={description}
+                      className="cursor-pointer group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm text-ink transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
                       <Icon className="size-4 shrink-0 text-ink-soft group-hover:text-primary" aria-hidden />
-                      <span className="min-w-0 flex-1 truncate">{preset.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{label}</span>
                       <Plus
-                        className="size-4 shrink-0 text-ink-soft opacity-0 transition-opacity group-hover:opacity-100"
+                        className="size-4 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
                         aria-hidden
                       />
                     </button>

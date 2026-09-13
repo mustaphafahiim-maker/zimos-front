@@ -12,15 +12,63 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
+import { fmt, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 
 type KindFilter = "all" | StoreTemplate["kind"];
 
-const KIND_LABEL: Record<KindFilter, string> = {
-  all: "All",
-  store: "Store",
-  funnel: "Funnel",
-  landing: "Landing page",
+const KIND_ORDER: KindFilter[] = ["all", "store", "funnel", "landing"];
+
+const KIND_LABEL: Record<Locale, Record<KindFilter, string>> = {
+  en: {
+    all: "All",
+    store: "Store",
+    funnel: "Funnel",
+    landing: "Landing page",
+  },
+  ar: {
+    all: "الكل",
+    store: "متجر",
+    funnel: "مسار بيع",
+    landing: "صفحة هبوط",
+  },
 };
+
+const STRINGS = {
+  en: {
+    title: "Templates",
+    description: "Start a store, funnel or landing page from a design built for COD selling.",
+    kindFilter: "Template type",
+    categoryFilter: "Category",
+    allCategories: "All categories",
+    searchPlaceholder: "Search templates…",
+    searchLabel: "Search templates",
+    emptyTitle: "No templates match",
+    emptyDesc: "Try another kind, category or search term.",
+    free: "Free",
+    applying: "Applying…",
+    useTemplate: "Use template",
+    appliedToast: "Template applied (prototype).",
+    funnelCreatedToast: "Funnel \"{name}\" created from template.",
+    previewLabel: "Preview of {name}",
+  },
+  ar: {
+    title: "القوالب",
+    description: "ابدأ متجرًا أو مسار بيع أو صفحة هبوط من تصميم مُعدّ للبيع بالدفع عند الاستلام.",
+    kindFilter: "نوع القالب",
+    categoryFilter: "الفئة",
+    allCategories: "كل الفئات",
+    searchPlaceholder: "ابحث في القوالب…",
+    searchLabel: "البحث في القوالب",
+    emptyTitle: "لا توجد قوالب مطابقة",
+    emptyDesc: "جرّب نوعًا أو فئة أو كلمة بحث أخرى.",
+    free: "مجاني",
+    applying: "جارٍ التطبيق…",
+    useTemplate: "استخدم القالب",
+    appliedToast: "تم تطبيق القالب (نموذج أولي).",
+    funnelCreatedToast: "تم إنشاء مسار البيع \"{name}\" من القالب.",
+    previewLabel: "معاينة {name}",
+  },
+} satisfies Messages;
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -39,10 +87,10 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 }
 
 /** A CSS-only mock of the page the template produces. */
-function TemplatePreview({ t }: { t: StoreTemplate }) {
+function TemplatePreview({ t, label }: { t: StoreTemplate; label: string }) {
   const blocks = t.kind === "store" ? ["grid", "grid", "grid", "grid", "grid", "grid"] : t.kind === "funnel" ? ["hero", "cta", "row", "row", "cta"] : ["hero", "row", "row", "cta"];
   return (
-    <div dir={t.rtl ? "rtl" : "ltr"} className="relative aspect-[4/3] w-full overflow-hidden rounded-t-[var(--radius-card)] bg-paper">
+    <div role="img" aria-label={label} dir={t.rtl ? "rtl" : "ltr"} className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-paper">
       <div className="flex h-5 items-center justify-between px-2" style={{ background: t.primaryColor }}>
         <span className="h-1.5 w-8 rounded-full bg-white/80" />
         <span className="flex gap-1">
@@ -85,12 +133,17 @@ function TemplatePreview({ t }: { t: StoreTemplate }) {
           )
         )}
       </div>
-      <span className="absolute bottom-2 end-2 rounded-full border border-line bg-paper-raised px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">{t.rtl ? "RTL" : "LTR"}</span>
+      <span dir="ltr" className="absolute bottom-2 end-2 rounded-full border border-line bg-paper-raised px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+        {t.rtl ? "RTL" : "LTR"}
+      </span>
     </div>
   );
 }
 
 export function TemplatesPage() {
+  const tr = useT(STRINGS);
+  const { locale } = useLocale();
+  const kindLabel = KIND_LABEL[locale];
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const toast = useToast();
@@ -118,12 +171,12 @@ export function TemplatesPage() {
     setApplying(t.id);
     try {
       if (t.kind === "store") {
-        toast.success("Template applied (prototype).");
+        toast.success(tr.appliedToast);
         navigate("/website");
         return;
       }
       const funnel = await mockApi.createFunnel(workspaceId, { name: t.name, templateId: t.id });
-      toast.success(`Funnel "${funnel.name}" created from template.`);
+      toast.success(fmt(tr.funnelCreatedToast, { name: funnel.name }));
       navigate(`/funnels/${funnel.id}`);
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -133,20 +186,20 @@ export function TemplatesPage() {
 
   return (
     <div className="max-w-6xl">
-      <PageHeader title="Templates" description="Start a store, funnel or landing page from a design built for COD selling." />
+      <PageHeader title={tr.title} description={tr.description} />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(KIND_LABEL) as KindFilter[]).map((k) => (
+        <div role="group" aria-label={tr.kindFilter} className="flex flex-wrap gap-1.5">
+          {KIND_ORDER.map((k) => (
             <Chip key={k} active={kind === k} onClick={() => setKind(k)}>
-              {KIND_LABEL[k]}
+              {kindLabel[k]}
             </Chip>
           ))}
         </div>
-        <span className="hidden h-5 w-px bg-line sm:block" />
-        <div className="flex flex-wrap gap-1.5">
+        <span className="hidden h-5 w-px bg-line sm:block" aria-hidden />
+        <div role="group" aria-label={tr.categoryFilter} className="flex flex-wrap gap-1.5">
           <Chip active={category === "all"} onClick={() => setCategory("all")}>
-            All categories
+            {tr.allCategories}
           </Chip>
           {categories.map((c) => (
             <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
@@ -154,44 +207,46 @@ export function TemplatesPage() {
             </Chip>
           ))}
         </div>
-        <div className="relative ml-auto w-full sm:w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" className="pl-9" />
+        <div className="relative w-full sm:ms-auto sm:w-64">
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr.searchPlaceholder} aria-label={tr.searchLabel} className="ps-9" />
         </div>
       </div>
 
       <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         {filtered.length === 0 ? (
-          <EmptyState icon={<LayoutGrid />} title="No templates match" description="Try another kind, category or search term." />
+          <EmptyState icon={<LayoutGrid />} title={tr.emptyTitle} description={tr.emptyDesc} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((t) => (
-              <Card key={t.id} className="flex flex-col overflow-hidden p-0">
-                <TemplatePreview t={t} />
+              <Card key={t.id} className="flex flex-col overflow-hidden rounded-2xl p-0">
+                <TemplatePreview t={t} label={fmt(tr.previewLabel, { name: t.name })} />
                 <div className="flex flex-1 flex-col gap-2 border-t border-line p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-ink">{t.name}</p>
+                      <p className="truncate font-semibold text-ink">{t.name}</p>
                       <p className="text-xs text-ink-soft">
-                        {KIND_LABEL[t.kind]} · {t.category}
+                        {kindLabel[t.kind]} · {t.category}
                       </p>
                     </div>
                     {t.isFree ? (
-                      <span className="shrink-0 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">Free</span>
+                      <span className="shrink-0 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">{tr.free}</span>
                     ) : (
-                      <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium tabular-nums text-accent-dark">{formatMoney(t.priceAmount)}</span>
+                      <bdi dir="ltr" className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium tabular-nums text-accent-dark">
+                        {formatMoney(t.priceAmount)}
+                      </bdi>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {t.tags.map((tag) => (
-                      <span key={tag} className="rounded-full border border-line px-2 py-0.5 text-[11px] text-ink-soft">
+                      <span key={tag} className="rounded-full border border-line bg-zimos-ice px-2 py-0.5 text-[11px] text-ink-soft">
                         {tag}
                       </span>
                     ))}
                   </div>
                   <div className="mt-auto pt-2">
                     <Button className="w-full" variant={t.kind === "store" ? "outline" : "default"} onClick={() => void use(t)} disabled={applying !== null}>
-                      {applying === t.id ? "Applying…" : "Use template"}
+                      {applying === t.id ? tr.applying : tr.useTemplate}
                     </Button>
                   </div>
                 </div>

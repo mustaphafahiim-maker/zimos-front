@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutTemplate, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, LayoutTemplate, Pencil, Trash2 } from "lucide-react";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import type { CreateWebsitePayload, Website, WebsiteTemplateSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -15,6 +15,82 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Website",
+    description:
+      "Pick a template to start your store's website. You can rename it now and customise it later.",
+    templatesHeading: "Templates",
+    noTemplates: "No website templates are available right now. Check back soon.",
+    modalDescription: "Preview what this template ships with, then name your site.",
+    preview: "Preview",
+    loadingTemplate: "Loading template details…",
+    templateError: "Couldn't load the template preview, but you can still create your site.",
+    templatePagesOne: "This template includes 1 page that will be copied to your site:",
+    templatePagesMany: "This template includes {n} pages that will be copied to your site:",
+    siteName: "Site name",
+    siteNameHint: "A temporary subdomain is generated from it — you can change it later.",
+    siteNamePlaceholder: "My store",
+    creating: "Creating…",
+    useTemplate: "Use this template",
+    siteCreated: 'Site "{name}" created.',
+    siteDeleted: 'Site "{name}" deleted.',
+    yourSites: "Your sites",
+    deleteSiteAria: "Delete {name}",
+    deleteSiteTitle: "Delete this site?",
+    deleteSiteConfirm: "Delete site",
+    deleteSiteBody:
+      "{name} and all of its pages, published revisions and any domain bound to it will be deleted permanently. This cannot be undone.",
+    deleteLiveWarning:
+      "This site is live right now. Deleting it takes it offline immediately — anyone visiting {subdomain} will stop seeing your store.",
+  },
+  ar: {
+    title: "الموقع",
+    description: "اختر قالبًا لبدء موقع متجرك. يمكنك تسميته الآن وتخصيصه لاحقًا.",
+    templatesHeading: "القوالب",
+    noTemplates: "لا تتوفر قوالب مواقع حاليًا. يُرجى المحاولة لاحقًا.",
+    modalDescription: "اطّلع على محتوى هذا القالب، ثم اختر اسمًا لموقعك.",
+    preview: "معاينة",
+    loadingTemplate: "جارٍ تحميل تفاصيل القالب…",
+    templateError: "تعذّر تحميل معاينة القالب، ولكن يمكنك متابعة إنشاء موقعك.",
+    templatePagesOne: "يتضمن هذا القالب صفحة واحدة ستُنسخ إلى موقعك:",
+    templatePagesMany: "عدد صفحات هذا القالب: {n}، وستُنسخ جميعها إلى موقعك:",
+    siteName: "اسم الموقع",
+    siteNameHint: "سيُنشأ منه نطاق فرعي (subdomain) مؤقت، ويمكنك تغييره لاحقًا.",
+    siteNamePlaceholder: "متجري",
+    creating: "جارٍ الإنشاء…",
+    useTemplate: "استخدام هذا القالب",
+    siteCreated: "تم إنشاء موقع «{name}».",
+    siteDeleted: "تم حذف موقع «{name}».",
+    yourSites: "مواقعك",
+    deleteSiteAria: "حذف {name}",
+    deleteSiteTitle: "حذف هذا الموقع؟",
+    deleteSiteConfirm: "حذف الموقع",
+    deleteSiteBody:
+      "سيتم حذف {name} وكل صفحاته وإصداراته المنشورة وأي نطاق مرتبط به نهائيًا. لا يمكن التراجع عن ذلك.",
+    deleteLiveWarning:
+      "هذا الموقع منشور حاليًا. حذفه سيوقفه فورًا — ولن يتمكن زوّار {subdomain} من رؤية متجرك بعد ذلك.",
+  },
+} satisfies Messages;
+
+/**
+ * Splits a "{key}" template around one placeholder so a React node (bold name,
+ * LTR hostname) can sit wherever each language's word order puts it.
+ */
+function withNode(template: string, key: string, node: ReactNode): ReactNode {
+  const token = `{${key}}`;
+  const at = template.indexOf(token);
+  if (at === -1) return template;
+  return (
+    <>
+      {template.slice(0, at)}
+      {node}
+      {template.slice(at + token.length)}
+    </>
+  );
+}
 
 /** Square-ish preview for a template card — the thumbnail, or a placeholder. */
 function TemplateThumb({ url, name }: { url: string | null; name: string }) {
@@ -31,7 +107,7 @@ function TemplateThumb({ url, name }: { url: string | null; name: string }) {
     );
   }
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center bg-primary-soft text-primary-dark">
+    <div className="flex aspect-[4/3] w-full items-center justify-center bg-zimos-ice text-primary">
       <LayoutTemplate className="size-8" aria-hidden />
     </div>
   );
@@ -44,19 +120,28 @@ function TemplateCard({
   template: WebsiteTemplateSummary;
   onSelect: () => void;
 }) {
+  const t = useT(STRINGS);
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="cursor-pointer flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-left transition-colors hover:border-primary"
+      className="group cursor-pointer flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised text-start shadow-card transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <TemplateThumb url={template.thumbnailUrl} name={template.name} />
       <div className="flex flex-1 flex-col gap-1 p-4">
-        <span className="font-medium text-ink">{template.name}</span>
+        <span dir="auto" className="font-semibold text-ink">
+          {template.name}
+        </span>
         {template.category && (
           <span className="text-xs text-ink-soft">{humanize(template.category)}</span>
         )}
-        <span className="mt-auto pt-2 text-sm font-medium text-primary">Preview →</span>
+        <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-medium text-primary">
+          {t.preview}
+          <ArrowRight
+            className="size-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+            aria-hidden
+          />
+        </span>
       </div>
     </button>
   );
@@ -76,6 +161,8 @@ function UseTemplateForm({
   template: WebsiteTemplateSummary;
   onCancel: () => void;
 }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
   const toast = useToast();
@@ -99,7 +186,7 @@ function UseTemplateForm({
     };
     try {
       const result = await apiClient.createWebsite(workspaceId, payload);
-      toast.success(`Site "${result.website.name}" created.`);
+      toast.success(fmt(t.siteCreated, { name: result.website.name }));
       navigate(`/website/${result.website.id}/edit`);
     } catch (err) {
       const fields = getFieldErrors(err);
@@ -116,32 +203,35 @@ function UseTemplateForm({
     <form onSubmit={submit} className="space-y-4">
       {formError && <Alert variant="danger">{formError}</Alert>}
 
-      <div className="rounded-[0.5rem] border border-line bg-paper px-4 py-3 text-sm">
+      <div className="rounded-xl border border-line bg-zimos-ice/50 px-4 py-3 text-sm">
         {detail.loading ? (
           <span className="flex items-center gap-2 text-ink-soft">
-            <Spinner className="size-4" /> جارٍ تحميل تفاصيل القالب…
+            <Spinner className="size-4" /> {t.loadingTemplate}
           </span>
         ) : detail.error ? (
           <span className="flex flex-wrap items-center gap-2 text-ink-soft">
-            تعذّر تحميل معاينة القالب، بس تقدر تكمّل الإنشاء عادي.
+            {t.templateError}
             <button
               type="button"
               onClick={() => detail.refresh()}
               className="cursor-pointer font-medium text-primary hover:underline"
             >
-              إعادة المحاولة
+              {c.retry}
             </button>
           </span>
         ) : (
           <>
             <p className="text-ink-soft">
-              القالب فيه {pages.length} {pages.length === 1 ? "صفحة" : "صفحات"} هتتنسخ لموقعك:
+              {pages.length === 1
+                ? t.templatePagesOne
+                : fmt(t.templatePagesMany, { n: pages.length })}
             </p>
             {pages.length > 0 && (
               <ul className="mt-1.5 flex flex-wrap gap-1.5">
                 {pages.map((p) => (
                   <li
                     key={p.path}
+                    dir="auto"
                     className="rounded-full border border-line bg-paper-raised px-2 py-0.5 text-xs text-ink-soft"
                   >
                     {p.title || p.path}
@@ -154,21 +244,22 @@ function UseTemplateForm({
       </div>
 
       <TextField
-        label="Site name"
+        label={t.siteName}
         required
+        dir="auto"
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        hint="هيتولّد منه رابط مؤقت (subdomain) تقدر تغيّره بعدين."
-        placeholder="My store"
+        hint={t.siteNameHint}
+        placeholder={t.siteNamePlaceholder}
       />
 
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button type="submit" disabled={saving || name.trim().length === 0}>
-          {saving ? "Creating…" : "Use this template"}
+          {saving ? t.creating : t.useTemplate}
         </Button>
       </div>
     </form>
@@ -180,6 +271,8 @@ function UseTemplateForm({
  * in the moments right after creating a site — a reload would strand it.
  */
 function ExistingSites() {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const sites = useAsync(() => apiClient.listWebsites(workspaceId), [workspaceId]);
@@ -199,33 +292,36 @@ function ExistingSites() {
     if (!site) return;
     await apiClient.deleteWebsite(workspaceId, site.id);
     setPendingDelete(null);
-    toast.success(`Site "${site.name}" deleted.`);
+    toast.success(fmt(t.siteDeleted, { name: site.name }));
     await sites.refresh({ silent: true });
   }
 
   return (
-    <div className="mb-8">
-      <h2 className="mb-2 font-display text-base font-medium text-ink">Your sites</h2>
-      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised">
+    <section className="mb-8">
+      <h2 className="mb-2 font-display text-base font-semibold text-ink">{t.yourSites}</h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card">
         {list.map((site) => (
           <li key={site.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink">{site.name}</p>
+              <p dir="auto" className="truncate text-sm font-semibold text-ink">
+                {site.name}
+              </p>
               <p className="truncate text-xs text-ink-soft">
-                {site.subdomain} · {humanize(site.status)}
+                <bdi dir="ltr">{site.subdomain}</bdi> · {humanize(site.status)}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button asChild size="sm" variant="outline">
                 <Link to={`/website/${site.id}/edit`}>
                   <Pencil className="size-4" aria-hidden />
-                  Edit
+                  {c.edit}
                 </Link>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label={`Delete ${site.name}`}
+                aria-label={fmt(t.deleteSiteAria, { name: site.name })}
+                title={c.delete}
                 className="text-danger hover:bg-danger-soft hover:text-danger"
                 onClick={() => setPendingDelete(site)}
               >
@@ -238,32 +334,39 @@ function ExistingSites() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete this site?"
-        confirmLabel="Delete site"
+        title={t.deleteSiteTitle}
+        confirmLabel={t.deleteSiteConfirm}
         destructive
         onCancel={() => setPendingDelete(null)}
         onConfirm={confirmDelete}
       >
         <div className="space-y-3 text-sm text-ink-soft">
           <p>
-            <span className="font-medium text-ink">{pendingDelete?.name}</span> and all of its
-            pages, published revisions and any domain bound to it will be deleted permanently.
-            This cannot be undone.
+            {withNode(
+              t.deleteSiteBody,
+              "name",
+              <bdi className="font-semibold text-ink">{pendingDelete?.name}</bdi>
+            )}
           </p>
           {pendingDelete?.status === "published" && (
             <Alert variant="danger">
-              This site is live right now. Deleting it takes it offline immediately — anyone
-              visiting <span className="font-medium">{pendingDelete.subdomain}</span> will stop
-              seeing your store.
+              {withNode(
+                t.deleteLiveWarning,
+                "subdomain",
+                <bdi dir="ltr" className="font-medium">
+                  {pendingDelete.subdomain}
+                </bdi>
+              )}
             </Alert>
           )}
         </div>
       </ConfirmDialog>
-    </div>
+    </section>
   );
 }
 
 export function WebsitePage() {
+  const t = useT(STRINGS);
   const templates = useAsync(() => apiClient.listWebsiteTemplates(), []);
 
   const [selected, setSelected] = useState<WebsiteTemplateSummary | null>(null);
@@ -272,18 +375,16 @@ export function WebsitePage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader
-        title="Website"
-        description="Pick a template to start your store's website. You can rename it now and customise it later."
-      />
+      <PageHeader title={t.title} description={t.description} />
 
       <ExistingSites />
 
+      <h2 className="mb-3 font-display text-base font-semibold text-ink">{t.templatesHeading}</h2>
       <DataState
         loading={templates.loading}
         error={templates.error}
         empty={list.length === 0}
-        emptyMessage="No website templates are available right now. Check back soon."
+        emptyMessage={t.noTemplates}
         onRetry={() => templates.refresh()}
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -301,7 +402,7 @@ export function WebsitePage() {
         open={selected !== null}
         onClose={() => setSelected(null)}
         title={selected ? selected.name : ""}
-        description="Preview what this template ships with, then name your site."
+        description={t.modalDescription}
       >
         {selected && (
           <UseTemplateForm template={selected} onCancel={() => setSelected(null)} />

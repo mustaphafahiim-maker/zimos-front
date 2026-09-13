@@ -5,19 +5,65 @@ import type { PageElement, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import {
   ELEMENT_SPECS,
   sectionElements,
   sectionLabel,
   setElementProp,
+  tr,
   type FieldSpec,
 } from "./blocks";
 import { ImageField, ImageListField } from "./ImageField";
 
+const STRINGS = {
+  en: {
+    addItem: "Add {item}",
+    itemN: "{item} {n}",
+    removeItemN: "Remove {item} {n}",
+    addQuestion: "Add question",
+    question: "Question",
+    answer: "Answer",
+    questionN: "Question {n}",
+    answerN: "Answer {n}",
+    removeQuestionN: "Remove question {n}",
+    addLink: "Add link",
+    platformN: "Platform {n}",
+    linkN: "Link {n}",
+    removeLinkN: "Remove link {n}",
+    elementsOne: "1 element",
+    elementsMany: "{n} elements",
+    closePanel: "Close panel",
+    noElements: "This section has no elements to edit.",
+    deleteSection: "Delete section",
+  },
+  ar: {
+    addItem: "إضافة {item}",
+    itemN: "{item} {n}",
+    removeItemN: "إزالة {item} {n}",
+    addQuestion: "إضافة سؤال",
+    question: "السؤال",
+    answer: "الإجابة",
+    questionN: "السؤال {n}",
+    answerN: "الإجابة {n}",
+    removeQuestionN: "إزالة السؤال {n}",
+    addLink: "إضافة رابط",
+    platformN: "المنصة {n}",
+    linkN: "الرابط {n}",
+    removeLinkN: "إزالة الرابط {n}",
+    elementsOne: "عنصر واحد",
+    elementsMany: "عدد العناصر: {n}",
+    closePanel: "إغلاق اللوحة",
+    noElements: "لا يحتوي هذا القسم على عناصر قابلة للتعديل.",
+    deleteSection: "حذف القسم",
+  },
+} satisfies Messages;
+
 /**
- * The right-hand panel. A section has no editable fields of its own — the tree
- * gives sections no props — so this walks the section's elements and renders a
- * fieldset per element from that element type's `FieldSpec[]`.
+ * The right-hand panel (left-hand in RTL). A section has no editable fields of
+ * its own — the tree gives sections no props — so this walks the section's
+ * elements and renders a fieldset per element from that element type's
+ * `FieldSpec[]`.
  */
 
 // --- prop readers: props are `unknown`, so coerce defensively --------------
@@ -105,21 +151,31 @@ function StringListEditor({
   value: string[];
   onChange: (next: string[]) => void;
 }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  // English sentence-cases the item inside "Add item"; Arabic has no case.
+  const inline = locale === "en" ? itemLabel.toLowerCase() : itemLabel;
   return (
-    <ListShell label={label} hint={hint} addLabel={`Add ${itemLabel.toLowerCase()}`} onAdd={() => onChange([...value, ""])}>
+    <ListShell
+      label={label}
+      hint={hint}
+      addLabel={fmt(t.addItem, { item: inline })}
+      onAdd={() => onChange([...value, ""])}
+    >
       <div className="space-y-2">
         {value.map((item, i) => (
           <div key={i} className="flex items-center gap-2">
             <Input
               value={item}
-              aria-label={`${itemLabel} ${i + 1}`}
+              dir="auto"
+              aria-label={fmt(t.itemN, { item: itemLabel, n: i + 1 })}
               onChange={(e) => onChange(value.map((v, j) => (j === i ? e.target.value : v)))}
             />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Remove ${itemLabel.toLowerCase()} ${i + 1}`}
+              aria-label={fmt(t.removeItemN, { item: inline, n: i + 1 })}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               <X className="size-4" aria-hidden />
@@ -142,26 +198,33 @@ function QaListEditor({
   value: QaItem[];
   onChange: (next: QaItem[]) => void;
 }) {
+  const t = useT(STRINGS);
   function patch(i: number, key: keyof QaItem, v: string) {
     onChange(value.map((item, j) => (j === i ? { ...item, [key]: v } : item)));
   }
   return (
-    <ListShell label={label} hint={hint} addLabel="Add question" onAdd={() => onChange([...value, { q: "", a: "" }])}>
+    <ListShell
+      label={label}
+      hint={hint}
+      addLabel={t.addQuestion}
+      onAdd={() => onChange([...value, { q: "", a: "" }])}
+    >
       <div className="space-y-3">
         {value.map((item, i) => (
-          <div key={i} className="space-y-2 rounded-[0.5rem] border border-line p-3">
+          <div key={i} className="space-y-2 rounded-xl border border-line bg-paper p-3">
             <div className="flex items-center gap-2">
               <Input
                 value={item.q}
-                placeholder="Question"
-                aria-label={`Question ${i + 1}`}
+                dir="auto"
+                placeholder={t.question}
+                aria-label={fmt(t.questionN, { n: i + 1 })}
                 onChange={(e) => patch(i, "q", e.target.value)}
               />
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label={`Remove question ${i + 1}`}
+                aria-label={fmt(t.removeQuestionN, { n: i + 1 })}
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
               >
                 <X className="size-4" aria-hidden />
@@ -169,8 +232,9 @@ function QaListEditor({
             </div>
             <Textarea
               value={item.a}
-              placeholder="Answer"
-              aria-label={`Answer ${i + 1}`}
+              dir="auto"
+              placeholder={t.answer}
+              aria-label={fmt(t.answerN, { n: i + 1 })}
               rows={2}
               onChange={(e) => patch(i, "a", e.target.value)}
             />
@@ -192,6 +256,7 @@ function LinkListEditor({
   value: LinkItem[];
   onChange: (next: LinkItem[]) => void;
 }) {
+  const t = useT(STRINGS);
   function patch(i: number, key: keyof LinkItem, v: string) {
     onChange(value.map((item, j) => (j === i ? { ...item, [key]: v } : item)));
   }
@@ -199,7 +264,7 @@ function LinkListEditor({
     <ListShell
       label={label}
       hint={hint}
-      addLabel="Add link"
+      addLabel={t.addLink}
       onAdd={() => onChange([...value, { platform: "", url: "" }])}
     >
       <div className="space-y-2">
@@ -207,22 +272,24 @@ function LinkListEditor({
           <div key={i} className="flex items-center gap-2">
             <Input
               value={item.platform}
+              dir="ltr"
               placeholder="instagram"
-              aria-label={`Platform ${i + 1}`}
+              aria-label={fmt(t.platformN, { n: i + 1 })}
               className="w-1/3"
               onChange={(e) => patch(i, "platform", e.target.value)}
             />
             <Input
               value={item.url}
+              dir="ltr"
               placeholder="https://…"
-              aria-label={`Link ${i + 1}`}
+              aria-label={fmt(t.linkN, { n: i + 1 })}
               onChange={(e) => patch(i, "url", e.target.value)}
             />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Remove link ${i + 1}`}
+              aria-label={fmt(t.removeLinkN, { n: i + 1 })}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               <X className="size-4" aria-hidden />
@@ -245,15 +312,19 @@ function ElementField({
   props: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const { locale } = useLocale();
   const raw = props[spec.key];
+  const label = tr(spec.label, locale);
+  const hint = spec.hint ? tr(spec.hint, locale) : undefined;
 
   switch (spec.kind) {
     case "text":
       return (
         <TextField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           placeholder={spec.placeholder}
+          dir={spec.ltr ? "ltr" : "auto"}
           value={asString(raw)}
           onChange={(e) => onChange(spec.key, e.target.value)}
         />
@@ -261,11 +332,12 @@ function ElementField({
 
     case "textarea":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Textarea
               id={id}
               rows={3}
+              dir="auto"
               placeholder={spec.placeholder}
               value={asString(raw)}
               onChange={(e) => onChange(spec.key, e.target.value)}
@@ -276,11 +348,12 @@ function ElementField({
 
     case "number":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Input
               id={id}
               type="number"
+              dir="ltr"
               min={spec.min}
               max={spec.max}
               value={asNumber(raw)}
@@ -302,15 +375,15 @@ function ElementField({
             type="checkbox"
             checked={raw === true}
             onChange={(e) => onChange(spec.key, e.target.checked)}
-            className="size-4 rounded border-line text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="size-4 rounded border-line accent-primary focus-visible:ring-2 focus-visible:ring-primary/40"
           />
-          {spec.label}
+          {label}
         </label>
       );
 
     case "select":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Select
               id={id}
@@ -325,7 +398,7 @@ function ElementField({
               <option value="">—</option>
               {spec.options.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {tr(o.label, locale)}
                 </option>
               ))}
             </Select>
@@ -336,8 +409,8 @@ function ElementField({
     case "image":
       return (
         <ImageField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asString(raw)}
           onChange={(url) => onChange(spec.key, url)}
         />
@@ -346,8 +419,8 @@ function ElementField({
     case "imageList":
       return (
         <ImageListField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asStringList(raw)}
           onChange={(urls) => onChange(spec.key, urls)}
         />
@@ -356,9 +429,9 @@ function ElementField({
     case "stringList":
       return (
         <StringListEditor
-          label={spec.label}
-          hint={spec.hint}
-          itemLabel={spec.itemLabel}
+          label={label}
+          hint={hint}
+          itemLabel={tr(spec.itemLabel, locale)}
           value={asStringList(raw)}
           onChange={(next) => onChange(spec.key, next)}
         />
@@ -367,8 +440,8 @@ function ElementField({
     case "qaList":
       return (
         <QaListEditor
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asQaList(raw)}
           onChange={(next) => onChange(spec.key, next)}
         />
@@ -377,8 +450,8 @@ function ElementField({
     case "linkList":
       return (
         <LinkListEditor
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asLinkList(raw)}
           onChange={(next) => onChange(spec.key, next)}
         />
@@ -393,15 +466,16 @@ function ElementFieldset({
   element: PageElement;
   onPropChange: (element: PageElement, key: string, value: unknown) => void;
 }) {
+  const { locale } = useLocale();
   const spec = ELEMENT_SPECS[element.type];
   const Icon = spec.icon;
   const props = element.props ?? {};
 
   return (
     <div className="space-y-3 border-b border-line px-4 py-4 last:border-b-0">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
-        <Icon className="size-3.5" aria-hidden />
-        {spec.label}
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-soft rtl:tracking-normal">
+        <Icon className="size-3.5 text-primary" aria-hidden />
+        {tr(spec.label, locale)}
       </div>
       {spec.fields.map((field) => (
         <ElementField
@@ -426,29 +500,36 @@ export function SectionInspector({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
   const elements = sectionElements(section);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0">
-          <h2 className="truncate font-display text-sm font-medium text-ink">
-            {sectionLabel(section)}
+          <h2 className="truncate font-display text-sm font-semibold text-ink">
+            {sectionLabel(section, locale)}
           </h2>
           <p className="truncate text-xs text-ink-soft">
-            {elements.length} {elements.length === 1 ? "element" : "elements"}
+            {elements.length === 1 ? t.elementsOne : fmt(t.elementsMany, { n: elements.length })}
           </p>
         </div>
-        <Button type="button" size="icon" variant="ghost" aria-label="Close panel" onClick={onClose}>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          aria-label={t.closePanel}
+          title={t.closePanel}
+          onClick={onClose}
+        >
           <X className="size-4" aria-hidden />
         </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {elements.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-soft">
-            This section has no elements to edit.
-          </p>
+          <p className="px-4 py-6 text-sm text-ink-soft">{t.noElements}</p>
         ) : (
           elements.map((element) => (
             <ElementFieldset
@@ -461,9 +542,15 @@ export function SectionInspector({
       </div>
 
       <div className="border-t border-line px-4 py-3">
-        <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="w-full text-danger hover:bg-danger-soft hover:text-danger"
+          onClick={onDelete}
+        >
           <Trash2 className="size-4" aria-hidden />
-          Delete section
+          {t.deleteSection}
         </Button>
       </div>
     </div>

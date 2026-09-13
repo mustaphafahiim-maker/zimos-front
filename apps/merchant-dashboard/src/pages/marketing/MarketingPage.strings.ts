@@ -1,0 +1,207 @@
+import type { PixelPlatform, TrackingPixel } from "@/mock/types";
+import type { Locale, Messages } from "@/i18n/LocaleContext";
+
+export type PixelEvent = TrackingPixel["events"][number];
+
+/** Locale-independent platform facts. Chip colors are the platforms' own brand colors. */
+export const PLATFORM_META: Record<PixelPlatform, { initials: string; chip: string; supportsCapi: boolean }> = {
+  facebook: { initials: "f", chip: "bg-[#1877F2] text-white", supportsCapi: true },
+  tiktok: { initials: "TT", chip: "bg-black text-white", supportsCapi: true },
+  snapchat: { initials: "S", chip: "bg-[#FFFC00] text-black", supportsCapi: true },
+  google_ads: { initials: "G", chip: "bg-gradient-to-br from-[#EA4335] to-[#34A853] text-white", supportsCapi: false },
+  ga4: { initials: "GA", chip: "bg-gradient-to-br from-[#EA4335] to-[#34A853] text-white", supportsCapi: false },
+};
+
+export const PLATFORM_TEXT: Record<Locale, Record<PixelPlatform, { name: string; idHint: string }>> = {
+  en: {
+    facebook: { name: "Facebook / Meta", idHint: "15–16 digit Pixel ID from Events Manager" },
+    tiktok: { name: "TikTok", idHint: "Pixel code, e.g. CJ8K2L3M…" },
+    snapchat: { name: "Snapchat", idHint: "Pixel ID from Snap Ads Manager" },
+    google_ads: { name: "Google Ads", idHint: "Conversion ID, e.g. AW-123456789" },
+    ga4: { name: "Google Analytics 4", idHint: "Measurement ID, e.g. G-XXXXXXXXXX" },
+  },
+  ar: {
+    facebook: { name: "Facebook / Meta", idHint: "معرّف البكسل المكوّن من 15–16 رقمًا من Events Manager" },
+    tiktok: { name: "TikTok", idHint: "كود البكسل، مثل CJ8K2L3M…" },
+    snapchat: { name: "Snapchat", idHint: "معرّف البكسل من Snap Ads Manager" },
+    google_ads: { name: "Google Ads", idHint: "معرّف التحويل، مثل AW-123456789" },
+    ga4: { name: "Google Analytics 4", idHint: "معرّف القياس، مثل G-XXXXXXXXXX" },
+  },
+};
+
+/** Event names stay Latin (they're the ad platforms' own names). */
+export const EVENT_KEYS: Array<{ key: PixelEvent; label: string }> = [
+  { key: "page_view", label: "PageView" },
+  { key: "view_content", label: "ViewContent" },
+  { key: "add_to_cart", label: "AddToCart" },
+  { key: "initiate_checkout", label: "InitiateCheckout" },
+  { key: "purchase", label: "Purchase" },
+  { key: "lead", label: "Lead" },
+];
+
+export const EVENT_LABEL: Record<PixelEvent, string> = Object.fromEntries(
+  EVENT_KEYS.map((e) => [e.key, e.label])
+) as Record<PixelEvent, string>;
+
+export const EVENT_DESCRIPTION: Record<Locale, Record<PixelEvent, string>> = {
+  en: {
+    page_view: "Page viewed",
+    view_content: "Product viewed",
+    add_to_cart: "Added to cart",
+    initiate_checkout: "Checkout started",
+    purchase: "Order placed",
+    lead: "Lead captured",
+  },
+  ar: {
+    page_view: "مشاهدة صفحة",
+    view_content: "مشاهدة منتج",
+    add_to_cart: "إضافة إلى السلة",
+    initiate_checkout: "بدء إتمام الطلب",
+    purchase: "إتمام طلب",
+    lead: "تسجيل عميل محتمل",
+  },
+};
+
+export const STRINGS = {
+  en: {
+    title: "Marketing & pixels",
+    description:
+      "Track ad performance across Facebook, TikTok, Snap and Google, with server-side events that survive browser blocking.",
+    addPixel: "Add pixel",
+    editPixel: "Edit pixel",
+    kpiEventsSent: "Events sent today",
+    kpiEventsSentHint: "Browser + server-side",
+    kpiPurchases: "Purchase events",
+    kpiPurchasesHint: "Today, across active pixels",
+    kpiQuality: "CAPI match quality",
+    kpiQualityValue: "{n} / 10",
+    kpiQualityHintNone: "Enable Conversions API to improve attribution",
+    kpiQualityHintOne: "1 pixel sending server events",
+    kpiQualityHintMany: "{n} pixels sending server events",
+    empty: "No pixels yet. Add your Facebook or TikTok pixel to start tracking.",
+    colPixel: "Pixel",
+    colPixelId: "Pixel ID",
+    colEvents: "Events",
+    colCapi: "Conversions API",
+    colLastEvent: "Last event",
+    notApplicable: "n/a",
+    serverSideOn: "Server-side on",
+    tokenSet: "Token set",
+    tokenMissing: "Token missing",
+    browserOnly: "Browser only",
+    testEvent: "Test event",
+    toastEnabled: "Pixel enabled.",
+    toastDisabled: "Pixel disabled.",
+    toastTestSent: "Test purchase event sent.",
+    toastRemoved: "Pixel removed.",
+    toastCopyFailed: "Couldn't copy — select the snippet and copy it manually.",
+    utmTitle: "UTM & attribution",
+    utmDescription: "Orders by traffic source, last 30 days. Sources come from utm_source on the landing visit.",
+    colSource: "Source",
+    colOrders: "Orders",
+    colRevenue: "Revenue",
+    colAov: "AOV",
+    scriptTitle: "Tracking script",
+    scriptDescription:
+      "Already installed on ZIMOS-hosted stores and funnels. Paste this on any external landing page to fire the same pixels.",
+    scriptNote1: "Fires PageView on load and ViewContent / AddToCart from the product buttons.",
+    scriptNote2: "Purchase events are deduplicated between browser and server using the order number.",
+    scriptNote3: "UTM parameters are stored for 30 days and attached to the order.",
+    confirmTitleNamed: "Remove “{name}”?",
+    confirmTitle: "Remove pixel?",
+    confirmDescription: "Events stop firing immediately. Your ad account keeps its historical data.",
+    confirmLabel: "Remove pixel",
+  },
+  ar: {
+    title: "التسويق والبكسل",
+    description:
+      "تابع أداء إعلاناتك على Facebook وTikTok وSnapchat وGoogle، مع أحداث تحويل من الخادم لا تتأثر بحظر المتصفحات.",
+    addPixel: "إضافة بكسل",
+    editPixel: "تعديل البكسل",
+    kpiEventsSent: "الأحداث المُرسلة اليوم",
+    kpiEventsSentHint: "من المتصفح + من الخادم",
+    kpiPurchases: "أحداث الشراء",
+    kpiPurchasesHint: "اليوم، عبر كل البكسلات النشطة",
+    kpiQuality: "جودة المطابقة في CAPI",
+    kpiQualityValue: "{n} / 10",
+    kpiQualityHintNone: "فعّل Conversions API لتحسين نسب التحويل للإعلانات",
+    kpiQualityHintOne: "بكسل واحد يرسل أحداثًا من الخادم",
+    kpiQualityHintMany: "{n} بكسل ترسل أحداثًا من الخادم",
+    empty: "لا يوجد بكسل بعد. أضف بكسل Facebook أو TikTok لبدء التتبع.",
+    colPixel: "البكسل",
+    colPixelId: "معرّف البكسل",
+    colEvents: "أحداث التحويل",
+    colCapi: "Conversions API",
+    colLastEvent: "آخر حدث",
+    notApplicable: "غير متاح",
+    serverSideOn: "مفعّل من الخادم",
+    tokenSet: "رمز الوصول مُضاف",
+    tokenMissing: "رمز الوصول غير موجود",
+    browserOnly: "من المتصفح فقط",
+    testEvent: "حدث تجريبي",
+    toastEnabled: "تم تفعيل البكسل.",
+    toastDisabled: "تم إيقاف البكسل.",
+    toastTestSent: "تم إرسال حدث شراء تجريبي.",
+    toastRemoved: "تم حذف البكسل.",
+    toastCopyFailed: "تعذّر النسخ — حدّد الكود وانسخه يدويًا.",
+    utmTitle: "UTM وإسناد الطلبات",
+    utmDescription: "الطلبات حسب مصدر الزيارات خلال آخر 30 يومًا. يُحدَّد المصدر من utm_source في زيارة صفحة الهبوط.",
+    colSource: "المصدر",
+    colOrders: "الطلبات",
+    colRevenue: "الإيرادات",
+    colAov: "متوسط قيمة الطلب",
+    scriptTitle: "كود التتبع",
+    scriptDescription:
+      "مُثبَّت تلقائيًا على المتاجر ومسارات البيع المستضافة على ZIMOS. الصقه في أي صفحة هبوط خارجية لتشغيل نفس البكسلات.",
+    scriptNote1: "يُرسل PageView عند تحميل الصفحة، وViewContent / AddToCart من أزرار المنتج.",
+    scriptNote2: "يتم منع تكرار أحداث Purchase بين المتصفح والخادم باستخدام رقم الطلب.",
+    scriptNote3: "تُحفظ معاملات UTM لمدة 30 يومًا وتُربط بالطلب.",
+    confirmTitleNamed: "حذف «{name}»؟",
+    confirmTitle: "حذف البكسل؟",
+    confirmDescription: "تتوقف الأحداث عن الإرسال فورًا. يحتفظ حسابك الإعلاني ببياناته السابقة.",
+    confirmLabel: "حذف البكسل",
+  },
+} satisfies Messages;
+
+export const FORM_STRINGS = {
+  en: {
+    platform: "Platform",
+    label: "Label",
+    labelPlaceholder: "Main FB Pixel",
+    pixelId: "Pixel ID",
+    capiLabel: "Conversions API (server-side)",
+    capiDescription: "Send events from our servers too — more accurate attribution when browsers block the pixel.",
+    accessToken: "Access token",
+    tokenPlaceholderKeep: "•••••••• (leave blank to keep the current token)",
+    tokenPlaceholderNew: "Paste the system user token",
+    tokenHint: "Stored encrypted. Generate it in Events Manager › Settings › Conversions API.",
+    eventsToSend: "Events to send",
+    errLabel: "Give the pixel a label.",
+    errPixelId: "Enter the pixel ID from your ad platform.",
+    errEvents: "Select at least one event.",
+    toastSaved: "Pixel saved.",
+    toastAdded: "Pixel added.",
+    savePixel: "Save pixel",
+    addPixel: "Add pixel",
+  },
+  ar: {
+    platform: "المنصة",
+    label: "الاسم",
+    labelPlaceholder: "بكسل Facebook الرئيسي",
+    pixelId: "معرّف البكسل",
+    capiLabel: "Conversions API (من الخادم)",
+    capiDescription: "أرسل الأحداث من خوادمنا أيضًا — لإسناد أدق للطلبات عندما تحظر المتصفحات البكسل.",
+    accessToken: "رمز الوصول (Access token)",
+    tokenPlaceholderKeep: "•••••••• (اتركه فارغًا للاحتفاظ بالرمز الحالي)",
+    tokenPlaceholderNew: "الصق رمز مستخدم النظام",
+    tokenHint: "يُحفظ مشفّرًا. أنشئه من Events Manager ثم Settings ثم Conversions API.",
+    eventsToSend: "الأحداث المُرسلة",
+    errLabel: "أدخل اسمًا للبكسل.",
+    errPixelId: "أدخل معرّف البكسل من منصتك الإعلانية.",
+    errEvents: "اختر حدثًا واحدًا على الأقل.",
+    toastSaved: "تم حفظ البكسل.",
+    toastAdded: "تمت إضافة البكسل.",
+    savePixel: "حفظ البكسل",
+    addPixel: "إضافة بكسل",
+  },
+} satisfies Messages;

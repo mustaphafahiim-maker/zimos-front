@@ -5,12 +5,66 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { formatDateTime, humanize } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
+import { useEnumLabel } from "../orderLabels";
+
+const STRINGS = {
+  en: {
+    returns: "Returns",
+    loading: "Loading returns…",
+    empty: "No returns on this order.",
+    restocked: "Restocked {date}",
+    approve: "Approve",
+    reject: "Reject",
+    restockUnits: "Restock units",
+    approvedToast: "Return approved.",
+    rejectedToast: "Return rejected.",
+    restockedToast: "Returned units added back to stock.",
+    openedToast: "Return opened.",
+    notDelivered: "A return can only be opened once the order has been delivered.",
+    openReturn: "Open a return",
+    chooseItems: "Choose at least one item and quantity to return.",
+    reason: "Reason",
+    detail: "Detail",
+    detailPlaceholder: "Optional — box crushed in transit",
+    items: "Items",
+    ordered: "(ordered {n})",
+    qtyFor: "Quantity to return for {name}",
+    opening: "Opening…",
+    submit: "Open return",
+  },
+  ar: {
+    returns: "المرتجعات",
+    loading: "جارٍ تحميل المرتجعات…",
+    empty: "لا توجد مرتجعات على هذا الطلب.",
+    restocked: "أُعيد للمخزون {date}",
+    approve: "قبول",
+    reject: "رفض",
+    restockUnits: "إعادة الوحدات للمخزون",
+    approvedToast: "تم قبول المرتجع.",
+    rejectedToast: "تم رفض المرتجع.",
+    restockedToast: "تمت إعادة الوحدات المرتجعة إلى المخزون.",
+    openedToast: "تم فتح المرتجع.",
+    notDelivered: "لا يمكن فتح مرتجع إلا بعد تسليم الطلب.",
+    openReturn: "فتح مرتجع",
+    chooseItems: "اختر منتجًا واحدًا على الأقل والكمية المراد إرجاعها.",
+    reason: "السبب",
+    detail: "التفاصيل",
+    detailPlaceholder: "اختياري — الكرتونة اتضربت أثناء الشحن",
+    items: "المنتجات",
+    ordered: "(الكمية المطلوبة {n})",
+    qtyFor: "الكمية المرتجعة من {name}",
+    opening: "جارٍ الفتح…",
+    submit: "فتح المرتجع",
+  },
+} satisfies Messages;
 
 const REASON_CODES: ReturnReasonCode[] = [
   "damaged",
@@ -28,6 +82,8 @@ interface Props {
 }
 
 export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
+  const t = useT(STRINGS);
+  const label = useEnumLabel();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const returns = useAsync(
@@ -49,7 +105,7 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
     setBusyId(ret.id);
     try {
       await apiClient.moderateReturn(workspaceId, ret.id, action);
-      toast.success(`Return ${action === "approve" ? "approved" : "rejected"}.`);
+      toast.success(action === "approve" ? t.approvedToast : t.rejectedToast);
       returns.refresh({ silent: true });
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -62,7 +118,7 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
     setBusyId(ret.id);
     try {
       await apiClient.restockReturn(workspaceId, ret.id);
-      toast.success("Returned units added back to stock.");
+      toast.success(t.restockedToast);
       returns.refresh({ silent: true });
       onOrderMaybeChanged();
     } catch (err) {
@@ -75,33 +131,33 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
   const list = returns.data ?? [];
 
   return (
-    <Card>
+    <Card className="rounded-2xl">
       <CardContent className="pt-6">
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">Returns</h2>
+        <h2 className="mb-3 font-display text-lg font-semibold text-ink">{t.returns}</h2>
 
         {returns.loading ? (
-          <Spinner className="size-5" />
+          <Spinner className="size-5" aria-label={t.loading} />
         ) : returns.error ? (
           <Alert variant="danger">{getErrorMessage(returns.error)}</Alert>
         ) : list.length === 0 ? (
-          <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
-            No returns on this order.
-          </p>
+          <EmptyState title={t.empty} />
         ) : (
           <ul className="space-y-3">
             {list.map((ret) => (
-              <li key={ret.id} className="rounded-[0.5rem] border border-line px-4 py-3">
+              <li key={ret.id} className="rounded-xl border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-ink">{humanize(ret.reason)}</span>
+                  <span className="text-sm text-ink">{label(ret.reason)}</span>
                   <StatusBadge value={ret.status} />
                 </div>
                 <div className="mt-1 text-xs text-ink-soft">
                   {ret.items
                     .map((it) => `${it.quantity}× ${itemName(it.orderItemId)}`)
-                    .join(", ")}
-                  {ret.restockedAt && <span> · Restocked {formatDateTime(ret.restockedAt)}</span>}
+                    .join("، ")}
+                  {ret.restockedAt && (
+                    <span> · {fmt(t.restocked, { date: formatDateTime(ret.restockedAt) })}</span>
+                  )}
                 </div>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {ret.status === "requested" && (
                     <>
                       <Button
@@ -109,7 +165,7 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                         onClick={() => moderate(ret, "approve")}
                         disabled={busyId === ret.id}
                       >
-                        Approve
+                        {t.approve}
                       </Button>
                       <Button
                         size="sm"
@@ -117,13 +173,13 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                         onClick={() => moderate(ret, "reject")}
                         disabled={busyId === ret.id}
                       >
-                        Reject
+                        {t.reject}
                       </Button>
                     </>
                   )}
                   {ret.status === "approved" && !ret.restockedAt && (
                     <Button size="sm" onClick={() => restock(ret)} disabled={busyId === ret.id}>
-                      Restock units
+                      {t.restockUnits}
                     </Button>
                   )}
                 </div>
@@ -136,14 +192,12 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
           <NewReturnForm
             order={order}
             onDone={() => {
-              toast.success("Return opened.");
+              toast.success(t.openedToast);
               returns.refresh({ silent: true });
             }}
           />
         ) : (
-          <p className="mt-4 border-t border-line pt-4 text-sm text-ink-soft">
-            A return can only be opened once the order has been delivered.
-          </p>
+          <p className="mt-4 border-t border-line pt-4 text-sm text-ink-soft">{t.notDelivered}</p>
         )}
       </CardContent>
     </Card>
@@ -151,6 +205,8 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
 }
 
 function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) {
+  const t = useT(STRINGS);
+  const label = useEnumLabel();
   const workspaceId = useWorkspaceId();
   const [reasonCode, setReasonCode] = useState<ReturnReasonCode>("damaged");
   const [reasonDetail, setReasonDetail] = useState("");
@@ -167,7 +223,7 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
       .map((it) => ({ orderItemId: it.id, quantity: Math.floor(Number(qty[it.id] ?? "0") || 0) }))
       .filter((l) => l.quantity > 0);
     if (items.length === 0) {
-      setFormError("Choose at least one item and quantity to return.");
+      setFormError(t.chooseItems);
       return;
     }
     setSaving(true);
@@ -191,11 +247,11 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
 
   return (
     <form onSubmit={submit} className="mt-4 space-y-3 border-t border-line pt-4">
-      <h3 className="text-sm font-medium text-ink">Open a return</h3>
+      <h3 className="text-sm font-medium text-ink">{t.openReturn}</h3>
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Reason" error={fieldErrors.reasonCode}>
+        <Field label={t.reason} error={fieldErrors.reasonCode}>
           {({ id }) => (
             <Select
               id={id}
@@ -204,7 +260,7 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
             >
               {REASON_CODES.map((r) => (
                 <option key={r} value={r}>
-                  {humanize(r)}
+                  {label(r)}
                 </option>
               ))}
             </Select>
@@ -212,24 +268,24 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
         </Field>
       </div>
 
-      <Field label="Detail" error={fieldErrors.reasonDetail}>
+      <Field label={t.detail} error={fieldErrors.reasonDetail}>
         {({ id }) => (
           <Textarea
             id={id}
             value={reasonDetail}
             onChange={(e) => setReasonDetail(e.target.value)}
-            placeholder="Optional — box crushed in transit"
+            placeholder={t.detailPlaceholder}
           />
         )}
       </Field>
 
       <div className="space-y-2">
-        <span className="text-sm font-medium text-ink-soft">Items</span>
+        <span className="text-sm font-medium text-ink-soft">{t.items}</span>
         {order.items.map((it) => (
           <div key={it.id} className="flex items-center gap-3 text-sm">
-            <span className="flex-1 text-ink">
+            <span className="min-w-0 flex-1 text-ink">
               {it.productNameSnapshot}
-              <span className="text-ink-soft"> (ordered {it.quantity})</span>
+              <span className="text-ink-soft"> {fmt(t.ordered, { n: it.quantity })}</span>
             </span>
             <input
               type="number"
@@ -238,7 +294,8 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
               value={qty[it.id] ?? ""}
               onChange={(e) => setQty((prev) => ({ ...prev, [it.id]: e.target.value }))}
               placeholder="0"
-              className="h-9 w-20 rounded-[0.5rem] border border-line bg-paper-raised px-2 text-sm"
+              aria-label={fmt(t.qtyFor, { name: it.productNameSnapshot })}
+              className="h-9 w-20 shrink-0 rounded-lg border border-line bg-paper-raised px-2 text-sm tabular-nums"
             />
           </div>
         ))}
@@ -249,7 +306,7 @@ function NewReturnForm({ order, onDone }: { order: Order; onDone: () => void }) 
 
       <div className="flex justify-end">
         <Button type="submit" size="sm" disabled={saving}>
-          {saving ? "Opening…" : "Open return"}
+          {saving ? t.opening : t.submit}
         </Button>
       </div>
     </form>

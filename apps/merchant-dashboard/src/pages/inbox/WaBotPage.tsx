@@ -8,6 +8,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatMoney } from "@/lib/format";
+import { useT, useCommon, useLocale, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Toggle } from "@/components/Toggle";
@@ -18,11 +19,148 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 
-const MATCH_LABEL: Record<WaBotRule["match"], string> = {
-  reply_1: "Reply 1",
-  reply_2: "Reply 2",
-  keyword: "Keyword",
-  any: "Any message",
+const STRINGS = {
+  en: {
+    title: "WhatsApp bot",
+    description: "Auto-confirm COD orders, answer tracking questions and hand off to a human when needed.",
+    backInbox: "Inbox",
+    toastSaved: "Bot settings saved.",
+    toastDisconnected: "WhatsApp number disconnected.",
+    toastConnected: "WhatsApp Business connected.",
+    connected: "Connected",
+    notConnected: "Not connected",
+    noNumber: "No number linked · Meta Cloud API",
+    disconnect: "Disconnect",
+    connectCta: "Connect WhatsApp Business",
+    behaviour: "Behaviour",
+    autoConfirm: "Auto confirmation",
+    autoConfirmDesc: "After every new order, send the “reply 1 to confirm / 2 to cancel” message and act on the reply.",
+    trackingReplies: "Tracking replies",
+    trackingRepliesDesc: "Answer “where is my order?” with the carrier and tracking number.",
+    handoffKeyword: "Handoff keyword",
+    handoffKeywordHint: "When the customer writes this word, the bot stops and the chat goes to an agent.",
+    outsideHours: "Outside-hours reply",
+    outsideHoursHint: "Sent once when a customer writes outside 10:00–22:00.",
+    rules: "Rules",
+    rulesHint: "Checked top to bottom: exact replies first, then keywords, then the catch-all.",
+    addRule: "Add rule",
+    colRule: "Rule",
+    colMatch: "Match",
+    colAction: "Action",
+    colResponse: "Response",
+    colHits: "Hits",
+    colOn: "On",
+    editRule: "Edit rule",
+    deleteRule: "Delete rule",
+    noRules: "No rules yet — the bot will stay silent.",
+    saveChanges: "Save changes",
+    connectDesc: "ZIMOS uses the official Meta Cloud API — no phone plugged into a laptop, no bans.",
+    step1Title: "Create a Meta Business account",
+    step1Desc: "Or pick an existing one. Your store's Facebook page must belong to it.",
+    step2Title: "Add a WhatsApp number",
+    step2Desc: "A number not currently registered on the WhatsApp app. A new SIM works; landlines with SMS work too.",
+    step3Title: "Approve the message templates",
+    step3Desc: "ZIMOS submits the confirmation, tracking and review templates for you. Approval usually takes under an hour.",
+    pricingNote: "Conversation pricing is billed by Meta directly (~0.5 EGP per confirmation conversation in Egypt). ZIMOS adds no markup.",
+    continueFacebook: "Continue with Facebook",
+    deleteTitle: "Delete “{name}”?",
+    deleteTitleFallback: "Delete rule?",
+    deleteDesc: "The bot will stop responding to messages this rule matched. Remember to save afterwards.",
+    errName: "Give the rule a name.",
+    errKeyword: "Enter the keyword to look for.",
+    errResponse: "Write the bot's reply.",
+    name: "Name",
+    whenCustomerSends: "When the customer sends",
+    optReply1: "Exactly “1”",
+    optReply2: "Exactly “2”",
+    optKeyword: "A message containing a keyword",
+    optAny: "Anything else",
+    keyword: "Keyword",
+    then: "Then",
+    reply: "Reply",
+    saveRule: "Save rule",
+    simulator: "Simulator",
+    simSubtitle: "Bot · test mode",
+    ruleLabel: "rule: {name}",
+    handoffRuleName: "Handoff keyword",
+    noRuleMatched: "(no rule matched — the bot stays silent and the chat opens for an agent)",
+    customerSends: "Customer sends…",
+    send: "Send",
+    simHint: "Try “1”, “2”, “فين طلبي” or “{kw}”. Uses your unsaved rules.",
+  },
+  ar: {
+    title: "بوت WhatsApp",
+    description: "تأكيد تلقائي لطلبات الدفع عند الاستلام، والرد على أسئلة تتبع الشحنة، وتحويل المحادثة لموظف عند الحاجة.",
+    backInbox: "صندوق الوارد",
+    toastSaved: "تم حفظ إعدادات البوت.",
+    toastDisconnected: "تم فصل رقم WhatsApp.",
+    toastConnected: "تم ربط WhatsApp Business.",
+    connected: "متصل",
+    notConnected: "غير متصل",
+    noNumber: "لا يوجد رقم مربوط · Meta Cloud API",
+    disconnect: "فصل",
+    connectCta: "ربط WhatsApp Business",
+    behaviour: "السلوك",
+    autoConfirm: "التأكيد التلقائي",
+    autoConfirmDesc: "بعد كل طلب جديد، تُرسل رسالة «رد بـ 1 للتأكيد / 2 للإلغاء» ويُنفَّذ الإجراء حسب رد العميل.",
+    trackingReplies: "ردود التتبع",
+    trackingRepliesDesc: "الرد على «فين طلبي؟» باسم شركة الشحن ورقم التتبع.",
+    handoffKeyword: "كلمة التحويل لموظف",
+    handoffKeywordHint: "عندما يكتب العميل هذه الكلمة، يتوقف البوت وتُحوَّل المحادثة إلى موظف.",
+    outsideHours: "الرد خارج ساعات العمل",
+    outsideHoursHint: "يُرسل مرة واحدة عندما يراسلك العميل خارج الفترة من 10:00 إلى 22:00.",
+    rules: "القواعد",
+    rulesHint: "تُفحص من الأعلى إلى الأسفل: الردود المطابقة تمامًا أولًا، ثم الكلمات المفتاحية، ثم القاعدة العامة.",
+    addRule: "إضافة قاعدة",
+    colRule: "القاعدة",
+    colMatch: "شرط المطابقة",
+    colAction: "الإجراء",
+    colResponse: "الرد",
+    colHits: "مرات التنفيذ",
+    colOn: "مفعّلة",
+    editRule: "تعديل القاعدة",
+    deleteRule: "حذف القاعدة",
+    noRules: "لا توجد قواعد بعد — لن يرد البوت على أي رسالة.",
+    saveChanges: "حفظ التغييرات",
+    connectDesc: "يستخدم ZIMOS واجهة Meta Cloud API الرسمية — بدون هاتف متصل بجهاز كمبيوتر، وبدون خطر الحظر.",
+    step1Title: "أنشئ حساب Meta Business",
+    step1Desc: "أو اختر حسابًا موجودًا. يجب أن تكون صفحة متجرك على Facebook تابعة له.",
+    step2Title: "أضف رقم WhatsApp",
+    step2Desc: "رقم غير مسجّل حاليًا على تطبيق WhatsApp. يمكن استخدام شريحة جديدة، أو خط أرضي يستقبل رسائل SMS.",
+    step3Title: "اعتماد قوالب الرسائل",
+    step3Desc: "يرسل ZIMOS قوالب التأكيد والتتبع وطلب التقييم للمراجعة نيابةً عنك. الاعتماد يستغرق عادةً أقل من ساعة.",
+    pricingNote: "تحاسبك Meta مباشرةً على المحادثات (حوالي 0.5 جنيه لكل محادثة تأكيد في مصر). لا يضيف ZIMOS أي رسوم إضافية.",
+    continueFacebook: "المتابعة عبر Facebook",
+    deleteTitle: "حذف «{name}»؟",
+    deleteTitleFallback: "حذف القاعدة؟",
+    deleteDesc: "سيتوقف البوت عن الرد على الرسائل التي كانت تطابق هذه القاعدة. لا تنسَ الحفظ بعد ذلك.",
+    errName: "أدخل اسمًا للقاعدة.",
+    errKeyword: "أدخل الكلمة المفتاحية المطلوب البحث عنها.",
+    errResponse: "اكتب رد البوت.",
+    name: "الاسم",
+    whenCustomerSends: "عندما يرسل العميل",
+    optReply1: "«1» بالضبط",
+    optReply2: "«2» بالضبط",
+    optKeyword: "رسالة تحتوي على كلمة مفتاحية",
+    optAny: "أي رسالة أخرى",
+    keyword: "الكلمة المفتاحية",
+    then: "ثم",
+    reply: "الرد",
+    saveRule: "حفظ القاعدة",
+    simulator: "المحاكي",
+    simSubtitle: "البوت · وضع التجربة",
+    ruleLabel: "القاعدة: {name}",
+    handoffRuleName: "كلمة التحويل لموظف",
+    noRuleMatched: "(لا توجد قاعدة مطابقة — لن يرد البوت وستُفتح المحادثة لموظف)",
+    customerSends: "رسالة العميل…",
+    send: "إرسال",
+    simHint: "جرّب «1» أو «2» أو «فين طلبي» أو «{kw}». يستخدم القواعد غير المحفوظة.",
+  },
+} satisfies Messages;
+
+const MATCH_LABEL: Record<Locale, Record<WaBotRule["match"], string>> = {
+  en: { reply_1: "Reply 1", reply_2: "Reply 2", keyword: "Keyword", any: "Any message" },
+  ar: { reply_1: "الرد 1", reply_2: "الرد 2", keyword: "كلمة مفتاحية", any: "أي رسالة" },
 };
 
 const MATCH_TONE: Record<WaBotRule["match"], string> = {
@@ -32,13 +170,24 @@ const MATCH_TONE: Record<WaBotRule["match"], string> = {
   any: "bg-paper text-ink-soft border border-line",
 };
 
-const ACTION_LABEL: Record<WaBotRule["action"], string> = {
-  confirm_order: "Confirm order",
-  cancel_order: "Cancel order",
-  send_tracking: "Send tracking",
-  handoff_agent: "Hand off to agent",
-  send_text: "Send text",
+const ACTION_LABEL: Record<Locale, Record<WaBotRule["action"], string>> = {
+  en: {
+    confirm_order: "Confirm order",
+    cancel_order: "Cancel order",
+    send_tracking: "Send tracking",
+    handoff_agent: "Hand off to agent",
+    send_text: "Send text",
+  },
+  ar: {
+    confirm_order: "تأكيد الطلب",
+    cancel_order: "إلغاء الطلب",
+    send_tracking: "إرسال رقم التتبع",
+    handoff_agent: "تحويل لموظف",
+    send_text: "إرسال نص",
+  },
 };
+
+const ACTION_KEYS: WaBotRule["action"][] = ["confirm_order", "cancel_order", "send_tracking", "handoff_agent", "send_text"];
 
 const ACTION_TONE: Record<WaBotRule["action"], string> = {
   confirm_order: "bg-success-soft text-success",
@@ -50,16 +199,19 @@ const ACTION_TONE: Record<WaBotRule["action"], string> = {
 
 const VARIABLES = ["{{customer.firstName}}", "{{order.number}}", "{{order.total}}", "{{shipment.carrier}}", "{{shipment.tracking}}"];
 
-const SAMPLE: Record<string, string> = {
-  "customer.firstName": "أحمد",
-  "order.number": "#10482",
-  "order.total": formatMoney(129900),
-  "shipment.carrier": "Bosta",
-  "shipment.tracking": "zg8F2K1",
-};
+function sampleValues(): Record<string, string> {
+  return {
+    "customer.firstName": "أحمد",
+    "order.number": "#10482",
+    "order.total": formatMoney(129900),
+    "shipment.carrier": "Bosta",
+    "shipment.tracking": "zg8F2K1",
+  };
+}
 
 function substitute(body: string): string {
-  return body.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key: string) => SAMPLE[key] ?? `{{${key}}}`);
+  const sample = sampleValues();
+  return body.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key: string) => sample[key] ?? `{{${key}}}`);
 }
 
 /** The same matching order the backend would use: exact replies, then keywords, then the catch-all. */
@@ -80,16 +232,13 @@ export function matchRule(rules: WaBotRule[], text: string): WaBotRule | null {
 }
 
 export function WaBotPage() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const settings = useAsync(() => mockApi.getWaBot(workspaceId), [workspaceId]);
 
   return (
     <div className="max-w-6xl">
-      <PageHeader
-        title="WhatsApp bot"
-        description="Auto-confirm COD orders, answer tracking questions and hand off to a human when needed."
-        back={{ to: "/inbox", label: "Inbox" }}
-      />
+      <PageHeader title={t.title} description={t.description} back={{ to: "/inbox", label: t.backInbox }} />
       <DataState loading={settings.loading} error={settings.error} onRetry={() => settings.refresh()}>
         {settings.data && <BotEditor key={workspaceId} initial={settings.data} onSaved={(s) => settings.setData(s)} />}
       </DataState>
@@ -98,6 +247,9 @@ export function WaBotPage() {
 }
 
 function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: WaBotSettings) => void }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale, intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [draft, setDraft] = useState<WaBotSettings>(initial);
@@ -121,7 +273,7 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
     try {
       await mockApi.saveWaBot(workspaceId, draft);
       onSaved(draft);
-      toast.success("Bot settings saved.");
+      toast.success(t.toastSaved);
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -134,7 +286,7 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
     setDraft(next);
     await mockApi.saveWaBot(workspaceId, next);
     onSaved(next);
-    toast.success("WhatsApp number disconnected.");
+    toast.success(t.toastDisconnected);
   }
 
   async function connect() {
@@ -143,119 +295,130 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
     await mockApi.saveWaBot(workspaceId, next);
     onSaved(next);
     setConnectOpen(false);
-    toast.success("WhatsApp Business connected.");
+    toast.success(t.toastConnected);
   }
+
+  const steps: Array<[string, string]> = [
+    [t.step1Title, t.step1Desc],
+    [t.step2Title, t.step2Desc],
+    [t.step3Title, t.step3Desc],
+  ];
 
   return (
     <div className="space-y-6">
       {/* Connection */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-full bg-[#25D366]/15 text-[#128C7E]">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper-raised p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
             <MessageCircle className="size-5" />
           </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-ink">{draft.businessName}</p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-ink" dir="auto">
+                {draft.businessName}
+              </p>
               {draft.connected ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
-                  <span className="size-1.5 rounded-full bg-success" /> Connected
+                  <span className="size-1.5 rounded-full bg-success" /> {t.connected}
                 </span>
               ) : (
-                <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">Not connected</span>
+                <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger">{t.notConnected}</span>
               )}
             </div>
-            <p className="font-mono text-xs text-ink-soft">{draft.connected ? draft.phoneNumber : "No number linked · Meta Cloud API"}</p>
+            {draft.connected ? (
+              <p className="font-mono text-xs text-ink-soft">
+                <bdi dir="ltr">{draft.phoneNumber}</bdi>
+              </p>
+            ) : (
+              <p className="text-xs text-ink-soft">{t.noNumber}</p>
+            )}
           </div>
         </div>
         {draft.connected ? (
           <Button variant="outline" size="sm" onClick={disconnect}>
-            Disconnect
+            {t.disconnect}
           </Button>
         ) : (
           <Button size="sm" onClick={() => setConnectOpen(true)}>
-            Connect WhatsApp Business
+            {t.connectCta}
           </Button>
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
           {/* Master toggles */}
-          <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised">
+          <div className="rounded-2xl border border-line bg-paper-raised">
             <div className="border-b border-line px-4 py-3">
-              <p className="text-sm font-medium text-ink">Behaviour</p>
+              <p className="text-sm font-medium text-ink">{t.behaviour}</p>
             </div>
             <div className="space-y-4 p-4">
-              <Toggle
-                label="Auto confirmation"
-                description="After every new order, send the “reply 1 to confirm / 2 to cancel” message and act on the reply."
-                checked={draft.confirmationEnabled}
-                onChange={(v) => set("confirmationEnabled", v)}
-              />
-              <Toggle label="Tracking replies" description="Answer “where is my order?” with the carrier and tracking number." checked={draft.trackingRepliesEnabled} onChange={(v) => set("trackingRepliesEnabled", v)} />
+              <Toggle label={t.autoConfirm} description={t.autoConfirmDesc} checked={draft.confirmationEnabled} onChange={(v) => set("confirmationEnabled", v)} />
+              <Toggle label={t.trackingReplies} description={t.trackingRepliesDesc} checked={draft.trackingRepliesEnabled} onChange={(v) => set("trackingRepliesEnabled", v)} />
               <div className="grid gap-4 sm:grid-cols-2">
-                <TextField label="Handoff keyword" hint="When the customer writes this word, the bot stops and the chat goes to an agent." value={draft.handoffKeyword} onChange={(e) => set("handoffKeyword", e.target.value)} dir="auto" />
+                <TextField label={t.handoffKeyword} hint={t.handoffKeywordHint} value={draft.handoffKeyword} onChange={(e) => set("handoffKeyword", e.target.value)} dir="auto" />
               </div>
-              <Field label="Outside-hours reply" hint="Sent once when a customer writes outside 10:00–22:00.">
+              <Field label={t.outsideHours} hint={t.outsideHoursHint}>
                 {({ id }) => <Textarea id={id} rows={2} dir="auto" value={draft.outsideHoursReply} onChange={(e) => set("outsideHoursReply", e.target.value)} />}
               </Field>
             </div>
           </div>
 
           {/* Rules */}
-          <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-ink">Rules</p>
-                <p className="text-xs text-ink-soft">Checked top to bottom: exact replies first, then keywords, then the catch-all.</p>
+          <div className="rounded-2xl border border-line bg-paper-raised">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">{t.rules}</p>
+                <p className="text-xs text-ink-soft">{t.rulesHint}</p>
               </div>
               <Button size="sm" variant="outline" onClick={() => setEditing({ rule: null })}>
-                <Plus /> Add rule
+                <Plus /> {t.addRule}
               </Button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-sm">
                 <thead>
-                  <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
-                    <th className="px-4 py-2.5 font-medium">Rule</th>
-                    <th className="px-4 py-2.5 font-medium">Match</th>
-                    <th className="px-4 py-2.5 font-medium">Action</th>
-                    <th className="px-4 py-2.5 font-medium">Response</th>
-                    <th className="px-4 py-2.5 font-medium">Hits</th>
-                    <th className="px-4 py-2.5 font-medium">On</th>
-                    <th className="px-4 py-2.5 font-medium" />
+                  <tr className="border-b border-line text-start text-xs uppercase tracking-wide text-ink-soft">
+                    <th className="px-4 py-2.5 text-start font-medium">{t.colRule}</th>
+                    <th className="px-4 py-2.5 text-start font-medium">{t.colMatch}</th>
+                    <th className="px-4 py-2.5 text-start font-medium">{t.colAction}</th>
+                    <th className="px-4 py-2.5 text-start font-medium">{t.colResponse}</th>
+                    <th className="px-4 py-2.5 text-end font-medium">{t.colHits}</th>
+                    <th className="px-4 py-2.5 text-start font-medium">{t.colOn}</th>
+                    <th className="px-4 py-2.5 font-medium">
+                      <span className="sr-only">{c.actions}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {draft.rules.map((r) => (
                     <tr key={r.id} className="border-b border-line last:border-0 hover:bg-paper">
-                      <td className="px-4 py-2.5 font-medium text-ink" dir="auto">
+                      <td className="px-4 py-2.5 text-start font-medium text-ink" dir="auto">
                         {r.name}
                       </td>
-                      <td className="px-4 py-2.5">
-                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", MATCH_TONE[r.match])}>{MATCH_LABEL[r.match]}</span>
+                      <td className="px-4 py-2.5 text-start">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", MATCH_TONE[r.match])}>{MATCH_LABEL[locale][r.match]}</span>
                         {r.match === "keyword" && r.keyword && (
-                          <span className="ml-1 font-mono text-xs text-ink" dir="auto">
+                          <span className="ms-1 font-mono text-xs text-ink" dir="auto">
                             “{r.keyword}”
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5">
-                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", ACTION_TONE[r.action])}>{ACTION_LABEL[r.action]}</span>
+                      <td className="px-4 py-2.5 text-start">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", ACTION_TONE[r.action])}>{ACTION_LABEL[locale][r.action]}</span>
                       </td>
-                      <td className="max-w-[260px] truncate px-4 py-2.5 text-ink-soft" dir="auto" title={r.responseText}>
+                      <td className="max-w-[260px] truncate px-4 py-2.5 text-start text-ink-soft" dir="auto" title={r.responseText}>
                         {r.responseText}
                       </td>
-                      <td className="px-4 py-2.5 tabular-nums text-ink-soft">{r.hits.toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-end tabular-nums text-ink-soft">{r.hits.toLocaleString(intlLocale)}</td>
                       <td className="px-4 py-2.5">
                         <Toggle checked={r.enabled} onChange={(v) => upsertRule({ ...r, enabled: v })} />
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                        <Button size="icon-sm" variant="ghost" aria-label="Edit rule" onClick={() => setEditing({ rule: r })}>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-end">
+                        <Button size="icon-sm" variant="ghost" aria-label={t.editRule} title={t.editRule} onClick={() => setEditing({ rule: r })}>
                           <Pencil />
                         </Button>
-                        <Button size="icon-sm" variant="ghost" aria-label="Delete rule" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
+                        <Button size="icon-sm" variant="ghost" aria-label={t.deleteRule} title={t.deleteRule} className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                           <Trash2 />
                         </Button>
                       </td>
@@ -264,7 +427,7 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
                   {draft.rules.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-sm text-ink-soft">
-                        No rules yet — the bot will stay silent.
+                        {t.noRules}
                       </td>
                     </tr>
                   )}
@@ -275,7 +438,7 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
 
           <div className="flex justify-end">
             <Button onClick={save} disabled={saving || !dirty}>
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? c.saving : t.saveChanges}
             </Button>
           </div>
         </div>
@@ -284,36 +447,32 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
       </div>
 
       {/* Connect modal */}
-      <Modal open={connectOpen} onClose={() => setConnectOpen(false)} title="Connect WhatsApp Business" description="Zimos uses the official Meta Cloud API — no phone plugged into a laptop, no bans.">
+      <Modal open={connectOpen} onClose={() => setConnectOpen(false)} title={t.connectCta} description={t.connectDesc}>
         <ol className="space-y-3">
-          {[
-            ["Create a Meta Business account", "Or pick an existing one. Your store's Facebook page must belong to it."],
-            ["Add a WhatsApp number", "A number not currently registered on the WhatsApp app. A new SIM works; landlines with SMS work too."],
-            ["Approve the message templates", "Zimos submits the confirmation, tracking and review templates for you. Approval usually takes under an hour."],
-          ].map(([t, d], i) => (
-            <li key={t} className="flex gap-3">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-medium text-primary-dark">{i + 1}</span>
-              <div>
-                <p className="text-sm font-medium text-ink">{t}</p>
-                <p className="text-xs text-ink-soft">{d}</p>
+          {steps.map(([title, desc], i) => (
+            <li key={title} className="flex gap-3">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-medium tabular-nums text-primary-dark">{i + 1}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">{title}</p>
+                <p className="text-xs text-ink-soft">{desc}</p>
               </div>
             </li>
           ))}
         </ol>
         <Alert variant="info" className="mt-4 text-xs">
-          Conversation pricing is billed by Meta directly (~0.5 EGP per confirmation conversation in Egypt). Zimos adds no markup.
+          {t.pricingNote}
         </Alert>
-        <div className="mt-4 flex justify-end gap-3">
+        <div className="mt-4 flex flex-wrap justify-end gap-3">
           <Button variant="outline" onClick={() => setConnectOpen(false)}>
-            Cancel
+            {c.cancel}
           </Button>
-          <Button onClick={connect} className="bg-[#1877F2] text-white hover:bg-[#1877F2]/85">
-            <ExternalLink /> Continue with Facebook
+          <Button onClick={connect}>
+            <ExternalLink className="rtl:-scale-x-100" /> {t.continueFacebook}
           </Button>
         </div>
       </Modal>
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing?.rule ? "Edit rule" : "Add rule"} className="max-w-2xl">
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing?.rule ? t.editRule : t.addRule} className="max-w-2xl">
         {editing && (
           <RuleForm
             key={editing.rule?.id ?? "new"}
@@ -329,9 +488,9 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
 
       <ConfirmDialog
         open={deleting !== null}
-        title={deleting ? `Delete "${deleting.name}"?` : "Delete rule?"}
-        description="The bot will stop responding to messages this rule matched. Remember to save afterwards."
-        confirmLabel="Delete rule"
+        title={deleting ? fmt(t.deleteTitle, { name: deleting.name }) : t.deleteTitleFallback}
+        description={t.deleteDesc}
+        confirmLabel={t.deleteRule}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={() => {
@@ -346,6 +505,9 @@ function BotEditor({ initial, onSaved }: { initial: WaBotSettings; onSaved: (s: 
 // --------------------------------------------------------------- Rule form --
 
 function RuleForm({ existing, onSave, onCancel }: { existing: WaBotRule | null; onSave: (r: WaBotRule) => void; onCancel: () => void }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
   const [name, setName] = useState(existing?.name ?? "");
   const [match, setMatch] = useState<WaBotRule["match"]>(existing?.match ?? "keyword");
   const [keyword, setKeyword] = useState(existing?.keyword ?? "");
@@ -371,9 +533,9 @@ function RuleForm({ existing, onSave, onCancel }: { existing: WaBotRule | null; 
   function submit(e: FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = "Give the rule a name.";
-    if (match === "keyword" && !keyword.trim()) errs.keyword = "Enter the keyword to look for.";
-    if (!responseText.trim()) errs.response = "Write the bot's reply.";
+    if (!name.trim()) errs.name = t.errName;
+    if (match === "keyword" && !keyword.trim()) errs.keyword = t.errKeyword;
+    if (!responseText.trim()) errs.response = t.errResponse;
     setErrors(errs);
     if (Object.keys(errs).length) return;
     onSave({
@@ -390,26 +552,26 @@ function RuleForm({ existing, onSave, onCancel }: { existing: WaBotRule | null; 
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <TextField label="Name" required value={name} onChange={(e) => setName(e.target.value)} error={errors.name} placeholder="فين طلبي" dir="auto" autoFocus />
+      <TextField label={t.name} required value={name} onChange={(e) => setName(e.target.value)} error={errors.name} placeholder="فين طلبي" dir="auto" autoFocus />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="When the customer sends" required>
+        <Field label={t.whenCustomerSends} required>
           {({ id }) => (
             <Select id={id} value={match} onChange={(e) => setMatch(e.target.value as WaBotRule["match"])}>
-              <option value="reply_1">Exactly “1”</option>
-              <option value="reply_2">Exactly “2”</option>
-              <option value="keyword">A message containing a keyword</option>
-              <option value="any">Anything else</option>
+              <option value="reply_1">{t.optReply1}</option>
+              <option value="reply_2">{t.optReply2}</option>
+              <option value="keyword">{t.optKeyword}</option>
+              <option value="any">{t.optAny}</option>
             </Select>
           )}
         </Field>
-        {match === "keyword" && <TextField label="Keyword" required value={keyword} onChange={(e) => setKeyword(e.target.value)} error={errors.keyword} placeholder="فين" dir="auto" />}
+        {match === "keyword" && <TextField label={t.keyword} required value={keyword} onChange={(e) => setKeyword(e.target.value)} error={errors.keyword} placeholder="فين" dir="auto" />}
       </div>
-      <Field label="Then">
+      <Field label={t.then}>
         {({ id }) => (
           <Select id={id} value={action} onChange={(e) => setAction(e.target.value as WaBotRule["action"])}>
-            {(Object.keys(ACTION_LABEL) as WaBotRule["action"][]).map((a) => (
+            {ACTION_KEYS.map((a) => (
               <option key={a} value={a}>
-                {ACTION_LABEL[a]}
+                {ACTION_LABEL[locale][a]}
               </option>
             ))}
           </Select>
@@ -417,9 +579,9 @@ function RuleForm({ existing, onSave, onCancel }: { existing: WaBotRule | null; 
       </Field>
       <div className="space-y-1.5">
         <Label>
-          Reply <span className="text-danger">*</span>
+          {t.reply} <span className="text-danger">*</span>
         </Label>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1" dir="ltr">
           {VARIABLES.map((v) => (
             <button key={v} type="button" onClick={() => insertVariable(v)} className="rounded-full border border-line bg-paper-raised px-2 py-0.5 font-mono text-[11px] text-ink-soft transition-colors hover:border-primary/40 hover:text-primary">
               {v}
@@ -429,11 +591,11 @@ function RuleForm({ existing, onSave, onCancel }: { existing: WaBotRule | null; 
         <Textarea ref={bodyRef} rows={3} dir="auto" value={responseText} onChange={(e) => setResponseText(e.target.value)} className={cn(errors.response && "border-danger")} placeholder="طلبك مع {{shipment.carrier}} 🚚" />
         {errors.response && <p className="text-xs font-medium text-danger">{errors.response}</p>}
       </div>
-      <div className="flex justify-end gap-3 pt-1">
+      <div className="flex flex-wrap justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c.cancel}
         </Button>
-        <Button type="submit">{existing ? "Save rule" : "Add rule"}</Button>
+        <Button type="submit">{existing ? t.saveRule : t.addRule}</Button>
       </div>
     </form>
   );
@@ -449,8 +611,9 @@ interface SimMessage {
 }
 
 function Simulator({ rules, handoffKeyword }: { rules: WaBotRule[]; handoffKeyword: string }) {
+  const t = useT(STRINGS);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<SimMessage[]>([{ id: "welcome", direction: "out", body: substitute("أهلاً {{customer.firstName}} 👋 وصلنا طلبك رقم {{order.number}}. رد بـ 1 لتأكيد الطلب أو 2 للإلغاء."), ruleName: null }]);
+  const [messages, setMessages] = useState<SimMessage[]>(() => [{ id: "welcome", direction: "out", body: substitute("أهلاً {{customer.firstName}} 👋 وصلنا طلبك رقم {{order.number}}. رد بـ 1 لتأكيد الطلب أو 2 للإلغاء."), ruleName: null }]);
 
   function send(e: FormEvent) {
     e.preventDefault();
@@ -460,45 +623,56 @@ function Simulator({ rules, handoffKeyword }: { rules: WaBotRule[]; handoffKeywo
     const handoff = handoffKeyword.trim() && text.toLowerCase().includes(handoffKeyword.trim().toLowerCase());
     const rule = matchRule(rules, text);
     if (rule) next.push({ id: uid(), direction: "out", body: substitute(rule.responseText), ruleName: rule.name });
-    else if (handoff) next.push({ id: uid(), direction: "out", body: "ثواني وهيرد عليك حد من الفريق 🙏", ruleName: "Handoff keyword" });
-    else next.push({ id: uid(), direction: "out", body: "(no rule matched — the bot stays silent and the chat opens for an agent)", ruleName: null });
+    else if (handoff) next.push({ id: uid(), direction: "out", body: "ثواني وهيرد عليك حد من الفريق 🙏", ruleName: t.handoffRuleName });
+    else next.push({ id: uid(), direction: "out", body: t.noRuleMatched, ruleName: null });
     setMessages((m) => [...m, ...next]);
     setInput("");
   }
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Simulator</p>
+    <div className="min-w-0 space-y-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.simulator}</p>
       <div className="mx-auto w-full max-w-[300px] rounded-[2rem] border-[6px] border-ink/80 bg-ink/80 p-1 shadow-xl">
-        <div className="flex h-[460px] flex-col overflow-hidden rounded-[1.6rem] bg-[#ECE5DD]">
-          <div className="flex items-center gap-2 bg-[#075E54] px-3 py-2 text-white">
+        <div className="flex h-[460px] flex-col overflow-hidden rounded-[1.6rem] bg-zimos-ice">
+          <div className="flex items-center gap-2 bg-primary px-3 py-2 text-white">
             <div className="flex size-7 items-center justify-center rounded-full bg-white/30">
               <Bot className="size-4" />
             </div>
             <div className="leading-tight">
               <p className="text-xs font-semibold">EgyStore</p>
-              <p className="text-[10px] opacity-80">Bot · test mode</p>
+              <p className="text-[10px] opacity-80">{t.simSubtitle}</p>
             </div>
           </div>
           <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
             {messages.map((m) => (
               <div key={m.id} className={cn("flex", m.direction === "out" ? "justify-start" : "justify-end")}>
-                <div className={cn("max-w-[88%] rounded-lg px-2.5 py-1.5 text-[12px] leading-snug text-black shadow-sm", m.direction === "out" ? "bg-white" : "bg-[#DCF8C6]")} dir="auto">
-                  {m.ruleName && <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wide text-black/50">rule: {m.ruleName}</p>}
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                <div
+                  className={cn(
+                    "max-w-[88%] rounded-2xl px-2.5 py-1.5 text-[12px] leading-snug shadow-sm",
+                    m.direction === "out" ? "rounded-ss-sm bg-paper-raised text-ink" : "rounded-ee-sm bg-primary text-white",
+                  )}
+                >
+                  {m.ruleName && (
+                    <p className="mb-0.5 text-[9px] font-medium uppercase tracking-wide text-ink-muted" dir="auto">
+                      {fmt(t.ruleLabel, { name: m.ruleName })}
+                    </p>
+                  )}
+                  <p className="whitespace-pre-wrap break-words" dir="auto">
+                    {m.body}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-          <form onSubmit={send} className="flex items-center gap-2 border-t border-black/5 bg-white/70 px-2 py-2">
-            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Customer sends…" dir="auto" className="h-8 flex-1 rounded-full bg-white text-xs" />
-            <button type="submit" aria-label="Send" className="flex size-8 items-center justify-center rounded-full bg-[#25D366] text-white">
-              <Send className="size-4" />
+          <form onSubmit={send} className="flex items-center gap-2 border-t border-line bg-paper-raised/80 px-2 py-2">
+            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={t.customerSends} dir="auto" className="h-8 min-w-0 flex-1 rounded-full bg-paper text-xs" />
+            <button type="submit" aria-label={t.send} className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90">
+              <Send className="size-4 rtl:-scale-x-100" />
             </button>
           </form>
         </div>
       </div>
-      <p className="text-xs text-ink-soft">Try “1”, “2”, “فين طلبي” or “{handoffKeyword || "موظف"}”. Uses your unsaved rules.</p>
+      <p className="text-xs text-ink-soft">{fmt(t.simHint, { kw: handoffKeyword || "موظف" })}</p>
     </div>
   );
 }

@@ -11,22 +11,89 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatAddress, formatMoney } from "@/lib/format";
+import { useT, useCommon, useLocale, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 
+const STRINGS = {
+  en: {
+    title: "Confirmation queue",
+    description: "Call each customer to confirm their order before it moves to fulfilment.",
+    empty: "No orders waiting for confirmation right now 🎉",
+    itemsOne: "1 item",
+    itemsTwo: "{n} items",
+    itemsFew: "{n} items",
+    itemsMany: "{n} items",
+    attemptsOne: "1 previous attempt",
+    attemptsTwo: "{n} previous attempts",
+    attemptsFew: "{n} previous attempts",
+    attemptsMany: "{n} previous attempts",
+    unnamed: "Unnamed customer",
+    noPhone: "No phone number",
+    claiming: "Claiming…",
+    claim: "Claim & call",
+    rejectionReason: "Rejection reason",
+    rejectionPlaceholder: "Customer changed their mind",
+    notes: "Notes",
+    notesPlaceholder: "Anything worth recording from the call (optional).",
+    saveOutcome: "Save outcome",
+    toastMarked: "{order} marked {outcome}.",
+  },
+  ar: {
+    title: "قائمة تأكيد الطلبات",
+    description: "اتصل بكل عميل لتأكيد طلبه قبل انتقاله إلى التجهيز والشحن.",
+    empty: "لا توجد طلبات بانتظار التأكيد الآن 🎉",
+    itemsOne: "منتج واحد",
+    itemsTwo: "منتجان",
+    itemsFew: "{n} منتجات",
+    itemsMany: "{n} منتج",
+    attemptsOne: "محاولة سابقة واحدة",
+    attemptsTwo: "محاولتان سابقتان",
+    attemptsFew: "{n} محاولات سابقة",
+    attemptsMany: "{n} محاولة سابقة",
+    unnamed: "عميل بدون اسم",
+    noPhone: "لا يوجد رقم هاتف",
+    claiming: "جارٍ الاستلام…",
+    claim: "استلام والاتصال",
+    rejectionReason: "سبب الرفض",
+    rejectionPlaceholder: "العميل غيّر رأيه",
+    notes: "ملاحظات",
+    notesPlaceholder: "أي تفاصيل مهمة من المكالمة (اختياري).",
+    saveOutcome: "حفظ النتيجة",
+    toastMarked: "{order}: {outcome}.",
+  },
+} satisfies Messages;
+
+type Strings = (typeof STRINGS)["en"];
+
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
 
-const OUTCOME_LABEL: Record<ConfirmationOutcome, string> = {
-  confirmed: "Confirmed",
-  rejected: "Rejected",
-  unreachable: "Unreachable",
-  postponed: "Postponed",
+const OUTCOME_LABEL: Record<Locale, Record<ConfirmationOutcome, string>> = {
+  en: {
+    confirmed: "Confirmed",
+    rejected: "Rejected",
+    unreachable: "Unreachable",
+    postponed: "Postponed",
+  },
+  ar: {
+    confirmed: "تم التأكيد",
+    rejected: "مرفوض",
+    unreachable: "تعذّر الوصول",
+    postponed: "مؤجل",
+  },
 };
 
+/** Picks the right plural form (Arabic has one / two / few (3–10) / many). */
+function plural(n: number, t: Strings, base: "items" | "attempts"): string {
+  const form = n === 1 ? "One" : n === 2 ? "Two" : n >= 3 && n <= 10 ? "Few" : "Many";
+  return fmt(t[`${base}${form}` as const], { n });
+}
+
 export function ConfirmationQueuePage() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const queue = useAsync(
     () => apiClient.listConfirmationQueue(workspaceId, { status: "queued", limit: 200 }),
@@ -35,25 +102,22 @@ export function ConfirmationQueuePage() {
   const tasks = queue.data ?? [];
 
   function patchTask(updated: ConfirmationTask) {
-    queue.setData((prev) => (prev ?? []).map((t) => (t.id === updated.id ? updated : t)));
+    queue.setData((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)));
   }
 
   function removeTask(taskId: string) {
-    queue.setData((prev) => (prev ?? []).filter((t) => t.id !== taskId));
+    queue.setData((prev) => (prev ?? []).filter((x) => x.id !== taskId));
   }
 
   return (
-    <div className="max-w-3xl">
-      <PageHeader
-        title="Confirmation Queue"
-        description="Call each customer to confirm their order before it moves to fulfilment."
-      />
+    <div className="min-w-0 max-w-3xl">
+      <PageHeader title={t.title} description={t.description} />
 
       <DataState
         loading={queue.loading}
         error={queue.error}
         empty={tasks.length === 0}
-        emptyMessage="لا يوجد أوردرات مستنية تأكيد دلوقتي 🎉"
+        emptyMessage={t.empty}
         onRetry={() => queue.refresh()}
       >
         <div className="space-y-4">
@@ -80,6 +144,9 @@ function ConfirmationCard({
   onClaimed: (task: ConfirmationTask) => void;
   onResolved: (taskId: string) => void;
 }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const { order } = task;
@@ -117,7 +184,8 @@ function ConfirmationCard({
       if (notes.trim()) payload.notes = notes.trim();
       if (outcome === "rejected") payload.rejectionReason = rejectionReason.trim();
       await apiClient.recordConfirmationOutcome(workspaceId, task.id, payload);
-      toast.success(`${order.orderNumber} marked ${OUTCOME_LABEL[outcome].toLowerCase()}.`);
+      const label = OUTCOME_LABEL[locale][outcome];
+      toast.success(fmt(t.toastMarked, { order: order.orderNumber, outcome: locale === "en" ? label.toLowerCase() : label }));
       onResolved(task.id);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -126,46 +194,50 @@ function ConfirmationCard({
   }
 
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="min-w-0 space-y-4 rounded-2xl p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <Link
             to={`/orders/${order.id}`}
-            className="font-display text-lg font-medium text-ink hover:text-primary"
+            className="font-display text-lg font-semibold text-ink hover:text-primary"
           >
-            {order.orderNumber}
+            <bdi>{order.orderNumber}</bdi>
           </Link>
           <p className="mt-0.5 text-sm text-ink-soft">
-            {order.items.length} item{order.items.length === 1 ? "" : "s"} ·{" "}
-            {formatMoney(order.totalAmount, order.currency)}
+            {plural(order.items.length, t, "items")} ·{" "}
+            <bdi>{formatMoney(order.totalAmount, order.currency)}</bdi>
           </p>
         </div>
         {task.attemptCount > 0 && (
-          <span className="rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
-            {task.attemptCount} previous attempt{task.attemptCount === 1 ? "" : "s"}
+          <span className="rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+            {plural(task.attemptCount, t, "attempts")}
           </span>
         )}
       </div>
 
-      <div className="rounded-[0.5rem] bg-paper px-4 py-3">
-        <p className="text-sm font-medium text-ink">{contact.fullName || "Unnamed customer"}</p>
-        <p className="mt-0.5 font-display text-xl font-medium text-ink">
+      <div className="rounded-lg bg-paper px-4 py-3">
+        <p className="text-sm font-medium text-ink" dir="auto">
+          {contact.fullName || t.unnamed}
+        </p>
+        <p className="mt-0.5 font-display text-xl font-semibold text-ink">
           {contact.phone ? (
-            <a href={`tel:${contact.phone}`} className="hover:text-primary">
+            <a href={`tel:${contact.phone}`} className="hover:text-primary" dir="ltr">
               {contact.phone}
             </a>
           ) : (
-            <span className="text-ink-soft">No phone number</span>
+            <span className="text-ink-soft">{t.noPhone}</span>
           )}
         </p>
-        <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
+        <p className="mt-1 text-sm text-ink-soft" dir="auto">
+          {formatAddress(order.shippingAddressSnapshot)}
+        </p>
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       {task.status === "queued" ? (
         <Button onClick={claim} disabled={busy}>
-          {busy ? "Claiming…" : "Claim & call"}
+          {busy ? t.claiming : t.claim}
         </Button>
       ) : (
         <div className="space-y-4">
@@ -179,34 +251,36 @@ function ConfirmationCard({
                 onClick={() => setOutcome(o)}
                 disabled={busy}
               >
-                {OUTCOME_LABEL[o]}
+                {OUTCOME_LABEL[locale][o]}
               </Button>
             ))}
           </div>
 
           {outcome === "rejected" && (
             <TextField
-              label="Rejection reason"
+              label={t.rejectionReason}
               required
+              dir="auto"
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Customer changed their mind"
+              placeholder={t.rejectionPlaceholder}
             />
           )}
 
-          <Field label="Notes">
+          <Field label={t.notes}>
             {({ id }) => (
               <Textarea
                 id={id}
+                dir="auto"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anything worth recording from the call (optional)."
+                placeholder={t.notesPlaceholder}
               />
             )}
           </Field>
 
           <Button onClick={save} disabled={busy || !outcome || rejectionMissing}>
-            {busy ? "Saving…" : "Save outcome"}
+            {busy ? c.saving : t.saveOutcome}
           </Button>
         </div>
       )}

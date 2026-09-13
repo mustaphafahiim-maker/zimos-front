@@ -54,6 +54,27 @@ function applyToDocument(locale: Locale) {
   el.dir = dirOf(locale);
 }
 
+export function intlLocaleOf(locale: Locale): string {
+  return locale === "ar" ? "ar-EG" : "en-US";
+}
+
+/**
+ * Module-level mirror of the active locale so plain (non-hook) helpers such as
+ * `formatDate` / `formatMoney` in lib/format.ts can format for the right
+ * language. Kept in sync by <LocaleProvider> synchronously during render (so
+ * the very render that switches language already formats correctly) and again
+ * in an effect.
+ */
+let activeLocale: Locale = readStored();
+
+export function getLocale(): Locale {
+  return activeLocale;
+}
+
+export function getIntlLocale(): string {
+  return intlLocaleOf(activeLocale);
+}
+
 interface LocaleState {
   locale: Locale;
   dir: Dir;
@@ -66,9 +87,17 @@ interface LocaleState {
 const LocaleContext = createContext<LocaleState | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readStored);
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    const initial = readStored();
+    activeLocale = initial;
+    return initial;
+  });
+  // Sync during render so formatters called by children in this same render
+  // pass already see the new locale.
+  activeLocale = locale;
 
   useEffect(() => {
+    activeLocale = locale;
     applyToDocument(locale);
   }, [locale]);
 
@@ -87,7 +116,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       dir: dirOf(locale),
       setLocale,
       toggleLocale: () => setLocale(locale === "ar" ? "en" : "ar"),
-      intlLocale: locale === "ar" ? "ar-EG" : "en-US",
+      intlLocale: intlLocaleOf(locale),
     }),
     [locale, setLocale]
   );

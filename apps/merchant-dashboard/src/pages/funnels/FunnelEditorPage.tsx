@@ -45,35 +45,39 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Select } from "@/components/Select";
 import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
+import { fmt, useCommon, useLocale, useT, type Locale } from "@/i18n/LocaleContext";
+import {
+  CANVAS_STRINGS,
+  CONDITION_LABELS,
+  EDITOR_STRINGS,
+  INSPECTOR_STRINGS,
+  LIST_STRINGS,
+  STATUS_LABELS,
+  STEP_DEFAULT_NAMES,
+  STEP_TYPE_LABELS,
+  VALIDATION_STRINGS,
+} from "./FunnelEditorPage.strings";
 
 // ------------------------------------------------------------------ meta --
 
 interface StepTypeMeta {
-  label: string;
   icon: LucideIcon;
-  /** Default display name for a freshly added step. */
-  defaultName: string;
   /** Whether an offer product is mandatory. */
   needsOffer: boolean;
 }
 
 export const STEP_TYPES: Record<FunnelStepType, StepTypeMeta> = {
-  landing: { label: "Landing page", icon: LayoutTemplate, defaultName: "صفحة الهبوط", needsOffer: false },
-  checkout: { label: "Checkout", icon: CreditCard, defaultName: "الدفع", needsOffer: false },
-  order_bump: { label: "Order bump", icon: ShoppingBag, defaultName: "Order bump", needsOffer: true },
-  upsell: { label: "Upsell", icon: ArrowUpRight, defaultName: "عرض بعد الشراء", needsOffer: true },
-  downsell: { label: "Downsell", icon: ArrowDownRight, defaultName: "Downsell", needsOffer: true },
-  thank_you: { label: "Thank you", icon: PartyPopper, defaultName: "شكراً لطلبك", needsOffer: false },
+  landing: { icon: LayoutTemplate, needsOffer: false },
+  checkout: { icon: CreditCard, needsOffer: false },
+  order_bump: { icon: ShoppingBag, needsOffer: true },
+  upsell: { icon: ArrowUpRight, needsOffer: true },
+  downsell: { icon: ArrowDownRight, needsOffer: true },
+  thank_you: { icon: PartyPopper, needsOffer: false },
 };
 
 const STEP_TYPE_ORDER: FunnelStepType[] = ["landing", "checkout", "order_bump", "upsell", "downsell", "thank_you"];
 
-const CONDITIONS: Record<FunnelEdgeCondition, string> = {
-  always: "Always",
-  completed_checkout: "Completed checkout",
-  accepted_offer: "Accepted",
-  declined_offer: "Declined",
-};
+const CONDITION_ORDER: FunnelEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer"];
 
 const STATUS_TONE: Record<FunnelStatus, "neutral" | "success" | "warning"> = {
   draft: "neutral",
@@ -84,9 +88,13 @@ const STATUS_TONE: Record<FunnelStatus, "neutral" | "success" | "warning"> = {
 const CARD_W = 208;
 const CARD_H = 104;
 
-function rate(step: FunnelStep): string {
-  if (step.views === 0) return "0%";
-  return `${((step.conversions / step.views) * 100).toFixed(1)}%`;
+function rate(step: FunnelStep, intlLocale: string): string {
+  const value = step.views === 0 ? 0 : step.conversions / step.views;
+  return new Intl.NumberFormat(intlLocale, {
+    style: "percent",
+    minimumFractionDigits: step.views === 0 ? 0 : 1,
+    maximumFractionDigits: step.views === 0 ? 0 : 1,
+  }).format(value);
 }
 
 function StepIcon({ type, className }: { type: FunnelStepType; className?: string }) {
@@ -96,18 +104,20 @@ function StepIcon({ type, className }: { type: FunnelStepType; className?: strin
 
 // ------------------------------------------------------------ validation --
 
-export function validateFunnel(funnel: Funnel): string[] {
+export function validateFunnel(funnel: Funnel, locale: Locale = "en"): string[] {
+  const v = VALIDATION_STRINGS[locale];
+  const typeLabels = STEP_TYPE_LABELS[locale];
   const problems: string[] = [];
   const keys = new Set(funnel.steps.map((s) => s.key));
   const entries = funnel.steps.filter((s) => s.type === "landing");
   if (entries.length !== 1) {
-    problems.push(entries.length === 0 ? "Add exactly one landing page as the entry step." : `Only one landing page is allowed (found ${entries.length}).`);
+    problems.push(entries.length === 0 ? v.noLanding : fmt(v.manyLanding, { n: entries.length }));
   }
   const entry = entries[0] ?? null;
 
   for (const e of funnel.edges) {
     if (!keys.has(e.fromStepKey) || !keys.has(e.toStepKey)) {
-      problems.push(`An edge points to a step that no longer exists (${e.fromStepKey} → ${e.toStepKey}).`);
+      problems.push(fmt(v.danglingEdge, { from: e.fromStepKey, to: e.toStepKey }));
     }
   }
 
@@ -124,16 +134,16 @@ export function validateFunnel(funnel: Funnel): string[] {
       }
     }
     for (const s of funnel.steps) {
-      if (!seen.has(s.key)) problems.push(`"${s.name}" can't be reached from the landing page.`);
+      if (!seen.has(s.key)) problems.push(fmt(v.unreachable, { name: s.name }));
     }
   }
 
   for (const s of funnel.steps) {
     if (STEP_TYPES[s.type].needsOffer && !s.offerId) {
-      problems.push(`"${s.name}" (${STEP_TYPES[s.type].label}) needs an offer product.`);
+      problems.push(fmt(v.needsOffer, { name: s.name, type: typeLabels[s.type] }));
     }
     if (s.type !== "thank_you" && !funnel.edges.some((e) => e.fromStepKey === s.key)) {
-      problems.push(`"${s.name}" has no outgoing edge — visitors would get stuck.`);
+      problems.push(fmt(v.noOutgoing, { name: s.name }));
     }
   }
   return problems;
@@ -146,6 +156,9 @@ export function FunnelEditorPage() {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const toast = useToast();
+  const t = useT(EDITOR_STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
 
   const loaded = useAsync(() => mockApi.getFunnel(workspaceId, funnelId), [workspaceId, funnelId]);
 
@@ -196,7 +209,7 @@ export function FunnelEditorPage() {
       const step: FunnelStep = {
         id: uid(),
         key,
-        name: STEP_TYPES[type].defaultName,
+        name: STEP_DEFAULT_NAMES[locale][type],
         type,
         offerId: null,
         offerName: null,
@@ -250,7 +263,7 @@ export function FunnelEditorPage() {
       setFunnel(next);
       setBaseline(JSON.stringify(next));
       loaded.setData(next);
-      toast.success("Funnel saved.");
+      toast.success(t.toastSaved);
       return next;
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -262,10 +275,10 @@ export function FunnelEditorPage() {
 
   async function publish() {
     if (!funnel) return;
-    const found = validateFunnel(funnel);
+    const found = validateFunnel(funnel, locale);
     setProblems(found);
     if (found.length > 0) {
-      toast.error("Fix the problems below before publishing.");
+      toast.error(t.toastFixProblems);
       return;
     }
     const saved = dirty ? await save() : funnel;
@@ -274,7 +287,7 @@ export function FunnelEditorPage() {
     const next: Funnel = { ...saved, status: "published", publishedAt: new Date().toISOString() };
     setFunnel(next);
     setBaseline(JSON.stringify(next));
-    toast.success("Funnel published.");
+    toast.success(t.toastPublished);
   }
 
   async function setStatus(status: FunnelStatus) {
@@ -283,7 +296,7 @@ export function FunnelEditorPage() {
     const next: Funnel = { ...funnel, status };
     setFunnel(next);
     setBaseline(JSON.stringify(next));
-    toast.success(status === "paused" ? "Funnel paused." : "Funnel resumed.");
+    toast.success(status === "paused" ? t.toastPaused : t.toastResumed);
   }
 
   function preview() {
@@ -294,17 +307,21 @@ export function FunnelEditorPage() {
   return (
     <div className="-m-6 flex h-[calc(100vh-4rem)] flex-col">
       <div className="border-b border-line bg-paper-raised px-6 py-3">
-        <DataState loading={loaded.loading} error={loaded.error} empty={!loaded.loading && !loaded.data} emptyMessage="This funnel doesn't exist." onRetry={() => loaded.refresh()}>
+        <DataState loading={loaded.loading} error={loaded.error} empty={!loaded.loading && !loaded.data} emptyMessage={t.notFound} onRetry={() => loaded.refresh()}>
           {funnel && (
             <>
-              <Link to="/funnels" className="mb-1 inline-block text-sm text-ink-soft transition-colors hover:text-primary">
-                ← Back to funnels
+              <Link to="/funnels" className="mb-1 inline-flex items-center gap-1 text-sm text-ink-soft transition-colors hover:text-primary">
+                <span aria-hidden className="inline-block rtl:rotate-180">
+                  ←
+                </span>
+                {t.backToFunnels}
               </Link>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   {editingName ? (
                     <Input
                       autoFocus
+                      dir="auto"
                       value={funnel.name}
                       onChange={(e) => patch((f) => ({ ...f, name: e.target.value }))}
                       onBlur={() => setEditingName(false)}
@@ -317,41 +334,42 @@ export function FunnelEditorPage() {
                     <button
                       type="button"
                       onClick={() => setEditingName(true)}
-                      title="Click to rename"
-                      className="cursor-pointer truncate rounded px-1 font-display text-xl font-medium text-ink hover:bg-paper"
+                      title={t.clickToRename}
+                      dir="auto"
+                      className="cursor-pointer truncate rounded px-1 font-display text-xl font-semibold text-ink hover:bg-paper"
                     >
                       {funnel.name}
                     </button>
                   )}
-                  <StatusBadge value={funnel.status} tone={STATUS_TONE[funnel.status]} />
-                  {dirty && <span className="text-xs text-ink-soft">Unsaved changes</span>}
+                  <StatusBadge value={STATUS_LABELS[locale][funnel.status]} tone={STATUS_TONE[funnel.status]} />
+                  {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button variant="outline" onClick={preview}>
-                    <ExternalLink className="size-4" aria-hidden /> Preview
+                    <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
                   </Button>
                   <Button onClick={() => void save()} disabled={!dirty || saving}>
                     {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                    {saving ? "Saving…" : "Save"}
+                    {saving ? c.saving : c.save}
                   </Button>
                   {funnel.status === "published" ? (
                     <Button variant="outline" onClick={() => void setStatus("paused")}>
-                      <Pause className="size-4" aria-hidden /> Pause
+                      <Pause className="size-4" aria-hidden /> {t.pause}
                     </Button>
                   ) : funnel.status === "paused" ? (
                     <Button variant="outline" onClick={() => void setStatus("published")}>
-                      <Play className="size-4" aria-hidden /> Resume
+                      <Play className="size-4" aria-hidden /> {t.resume}
                     </Button>
                   ) : (
                     <Button variant="outline" onClick={() => void publish()} disabled={saving}>
-                      <Rocket className="size-4" aria-hidden /> Publish
+                      <Rocket className="size-4" aria-hidden /> {t.publish}
                     </Button>
                   )}
                 </div>
               </div>
               {problems.length > 0 && (
                 <Alert variant="danger" className="mt-3">
-                  <p className="font-medium">This funnel can&rsquo;t be published yet:</p>
+                  <p className="font-medium">{t.cantPublish}</p>
                   <ul className="mt-1 list-disc space-y-0.5 ps-5">
                     {problems.map((p, i) => (
                       <li key={i}>{p}</li>
@@ -366,9 +384,9 @@ export function FunnelEditorPage() {
 
       {funnel && (
         <div className="flex min-h-0 flex-1">
-          <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-paper-raised">
+          <aside className="flex w-64 shrink-0 flex-col border-e border-line bg-paper-raised">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-ink-soft">Steps</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.steps}</span>
               <AddStepMenu onAdd={addStep} />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -386,7 +404,7 @@ export function FunnelEditorPage() {
 
           <FlowCanvas funnel={funnel} selectedKey={selectedKey} onSelect={setSelectedKey} onMove={(key, x, y) => updateStep(key, { x, y })} />
 
-          <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-paper-raised">
+          <aside className="w-80 shrink-0 overflow-y-auto border-s border-line bg-paper-raised">
             {selected ? (
               <StepInspector
                 key={selected.key}
@@ -398,7 +416,7 @@ export function FunnelEditorPage() {
                 onClose={() => setSelectedKey(null)}
               />
             ) : (
-              <p className="px-4 py-6 text-sm text-ink-soft">Select a step on the canvas or in the list to edit it.</p>
+              <p className="px-4 py-6 text-sm text-ink-soft">{t.selectHint}</p>
             )}
           </aside>
         </div>
@@ -406,9 +424,9 @@ export function FunnelEditorPage() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete this step?"
-        description={pendingDelete ? `"${pendingDelete.name}" and every edge connected to it will be removed. Nothing is deleted until you save.` : undefined}
-        confirmLabel="Delete step"
+        title={t.deleteStepTitle}
+        description={pendingDelete ? fmt(t.deleteStepDescription, { name: pendingDelete.name }) : undefined}
+        confirmLabel={t.deleteStep}
         destructive
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteStep(pendingDelete)}
@@ -417,7 +435,7 @@ export function FunnelEditorPage() {
       {loaded.error === null && !loaded.loading && !loaded.data && (
         <div className="p-6">
           <Button variant="outline" onClick={() => navigate("/funnels")}>
-            Back to funnels
+            {t.backToFunnels}
           </Button>
         </div>
       )}
@@ -429,27 +447,30 @@ export function FunnelEditorPage() {
 
 function AddStepMenu({ onAdd }: { onAdd: (type: FunnelStepType) => void }) {
   const [open, setOpen] = useState(false);
+  const t = useT(LIST_STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
   return (
     <div className="relative">
       <Button size="xs" variant="outline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <Plus className="size-3" aria-hidden /> Add step
+        <Plus className="size-3" aria-hidden /> {t.addStep}
       </Button>
       {open && (
         <>
-          <button type="button" aria-label="Close" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
-          <ul className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised py-1 shadow-lg">
-            {STEP_TYPE_ORDER.map((t) => (
-              <li key={t}>
+          <button type="button" aria-label={c.close} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <ul className="absolute end-0 z-20 mt-1 w-52 overflow-hidden rounded-2xl border border-line bg-paper-raised py-1 shadow-lg">
+            {STEP_TYPE_ORDER.map((type) => (
+              <li key={type}>
                 <button
                   type="button"
                   onClick={() => {
-                    onAdd(t);
+                    onAdd(type);
                     setOpen(false);
                   }}
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-start text-sm text-ink hover:bg-zimos-ice"
                 >
-                  <StepIcon type={t} className="size-4 text-primary" />
-                  {STEP_TYPES[t].label}
+                  <StepIcon type={type} className="size-4 text-primary" />
+                  {STEP_TYPE_LABELS[locale][type]}
                 </button>
               </li>
             ))}
@@ -462,12 +483,14 @@ function AddStepMenu({ onAdd }: { onAdd: (type: FunnelStepType) => void }) {
 
 function SortableStepRow({ step, selected, onSelect, onDelete }: { step: FunnelStep; selected: boolean; onSelect: () => void; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: step.key });
+  const t = useT(LIST_STRINGS);
+  const { locale } = useLocale();
   return (
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        "flex items-center gap-1 rounded-[0.5rem] border bg-paper-raised pr-1 transition-colors",
+        "flex items-center gap-1 rounded-xl border bg-paper-raised pe-1 transition-colors",
         selected ? "border-primary ring-1 ring-primary/30" : "border-line hover:border-primary/50",
         isDragging && "z-10 opacity-80 shadow-lg"
       )}
@@ -477,19 +500,21 @@ function SortableStepRow({ step, selected, onSelect, onDelete }: { step: FunnelS
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        aria-label={`Reorder ${step.name}`}
+        aria-label={fmt(t.reorder, { name: step.name })}
         className="cursor-grab rounded p-1.5 text-ink-soft hover:text-ink active:cursor-grabbing"
       >
         <GripVertical className="size-4" aria-hidden />
       </button>
-      <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-1.5 text-left">
+      <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-1.5 text-start">
         <StepIcon type={step.type} className="size-4 shrink-0 text-primary" />
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium text-ink">{step.name}</span>
-          <span className="block text-[11px] text-ink-soft">{STEP_TYPES[step.type].label}</span>
+          <span className="block truncate text-sm font-medium text-ink" dir="auto">
+            {step.name}
+          </span>
+          <span className="block text-[11px] text-ink-soft">{STEP_TYPE_LABELS[locale][step.type]}</span>
         </span>
       </button>
-      <button type="button" onClick={onDelete} aria-label={`Delete ${step.name}`} className="cursor-pointer rounded p-1.5 text-ink-soft hover:bg-danger-soft hover:text-danger">
+      <button type="button" onClick={onDelete} aria-label={fmt(t.deleteNamed, { name: step.name })} className="cursor-pointer rounded p-1.5 text-ink-soft hover:bg-danger-soft hover:text-danger">
         <Trash2 className="size-3.5" aria-hidden />
       </button>
     </li>
@@ -511,6 +536,9 @@ function FlowCanvas({
 }) {
   const drag = useRef<{ key: string; dx: number; dy: number; moved: boolean } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const t = useT(CANVAS_STRINGS);
+  const { locale, dir, intlLocale } = useLocale();
+  const numberFmt = useMemo(() => new Intl.NumberFormat(intlLocale), [intlLocale]);
 
   const byKey = useMemo(() => new Map(funnel.steps.map((s) => [s.key, s])), [funnel.steps]);
   const width = Math.max(900, ...funnel.steps.map((s) => s.x + CARD_W + 80));
@@ -546,7 +574,7 @@ function FlowCanvas({
   }
 
   return (
-    <main ref={containerRef} className="relative min-w-0 flex-1 overflow-auto bg-paper" style={{ backgroundImage: "radial-gradient(var(--color-line) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
+    <main ref={containerRef} dir="ltr" aria-label={EDITOR_STRINGS[locale].canvasLabel} className="relative min-w-0 flex-1 overflow-auto bg-paper" style={{ backgroundImage: "radial-gradient(var(--color-line) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
       <div className="relative" style={{ width, height }}>
         <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
           <defs>
@@ -567,7 +595,7 @@ function FlowCanvas({
             const mx = (x1 + x2) / 2;
             const my = (y1 + y2) / 2;
             const active = e.fromStepKey === selectedKey || e.toStepKey === selectedKey;
-            const label = CONDITIONS[e.condition];
+            const label = CONDITION_LABELS[locale][e.condition];
             const lw = label.length * 6.2 + 14;
             return (
               <g key={e.id}>
@@ -598,28 +626,30 @@ function FlowCanvas({
               }}
               style={{ left: s.x, top: s.y, width: CARD_W, height: CARD_H }}
               className={cn(
-                "absolute cursor-grab select-none rounded-[var(--radius-card)] border bg-paper-raised p-3 shadow-sm transition-shadow active:cursor-grabbing",
+                "absolute cursor-grab select-none rounded-2xl border bg-paper-raised p-3 shadow-sm transition-shadow active:cursor-grabbing",
                 isSelected ? "border-primary ring-2 ring-primary/30 shadow-md" : "border-line hover:border-primary/50"
               )}
             >
-              <div className="flex items-center gap-2">
+              <div dir={dir} className="flex items-center gap-2">
                 <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", isSelected ? "bg-primary text-white" : "bg-primary-soft text-primary-dark")}>
                   <StepIcon type={s.type} className="size-4" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-ink">{s.name}</span>
-                  <span className="block text-[11px] text-ink-soft">
-                    {STEP_TYPES[s.type].label}
-                    {isEntry && " · entry"}
+                  <span className="block truncate text-sm font-medium text-ink" dir="auto">
+                    {s.name}
+                  </span>
+                  <span className="block truncate text-[11px] text-ink-soft">
+                    {STEP_TYPE_LABELS[locale][s.type]}
+                    {isEntry && ` · ${t.entry}`}
                   </span>
                 </span>
-                {s.experimentId && <FlaskConical className="ml-auto size-3.5 shrink-0 text-accent-dark" aria-label="A/B test running" />}
+                {s.experimentId && <FlaskConical className="ms-auto size-3.5 shrink-0 text-accent-dark" aria-label={t.abRunning} />}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs tabular-nums">
                 <span className="text-ink-soft">
-                  {s.views.toLocaleString()} → {s.conversions.toLocaleString()}
+                  {numberFmt.format(s.views)} → {numberFmt.format(s.conversions)}
                 </span>
-                <span className="rounded-full bg-success-soft px-2 py-0.5 font-medium text-success">{rate(s)}</span>
+                <span className="rounded-full bg-success-soft px-2 py-0.5 font-medium text-success">{rate(s, intlLocale)}</span>
               </div>
             </div>
           );
@@ -647,6 +677,9 @@ function StepInspector({
   onClose: () => void;
 }) {
   const products = useAsync(() => mockApi.demoProducts(), []);
+  const t = useT(INSPECTOR_STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
   const [price, setPrice] = useState(minorToMajorInput(step.priceAmount));
   const needsOffer = STEP_TYPES[step.type].needsOffer;
   const outgoing = funnel.edges.filter((e) => e.fromStepKey === step.key).sort((a, b) => a.priority - b.priority);
@@ -689,40 +722,40 @@ function StepInspector({
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
         <div className="flex items-center gap-2">
           <StepIcon type={step.type} className="size-4 text-primary" />
-          <span className="text-sm font-medium text-ink">Step settings</span>
+          <span className="text-sm font-semibold text-ink">{t.stepSettings}</span>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close inspector" className="cursor-pointer rounded p-1 text-ink-soft hover:text-ink">
+        <button type="button" onClick={onClose} aria-label={t.closeInspector} title={c.close} className="cursor-pointer rounded p-1 text-ink-soft hover:text-ink">
           <X className="size-4" aria-hidden />
         </button>
       </div>
 
       <div className="space-y-5 px-4 py-4">
         <div className="space-y-1.5">
-          <Label htmlFor="step-name">Name</Label>
-          <Input id="step-name" value={step.name} onChange={(e) => onChange({ name: e.target.value })} />
+          <Label htmlFor="step-name">{t.name}</Label>
+          <Input id="step-name" dir="auto" value={step.name} onChange={(e) => onChange({ name: e.target.value })} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="step-type">Type</Label>
+          <Label htmlFor="step-type">{t.type}</Label>
           <Select id="step-type" value={step.type} onChange={(e) => onChange({ type: e.target.value as FunnelStepType })}>
-            {STEP_TYPE_ORDER.map((t) => (
-              <option key={t} value={t}>
-                {STEP_TYPES[t].label}
+            {STEP_TYPE_ORDER.map((type) => (
+              <option key={type} value={type}>
+                {STEP_TYPE_LABELS[locale][type]}
               </option>
             ))}
           </Select>
         </div>
 
         {needsOffer && (
-          <div className="space-y-3 rounded-[var(--radius-card)] border border-line bg-paper p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Offer</p>
+          <div className="space-y-3 rounded-2xl border border-line bg-paper p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.offer}</p>
             <div className="space-y-1.5">
-              <Label htmlFor="step-offer">Product</Label>
+              <Label htmlFor="step-offer">{t.product}</Label>
               {products.loading ? (
                 <Spinner className="size-4" />
               ) : (
                 <Select id="step-offer" value={step.offerId ?? ""} onChange={(e) => pickOffer(e.target.value)}>
-                  <option value="">— Pick a product —</option>
+                  <option value="">{t.pickProduct}</option>
                   {(products.data ?? []).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -730,66 +763,68 @@ function StepInspector({
                   ))}
                 </Select>
               )}
-              {!step.offerId && <p className="text-xs text-danger">Required before publishing.</p>}
+              {!step.offerId && <p className="text-xs text-danger">{t.required}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="step-price">Offer price</Label>
+              <Label htmlFor="step-price">{t.offerPrice}</Label>
               <div className="relative">
-                <Input id="step-price" type="number" min={0} step="0.01" value={price} onChange={(e) => commitPrice(e.target.value)} className="pr-12" />
-                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-xs text-ink-soft">{funnel.currency}</span>
+                <Input id="step-price" type="number" dir="ltr" min={0} step="0.01" value={price} onChange={(e) => commitPrice(e.target.value)} className="pe-12 text-start" />
+                <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs text-ink-soft" dir="ltr">
+                  {funnel.currency}
+                </span>
               </div>
             </div>
           </div>
         )}
 
-        <div className="rounded-[var(--radius-card)] border border-line bg-paper p-3">
+        <div className="rounded-2xl border border-line bg-paper p-3">
           <Toggle
-            label="A/B test this step"
-            description={abEnabled ? "Traffic is split between variants." : "Compare two versions of this step."}
+            label={t.abTest}
+            description={abEnabled ? t.abOn : t.abOff}
             checked={abEnabled}
             onChange={(next) => onChange({ experimentId: next ? `exp-${step.key}-${uid().slice(0, 6)}` : null })}
           />
           {abEnabled && (
             <Link to="/experiments" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              <FlaskConical className="size-3.5" aria-hidden /> Manage in Experiments
+              <FlaskConical className="size-3.5" aria-hidden /> {t.manageExperiments}
             </Link>
           )}
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Edges</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.edges}</p>
             <Button size="xs" variant="outline" onClick={addEdge} disabled={others.length === 0}>
-              <Plus className="size-3" aria-hidden /> Add
+              <Plus className="size-3" aria-hidden /> {c.add}
             </Button>
           </div>
           {outgoing.length === 0 ? (
-            <p className="text-xs text-ink-soft">{step.type === "thank_you" ? "The thank-you page ends the funnel." : "No outgoing edges yet."}</p>
+            <p className="text-xs text-ink-soft">{step.type === "thank_you" ? t.thankYouEnds : t.noEdges}</p>
           ) : (
             <ul className="space-y-2">
               {outgoing.map((e) => (
-                <li key={e.id} className="space-y-2 rounded-[0.5rem] border border-line bg-paper p-2">
+                <li key={e.id} className="space-y-2 rounded-xl border border-line bg-paper p-2">
                   <div className="grid grid-cols-[1fr_auto] items-center gap-2">
-                    <Select value={e.toStepKey} onChange={(ev) => updateEdge(e.id, { toStepKey: ev.target.value })} className="h-8 text-xs" aria-label="To step">
+                    <Select value={e.toStepKey} onChange={(ev) => updateEdge(e.id, { toStepKey: ev.target.value })} className="h-8 text-xs" aria-label={t.toStep}>
                       {others.map((s) => (
                         <option key={s.key} value={s.key}>
-                          → {s.name}
+                          {fmt(t.toStepOption, { name: s.name })}
                         </option>
                       ))}
                     </Select>
-                    <button type="button" onClick={() => removeEdge(e.id)} aria-label="Remove edge" className="cursor-pointer rounded p-1 text-ink-soft hover:bg-danger-soft hover:text-danger">
+                    <button type="button" onClick={() => removeEdge(e.id)} aria-label={t.removeEdge} className="cursor-pointer rounded p-1 text-ink-soft hover:bg-danger-soft hover:text-danger">
                       <Trash2 className="size-3.5" aria-hidden />
                     </button>
                   </div>
                   <div className="grid grid-cols-[1fr_64px] gap-2">
-                    <Select value={e.condition} onChange={(ev) => updateEdge(e.id, { condition: ev.target.value as FunnelEdgeCondition })} className="h-8 text-xs" aria-label="Condition">
-                      {(Object.keys(CONDITIONS) as FunnelEdgeCondition[]).map((c) => (
-                        <option key={c} value={c}>
-                          {CONDITIONS[c]}
+                    <Select value={e.condition} onChange={(ev) => updateEdge(e.id, { condition: ev.target.value as FunnelEdgeCondition })} className="h-8 text-xs" aria-label={t.condition}>
+                      {CONDITION_ORDER.map((cond) => (
+                        <option key={cond} value={cond}>
+                          {CONDITION_LABELS[locale][cond]}
                         </option>
                       ))}
                     </Select>
-                    <Input type="number" min={1} value={e.priority} onChange={(ev) => updateEdge(e.id, { priority: Math.max(1, Math.floor(Number(ev.target.value)) || 1) })} className="h-8 text-xs" aria-label="Priority" />
+                    <Input type="number" dir="ltr" min={1} value={e.priority} onChange={(ev) => updateEdge(e.id, { priority: Math.max(1, Math.floor(Number(ev.target.value)) || 1) })} className="h-8 text-xs" aria-label={t.priority} title={t.priority} />
                   </div>
                 </li>
               ))}
@@ -799,7 +834,7 @@ function StepInspector({
 
         <div className="border-t border-line pt-4">
           <Button variant="ghost" className="text-danger hover:bg-danger-soft" onClick={onDelete}>
-            <Trash2 className="size-4" aria-hidden /> Delete step
+            <Trash2 className="size-4" aria-hidden /> {EDITOR_STRINGS[locale].deleteStep}
           </Button>
         </div>
       </div>

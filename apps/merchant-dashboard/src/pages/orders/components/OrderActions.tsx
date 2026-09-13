@@ -4,11 +4,68 @@ import type { Order, UpdateOrderPayload } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { useT, useCommon, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
+import { ltr } from "../orderLabels";
+
+const STRINGS = {
+  en: {
+    editAddressNotes: "Edit address / notes",
+    preparing: "Preparing…",
+    downloadWaybill: "Download waybill",
+    cancelOrder: "Cancel order",
+    cancelled: "Cancelled",
+    shippedNote: "Shipped — cancel/edit are disabled; open a return instead.",
+    reasonRequired: "Enter a reason for the cancellation.",
+    cancelledToast: "Order cancelled. The stock reservation has been released.",
+    cancelTitle: "Cancel {order}?",
+    cancelDescription:
+      "Releases the inventory reservation and moves confirmation to “rejected”. Refunding a paid order is a separate step.",
+    cancelConfirm: "Cancel this order",
+    reason: "Reason",
+    reasonPlaceholder: "Customer changed their mind",
+    editTitle: "Edit {order}",
+    updatedToast: "Order updated.",
+    editHint: "Only the shipping address and internal notes are editable. Totals aren't re-priced.",
+    country: "Country (2-letter)",
+    city: "City",
+    province: "Province",
+    postalCode: "Postal code",
+    addressLine: "Address line",
+    internalNotes: "Internal notes",
+    saveChanges: "Save changes",
+  },
+  ar: {
+    editAddressNotes: "تعديل العنوان / الملاحظات",
+    preparing: "جارٍ التجهيز…",
+    downloadWaybill: "تحميل بوليصة الشحن",
+    cancelOrder: "إلغاء الطلب",
+    cancelled: "ملغي",
+    shippedNote: "تم الشحن — الإلغاء والتعديل غير متاحين؛ افتح مرتجعًا بدلًا من ذلك.",
+    reasonRequired: "أدخل سبب الإلغاء.",
+    cancelledToast: "تم إلغاء الطلب وتحرير الكمية المحجوزة من المخزون.",
+    cancelTitle: "إلغاء الطلب {order}؟",
+    cancelDescription:
+      "سيتم تحرير الكمية المحجوزة من المخزون وتغيير حالة التأكيد إلى «مرفوض». استرداد مبلغ الطلب المدفوع خطوة منفصلة.",
+    cancelConfirm: "إلغاء هذا الطلب",
+    reason: "السبب",
+    reasonPlaceholder: "العميل غيّر رأيه",
+    editTitle: "تعديل الطلب {order}",
+    updatedToast: "تم تحديث الطلب.",
+    editHint: "يمكن تعديل عنوان الشحن والملاحظات الداخلية فقط. لن يُعاد حساب الإجماليات.",
+    country: "الدولة (رمز من حرفين)",
+    city: "المدينة",
+    province: "المحافظة",
+    postalCode: "الرمز البريدي",
+    addressLine: "العنوان",
+    internalNotes: "ملاحظات داخلية",
+    saveChanges: "حفظ التغييرات",
+  },
+} satisfies Messages;
 
 const SHIPPED_STATES = ["fulfilled", "partially_fulfilled", "returned"];
 
@@ -18,6 +75,7 @@ interface Props {
 }
 
 export function OrderActions({ order, onChanged }: Props) {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [cancelling, setCancelling] = useState(false);
@@ -31,9 +89,9 @@ export function OrderActions({ order, onChanged }: Props) {
   const canEdit = !isCancelled && !isShipped;
 
   async function confirmCancel() {
-    if (reason.trim().length === 0) throw new Error("Enter a reason for the cancellation.");
+    if (reason.trim().length === 0) throw new Error(t.reasonRequired);
     await apiClient.cancelOrder(workspaceId, order.id, reason.trim());
-    toast.success("Order cancelled. The stock reservation has been released.");
+    toast.success(t.cancelledToast);
     setCancelling(false);
     setReason("");
     onChanged();
@@ -57,11 +115,11 @@ export function OrderActions({ order, onChanged }: Props) {
     <div className="flex flex-wrap items-center gap-2">
       {canEdit && (
         <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-          Edit address / notes
+          {t.editAddressNotes}
         </Button>
       )}
       <Button variant="outline" size="sm" onClick={downloadWaybill} disabled={waybillBusy}>
-        {waybillBusy ? "Preparing…" : "Download waybill"}
+        {waybillBusy ? t.preparing : t.downloadWaybill}
       </Button>
       {canCancel && (
         <Button
@@ -72,45 +130,48 @@ export function OrderActions({ order, onChanged }: Props) {
             setCancelling(true);
           }}
         >
-          Cancel order
+          {t.cancelOrder}
         </Button>
       )}
       {isCancelled && (
-        <span className="text-sm text-danger">
-          Cancelled{order.cancellationReason ? ` — ${order.cancellationReason}` : ""}
+        <span className="min-w-0 text-sm text-danger">
+          {t.cancelled}
+          {order.cancellationReason ? ` — ${order.cancellationReason}` : ""}
         </span>
       )}
       {!isCancelled && isShipped && (
-        <span className="text-sm text-ink-soft">
-          Shipped — cancel/edit are disabled; open a return instead.
-        </span>
+        <span className="min-w-0 text-sm text-ink-soft">{t.shippedNote}</span>
       )}
 
       <ConfirmDialog
         open={cancelling}
-        title={`Cancel ${order.orderNumber}?`}
-        description="Releases the inventory reservation and moves confirmation to “rejected”. Refunding a paid order is a separate step."
-        confirmLabel="Cancel this order"
+        title={fmt(t.cancelTitle, { order: ltr(order.orderNumber) })}
+        description={t.cancelDescription}
+        confirmLabel={t.cancelConfirm}
         destructive
         onCancel={() => setCancelling(false)}
         onConfirm={confirmCancel}
       >
         <TextField
-          label="Reason"
+          label={t.reason}
           required
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Customer changed their mind"
+          placeholder={t.reasonPlaceholder}
         />
       </ConfirmDialog>
 
-      <Modal open={editing} onClose={() => setEditing(false)} title={`Edit ${order.orderNumber}`}>
+      <Modal
+        open={editing}
+        onClose={() => setEditing(false)}
+        title={fmt(t.editTitle, { order: ltr(order.orderNumber) })}
+      >
         <EditOrderForm
           order={order}
           onCancel={() => setEditing(false)}
           onDone={() => {
             setEditing(false);
-            toast.success("Order updated.");
+            toast.success(t.updatedToast);
             onChanged();
           }}
         />
@@ -128,6 +189,8 @@ function EditOrderForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const addr = order.shippingAddressSnapshot ?? {};
   const [country, setCountry] = useState(addr.country ?? "EG");
@@ -171,52 +234,52 @@ function EditOrderForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       {formError && <Alert variant="danger">{formError}</Alert>}
-      <p className="text-sm text-ink-soft">
-        Only the shipping address and internal notes are editable. Totals aren't re-priced.
-      </p>
+      <p className="text-sm text-ink-soft">{t.editHint}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Country (2-letter)"
+          label={t.country}
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           error={fieldErrors["shippingAddress.country"]}
+          dir="ltr"
         />
         <TextField
-          label="City"
+          label={t.city}
           value={city}
           onChange={(e) => setCity(e.target.value)}
           error={fieldErrors["shippingAddress.city"]}
         />
         <TextField
-          label="Province"
+          label={t.province}
           value={province}
           onChange={(e) => setProvince(e.target.value)}
           error={fieldErrors["shippingAddress.province"]}
         />
         <TextField
-          label="Postal code"
+          label={t.postalCode}
           value={postalCode}
           onChange={(e) => setPostalCode(e.target.value)}
           error={fieldErrors["shippingAddress.postalCode"]}
+          dir="ltr"
         />
       </div>
       <TextField
-        label="Address line"
+        label={t.addressLine}
         value={addressLine}
         onChange={(e) => setAddressLine(e.target.value)}
         error={fieldErrors["shippingAddress.addressLine"]}
       />
-      <Field label="Internal notes" error={fieldErrors.notes}>
+      <Field label={t.internalNotes} error={fieldErrors.notes}>
         {({ id }) => (
           <Textarea id={id} value={notes} onChange={(e) => setNotes(e.target.value)} />
         )}
       </Field>
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? c.saving : t.saveChanges}
         </Button>
       </div>
     </form>

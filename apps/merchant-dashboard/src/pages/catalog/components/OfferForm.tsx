@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Plus } from "lucide-react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import type {
   CreateOfferPayload,
@@ -14,6 +15,52 @@ import { majorToMinor, minorToMajorInput, variantLabel } from "@/lib/format";
 import { TextField, Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    needVariant: "Add an active variant to this product before creating an offer.",
+    offerName: "Offer name",
+    offerNamePlaceholder: "3-pack bundle",
+    pricingMode: "Pricing mode",
+    fixed: "Fixed price",
+    computed: "Computed from variants",
+    bundlePrice: "Bundle price",
+    badge: "Badge",
+    badgeHint: "Optional — e.g. “Best value”.",
+    bundleContents: "Bundle contents",
+    addLine: "Add line",
+    quantity: "Quantity",
+    lineVariant: "Variant for line {n}",
+    remove: "Remove",
+    isDefault: "Default offer for this product",
+    saveOffer: "Save offer",
+    createOffer: "Create offer",
+    errLines: "Add at least one variant to the bundle.",
+    errPrice: "A fixed-price offer needs a valid price.",
+  },
+  ar: {
+    needVariant: "أضف متغيّرًا نشطًا لهذا المنتج قبل إنشاء عرض.",
+    offerName: "اسم العرض",
+    offerNamePlaceholder: "باقة 3 قطع",
+    pricingMode: "طريقة التسعير",
+    fixed: "سعر ثابت",
+    computed: "محسوب من المتغيّرات",
+    bundlePrice: "سعر الباقة",
+    badge: "شارة",
+    badgeHint: "اختياري — مثل «أفضل قيمة».",
+    bundleContents: "محتويات الباقة",
+    addLine: "إضافة بند",
+    quantity: "الكمية",
+    lineVariant: "متغيّر البند {n}",
+    remove: "إزالة",
+    isDefault: "العرض الافتراضي لهذا المنتج",
+    saveOffer: "حفظ العرض",
+    createOffer: "إنشاء العرض",
+    errLines: "أضف متغيّرًا واحدًا على الأقل إلى الباقة.",
+    errPrice: "العرض بسعر ثابت يحتاج إلى سعر صحيح.",
+  },
+} satisfies Messages;
 
 interface Props {
   productId: string;
@@ -30,6 +77,8 @@ interface LineDraft {
 }
 
 export function OfferForm({ productId, variants, offer, onDone, onCancel }: Props) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const isEdit = Boolean(offer);
   const sellable = variants.filter((v) => v.status === "active");
@@ -62,7 +111,7 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
       .filter((l) => l.variantId)
       .map((l) => ({ variantId: l.variantId, quantity: Math.max(1, Math.floor(Number(l.quantity) || 0)) }));
     if (cleanLines.length === 0) {
-      setFieldErrors({ lines: "Add at least one variant to the bundle." });
+      setFieldErrors({ lines: t.errLines });
       return;
     }
 
@@ -70,7 +119,7 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
     if (pricingMode === "fixed") {
       priceMinor = majorToMinor(price);
       if (!Number.isFinite(priceMinor) || priceMinor < 0) {
-        setFieldErrors({ priceAmount: "A fixed-price offer needs a valid price." });
+        setFieldErrors({ priceAmount: t.errPrice });
         return;
       }
     }
@@ -111,10 +160,10 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
   if (sellable.length === 0) {
     return (
       <div className="space-y-4">
-        <Alert variant="danger">Add an active variant to this product before creating an offer.</Alert>
+        <Alert variant="danger">{t.needVariant}</Alert>
         <div className="flex justify-end">
           <Button variant="outline" onClick={onCancel}>
-            Close
+            {c.close}
           </Button>
         </div>
       </div>
@@ -126,30 +175,30 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <TextField
-        label="Offer name"
+        label={t.offerName}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        placeholder="3-pack bundle"
+        placeholder={t.offerNamePlaceholder}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Pricing mode" error={fieldErrors.pricingMode}>
+        <Field label={t.pricingMode} error={fieldErrors.pricingMode}>
           {({ id }) => (
             <Select
               id={id}
               value={pricingMode}
               onChange={(e) => setPricingMode(e.target.value as OfferPricingMode)}
             >
-              <option value="fixed">Fixed price</option>
-              <option value="computed">Computed from variants</option>
+              <option value="fixed">{t.fixed}</option>
+              <option value="computed">{t.computed}</option>
             </Select>
           )}
         </Field>
         {pricingMode === "fixed" && (
           <MoneyInput
-            label="Bundle price"
+            label={t.bundlePrice}
             required
             value={price}
             onChange={setPrice}
@@ -159,32 +208,34 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
       </div>
 
       <TextField
-        label="Badge"
+        label={t.badge}
         value={badge}
         onChange={(e) => setBadge(e.target.value)}
         error={fieldErrors.badge}
-        hint="Optional — e.g. “Best value”."
+        hint={t.badgeHint}
       />
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-ink-soft">Bundle contents</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium text-ink-soft">{t.bundleContents}</span>
           <Button
             type="button"
             size="sm"
             variant="ghost"
             onClick={() => setLines((prev) => [...prev, { variantId: sellable[0].id, quantity: "1" }])}
           >
-            + Add line
+            <Plus className="size-4" aria-hidden />
+            {t.addLine}
           </Button>
         </div>
         {fieldErrors.lines && <p className="text-xs font-medium text-danger">{fieldErrors.lines}</p>}
         {lines.map((line, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={i} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
             <Select
               value={line.variantId}
               onChange={(e) => setLine(i, { variantId: e.target.value })}
-              className="flex-1"
+              className="min-w-0 flex-1"
+              aria-label={fmt(t.lineVariant, { n: i + 1 })}
             >
               {sellable.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -195,10 +246,11 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
             <Input
               type="number"
               min={1}
+              dir="ltr"
               value={line.quantity}
               onChange={(e) => setLine(i, { quantity: e.target.value })}
               className="w-20"
-              aria-label="Quantity"
+              aria-label={t.quantity}
             />
             {lines.length > 1 && (
               <Button
@@ -208,7 +260,7 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
                 className="text-danger hover:bg-danger-soft"
                 onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
               >
-                Remove
+                {t.remove}
               </Button>
             )}
           </div>
@@ -217,15 +269,15 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
 
       <label className="flex items-center gap-2 text-sm text-ink">
         <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
-        Default offer for this product
+        {t.isDefault}
       </label>
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : isEdit ? "Save offer" : "Create offer"}
+          {saving ? c.saving : isEdit ? t.saveOffer : t.createOffer}
         </Button>
       </div>
     </form>

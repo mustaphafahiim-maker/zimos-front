@@ -17,13 +17,18 @@ export function Field({ label, error, hint, required, className, children }: Fie
     <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={id}>
         {label}
-        {required && <span className="text-danger"> *</span>}
+        {required && (
+          <span className="text-danger" aria-hidden>
+            {" "}
+            *
+          </span>
+        )}
       </Label>
       {children({ id, "aria-invalid": error ? true : undefined })}
       {error ? (
         <p className="text-xs font-medium text-danger">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-ink-soft">{hint}</p>
+        <p className="text-xs text-ink-muted">{hint}</p>
       ) : null}
     </div>
   );
@@ -44,6 +49,7 @@ export function TextField({ label, error, hint, required, className, ...inputPro
           id={id}
           {...aria}
           {...inputProps}
+          required={required}
           className={cn(error && "border-danger focus-visible:ring-danger/30")}
         />
       )}

@@ -15,7 +15,7 @@ interface MoneyInputProps {
   className?: string;
 }
 
-/** Text input for a money amount in major units, with a currency adornment. */
+/** Text input for a money amount in major units, with a currency adornment at the start edge. */
 export function MoneyInput({
   label,
   value,
@@ -32,7 +32,7 @@ export function MoneyInput({
     <Field label={label} error={error} hint={hint} required={required} className={className}>
       {({ id, ...aria }) => (
         <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-ink-soft">
+          <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-xs font-medium text-ink-muted">
             {currency}
           </span>
           <Input
@@ -43,7 +43,7 @@ export function MoneyInput({
             disabled={disabled}
             placeholder={placeholder}
             onChange={(e) => onChange(e.target.value)}
-            className={cn("pl-12", error && "border-danger focus-visible:ring-danger/30")}
+            className={cn("tabular ps-12", error && "border-danger focus-visible:ring-danger/30")}
           />
         </div>
       )}

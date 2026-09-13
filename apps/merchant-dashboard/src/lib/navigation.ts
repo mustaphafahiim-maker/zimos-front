@@ -32,17 +32,30 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
+import type { Locale } from "@/i18n/LocaleContext";
+
+/** A label in both dashboard languages. */
+export interface LocalizedText {
+  en: string;
+  ar: string;
+}
+
+export function localized(text: LocalizedText, locale: Locale): string {
+  return text[locale];
+}
 
 export interface NavItem {
-  label: string;
+  label: LocalizedText;
   to: string;
   icon: LucideIcon;
-  /** Small pill next to the label, e.g. "New". */
-  badge?: string;
+  /** Shows a small "New" pill next to the label. */
+  isNew?: boolean;
 }
 
 export interface NavGroup {
-  label: string | null;
+  /** Stable id used to persist the collapsed state. */
+  id: string;
+  label: LocalizedText | null;
   items: NavItem[];
 }
 
@@ -52,72 +65,89 @@ export interface NavGroup {
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
+    id: "main",
     label: null,
     items: [
-      { label: "Home", to: "/", icon: Home },
-      { label: "All stores", to: "/stores", icon: Building2 },
+      { label: { en: "Home", ar: "الرئيسية" }, to: "/", icon: Home },
+      { label: { en: "All stores", ar: "كل المتاجر" }, to: "/stores", icon: Building2 },
     ],
   },
   {
-    label: "Sell",
+    id: "sell",
+    label: { en: "Sell", ar: "البيع" },
     items: [
-      { label: "Orders", to: "/orders", icon: ShoppingBag },
-      { label: "Order pipeline", to: "/orders/pipeline", icon: Filter },
-      { label: "Call center", to: "/call-center", icon: Headphones, badge: "New" },
-      { label: "WhatsApp inbox", to: "/inbox", icon: MessageCircle, badge: "New" },
-      { label: "Abandoned checkouts", to: "/abandoned-checkouts", icon: ShoppingCart },
-      { label: "Returns & RTO", to: "/returns", icon: RotateCcw },
-      { label: "Fraud protection", to: "/fraud", icon: ShieldAlert },
+      { label: { en: "Orders", ar: "الطلبات" }, to: "/orders", icon: ShoppingBag },
+      { label: { en: "Order pipeline", ar: "مسار الطلبات" }, to: "/orders/pipeline", icon: Filter },
+      { label: { en: "Call center", ar: "مركز الاتصال" }, to: "/call-center", icon: Headphones, isNew: true },
+      { label: { en: "WhatsApp inbox", ar: "صندوق واتساب" }, to: "/inbox", icon: MessageCircle, isNew: true },
+      { label: { en: "Abandoned checkouts", ar: "السلات المتروكة" }, to: "/abandoned-checkouts", icon: ShoppingCart },
+      { label: { en: "Returns & RTO", ar: "المرتجعات" }, to: "/returns", icon: RotateCcw },
+      { label: { en: "Fraud protection", ar: "الحماية من الاحتيال" }, to: "/fraud", icon: ShieldAlert },
     ],
   },
   {
-    label: "Money",
+    id: "money",
+    label: { en: "Money", ar: "المالية" },
     items: [
-      { label: "Profit & loss", to: "/profit", icon: TrendingUp, badge: "New" },
-      { label: "COD settlements", to: "/settlements", icon: Coins, badge: "New" },
-      { label: "Payments", to: "/payments", icon: CreditCard },
+      { label: { en: "Profit & loss", ar: "الأرباح والخسائر" }, to: "/profit", icon: TrendingUp, isNew: true },
+      { label: { en: "COD settlements", ar: "تسويات الدفع عند الاستلام" }, to: "/settlements", icon: Coins, isNew: true },
+      { label: { en: "Payments", ar: "المدفوعات" }, to: "/payments", icon: CreditCard },
     ],
   },
   {
-    label: "Catalog",
+    id: "catalog",
+    label: { en: "Catalog", ar: "الكتالوج" },
     items: [
-      { label: "Products", to: "/catalog", icon: Package },
-      { label: "Inventory", to: "/inventory", icon: Boxes },
-      { label: "Suppliers", to: "/suppliers", icon: PackageOpen, badge: "New" },
-      { label: "Customers", to: "/customers", icon: Users },
-      { label: "Reviews", to: "/reviews", icon: Star },
+      { label: { en: "Products", ar: "المنتجات" }, to: "/catalog", icon: Package },
+      { label: { en: "Inventory", ar: "المخزون" }, to: "/inventory", icon: Boxes },
+      { label: { en: "Suppliers", ar: "الموردون" }, to: "/suppliers", icon: PackageOpen, isNew: true },
+      { label: { en: "Customers", ar: "العملاء" }, to: "/customers", icon: Users },
+      { label: { en: "Reviews", ar: "التقييمات" }, to: "/reviews", icon: Star },
     ],
   },
   {
-    label: "Grow",
+    id: "grow",
+    label: { en: "Grow", ar: "النمو" },
     items: [
-      { label: "Ads & media buying", to: "/ads", icon: Target, badge: "New" },
-      { label: "Funnels", to: "/funnels", icon: Workflow },
-      { label: "Offers & bundles", to: "/offers", icon: Zap },
-      { label: "A/B tests", to: "/experiments", icon: FlaskConical },
-      { label: "Discounts", to: "/discounts", icon: Tag },
-      { label: "Pixels & tracking", to: "/marketing", icon: Megaphone },
-      { label: "Automations", to: "/automations", icon: Sparkles },
-      { label: "Affiliates", to: "/affiliates", icon: Handshake },
+      { label: { en: "Ads & media buying", ar: "الإعلانات وشراء الوسائط" }, to: "/ads", icon: Target, isNew: true },
+      { label: { en: "Funnels", ar: "مسارات البيع" }, to: "/funnels", icon: Workflow },
+      { label: { en: "Offers & bundles", ar: "العروض والباقات" }, to: "/offers", icon: Zap },
+      { label: { en: "A/B tests", ar: "اختبارات A/B" }, to: "/experiments", icon: FlaskConical },
+      { label: { en: "Discounts", ar: "الخصومات" }, to: "/discounts", icon: Tag },
+      { label: { en: "Pixels & tracking", ar: "البكسلات والتتبع" }, to: "/marketing", icon: Megaphone },
+      { label: { en: "Automations", ar: "الأتمتة" }, to: "/automations", icon: Sparkles },
+      { label: { en: "Affiliates", ar: "التسويق بالعمولة" }, to: "/affiliates", icon: Handshake },
     ],
   },
   {
-    label: "Storefront",
+    id: "storefront",
+    label: { en: "Storefront", ar: "واجهة المتجر" },
     items: [
-      { label: "Website", to: "/website", icon: Globe },
-      { label: "Templates", to: "/templates", icon: LayoutTemplate },
-      { label: "Shipping & carriers", to: "/shipping", icon: Truck },
+      { label: { en: "Website", ar: "الموقع" }, to: "/website", icon: Globe },
+      { label: { en: "Templates", ar: "القوالب" }, to: "/templates", icon: LayoutTemplate },
+      { label: { en: "Shipping & carriers", ar: "الشحن وشركات الشحن" }, to: "/shipping", icon: Truck },
     ],
   },
   {
-    label: "Insights",
+    id: "insights",
+    label: { en: "Insights", ar: "الرؤى" },
     items: [
-      { label: "Analytics", to: "/analytics", icon: BarChart3 },
-      { label: "Apps", to: "/apps", icon: Blocks },
-      { label: "Settings", to: "/settings", icon: Settings },
+      { label: { en: "Analytics", ar: "التحليلات" }, to: "/analytics", icon: BarChart3 },
+      { label: { en: "Apps", ar: "التطبيقات" }, to: "/apps", icon: Blocks },
+      { label: { en: "Settings", ar: "الإعدادات" }, to: "/settings", icon: Settings },
     ],
   },
 ];
 
 /** Flat list, kept for anything that still iterates the old shape. */
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+
+/** The nav item a pathname belongs to (longest matching prefix), if any. */
+export function findNavItem(pathname: string): NavItem | undefined {
+  let best: NavItem | undefined;
+  for (const item of NAV_ITEMS) {
+    const match = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
+    if (match && (!best || item.to.length > best.to.length)) best = item;
+  }
+  return best;
+}

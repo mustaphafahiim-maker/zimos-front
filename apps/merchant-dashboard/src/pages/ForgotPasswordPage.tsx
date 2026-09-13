@@ -1,11 +1,33 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { useT } from "@/i18n/LocaleContext";
+import { AuthBackLink, AuthShell, AuthTitle } from "@/components/AuthShell";
+
+const STRINGS = {
+  en: {
+    title: "Reset your password",
+    intro: "Enter your email and we'll send you a link to set a new password.",
+    sent: "If this email is registered, you'll receive a reset link within a few minutes.",
+    email: "Email",
+    submit: "Send reset link",
+    submitting: "Sending…",
+    generic: "Something unexpected happened. Please try again shortly.",
+  },
+  ar: {
+    title: "إعادة تعيين كلمة المرور",
+    intro: "أدخل بريدك الإلكتروني وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.",
+    sent: "إذا كان هذا البريد مسجّلًا لدينا، فسيصلك رابط إعادة التعيين خلال دقائق.",
+    email: "البريد الإلكتروني",
+    submit: "إرسال رابط إعادة التعيين",
+    submitting: "جارٍ الإرسال…",
+    generic: "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
+  },
+};
 
 export function ForgotPasswordPage() {
+  const t = useT(STRINGS);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,72 +43,51 @@ export function ForgotPasswordPage() {
       // registered, so any resolved call just means "show the notice".
       setSent(true);
     } catch (err) {
-      // Only a genuine server-side failure lands here (the endpoint never
-      // rejects a merely-unknown email) — surface it and let them retry.
-      setError(
-        err instanceof ApiError ? err.message : "حصل خطأ غير متوقع، حاول تاني بعد شوية."
-      );
+      setError(err instanceof ApiError ? err.message : t.generic);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Reset your password</h2>
+    <AuthShell>
+      <AuthTitle title={t.title} subtitle={sent ? undefined : t.intro} />
 
-          {sent ? (
-            <>
-              <Alert variant="success" className="mt-6">
-                لو الإيميل ده مسجل عندنا، هيوصلك لينك تعيين باسورد جديد خلال دقايق.
-              </Alert>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                ← Back to sign in
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-ink-soft">
-                اكتب إيميلك وهنبعتلك لينك تعيّن منه باسورد جديد.
-              </p>
+      {sent ? (
+        <>
+          <Alert variant="success" className="mt-6">
+            {t.sent}
+          </Alert>
+          <AuthBackLink />
+        </>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            {error && <Alert variant="danger">{error}</Alert>}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && <Alert variant="danger">{error}</Alert>}
+            <div className="space-y-1.5">
+              <Label htmlFor="email">{t.email}</Label>
+              <Input
+                id="email"
+                type="email"
+                dir="ltr"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="rtl:text-end"
+              />
+            </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                </div>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? t.submitting : t.submit}
+            </Button>
+          </form>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "جارٍ الإرسال…" : "Send reset link"}
-                </Button>
-              </form>
-
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                ← Back to sign in
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <AuthBackLink />
+        </>
+      )}
+    </AuthShell>
   );
 }

@@ -21,6 +21,7 @@ import {
   minorToMajorInput,
   percentToBasisPoints,
 } from "@/lib/format";
+import { fmt, useCommon, useLocale, useT } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -30,13 +31,7 @@ import { Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
-
-const TYPE_LABEL: Record<DiscountType, string> = {
-  percentage: "Percentage off",
-  fixed: "Fixed amount off",
-  free_shipping: "Free shipping",
-  buy_x_get_y: "Buy X get Y",
-};
+import { FORM_STRINGS, PICKER_STRINGS, STRINGS, TYPE_LABELS } from "./DiscountsPage.strings";
 
 /** Value column: percent for %, money for fixed, a plain caption otherwise. */
 function discountValueLabel(d: Discount): string {
@@ -65,10 +60,10 @@ function displayStatus(d: Discount): DisplayStatus {
   return "active";
 }
 
-function dateRangeLabel(d: Discount): string {
-  if (!d.startsAt && !d.endsAt) return "No date limit";
-  if (d.startsAt && !d.endsAt) return `From ${formatDate(d.startsAt)}`;
-  if (!d.startsAt && d.endsAt) return `Until ${formatDate(d.endsAt)}`;
+function dateRangeLabel(d: Discount, t: Record<"noDateLimit" | "fromDate" | "untilDate", string>): string {
+  if (!d.startsAt && !d.endsAt) return t.noDateLimit;
+  if (d.startsAt && !d.endsAt) return fmt(t.fromDate, { date: formatDate(d.startsAt) });
+  if (!d.startsAt && d.endsAt) return fmt(t.untilDate, { date: formatDate(d.endsAt) });
   return `${formatDate(d.startsAt)} – ${formatDate(d.endsAt)}`;
 }
 
@@ -85,6 +80,10 @@ function generateCode(): string {
 export function DiscountsPage() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
+  const typeLabel = TYPE_LABELS[locale];
   const list = useAsync(() => apiClient.listDiscounts(workspaceId), [workspaceId]);
 
   const [formTarget, setFormTarget] = useState<Discount | "new" | null>(null);
@@ -98,7 +97,7 @@ export function DiscountsPage() {
     const next = d.status === "active" ? "disabled" : "active";
     try {
       await apiClient.setDiscountStatus(workspaceId, d.id, next);
-      toast.success(next === "active" ? "Discount enabled." : "Discount disabled.");
+      toast.success(next === "active" ? t.toastEnabled : t.toastDisabled);
       reload();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -108,7 +107,7 @@ export function DiscountsPage() {
   async function confirmDelete() {
     if (!deleting) return;
     await apiClient.deleteDiscount(workspaceId, deleting.id);
-    toast.success(deleting.code ? `"${deleting.code}" archived.` : "Discount archived.");
+    toast.success(deleting.code ? fmt(t.toastArchivedCode, { code: deleting.code }) : t.toastArchived);
     setDeleting(null);
     reload();
   }
@@ -116,29 +115,31 @@ export function DiscountsPage() {
   return (
     <div className="max-w-5xl">
       <PageHeader
-        title="Discounts"
-        description="Codes and automatic discounts applied at checkout."
-        actions={<Button onClick={() => setFormTarget("new")}>Create discount</Button>}
+        title={t.title}
+        description={t.description}
+        actions={<Button onClick={() => setFormTarget("new")}>{t.createDiscount}</Button>}
       />
 
       <DataState
         loading={list.loading}
         error={list.error}
         empty={discounts.length === 0}
-        emptyMessage="No discounts yet. Create your first one."
+        emptyMessage={t.empty}
         onRetry={() => list.refresh()}
       >
-        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
-              <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Value</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Usage</th>
-                <th className="px-4 py-3 font-medium">Dates</th>
-                <th className="px-4 py-3 font-medium" />
+              <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
+                <th className="px-4 py-3 text-start font-medium">{t.colCode}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colType}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colValue}</th>
+                <th className="px-4 py-3 text-start font-medium">{c.status}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colUsage}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colDates}</th>
+                <th className="px-4 py-3 font-medium">
+                  <span className="sr-only">{c.actions}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -146,32 +147,40 @@ export function DiscountsPage() {
                 <tr
                   key={d.id}
                   onClick={() => setFormTarget(d)}
-                  className="cursor-pointer border-b border-line last:border-0 hover:bg-paper-raised"
+                  className="cursor-pointer border-b border-line last:border-0 hover:bg-paper"
                 >
                   <td className="px-4 py-3">
                     {d.code ? (
-                      <span className="font-medium text-ink">{d.code}</span>
+                      <span dir="ltr" className="font-mono font-medium text-ink">
+                        {d.code}
+                      </span>
                     ) : (
-                      <span className="text-ink-soft">Automatic</span>
+                      <span className="text-ink-soft">{t.automatic}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-ink-soft">{TYPE_LABEL[d.type]}</td>
-                  <td className="px-4 py-3 text-ink-soft">{discountValueLabel(d)}</td>
+                  <td className="px-4 py-3 text-ink-soft">{typeLabel[d.type]}</td>
+                  <td className="px-4 py-3 text-ink-soft">
+                    <bdi dir="ltr" className="tabular-nums">
+                      {discountValueLabel(d)}
+                    </bdi>
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge value={displayStatus(d)} />
                   </td>
                   <td className="px-4 py-3 text-ink-soft">
-                    {d.usageCount}
-                    {d.usageLimit != null ? ` / ${d.usageLimit}` : ""}
+                    <bdi dir="ltr" className="tabular-nums">
+                      {d.usageCount}
+                      {d.usageLimit != null ? ` / ${d.usageLimit}` : ""}
+                    </bdi>
                   </td>
-                  <td className="px-4 py-3 text-ink-soft">{dateRangeLabel(d)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-ink-soft">{dateRangeLabel(d, t)}</td>
                   <td
-                    className="whitespace-nowrap px-4 py-3 text-right"
+                    className="whitespace-nowrap px-4 py-3 text-end"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {d.status !== "archived" && (
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(d)}>
-                        {d.status === "active" ? "Disable" : "Enable"}
+                        {d.status === "active" ? t.disable : t.enable}
                       </Button>
                     )}
                     <Button
@@ -180,7 +189,7 @@ export function DiscountsPage() {
                       className="text-danger hover:bg-danger-soft"
                       onClick={() => setDeleting(d)}
                     >
-                      Delete
+                      {c.delete}
                     </Button>
                   </td>
                 </tr>
@@ -193,7 +202,7 @@ export function DiscountsPage() {
       <Modal
         open={formTarget !== null}
         onClose={() => setFormTarget(null)}
-        title={formTarget === "new" ? "Create discount" : "Edit discount"}
+        title={formTarget === "new" ? t.createDiscount : t.editDiscount}
       >
         {formTarget !== null && (
           <DiscountForm
@@ -210,9 +219,9 @@ export function DiscountsPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title={deleting?.code ? `Archive "${deleting.code}"?` : "Archive this discount?"}
-        description="A discount that has been redeemed is financial history, so it's archived rather than deleted — it stops applying at checkout and drops off active reporting."
-        confirmLabel="Archive discount"
+        title={deleting?.code ? fmt(t.confirmTitleCode, { code: deleting.code }) : t.confirmTitle}
+        description={t.confirmDescription}
+        confirmLabel={t.confirmLabel}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
@@ -232,6 +241,10 @@ function DiscountForm({
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(FORM_STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
+  const typeLabel = TYPE_LABELS[locale];
   const isEdit = Boolean(discount);
 
   const [code, setCode] = useState(discount?.code ?? "");
@@ -273,13 +286,12 @@ function DiscountForm({
       valueNum = type === "percentage" ? percentToBasisPoints(value) : majorToMinor(value);
       if (!Number.isFinite(valueNum) || valueNum < 0) {
         setFieldErrors({
-          value:
-            type === "percentage" ? "Enter a percentage between 0 and 100." : "Enter a valid amount.",
+          value: type === "percentage" ? t.errPercentRange : t.errAmount,
         });
         return;
       }
       if (type === "percentage" && valueNum > 10000) {
-        setFieldErrors({ value: "A percentage discount can't exceed 100%." });
+        setFieldErrors({ value: t.errPercentMax });
         return;
       }
     }
@@ -288,7 +300,7 @@ function DiscountForm({
     if (minimumSubtotal.trim() !== "") {
       minSubtotalNum = majorToMinor(minimumSubtotal);
       if (!Number.isFinite(minSubtotalNum) || minSubtotalNum < 0) {
-        setFieldErrors({ minimumSubtotal: "Enter a valid amount." });
+        setFieldErrors({ minimumSubtotal: t.errAmount });
         return;
       }
     }
@@ -297,7 +309,7 @@ function DiscountForm({
     if (usageLimit.trim() !== "") {
       usageLimitNum = Math.floor(Number(usageLimit));
       if (!Number.isFinite(usageLimitNum) || usageLimitNum < 1) {
-        setFieldErrors({ usageLimit: "Enter a whole number of 1 or more." });
+        setFieldErrors({ usageLimit: t.errWholeNumber });
         return;
       }
     }
@@ -306,13 +318,13 @@ function DiscountForm({
     if (perCustomerLimit.trim() !== "") {
       perCustomerNum = Math.floor(Number(perCustomerLimit));
       if (!Number.isFinite(perCustomerNum) || perCustomerNum < 1) {
-        setFieldErrors({ perCustomerLimit: "Enter a whole number of 1 or more." });
+        setFieldErrors({ perCustomerLimit: t.errWholeNumber });
         return;
       }
     }
 
     if (productScope === "products" && productIds.length === 0) {
-      setFieldErrors({ productRestrictions: "Select at least one product, or switch to all products." });
+      setFieldErrors({ productRestrictions: t.errProducts });
       return;
     }
 
@@ -335,7 +347,7 @@ function DiscountForm({
           stackable,
         };
         await apiClient.updateDiscount(workspaceId, discount.id, payload);
-        toast.success("Discount saved.");
+        toast.success(t.toastSaved);
       } else {
         const payload: CreateDiscountPayload = { type, stackable, productRestrictions: restrictions };
         if (codeValue) payload.code = codeValue;
@@ -346,7 +358,7 @@ function DiscountForm({
         if (usageLimitNum != null) payload.usageLimit = usageLimitNum;
         if (perCustomerNum != null) payload.perCustomerLimit = perCustomerNum;
         await apiClient.createDiscount(workspaceId, payload);
-        toast.success(codeValue ? `"${codeValue}" created.` : "Automatic discount created.");
+        toast.success(codeValue ? fmt(t.toastCreatedCode, { code: codeValue }) : t.toastCreatedAuto);
       }
       onDone();
     } catch (err) {
@@ -362,34 +374,35 @@ function DiscountForm({
     <form onSubmit={submit} className="space-y-4">
       {formError && <Alert variant="danger">{formError}</Alert>}
 
-      <Field
-        label="Code"
-        error={fieldErrors.code}
-        hint="Leave blank for an automatic discount with no code."
-      >
+      <Field label={t.code} error={fieldErrors.code} hint={t.codeHint}>
         {({ id, ...aria }) => (
           <div className="flex gap-2">
             <Input
               id={id}
               {...aria}
+              dir="ltr"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="SUMMER25"
-              className={fieldErrors.code ? "border-danger focus-visible:ring-danger/30" : undefined}
+              className={
+                fieldErrors.code
+                  ? "font-mono border-danger focus-visible:ring-danger/30"
+                  : "font-mono"
+              }
             />
             <Button type="button" variant="outline" onClick={() => setCode(generateCode())}>
-              Generate
+              {t.generate}
             </Button>
           </div>
         )}
       </Field>
 
-      <Field label="Type" error={fieldErrors.type}>
+      <Field label={t.type} error={fieldErrors.type}>
         {({ id }) => (
           <Select id={id} value={type} onChange={(e) => setType(e.target.value as DiscountType)}>
-            {(Object.keys(TYPE_LABEL) as DiscountType[]).map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABEL[t]}
+            {(Object.keys(typeLabel) as DiscountType[]).map((k) => (
+              <option key={k} value={k}>
+                {typeLabel[k]}
               </option>
             ))}
           </Select>
@@ -397,9 +410,9 @@ function DiscountForm({
       </Field>
 
       {type === "percentage" && (
-        <Field label="Percentage" required error={fieldErrors.value} hint="Between 0 and 100.">
+        <Field label={t.percentage} required error={fieldErrors.value} hint={t.percentageHint}>
           {({ id, ...aria }) => (
-            <div className="relative">
+            <div className="relative" dir="ltr">
               <Input
                 id={id}
                 {...aria}
@@ -409,9 +422,9 @@ function DiscountForm({
                 step="0.01"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                className="pr-8"
+                className="pe-8"
               />
-              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-ink-soft">
+              <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-sm text-ink-soft">
                 %
               </span>
             </div>
@@ -421,7 +434,7 @@ function DiscountForm({
 
       {type === "fixed" && (
         <MoneyInput
-          label="Amount off"
+          label={t.amountOff}
           required
           value={value}
           onChange={setValue}
@@ -430,15 +443,15 @@ function DiscountForm({
       )}
 
       <MoneyInput
-        label="Minimum subtotal"
+        label={t.minimumSubtotal}
         value={minimumSubtotal}
         onChange={setMinimumSubtotal}
         error={fieldErrors.minimumSubtotal}
-        hint="Optional — the order subtotal must reach this before the discount applies."
+        hint={t.minimumSubtotalHint}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Starts at" error={fieldErrors.startsAt}>
+        <Field label={t.startsAt} error={fieldErrors.startsAt}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -449,7 +462,7 @@ function DiscountForm({
             />
           )}
         </Field>
-        <Field label="Ends at" error={fieldErrors.endsAt}>
+        <Field label={t.endsAt} error={fieldErrors.endsAt}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -463,7 +476,7 @@ function DiscountForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Usage limit" error={fieldErrors.usageLimit} hint="Total redemptions allowed.">
+        <Field label={t.usageLimit} error={fieldErrors.usageLimit} hint={t.usageLimitHint}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -476,9 +489,9 @@ function DiscountForm({
           )}
         </Field>
         <Field
-          label="Per-customer limit"
+          label={t.perCustomerLimit}
           error={fieldErrors.perCustomerLimit}
-          hint="Redemptions allowed per customer."
+          hint={t.perCustomerLimitHint}
         >
           {({ id, ...aria }) => (
             <Input
@@ -494,7 +507,7 @@ function DiscountForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Applies to</Label>
+        <Label>{t.appliesTo}</Label>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-ink">
             <input
@@ -503,7 +516,7 @@ function DiscountForm({
               checked={productScope === "all"}
               onChange={() => setProductScope("all")}
             />
-            All products
+            {t.allProducts}
           </label>
           <label className="flex items-center gap-2 text-sm text-ink">
             <input
@@ -512,7 +525,7 @@ function DiscountForm({
               checked={productScope === "products"}
               onChange={() => setProductScope("products")}
             />
-            Specific products
+            {t.specificProducts}
           </label>
           {productScope === "products" && (
             <ProductScopePicker selected={productIds} onChange={setProductIds} />
@@ -529,15 +542,15 @@ function DiscountForm({
           checked={stackable}
           onChange={(e) => setStackable(e.target.checked)}
         />
-        Can be combined with other discounts
+        {t.stackable}
       </label>
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : isEdit ? "Save discount" : "Create discount"}
+          {saving ? c.saving : isEdit ? t.saveDiscount : t.createDiscount}
         </Button>
       </div>
     </form>
@@ -556,6 +569,7 @@ function ProductScopePicker({
   onChange: (ids: string[]) => void;
 }) {
   const workspaceId = useWorkspaceId();
+  const t = useT(PICKER_STRINGS);
   const products = useAsync(
     () => apiClient.listProducts(workspaceId, { limit: 200 }).then((r) => r.products),
     [workspaceId]
@@ -579,20 +593,21 @@ function ProductScopePicker({
   if (products.error) return <p className="text-sm text-danger">{getErrorMessage(products.error)}</p>;
 
   return (
-    <div className="space-y-2 rounded-[var(--radius-card)] border border-line p-3">
+    <div className="space-y-2 rounded-2xl border border-line p-3">
       <div className="flex items-center justify-between gap-2">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter products…"
+          placeholder={t.filterPlaceholder}
+          aria-label={t.filterPlaceholder}
           className="max-w-xs"
         />
-        <span className="whitespace-nowrap text-xs text-ink-soft">{selected.length} selected</span>
+        <span className="whitespace-nowrap text-xs text-ink-soft">
+          {fmt(t.selected, { n: selected.length })}
+        </span>
       </div>
       {filtered.length === 0 ? (
-        <p className="text-sm text-ink-soft">
-          {all.length === 0 ? "No products yet — add one in Catalog first." : "No products match."}
-        </p>
+        <p className="text-sm text-ink-soft">{all.length === 0 ? t.noProducts : t.noMatch}</p>
       ) : (
         <div className="max-h-48 space-y-1 overflow-y-auto">
           {filtered.map((p: Product) => (

@@ -6,13 +6,32 @@ import { formatProductCode } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import { ProductDetailsForm } from "./components/ProductDetailsForm";
 import { ProductImagesSection } from "./components/ProductImagesSection";
 import { VariantsSection } from "./components/VariantsSection";
 import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
 
+const STRINGS = {
+  en: {
+    newProduct: "New product",
+    products: "Products",
+    product: "Product",
+    newDescription:
+      "Name, description and at least one image are required. Add variants, offers and collections after it's created.",
+  },
+  ar: {
+    newProduct: "منتج جديد",
+    products: "المنتجات",
+    product: "المنتج",
+    newDescription:
+      "الاسم والوصف وصورة واحدة على الأقل مطلوبة. يمكنك إضافة المتغيّرات والعروض والمجموعات بعد إنشاء المنتج.",
+  },
+} satisfies Messages;
+
 export function ProductEditPage() {
+  const t = useT(STRINGS);
   const { productId } = useParams<{ productId: string }>();
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
@@ -27,14 +46,11 @@ export function ProductEditPage() {
     return (
       <div className="max-w-3xl">
         <PageHeader
-          title="New product"
-          back={{ to: "/catalog", label: "Products" }}
-          description="Name, description and at least one image are required. Add variants, offers and collections after it's created."
+          title={t.newProduct}
+          back={{ to: "/catalog", label: t.products }}
+          description={t.newDescription}
         />
-        <ProductDetailsForm
-          mode="create"
-          onCreated={(created) => navigate(`/catalog/${created.id}`)}
-        />
+        <ProductDetailsForm mode="create" onCreated={(created) => navigate(`/catalog/${created.id}`)} />
       </div>
     );
   }
@@ -45,9 +61,9 @@ export function ProductEditPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader
-        title={data?.name ?? "Product"}
+        title={data?.name ?? t.product}
         titleMeta={formatProductCode(data?.productCode) ?? undefined}
-        back={{ to: "/catalog", label: "Products" }}
+        back={{ to: "/catalog", label: t.products }}
         actions={data && <StatusBadge value={data.status} />}
       />
 
@@ -55,17 +71,8 @@ export function ProductEditPage() {
         {data && (
           <div className="space-y-6">
             <ProductDetailsForm mode="edit" product={data} onSaved={reload} />
-            <ProductImagesSection
-              mode="edit"
-              productId={data.id}
-              media={data.media ?? []}
-              onChanged={reload}
-            />
-            <VariantsSection
-              productId={data.id}
-              variants={data.variants ?? []}
-              onChanged={reload}
-            />
+            <ProductImagesSection mode="edit" productId={data.id} media={data.media ?? []} onChanged={reload} />
+            <VariantsSection productId={data.id} variants={data.variants ?? []} onChanged={reload} />
             <OffersSection
               productId={data.id}
               offers={data.offers ?? []}

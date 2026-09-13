@@ -9,7 +9,7 @@ interface ToggleProps {
   className?: string;
 }
 
-/** Accessible switch. Renders label/description on the left when provided. */
+/** Accessible switch. Renders label/description at the start when provided; the knob mirrors in RTL. */
 export function Toggle({ checked, onChange, label, description, disabled, className }: ToggleProps) {
   const control = (
     <button
@@ -21,14 +21,14 @@ export function Toggle({ checked, onChange, label, description, disabled, classN
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-        checked ? "bg-primary" : "bg-line",
+        checked ? "bg-primary" : "bg-line-strong",
         disabled && "cursor-not-allowed opacity-50"
       )}
     >
       <span
         className={cn(
-          "inline-block size-5 rounded-full bg-white shadow transition-transform",
-          checked ? "translate-x-5" : "translate-x-0.5"
+          "inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200",
+          checked ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0.5 rtl:-translate-x-0.5"
         )}
       />
     </button>

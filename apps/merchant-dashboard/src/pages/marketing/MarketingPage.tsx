@@ -8,6 +8,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatMoney } from "@/lib/format";
+import { fmt, useCommon, useLocale, useT } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
@@ -18,27 +19,16 @@ import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { HBarList } from "@/components/charts";
 import { useToast } from "@/components/Toast";
-
-type PixelEvent = TrackingPixel["events"][number];
-
-const PLATFORM: Record<PixelPlatform, { name: string; initials: string; chip: string; supportsCapi: boolean; idHint: string }> = {
-  facebook: { name: "Facebook / Meta", initials: "f", chip: "bg-[#1877F2] text-white", supportsCapi: true, idHint: "15–16 digit Pixel ID from Events Manager" },
-  tiktok: { name: "TikTok", initials: "TT", chip: "bg-black text-white", supportsCapi: true, idHint: "Pixel code, e.g. CJ8K2L3M…" },
-  snapchat: { name: "Snapchat", initials: "S", chip: "bg-[#FFFC00] text-black", supportsCapi: true, idHint: "Pixel ID from Snap Ads Manager" },
-  google_ads: { name: "Google Ads", initials: "G", chip: "bg-gradient-to-br from-[#EA4335] to-[#34A853] text-white", supportsCapi: false, idHint: "Conversion ID, e.g. AW-123456789" },
-  ga4: { name: "Google Analytics 4", initials: "GA", chip: "bg-gradient-to-br from-[#EA4335] to-[#34A853] text-white", supportsCapi: false, idHint: "Measurement ID, e.g. G-XXXXXXXXXX" },
-};
-
-const EVENTS: Array<{ key: PixelEvent; label: string }> = [
-  { key: "page_view", label: "PageView" },
-  { key: "view_content", label: "ViewContent" },
-  { key: "add_to_cart", label: "AddToCart" },
-  { key: "initiate_checkout", label: "InitiateCheckout" },
-  { key: "purchase", label: "Purchase" },
-  { key: "lead", label: "Lead" },
-];
-
-const EVENT_LABEL: Record<PixelEvent, string> = Object.fromEntries(EVENTS.map((e) => [e.key, e.label])) as Record<PixelEvent, string>;
+import {
+  EVENT_DESCRIPTION,
+  EVENT_KEYS,
+  EVENT_LABEL,
+  FORM_STRINGS,
+  PLATFORM_META,
+  PLATFORM_TEXT,
+  STRINGS,
+  type PixelEvent,
+} from "./MarketingPage.strings";
 
 function maskPixelId(id: string): string {
   if (id.length <= 6) return id;
@@ -46,10 +36,15 @@ function maskPixelId(id: string): string {
 }
 
 function PlatformChip({ platform, className }: { platform: PixelPlatform; className?: string }) {
-  const p = PLATFORM[platform];
+  const { locale } = useLocale();
+  const meta = PLATFORM_META[platform];
   return (
-    <span className={cn("inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold", p.chip, className)} title={p.name}>
-      {p.initials}
+    <span
+      dir="ltr"
+      className={cn("inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold", meta.chip, className)}
+      title={PLATFORM_TEXT[locale][platform].name}
+    >
+      {meta.initials}
     </span>
   );
 }
@@ -57,6 +52,10 @@ function PlatformChip({ platform, className }: { platform: PixelPlatform; classN
 export function MarketingPage() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale, intlLocale } = useLocale();
+  const platformText = PLATFORM_TEXT[locale];
   const list = useAsync(() => mockApi.listPixels(workspaceId), [workspaceId]);
   const analytics = useAsync(() => mockApi.getAnalytics(workspaceId, "30d"), [workspaceId]);
 
@@ -83,7 +82,7 @@ export function MarketingPage() {
     list.setData((prev) => (prev ?? []).map((p) => (p.id === px.id ? { ...p, status } : p)));
     try {
       await mockApi.savePixel(workspaceId, { ...px, status });
-      toast.success(next ? "Pixel enabled." : "Pixel disabled.");
+      toast.success(next ? t.toastEnabled : t.toastDisabled);
     } catch (err) {
       toast.error(getErrorMessage(err));
       reload();
@@ -93,7 +92,7 @@ export function MarketingPage() {
   async function sendTest(px: TrackingPixel) {
     try {
       await mockApi.savePixel(workspaceId, { ...px, lastEventAt: nowIso() });
-      toast.success("Test purchase event sent.");
+      toast.success(t.toastTestSent);
       reload();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -103,7 +102,7 @@ export function MarketingPage() {
   async function confirmDelete() {
     if (!deleting) return;
     await mockApi.deletePixel(workspaceId, deleting.id);
-    toast.success("Pixel removed.");
+    toast.success(t.toastRemoved);
     setDeleting(null);
     reload();
   }
@@ -116,93 +115,133 @@ export function MarketingPage() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Couldn't copy — select the snippet and copy it manually.");
+      toast.error(t.toastCopyFailed);
     }
   }
 
   const sources = analytics.data?.bySource ?? [];
 
+  const qualityHint =
+    kpis.capiCount === 0
+      ? t.kpiQualityHintNone
+      : kpis.capiCount === 1
+        ? t.kpiQualityHintOne
+        : fmt(t.kpiQualityHintMany, { n: kpis.capiCount });
+
   return (
     <div className="max-w-6xl">
       <PageHeader
-        title="Marketing & pixels"
-        description="Track ad performance across Facebook, TikTok, Snap and Google, with server-side events that survive browser blocking."
-        actions={<Button onClick={() => setFormTarget("new")}>Add pixel</Button>}
+        title={t.title}
+        description={t.description}
+        actions={<Button onClick={() => setFormTarget("new")}>{t.addPixel}</Button>}
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <KpiCard label="Events sent today" value={kpis.sent.toLocaleString()} hint="Browser + server-side" icon={<Activity />} />
-        <KpiCard label="Purchase events" value={kpis.purchases.toLocaleString()} hint="Today, across active pixels" icon={<Send />} />
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KpiCard
-          label="CAPI match quality"
-          value={kpis.quality === null ? "—" : `${kpis.quality.toFixed(1)} / 10`}
-          hint={kpis.capiCount === 0 ? "Enable Conversions API to improve attribution" : `${kpis.capiCount} pixel${kpis.capiCount > 1 ? "s" : ""} sending server events`}
+          label={t.kpiEventsSent}
+          value={<bdi dir="ltr">{kpis.sent.toLocaleString(intlLocale)}</bdi>}
+          hint={t.kpiEventsSentHint}
+          icon={<Activity />}
+        />
+        <KpiCard
+          label={t.kpiPurchases}
+          value={<bdi dir="ltr">{kpis.purchases.toLocaleString(intlLocale)}</bdi>}
+          hint={t.kpiPurchasesHint}
+          icon={<Send />}
+        />
+        <KpiCard
+          className="col-span-2 lg:col-span-1"
+          label={t.kpiQuality}
+          value={
+            <bdi dir="ltr">
+              {kpis.quality === null ? "—" : fmt(t.kpiQualityValue, { n: kpis.quality.toFixed(1) })}
+            </bdi>
+          }
+          hint={qualityHint}
           icon={<ShieldCheck />}
         />
       </div>
 
-      <DataState loading={list.loading} error={list.error} empty={pixels.length === 0} emptyMessage="No pixels yet. Add your Facebook or TikTok pixel to start tracking." onRetry={() => list.refresh()}>
-        <div className="mb-6 overflow-x-auto rounded-[var(--radius-card)] border border-line">
+      <DataState loading={list.loading} error={list.error} empty={pixels.length === 0} emptyMessage={t.empty} onRetry={() => list.refresh()}>
+        <div className="mb-6 overflow-x-auto rounded-2xl border border-line bg-paper-raised">
           <table className="w-full min-w-[960px] text-sm">
             <thead>
-              <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 font-medium">Pixel</th>
-                <th className="px-4 py-3 font-medium">Pixel ID</th>
-                <th className="px-4 py-3 font-medium">Events</th>
-                <th className="px-4 py-3 font-medium">Conversions API</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Last event</th>
-                <th className="px-4 py-3 font-medium" />
+              <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
+                <th className="px-4 py-3 text-start font-medium">{t.colPixel}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colPixelId}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colEvents}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colCapi}</th>
+                <th className="px-4 py-3 text-start font-medium">{c.status}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.colLastEvent}</th>
+                <th className="px-4 py-3 font-medium">
+                  <span className="sr-only">{c.actions}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {pixels.map((px) => (
-                <tr key={px.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+                <tr key={px.id} className="border-b border-line last:border-0 hover:bg-paper">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <PlatformChip platform={px.platform} />
                       <div className="min-w-0">
                         <p className="truncate font-medium text-ink">{px.label}</p>
-                        <p className="text-xs text-ink-soft">{PLATFORM[px.platform].name}</p>
+                        <p className="text-xs text-ink-soft">{platformText[px.platform].name}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-ink-soft">{maskPixelId(px.pixelId)}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-ink-soft">
+                    <bdi dir="ltr">{maskPixelId(px.pixelId)}</bdi>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex max-w-[240px] flex-wrap gap-1">
                       {px.events.map((e) => (
-                        <span key={e} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink-soft">
+                        <span
+                          key={e}
+                          dir="ltr"
+                          title={EVENT_DESCRIPTION[locale][e]}
+                          className="rounded-full border border-line bg-primary-soft px-2 py-0.5 text-[11px] text-primary"
+                        >
                           {EVENT_LABEL[e]}
                         </span>
                       ))}
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    {!PLATFORM[px.platform].supportsCapi ? (
-                      <span className="text-xs text-ink-soft">n/a</span>
+                    {!PLATFORM_META[px.platform].supportsCapi ? (
+                      <span className="text-xs text-ink-soft">{t.notApplicable}</span>
                     ) : px.capiEnabled ? (
                       <div className="flex flex-col gap-0.5 text-xs">
                         <span className="inline-flex items-center gap-1 font-medium text-success">
-                          <Radio className="size-3" /> Server-side on
+                          <Radio className="size-3" /> {t.serverSideOn}
                         </span>
-                        <span className={cn(px.capiTokenSet ? "text-ink-soft" : "font-medium text-danger")}>{px.capiTokenSet ? "Token set" : "Token missing"}</span>
+                        <span className={cn(px.capiTokenSet ? "text-ink-soft" : "font-medium text-danger")}>
+                          {px.capiTokenSet ? t.tokenSet : t.tokenMissing}
+                        </span>
                       </div>
                     ) : (
-                      <span className="text-xs text-ink-soft">Browser only</span>
+                      <span className="text-xs text-ink-soft">{t.browserOnly}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <Toggle checked={px.status === "active"} onChange={(next) => toggleStatus(px, next)} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-ink-soft">{formatDateTime(px.lastEventAt)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
+                  <td className="whitespace-nowrap px-4 py-3 text-end">
                     <Button size="sm" variant="ghost" onClick={() => sendTest(px)} disabled={px.status !== "active"}>
-                      Test event
+                      {t.testEvent}
                     </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label="Edit" onClick={() => setFormTarget(px)}>
+                    <Button size="icon-sm" variant="ghost" aria-label={c.edit} title={c.edit} onClick={() => setFormTarget(px)}>
                       <Pencil />
                     </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label="Delete" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(px)}>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={c.delete}
+                      title={c.delete}
+                      className="text-danger hover:bg-danger-soft"
+                      onClick={() => setDeleting(px)}
+                    >
                       <Trash2 />
                     </Button>
                   </td>
@@ -214,36 +253,46 @@ export function MarketingPage() {
       </DataState>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Card>
+        <Card className="min-w-0 rounded-2xl">
           <CardHeader>
-            <CardTitle>UTM & attribution</CardTitle>
-            <CardDescription>Orders by traffic source, last 30 days. Sources come from utm_source on the landing visit.</CardDescription>
+            <CardTitle className="font-semibold">{t.utmTitle}</CardTitle>
+            <CardDescription>{t.utmDescription}</CardDescription>
           </CardHeader>
           <CardContent>
             {analytics.loading ? (
-              <p className="text-sm text-ink-soft">Loading…</p>
+              <p className="text-sm text-ink-soft">{c.loading}</p>
             ) : analytics.error ? (
               <Alert variant="danger">{getErrorMessage(analytics.error)}</Alert>
             ) : (
               <>
-                <HBarList rows={sources.map((s) => ({ label: s.source, value: s.revenueAmount, caption: formatMoney(s.revenueAmount) }))} />
+                <div dir="ltr">
+                  <HBarList rows={sources.map((s) => ({ label: s.source, value: s.revenueAmount, caption: formatMoney(s.revenueAmount) }))} />
+                </div>
                 <div className="mt-2 overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-left text-ink-soft">
-                        <th className="py-1 font-medium">Source</th>
-                        <th className="py-1 text-right font-medium">Orders</th>
-                        <th className="py-1 text-right font-medium">Revenue</th>
-                        <th className="py-1 text-right font-medium">AOV</th>
+                      <tr className="text-start text-ink-soft">
+                        <th className="py-1 text-start font-medium">{t.colSource}</th>
+                        <th className="py-1 text-end font-medium">{t.colOrders}</th>
+                        <th className="py-1 text-end font-medium">{t.colRevenue}</th>
+                        <th className="py-1 text-end font-medium">{t.colAov}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sources.map((s) => (
                         <tr key={s.source} className="border-t border-line">
-                          <td className="py-1.5 text-ink">{s.source}</td>
-                          <td className="py-1.5 text-right tabular-nums text-ink-soft">{s.orders.toLocaleString()}</td>
-                          <td className="py-1.5 text-right tabular-nums text-ink-soft">{formatMoney(s.revenueAmount)}</td>
-                          <td className="py-1.5 text-right tabular-nums text-ink-soft">{formatMoney(s.orders > 0 ? Math.round(s.revenueAmount / s.orders) : 0)}</td>
+                          <td className="py-1.5 text-ink">
+                            <bdi dir="ltr">{s.source}</bdi>
+                          </td>
+                          <td className="py-1.5 text-end tabular-nums text-ink-soft">
+                            <bdi dir="ltr">{s.orders.toLocaleString(intlLocale)}</bdi>
+                          </td>
+                          <td className="py-1.5 text-end tabular-nums text-ink-soft">
+                            <bdi dir="ltr">{formatMoney(s.revenueAmount)}</bdi>
+                          </td>
+                          <td className="py-1.5 text-end tabular-nums text-ink-soft">
+                            <bdi dir="ltr">{formatMoney(s.orders > 0 ? Math.round(s.revenueAmount / s.orders) : 0)}</bdi>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -254,29 +303,31 @@ export function MarketingPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 rounded-2xl">
           <CardHeader>
-            <CardTitle>Tracking script</CardTitle>
-            <CardDescription>Already installed on Zimos-hosted stores and funnels. Paste this on any external landing page to fire the same pixels.</CardDescription>
+            <CardTitle className="font-semibold">{t.scriptTitle}</CardTitle>
+            <CardDescription>{t.scriptDescription}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative rounded-[var(--radius-card)] border border-line bg-paper p-3">
-              <pre className="overflow-x-auto whitespace-pre-wrap break-all pr-20 font-mono text-xs text-ink">{snippet}</pre>
-              <Button size="sm" variant="outline" className="absolute right-2 top-2" onClick={copySnippet}>
+            <div className="relative rounded-2xl border border-line bg-zimos-ice p-3 pe-24">
+              <pre dir="ltr" className="overflow-x-auto whitespace-pre-wrap break-all text-start font-mono text-xs text-ink">
+                {snippet}
+              </pre>
+              <Button size="sm" variant="outline" className="absolute end-2 top-2" onClick={copySnippet}>
                 {copied ? <Check /> : <Copy />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? c.copied : c.copy}
               </Button>
             </div>
-            <ul className="space-y-1 text-xs text-ink-soft">
-              <li>• Fires PageView on load and ViewContent / AddToCart from the product buttons.</li>
-              <li>• Purchase events are deduplicated between browser and server using the order number.</li>
-              <li>• UTM parameters are stored for 30 days and attached to the order.</li>
+            <ul className="mt-3 space-y-1 text-xs text-ink-soft">
+              <li>• {t.scriptNote1}</li>
+              <li>• {t.scriptNote2}</li>
+              <li>• {t.scriptNote3}</li>
             </ul>
           </CardContent>
         </Card>
       </div>
 
-      <Modal open={formTarget !== null} onClose={() => setFormTarget(null)} title={formTarget === "new" ? "Add pixel" : "Edit pixel"}>
+      <Modal open={formTarget !== null} onClose={() => setFormTarget(null)} title={formTarget === "new" ? t.addPixel : t.editPixel}>
         {formTarget !== null && (
           <PixelForm
             key={formTarget === "new" ? "new" : formTarget.id}
@@ -292,9 +343,9 @@ export function MarketingPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title={deleting ? `Remove "${deleting.label}"?` : "Remove pixel?"}
-        description="Events stop firing immediately. Your ad account keeps its historical data."
-        confirmLabel="Remove pixel"
+        title={deleting ? fmt(t.confirmTitleNamed, { name: deleting.label }) : t.confirmTitle}
+        description={t.confirmDescription}
+        confirmLabel={t.confirmLabel}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
@@ -306,6 +357,10 @@ export function MarketingPage() {
 function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone: () => void; onCancel: () => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(FORM_STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
+  const platformText = PLATFORM_TEXT[locale];
   const isEdit = Boolean(pixel);
 
   const [platform, setPlatform] = useState<PixelPlatform>(pixel?.platform ?? "facebook");
@@ -318,7 +373,7 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const supportsCapi = PLATFORM[platform].supportsCapi;
+  const supportsCapi = PLATFORM_META[platform].supportsCapi;
 
   function toggleEvent(e: PixelEvent) {
     setEvents((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]));
@@ -328,9 +383,9 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
     e.preventDefault();
     setError(null);
     const errs: Record<string, string> = {};
-    if (!label.trim()) errs.label = "Give the pixel a label.";
-    if (!pixelId.trim()) errs.pixelId = "Enter the pixel ID from your ad platform.";
-    if (events.length === 0) errs.events = "Select at least one event.";
+    if (!label.trim()) errs.label = t.errLabel;
+    if (!pixelId.trim()) errs.pixelId = t.errPixelId;
+    if (events.length === 0) errs.events = t.errEvents;
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -350,7 +405,7 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
     setSaving(true);
     try {
       await mockApi.savePixel(workspaceId, next);
-      toast.success(isEdit ? "Pixel saved." : "Pixel added.");
+      toast.success(isEdit ? t.toastSaved : t.toastAdded);
       onDone();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -363,14 +418,14 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
     <form onSubmit={submit} className="space-y-4">
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Field label="Platform">
+      <Field label={t.platform}>
         {({ id }) => (
           <div className="flex items-center gap-3">
             <PlatformChip platform={platform} />
             <Select id={id} value={platform} onChange={(e) => setPlatform(e.target.value as PixelPlatform)} disabled={isEdit}>
-              {(Object.keys(PLATFORM) as PixelPlatform[]).map((p) => (
+              {(Object.keys(PLATFORM_META) as PixelPlatform[]).map((p) => (
                 <option key={p} value={p}>
-                  {PLATFORM[p].name}
+                  {platformText[p].name}
                 </option>
               ))}
             </Select>
@@ -378,38 +433,48 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
         )}
       </Field>
 
-      <TextField label="Label" required value={label} onChange={(e) => setLabel(e.target.value)} error={fieldErrors.label} placeholder="Main FB Pixel" />
-      <TextField label="Pixel ID" required value={pixelId} onChange={(e) => setPixelId(e.target.value)} error={fieldErrors.pixelId} hint={PLATFORM[platform].idHint} className="font-mono" />
+      <TextField label={t.label} required value={label} onChange={(e) => setLabel(e.target.value)} error={fieldErrors.label} placeholder={t.labelPlaceholder} />
+      <TextField
+        label={t.pixelId}
+        required
+        dir="ltr"
+        value={pixelId}
+        onChange={(e) => setPixelId(e.target.value)}
+        error={fieldErrors.pixelId}
+        hint={platformText[platform].idHint}
+        className="font-mono"
+      />
 
       {supportsCapi && (
-        <div className="space-y-3 rounded-[var(--radius-card)] border border-line p-3">
-          <Toggle
-            checked={capiEnabled}
-            onChange={setCapiEnabled}
-            label="Conversions API (server-side)"
-            description="Send events from our servers too — more accurate attribution when browsers block the pixel."
-          />
+        <div className="space-y-3 rounded-2xl border border-line p-3">
+          <Toggle checked={capiEnabled} onChange={setCapiEnabled} label={t.capiLabel} description={t.capiDescription} />
           {capiEnabled && (
             <TextField
-              label="Access token"
+              label={t.accessToken}
               type="password"
+              dir="ltr"
               autoComplete="off"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder={pixel?.capiTokenSet ? "•••••••• (leave blank to keep the current token)" : "Paste the system user token"}
-              hint="Stored encrypted. Generate it in Events Manager → Settings → Conversions API."
+              placeholder={pixel?.capiTokenSet ? t.tokenPlaceholderKeep : t.tokenPlaceholderNew}
+              hint={t.tokenHint}
             />
           )}
         </div>
       )}
 
       <div className="space-y-1.5">
-        <Label>Events to send</Label>
-        <div className="grid grid-cols-2 gap-1 rounded-[var(--radius-card)] border border-line p-2 sm:grid-cols-3">
-          {EVENTS.map((e) => (
-            <label key={e.key} className="flex items-center gap-2 rounded px-1 py-1 text-sm text-ink hover:bg-paper-raised">
-              <input type="checkbox" checked={events.includes(e.key)} onChange={() => toggleEvent(e.key)} />
-              {e.label}
+        <Label>{t.eventsToSend}</Label>
+        <div className="grid grid-cols-2 gap-1 rounded-2xl border border-line p-2 sm:grid-cols-3">
+          {EVENT_KEYS.map((e) => (
+            <label key={e.key} className="flex items-start gap-2 rounded px-1 py-1 text-sm text-ink hover:bg-paper-raised">
+              <input type="checkbox" className="mt-1" checked={events.includes(e.key)} onChange={() => toggleEvent(e.key)} />
+              <span className="min-w-0">
+                <span dir="ltr" className="block">
+                  {e.label}
+                </span>
+                <span className="block text-xs text-ink-muted">{EVENT_DESCRIPTION[locale][e.key]}</span>
+              </span>
             </label>
           ))}
         </div>
@@ -418,10 +483,10 @@ function PixelForm({ pixel, onDone, onCancel }: { pixel?: TrackingPixel; onDone:
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : isEdit ? "Save pixel" : "Add pixel"}
+          {saving ? c.saving : isEdit ? t.savePixel : t.addPixel}
         </Button>
       </div>
     </form>

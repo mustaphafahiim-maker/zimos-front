@@ -2,6 +2,20 @@ import { useId } from "react";
 import { Check } from "lucide-react";
 import { Input, Label, cn } from "@store-builder/ui";
 import { BRAND_COLOR_PRESETS, normalizeHex } from "@/lib/brandColors";
+import { fmt, useT } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    picker: "{label} colour picker",
+    use: "Use {hex}",
+    invalid: "Enter a hex colour like #1F5D5B.",
+  },
+  ar: {
+    picker: "منتقي لون {label}",
+    use: "استخدام {hex}",
+    invalid: "أدخل لونًا بصيغة hex مثل ‎#1F5D5B.",
+  },
+};
 
 /**
  * A colour swatch + native picker + hex text box + preset row, all bound to one
@@ -20,6 +34,7 @@ export function ColorField({
   value: string;
   onChange: (hex: string) => void;
 }) {
+  const t = useT(STRINGS);
   const id = useId();
   const valid = normalizeHex(value);
   // Keep the native picker on the last valid colour — it cannot show a partial hex.
@@ -32,16 +47,17 @@ export function ColorField({
         <input
           id={id}
           type="color"
-          aria-label={`${label} colour picker`}
+          aria-label={fmt(t.picker, { label })}
           value={swatch}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="size-10 shrink-0 cursor-pointer rounded-[0.5rem] border border-line bg-paper-raised p-1"
+          className="size-10 shrink-0 cursor-pointer rounded-[10px] border border-line bg-paper-raised p-1"
         />
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={() => valid && onChange(valid)}
           spellCheck={false}
+          dir="ltr"
           aria-invalid={valid ? undefined : true}
           placeholder="#1F5D5B"
           className={cn("w-32 font-mono uppercase", !valid && "border-danger focus-visible:ring-danger/30")}
@@ -57,11 +73,11 @@ export function ColorField({
               type="button"
               onClick={() => onChange(preset)}
               title={preset}
-              aria-label={`Use ${preset}`}
+              aria-label={fmt(t.use, { hex: preset })}
               aria-pressed={active}
               className={cn(
-                "cursor-pointer flex size-7 items-center justify-center rounded-full border transition-transform hover:scale-110",
-                active ? "border-ink" : "border-line"
+                "flex size-7 cursor-pointer items-center justify-center rounded-full border transition-transform hover:scale-110",
+                active ? "border-ink ring-2 ring-primary/30" : "border-line"
               )}
               style={{ backgroundColor: preset }}
             >
@@ -72,9 +88,9 @@ export function ColorField({
       </div>
 
       {valid ? (
-        hint && <p className="text-xs text-ink-soft">{hint}</p>
+        hint && <p className="text-xs text-ink-muted">{hint}</p>
       ) : (
-        <p className="text-xs font-medium text-danger">Enter a hex colour like #1F5D5B.</p>
+        <p className="text-xs font-medium text-danger">{t.invalid}</p>
       )}
     </div>
   );

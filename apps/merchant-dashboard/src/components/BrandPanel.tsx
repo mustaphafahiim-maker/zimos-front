@@ -1,57 +1,41 @@
-const FILLED_CELLS = new Set([
-  "2-1", "2-2", "3-4", "4-1", "4-5", "5-3", "6-0", "6-4", "1-3", "0-5",
-]);
+import { ZimosLogo, ZIMOS_PHRASES } from "@store-builder/ui";
+import { useT } from "@/i18n/LocaleContext";
 
+const STRINGS = {
+  en: {
+    headline: "Your store, your orders and your cash-on-delivery operations in one workspace.",
+    subcopy: "Launch a storefront or funnel, confirm orders, ship with your carriers and see your real profit.",
+  },
+  ar: {
+    headline: "متجرك وطلباتك وعمليات الدفع عند الاستلام في مساحة عمل واحدة.",
+    subcopy: "أطلق متجرك أو مسار بيعك، وأكّد الطلبات، واشحن مع شركات الشحن التي تتعامل معها، وتابع أرباحك الحقيقية.",
+  },
+};
+
+/** Navy brand panel shown beside the auth forms on large screens. */
 export function BrandPanel() {
-  const cols = 6;
-  const rows = 7;
-  const cellSize = 34;
-  const gap = 8;
-
-  const cells = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const key = `${r}-${c}`;
-      const filled = FILLED_CELLS.has(key);
-      cells.push(
-        <rect
-          key={key}
-          x={c * (cellSize + gap)}
-          y={r * (cellSize + gap)}
-          width={cellSize}
-          height={cellSize}
-          rx={6}
-          className={filled ? "fill-accent" : "fill-white/10"}
-        />
-      );
-    }
-  }
-
+  const t = useT(STRINGS);
   return (
-    <div className="relative hidden overflow-hidden bg-primary-dark px-12 py-16 text-white lg:flex lg:w-[44%] lg:flex-col lg:justify-between">
+    <div className="relative hidden overflow-hidden bg-zimos-navy px-12 py-12 text-white lg:flex lg:w-[44%] lg:max-w-[640px] lg:flex-col lg:justify-between xl:px-16">
       <div className="relative z-10">
-        <span className="font-display text-lg tracking-tight">Zimos</span>
+        <ZimosLogo surface="dark" height={40} />
       </div>
 
-      <div className="relative z-10 max-w-sm">
-        <h1 className="font-display text-4xl font-medium leading-[1.15]">
-          Every shelf, every price, every order — one workspace.
-        </h1>
-        <p className="mt-5 text-[15px] leading-relaxed text-white/70">
-          Build your catalog, take orders by COD or online payment, and give
-          your customers a store worth bookmarking.
-        </p>
+      <div className="relative z-10 max-w-md">
+        <h1 className="text-[34px] leading-[1.2] font-semibold tracking-tight text-white">{t.headline}</h1>
+        <p className="mt-4 text-[15px] leading-relaxed text-white/70">{t.subcopy}</p>
       </div>
 
-      <svg
-        className="pointer-events-none absolute -bottom-16 -right-16 opacity-90"
-        width={cols * (34 + 8)}
-        height={rows * (34 + 8)}
-        viewBox={`0 0 ${cols * (34 + 8)} ${rows * (34 + 8)}`}
-        aria-hidden="true"
-      >
-        {cells}
-      </svg>
+      <p className="relative z-10 text-sm font-medium text-white/50" dir="ltr" lang="en">
+        {ZIMOS_PHRASES.limits}
+      </p>
+
+      {/* Signature layered diagonal ribbons — decorative only. */}
+      <div aria-hidden className="zimos-ribbons -end-40 top-[46%] h-[420px] w-[620px] opacity-90" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -end-24 top-[10%] h-24 w-[420px] rotate-[-24deg] rounded-full bg-gradient-to-r from-zimos-blue/35 to-zimos-sky/10"
+      />
     </div>
   );
 }

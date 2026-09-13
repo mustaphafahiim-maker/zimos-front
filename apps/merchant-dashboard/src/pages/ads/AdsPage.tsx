@@ -7,7 +7,7 @@ import { useAsync } from "@/lib/useAsync";
 import { formatMoney, formatDateTime, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { mockApi } from "@/mock/api";
 import type { AdAccount, AdCreative, AdSet, Campaign } from "@/mock/types2";
-import { computeMetrics, fmtPct, fmtX, PLATFORM_LABEL, verdictFor, withEstimatedCost, type AdMetrics } from "@/lib/adMetrics";
+import { computeMetrics, fmtPct, fmtX, PLATFORM_LABEL, platformLabel, verdictFor, verdictLabel, withEstimatedCost, type AdMetrics } from "@/lib/adMetrics";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
@@ -19,15 +19,17 @@ import { EmptyState } from "@/components/EmptyState";
 import { LineAreaChart } from "@/components/charts";
 import { RangeSwitch, type AnalyticsRange } from "@/components/RangeSwitch";
 import { useToast } from "@/components/Toast";
-import { PlatformChip, VerdictPill, breakEvenCpdFor, tdNum, thClass } from "./adsShared";
+import { fmt, useCommon, useLocale, useT } from "@/i18n/LocaleContext";
+import { Num, PlatformChip, VerdictPill, breakEvenCpdFor, fmtNodes, tdNum, thClass, useAdsLabels } from "./adsShared";
+import { ADS_COMMON, ADS_PAGE } from "./ads.strings";
 
 // ------------------------------------------------------------ helpers --
 
 const RANGE_DAYS: Record<AnalyticsRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
 const PLATFORMS: Array<AdAccount["platform"]> = ["facebook", "tiktok", "snapchat", "google"];
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function shortDate(iso: string, intlLocale: string): string {
+  return new Date(iso).toLocaleDateString(intlLocale, { month: "short", day: "numeric" });
 }
 
 function money(v: number | null, currency: string): string {
@@ -64,16 +66,13 @@ const SORT_VALUE: Record<SortKey, (r: CampaignRow) => number | string> = {
   net: (r) => r.m.netProfit,
 };
 
-interface AdRule {
-  id: string;
-  title: string;
-  description: string;
-}
+type AdsPageKey = keyof (typeof ADS_PAGE)["en"];
 
-const AD_RULES: AdRule[] = [
-  { id: "pause-over-be", title: "Pause ad set if CPD > break-even for 2 days", description: "Checks every morning at 09:00. Ad sets whose cost per delivered order exceeds the product's break-even CPD on two consecutive days are paused on the platform." },
-  { id: "scale-winners", title: "Increase budget 20% if ROAS > 3 and CPD < 70% of break-even", description: "Once per day, capped at 2 increases per campaign per week so the algorithm has time to re-learn." },
-  { id: "notify-zero-conf", title: "Notify on WhatsApp if spend > 5,000 EGP with 0 confirmed orders", description: "Sends a WhatsApp alert to the workspace owner — usually a broken pixel, a dead landing page or a confirmation team backlog." },
+/** Rule ids are persisted; their copy is resolved per locale from ADS_PAGE. */
+const AD_RULES: Array<{ id: string; titleKey: AdsPageKey; descriptionKey: AdsPageKey }> = [
+  { id: "pause-over-be", titleKey: "rulePauseTitle", descriptionKey: "rulePauseDesc" },
+  { id: "scale-winners", titleKey: "ruleScaleTitle", descriptionKey: "ruleScaleDesc" },
+  { id: "notify-zero-conf", titleKey: "ruleNotifyTitle", descriptionKey: "ruleNotifyDesc" },
 ];
 
 function rulesKey(ws: string) {
@@ -92,10 +91,10 @@ function readRules(ws: string): Record<string, boolean> {
 
 // ------------------------------------------------------- sub-components --
 
-function SortableTh({ label, sortKey, sort, onSort, align = "right", className }: { label: string; sortKey: SortKey; sort: { key: SortKey; dir: "asc" | "desc" }; onSort: (k: SortKey) => void; align?: "left" | "right"; className?: string }) {
+function SortableTh({ label, title, sortKey, sort, onSort, align = "end", className }: { label: string; title?: string; sortKey: SortKey; sort: { key: SortKey; dir: "asc" | "desc" }; onSort: (k: SortKey) => void; align?: "start" | "end"; className?: string }) {
   const active = sort.key === sortKey;
   return (
-    <th className={cn(thClass, align === "right" && "text-right", className)}>
+    <th className={cn(thClass, align === "end" && "text-end", className)} title={title} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}>
       <button type="button" onClick={() => onSort(sortKey)} className={cn("inline-flex items-center gap-1 hover:text-ink", active && "text-ink")}>
         {label}
         {active && (sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />)}
@@ -105,6 +104,7 @@ function SortableTh({ label, sortKey, sort, onSort, align = "right", className }
 }
 
 function BudgetCell({ campaign, currency, onSave }: { campaign: Campaign; currency: string; onSave: (minor: number) => Promise<void> }) {
+  const t = useT(ADS_PAGE);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -133,10 +133,12 @@ function BudgetCell({ campaign, currency, onSave }: { campaign: Campaign; curren
         <Input
           autoFocus
           type="number"
+          dir="ltr"
           min={0}
           step="1"
           value={value}
           disabled={busy}
+          aria-label={t.tipBudget}
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => void commit()}
           onKeyDown={(e) => {
@@ -149,26 +151,45 @@ function BudgetCell({ campaign, currency, onSave }: { campaign: Campaign; curren
     );
   }
   return (
-    <button type="button" onClick={start} className="rounded px-1 tabular-nums text-ink underline decoration-dotted underline-offset-4 hover:bg-paper-raised hover:text-primary" title="Click to edit daily budget">
-      {formatMoney(campaign.dailyBudgetAmount, currency)}
+    <button type="button" onClick={start} className="rounded px-1 tabular-nums text-ink underline decoration-dotted underline-offset-4 hover:bg-paper hover:text-primary" title={t.budgetEditTitle}>
+      <Num>{formatMoney(campaign.dailyBudgetAmount, currency)}</Num>
     </button>
   );
 }
 
 function MetricCells({ stats, breakEvenCpd, currency }: { stats: Parameters<typeof computeMetrics>[0]; breakEvenCpd: number | null; currency: string }) {
+  const { intlLocale } = useLocale();
   const m = computeMetrics(stats);
   const verdict = verdictFor(m.cpd, breakEvenCpd);
   return (
     <>
-      <td className={cn(tdNum, "text-ink")}>{formatMoney(stats.spendAmount, currency)}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{stats.orders.toLocaleString()}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{fmtPct(m.confirmationRate)}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{fmtPct(m.deliveryRate)}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{money(m.cpo, currency)}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{money(m.cpco, currency)}</td>
-      <td className={cn(tdNum, "font-medium text-ink")}>{money(m.cpd, currency)}</td>
-      <td className={cn(tdNum, "text-ink-soft")}>{fmtX(m.roas)}</td>
-      <td className={cn(tdNum, "font-medium", m.netProfit < 0 ? "text-danger" : "text-success")}>{formatMoney(m.netProfit, currency)}</td>
+      <td className={cn(tdNum, "text-ink")}>
+        <Num>{formatMoney(stats.spendAmount, currency)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{stats.orders.toLocaleString(intlLocale)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{fmtPct(m.confirmationRate)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{fmtPct(m.deliveryRate)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{money(m.cpo, currency)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{money(m.cpco, currency)}</Num>
+      </td>
+      <td className={cn(tdNum, "font-medium text-ink")}>
+        <Num>{money(m.cpd, currency)}</Num>
+      </td>
+      <td className={cn(tdNum, "text-ink-soft")}>
+        <Num>{fmtX(m.roas)}</Num>
+      </td>
+      <td className={cn(tdNum, "font-medium", m.netProfit < 0 ? "text-danger" : "text-success")}>
+        <Num>{formatMoney(m.netProfit, currency)}</Num>
+      </td>
       <td className="px-3 py-2">
         <VerdictPill verdict={verdict} />
       </td>
@@ -177,13 +198,14 @@ function MetricCells({ stats, breakEvenCpd, currency }: { stats: Parameters<type
 }
 
 function CreativeRow({ creative, campaign, breakEvenCpd, currency }: { creative: AdCreative; campaign: Campaign; breakEvenCpd: number | null; currency: string }) {
+  const { creativeFormat } = useAdsLabels();
   return (
     <tr className="border-b border-line/60 bg-paper text-xs last:border-0">
-      <td className="px-3 py-2 pl-14">
+      <td className="px-3 py-2 ps-14">
         <div className="flex items-center gap-2">
           <span className="size-6 shrink-0 rounded" style={{ background: creative.thumbnailColor }} />
           <span className="truncate text-ink">{creative.name}</span>
-          <span className="rounded border border-line bg-paper-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-soft">{creative.format}</span>
+          <span className="rounded border border-line bg-paper-raised px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-ink-soft">{creativeFormat[creative.format]}</span>
         </div>
       </td>
       <MetricCells stats={withEstimatedCost(creative, campaign)} breakEvenCpd={breakEvenCpd} currency={currency} />
@@ -192,14 +214,15 @@ function CreativeRow({ creative, campaign, breakEvenCpd, currency }: { creative:
 }
 
 function AdSetRows({ adSet, campaign, breakEvenCpd, currency, expanded, onToggle }: { adSet: AdSet; campaign: Campaign; breakEvenCpd: number | null; currency: string; expanded: boolean; onToggle: () => void }) {
+  const t = useT(ADS_PAGE);
   return (
     <>
-      <tr className="cursor-pointer border-b border-line/60 bg-paper-raised/60 text-sm hover:bg-paper-raised" onClick={onToggle}>
-        <td className="px-3 py-2 pl-8">
+      <tr className="cursor-pointer border-b border-line/60 bg-paper-raised text-sm hover:bg-paper" onClick={onToggle} aria-expanded={expanded}>
+        <td className="px-3 py-2 ps-8">
           <div className="flex items-center gap-2">
-            {expanded ? <ChevronDown className="size-3.5 text-ink-soft" /> : <ChevronRight className="size-3.5 text-ink-soft" />}
+            {expanded ? <ChevronDown className="size-3.5 text-ink-soft" /> : <ChevronRight className="size-3.5 text-ink-soft rtl:rotate-180" />}
             <span className="truncate text-ink">{adSet.name}</span>
-            <span className="text-xs text-ink-soft">· {adSet.creatives.length} creatives</span>
+            <span className="whitespace-nowrap text-xs text-ink-soft">{fmt(t.creativesCount, { n: adSet.creatives.length })}</span>
           </div>
         </td>
         <MetricCells stats={withEstimatedCost(adSet, campaign)} breakEvenCpd={breakEvenCpd} currency={currency} />
@@ -210,6 +233,8 @@ function AdSetRows({ adSet, campaign, breakEvenCpd, currency, expanded, onToggle
 }
 
 function DrillDown({ campaign, breakEvenCpd, currency }: { campaign: Campaign; breakEvenCpd: number | null; currency: string }) {
+  const t = useT(ADS_PAGE);
+  const a = useT(ADS_COMMON);
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   function toggle(id: string) {
     setOpen((prev) => {
@@ -219,20 +244,31 @@ function DrillDown({ campaign, breakEvenCpd, currency }: { campaign: Campaign; b
       return next;
     });
   }
+  const headers: Array<{ label: string; title?: string }> = [
+    { label: a.spend },
+    { label: a.orders },
+    { label: a.confPct, title: a.tipConf },
+    { label: a.delivPct, title: a.tipDeliv },
+    { label: a.cpo, title: a.tipCpo },
+    { label: a.cpco, title: a.tipCpco },
+    { label: a.cpd, title: a.tipCpd },
+    { label: a.roas, title: a.tipRoas },
+    { label: a.netProfit },
+  ];
   return (
     <tr className="border-b border-line">
-      <td colSpan={16} className="bg-paper-raised/40 p-0">
-        <div className="overflow-x-auto border-l-2 border-primary/40">
+      <td colSpan={16} className="bg-paper/60 p-0">
+        <div className="overflow-x-auto border-s-2 border-primary/40">
           <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-b border-line text-[10px] uppercase tracking-wide text-ink-soft">
-                <th className="px-3 py-1.5 pl-8 text-left font-medium">Ad set / creative</th>
-                {["Spend", "Orders", "Conf %", "Deliv %", "CPO", "CPCO", "CPD", "ROAS", "Net profit"].map((h) => (
-                  <th key={h} className="px-3 py-1.5 text-right font-medium">
-                    {h}
+                <th className="px-3 py-1.5 ps-8 text-start font-medium">{t.colAdSetCreative}</th>
+                {headers.map((h) => (
+                  <th key={h.label} className="px-3 py-1.5 text-end font-medium" title={h.title}>
+                    {h.label}
                   </th>
                 ))}
-                <th className="px-3 py-1.5 text-left font-medium">Verdict</th>
+                <th className="px-3 py-1.5 text-start font-medium">{a.verdict}</th>
               </tr>
             </thead>
             <tbody>
@@ -242,10 +278,13 @@ function DrillDown({ campaign, breakEvenCpd, currency }: { campaign: Campaign; b
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between px-4 py-2 text-xs text-ink-soft">
-          <span>Ad set and creative net profit uses the campaign's average cost per delivered order.</span>
-          <Link to={`/ads/${campaign.id}`} className="font-medium text-primary hover:underline">
-            Open campaign →
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-ink-soft">
+          <span>{t.drillNote}</span>
+          <Link to={`/ads/${campaign.id}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+            {t.openCampaign}
+            <span aria-hidden className="inline-block rtl:rotate-180">
+              →
+            </span>
           </Link>
         </div>
       </td>
@@ -256,15 +295,20 @@ function DrillDown({ campaign, breakEvenCpd, currency }: { campaign: Campaign; b
 function ConnectModal({ open, onClose, onConnected }: { open: boolean; onClose: () => void; onConnected: (acc: AdAccount) => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(ADS_PAGE);
+  const c = useCommon();
+  const { locale } = useLocale();
   const [platform, setPlatform] = useState<AdAccount["platform"]>("facebook");
   const [busy, setBusy] = useState(false);
+  const name = platformLabel(platform, locale);
 
   async function connect() {
     setBusy(true);
     try {
+      // The account name is data sent to the API; keep it unchanged across locales.
       const acc = await mockApi.connectAdAccount(workspaceId, platform, `${PLATFORM_LABEL[platform]} — New account`);
       onConnected(acc);
-      toast.success(`${PLATFORM_LABEL[platform]} ad account connected.`);
+      toast.success(fmt(t.toastConnected, { platform: name }));
       onClose();
     } finally {
       setBusy(false);
@@ -275,16 +319,16 @@ function ConnectModal({ open, onClose, onConnected }: { open: boolean; onClose: 
     <Modal
       open={open}
       onClose={onClose}
-      title="Connect ad account"
-      description="Zimos reads spend, impressions and clicks from the platform and matches them to your orders via utm_campaign, fbclid and ttclid."
+      title={t.connectTitle}
+      description={t.connectDesc}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {c.cancel}
           </Button>
           <Button onClick={() => void connect()} disabled={busy}>
             <Plug />
-            {busy ? "Connecting…" : `Continue with ${PLATFORM_LABEL[platform]}`}
+            {busy ? t.connecting : fmt(t.continueWith, { platform: name })}
           </Button>
         </>
       }
@@ -295,42 +339,44 @@ function ConnectModal({ open, onClose, onConnected }: { open: boolean; onClose: 
             key={p}
             type="button"
             onClick={() => setPlatform(p)}
-            className={cn(
-              "rounded-[0.5rem] border px-3 py-3 text-sm font-medium transition-colors",
-              platform === p ? "border-primary bg-primary-soft text-primary-dark" : "border-line text-ink hover:border-primary/40"
-            )}
+            aria-pressed={platform === p}
+            className={cn("rounded-xl border px-3 py-3 text-sm font-medium transition-colors", platform === p ? "border-primary bg-primary-soft text-primary" : "border-line text-ink hover:border-primary/40")}
           >
-            {PLATFORM_LABEL[p]}
+            {platformLabel(p, locale)}
           </button>
         ))}
       </div>
       <ol className="mt-4 space-y-2 text-sm text-ink-soft">
-        <li>1. You'll be redirected to {PLATFORM_LABEL[platform]} to sign in and pick an ad account.</li>
-        <li>2. Zimos asks for read access to ads insights and write access to pause / resume and change budgets.</li>
-        <li>3. Spend syncs every 15 minutes; orders are attributed by click id and UTM.</li>
+        <li>{fmt(t.step1, { platform: name })}</li>
+        <li>{t.step2}</li>
+        <li>{t.step3}</li>
       </ol>
       <Alert variant="info" className="mt-4 text-xs">
-        Demo mode: this creates a mock account locally. No real OAuth call is made.
+        {t.demoNote}
       </Alert>
     </Modal>
   );
 }
 
 function AccountsStrip({ accounts, currency, onReconnect, onConnect }: { accounts: AdAccount[]; currency: string; onReconnect: (id: string) => Promise<void>; onConnect: () => void }) {
+  const t = useT(ADS_PAGE);
+  const { accountStatus } = useAdsLabels();
   const [busyId, setBusyId] = useState<string | null>(null);
   return (
     <div className="flex gap-3 overflow-x-auto pb-1">
       {accounts.map((a) => (
-        <div key={a.id} className="flex min-w-[260px] shrink-0 flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-paper-raised px-4 py-3">
+        <div key={a.id} className="flex min-w-[260px] shrink-0 flex-col gap-2 rounded-2xl border border-line bg-paper-raised px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <PlatformChip platform={a.platform} />
-            <StatusBadge value={a.status} tone={a.status === "connected" ? "success" : a.status === "token_expired" ? "warning" : "neutral"} />
+            <StatusBadge value={accountStatus[a.status]} tone={a.status === "connected" ? "success" : a.status === "token_expired" ? "warning" : "neutral"} />
           </div>
           <p className="truncate text-sm font-medium text-ink">{a.name}</p>
           <div className="flex items-end justify-between gap-2">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-ink-soft">Spend today</p>
-              <p className="font-display text-lg font-medium tabular-nums text-ink">{formatMoney(a.spendTodayAmount, currency)}</p>
+              <p className="text-[11px] uppercase tracking-wide text-ink-soft">{t.spendToday}</p>
+              <p className="font-display text-lg font-medium text-ink">
+                <Num>{formatMoney(a.spendTodayAmount, currency)}</Num>
+              </p>
             </div>
             {a.status === "token_expired" ? (
               <Button
@@ -344,10 +390,10 @@ function AccountsStrip({ accounts, currency, onReconnect, onConnect }: { account
                 }}
               >
                 <RefreshCw className={cn(busyId === a.id && "animate-spin")} />
-                Reconnect
+                {t.reconnect}
               </Button>
             ) : (
-              <span className="text-[11px] text-ink-soft">Synced {a.lastSyncAt ? formatDateTime(a.lastSyncAt) : "never"}</span>
+              <span className="text-[11px] text-ink-soft">{fmt(t.synced, { time: a.lastSyncAt ? formatDateTime(a.lastSyncAt) : t.never })}</span>
             )}
           </div>
         </div>
@@ -355,10 +401,10 @@ function AccountsStrip({ accounts, currency, onReconnect, onConnect }: { account
       <button
         type="button"
         onClick={onConnect}
-        className="flex min-w-[200px] shrink-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-card)] border border-dashed border-line px-4 py-3 text-sm text-ink-soft transition-colors hover:border-primary/40 hover:text-primary"
+        className="flex min-w-[200px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-ink-soft transition-colors hover:border-primary/40 hover:text-primary"
       >
         <Plug className="size-5" />
-        Connect ad account
+        {t.connectTitle}
       </button>
     </div>
   );
@@ -369,6 +415,10 @@ function AccountsStrip({ accounts, currency, onReconnect, onConnect }: { account
 export function AdsPage() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(ADS_PAGE);
+  const c = useCommon();
+  const { t: a, campaignStatus } = useAdsLabels();
+  const { locale, intlLocale } = useLocale();
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [platform, setPlatform] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -478,8 +528,8 @@ export function AdsPage() {
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-days)
-      .map(([date, v]) => ({ label: shortDate(date), ...v }));
-  }, [data, range]);
+      .map(([date, v]) => ({ label: shortDate(date, intlLocale), ...v }));
+  }, [data, range, intlLocale]);
 
   function onSort(key: SortKey) {
     setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" ? "asc" : "desc" }));
@@ -521,22 +571,25 @@ export function AdsPage() {
     await Promise.all(ids.map((id) => setStatus1(id, next)));
     setBulkBusy(false);
     setSelected(new Set());
-    toast.success(`${ids.length} campaign${ids.length === 1 ? "" : "s"} ${next === "active" ? "activated" : "paused"}.`);
+    const one = ids.length === 1;
+    const template = next === "active" ? (one ? t.toastActivatedOne : t.toastActivatedMany) : one ? t.toastPausedOne : t.toastPausedMany;
+    toast.success(fmt(template, { n: ids.length }));
   }
 
   async function saveBudget(id: string, minor: number) {
     patchCampaign(id, { dailyBudgetAmount: minor });
     await mockApi.setCampaignBudget(workspaceId, id, minor);
-    toast.success("Daily budget updated.");
+    toast.success(t.toastBudget);
   }
 
   async function reconnect(id: string) {
     await mockApi.reconnectAdAccount(workspaceId, id);
     await state.refresh({ silent: true });
-    toast.success("Ad account reconnected.");
+    toast.success(t.toastReconnected);
   }
 
   function exportCsv() {
+    // Machine-readable snake_case headers and raw enum values are kept stable across locales.
     const header = ["platform", "campaign", "product", "status", "daily_budget", "spend", "orders", "confirmed", "delivered", "conf_rate", "deliv_rate", "cpo", "cpco", "cpd", "break_even_cpd", "roas", "net_profit", "verdict"];
     const lines = visible.map((r) => [
       r.c.platform,
@@ -561,35 +614,41 @@ export function AdsPage() {
     const csv = [header, ...lines].map((l) => l.map(csvCell).join(",")).join("\n");
     const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `campaigns-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const el = document.createElement("a");
+    el.href = url;
+    el.download = `campaigns-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(el);
+    el.click();
+    el.remove();
     URL.revokeObjectURL(url);
   }
 
-  const kpiCards: Array<{ label: string; value: ReactNode; hint: string; tone?: string }> = [
-    { label: "Spend", value: formatMoney(Math.round(kpi.spend), currency), hint: `Across ${data?.accounts.length ?? 0} ad accounts` },
-    { label: "Orders", value: kpi.orders.toLocaleString(), hint: "Placed, before confirmation" },
-    { label: "CPCO", value: money(kpi.cpco, currency), hint: "Spend ÷ confirmed orders" },
-    { label: "CPD", value: money(kpi.cpd, currency), hint: "Spend ÷ delivered orders" },
-    { label: "Real ROAS", value: fmtX(kpi.roas), hint: "Delivered revenue only ÷ spend" },
-    { label: "Net profit", value: <span className={kpi.net < 0 ? "text-danger" : "text-success"}>{formatMoney(Math.round(kpi.net), currency)}</span>, hint: "Revenue − spend − cost of delivered" },
+  const kpiCards: Array<{ id: string; label: string; value: ReactNode; hint: string }> = [
+    { id: "spend", label: a.spend, value: <Num>{formatMoney(Math.round(kpi.spend), currency)}</Num>, hint: fmt(t.kpiSpendHint, { n: data?.accounts.length ?? 0 }) },
+    { id: "orders", label: a.orders, value: <Num>{kpi.orders.toLocaleString(intlLocale)}</Num>, hint: t.kpiOrdersHint },
+    { id: "cpco", label: t.kpiCpco, value: <Num>{money(kpi.cpco, currency)}</Num>, hint: t.kpiCpcoHint },
+    { id: "cpd", label: t.kpiCpd, value: <Num>{money(kpi.cpd, currency)}</Num>, hint: t.kpiCpdHint },
+    { id: "roas", label: t.kpiRoas, value: <Num>{fmtX(kpi.roas)}</Num>, hint: t.kpiRoasHint },
+    { id: "net", label: a.netProfit, value: <Num className={kpi.net < 0 ? "text-danger" : "text-success"}>{formatMoney(Math.round(kpi.net), currency)}</Num>, hint: t.kpiNetHint },
+  ];
+
+  const series = [
+    { label: t.seriesSpend, key: "spend" as const, color: "var(--color-accent)" },
+    { label: t.seriesRevenue, key: "revenue" as const, color: "var(--color-primary)" },
+    { label: a.netProfit, key: "net" as const, color: "var(--color-success)" },
   ];
 
   return (
     <div className="max-w-7xl">
       <PageHeader
-        title="Ads & media buying"
-        description="Every campaign measured on what a COD business actually keeps: cost per delivered order and net profit, not platform ROAS."
+        title={t.title}
+        description={t.description}
         actions={
           <>
             <RangeSwitch value={range} onChange={setRange} />
             <Button variant="outline" size="sm" disabled={visible.length === 0} onClick={exportCsv}>
               <Download />
-              Export CSV
+              {c.exportCsv}
             </Button>
           </>
         }
@@ -600,75 +659,73 @@ export function AdsPage() {
           <div className="space-y-6">
             <AccountsStrip accounts={data.accounts} currency={currency} onReconnect={reconnect} onConnect={() => setConnectOpen(true)} />
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
               {kpiCards.map((k) => (
-                <KpiCard key={k.label} label={k.label} value={k.value} hint={k.hint} />
+                <KpiCard key={k.id} label={k.label} value={k.value} hint={k.hint} />
               ))}
             </div>
 
-            <Card>
+            <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Spend vs revenue vs net profit</CardTitle>
-                <CardDescription>Daily, summed across campaigns. Revenue counts delivered orders only.</CardDescription>
+                <CardTitle className="font-semibold">{t.chartTitle}</CardTitle>
+                <CardDescription>{t.chartDesc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
-                  {[
-                    { label: "Ad spend", key: "spend" as const, color: "var(--color-accent)" },
-                    { label: "Delivered revenue", key: "revenue" as const, color: "var(--color-primary)" },
-                    { label: "Net profit", key: "net" as const, color: "var(--color-success)" },
-                  ].map((s) => (
+                  {series.map((s) => (
                     <div key={s.key}>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-soft">{s.label}</p>
-                      <LineAreaChart points={chart.map((d) => ({ label: d.label, value: Math.max(d[s.key], 0) }))} color={s.color} format={(v) => formatMoney(Math.round(v), currency)} height={140} />
+                      <div dir="ltr">
+                        <LineAreaChart points={chart.map((d) => ({ label: d.label, value: Math.max(d[s.key], 0) }))} color={s.color} format={(v) => formatMoney(Math.round(v), currency)} height={140} />
+                      </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-2xl">
               <CardHeader>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <CardTitle>Campaigns</CardTitle>
-                    <CardDescription>Last 30 days. Click a row to drill into ad sets and creatives.</CardDescription>
+                    <CardTitle className="font-semibold">{t.campaignsTitle}</CardTitle>
+                    <CardDescription>{t.campaignsDesc}</CardDescription>
                   </div>
                   {selected.size > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-ink-soft">{selected.size} selected</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-ink-soft">{fmt(t.selectedCount, { n: selected.size })}</span>
                       <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => void bulkStatus("paused")}>
                         <Pause />
-                        Pause selected
+                        {t.pauseSelected}
                       </Button>
                       <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => void bulkStatus("active")}>
                         <Play />
-                        Activate selected
+                        {t.activateSelected}
                       </Button>
                     </div>
                   )}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
-                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns or products" className="h-9 w-64 pl-8" />
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
+                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchPlaceholder} aria-label={t.searchPlaceholder} className="h-9 w-full ps-8 sm:w-64" />
                   </div>
-                  <Select value={platform} onChange={(e) => setPlatform(e.target.value)} className="h-9 w-auto">
-                    <option value="all">All platforms</option>
+                  <Select value={platform} onChange={(e) => setPlatform(e.target.value)} className="h-9 w-auto" aria-label={t.allPlatforms}>
+                    <option value="all">{t.allPlatforms}</option>
                     {PLATFORMS.map((p) => (
                       <option key={p} value={p}>
-                        {PLATFORM_LABEL[p]}
+                        {platformLabel(p, locale)}
                       </option>
                     ))}
                   </Select>
-                  <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 w-auto">
-                    <option value="all">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="paused">Paused</option>
-                    <option value="ended">Ended</option>
+                  <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 w-auto" aria-label={t.allStatuses}>
+                    <option value="all">{t.allStatuses}</option>
+                    <option value="active">{campaignStatus.active}</option>
+                    <option value="paused">{campaignStatus.paused}</option>
+                    <option value="ended">{campaignStatus.ended}</option>
                   </Select>
-                  <Select value={product} onChange={(e) => setProduct(e.target.value)} className="h-9 w-auto max-w-[240px]">
-                    <option value="all">All products</option>
+                  <Select value={product} onChange={(e) => setProduct(e.target.value)} className="h-9 w-auto max-w-[240px]" aria-label={t.allProducts}>
+                    <option value="all">{t.allProducts}</option>
                     {products.map(([id, name]) => (
                       <option key={id} value={id}>
                         {name}
@@ -679,35 +736,35 @@ export function AdsPage() {
               </CardHeader>
               <CardContent>
                 {visible.length === 0 ? (
-                  <EmptyState title="No campaigns match" description="Try clearing the filters or connect an ad account to import campaigns." />
+                  <EmptyState title={t.emptyTitle} description={t.emptyDesc} />
                 ) : (
-                  <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                  <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
                     <table className="w-full min-w-[1400px] text-sm">
                       <thead>
-                        <tr className="border-b border-line bg-paper-raised">
+                        <tr className="border-b border-line bg-paper">
                           <th className="w-8 px-3 py-2.5">
                             <input
                               type="checkbox"
-                              aria-label="Select all"
+                              aria-label={t.selectAll}
                               checked={allVisibleSelected}
                               onChange={(e) => setSelected(e.target.checked ? new Set(visible.map((r) => r.c.id)) : new Set())}
                               className="size-4 accent-[var(--color-primary)]"
                             />
                           </th>
-                          <SortableTh label="Campaign" sortKey="name" sort={sort} onSort={onSort} align="left" />
-                          <SortableTh label="Status" sortKey="status" sort={sort} onSort={onSort} align="left" />
-                          <SortableTh label="Budget/day" sortKey="budget" sort={sort} onSort={onSort} />
-                          <SortableTh label="Spend" sortKey="spend" sort={sort} onSort={onSort} />
-                          <SortableTh label="Orders" sortKey="orders" sort={sort} onSort={onSort} />
-                          <SortableTh label="Conf %" sortKey="conf" sort={sort} onSort={onSort} />
-                          <SortableTh label="Deliv %" sortKey="deliv" sort={sort} onSort={onSort} />
-                          <SortableTh label="CPO" sortKey="cpo" sort={sort} onSort={onSort} />
-                          <SortableTh label="CPCO" sortKey="cpco" sort={sort} onSort={onSort} />
-                          <SortableTh label="CPD" sortKey="cpd" sort={sort} onSort={onSort} />
-                          <SortableTh label="BE CPD" sortKey="be" sort={sort} onSort={onSort} />
-                          <SortableTh label="ROAS" sortKey="roas" sort={sort} onSort={onSort} />
-                          <SortableTh label="Net profit" sortKey="net" sort={sort} onSort={onSort} />
-                          <th className={thClass}>Verdict</th>
+                          <SortableTh label={a.campaign} sortKey="name" sort={sort} onSort={onSort} align="start" />
+                          <SortableTh label={c.status} sortKey="status" sort={sort} onSort={onSort} align="start" />
+                          <SortableTh label={t.colBudget} title={t.tipBudget} sortKey="budget" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.spend} sortKey="spend" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.orders} sortKey="orders" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.confPct} title={a.tipConf} sortKey="conf" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.delivPct} title={a.tipDeliv} sortKey="deliv" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.cpo} title={a.tipCpo} sortKey="cpo" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.cpco} title={a.tipCpco} sortKey="cpco" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.cpd} title={a.tipCpd} sortKey="cpd" sort={sort} onSort={onSort} />
+                          <SortableTh label={t.colBe} title={t.tipBe} sortKey="be" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.roas} title={a.tipRoas} sortKey="roas" sort={sort} onSort={onSort} />
+                          <SortableTh label={a.netProfit} sortKey="net" sort={sort} onSort={onSort} />
+                          <th className={thClass}>{a.verdict}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -715,41 +772,61 @@ export function AdsPage() {
                           const isOpen = expanded.has(r.c.id);
                           return (
                             <Fragment key={r.c.id}>
-                              <tr className={cn("cursor-pointer border-b border-line hover:bg-paper-raised", isOpen && "bg-paper-raised")} onClick={() => toggleExpanded(r.c.id)}>
+                              <tr className={cn("cursor-pointer border-b border-line hover:bg-paper", isOpen && "bg-paper")} onClick={() => toggleExpanded(r.c.id)} aria-expanded={isOpen}>
                                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <input type="checkbox" aria-label={`Select ${r.c.name}`} checked={selected.has(r.c.id)} onChange={() => toggleSelected(r.c.id)} className="size-4 accent-[var(--color-primary)]" />
+                                  <input type="checkbox" aria-label={fmt(t.selectRow, { name: r.c.name })} checked={selected.has(r.c.id)} onChange={() => toggleSelected(r.c.id)} className="size-4 accent-[var(--color-primary)]" />
                                 </td>
                                 <td className="max-w-[320px] px-3 py-2.5">
                                   <div className="flex items-center gap-2">
-                                    {isOpen ? <ChevronDown className="size-4 shrink-0 text-ink-soft" /> : <ChevronRight className="size-4 shrink-0 text-ink-soft" />}
+                                    {isOpen ? <ChevronDown className="size-4 shrink-0 text-ink-soft" /> : <ChevronRight className="size-4 shrink-0 text-ink-soft rtl:rotate-180" />}
                                     <PlatformChip platform={r.c.platform} />
                                     <div className="min-w-0">
                                       <Link to={`/ads/${r.c.id}`} onClick={(e) => e.stopPropagation()} className="block truncate font-medium text-ink hover:text-primary">
                                         {r.c.name}
                                       </Link>
-                                      <p className="truncate text-xs text-ink-soft">{r.c.productName ?? "No product linked"}</p>
+                                      <p className="truncate text-xs text-ink-soft">{r.c.productName ?? t.noProduct}</p>
                                     </div>
                                   </div>
                                 </td>
                                 <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center gap-2">
                                     <Toggle checked={r.c.status === "active"} disabled={r.c.status === "ended"} onChange={(on) => void setStatus1(r.c.id, on ? "active" : "paused")} label={undefined} />
-                                    <StatusBadge value={r.c.status} tone={r.c.status === "active" ? "success" : r.c.status === "paused" ? "warning" : "neutral"} />
+                                    <StatusBadge value={campaignStatus[r.c.status]} tone={r.c.status === "active" ? "success" : r.c.status === "paused" ? "warning" : "neutral"} />
                                   </div>
                                 </td>
                                 <td className={tdNum}>
                                   <BudgetCell campaign={r.c} currency={currency} onSave={(minor) => saveBudget(r.c.id, minor)} />
                                 </td>
-                                <td className={cn(tdNum, "text-ink")}>{formatMoney(r.c.spendAmount, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{r.c.orders.toLocaleString()}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{fmtPct(r.m.confirmationRate)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{fmtPct(r.m.deliveryRate)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{money(r.m.cpo, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{money(r.m.cpco, currency)}</td>
-                                <td className={cn(tdNum, "font-medium text-ink")}>{money(r.m.cpd, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{money(r.breakEvenCpd, currency)}</td>
-                                <td className={cn(tdNum, "text-ink-soft")}>{fmtX(r.m.roas)}</td>
-                                <td className={cn(tdNum, "font-medium", r.m.netProfit < 0 ? "text-danger" : "text-success")}>{formatMoney(r.m.netProfit, currency)}</td>
+                                <td className={cn(tdNum, "text-ink")}>
+                                  <Num>{formatMoney(r.c.spendAmount, currency)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{r.c.orders.toLocaleString(intlLocale)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{fmtPct(r.m.confirmationRate)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{fmtPct(r.m.deliveryRate)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{money(r.m.cpo, currency)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{money(r.m.cpco, currency)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "font-medium text-ink")}>
+                                  <Num>{money(r.m.cpd, currency)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{money(r.breakEvenCpd, currency)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "text-ink-soft")}>
+                                  <Num>{fmtX(r.m.roas)}</Num>
+                                </td>
+                                <td className={cn(tdNum, "font-medium", r.m.netProfit < 0 ? "text-danger" : "text-success")}>
+                                  <Num>{formatMoney(r.m.netProfit, currency)}</Num>
+                                </td>
                                 <td className="px-3 py-2.5">
                                   <VerdictPill verdict={r.verdict} />
                                 </td>
@@ -763,26 +840,30 @@ export function AdsPage() {
                   </div>
                 )}
                 <p className="mt-3 text-xs text-ink-soft">
-                  Verdict: CPD below 80% of break-even → <span className="font-medium text-success">Scale</span>, 80–100% → <span className="font-medium text-accent-dark">Hold</span>, above break-even →{" "}
-                  <span className="font-medium text-danger">Kill</span>. Break-even comes from each product's cost assumptions on the{" "}
-                  <Link to="/profit" className="text-primary hover:underline">
-                    Profit page
-                  </Link>
-                  .
+                  {fmtNodes(t.verdictLegend, {
+                    scale: <span className="font-medium text-success">{verdictLabel("scale", locale)}</span>,
+                    hold: <span className="font-medium text-warning">{verdictLabel("hold", locale)}</span>,
+                    kill: <span className="font-medium text-danger">{verdictLabel("kill", locale)}</span>,
+                    profitLink: (
+                      <Link to="/profit" className="text-primary hover:underline">
+                        {a.profitPage}
+                      </Link>
+                    ),
+                  })}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Rules</CardTitle>
-                <CardDescription>Automations that act on your campaigns using confirmation and delivery data the ad platforms never see.</CardDescription>
+                <CardTitle className="font-semibold">{t.rulesTitle}</CardTitle>
+                <CardDescription>{t.rulesDesc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="divide-y divide-line">
                   {AD_RULES.map((rule) => (
                     <li key={rule.id} className="py-3">
-                      <Toggle checked={rules[rule.id] ?? false} onChange={(on) => setRule(rule.id, on)} label={rule.title} description={rule.description} />
+                      <Toggle checked={rules[rule.id] ?? false} onChange={(on) => setRule(rule.id, on)} label={t[rule.titleKey]} description={t[rule.descriptionKey]} />
                     </li>
                   ))}
                 </ul>

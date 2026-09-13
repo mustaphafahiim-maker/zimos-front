@@ -13,8 +13,107 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    customer: "Customer",
+    customers: "Customers",
+    summary: "{orders} orders · reliability {score}",
+    contactDetails: "Contact details",
+    fullName: "Full name",
+    email: "Email",
+    phone: "Phone",
+    phoneHint: "Set from the storefront / checkout — read-only here.",
+    alternatePhone: "Alternate phone",
+    marketingConsent: "Has consented to marketing",
+    customerUpdated: "Customer updated.",
+    blacklist: "Blacklist",
+    isBlacklisted: "This customer is blacklisted.",
+    isBlacklistedReason: "This customer is blacklisted — {reason}.",
+    removeFromBlacklist: "Remove from blacklist",
+    blacklistExplainer: "Blacklisting stops this customer from checking out.",
+    blacklistCustomer: "Blacklist customer",
+    blacklistConfirmTitle: "Blacklist this customer?",
+    blacklistConfirmDescription: "They won't be able to check out until you remove them from the blacklist.",
+    blacklistConfirm: "Blacklist",
+    reason: "Reason",
+    reasonPlaceholder: "Repeated failed deliveries",
+    reasonRequired: "Enter a reason for blacklisting this customer.",
+    blacklistedToast: "Customer blacklisted.",
+    removedToast: "Customer removed from the blacklist.",
+    removeConfirmTitle: "Remove from blacklist?",
+    removeConfirmDescription: "The customer will be able to place orders again.",
+    remove: "Remove",
+    addresses: "Addresses",
+    addAddress: "Add address",
+    editAddress: "Edit address",
+    saveAddress: "Save address",
+    noAddresses: "No addresses on file.",
+    listSeparator: ", ",
+    default: "Default",
+    country: "Country",
+    countryHint: "Two-letter code.",
+    province: "Province",
+    city: "City",
+    postalCode: "Postal code",
+    addressLine: "Address line",
+    notes: "Notes",
+    defaultAddress: "Default address",
+    addressSaved: "Address saved.",
+    addressAdded: "Address added.",
+  },
+  ar: {
+    customer: "العميل",
+    customers: "العملاء",
+    summary: "{orders} طلب · الموثوقية {score}",
+    contactDetails: "بيانات التواصل",
+    fullName: "الاسم بالكامل",
+    email: "البريد الإلكتروني",
+    phone: "الهاتف",
+    phoneHint: "يُحدَّد من المتجر / صفحة الدفع — للقراءة فقط هنا.",
+    alternatePhone: "هاتف بديل",
+    marketingConsent: "وافق على استلام الرسائل التسويقية",
+    customerUpdated: "تم تحديث بيانات العميل.",
+    blacklist: "قائمة الحظر",
+    isBlacklisted: "هذا العميل محظور.",
+    isBlacklistedReason: "هذا العميل محظور — {reason}.",
+    removeFromBlacklist: "إزالة من قائمة الحظر",
+    blacklistExplainer: "حظر العميل يمنعه من إتمام الطلب.",
+    blacklistCustomer: "حظر العميل",
+    blacklistConfirmTitle: "حظر هذا العميل؟",
+    blacklistConfirmDescription: "لن يتمكن من إتمام أي طلب حتى تزيله من قائمة الحظر.",
+    blacklistConfirm: "حظر",
+    reason: "السبب",
+    reasonPlaceholder: "رفض الاستلام أكثر من مرة",
+    reasonRequired: "اكتب سبب حظر هذا العميل.",
+    blacklistedToast: "تم حظر العميل.",
+    removedToast: "تمت إزالة العميل من قائمة الحظر.",
+    removeConfirmTitle: "إزالة من قائمة الحظر؟",
+    removeConfirmDescription: "سيتمكن العميل من تقديم الطلبات مرة أخرى.",
+    remove: "إزالة",
+    addresses: "العناوين",
+    addAddress: "إضافة عنوان",
+    editAddress: "تعديل العنوان",
+    saveAddress: "حفظ العنوان",
+    noAddresses: "لا توجد عناوين مسجّلة.",
+    listSeparator: "، ",
+    default: "افتراضي",
+    country: "الدولة",
+    countryHint: "رمز من حرفين (مثل EG).",
+    province: "المحافظة",
+    city: "المدينة",
+    postalCode: "الرمز البريدي",
+    addressLine: "العنوان بالتفصيل",
+    notes: "ملاحظات",
+    defaultAddress: "العنوان الافتراضي",
+    addressSaved: "تم حفظ العنوان.",
+    addressAdded: "تمت إضافة العنوان.",
+  },
+} satisfies Messages;
 
 export function CustomerDetailPage() {
+  const t = useT(STRINGS);
   const { customerId } = useParams<{ customerId: string }>();
   const workspaceId = useWorkspaceId();
   const detail = useAsync(
@@ -30,12 +129,12 @@ export function CustomerDetailPage() {
         title={
           customer
             ? customer.fullName || customer.phoneRaw || customer.phoneNormalized
-            : "Customer"
+            : t.customer
         }
-        back={{ to: "/customers", label: "Customers" }}
+        back={{ to: "/customers", label: t.customers }}
         description={
           customer
-            ? `${customer.totalOrders} orders · reliability ${customer.reliabilityScore}`
+            ? fmt(t.summary, { orders: customer.totalOrders, score: customer.reliabilityScore })
             : undefined
         }
       />
@@ -54,6 +153,8 @@ export function CustomerDetailPage() {
 }
 
 function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () => void }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [fullName, setFullName] = useState(customer.fullName ?? "");
@@ -76,7 +177,7 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
         alternatePhone: alternatePhone.trim() || null,
         marketingConsent,
       });
-      toast.success("Customer updated.");
+      toast.success(t.customerUpdated);
       onSaved();
     } catch (err) {
       const fields = getFieldErrors(err);
@@ -88,31 +189,35 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Contact details</h2>
+    <section className="rounded-2xl border border-line bg-paper-raised p-5">
+      <h2 className="font-display text-lg font-semibold text-ink">{t.contactDetails}</h2>
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
-            label="Full name"
+            label={t.fullName}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             error={fieldErrors.fullName}
+            dir="auto"
           />
           <TextField
-            label="Email"
+            label={t.email}
             type="email"
+            dir="ltr"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={fieldErrors.email}
           />
-          <Field label="Phone" hint="Set from the storefront / checkout — read-only here.">
+          <Field label={t.phone} hint={t.phoneHint}>
             {({ id }) => (
-              <Input id={id} value={customer.phoneRaw || customer.phoneNormalized} disabled />
+              <Input id={id} dir="ltr" value={customer.phoneRaw || customer.phoneNormalized} disabled />
             )}
           </Field>
           <TextField
-            label="Alternate phone"
+            label={t.alternatePhone}
+            type="tel"
+            dir="ltr"
             value={alternatePhone}
             onChange={(e) => setAlternatePhone(e.target.value)}
             error={fieldErrors.alternatePhone}
@@ -121,14 +226,15 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
         <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
+            className="accent-primary"
             checked={marketingConsent}
             onChange={(e) => setMarketingConsent(e.target.checked)}
           />
-          Has consented to marketing
+          {t.marketingConsent}
         </label>
         <div className="flex justify-end">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? c.saving : c.save}
           </Button>
         </div>
       </form>
@@ -143,6 +249,7 @@ function BlacklistSection({
   customer: Customer;
   onChanged: () => void;
 }) {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [blacklisting, setBlacklisting] = useState(false);
@@ -150,12 +257,12 @@ function BlacklistSection({
   const [reason, setReason] = useState("");
 
   async function confirmBlacklist() {
-    if (reason.trim() === "") throw new Error("Enter a reason for blacklisting this customer.");
+    if (reason.trim() === "") throw new Error(t.reasonRequired);
     await apiClient.setCustomerBlacklist(workspaceId, customer.id, {
       isBlacklisted: true,
       reason: reason.trim(),
     });
-    toast.success("Customer blacklisted.");
+    toast.success(t.blacklistedToast);
     setBlacklisting(false);
     setReason("");
     onChanged();
@@ -163,29 +270,28 @@ function BlacklistSection({
 
   async function confirmRemove() {
     await apiClient.setCustomerBlacklist(workspaceId, customer.id, { isBlacklisted: false });
-    toast.success("Customer removed from the blacklist.");
+    toast.success(t.removedToast);
     setUnblacklisting(false);
     onChanged();
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Blacklist</h2>
+    <section className="rounded-2xl border border-line bg-paper-raised p-5">
+      <h2 className="font-display text-lg font-semibold text-ink">{t.blacklist}</h2>
       {customer.isBlacklisted ? (
         <div className="mt-3 space-y-3">
           <p className="text-sm text-ink-soft">
-            This customer is blacklisted
-            {customer.blacklistReason ? ` — ${customer.blacklistReason}` : ""}.
+            {customer.blacklistReason
+              ? fmt(t.isBlacklistedReason, { reason: customer.blacklistReason })
+              : t.isBlacklisted}
           </p>
           <Button variant="outline" size="sm" onClick={() => setUnblacklisting(true)}>
-            Remove from blacklist
+            {t.removeFromBlacklist}
           </Button>
         </div>
       ) : (
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-ink-soft">
-            Blacklisting stops this customer from checking out.
-          </p>
+          <p className="text-sm text-ink-soft">{t.blacklistExplainer}</p>
           <Button
             variant="danger"
             size="sm"
@@ -194,27 +300,28 @@ function BlacklistSection({
               setBlacklisting(true);
             }}
           >
-            Blacklist customer
+            {t.blacklistCustomer}
           </Button>
         </div>
       )}
 
       <ConfirmDialog
         open={blacklisting}
-        title="Blacklist this customer?"
-        description="They won't be able to check out until you remove them from the blacklist."
-        confirmLabel="Blacklist"
+        title={t.blacklistConfirmTitle}
+        description={t.blacklistConfirmDescription}
+        confirmLabel={t.blacklistConfirm}
         destructive
         onCancel={() => setBlacklisting(false)}
         onConfirm={confirmBlacklist}
       >
-        <Field label="Reason" required>
+        <Field label={t.reason} required>
           {({ id }) => (
             <Textarea
               id={id}
+              dir="auto"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Repeated failed deliveries"
+              placeholder={t.reasonPlaceholder}
             />
           )}
         </Field>
@@ -222,9 +329,9 @@ function BlacklistSection({
 
       <ConfirmDialog
         open={unblacklisting}
-        title="Remove from blacklist?"
-        description="The customer will be able to place orders again."
-        confirmLabel="Remove"
+        title={t.removeConfirmTitle}
+        description={t.removeConfirmDescription}
+        confirmLabel={t.remove}
         onCancel={() => setUnblacklisting(false)}
         onConfirm={confirmRemove}
       />
@@ -239,38 +346,40 @@ function AddressesSection({
   customer: Customer;
   onChanged: () => void;
 }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const [target, setTarget] = useState<CustomerAddress | "new" | null>(null);
   const addresses = customer.addresses ?? [];
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
+    <section className="rounded-2xl border border-line bg-paper-raised p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-medium text-ink">Addresses</h2>
+        <h2 className="font-display text-lg font-semibold text-ink">{t.addresses}</h2>
         <Button size="sm" onClick={() => setTarget("new")}>
-          Add address
+          {t.addAddress}
         </Button>
       </div>
 
       {addresses.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-soft">No addresses on file.</p>
+        <p className="mt-3 text-sm text-ink-soft">{t.noAddresses}</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {addresses.map((a) => (
             <li
               key={a.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-[0.5rem] border border-line p-3"
+              className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line p-3"
             >
               <div className="min-w-0 text-sm">
-                <p className="text-ink">
+                <p className="text-ink" dir="auto">
                   {[a.addressLine, a.city, a.province, a.postalCode, a.country]
                     .filter(Boolean)
-                    .join(", ")}
+                    .join(t.listSeparator)}
                 </p>
-                {a.notes && <p className="text-xs text-ink-soft">{a.notes}</p>}
-                {a.isDefault && <p className="text-xs text-primary">Default</p>}
+                {a.notes && <p className="text-xs text-ink-soft" dir="auto">{a.notes}</p>}
+                {a.isDefault && <p className="text-xs text-primary">{t.default}</p>}
               </div>
               <Button size="sm" variant="ghost" onClick={() => setTarget(a)}>
-                Edit
+                {c.edit}
               </Button>
             </li>
           ))}
@@ -280,7 +389,7 @@ function AddressesSection({
       <Modal
         open={target !== null}
         onClose={() => setTarget(null)}
-        title={target === "new" ? "Add address" : "Edit address"}
+        title={target === "new" ? t.addAddress : t.editAddress}
       >
         {target !== null && (
           <AddressForm
@@ -310,6 +419,8 @@ function AddressForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [country, setCountry] = useState(address?.country ?? "EG");
@@ -339,7 +450,7 @@ function AddressForm({
           notes: notes.trim() || null,
           isDefault,
         });
-        toast.success("Address saved.");
+        toast.success(t.addressSaved);
       } else {
         await apiClient.addCustomerAddress(workspaceId, customerId, {
           country: country.trim().toUpperCase(),
@@ -350,7 +461,7 @@ function AddressForm({
           notes: notes.trim() || undefined,
           isDefault,
         });
-        toast.success("Address added.");
+        toast.success(t.addressAdded);
       }
       onDone();
     } catch (err) {
@@ -367,62 +478,68 @@ function AddressForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Country"
+          label={t.country}
           required
+          dir="ltr"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           error={fieldErrors.country}
-          hint="Two-letter code."
+          hint={t.countryHint}
         />
         <TextField
-          label="Province"
+          label={t.province}
+          dir="auto"
           value={province}
           onChange={(e) => setProvince(e.target.value)}
           error={fieldErrors.province}
         />
         <TextField
-          label="City"
+          label={t.city}
           required
+          dir="auto"
           value={city}
           onChange={(e) => setCity(e.target.value)}
           error={fieldErrors.city}
         />
         <TextField
-          label="Postal code"
+          label={t.postalCode}
+          dir="ltr"
           value={postalCode}
           onChange={(e) => setPostalCode(e.target.value)}
           error={fieldErrors.postalCode}
         />
       </div>
       <TextField
-        label="Address line"
+        label={t.addressLine}
         required
+        dir="auto"
         value={addressLine}
         onChange={(e) => setAddressLine(e.target.value)}
         error={fieldErrors.addressLine}
       />
-      <Field label="Notes" error={fieldErrors.notes}>
+      <Field label={t.notes} error={fieldErrors.notes}>
         {({ id }) => (
-          <Textarea id={id} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Textarea id={id} dir="auto" value={notes} onChange={(e) => setNotes(e.target.value)} />
         )}
       </Field>
       <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
+          className="accent-primary"
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
         />
-        Default address
+        {t.defaultAddress}
       </label>
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {c.cancel}
         </Button>
         <Button
           type="submit"
           disabled={saving || !country.trim() || !city.trim() || !addressLine.trim()}
         >
-          {saving ? "Saving…" : address ? "Save address" : "Add address"}
+          {saving ? c.saving : address ? t.saveAddress : t.addAddress}
         </Button>
       </div>
     </form>

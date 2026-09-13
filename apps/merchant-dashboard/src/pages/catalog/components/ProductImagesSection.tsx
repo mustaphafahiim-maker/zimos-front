@@ -8,6 +8,52 @@ import { getErrorMessage } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { useToast } from "@/components/Toast";
 import { ProductImage } from "@/components/ProductImage";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Images",
+    discard: "Discard",
+    saveImages: "Save images",
+    help:
+      "PNG, JPEG, GIF or WEBP. Anything over 5 MB is resized automatically before upload. The first image is the primary one shown in the catalog and storefront.",
+    dropHere: "Drop images here or click to choose",
+    multiple: "Multiple files supported",
+    preparingOne: "Preparing 1 image…",
+    preparingMany: "Preparing {n} images…",
+    uploadingOne: "Uploading 1 image…",
+    uploadingMany: "Uploading {n} images…",
+    imageAlt: "Image {n}",
+    primary: "Primary",
+    moveEarlier: "Move image earlier",
+    moveLater: "Move image later",
+    removeImage: "Remove image",
+    empty: "No images yet.",
+    savedToast: "Images saved.",
+    fileError: "{file}: {error}",
+  },
+  ar: {
+    title: "الصور",
+    discard: "تجاهل التغييرات",
+    saveImages: "حفظ الصور",
+    help:
+      "PNG أو JPEG أو GIF أو WEBP. أي صورة أكبر من 5 ميجابايت يتم تصغيرها تلقائيًا قبل الرفع. الصورة الأولى هي الرئيسية التي تظهر في الكتالوج والمتجر.",
+    dropHere: "اسحب الصور وأفلتها هنا أو اضغط للاختيار",
+    multiple: "يمكنك رفع أكثر من ملف",
+    preparingOne: "جارٍ تجهيز صورة واحدة…",
+    preparingMany: "جارٍ تجهيز {n} صور…",
+    uploadingOne: "جارٍ رفع صورة واحدة…",
+    uploadingMany: "جارٍ رفع {n} صور…",
+    imageAlt: "الصورة {n}",
+    primary: "رئيسية",
+    moveEarlier: "نقل الصورة للأمام",
+    moveLater: "نقل الصورة للخلف",
+    removeImage: "إزالة الصورة",
+    empty: "لا توجد صور بعد.",
+    savedToast: "تم حفظ الصور.",
+    fileError: "{file}: {error}",
+  },
+} satisfies Messages;
 
 /**
  * Two modes:
@@ -34,6 +80,8 @@ type Props =
     };
 
 export function ProductImagesSection(props: Props) {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
 
@@ -105,7 +153,7 @@ export function ProductImagesSection(props: Props) {
           return { ok: true as const, uploaded };
         } catch (err) {
           setUploading((n) => n - 1);
-          return { ok: false as const, msg: `${file.name}: ${getErrorMessage(err)}` };
+          return { ok: false as const, msg: fmt(t.fileError, { file: file.name, error: getErrorMessage(err) }) };
         }
       })
     );
@@ -135,7 +183,7 @@ export function ProductImagesSection(props: Props) {
     setSaving(true);
     try {
       await apiClient.updateProduct(workspaceId, props.productId, { media: editItems });
-      toast.success("Images saved.");
+      toast.success(t.savedToast);
       props.onChanged();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -151,27 +199,25 @@ export function ProductImagesSection(props: Props) {
   }
 
   return (
-    <Card>
+    <Card className="rounded-2xl">
       <CardContent className="pt-6">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="font-display text-lg font-medium text-ink">
-            Images{props.mode === "create" && <span className="text-danger"> *</span>}
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-semibold text-ink">
+            {t.title}
+            {props.mode === "create" && <span className="text-danger"> *</span>}
           </h2>
           {dirty && (
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setEditItems(savedMedia)} disabled={saving}>
-                Discard
+                {t.discard}
               </Button>
               <Button size="sm" onClick={save} disabled={saving || uploading > 0 || preparing > 0}>
-                {saving ? "Saving…" : "Save images"}
+                {saving ? c.saving : t.saveImages}
               </Button>
             </div>
           )}
         </div>
-        <p className="mb-4 text-sm text-ink-soft">
-          PNG, JPEG, GIF or WEBP. Anything over 5&nbsp;MB is resized automatically before upload.
-          The first image is the primary one shown in the catalog and storefront.
-        </p>
+        <p className="mb-4 text-sm text-ink-soft">{t.help}</p>
 
         {props.mode === "create" && props.error && (
           <Alert variant="danger" className="mb-4">
@@ -181,7 +227,7 @@ export function ProductImagesSection(props: Props) {
 
         {errors.length > 0 && (
           <Alert variant="danger" className="mb-4">
-            <ul className="list-disc space-y-0.5 pl-4">
+            <ul className="list-disc space-y-0.5 ps-4">
               {errors.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}
@@ -197,13 +243,13 @@ export function ProductImagesSection(props: Props) {
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-[0.5rem] border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
-            dragOver ? "border-primary bg-primary-soft" : "border-line hover:border-primary/60"
+            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
+            dragOver ? "border-primary bg-primary-soft" : "border-line bg-zimos-ice/40 hover:border-primary/60"
           )}
         >
-          <Upload className="size-5 text-ink-soft" aria-hidden />
-          <span className="font-medium text-ink">Drop images here or click to choose</span>
-          <span className="text-xs text-ink-soft">Multiple files supported</span>
+          <Upload className="size-5 text-primary" aria-hidden />
+          <span className="font-medium text-ink">{t.dropHere}</span>
+          <span className="text-xs text-ink-soft">{t.multiple}</span>
           <input
             type="file"
             accept={ACCEPTED_IMAGE_ACCEPT}
@@ -218,27 +264,26 @@ export function ProductImagesSection(props: Props) {
 
         {preparing > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
-            <Spinner className="size-4" /> Preparing {preparing} image{preparing === 1 ? "" : "s"}…
+            <Spinner className="size-4" />
+            {preparing === 1 ? t.preparingOne : fmt(t.preparingMany, { n: preparing })}
           </p>
         )}
 
         {uploading > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
-            <Spinner className="size-4" /> Uploading {uploading} image{uploading === 1 ? "" : "s"}…
+            <Spinner className="size-4" />
+            {uploading === 1 ? t.uploadingOne : fmt(t.uploadingMany, { n: uploading })}
           </p>
         )}
 
         {items.length > 0 ? (
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {items.map((m, i) => (
-              <li
-                key={m.path || m.url}
-                className="group relative overflow-hidden rounded-[0.5rem] border border-line"
-              >
-                <ProductImage media={m} alt={`Image ${i + 1}`} className="aspect-square w-full" />
+              <li key={m.path || m.url} className="group relative overflow-hidden rounded-xl border border-line">
+                <ProductImage media={m} alt={fmt(t.imageAlt, { n: i + 1 })} className="aspect-square w-full" />
                 {i === 0 && (
-                  <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
-                    <Star className="size-3" aria-hidden /> Primary
+                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
+                    <Star className="size-3" aria-hidden /> {t.primary}
                   </span>
                 )}
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/60 px-1.5 py-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -247,7 +292,8 @@ export function ProductImagesSection(props: Props) {
                       type="button"
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
-                      aria-label="Move image earlier"
+                      aria-label={t.moveEarlier}
+                      title={t.moveEarlier}
                       className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronUp className="size-4" aria-hidden />
@@ -256,7 +302,8 @@ export function ProductImagesSection(props: Props) {
                       type="button"
                       onClick={() => move(i, 1)}
                       disabled={i === items.length - 1}
-                      aria-label="Move image later"
+                      aria-label={t.moveLater}
+                      title={t.moveLater}
                       className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronDown className="size-4" aria-hidden />
@@ -265,7 +312,8 @@ export function ProductImagesSection(props: Props) {
                   <button
                     type="button"
                     onClick={() => remove(i)}
-                    aria-label="Remove image"
+                    aria-label={t.removeImage}
+                    title={t.removeImage}
                     className="cursor-pointer rounded p-1 text-white hover:bg-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
@@ -275,8 +323,7 @@ export function ProductImagesSection(props: Props) {
             ))}
           </ul>
         ) : (
-          uploading === 0 &&
-          preparing === 0 && <p className="mt-4 text-sm text-ink-soft">No images yet.</p>
+          uploading === 0 && preparing === 0 && <p className="mt-4 text-sm text-ink-soft">{t.empty}</p>
         )}
       </CardContent>
     </Card>

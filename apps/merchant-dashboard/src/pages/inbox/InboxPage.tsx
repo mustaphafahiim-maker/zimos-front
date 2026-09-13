@@ -1,36 +1,128 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Input, cn } from "@store-builder/ui";
-import { Bot, Check, CheckCheck, FileText, MessageCircle, Package, Phone, Search, Send, Settings2, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Bot, Check, CheckCheck, FileText, MessageCircle, Package, Phone, Search, Send, Settings2, ShieldCheck, X } from "lucide-react";
 import type { WaConversation, WaMessage } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate, formatMoney } from "@/lib/format";
+import { useT, useCommon, useLocale, fmt, type Messages } from "@/i18n/LocaleContext";
+import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 
+const STRINGS = {
+  en: {
+    title: "Inbox",
+    description: "Shared WhatsApp inbox — every customer chat, with the order right next to it.",
+    botSettings: "WhatsApp bot",
+    filterOpen: "Open",
+    filterBot: "Bot handling",
+    filterResolved: "Resolved",
+    filterUnassigned: "Unassigned",
+    searchPlaceholder: "Search name, phone, order…",
+    searchAria: "Search conversations",
+    noMatch: "No conversations match.",
+    pickTitle: "Pick a conversation",
+    pickDescription: "Select a chat from the list to read and reply. Unread chats show a count badge.",
+    contextEmpty: "Customer and order details appear here.",
+    yesterday: "Yesterday",
+    statusAria: "Conversation status",
+    assignAria: "Assign to",
+    backToList: "Back to conversations",
+    bot: "Bot",
+    templates: "Templates",
+    composerPlaceholder: "Type a message… (Enter to send, Shift+Enter for newline)",
+    send: "Send",
+    qrConfirm: "Confirm order ✅",
+    qrTracking: "Send tracking 🚚",
+    qrAddress: "Ask address 📍",
+    qrThanks: "Thank you 🙏",
+    tickFailed: "Failed",
+    tickSent: "Sent",
+    tickRead: "Read",
+    tickDelivered: "Delivered",
+    customer: "Customer",
+    orders: "Orders",
+    reliability: "Reliability",
+    order: "Order",
+    shipping: "Shipping",
+    totalCod: "Total (COD)",
+    actions: "Actions",
+    confirmOrder: "Confirm order",
+    cancelOrder: "Cancel order",
+    createReturn: "Create return",
+    orderFallback: "Order",
+    toastConfirmed: "{order} confirmed — moved to fulfilment.",
+    toastCancelled: "{order} cancelled.",
+    toastReturn: "Return request created for {order}.",
+  },
+  ar: {
+    title: "صندوق الوارد",
+    description: "صندوق WhatsApp مشترك — كل محادثات العملاء، والطلب ظاهر بجانب كل محادثة.",
+    botSettings: "بوت WhatsApp",
+    filterOpen: "مفتوحة",
+    filterBot: "يتولاها البوت",
+    filterResolved: "تم حلها",
+    filterUnassigned: "غير مُسندة",
+    searchPlaceholder: "ابحث بالاسم أو الهاتف أو رقم الطلب…",
+    searchAria: "البحث في المحادثات",
+    noMatch: "لا توجد محادثات مطابقة.",
+    pickTitle: "اختر محادثة",
+    pickDescription: "اختر محادثة من القائمة لقراءتها والرد عليها. المحادثات غير المقروءة يظهر عليها عدد الرسائل.",
+    contextEmpty: "تظهر هنا بيانات العميل والطلب.",
+    yesterday: "أمس",
+    statusAria: "حالة المحادثة",
+    assignAria: "إسناد إلى",
+    backToList: "العودة إلى المحادثات",
+    bot: "البوت",
+    templates: "القوالب",
+    composerPlaceholder: "اكتب رسالة… (Enter للإرسال، Shift+Enter لسطر جديد)",
+    send: "إرسال",
+    qrConfirm: "تأكيد الطلب ✅",
+    qrTracking: "إرسال رقم التتبع 🚚",
+    qrAddress: "طلب العنوان 📍",
+    qrThanks: "شكر 🙏",
+    tickFailed: "فشل الإرسال",
+    tickSent: "تم الإرسال",
+    tickRead: "تمت القراءة",
+    tickDelivered: "تم التسليم",
+    customer: "العميل",
+    orders: "الطلبات",
+    reliability: "الموثوقية",
+    order: "الطلب",
+    shipping: "الشحن",
+    totalCod: "الإجمالي (الدفع عند الاستلام)",
+    actions: "إجراءات",
+    confirmOrder: "تأكيد الطلب",
+    cancelOrder: "إلغاء الطلب",
+    createReturn: "إنشاء مرتجع",
+    orderFallback: "الطلب",
+    toastConfirmed: "تم تأكيد {order} ونقله إلى التجهيز.",
+    toastCancelled: "تم إلغاء {order}.",
+    toastReturn: "تم إنشاء طلب مرتجع لـ {order}.",
+  },
+} satisfies Messages;
+
+type Strings = (typeof STRINGS)["en"];
+
 type Filter = "all" | "open" | "bot" | "resolved" | "unassigned";
 
-const FILTERS: Array<{ key: Filter; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "open", label: "Open" },
-  { key: "bot", label: "Bot handling" },
-  { key: "resolved", label: "Resolved" },
-  { key: "unassigned", label: "Unassigned" },
-];
+const FILTER_KEYS: Filter[] = ["all", "open", "bot", "resolved", "unassigned"];
 
 const AGENTS = ["أميرة سعيد", "محمود عادل"];
 
-const QUICK_REPLIES: Array<{ label: string; text: string }> = [
-  { label: "Confirm order ✅", text: "تمام ✅ طلبك اتأكد وهيتشحن خلال 24 ساعة." },
-  { label: "Send tracking 🚚", text: "طلبك اتشحن مع Bosta 🚚 رقم التتبع: zg8F2K1 — متوقع يوصل خلال يومين." },
-  { label: "Ask address 📍", text: "ممكن تبعتلنا العنوان بالتفصيل (المحافظة – الشارع – رقم العمارة والدور) 📍" },
-  { label: "Thank you 🙏", text: "شكراً لتعاملك معانا 🙏 لو احتجت أي حاجة ابعتلنا في أي وقت." },
+// Message texts stay in Egyptian Arabic (they are sent to customers); only the chip labels are localised.
+const QUICK_REPLIES: Array<{ labelKey: keyof Strings; text: string }> = [
+  { labelKey: "qrConfirm", text: "تمام ✅ طلبك اتأكد وهيتشحن خلال 24 ساعة." },
+  { labelKey: "qrTracking", text: "طلبك اتشحن مع Bosta 🚚 رقم التتبع: zg8F2K1 — متوقع يوصل خلال يومين." },
+  { labelKey: "qrAddress", text: "ممكن تبعتلنا العنوان بالتفصيل (المحافظة – الشارع – رقم العمارة والدور) 📍" },
+  { labelKey: "qrThanks", text: "شكراً لتعاملك معانا 🙏 لو احتجت أي حاجة ابعتلنا في أي وقت." },
 ];
 
 const TEMPLATES: Array<{ name: string; text: string }> = [
@@ -39,6 +131,21 @@ const TEMPLATES: Array<{ name: string; text: string }> = [
   { name: "delivery_reminder", text: "المندوب هيوصلك النهاردة، من فضلك جهّز مبلغ الطلب كاش 💵" },
   { name: "review_request", text: "وصلك طلبك؟ يهمنا رأيك ⭐ رد بتقييم من 1 لـ 5." },
 ];
+
+function filterLabel(f: Filter, t: Strings, all: string): string {
+  switch (f) {
+    case "all":
+      return all;
+    case "open":
+      return t.filterOpen;
+    case "bot":
+      return t.filterBot;
+    case "resolved":
+      return t.filterResolved;
+    case "unassigned":
+      return t.filterUnassigned;
+  }
+}
 
 function initials(name: string): string {
   return name
@@ -49,24 +156,24 @@ function initials(name: string): string {
     .join("");
 }
 
-function timeLabel(iso: string): string {
+function timeLabel(iso: string, intlLocale: string): string {
   const d = new Date(iso);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString(intlLocale, { month: "short", day: "numeric" });
 }
 
 function dayKey(iso: string): string {
   return new Date(iso).toDateString();
 }
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, today: string, yesterday: string): string {
   const d = new Date(iso);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return "Today";
+  if (d.toDateString() === now.toDateString()) return today;
   const y = new Date(now);
   y.setDate(y.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return "Yesterday";
+  if (d.toDateString() === y.toDateString()) return yesterday;
   return formatDate(iso);
 }
 
@@ -80,6 +187,9 @@ function fabricateOrder(orderNumber: string) {
 }
 
 export function InboxPage() {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const list = useAsync(() => mockApi.listWaConversations(workspaceId), [workspaceId]);
@@ -138,75 +248,80 @@ export function InboxPage() {
 
   return (
     <div className="flex h-[calc(100vh-7rem)] min-h-[560px] flex-col">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="font-display text-2xl font-medium text-ink">Inbox</h1>
-          <p className="text-sm text-ink-soft">Shared WhatsApp inbox — every customer chat, with the order right next to it.</p>
-        </div>
-        <Button variant="outline" size="sm" render={<Link to="/inbox/bot" />}>
-          <Settings2 /> WhatsApp bot
-        </Button>
-      </div>
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={
+          <Button variant="outline" size="sm" render={<Link to="/inbox/bot" />}>
+            <Settings2 /> {t.botSettings}
+          </Button>
+        }
+      />
 
       <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
-        <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr] overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised lg:grid-cols-[320px_1fr_300px]">
-          {/* LEFT: conversation list */}
-          <aside className="flex min-h-0 flex-col border-r border-line">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-2xl border border-line bg-paper-raised md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
+          {/* START: conversation list */}
+          <aside className={cn("min-h-0 min-w-0 flex-col border-line md:flex md:border-e", selected ? "hidden" : "flex")}>
             <div className="space-y-2 border-b border-line p-3">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, phone, order…" className="h-9 pl-8" />
+                <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchPlaceholder} aria-label={t.searchAria} className="h-9 ps-8" />
               </div>
               <div className="flex flex-wrap gap-1">
-                {FILTERS.map((f) => (
+                {FILTER_KEYS.map((key) => (
                   <button
-                    key={f.key}
+                    key={key}
                     type="button"
-                    onClick={() => setFilter(f.key)}
+                    onClick={() => setFilter(key)}
+                    aria-pressed={filter === key}
                     className={cn(
                       "rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
-                      filter === f.key ? "border-primary bg-primary-soft text-primary-dark" : "border-line text-ink-soft hover:border-primary/40",
+                      filter === key ? "border-primary bg-primary-soft text-primary-dark" : "border-line text-ink-soft hover:border-primary/40",
                     )}
                   >
-                    {f.label}
+                    {filterLabel(key, t, c.all)}
                   </button>
                 ))}
               </div>
             </div>
             <ul className="min-h-0 flex-1 overflow-y-auto">
-              {rows.length === 0 && <li className="p-6 text-center text-sm text-ink-soft">No conversations match.</li>}
-              {rows.map((c) => (
-                <li key={c.id}>
+              {rows.length === 0 && <li className="p-6 text-center text-sm text-ink-soft">{t.noMatch}</li>}
+              {rows.map((conv) => (
+                <li key={conv.id}>
                   <button
                     type="button"
-                    onClick={() => selectConversation(c)}
-                    className={cn("flex w-full gap-3 border-b border-line px-3 py-3 text-left transition-colors hover:bg-paper", selectedId === c.id && "bg-primary-soft/40")}
+                    onClick={() => selectConversation(conv)}
+                    className={cn("flex w-full gap-3 border-b border-line px-3 py-3 text-start transition-colors hover:bg-paper", selectedId === conv.id && "bg-primary-soft/40")}
                   >
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark" dir="auto">
-                      {initials(c.customerName)}
+                      {initials(conv.customerName)}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="flex min-w-0 items-center gap-1">
                           <span className="truncate text-sm font-medium text-ink" dir="auto">
-                            {c.customerName}
+                            {conv.customerName}
                           </span>
-                          {c.status === "bot" && <Bot className="size-3.5 shrink-0 text-primary" aria-label="Bot handling" />}
+                          {conv.status === "bot" && <Bot className="size-3.5 shrink-0 text-primary" aria-label={t.filterBot} />}
                         </span>
-                        <span className="shrink-0 text-[11px] text-ink-soft">{timeLabel(c.lastAt)}</span>
+                        <span className="shrink-0 text-[11px] text-ink-soft">{timeLabel(conv.lastAt, intlLocale)}</span>
                       </span>
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-xs text-ink-soft" dir="auto">
-                          {c.orderNumber && <span className="mr-1 font-mono text-ink">{c.orderNumber}</span>}
-                          {c.lastMessage}
+                          {conv.orderNumber && (
+                            <bdi className="me-1 font-mono text-ink" dir="ltr">
+                              {conv.orderNumber}
+                            </bdi>
+                          )}
+                          {conv.lastMessage}
                         </span>
-                        {c.unread > 0 && <span className="shrink-0 rounded-full bg-[#25D366] px-1.5 text-[10px] font-semibold text-white">{c.unread}</span>}
+                        {conv.unread > 0 && <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">{conv.unread}</span>}
                       </span>
-                      {c.tags.length > 0 && (
+                      {conv.tags.length > 0 && (
                         <span className="mt-1 flex flex-wrap gap-1">
-                          {c.tags.map((t) => (
-                            <span key={t} className="rounded-full bg-paper px-1.5 py-px text-[10px] text-ink-soft ring-1 ring-line">
-                              {t}
+                          {conv.tags.map((tag) => (
+                            <span key={tag} className="rounded-full bg-paper px-1.5 py-px text-[10px] text-ink-soft ring-1 ring-line" dir="auto">
+                              {tag}
                             </span>
                           ))}
                         </span>
@@ -219,7 +334,7 @@ export function InboxPage() {
           </aside>
 
           {/* CENTER: thread */}
-          <section className="flex min-h-0 min-w-0 flex-col">
+          <section className={cn("min-h-0 min-w-0 flex-col md:flex", selected ? "flex" : "hidden")}>
             {selected ? (
               <Thread
                 key={selected.id}
@@ -228,17 +343,18 @@ export function InboxPage() {
                 onAssign={(name) => setAssignments((prev) => ({ ...prev, [selected.id]: name }))}
                 onStatus={(s) => changeStatus(selected, s)}
                 onSend={(body) => send(selected, body)}
+                onBack={() => setSelectedId(null)}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center p-8">
-                <EmptyState icon={<MessageCircle />} title="Pick a conversation" description="Select a chat on the left to read and reply. Unread messages are marked with a green badge." className="border-0" />
+                <EmptyState icon={<MessageCircle />} title={t.pickTitle} description={t.pickDescription} className="border-0" />
               </div>
             )}
           </section>
 
-          {/* RIGHT: context panel */}
-          <aside className="hidden min-h-0 flex-col overflow-y-auto border-l border-line bg-paper lg:flex">
-            {selected ? <ContextPanel conversation={selected} /> : <div className="p-6 text-center text-xs text-ink-soft">Customer and order details appear here.</div>}
+          {/* END: context panel */}
+          <aside className="hidden min-h-0 flex-col overflow-y-auto border-s border-line bg-paper lg:flex">
+            {selected ? <ContextPanel conversation={selected} /> : <div className="p-6 text-center text-xs text-ink-soft">{t.contextEmpty}</div>}
           </aside>
         </div>
       </DataState>
@@ -254,13 +370,18 @@ function Thread({
   onAssign,
   onStatus,
   onSend,
+  onBack,
 }: {
   conversation: WaConversation;
   assigned: string;
   onAssign: (name: string) => void;
   onStatus: (s: WaConversation["status"]) => void;
   onSend: (body: string) => Promise<void>;
+  onBack: () => void;
 }) {
+  const t = useT(STRINGS);
+  const common = useCommon();
+  const { intlLocale } = useLocale();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -296,6 +417,9 @@ function Thread({
     <>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-3">
+          <Button type="button" size="icon-sm" variant="ghost" className="md:hidden" aria-label={t.backToList} onClick={onBack}>
+            <ArrowLeft className="rtl:rotate-180" />
+          </Button>
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark" dir="auto">
             {initials(c.customerName)}
           </span>
@@ -303,26 +427,26 @@ function Thread({
             <p className="truncate text-sm font-medium text-ink" dir="auto">
               {c.customerName}
             </p>
-            <p className="flex items-center gap-2 text-xs text-ink-soft">
+            <p className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
               <span className="inline-flex items-center gap-1 font-mono">
-                <Phone className="size-3" /> {c.phone}
+                <Phone className="size-3" /> <bdi dir="ltr">{c.phone}</bdi>
               </span>
               {c.orderNumber && (
                 <Link to={`/orders/${c.orderNumber.replace("#", "")}`} className="inline-flex items-center gap-1 font-mono text-primary hover:underline">
-                  <Package className="size-3" /> {c.orderNumber}
+                  <Package className="size-3" /> <bdi dir="ltr">{c.orderNumber}</bdi>
                 </Link>
               )}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={c.status} onChange={(e) => onStatus(e.target.value as WaConversation["status"])} className="h-8 w-32 py-1 text-xs" aria-label="Conversation status">
-            <option value="open">Open</option>
-            <option value="bot">Bot handling</option>
-            <option value="resolved">Resolved</option>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={c.status} onChange={(e) => onStatus(e.target.value as WaConversation["status"])} className="h-8 w-32 py-1 text-xs" aria-label={t.statusAria}>
+            <option value="open">{t.filterOpen}</option>
+            <option value="bot">{t.filterBot}</option>
+            <option value="resolved">{t.filterResolved}</option>
           </Select>
-          <Select value={assigned} onChange={(e) => onAssign(e.target.value)} className="h-8 w-36 py-1 text-xs" aria-label="Assign to" dir="auto">
-            <option value="">Unassigned</option>
+          <Select value={assigned} onChange={(e) => onAssign(e.target.value)} className="h-8 w-36 py-1 text-xs" aria-label={t.assignAria} dir="auto">
+            <option value="">{t.filterUnassigned}</option>
             {AGENTS.map((a) => (
               <option key={a} value={a}>
                 {a}
@@ -332,7 +456,7 @@ function Thread({
         </div>
       </header>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto bg-[#ECE5DD]/60 px-4 py-3 dark:bg-paper">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto bg-zimos-ice/40 px-4 py-3 dark:bg-paper">
         {c.messages.map((m) => {
           const day = dayKey(m.at);
           const showSep = day !== lastDay;
@@ -342,19 +466,26 @@ function Thread({
             <div key={m.id}>
               {showSep && (
                 <p className="my-2 text-center">
-                  <span className="rounded-full bg-paper-raised px-2 py-0.5 text-[10px] text-ink-soft shadow-sm">{dayLabel(m.at)}</span>
+                  <span className="rounded-full bg-paper-raised px-2 py-0.5 text-[10px] text-ink-soft shadow-sm">{dayLabel(m.at, common.today, t.yesterday)}</span>
                 </p>
               )}
               <div className={cn("flex", out ? "justify-end" : "justify-start")}>
-                <div className={cn("max-w-[75%] rounded-lg px-2.5 py-1.5 text-[13px] leading-snug shadow-sm", out ? "bg-[#DCF8C6] text-black dark:bg-success-soft dark:text-ink" : "bg-white text-black dark:bg-paper-raised dark:text-ink")} dir="auto">
+                <div
+                  className={cn(
+                    "max-w-[75%] rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm",
+                    out ? "rounded-ee-sm bg-primary text-white" : "rounded-ss-sm border border-line bg-paper-raised text-ink",
+                  )}
+                >
                   {m.byBot && (
-                    <span className="mb-0.5 inline-flex items-center gap-1 rounded bg-black/5 px-1 text-[9px] font-medium uppercase tracking-wide text-black/60 dark:bg-white/10 dark:text-ink-soft">
-                      <Bot className="size-2.5" /> Bot
+                    <span className={cn("mb-0.5 inline-flex items-center gap-1 rounded px-1 text-[9px] font-medium uppercase tracking-wide", out ? "bg-white/15 text-white/80" : "bg-primary-soft text-primary-dark")}>
+                      <Bot className="size-2.5" /> {t.bot}
                     </span>
                   )}
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                  <p className="mt-0.5 flex items-center justify-end gap-1 text-[9px] text-black/40 dark:text-ink-soft">
-                    {new Date(m.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                  <p className="whitespace-pre-wrap break-words" dir="auto">
+                    {m.body}
+                  </p>
+                  <p className={cn("mt-0.5 flex items-center justify-end gap-1 text-[9px]", out ? "text-white/70" : "text-ink-muted")}>
+                    <bdi dir="ltr">{new Date(m.at).toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" })}</bdi>
                     {out && <Ticks status={m.status} />}
                   </p>
                 </div>
@@ -367,21 +498,23 @@ function Thread({
       <footer className="border-t border-line p-3">
         <div className="mb-2 flex flex-wrap items-center gap-1">
           {QUICK_REPLIES.map((q) => (
-            <button key={q.label} type="button" onClick={() => insert(q.text)} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink-soft transition-colors hover:border-primary/40 hover:text-primary">
-              {q.label}
+            <button key={q.labelKey} type="button" onClick={() => insert(q.text)} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink-soft transition-colors hover:border-primary/40 hover:text-primary">
+              {t[q.labelKey]}
             </button>
           ))}
-          <div className="relative ml-auto">
-            <Button type="button" size="xs" variant="outline" onClick={() => setTemplatesOpen((o) => !o)}>
-              <FileText /> Templates
+          <div className="relative ms-auto">
+            <Button type="button" size="xs" variant="outline" onClick={() => setTemplatesOpen((o) => !o)} aria-expanded={templatesOpen}>
+              <FileText /> {t.templates}
             </Button>
             {templatesOpen && (
-              <div className="absolute bottom-full right-0 z-10 mb-1 w-72 rounded-[var(--radius-card)] border border-line bg-paper-raised p-1 shadow-lg">
-                {TEMPLATES.map((t) => (
-                  <button key={t.name} type="button" onClick={() => insert(t.text)} className="block w-full rounded px-2 py-1.5 text-left hover:bg-paper">
-                    <span className="font-mono text-[11px] text-primary">{t.name}</span>
+              <div className="absolute bottom-full end-0 z-10 mb-1 w-72 max-w-[80vw] rounded-2xl border border-line bg-paper-raised p-1 shadow-lg">
+                {TEMPLATES.map((tpl) => (
+                  <button key={tpl.name} type="button" onClick={() => insert(tpl.text)} className="block w-full rounded-lg px-2 py-1.5 text-start hover:bg-paper">
+                    <span className="font-mono text-[11px] text-primary" dir="ltr">
+                      {tpl.name}
+                    </span>
                     <span className="block truncate text-xs text-ink-soft" dir="auto">
-                      {t.text}
+                      {tpl.text}
                     </span>
                   </button>
                 ))}
@@ -402,11 +535,11 @@ function Thread({
             }}
             rows={2}
             dir="auto"
-            placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
-            className="min-h-[44px] flex-1"
+            placeholder={t.composerPlaceholder}
+            className="min-h-[44px] min-w-0 flex-1"
           />
-          <Button type="button" onClick={submit} disabled={sending || !draft.trim()} className="bg-[#25D366] text-white hover:bg-[#1ebe5b]">
-            <Send /> Send
+          <Button type="button" onClick={submit} disabled={sending || !draft.trim()}>
+            <Send className="rtl:-scale-x-100" /> {t.send}
           </Button>
         </div>
       </footer>
@@ -415,76 +548,81 @@ function Thread({
 }
 
 function Ticks({ status }: { status: WaMessage["status"] }) {
-  if (status === "failed") return <X className="size-3 text-danger" aria-label="Failed" />;
-  if (status === "sent") return <Check className="size-3" aria-label="Sent" />;
-  return <CheckCheck className={cn("size-3", status === "read" && "text-[#34B7F1]")} aria-label={status === "read" ? "Read" : "Delivered"} />;
+  const t = useT(STRINGS);
+  if (status === "failed") return <X className="size-3 text-danger-soft" aria-label={t.tickFailed} />;
+  if (status === "sent") return <Check className="size-3" aria-label={t.tickSent} />;
+  return <CheckCheck className={cn("size-3", status === "read" && "text-zimos-ice")} aria-label={status === "read" ? t.tickRead : t.tickDelivered} />;
 }
 
 // --------------------------------------------------------- Context panel --
 
 function ContextPanel({ conversation: c }: { conversation: WaConversation }) {
+  const t = useT(STRINGS);
   const toast = useToast();
   const order = c.orderNumber ? fabricateOrder(c.orderNumber) : null;
   const reliability = order?.reliability ?? 70;
+  const orderRef = c.orderNumber ?? t.orderFallback;
 
   return (
     <div className="space-y-3 p-3">
-      <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Customer</p>
+      <div className="rounded-2xl border border-line bg-paper-raised p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.customer}</p>
         <p className="mt-1 text-sm font-medium text-ink" dir="auto">
           {c.customerName}
         </p>
-        <p className="font-mono text-xs text-ink-soft">{c.phone}</p>
+        <p className="font-mono text-xs text-ink-soft">
+          <bdi dir="ltr">{c.phone}</bdi>
+        </p>
         <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div>
-            <dt className="text-ink-soft">Orders</dt>
-            <dd className="font-medium text-ink">{order?.ordersCount ?? 1}</dd>
+            <dt className="text-ink-soft">{t.orders}</dt>
+            <dd className="font-medium tabular-nums text-ink">{order?.ordersCount ?? 1}</dd>
           </div>
           <div>
-            <dt className="text-ink-soft">Reliability</dt>
-            <dd className={cn("inline-flex items-center gap-1 font-medium", reliability >= 70 ? "text-success" : reliability >= 50 ? "text-accent-dark" : "text-danger")}>
-              <ShieldCheck className="size-3" /> {reliability}%
+            <dt className="text-ink-soft">{t.reliability}</dt>
+            <dd className={cn("inline-flex items-center gap-1 font-medium", reliability >= 70 ? "text-success" : reliability >= 50 ? "text-warning" : "text-danger")}>
+              <ShieldCheck className="size-3" /> <bdi dir="ltr">{reliability}%</bdi>
             </dd>
           </div>
         </dl>
       </div>
 
       {order && c.orderNumber && (
-        <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-3">
+        <div className="rounded-2xl border border-line bg-paper-raised p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Order</p>
-            <Link to={`/orders/${c.orderNumber.replace("#", "")}`} className="font-mono text-xs text-primary hover:underline">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.order}</p>
+            <Link to={`/orders/${c.orderNumber.replace("#", "")}`} className="font-mono text-xs text-primary hover:underline" dir="ltr">
               {c.orderNumber}
             </Link>
           </div>
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <span className="text-ink" dir="auto">
+          <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+            <span className="min-w-0 text-ink" dir="auto">
               {order.item} × 1
             </span>
-            <span className="tabular-nums text-ink">{formatMoney(order.price)}</span>
+            <span className="shrink-0 tabular-nums text-ink">{formatMoney(order.price)}</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-xs text-ink-soft">
-            <span>Shipping</span>
+            <span>{t.shipping}</span>
             <span className="tabular-nums">{formatMoney(order.shipping)}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm font-medium text-ink">
-            <span>Total (COD)</span>
-            <span className="tabular-nums">{formatMoney(order.total)}</span>
+          <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2 text-sm font-medium text-ink">
+            <span>{t.totalCod}</span>
+            <span className="shrink-0 tabular-nums">{formatMoney(order.total)}</span>
           </div>
         </div>
       )}
 
-      <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">Actions</p>
+      <div className="rounded-2xl border border-line bg-paper-raised p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.actions}</p>
         <div className="mt-2 grid gap-1.5">
-          <Button size="sm" variant="outline" className="justify-start text-success" onClick={() => toast.success(`${c.orderNumber ?? "Order"} confirmed — moved to fulfilment.`)}>
-            <Check /> Confirm order
+          <Button size="sm" variant="outline" className="justify-start text-success" onClick={() => toast.success(fmt(t.toastConfirmed, { order: orderRef }))}>
+            <Check /> {t.confirmOrder}
           </Button>
-          <Button size="sm" variant="outline" className="justify-start text-danger" onClick={() => toast.success(`${c.orderNumber ?? "Order"} cancelled.`)}>
-            <X /> Cancel order
+          <Button size="sm" variant="outline" className="justify-start text-danger" onClick={() => toast.success(fmt(t.toastCancelled, { order: orderRef }))}>
+            <X /> {t.cancelOrder}
           </Button>
-          <Button size="sm" variant="outline" className="justify-start" onClick={() => toast.success(`Return request created for ${c.orderNumber ?? "order"}.`)}>
-            <Package /> Create return
+          <Button size="sm" variant="outline" className="justify-start" onClick={() => toast.success(fmt(t.toastReturn, { order: orderRef }))}>
+            <Package /> {t.createReturn}
           </Button>
         </div>
       </div>

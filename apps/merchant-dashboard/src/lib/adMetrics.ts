@@ -164,12 +164,30 @@ export function verdictFor(cpd: number | null, breakEvenCpd: number | null): Ver
   return "kill";
 }
 
-export const VERDICT_LABEL: Record<Verdict, string> = { scale: "Scale", hold: "Hold", kill: "Kill" };
+type LabelLocale = "en" | "ar";
+
+const VERDICT_LABELS: Record<LabelLocale, Record<Verdict, string>> = {
+  en: { scale: "Scale", hold: "Hold", kill: "Kill" },
+  ar: { scale: "كبّر", hold: "استمر", kill: "أوقف" },
+};
+
+/** Localised verdict label. Defaults to English for callers without a locale. */
+export function verdictLabel(v: Verdict, locale: LabelLocale = "en"): string {
+  return VERDICT_LABELS[locale][v];
+}
+
+/** @deprecated English only — prefer `verdictLabel(v, locale)`. */
+export const VERDICT_LABEL: Record<Verdict, string> = VERDICT_LABELS.en;
 export const VERDICT_CLASS: Record<Verdict, string> = {
   scale: "bg-success-soft text-success border-success/30",
-  hold: "bg-accent-soft text-accent-dark border-accent/40",
+  hold: "bg-warning-soft text-warning border-warning/30",
   kill: "bg-danger-soft text-danger border-danger/30",
 };
+
+/** Platform names are brand names and stay in Latin script in every locale. */
+export function platformLabel(p: Campaign["platform"], _locale: LabelLocale = "en"): string {
+  return PLATFORM_LABEL[p];
+}
 
 export const PLATFORM_LABEL: Record<Campaign["platform"], string> = {
   facebook: "Facebook",

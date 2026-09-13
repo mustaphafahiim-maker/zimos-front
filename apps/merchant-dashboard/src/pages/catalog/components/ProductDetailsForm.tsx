@@ -14,10 +14,62 @@ import { useToast } from "@/components/Toast";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
+import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { ProductImagesSection } from "./ProductImagesSection";
 
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"];
 const TYPES: ProductType[] = ["physical", "digital", "service"];
+
+const STATUS_LABELS: Record<Locale, Record<ProductStatus, string>> = {
+  en: { draft: "Draft", active: "Active", archived: "Archived" },
+  ar: { draft: "مسودة", active: "نشط", archived: "مؤرشف" },
+};
+
+const TYPE_LABELS: Record<Locale, Record<ProductType, string>> = {
+  en: { physical: "Physical", digital: "Digital", service: "Service" },
+  ar: { physical: "منتج ملموس", digital: "منتج رقمي", service: "خدمة" },
+};
+
+const STRINGS = {
+  en: {
+    basics: "Basics",
+    name: "Name",
+    namePlaceholder: "T-Shirt",
+    description: "Description",
+    descriptionPlaceholder: "Soft cotton tee…",
+    type: "Type",
+    tags: "Tags",
+    tagsHint: "Comma-separated.",
+    tagsPlaceholder: "apparel, summer",
+    errName: "Enter a product name.",
+    errDescription: "Add a description.",
+    errImage: "Add at least one product image.",
+    createdToast: "\"{name}\" created.",
+    savedToast: "Product details saved.",
+    uploadingImages: "Uploading images…",
+    createProduct: "Create product",
+    saveBasics: "Save basics",
+  },
+  ar: {
+    basics: "المعلومات الأساسية",
+    name: "الاسم",
+    namePlaceholder: "تيشيرت",
+    description: "الوصف",
+    descriptionPlaceholder: "تيشيرت قطن ناعم…",
+    type: "النوع",
+    tags: "الوسوم",
+    tagsHint: "افصل بينها بفاصلة (,).",
+    tagsPlaceholder: "ملابس, صيفي",
+    errName: "أدخل اسم المنتج.",
+    errDescription: "أضف وصفًا للمنتج.",
+    errImage: "أضف صورة واحدة على الأقل للمنتج.",
+    createdToast: "تم إنشاء \"{name}\".",
+    savedToast: "تم حفظ بيانات المنتج.",
+    uploadingImages: "جارٍ رفع الصور…",
+    createProduct: "إنشاء المنتج",
+    saveBasics: "حفظ المعلومات الأساسية",
+  },
+} satisfies Messages;
 
 interface Props {
   mode: "create" | "edit";
@@ -27,6 +79,9 @@ interface Props {
 }
 
 export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props) {
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const isCreate = mode === "create";
@@ -51,13 +106,13 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
     // Client-side required-field checks. For a new product: name, description
     // and at least one image. For edits: just name.
     const errs: Record<string, string> = {};
-    if (name.trim() === "") errs.name = "Enter a product name.";
-    if (isCreate && description.trim() === "") errs.description = "Add a description.";
+    if (name.trim() === "") errs.name = t.errName;
+    if (isCreate && description.trim() === "") errs.description = t.errDescription;
     const missingImage = isCreate && media.length === 0;
 
     if (Object.keys(errs).length > 0 || missingImage) {
       setFieldErrors(errs);
-      setMediaError(missingImage ? "Add at least one product image." : null);
+      setMediaError(missingImage ? t.errImage : null);
       setFormError(null);
       return;
     }
@@ -74,7 +129,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       productType,
       tags: tags
         .split(",")
-        .map((t) => t.trim())
+        .map((tag) => tag.trim())
         .filter(Boolean),
       ...(isCreate ? { media } : {}),
     };
@@ -82,11 +137,11 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
     try {
       if (isCreate) {
         const created = await apiClient.createProduct(workspaceId, payload);
-        toast.success(`"${created.name}" created.`);
+        toast.success(fmt(t.createdToast, { name: created.name }));
         onCreated?.(created);
       } else if (product) {
         await apiClient.updateProduct(workspaceId, product.id, payload);
-        toast.success("Product details saved.");
+        toast.success(t.savedToast);
         onSaved?.();
       }
     } catch (err) {
@@ -101,63 +156,55 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
+      <Card className="rounded-2xl">
         <CardContent className="pt-6">
           <div className="space-y-4">
-            <h2 className="font-display text-lg font-medium text-ink">Basics</h2>
+            <h2 className="font-display text-lg font-semibold text-ink">{t.basics}</h2>
             {formError && <Alert variant="danger">{formError}</Alert>}
 
             <TextField
-              label="Name"
+              label={t.name}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={fieldErrors.name}
-              placeholder="T-Shirt"
+              placeholder={t.namePlaceholder}
             />
 
-            <Field
-              label="Description"
-              required={isCreate}
-              error={fieldErrors.description}
-            >
+            <Field label={t.description} required={isCreate} error={fieldErrors.description}>
               {({ id }) => (
                 <Textarea
                   id={id}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Soft cotton tee…"
+                  placeholder={t.descriptionPlaceholder}
                 />
               )}
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Status" error={fieldErrors.status}>
+              <Field label={c.status} error={fieldErrors.status}>
                 {({ id }) => (
-                  <Select
-                    id={id}
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as ProductStatus)}
-                  >
+                  <Select id={id} value={status} onChange={(e) => setStatus(e.target.value as ProductStatus)}>
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {s[0].toUpperCase() + s.slice(1)}
+                        {STATUS_LABELS[locale][s]}
                       </option>
                     ))}
                   </Select>
                 )}
               </Field>
 
-              <Field label="Type" error={fieldErrors.productType}>
+              <Field label={t.type} error={fieldErrors.productType}>
                 {({ id }) => (
                   <Select
                     id={id}
                     value={productType}
                     onChange={(e) => setProductType(e.target.value as ProductType)}
                   >
-                    {TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t[0].toUpperCase() + t.slice(1)}
+                    {TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {TYPE_LABELS[locale][type]}
                       </option>
                     ))}
                   </Select>
@@ -166,12 +213,12 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
             </div>
 
             <TextField
-              label="Tags"
-              hint="Comma-separated."
+              label={t.tags}
+              hint={t.tagsHint}
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               error={fieldErrors.tags}
-              placeholder="apparel, summer"
+              placeholder={t.tagsPlaceholder}
             />
           </div>
         </CardContent>
@@ -190,12 +237,12 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       <div className="flex justify-end">
         <Button type="submit" disabled={saving || imagesUploading > 0}>
           {saving
-            ? "Saving…"
+            ? c.saving
             : imagesUploading > 0
-              ? "Uploading images…"
+              ? t.uploadingImages
               : isCreate
-                ? "Create product"
-                : "Save basics"}
+                ? t.createProduct
+                : t.saveBasics}
         </Button>
       </div>
     </form>
