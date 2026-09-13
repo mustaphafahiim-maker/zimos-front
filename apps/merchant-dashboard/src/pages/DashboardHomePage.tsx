@@ -22,6 +22,7 @@ import { useAsync } from "@/lib/useAsync";
 import { formatMoney, formatNumber, formatPercentValue, formatShortDate } from "@/lib/format";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";
+import { listInventoryItems } from "@/pages/inventory/inventoryAdapter";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
 import { HBarList, LineAreaChart } from "@/components/charts";
@@ -126,7 +127,12 @@ export function DashboardHomePage() {
 
   const attention = useAsync(
     () =>
-      Promise.all([mockApi.listFlagged(workspaceId), mockApi.listAbandoned(workspaceId), mockApi.listInventory(workspaceId)]).then(
+      Promise.all([
+        mockApi.listFlagged(workspaceId),
+        mockApi.listAbandoned(workspaceId),
+        // Real stock (same source as the Inventory page); a failure only hides the count.
+        listInventoryItems(workspaceId).catch(() => []),
+      ]).then(
         ([flagged, abandoned, inventory]) => ({
           flagged: flagged.filter((f) => f.status === "flagged").length,
           abandoned: abandoned.filter((a) => a.recoveryStatus === "not_contacted").length,

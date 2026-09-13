@@ -5,6 +5,7 @@ import { AlertTriangle, BellOff, Boxes, CheckCheck, Coins, Globe, PhoneCall, Sho
 import { cn } from "@store-builder/ui";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";
+import { listInventoryItems } from "@/pages/inventory/inventoryAdapter";
 import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useLocalStorage } from "@/lib/useLocalStorage";
@@ -124,7 +125,8 @@ export function useNotifications(): NotificationsState {
       mockApi.listSettlements(ws),
       mockApi.listCampaigns(ws),
       mockApi.listEconomics(ws),
-      mockApi.listInventory(ws),
+      // Real stock (same source as the Inventory page); a failure only hides stock alerts.
+      listInventoryItems(ws).catch(() => []),
       mockApi.listAdAccounts(ws),
       mockApi.listDomains(ws),
     ]);
