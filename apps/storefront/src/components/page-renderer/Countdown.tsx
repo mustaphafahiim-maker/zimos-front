@@ -16,7 +16,6 @@ function parts(msLeft: number) {
     hours: Math.floor(total / 3600),
     minutes: Math.floor((total % 3600) / 60),
     seconds: total % 60,
-    done: total === 0,
   };
 }
 
@@ -24,9 +23,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 export function Countdown({ label, endsInHours }: { label: string; endsInHours: number }) {
   // Seeded with the full duration so the server HTML and the first client
-  // render agree; the interval below takes over a second later. The deadline is
-  // pinned inside the effect rather than in state, which keeps the effect body
-  // free of a synchronous setState.
+  // render agree; the interval below takes over a second later.
   const [left, setLeft] = useState(() => endsInHours * 3600_000);
 
   useEffect(() => {
@@ -35,16 +32,21 @@ export function Countdown({ label, endsInHours }: { label: string; endsInHours: 
     return () => clearInterval(id);
   }, [endsInHours]);
 
-  const { hours, minutes, seconds, done } = parts(left);
+  const { hours, minutes, seconds } = parts(left);
+  const units = [hours, minutes, seconds];
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-accent/40 bg-accent-soft px-5 py-4 text-center">
-      {label && <p className="text-sm font-medium text-ink">{label}</p>}
-      <p
-        className="mt-1 font-display text-3xl font-medium tabular-nums text-accent-dark"
-        aria-live="off"
-      >
-        {done ? "00:00:00" : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
+    <div className="rounded-2xl border border-primary/20 bg-primary-soft px-5 py-4 text-center">
+      {label && <p className="text-sm font-semibold text-ink">{label}</p>}
+      <p className="mt-2 flex items-center justify-center gap-2" dir="ltr" aria-live="off">
+        {units.map((value, i) => (
+          <span key={i} className="flex items-center gap-2">
+            <span className="min-w-12 rounded-xl bg-paper-raised px-2 py-1.5 text-2xl font-bold tabular-nums text-primary shadow-card">
+              {pad(value)}
+            </span>
+            {i < units.length - 1 && <span className="text-xl font-bold text-primary/60">:</span>}
+          </span>
+        ))}
       </p>
     </div>
   );

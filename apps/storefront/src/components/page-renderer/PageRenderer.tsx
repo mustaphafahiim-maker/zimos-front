@@ -5,6 +5,7 @@ import type {
   PageSection,
   PageTree,
 } from "@store-builder/api-client";
+import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
 import {
   CartElement,
   CollectionListElement,
@@ -43,7 +44,8 @@ import { SPAN_CLASS, propsOf } from "./props";
  *
  * Only `elements` are typed; sections, rows and columns are pure containers, so
  * layout here is entirely structural — a row is a 12-column grid, a column
- * spans `span` of it, and elements stack inside.
+ * spans `span` of it, and elements stack inside. Grid order follows the
+ * document direction, so an RTL store lays columns out right-to-left.
  *
  * Every node is treated as untrusted: the tree can come from a template, from
  * the editor, or from a hand-written API call, and only its *structure* was
@@ -53,10 +55,13 @@ import { SPAN_CLASS, propsOf } from "./props";
 interface Ctx {
   workspaceId: string;
   currency: string;
+  locale: Locale;
+  t: Dictionary;
 }
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   const props = propsOf(element);
+  const { t } = ctx;
 
   switch (element.type) {
     case "heading":
@@ -72,9 +77,9 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "button":
       return <ButtonElement props={props} workspaceId={ctx.workspaceId} />;
     case "video":
-      return <VideoElement props={props} />;
+      return <VideoElement props={props} t={t} />;
     case "embed":
-      return <EmbedElement props={props} />;
+      return <EmbedElement props={props} t={t} />;
     case "spacer":
       return <SpacerElement props={props} />;
     case "divider":
@@ -84,34 +89,26 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "list":
       return <ListElement props={props} />;
     case "accordion":
-      return <AccordionElement props={props} />;
+      return <AccordionElement props={props} t={t} />;
     case "faq":
-      return <FaqElement props={props} />;
+      return <FaqElement props={props} t={t} />;
     case "testimonial":
-      return <TestimonialElement props={props} />;
+      return <TestimonialElement props={props} t={t} />;
     case "countdown":
       return <CountdownElement props={props} />;
     case "form":
-      return <FormElement props={props} />;
+      return <FormElement props={props} t={t} />;
     case "map":
-      return <MapElement props={props} />;
+      return <MapElement props={props} t={t} />;
     case "social_icons":
-      return <SocialIconsElement props={props} />;
+      return <SocialIconsElement props={props} t={t} />;
     case "product_card":
       return (
-        <ProductCardElement
-          props={props}
-          workspaceId={ctx.workspaceId}
-          currency={ctx.currency}
-        />
+        <ProductCardElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
       );
     case "product_list":
       return (
-        <ProductListElement
-          props={props}
-          workspaceId={ctx.workspaceId}
-          currency={ctx.currency}
-        />
+        <ProductListElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
       );
     case "collection_list":
       return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
@@ -155,7 +152,7 @@ function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   if (rows.length === 0) return null;
 
   return (
-    <section className="px-6 py-8">
+    <section className="px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
@@ -169,14 +166,16 @@ export function PageRenderer({
   tree,
   workspaceId,
   currency,
+  locale,
 }: {
   tree: PageTree | null;
   workspaceId: string;
   currency: string;
+  locale: Locale;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency };
+  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale) };
 
   return (
     <div className="divide-y divide-line">

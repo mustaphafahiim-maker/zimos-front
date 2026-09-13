@@ -1,337 +1,278 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ApiError,
-  formatMoney,
-  type CartLine,
-  type CheckoutPayload,
-} from "@store-builder/api-client";
+import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
+import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { ArrowIcon, CashIcon } from "@/components/Icons";
+import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
+import { formatPrice } from "@/lib/i18n";
+import { estimateShipping, getOrderBump, type OrderSnapshot } from "@/lib/mockCommerce";
+import {
+  EMPTY_ORDER_FORM,
+  FIELD_ORDER,
+  toCheckoutPayload,
+  validateOrderForm,
+  type OrderFormErrors,
+  type OrderFormField,
+  type OrderFormValues,
+} from "@/lib/orderForm";
+import { afterOrder, orderErrorMessage, placeCodOrder } from "@/lib/placeOrder";
+import { variantLabel } from "@/lib/product";
+import { useStore } from "@/lib/StoreContext";
+import { useCatalog } from "@/lib/useCatalog";
 
-const PAYMENT_OPTIONS = [
-  { value: "cod", label: "الدفع عند الاستلام", enabled: true },
-  { value: "card", label: "بطاقة ائتمانية", enabled: false },
-  { value: "wallet", label: "محفظة إلكترونية", enabled: false },
-  { value: "bank_transfer", label: "تحويل بنكي", enabled: false },
-] as const;
-
-const REQUIRED_FIELDS = ["fullName", "phone", "country", "city", "addressLine"] as const;
-
-type FormState = {
-  fullName: string;
-  phone: string;
-  alternatePhone: string;
-  email: string;
-  country: string;
-  province: string;
-  city: string;
-  addressLine: string;
-  postalCode: string;
-  notes: string;
-};
-
-const EMPTY_FORM: FormState = {
-  fullName: "",
-  phone: "",
-  alternatePhone: "",
-  email: "",
-  country: "EG",
-  province: "",
-  city: "",
-  addressLine: "",
-  postalCode: "",
-  notes: "",
-};
-
-function Field({
-  label,
-  value,
-  onChange,
-  required = false,
-  invalid = false,
-  type = "text",
-  inputMode,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  invalid?: boolean;
-  type?: string;
-  inputMode?: "text" | "tel" | "email" | "numeric";
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm text-ink-soft">
-        {label} {required && <span className="text-danger">*</span>}
-      </span>
-      <input
-        type={type}
-        inputMode={inputMode}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`mt-1 w-full rounded-[0.5rem] border bg-paper-raised px-3 py-2 text-sm text-ink outline-none focus:border-primary ${
-          invalid ? "border-danger" : "border-line"
-        }`}
-      />
-    </label>
-  );
-}
-
-function lineTitle(line: CartLine): string {
-  if (line.variant) {
-    return Object.values(line.variant.optionValues).join(" / ") || line.variant.sku || "منتج";
-  }
-  return "منتج";
-}
+const FORM_PREFIX = "checkout";
 
 export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const router = useRouter();
-  const { cart, clearCart } = useCart();
+  const { cart, addItem, clearCart } = useCart();
+  const { t, money, locale } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
+  const { products, byVariant, loaded } = useCatalog(workspaceId);
 
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [invalid, setInvalid] = useState<Partial<Record<keyof FormState, boolean>>>({});
+  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  const [errors, setErrors] = useState<OrderFormErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [bumpOn, setBumpOn] = useState(false);
+  const bumpAdded = useRef(false);
 
   const currency = cart?.currency ?? "EGP";
   const items = cart?.items ?? [];
 
-  function set<K extends keyof FormState>(key: K, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const bump = useMemo(() => {
+    if (!loaded) return null;
+    const inCart = new Set(items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[]);
+    return getOrderBump(products ?? [], [...inCart], locale);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, products, locale]);
+
+  // Once the bump is a real line in the cart, the cart subtotal already has it.
+  const bumpInTotals = bumpOn && bump && !bumpAdded.current ? bump.priceAmount : 0;
+  const shipping = estimateShipping(values.governorate);
+  const subtotal = cart?.subtotal ?? 0;
+  const total = subtotal + bumpInTotals + (shipping ?? 0);
+
+  function onFieldChange(field: OrderFormField, value: string) {
+    setValues((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (submitting) return;
 
-    const missing: Partial<Record<keyof FormState, boolean>> = {};
-    for (const key of REQUIRED_FIELDS) {
-      if (!form[key].trim()) missing[key] = true;
-    }
-    setInvalid(missing);
-    if (Object.keys(missing).length > 0) {
-      setError("من فضلك املأ كل الحقول المطلوبة.");
+    const found = validateOrderForm(values, t);
+    setErrors(found);
+    const invalid = FIELD_ORDER.filter((k) => found[k]);
+    if (invalid.length > 0) {
+      setFormError(t.form.errors.summary(invalid.length));
+      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
       return;
     }
-    if (items.length === 0) {
-      setError("سلة التسوق فاضية.");
+    if (!cart || items.length === 0) {
+      setFormError(t.form.errors.emptyCart);
       return;
     }
 
-    const payload: CheckoutPayload = {
-      contact: {
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
-        ...(form.alternatePhone.trim() ? { alternatePhone: form.alternatePhone.trim() } : {}),
-        ...(form.email.trim() ? { email: form.email.trim() } : {}),
-      },
-      shippingAddress: {
-        country: form.country.trim(),
-        ...(form.province.trim() ? { province: form.province.trim() } : {}),
-        city: form.city.trim(),
-        addressLine: form.addressLine.trim(),
-        ...(form.postalCode.trim() ? { postalCode: form.postalCode.trim() } : {}),
-        ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
-      },
-      paymentMethod: "cod",
-    };
+    const systemNotes: string[] = [];
+    const extras: OrderSnapshot["extras"] = [];
 
     setSubmitting(true);
-    setError(null);
+    setFormError(null);
     try {
-      const order = await client.checkout(workspaceId, payload, cart?.guestToken);
+      if (bumpOn && bump) {
+        if (bump.real && bump.variantId) {
+          if (!bumpAdded.current) {
+            await addItem(bump.variantId, bump.offerId, 1);
+            bumpAdded.current = true;
+          }
+        } else {
+          systemNotes.push(`Order bump: ${bump.name} (+${formatPrice(bump.priceAmount, currency, "en")})`);
+          extras.push({ label: bump.name, amount: bump.priceAmount });
+        }
+      }
+
+      const payload = toCheckoutPayload(values, { discountCode: appliedCode, systemNotes });
+      const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
       clearCart();
-      const query = new URLSearchParams({
-        number: order.orderNumber,
-        phone: payload.contact.phone,
-      });
-      router.push(`/store/${workspaceId}/orders/${order.id}?${query.toString()}`);
+      router.push(afterOrder(workspaceId, order, payload.contact.phone, extras));
     } catch (err) {
-      setError(
-        err instanceof ApiError || err instanceof Error
-          ? err.message
-          : "تعذّر إتمام الطلب، حاول تاني."
-      );
+      setFormError(orderErrorMessage(err, t.form.errors.generic));
       setSubmitting(false);
     }
   }
 
   return (
-    <main dir="rtl" className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+    <main className={`${container} flex-1 py-8 sm:py-10`}>
       <Link
         href={`/store/${workspaceId}/cart`}
-        className="text-sm text-primary hover:underline"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft hover:text-primary"
       >
-        → رجوع للسلة
+        <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
+        {t.checkout.backToCart}
       </Link>
-      <h1 className="mt-4 font-display text-2xl font-medium text-ink">إتمام الطلب</h1>
+      <h1 className="mt-2 text-2xl font-bold text-ink sm:text-3xl">{t.checkout.title}</h1>
 
-      <div className="mt-8 grid gap-10 md:grid-cols-[1fr_20rem]">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section>
-            <h2 className="font-display text-base font-medium text-ink">بيانات التواصل</h2>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              <Field
-                label="الاسم الكامل"
-                required
-                value={form.fullName}
-                invalid={invalid.fullName}
-                onChange={(v) => set("fullName", v)}
-              />
-              <Field
-                label="رقم الموبايل"
-                required
-                type="tel"
-                inputMode="tel"
-                value={form.phone}
-                invalid={invalid.phone}
-                onChange={(v) => set("phone", v)}
-              />
-              <Field
-                label="رقم بديل"
-                type="tel"
-                inputMode="tel"
-                value={form.alternatePhone}
-                onChange={(v) => set("alternatePhone", v)}
-              />
-              <Field
-                label="البريد الإلكتروني"
-                type="email"
-                inputMode="email"
-                value={form.email}
-                onChange={(v) => set("email", v)}
+      <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem]">
+        <div className="space-y-6">
+          <section className={`${card} p-5 sm:p-6`} aria-labelledby="shipping-title">
+            <h2 id="shipping-title" className="text-lg font-semibold text-ink">
+              {t.checkout.shipping}
+            </h2>
+            <div className="mt-4">
+              <OrderFormFields
+                idPrefix={FORM_PREFIX}
+                values={values}
+                errors={errors}
+                onChange={onFieldChange}
+                showAltPhone
+                showEmail
               />
             </div>
           </section>
 
-          <section>
-            <h2 className="font-display text-base font-medium text-ink">عنوان الشحن</h2>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              <Field
-                label="الدولة"
-                required
-                value={form.country}
-                invalid={invalid.country}
-                onChange={(v) => set("country", v)}
-              />
-              <Field
-                label="المحافظة"
-                value={form.province}
-                onChange={(v) => set("province", v)}
-              />
-              <Field
-                label="المدينة"
-                required
-                value={form.city}
-                invalid={invalid.city}
-                onChange={(v) => set("city", v)}
-              />
-              <Field
-                label="الرمز البريدي"
-                inputMode="numeric"
-                value={form.postalCode}
-                onChange={(v) => set("postalCode", v)}
-              />
-              <div className="sm:col-span-2">
-                <Field
-                  label="العنوان بالتفصيل"
-                  required
-                  value={form.addressLine}
-                  invalid={invalid.addressLine}
-                  onChange={(v) => set("addressLine", v)}
-                />
-              </div>
-              <label className="block sm:col-span-2">
-                <span className="text-sm text-ink-soft">ملاحظات</span>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => set("notes", e.target.value)}
-                  rows={3}
-                  className="mt-1 w-full rounded-[0.5rem] border border-line bg-paper-raised px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                />
+          <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
+            <h2 id="payment-title" className="text-lg font-semibold text-ink">
+              {t.checkout.payment}
+            </h2>
+            <fieldset className="mt-4 space-y-2">
+              <legend className="sr-only">{t.checkout.payment}</legend>
+              <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+                <input type="radio" name="paymentMethod" value="cod" defaultChecked className="h-5 w-5 accent-primary" />
+                <CashIcon className="text-primary" />
+                <span>
+                  <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
+                  <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
+                </span>
               </label>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="font-display text-base font-medium text-ink">طريقة الدفع</h2>
-            <div className="mt-3 space-y-2">
-              {PAYMENT_OPTIONS.map((opt) => (
+              {[t.checkout.card, t.checkout.wallet, t.checkout.bank].map((name) => (
                 <label
-                  key={opt.value}
-                  className={`flex items-center gap-3 rounded-[0.5rem] border border-line px-3 py-2 text-sm ${
-                    opt.enabled ? "cursor-pointer text-ink" : "cursor-not-allowed text-ink-soft opacity-70"
-                  }`}
+                  key={name}
+                  className="flex min-h-12 cursor-not-allowed items-center gap-3 rounded-xl border border-line px-4 py-2.5 text-sm text-ink-muted"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={opt.value}
-                    defaultChecked={opt.value === "cod"}
-                    disabled={!opt.enabled}
-                    className="accent-primary"
-                  />
-                  <span>{opt.label}</span>
-                  {!opt.enabled && (
-                    <span className="mr-auto rounded-full bg-paper px-2 py-0.5 text-xs text-ink-soft">
-                      قريبًا
-                    </span>
-                  )}
+                  <input type="radio" name="paymentMethod" disabled className="h-5 w-5" />
+                  <span>{name}</span>
+                  <span className="ms-auto rounded-full bg-zimos-cloud px-2 py-0.5 text-xs dark:bg-primary-soft">
+                    {t.checkout.soon}
+                  </span>
                 </label>
               ))}
+            </fieldset>
+          </section>
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <section className={`${card} p-5`} aria-labelledby="summary-title">
+            <h2 id="summary-title" className="text-base font-semibold text-ink">
+              {t.checkout.summary}
+            </h2>
+            {items.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-soft">{t.cart.empty}</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {items.map((line) => {
+                  const product = byVariant.get(line.variantId);
+                  const options = variantLabel(line.variant);
+                  return (
+                    <li key={line.id} className="flex justify-between gap-3 text-sm">
+                      <span className="min-w-0 text-ink-soft">
+                        <span className="line-clamp-2 text-ink">{product?.name ?? (options || t.cart.item)}</span>
+                        {product && options && <span className="block text-xs">{options}</span>}
+                        <span className="text-xs"> × {line.quantity}</span>
+                      </span>
+                      <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
+            <div className="mt-5 border-t border-line pt-4">
+              <label htmlFor="discount-code" className="mb-1.5 block text-sm font-medium text-ink">
+                {t.checkout.discountCode}
+              </label>
+              {appliedCode ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
+                  <p className="text-xs text-primary" aria-live="polite">
+                    {t.checkout.discountPending(appliedCode)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setAppliedCode("")}
+                    className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
+                  >
+                    {t.checkout.removeCode}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    id="discount-code"
+                    type="text"
+                    autoComplete="off"
+                    dir="ltr"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                    className={`${input} uppercase`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => codeInput.trim() && setAppliedCode(codeInput.trim())}
+                    className={btnSecondary}
+                  >
+                    {t.checkout.apply}
+                  </button>
+                </div>
+              )}
             </div>
+
+            <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{t.checkout.subtotal}</dt>
+                <dd className="text-ink">{money(subtotal, currency)}</dd>
+              </div>
+              {bumpInTotals > 0 && bump && (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{bump.name}</dt>
+                  <dd className="text-ink">{money(bump.priceAmount, currency)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{t.checkout.shippingEstimate}</dt>
+                <dd className="text-ink">
+                  {shipping !== null ? money(shipping, currency) : t.checkout.chooseGovernorateForShipping}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3 border-t border-line pt-3 text-base font-bold text-ink">
+                <dt>{t.checkout.totalEstimate}</dt>
+                <dd>{money(total, currency)}</dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-ink-muted">{t.checkout.finalNote}</p>
           </section>
 
-          {error && (
-            <p className="rounded-[0.5rem] bg-danger-soft px-4 py-2 text-sm text-danger">
-              {error}
-            </p>
+          {bump && items.length > 0 && (
+            <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
           )}
 
-          <button
-            type="submit"
-            disabled={submitting || items.length === 0}
-            className="cursor-pointer w-full rounded-[0.5rem] bg-primary px-6 py-3 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? "جارٍ تأكيد الطلب…" : "تأكيد الطلب"}
+          <div role="alert" aria-live="assertive" className="empty:hidden">
+            {formError && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>}
+          </div>
+
+          <button type="submit" disabled={submitting || items.length === 0} className={btnPrimaryLg}>
+            {submitting ? t.checkout.placing : t.checkout.place}
           </button>
-        </form>
-
-        <aside className="h-max rounded-[var(--radius-card)] border border-line bg-paper-raised p-5">
-          <h2 className="font-display text-base font-medium text-ink">ملخص الطلب</h2>
-          {items.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-soft">سلة التسوق فاضية.</p>
-          ) : (
-            <>
-              <ul className="mt-3 space-y-3">
-                {items.map((line) => (
-                  <li key={line.id} className="flex justify-between gap-3 text-sm">
-                    <span className="text-ink-soft">
-                      {lineTitle(line)} <span className="text-ink-soft">×{line.quantity}</span>
-                    </span>
-                    <span className="shrink-0 text-ink">
-                      {formatMoney(line.lineTotal, currency)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 flex justify-between border-t border-line pt-3 text-sm">
-                <span className="text-ink-soft">الإجمالي المبدئي</span>
-                <span className="font-medium text-ink">
-                  {formatMoney(cart?.subtotal ?? 0, currency)}
-                </span>
-              </div>
-            </>
-          )}
         </aside>
-      </div>
+      </form>
     </main>
   );
 }

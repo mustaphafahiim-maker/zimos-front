@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { ApiError, formatMoney, type StorefrontProduct } from "@store-builder/api-client";
+import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
+import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
+import { compareAtOf, defaultOfferOf, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { ProductCard } from "@/components/ProductCard";
+import { BoxIcon } from "@/components/Icons";
+import { btnPrimary } from "@/components/ui";
 import { CartSummary } from "./CartSummary";
 import { COLUMN_CLASS, type Props, bool, num, str } from "./props";
 
@@ -15,17 +19,10 @@ import { COLUMN_CLASS, type Props, bool, num, str } from "./props";
  * down: one misconfigured block should not 500 a live storefront.
  */
 
-function priceOf(product: StorefrontProduct): number | undefined {
-  const defaultOffer = product.offers.find((o) => o.isDefault) ?? product.offers[0];
-  return defaultOffer?.priceAmount ?? product.variants[0]?.priceAmount;
-}
-
 async function listProducts(workspaceId: string, limit: number): Promise<StorefrontProduct[]> {
   try {
     const client = await createServerStorefrontApiClient();
-    const { products } = await client.listStorefrontProducts(workspaceId, {
-      limit,
-    });
+    const { products } = await client.listStorefrontProducts(workspaceId, { limit });
     return products;
   } catch {
     return [];
@@ -34,7 +31,7 @@ async function listProducts(workspaceId: string, limit: number): Promise<Storefr
 
 function BlockTitle({ children }: { children: string }) {
   if (!children.trim()) return null;
-  return <h2 className="mb-4 font-display text-2xl font-medium text-ink">{children}</h2>;
+  return <h2 className="mb-5 text-2xl font-bold text-ink">{children}</h2>;
 }
 
 /**
@@ -51,10 +48,12 @@ export async function ProductListElement({
   props,
   workspaceId,
   currency,
+  locale,
 }: {
   props: Props;
   workspaceId: string;
   currency: string;
+  locale: Locale;
 }) {
   const limit = num(props, "limit", 8, 1, 48);
   const columns = num(props, "columns", 4, 1, 6);
@@ -64,14 +63,9 @@ export async function ProductListElement({
   return (
     <div>
       <BlockTitle>{str(props, "title")}</BlockTitle>
-      <div className={`grid gap-5 ${COLUMN_CLASS[columns]}`}>
+      <div className={`grid gap-3 sm:gap-5 ${COLUMN_CLASS[columns]}`}>
         {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            workspaceId={workspaceId}
-            currency={currency}
-          />
+          <ProductCard key={product.id} product={product} workspaceId={workspaceId} currency={currency} locale={locale} />
         ))}
       </div>
     </div>
@@ -87,11 +81,14 @@ export async function ProductCardElement({
   props,
   workspaceId,
   currency,
+  locale,
 }: {
   props: Props;
   workspaceId: string;
   currency: string;
+  locale: Locale;
 }) {
+  const t = getDictionary(locale);
   const productId = str(props, "productId").trim();
   const client = await createServerStorefrontApiClient();
 
@@ -107,37 +104,56 @@ export async function ProductCardElement({
   if (!product) return null;
 
   const price = priceOf(product);
+  const compareAt = compareAtOf(product);
   const variant = product.variants.find((v) => v.inStock) ?? product.variants[0];
-  const defaultOffer = product.offers.find((o) => o.isDefault) ?? product.offers[0];
+  const offer = defaultOfferOf(product);
+  const image = firstImage(product);
+  const href = `/store/${workspaceId}/products/${product.slug}`;
 
   return (
     <div>
       <BlockTitle>{str(props, "title")}</BlockTitle>
-      <div className="grid gap-6 rounded-[var(--radius-card)] border border-line bg-paper-raised p-5 sm:grid-cols-2">
-        <div className="aspect-square rounded-[var(--radius-card)] bg-primary-soft" />
-        <div className="flex flex-col">
-          <h3 className="font-display text-xl font-medium text-ink">{product.name}</h3>
-          {bool(props, "showPrice", true) && price !== undefined && (
-            <p className="mt-2 text-lg text-primary-dark">{formatMoney(price, currency)}</p>
+      <div className="grid gap-6 rounded-2xl border border-line bg-paper-raised p-5 shadow-card sm:grid-cols-2 sm:p-6">
+        <div className="aspect-square overflow-hidden rounded-2xl bg-zimos-cloud dark:bg-primary-soft">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" width={600} height={600} loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-primary/40">
+              <BoxIcon size={56} />
+            </div>
           )}
-          {product.description && (
-            <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink-soft">
-              {product.description}
+        </div>
+        <div className="flex flex-col">
+          <h3 className="text-xl font-bold text-ink">{product.name}</h3>
+          {bool(props, "showPrice", true) && price !== undefined && (
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
+              <span className="text-2xl font-bold text-ink">{formatPrice(price, currency, locale)}</span>
+              {compareAt && (
+                <span className="text-base text-ink-muted line-through">{formatPrice(compareAt, currency, locale)}</span>
+              )}
             </p>
           )}
-          <div className="mt-auto">
+          {product.description && (
+            <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink-soft">{product.description}</p>
+          )}
+          <div className="mt-auto space-y-3 pt-5">
+            <Link href={`${href}#order-form`} className={`${btnPrimary} w-full`}>
+              {t.product.orderNow}
+            </Link>
             {bool(props, "showBuyButton", true) ? (
               <AddToCartButton
+                variant="secondary"
                 variantId={variant?.id}
-                offerId={defaultOffer?.id}
+                offerId={offer && offerAppliesTo(offer, variant?.id) ? offer.id : undefined}
                 disabled={!variant?.inStock}
               />
             ) : null}
             <Link
-              href={`/store/${workspaceId}/products/${product.slug}`}
-              className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+              href={href}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
             >
-              View details →
+              {t.renderer.viewDetails}
             </Link>
           </div>
         </div>
@@ -147,12 +163,9 @@ export async function ProductCardElement({
 }
 
 /**
- * `collection_list`.
- *
- * The cards are not links: this storefront has no per-collection route yet
- * (only `/`, `/products/:idOrSlug`, `/cart`, `/checkout`, `/orders/:id`), so
- * every card would land on a 404. They stay informational until a collection
- * page exists.
+ * `collection_list`. Each card links to the store home filtered by that
+ * collection (`?collection=<id>`), which the home catalogue honours through the
+ * public products endpoint's `collectionId` filter.
  */
 export async function CollectionListElement({
   props,
@@ -179,15 +192,16 @@ export async function CollectionListElement({
       <BlockTitle>{str(props, "title")}</BlockTitle>
       <div className={`grid gap-4 ${COLUMN_CLASS[columns]}`}>
         {shown.map((collection) => (
-          <div
+          <Link
             key={collection.id}
-            className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4"
+            href={`/store/${workspaceId}?collection=${encodeURIComponent(collection.id)}#products`}
+            className="block rounded-2xl border border-line bg-paper-raised p-5 transition-colors hover:border-primary"
           >
-            <h3 className="font-medium text-ink">{collection.name}</h3>
+            <h3 className="font-semibold text-ink">{collection.name}</h3>
             {collection.description && (
               <p className="mt-1 line-clamp-3 text-sm text-ink-soft">{collection.description}</p>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -196,5 +210,5 @@ export async function CollectionListElement({
 
 /** `cart` — a live count plus a link into the real cart page. */
 export function CartElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
-  return <CartSummary title={str(props, "title", "Your cart")} workspaceId={workspaceId} />;
+  return <CartSummary title={str(props, "title")} workspaceId={workspaceId} />;
 }

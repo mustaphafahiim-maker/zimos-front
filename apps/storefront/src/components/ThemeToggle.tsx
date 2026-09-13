@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { useStore } from "@/lib/StoreContext";
+import { iconBtn } from "./ui";
 
 type Theme = "light" | "dark";
 
@@ -102,8 +104,8 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     emit();
   }, []);
 
-  const label =
-    theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  const { t } = useStore();
+  const label = theme === "dark" ? t.common.themeLight : t.common.themeDark;
 
   return (
     <button
@@ -112,7 +114,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       aria-label={label}
       title={label}
       suppressHydrationWarning
-      className={`cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-paper text-ink transition-colors hover:border-primary hover:text-primary-dark ${className}`}
+      className={`${iconBtn} ${className}`}
     >
       <span suppressHydrationWarning>
         {theme === "dark" ? <SunIcon /> : <MoonIcon />}
