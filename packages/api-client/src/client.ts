@@ -22,9 +22,21 @@ import type {
   CreateShippingZonePayload,
   CreateTaxRatePayload,
   CreateVariantPayload,
+  CreateFunnelEdgePayload,
+  CreateFunnelPayload,
+  CreateFunnelStepPayload,
   CreateWebsitePagePayload,
   CreateWebsitePayload,
   Customer,
+  Funnel,
+  FunnelDetail,
+  FunnelEdge,
+  FunnelRevision,
+  FunnelStep,
+  PublishFunnelResult,
+  UpdateFunnelEdgePayload,
+  UpdateFunnelPayload,
+  UpdateFunnelStepPayload,
   CustomerAddress,
   CustomerListParams,
   CustomerListResponse,
@@ -71,6 +83,7 @@ import type {
   UpdateTaxRatePayload,
   UpdateVariantPayload,
   UpdateWorkspacePayload,
+  SlugCheckResult,
   Variant,
   UpdateWebsitePagePayload,
   Website,
@@ -395,6 +408,24 @@ export class ApiClient {
     return workspace;
   }
 
+  /**
+   * Whether a store address is free to take, for checking one as it is typed.
+   *
+   * Always a 200 — an address that is malformed, too short/long or reserved
+   * comes back as `{ available: false, reason }` rather than as a validation
+   * error, so the caller has one shape to render for every outcome. The
+   * backend lowercases and trims before judging, so it agrees with what a
+   * later PATCH would store.
+   *
+   * Pass `signal` to drop a check that a later keystroke has superseded.
+   */
+  async checkWorkspaceSlug(slug: string, signal?: AbortSignal) {
+    return this.request<SlugCheckResult>(
+      `/workspaces/check-slug?slug=${encodeURIComponent(slug)}`,
+      { signal }
+    );
+  }
+
   async listMembers(workspaceId: string) {
     const { members } = await this.request<{ members: Membership[] }>(
       `/workspaces/${workspaceId}/members`
@@ -515,6 +546,156 @@ export class ApiClient {
       { method: "PATCH", body: payload }
     );
     return page;
+  }
+
+  // ---------------------------------------------------------------------
+  // Funnels — /workspaces/:workspaceId/funnels
+  // Everything needs FUNNELS_MANAGE; publish, pause, resume and rollback need
+  // FUNNELS_PUBLISH. Creating and publishing also need an active subscription
+  // (402 SUBSCRIPTION_REQUIRED otherwise).
+  // ---------------------------------------------------------------------
+
+  private funnelsBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/funnels`;
+  }
+
+  async listFunnels(workspaceId: string) {
+    const { funnels } = await this.request<{ funnels: Funnel[] }>(this.funnelsBase(workspaceId));
+    return funnels;
+  }
+
+  /** The funnel with its working steps and edges — one call opens the builder. */
+  async getFunnel(workspaceId: string, funnelId: string) {
+    return this.request<FunnelDetail>(`${this.funnelsBase(workspaceId)}/${funnelId}`);
+  }
+
+  async createFunnel(workspaceId: string, payload: CreateFunnelPayload) {
+    const { funnel } = await this.request<{ funnel: Funnel }>(this.funnelsBase(workspaceId), {
+      method: "POST",
+      body: payload,
+    });
+    return funnel;
+  }
+
+  async updateFunnel(workspaceId: string, funnelId: string, payload: UpdateFunnelPayload) {
+    const { funnel } = await this.request<{ funnel: Funnel }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}`,
+      { method: "PATCH", body: payload }
+    );
+    return funnel;
+  }
+
+  /** Steps, edges, revisions and visitor sessions go with it. No undo. */
+  async deleteFunnel(workspaceId: string, funnelId: string): Promise<void> {
+    await this.request<{ deleted: true }>(`${this.funnelsBase(workspaceId)}/${funnelId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
+   * A key already used in the funnel is a 409 FUNNEL_STEP_KEY_TAKEN; a malformed
+   * `builderData` tree is a 422 naming the node path, as for website pages.
+   */
+  async createFunnelStep(workspaceId: string, funnelId: string, payload: CreateFunnelStepPayload) {
+    const { step } = await this.request<{ step: FunnelStep }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/steps`,
+      { method: "POST", body: payload }
+    );
+    return step;
+  }
+
+  async updateFunnelStep(
+    workspaceId: string,
+    funnelId: string,
+    stepId: string,
+    payload: UpdateFunnelStepPayload
+  ) {
+    const { step } = await this.request<{ step: FunnelStep }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/steps/${stepId}`,
+      { method: "PATCH", body: payload }
+    );
+    return step;
+  }
+
+  /** Also deletes every draft edge into or out of the step. */
+  async deleteFunnelStep(workspaceId: string, funnelId: string, stepId: string): Promise<void> {
+    await this.request<{ deleted: true }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/steps/${stepId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async createFunnelEdge(workspaceId: string, funnelId: string, payload: CreateFunnelEdgePayload) {
+    const { edge } = await this.request<{ edge: FunnelEdge }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/edges`,
+      { method: "POST", body: payload }
+    );
+    return edge;
+  }
+
+  async updateFunnelEdge(
+    workspaceId: string,
+    funnelId: string,
+    edgeId: string,
+    payload: UpdateFunnelEdgePayload
+  ) {
+    const { edge } = await this.request<{ edge: FunnelEdge }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/edges/${edgeId}`,
+      { method: "PATCH", body: payload }
+    );
+    return edge;
+  }
+
+  async deleteFunnelEdge(workspaceId: string, funnelId: string, edgeId: string): Promise<void> {
+    await this.request<{ deleted: true }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/edges/${edgeId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  /**
+   * Publishes the *saved* steps and edges as a new numbered revision. A graph
+   * that isn't publishable is a 422 whose `error.details[]` lists every problem
+   * as a `FunnelPublishProblem` (no entry step, unreachable steps, empty steps,
+   * upsell without an offer).
+   */
+  async publishFunnel(workspaceId: string, funnelId: string, note?: string) {
+    return this.request<PublishFunnelResult>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/publish`,
+      { method: "POST", body: note ? { note } : {} }
+    );
+  }
+
+  async listFunnelRevisions(workspaceId: string, funnelId: string) {
+    const { revisions } = await this.request<{ revisions: FunnelRevision[] }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/revisions`
+    );
+    return revisions;
+  }
+
+  /** Points the live funnel back at an earlier revision. Draft steps are untouched. */
+  async rollbackFunnel(workspaceId: string, funnelId: string, revisionId: string) {
+    return this.request<{ funnel: Funnel; rolledBackTo: { id: string; revisionNumber: number } }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/revisions/${revisionId}/rollback`,
+      { method: "POST" }
+    );
+  }
+
+  /** Only a funnel that has been published can be paused (409 FUNNEL_NOT_PUBLISHED). */
+  async pauseFunnel(workspaceId: string, funnelId: string) {
+    const { funnel } = await this.request<{ funnel: Funnel }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/pause`,
+      { method: "POST" }
+    );
+    return funnel;
+  }
+
+  async resumeFunnel(workspaceId: string, funnelId: string) {
+    const { funnel } = await this.request<{ funnel: Funnel }>(
+      `${this.funnelsBase(workspaceId)}/${funnelId}/resume`,
+      { method: "POST" }
+    );
+    return funnel;
   }
 
   // ---------------------------------------------------------------------
@@ -665,6 +846,14 @@ export class ApiClient {
       `${this.catalogBase(workspaceId)}/products/${productId}/offers`
     );
     return offers;
+  }
+
+  /** One offer with its lines, whatever its status. 404 when it isn't in the workspace. */
+  async getOffer(workspaceId: string, offerId: string) {
+    const { offer } = await this.request<{ offer: Offer }>(
+      `${this.catalogBase(workspaceId)}/offers/${offerId}`
+    );
+    return offer;
   }
 
   async createOffer(workspaceId: string, productId: string, payload: CreateOfferPayload) {

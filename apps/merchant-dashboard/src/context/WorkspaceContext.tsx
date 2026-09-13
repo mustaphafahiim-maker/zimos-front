@@ -1,16 +1,28 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Workspace } from "@store-builder/api-client";
+import { getErrorMessage } from "@/lib/errors";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "./AuthContext";
 
 const CURRENT_WORKSPACE_KEY = "sb.currentWorkspaceId";
+
+/**
+ * The outcome of creating a store. `addressError` is set when the store was
+ * created but the address the merchant picked could not be applied — the store
+ * still exists, under the address the backend generated, so this is something
+ * to explain rather than an error to throw.
+ */
+export interface CreateWorkspaceResult {
+  workspace: Workspace;
+  addressError?: string;
+}
 
 interface WorkspaceContextValue {
   workspaces: Workspace[];
   currentWorkspace: Workspace | null;
   loading: boolean;
   selectWorkspace: (workspaceId: string) => void;
-  createWorkspace: (name: string) => Promise<Workspace>;
+  createWorkspace: (name: string, slug?: string) => Promise<CreateWorkspaceResult>;
   refresh: () => Promise<void>;
 }
 
@@ -64,12 +76,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setCurrentWorkspaceId(workspaceId);
         localStorage.setItem(CURRENT_WORKSPACE_KEY, workspaceId);
       },
-      async createWorkspace(name) {
-        const workspace = await apiClient.createWorkspace(name);
+      /**
+       * Two calls, because `POST /workspaces` takes only a name and derives the
+       * address itself — there is no way to hand it one. So the store is
+       * created, then moved to the address the merchant chose.
+       *
+       * The move is allowed to fail without failing the whole thing. By the
+       * time it runs the store exists, and throwing would leave the merchant
+       * looking at an error beside a store that had in fact been created. A
+       * clash here means someone took the address between the last check and
+       * the write, which is rare but not impossible.
+       */
+      async createWorkspace(name, slug) {
+        const created = await apiClient.createWorkspace(name);
+        let workspace = created;
+        let addressError: string | undefined;
+
+        if (slug && slug !== created.slug) {
+          try {
+            workspace = await apiClient.updateWorkspace(created.id, { slug });
+          } catch (err) {
+            addressError = getErrorMessage(err);
+          }
+        }
+
         setWorkspaces((prev) => [...prev, workspace]);
         setCurrentWorkspaceId(workspace.id);
         localStorage.setItem(CURRENT_WORKSPACE_KEY, workspace.id);
-        return workspace;
+        return { workspace, addressError };
       },
       refresh,
     }),

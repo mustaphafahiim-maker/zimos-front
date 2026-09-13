@@ -5,6 +5,7 @@ import { NAV_ITEMS } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { StoreLinkBar } from "@/components/StoreLinkBar";
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -30,9 +31,11 @@ export function DashboardLayout() {
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
+                // Dark primary-dark stays deep (white text sits on it elsewhere),
+                // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
                 cn(
-                  "block rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark",
-                  isActive && "bg-primary-soft text-primary-dark"
+                  "block rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
+                  isActive && "bg-primary-soft text-primary-dark dark:text-primary"
                 )
               }
             >
@@ -52,8 +55,9 @@ export function DashboardLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-line bg-paper-raised px-6">
-          <div className="relative">
+        <header className="flex h-16 items-center justify-between gap-4 border-b border-line bg-paper-raised px-6">
+          <div className="flex min-w-0 items-center gap-1">
+          <div className="relative shrink-0 max-w-[40vw] sm:max-w-none">
             <button
               onClick={() => setSwitcherOpen((v) => !v)}
               className="cursor-pointer flex items-center gap-2 rounded-[0.5rem] px-2 py-1.5 text-sm font-medium text-ink hover:bg-paper"
@@ -72,7 +76,7 @@ export function DashboardLayout() {
                     }}
                     className={cn(
                       "block w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-primary-soft",
-                      workspace.id === currentWorkspace?.id && "font-medium text-primary-dark"
+                      workspace.id === currentWorkspace?.id && "font-medium text-primary-dark dark:text-primary"
                     )}
                   >
                     {workspace.name}
@@ -92,9 +96,14 @@ export function DashboardLayout() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-sm text-ink-soft">
-            <span>{user?.fullName ?? user?.email}</span>
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-dark">
+          {/* The store's public link, beside the store it belongs to: on every
+              page, and it changes with the switcher above. */}
+          {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3 text-sm text-ink-soft">
+            <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-dark dark:text-primary">
               {(user?.fullName ?? user?.email ?? "?").charAt(0).toUpperCase()}
             </div>
           </div>

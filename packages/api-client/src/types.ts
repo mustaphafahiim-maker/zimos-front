@@ -69,8 +69,31 @@ export interface Membership {
   status: "active" | "invited" | string;
 }
 
+/**
+ * Why a store address may not be used. Stable keys straight from the backend
+ * (`core/utils/workspaceSlug.js`) — the UI maps them to its own copy.
+ */
+export type SlugRejectionReason =
+  | "invalid_format"
+  | "too_short"
+  | "too_long"
+  | "reserved"
+  | "taken";
+
+/** The body of `GET /workspaces/check-slug`. `reason` is set only when taken. */
+export interface SlugCheckResult {
+  available: boolean;
+  reason?: SlugRejectionReason;
+}
+
 export interface UpdateWorkspacePayload {
   name?: string;
+  /**
+   * The store's public address — it is served at `<slug>.zimos.co`. Refused as
+   * 422 when malformed or reserved, and 409 when another workspace holds it.
+   * Re-sending the address a store already has is a no-op, not a clash.
+   */
+  slug?: string;
   logoUrl?: string | null;
   tagline?: string | null;
   themeSettings?: Record<string, unknown>;
@@ -328,6 +351,160 @@ export interface CreateWebsitePayload {
   templateVersionId?: string;
   globalStyles?: Record<string, unknown>;
   seo?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------
+// Funnels (/workspaces/:workspaceId/funnels)
+// A funnel is a directed graph of steps. Every step's `builderData` is the
+// same page tree a website page stores (validated by the same pageTree rules),
+// and edges route a visitor from one step to the next by outcome. Shapes
+// mirror src/modules/funnels/* and were checked against a live round-trip.
+// ---------------------------------------------------------------------
+
+export type FunnelStatus = "draft" | "published" | "paused";
+
+export interface Funnel {
+  id: string;
+  workspaceId: string;
+  name: string;
+  /** Globally unique slug; the public runtime accepts it in place of the id. */
+  subdomain: string | null;
+  status: FunnelStatus;
+  publishedRevisionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const FUNNEL_STEP_TYPES = [
+  "landing",
+  "sales",
+  "opt_in",
+  "checkout",
+  "upsell",
+  "downsell",
+  "thank_you",
+  "custom",
+] as const;
+
+export type FunnelStepType = (typeof FUNNEL_STEP_TYPES)[number];
+
+export interface FunnelStep {
+  id: string;
+  workspaceId: string;
+  funnelId: string;
+  /** Immutable after create — edges reference steps by key, not id. */
+  key: string;
+  stepType: FunnelStepType;
+  name: string;
+  builderData: PageTree;
+  /** Publishing requires one (an active offer) on upsell/downsell steps. */
+  offerId: string | null;
+  abTestExperimentId?: string | null;
+  seo: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FunnelEdgeConditionType =
+  | "always"
+  | "completed_checkout"
+  | "accepted_offer"
+  | "declined_offer";
+
+export interface FunnelEdgeCondition {
+  type: FunnelEdgeConditionType;
+}
+
+export interface FunnelEdge {
+  id: string;
+  workspaceId: string;
+  funnelId: string;
+  fromStepKey: string;
+  toStepKey: string;
+  /** `null` routes like `{ type: "always" }`. */
+  condition: FunnelEdgeCondition | null;
+  /** Higher wins when several outbound edges match the same outcome. */
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One published snapshot. The list endpoint adds `publishedByUserId` + `stepCount`. */
+export interface FunnelRevision {
+  id: string;
+  revisionNumber: number;
+  note: string | null;
+  createdAt: string;
+  publishedByUserId?: string;
+  stepCount?: number;
+}
+
+/** GET /workspaces/:workspaceId/funnels/:funnelId — the working (draft) graph. */
+export interface FunnelDetail {
+  funnel: Funnel;
+  steps: FunnelStep[];
+  edges: FunnelEdge[];
+  publishedRevision: FunnelRevision | null;
+}
+
+export interface CreateFunnelPayload {
+  name: string;
+  subdomain?: string;
+}
+
+export interface UpdateFunnelPayload {
+  name?: string;
+}
+
+export interface CreateFunnelStepPayload {
+  /** Lowercase slug (letters, digits, "-", "_"), unique within the funnel. */
+  key: string;
+  stepType: FunnelStepType;
+  name: string;
+  builderData?: PageTree;
+  offerId?: string;
+  seo?: Record<string, unknown>;
+}
+
+/** `.min(1)` server-side. `key` is deliberately absent — it cannot change. */
+export interface UpdateFunnelStepPayload {
+  stepType?: FunnelStepType;
+  name?: string;
+  builderData?: PageTree;
+  /** `null` clears it. */
+  offerId?: string | null;
+  seo?: Record<string, unknown>;
+}
+
+export interface CreateFunnelEdgePayload {
+  fromStepKey: string;
+  toStepKey: string;
+  condition?: FunnelEdgeCondition | null;
+  priority?: number;
+}
+
+export interface UpdateFunnelEdgePayload {
+  fromStepKey?: string;
+  toStepKey?: string;
+  condition?: FunnelEdgeCondition | null;
+  priority?: number;
+}
+
+/** 201 body of POST .../funnels/:funnelId/publish */
+export interface PublishFunnelResult {
+  funnel: Funnel;
+  revision: FunnelRevision;
+}
+
+/**
+ * One entry of a failed publish's 422 `error.details[]`. Graph problems name
+ * the step in `field` ("steps.<key>.offerId"); content problems also carry
+ * `stepKey`. Funnel-wide problems use the bare field "steps".
+ */
+export interface FunnelPublishProblem {
+  field: string;
+  message: string;
+  stepKey?: string;
 }
 
 // ---------------------------------------------------------------------
