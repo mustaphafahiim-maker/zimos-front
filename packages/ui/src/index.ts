@@ -86,5 +86,19 @@ export {
 
 export { cn } from "cn";
 
+// ZIMOS brand primitives (RTL-safe, token-styled).
+export {
+  Skeleton,
+  SkeletonRows,
+  Avatar,
+  Progress,
+  SegmentedControl,
+  Kbd,
+  Stepper,
+  Chip,
+  type SegmentOption,
+  type StepperStep,
+} from "./components/zimos-extras";
+
 // ZIMOS brand — official logo renderers + approved phrases.
 export { ZimosLogo, ZimosMark, ZIMOS_PHRASES, type ZimosLogoSurface } from "./brand/ZimosLogo";

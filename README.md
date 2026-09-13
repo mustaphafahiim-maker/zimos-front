@@ -1,68 +1,84 @@
-# Store Builder — Frontend
+# ZIMOS — Frontend
 
-Three apps that talk to the [store-builder-backend](../store-builder-backend) API, sharing two internal packages.
+Commerce Without Limits. The ZIMOS frontend is an npm-workspaces monorepo with
+four apps and two shared packages.
 
 ```
-store-builder-frontend/
-  apps/
-    merchant-dashboard/   React (Vite) — the tool merchants use to run their store. Auth-gated.
-    platform-admin/       React (Vite) — internal tool for the Store Builder team. Auth-gated, platformAdmin only.
-    storefront/            Next.js — the public, customer-facing shop. No auth; SEO-oriented.
-  packages/
-    api-client/            Shared TS client for the backend API (auth, tokens w/ auto-refresh, workspaces, public storefront).
-    ui/                     Shared shadcn-style UI kit (Button, Input, Label, Card, Alert, Spinner) on one design system.
+apps/
+  merchant-dashboard/  React 19 + Vite. The merchant workspace: orders, call center,
+                       WhatsApp inbox, funnels, ads analytics, profit, settlements, catalog…
+  platform-admin/      React 19 + Vite. Internal console for the ZIMOS team.
+  storefront/          Next.js 16. The public shop customers buy from (COD-first, RTL).
+  marketing/           Next.js 16. zimos.co marketing site, Arabic-first.
+packages/
+  api-client/          Typed client for the ZIMOS backend API (tokens, auto-refresh).
+  ui/                  Shared UI kit + ZIMOS brand system (tokens, logo, primitives).
 ```
 
-## Why three apps instead of one
+## Brand system
 
-- **merchant-dashboard** and **platform-admin** are both behind auth, have no SEO needs, and are heavy on interactivity — a plain SPA (Vite) is the simplest, fastest thing to build and iterate on.
-- **storefront** is public, needs real SEO (product pages, OG tags), and will eventually route by custom domain / subdomain per workspace — Next.js's SSR and middleware are built for exactly that. It talks only to the backend's public `/store/:workspaceId/...` API, never the authed merchant API — this matches how the backend README describes the intended split.
+Everything visual comes from one place: `packages/ui/src/brand/zimos.css`.
 
-## Prerequisites
+| Token | Value | Use |
+|---|---|---|
+| Z Blue | `#0066FF` | Primary actions, emphasis |
+| Sky Blue | `#66C2FF` | Supporting accent |
+| Navy | `#0B1F66` | Important type, dark compositions |
+| Ice | `#E8F4FF` | Separators, soft fills |
+| Cloud | `#F7FAFF` | Surfaces |
 
-- Node.js 20+ (built and tested on Node 22)
-- The backend running locally (see `store-builder-backend/README.md`). Default expected at `http://localhost:4000/api/v1`.
+- **Type:** Inter for Latin, Noto Sans Arabic for Arabic (applied automatically under `dir="rtl"`).
+- **Shape:** cards `rounded-2xl`, buttons and inputs 10 px, modals 20 px, light-blue borders.
+- **Status colours** (success, warning, danger) are functional only.
+- **Utilities:** `bg-paper`, `bg-paper-raised`, `text-ink`, `text-ink-soft`, `border-line`,
+  `bg-primary`, `bg-primary-soft`, `bg-zimos-ice`, `bg-zimos-navy`, and so on.
+
+### Logo
+
+Use only `<ZimosLogo />` and `<ZimosMark />` from `@store-builder/ui`. Never redraw
+or retype the logo. The approved logo currently exists only as raster exports with a
+baked-in background, served from each app's `public/brand/`.
+
+> **Required for final output:** the official transparent SVG logo files. See
+> `apps/*/public/brand/README.md`.
+
+## Languages
+
+- **Dashboard:** English and Arabic with full RTL. Each page owns its strings:
+  `const t = useT({ en: {...}, ar: {...} })` from `src/i18n/LocaleContext.tsx`.
+  Use logical Tailwind classes (`ms-`, `pe-`, `start-`, `text-end`…), never `left`/`right`.
+- **Storefront:** follows the store's locale, with a customer language switch.
+- **Marketing:** `/ar` (default) and `/en`.
+
+## Prototype data
+
+Features whose backend does not exist yet run on a localStorage mock in
+`apps/merchant-dashboard/src/mock/` (and `apps/platform-admin/src/mock/`). Every mock
+method is annotated with the endpoint it should become. The full backend contract is in
+[`BACKEND_CONTRACT.md`](BACKEND_CONTRACT.md).
 
 ## Getting started
 
 ```bash
-npm install        # installs all three apps + both shared packages (npm workspaces)
+npm install
 ```
 
-Each app has an `.env.example` — copy it to `.env` (Vite apps) or `.env.local` (Next.js) and point `VITE_API_BASE_URL` / `NEXT_PUBLIC_API_BASE_URL` at your backend if it's not on the default port.
+Each app has an `.env.example`. Copy it to `.env` (Vite apps) or `.env.local` (Next.js).
 
 ```bash
-npm run dev:dashboard   # http://localhost:5173 — merchant dashboard
-npm run dev:admin       # http://localhost:5174 — platform admin
-npm run dev:storefront  # http://localhost:3000 — storefront (open /store/<a real workspaceId>)
+npm run dev:dashboard    # http://localhost:5173
+npm run dev:admin        # http://localhost:5174
+npm run dev:storefront   # http://localhost:3000  -> open /store/<workspaceId>
+npm run dev:marketing    # http://localhost:3001
 ```
 
-Run all three in separate terminals — a merchant needs to register + build a catalog in the dashboard before there's anything to see in the storefront.
+The backend is expected at `http://localhost:4000/api/v1`. The Vite apps proxy `/api`
+and `/uploads` to it in development.
+
+Demo login (after seeding the backend): `demo@zimos.test` / `DemoPassw0rd!123`.
 
 ## Build
 
 ```bash
 npm run build:all
-# or individually: build:dashboard / build:admin / build:storefront
 ```
-
-All three currently build clean with zero TypeScript errors.
-
-## What's implemented so far
-
-- **api-client**: full auth flow (register/login/refresh/logout/me), workspace list/create, admin workspace list, and the public storefront endpoints (store meta, product list, product detail, collections) — response shapes were taken directly from the backend's controllers/services, not guessed from the Postman collection.
-- **merchant-dashboard**: register → login → pick/create a workspace → dashboard shell with sidebar nav. All non-auth sections (Orders, Catalog, Customers, Discounts, Shipping & Tax, Website, Funnels, Settings) are wired into routing as placeholders, ready to build out.
-- **platform-admin**: login gated on the `platformAdmin` flag, workspaces table (`GET /admin/workspaces`), overview placeholder.
-- **storefront**: store home page (branding + product grid) and a product detail page, both server-rendered against the live public API. Path-based routing (`/store/:workspaceId`) for now — custom-domain/subdomain routing via middleware is a deliberate next step, not yet built.
-
-## Known gaps / next steps
-
-- No Cart or Checkout flow yet on the storefront (`X-Cart-Token` handling, Idempotency-Key on order creation).
-- Password reset UI is a placeholder — the backend already supports both email and SMS reset.
-- Catalog, Orders, Customers, etc. dashboards are placeholders — the API client has no methods for them yet either.
-- No middleware-based custom-domain resolution on the storefront yet (currently path-based only).
-- No test suite yet.
-
-## Design system
-
-Both React apps and the storefront share one visual language ("Nile & Souk" — deep teal + warm amber, `Fraunces` for display type, `Plus Jakarta Sans` for UI text) defined via Tailwind v4 `@theme` tokens in each app's global CSS. The shared `@store-builder/ui` package builds on top of those tokens, so any Tailwind utility class (`bg-primary`, `text-ink-soft`, etc.) works in all three apps as long as the app defines the same `@theme` block.
