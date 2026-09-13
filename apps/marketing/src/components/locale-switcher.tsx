@@ -19,8 +19,9 @@ export function LocaleSwitcher({ className = "" }: { className?: string }) {
     <Link
       href={href}
       hrefLang={target}
+      lang={target}
       aria-label={dict.nav.switchLanguageAria}
-      className={`inline-flex h-9 items-center rounded-full border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft transition-colors hover:text-ink hover:border-ink-soft ${className}`}
+      className={`inline-flex h-9 items-center rounded-lg border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft transition-colors hover:border-line-strong hover:text-ink ${className}`}
     >
       {dict.nav.switchLanguage}
     </Link>

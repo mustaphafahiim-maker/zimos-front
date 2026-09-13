@@ -27,9 +27,11 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
 
   const { meta } = getDictionary(locale);
+  // Icons come from the file conventions src/app/icon.png + apple-icon.png.
   return {
     title: meta.title,
     description: meta.description,
+    applicationName: "ZIMOS",
     alternates: {
       canonical: `/${locale}`,
       languages: { ar: "/ar", en: "/en" },
@@ -37,16 +39,18 @@ export async function generateMetadata({
     openGraph: {
       title: meta.title,
       description: meta.description,
+      siteName: "ZIMOS",
       locale: locale === "ar" ? "ar_EG" : "en_US",
       type: "website",
     },
   };
 }
 
+// ZIMOS Cloud for light, deep Navy for dark.
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+    { media: "(prefers-color-scheme: light)", color: "#F7FAFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1F66" },
   ],
 };
 
