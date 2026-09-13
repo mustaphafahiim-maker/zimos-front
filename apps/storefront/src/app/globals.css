@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@import "../../../../packages/ui/src/brand/zimos.css";
+
+/* Dark mode is driven by a `.dark` class on <html>, set before first paint by
+   an inline script in the root layout and toggled by the theme switch. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ *
+ * Storefront defaults.
+ *
+ * All semantic tokens (ink, paper, line, primary, accent, success, danger …)
+ * come from the shared ZIMOS brand file imported above. The storefront only
+ * adds two things on top:
+ *
+ *   1. the self-hosted next/font families (see src/app/fonts.ts) wired into
+ *      the brand's --font-latin / --font-arabic slots, and
+ *   2. the per-merchant colour override (`.brand-theme`).
+ * ------------------------------------------------------------------ */
+:root {
+  --font-latin: var(--font-inter), "Inter", Arial, system-ui, sans-serif;
+  --font-arabic: var(--font-noto-arabic), var(--font-inter), "Noto Sans Arabic", Arial, sans-serif;
+
+  /* Merchant branding. The store layout overrides these two per workspace from
+     `themeSettings`; with nothing saved the store falls back to ZIMOS Blue/Sky. */
+  --brand-primary: #0066ff;
+  --brand-secondary: #66c2ff;
+}
+
+.dark {
+  --brand-primary: #3d8bff;
+  --brand-secondary: #66c2ff;
+}
+
+/* ------------------------------------------------------------------ *
+ * Per-store branding. The store layout puts this class on its wrapper and
+ * sets --brand-primary / --brand-secondary inline from the workspace's
+ * themeSettings; re-pointing the semantic primary/accent tokens at them
+ * here means every `bg-primary` / `text-accent` / `border-primary` utility
+ * inside the store picks up the merchant's colours. The -dark / -soft steps
+ * are derived so a single hex still yields a coherent ramp.
+ * ------------------------------------------------------------------ */
+.brand-theme {
+  --color-primary: var(--brand-primary);
+  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 70%, #0b1f66);
+  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 10%, #fff);
+
+  --color-accent: var(--brand-secondary);
+  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 72%, #0b1f66);
+  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 14%, #fff);
+}
+
+/* On dark backgrounds the "soft" tints sink toward the navy paper rather than
+   white, or they read as glaring light blocks. */
+.dark .brand-theme {
+  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 60%, #fff);
+  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 22%, #081a4a);
+  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 60%, #fff);
+  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 20%, #081a4a);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

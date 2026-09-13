@@ -1,0 +1,87 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+/* ZIMOS brand tokens, fonts, logo rendering. Every colour, radius and font
+   used by this app comes from here. */
+@import "../../../packages/ui/src/brand/zimos.css";
+
+/* Tailwind v4 only scans this app's own tree; the shared UI package resolves
+   through node_modules, so point the scanner at its source explicitly.
+   Path: src -> platform-admin -> apps -> root. */
+@source "../../../packages/ui/src";
+
+/* Dark mode is driven by a `.dark` class on <html>, set before first paint by
+   an inline script in index.html and toggled by the theme switch. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply outline-ring/50;
+  }
+  body {
+    @apply bg-paper text-ink;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+}
+
+@keyframes zimos-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes zimos-slide-in-end {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes zimos-slide-in-start {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+[dir="rtl"] .animate-zimos-slide-in-end {
+  animation-name: zimos-slide-in-start;
+}
+[dir="rtl"] .animate-zimos-slide-in-start {
+  animation-name: zimos-slide-in-end;
+}
+.animate-zimos-slide-up {
+  animation: zimos-slide-up var(--dur-base) var(--ease-zimos) both;
+}
+.animate-zimos-slide-in-end {
+  animation: zimos-slide-in-end var(--dur-base) var(--ease-zimos) both;
+}
+.animate-zimos-slide-in-start {
+  animation: zimos-slide-in-start var(--dur-base) var(--ease-zimos) both;
+}
+
+/* Range input tinted with the brand primary. */
+input[type="range"].zimos-range {
+  accent-color: var(--color-primary);
+}

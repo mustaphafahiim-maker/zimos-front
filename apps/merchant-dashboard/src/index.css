@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+/* ZIMOS brand tokens, fonts, logo rendering. Every colour, radius and font
+   used by this app comes from here. */
+@import "../../../packages/ui/src/brand/zimos.css";
+
+/* Tailwind v4 only scans this app's own tree; the shared UI package resolves
+   through node_modules, so point the scanner at its source explicitly.
+   Path: src -> merchant-dashboard -> apps -> root. */
+@source "../../../packages/ui/src";
+
+/* Dark mode is driven by a `.dark` class on <html>, set before first paint by
+   an inline script in index.html and toggled by the theme switch. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply outline-ring/50;
+  }
+  body {
+    @apply bg-paper text-ink;
+  }
+  /* Anchor absolutely positioned content in header cells (e.g. `sr-only`
+     labels) to the cell. Without a positioned ancestor they resolve against
+     the page, escape the table's `overflow-x-auto` wrapper and, in RTL, widen
+     the whole document. Utilities such as `sticky` still override this. */
+  th {
+    position: relative;
+  }
+}
+
+@layer utilities {
+  /* Subtle numeric alignment for tables and KPIs. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Thin, brand-tinted scrollbars inside panels. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+}
+
+/* Quick, directional entrance used by drawers, palettes and popovers. */
+@keyframes zimos-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes zimos-slide-in-end {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+[dir="rtl"] .animate-zimos-slide-in-end {
+  animation-name: zimos-slide-in-start;
+}
+@keyframes zimos-slide-in-start {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-zimos-slide-up {
+  animation: zimos-slide-up var(--dur-base) var(--ease-zimos) both;
+}
+.animate-zimos-slide-in-end {
+  animation: zimos-slide-in-end var(--dur-base) var(--ease-zimos) both;
+}
