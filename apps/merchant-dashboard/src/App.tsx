@@ -1,3 +1,4 @@
+import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/i18n/LocaleContext";
@@ -5,145 +6,179 @@ import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
-import { LoginPage } from "@/pages/LoginPage";
-import { RegisterPage } from "@/pages/RegisterPage";
-import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
-import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
-import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
-import { WorkspacePickerPage } from "@/pages/WorkspacePickerPage";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { DashboardHomePage } from "@/pages/DashboardHomePage";
-import { CatalogProductsPage } from "@/pages/catalog/CatalogProductsPage";
-import { CollectionsPage } from "@/pages/catalog/CollectionsPage";
-import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
-import { OrdersListPage } from "@/pages/orders/OrdersListPage";
-import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
-import { OrderPipelinePage } from "@/pages/orders/OrderPipelinePage";
-import { AbandonedCheckoutsPage } from "@/pages/orders/AbandonedCheckoutsPage";
-import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
-import { CustomersPage } from "@/pages/customers/CustomersPage";
-import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
-import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
-import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
-import { WebsitePage } from "@/pages/website/WebsitePage";
-import { WebsiteEditorPage } from "@/pages/website/editor/WebsiteEditorPage";
-import { SettingsPage } from "@/pages/settings/SettingsPage";
-import { FunnelsPage } from "@/pages/funnels/FunnelsPage";
-import { FunnelEditorPage } from "@/pages/funnels/FunnelEditorPage";
-import { ExperimentsPage } from "@/pages/experiments/ExperimentsPage";
-import { TemplatesPage } from "@/pages/templates/TemplatesPage";
-import { OffersPage } from "@/pages/offers/OffersPage";
-import { MarketingPage } from "@/pages/marketing/MarketingPage";
-import { AutomationsPage } from "@/pages/automations/AutomationsPage";
-import { FraudProtectionPage } from "@/pages/fraud/FraudProtectionPage";
-import { AnalyticsPage } from "@/pages/analytics/AnalyticsPage";
-import { InventoryPage } from "@/pages/inventory/InventoryPage";
-import { PaymentsPage } from "@/pages/payments/PaymentsPage";
-import { AppsPage } from "@/pages/apps/AppsPage";
-import { AdsPage } from "@/pages/ads/AdsPage";
-import { CampaignDetailPage } from "@/pages/ads/CampaignDetailPage";
-import { ProfitPage } from "@/pages/profit/ProfitPage";
-import { CallCenterPage } from "@/pages/callcenter/CallCenterPage";
-import { AgentsPage } from "@/pages/callcenter/AgentsPage";
-import { CallLogsPage } from "@/pages/callcenter/CallLogsPage";
-import { CallCenterSettingsPage } from "@/pages/callcenter/CallCenterSettingsPage";
-import { InboxPage } from "@/pages/inbox/InboxPage";
-import { WaBotPage } from "@/pages/inbox/WaBotPage";
-import { SettlementsPage } from "@/pages/settlements/SettlementsPage";
-import { ReturnsPage } from "@/pages/returns/ReturnsPage";
-import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
-import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
-import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
-import { StoresPage } from "@/pages/stores/StoresPage";
+import { BrandLoader } from "@/components/BrandLoader";
+// The sign-in screen is the most common cold entry point, so it ships in the
+// main bundle. Every other page is split into its own chunk and loaded on
+// first visit.
+import { LoginPage } from "@/pages/LoginPage";
+
+/**
+ * `React.lazy` for modules that use named exports. `key` must be the page's
+ * export name; the module may export other helpers alongside it.
+ */
+function page<K extends string>(load: () => Promise<Record<K, ComponentType>>, key: K) {
+  return lazy(() => load().then((m) => ({ default: m[key] })));
+}
+
+// Auth & onboarding
+const RegisterPage = page(() => import("@/pages/RegisterPage"), "RegisterPage");
+const AuthCallbackPage = page(() => import("@/pages/AuthCallbackPage"), "AuthCallbackPage");
+const ForgotPasswordPage = page(() => import("@/pages/ForgotPasswordPage"), "ForgotPasswordPage");
+const ResetPasswordPage = page(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage");
+const VerifyEmailPage = page(() => import("@/pages/VerifyEmailPage"), "VerifyEmailPage");
+const WorkspacePickerPage = page(() => import("@/pages/WorkspacePickerPage"), "WorkspacePickerPage");
+
+// Home
+const DashboardHomePage = page(() => import("@/pages/DashboardHomePage"), "DashboardHomePage");
+const StoresPage = page(() => import("@/pages/stores/StoresPage"), "StoresPage");
+
+// Sell & COD operations
+const OrdersListPage = page(() => import("@/pages/orders/OrdersListPage"), "OrdersListPage");
+const OrderDetailPage = page(() => import("@/pages/orders/OrderDetailPage"), "OrderDetailPage");
+const OrderPipelinePage = page(() => import("@/pages/orders/OrderPipelinePage"), "OrderPipelinePage");
+const AbandonedCheckoutsPage = page(() => import("@/pages/orders/AbandonedCheckoutsPage"), "AbandonedCheckoutsPage");
+const ConfirmationQueuePage = page(() => import("@/pages/confirmation/ConfirmationQueuePage"), "ConfirmationQueuePage");
+const CallCenterPage = page(() => import("@/pages/callcenter/CallCenterPage"), "CallCenterPage");
+const AgentsPage = page(() => import("@/pages/callcenter/AgentsPage"), "AgentsPage");
+const CallLogsPage = page(() => import("@/pages/callcenter/CallLogsPage"), "CallLogsPage");
+const CallCenterSettingsPage = page(() => import("@/pages/callcenter/CallCenterSettingsPage"), "CallCenterSettingsPage");
+const InboxPage = page(() => import("@/pages/inbox/InboxPage"), "InboxPage");
+const WaBotPage = page(() => import("@/pages/inbox/WaBotPage"), "WaBotPage");
+const ReturnsPage = page(() => import("@/pages/returns/ReturnsPage"), "ReturnsPage");
+const FraudProtectionPage = page(() => import("@/pages/fraud/FraudProtectionPage"), "FraudProtectionPage");
+
+// Money
+const ProfitPage = page(() => import("@/pages/profit/ProfitPage"), "ProfitPage");
+const SettlementsPage = page(() => import("@/pages/settlements/SettlementsPage"), "SettlementsPage");
+const PaymentsPage = page(() => import("@/pages/payments/PaymentsPage"), "PaymentsPage");
+
+// Catalog
+const CatalogProductsPage = page(() => import("@/pages/catalog/CatalogProductsPage"), "CatalogProductsPage");
+const CollectionsPage = page(() => import("@/pages/catalog/CollectionsPage"), "CollectionsPage");
+const ProductEditPage = page(() => import("@/pages/catalog/ProductEditPage"), "ProductEditPage");
+const InventoryPage = page(() => import("@/pages/inventory/InventoryPage"), "InventoryPage");
+const SuppliersPage = page(() => import("@/pages/suppliers/SuppliersPage"), "SuppliersPage");
+const CustomersPage = page(() => import("@/pages/customers/CustomersPage"), "CustomersPage");
+const CustomerDetailPage = page(() => import("@/pages/customers/CustomerDetailPage"), "CustomerDetailPage");
+const ReviewsPage = page(() => import("@/pages/reviews/ReviewsPage"), "ReviewsPage");
+
+// Grow
+const AdsPage = page(() => import("@/pages/ads/AdsPage"), "AdsPage");
+const CampaignDetailPage = page(() => import("@/pages/ads/CampaignDetailPage"), "CampaignDetailPage");
+const FunnelsPage = page(() => import("@/pages/funnels/FunnelsPage"), "FunnelsPage");
+const FunnelEditorPage = page(() => import("@/pages/funnels/FunnelEditorPage"), "FunnelEditorPage");
+const OffersPage = page(() => import("@/pages/offers/OffersPage"), "OffersPage");
+const ExperimentsPage = page(() => import("@/pages/experiments/ExperimentsPage"), "ExperimentsPage");
+const DiscountsPage = page(() => import("@/pages/discounts/DiscountsPage"), "DiscountsPage");
+const MarketingPage = page(() => import("@/pages/marketing/MarketingPage"), "MarketingPage");
+const AutomationsPage = page(() => import("@/pages/automations/AutomationsPage"), "AutomationsPage");
+const AffiliatesPage = page(() => import("@/pages/affiliates/AffiliatesPage"), "AffiliatesPage");
+
+// Storefront
+const WebsitePage = page(() => import("@/pages/website/WebsitePage"), "WebsitePage");
+const WebsiteEditorPage = page(() => import("@/pages/website/editor/WebsiteEditorPage"), "WebsiteEditorPage");
+const TemplatesPage = page(() => import("@/pages/templates/TemplatesPage"), "TemplatesPage");
+const ShippingTaxPage = page(() => import("@/pages/shipping/ShippingTaxPage"), "ShippingTaxPage");
+
+// Insights
+const AnalyticsPage = page(() => import("@/pages/analytics/AnalyticsPage"), "AnalyticsPage");
+const AppsPage = page(() => import("@/pages/apps/AppsPage"), "AppsPage");
+const SettingsPage = page(() => import("@/pages/settings/SettingsPage"), "SettingsPage");
+
+/** Full-screen loader for pages rendered outside the dashboard shell. */
+function Screen({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<BrandLoader />}>{children}</Suspense>;
+}
+
+/** In-shell loader: keeps the sidebar and top bar visible while a page chunk loads. */
+function InShell({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<BrandLoader className="min-h-[60vh] bg-transparent" />}>{children}</Suspense>;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <LocaleProvider>
-      <AuthProvider>
-        <WorkspaceProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <AuthProvider>
+          <WorkspaceProvider>
+            <ToastProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<Screen><RegisterPage /></Screen>} />
+                <Route path="/auth/callback" element={<Screen><AuthCallbackPage /></Screen>} />
+                <Route path="/forgot-password" element={<Screen><ForgotPasswordPage /></Screen>} />
+                <Route path="/reset-password" element={<Screen><ResetPasswordPage /></Screen>} />
+                <Route path="/verify-email" element={<Screen><VerifyEmailPage /></Screen>} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route path="/workspaces" element={<WorkspacePickerPage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/workspaces" element={<Screen><WorkspacePickerPage /></Screen>} />
 
-                <Route element={<RequireWorkspace />}>
-                  <Route element={<DashboardLayout />}>
-                    <Route path="/" element={<DashboardHomePage />} />
-                    <Route path="/stores" element={<StoresPage />} />
+                  <Route element={<RequireWorkspace />}>
+                    <Route element={<DashboardLayout />}>
+                      <Route path="/" element={<InShell><DashboardHomePage /></InShell>} />
+                      <Route path="/stores" element={<InShell><StoresPage /></InShell>} />
 
-                    {/* Phase 2: COD operations */}
-                    <Route path="/call-center" element={<CallCenterPage />} />
-                    <Route path="/call-center/agents" element={<AgentsPage />} />
-                    <Route path="/call-center/logs" element={<CallLogsPage />} />
-                    <Route path="/call-center/settings" element={<CallCenterSettingsPage />} />
-                    <Route path="/inbox" element={<InboxPage />} />
-                    <Route path="/inbox/bot" element={<WaBotPage />} />
-                    <Route path="/returns" element={<ReturnsPage />} />
-                    <Route path="/reviews" element={<ReviewsPage />} />
+                      {/* Sell & COD operations */}
+                      <Route path="/orders" element={<InShell><OrdersListPage /></InShell>} />
+                      <Route path="/orders/pipeline" element={<InShell><OrderPipelinePage /></InShell>} />
+                      <Route path="/orders/:orderId" element={<InShell><OrderDetailPage /></InShell>} />
+                      <Route path="/confirmation-queue" element={<InShell><ConfirmationQueuePage /></InShell>} />
+                      <Route path="/call-center" element={<InShell><CallCenterPage /></InShell>} />
+                      <Route path="/call-center/agents" element={<InShell><AgentsPage /></InShell>} />
+                      <Route path="/call-center/logs" element={<InShell><CallLogsPage /></InShell>} />
+                      <Route path="/call-center/settings" element={<InShell><CallCenterSettingsPage /></InShell>} />
+                      <Route path="/inbox" element={<InShell><InboxPage /></InShell>} />
+                      <Route path="/inbox/bot" element={<InShell><WaBotPage /></InShell>} />
+                      <Route path="/abandoned-checkouts" element={<InShell><AbandonedCheckoutsPage /></InShell>} />
+                      <Route path="/returns" element={<InShell><ReturnsPage /></InShell>} />
+                      <Route path="/fraud" element={<InShell><FraudProtectionPage /></InShell>} />
 
-                    {/* Phase 2: money */}
-                    <Route path="/profit" element={<ProfitPage />} />
-                    <Route path="/settlements" element={<SettlementsPage />} />
+                      {/* Money */}
+                      <Route path="/profit" element={<InShell><ProfitPage /></InShell>} />
+                      <Route path="/settlements" element={<InShell><SettlementsPage /></InShell>} />
+                      <Route path="/payments" element={<InShell><PaymentsPage /></InShell>} />
 
-                    {/* Phase 2: growth */}
-                    <Route path="/ads" element={<AdsPage />} />
-                    <Route path="/ads/:campaignId" element={<CampaignDetailPage />} />
-                    <Route path="/affiliates" element={<AffiliatesPage />} />
-                    <Route path="/suppliers" element={<SuppliersPage />} />
+                      {/* Catalog */}
+                      <Route path="/catalog" element={<InShell><CatalogProductsPage /></InShell>} />
+                      <Route path="/catalog/collections" element={<InShell><CollectionsPage /></InShell>} />
+                      <Route path="/catalog/new" element={<InShell><ProductEditPage /></InShell>} />
+                      <Route path="/catalog/:productId" element={<InShell><ProductEditPage /></InShell>} />
+                      <Route path="/inventory" element={<InShell><InventoryPage /></InShell>} />
+                      <Route path="/suppliers" element={<InShell><SuppliersPage /></InShell>} />
+                      <Route path="/customers" element={<InShell><CustomersPage /></InShell>} />
+                      <Route path="/customers/:customerId" element={<InShell><CustomerDetailPage /></InShell>} />
+                      <Route path="/reviews" element={<InShell><ReviewsPage /></InShell>} />
 
-                    {/* Sell */}
-                    <Route path="/orders" element={<OrdersListPage />} />
-                    <Route path="/orders/pipeline" element={<OrderPipelinePage />} />
-                    <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-                    <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
-                    <Route path="/abandoned-checkouts" element={<AbandonedCheckoutsPage />} />
-                    <Route path="/fraud" element={<FraudProtectionPage />} />
+                      {/* Grow */}
+                      <Route path="/ads" element={<InShell><AdsPage /></InShell>} />
+                      <Route path="/ads/:campaignId" element={<InShell><CampaignDetailPage /></InShell>} />
+                      <Route path="/funnels" element={<InShell><FunnelsPage /></InShell>} />
+                      <Route path="/funnels/:funnelId" element={<InShell><FunnelEditorPage /></InShell>} />
+                      <Route path="/offers" element={<InShell><OffersPage /></InShell>} />
+                      <Route path="/experiments" element={<InShell><ExperimentsPage /></InShell>} />
+                      <Route path="/discounts" element={<InShell><DiscountsPage /></InShell>} />
+                      <Route path="/marketing" element={<InShell><MarketingPage /></InShell>} />
+                      <Route path="/automations" element={<InShell><AutomationsPage /></InShell>} />
+                      <Route path="/affiliates" element={<InShell><AffiliatesPage /></InShell>} />
 
-                    {/* Catalog */}
-                    <Route path="/catalog" element={<CatalogProductsPage />} />
-                    <Route path="/catalog/collections" element={<CollectionsPage />} />
-                    <Route path="/catalog/new" element={<ProductEditPage />} />
-                    <Route path="/catalog/:productId" element={<ProductEditPage />} />
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/customers" element={<CustomersPage />} />
-                    <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
+                      {/* Storefront */}
+                      <Route path="/website" element={<InShell><WebsitePage /></InShell>} />
+                      <Route path="/website/:websiteId/edit" element={<InShell><WebsiteEditorPage /></InShell>} />
+                      <Route path="/templates" element={<InShell><TemplatesPage /></InShell>} />
+                      <Route path="/shipping" element={<InShell><ShippingTaxPage /></InShell>} />
 
-                    {/* Grow */}
-                    <Route path="/funnels" element={<FunnelsPage />} />
-                    <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
-                    <Route path="/offers" element={<OffersPage />} />
-                    <Route path="/experiments" element={<ExperimentsPage />} />
-                    <Route path="/discounts" element={<DiscountsPage />} />
-                    <Route path="/marketing" element={<MarketingPage />} />
-                    <Route path="/automations" element={<AutomationsPage />} />
-
-                    {/* Storefront */}
-                    <Route path="/website" element={<WebsitePage />} />
-                    <Route path="/website/:websiteId/edit" element={<WebsiteEditorPage />} />
-                    <Route path="/templates" element={<TemplatesPage />} />
-                    <Route path="/shipping" element={<ShippingTaxPage />} />
-                    <Route path="/payments" element={<PaymentsPage />} />
-
-                    {/* Insights */}
-                    <Route path="/analytics" element={<AnalyticsPage />} />
-                    <Route path="/apps" element={<AppsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
+                      {/* Insights */}
+                      <Route path="/analytics" element={<InShell><AnalyticsPage /></InShell>} />
+                      <Route path="/apps" element={<InShell><AppsPage /></InShell>} />
+                      <Route path="/settings" element={<InShell><SettingsPage /></InShell>} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
-            </Routes>
-          </ToastProvider>
-        </WorkspaceProvider>
-      </AuthProvider>
+              </Routes>
+            </ToastProvider>
+          </WorkspaceProvider>
+        </AuthProvider>
       </LocaleProvider>
     </BrowserRouter>
   );
