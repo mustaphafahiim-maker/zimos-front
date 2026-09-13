@@ -1,15 +1,23 @@
 import { useState, type FormEvent } from "react";
 import { Copy, Globe } from "lucide-react";
 import { Alert, Button, Spinner, cn } from "@store-builder/ui";
-import { mockApi } from "@/mock/api";
-import type { DomainRecord } from "@/mock/types";
+import {
+  domainsAdd,
+  domainsList,
+  domainsRemove,
+  domainsVerify,
+  type DomainDTO,
+  type DomainStatus,
+  type DomainVerificationRecord,
+} from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { TextField, Field } from "@/components/Field";
-import { Select } from "@/components/Select";
+import { TextField } from "@/components/Field";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
@@ -18,7 +26,7 @@ const CNAME_TARGET = "stores.zimos.app";
 
 type Tone = "success" | "warning" | "danger" | "info";
 
-const STATUS_TONE: Record<DomainRecord["status"], Tone> = {
+const STATUS_TONE: Record<DomainStatus, Tone> = {
   active: "success",
   verified: "info",
   pending_verification: "warning",
@@ -32,7 +40,7 @@ const TONE_CLASS: Record<Tone, string> = {
   danger: "bg-danger-soft text-danger border-danger/25",
 };
 
-const STATUS_LABEL: Record<Locale, Record<DomainRecord["status"], string>> = {
+const STATUS_LABEL: Record<Locale, Record<DomainStatus, string>> = {
   en: { active: "Active", verified: "Verified", pending_verification: "Pending verification", failed: "Failed" },
   ar: { active: "نشط", verified: "تم التحقق", pending_verification: "بانتظار التحقق", failed: "فشل التحقق" },
 };
@@ -40,21 +48,19 @@ const STATUS_LABEL: Record<Locale, Record<DomainRecord["status"], string>> = {
 const STRINGS = {
   en: {
     title: "Domains",
-    hint: "Point your own domain at the store or at a single funnel.",
+    hint: "Connect your own domain. Domains point to your store.",
     addDomain: "Add domain",
     verified: "{host} verified.",
     removed: "{host} removed.",
     emptyTitle: "No custom domains",
     emptyHint: "Your store is reachable on its zimos.app subdomain until you add one.",
     colHostname: "Hostname",
-    colTarget: "Target",
-    primary: "Primary",
-    targetStore: "Store",
-    targetFunnel: "Funnel",
+    colRecord: "Verification record",
     verifying: "Verifying…",
     verify: "Verify",
     remove: "Remove",
-    addDescription: "You will need access to the domain's DNS settings.",
+    showRecords: "DNS records",
+    addDescription: "You will need access to the domain's DNS settings. Domains point to your store.",
     removeTitle: "Remove {host}?",
     removeDescription: "Visitors to this domain will see an error until you point it elsewhere.",
     removeDomain: "Remove domain",
@@ -62,30 +68,33 @@ const STRINGS = {
     copyFailed: "Could not copy — select the text manually.",
     copyLabel: "Copy {label}",
     finishTitle: "Finish setting up",
-    finishHint: "Add these two records at your DNS provider, then click Verify. Propagation can take up to an hour.",
+    finishHint: "Add the TXT record below at your DNS provider to prove you own the domain, and point the domain at ZIMOS with the CNAME record. Then click Verify. DNS changes can take up to an hour.",
+    txtName: "Name / host",
+    txtValue: "Value",
     dismiss: "Dismiss",
     invalidHost: "Enter a valid hostname, e.g. shop.example.com",
     hostname: "Hostname",
-    pointsTo: "Points to",
     adding: "Adding…",
+    permission: "You don't have permission to manage domains.",
+    subscription: "This workspace needs an active subscription to make changes.",
+    storeNotSetUp: "Set up your store first (add a product) before connecting a domain.",
+    domainTaken: "That domain is already connected to a store.",
   },
   ar: {
     title: "النطاقات (الدومين)",
-    hint: "اربط نطاقك الخاص بالمتجر أو بمسار مبيعات (Funnel) واحد.",
+    hint: "اربط نطاقك الخاص. النطاقات تشير إلى متجرك.",
     addDomain: "إضافة نطاق",
     verified: "تم التحقق من {host}.",
     removed: "تمت إزالة {host}.",
     emptyTitle: "لا توجد نطاقات مخصصة",
     emptyHint: "يمكن الوصول إلى متجرك عبر نطاقه الفرعي على zimos.app حتى تضيف نطاقًا خاصًا.",
     colHostname: "النطاق",
-    colTarget: "يشير إلى",
-    primary: "أساسي",
-    targetStore: "المتجر",
-    targetFunnel: "مسار مبيعات",
+    colRecord: "سجل التحقق",
     verifying: "جارٍ التحقق…",
     verify: "تحقق",
     remove: "إزالة",
-    addDescription: "ستحتاج إلى صلاحية الوصول إلى إعدادات DNS الخاصة بالنطاق.",
+    showRecords: "سجلات DNS",
+    addDescription: "ستحتاج إلى صلاحية الوصول إلى إعدادات DNS الخاصة بالنطاق. النطاقات تشير إلى متجرك.",
     removeTitle: "إزالة {host}؟",
     removeDescription: "سيرى زوار هذا النطاق رسالة خطأ حتى توجّهه إلى مكان آخر.",
     removeDomain: "إزالة النطاق",
@@ -93,27 +102,45 @@ const STRINGS = {
     copyFailed: "تعذّر النسخ — حدّد النص وانسخه يدويًا.",
     copyLabel: "نسخ {label}",
     finishTitle: "أكمل إعداد",
-    finishHint: "أضف هذين السجلين لدى مزوّد DNS الخاص بك، ثم اضغط «تحقق». قد يستغرق التفعيل حتى ساعة.",
+    finishHint: "أضف سجل TXT التالي لدى مزوّد DNS لإثبات ملكيتك للنطاق، ووجّه النطاق إلى ZIMOS بسجل CNAME. ثم اضغط «تحقق». قد تستغرق تغييرات DNS حتى ساعة.",
+    txtName: "الاسم / المضيف",
+    txtValue: "القيمة",
     dismiss: "إخفاء",
     invalidHost: "أدخل نطاقًا صحيحًا، مثل shop.example.com",
     hostname: "النطاق",
-    pointsTo: "يشير إلى",
     adding: "جارٍ الإضافة…",
+    permission: "ليست لديك صلاحية لإدارة النطاقات.",
+    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإجراء التغييرات.",
+    storeNotSetUp: "جهّز متجرك أولًا (أضف منتجًا) قبل ربط نطاق.",
+    domainTaken: "هذا النطاق مربوط بالفعل بمتجر.",
   },
 } satisfies Messages;
 
-function DomainStatus({ status }: { status: DomainRecord["status"] }) {
+function DomainStatusBadge({ status }: { status: DomainStatus }) {
   const { locale } = useLocale();
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-        TONE_CLASS[STATUS_TONE[status]]
+        "inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium",
+        TONE_CLASS[STATUS_TONE[status] ?? "warning"]
       )}
     >
-      {STATUS_LABEL[locale][status]}
+      {STATUS_LABEL[locale][status] ?? status}
     </span>
   );
+}
+
+function useDomainErrorText() {
+  const t = useT(STRINGS);
+  return (err: unknown): string => {
+    if (err instanceof ApiError) {
+      if (err.status === 403) return t.permission;
+      if (err.status === 402 || err.code === "SUBSCRIPTION_REQUIRED") return t.subscription;
+      if (err.code === "STORE_NOT_SET_UP") return t.storeNotSetUp;
+      if (err.code === "DOMAIN_TAKEN") return t.domainTaken;
+    }
+    return getErrorMessage(err);
+  };
 }
 
 export function DomainsTab() {
@@ -121,21 +148,26 @@ export function DomainsTab() {
   const toast = useToast();
   const t = useT(STRINGS);
   const c = useCommon();
-  const domains = useAsync(() => mockApi.listDomains(workspaceId), [workspaceId]);
+  const errorText = useDomainErrorText();
+  const domains = useAsync(() => domainsList(apiClient, workspaceId), [workspaceId]);
   const [adding, setAdding] = useState(false);
-  const [removing, setRemoving] = useState<DomainRecord | null>(null);
+  const [removing, setRemoving] = useState<DomainDTO | null>(null);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
-  const [justAdded, setJustAdded] = useState<DomainRecord | null>(null);
+  const [shown, setShown] = useState<DomainDTO | null>(null);
 
   const list = domains.data ?? [];
   const reload = () => domains.refresh({ silent: true });
 
-  async function verify(d: DomainRecord) {
+  async function verify(d: DomainDTO) {
     setVerifyingId(d.id);
     try {
-      await mockApi.verifyDomain(workspaceId, d.id);
-      toast.success(fmt(t.verified, { host: d.hostname }));
-      reload();
+      const updated = await domainsVerify(apiClient, workspaceId, d.id);
+      toast.success(fmt(t.verified, { host: updated.hostname }));
+      if (shown?.id === d.id) setShown(null);
+      void reload();
+    } catch (err) {
+      // DOMAIN_NOT_VERIFIED carries the exact TXT record the API looked for.
+      toast.error(errorText(err));
     } finally {
       setVerifyingId(null);
     }
@@ -143,11 +175,17 @@ export function DomainsTab() {
 
   async function confirmRemove() {
     if (!removing) return;
-    await mockApi.removeDomain(workspaceId, removing.id);
-    toast.success(fmt(t.removed, { host: removing.hostname }));
-    if (justAdded?.id === removing.id) setJustAdded(null);
-    setRemoving(null);
-    reload();
+    const target = removing;
+    try {
+      await domainsRemove(apiClient, workspaceId, target.id);
+      toast.success(fmt(t.removed, { host: target.hostname }));
+      if (shown?.id === target.id) setShown(null);
+      void reload();
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setRemoving(null);
+    }
   }
 
   return (
@@ -174,62 +212,64 @@ export function DomainsTab() {
               <thead>
                 <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
                   <th className="px-4 py-3 text-start font-medium">{t.colHostname}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colTarget}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t.colRecord}</th>
                   <th className="px-4 py-3 text-start font-medium">{c.status}</th>
                   <th className="px-4 py-3 font-medium" />
                 </tr>
               </thead>
               <tbody>
-                {list.map((d) => (
-                  <tr key={d.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                {list.map((d) => {
+                  const pending = d.status === "pending_verification" || d.status === "failed";
+                  return (
+                    <tr key={d.id} className="border-b border-line last:border-0">
+                      <td className="px-4 py-3">
                         <bdi dir="ltr" className="font-medium text-ink">
                           {d.hostname}
                         </bdi>
-                        {d.isPrimary && (
-                          <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-                            {t.primary}
-                          </span>
+                      </td>
+                      <td className="max-w-[260px] px-4 py-3 text-ink-soft">
+                        {d.record ? (
+                          <code dir="ltr" className="block truncate text-xs" title={d.record.value}>
+                            TXT {d.record.value}
+                          </code>
+                        ) : (
+                          "—"
                         )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-ink-soft">
-                      <span className="text-xs uppercase tracking-wide">
-                        {d.target === "funnel" ? t.targetFunnel : t.targetStore}
-                      </span>{" "}
-                      · <bdi>{d.target === "store" ? t.targetStore : d.targetLabel}</bdi>
-                    </td>
-                    <td className="px-4 py-3">
-                      <DomainStatus status={d.status} />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-end">
-                      {(d.status === "pending_verification" || d.status === "failed") && (
-                        <Button size="sm" variant="ghost" onClick={() => verify(d)} disabled={verifyingId === d.id}>
-                          {verifyingId === d.id ? (
-                            <>
-                              <Spinner className="size-3" /> {t.verifying}
-                            </>
-                          ) : (
-                            t.verify
-                          )}
-                        </Button>
-                      )}
-                      {!d.isPrimary && (
+                      </td>
+                      <td className="px-4 py-3">
+                        <DomainStatusBadge status={d.status} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-end">
+                        {pending && d.record && (
+                          <Button size="sm" variant="ghost" onClick={() => setShown(d)}>
+                            {t.showRecords}
+                          </Button>
+                        )}
+                        {pending && (
+                          <Button size="sm" variant="ghost" onClick={() => verify(d)} disabled={verifyingId === d.id}>
+                            {verifyingId === d.id ? (
+                              <>
+                                <Spinner className="size-3" /> {t.verifying}
+                              </>
+                            ) : (
+                              t.verify
+                            )}
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={() => setRemoving(d)}>
                           {t.remove}
                         </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </DataState>
 
-      {justAdded && <DnsInstructions domain={justAdded} onDismiss={() => setJustAdded(null)} />}
+      {shown?.record && <DnsInstructions hostname={shown.hostname} record={shown.record} onDismiss={() => setShown(null)} />}
 
       <Modal open={adding} onClose={() => setAdding(false)} title={t.addDomain} description={t.addDescription}>
         {adding && (
@@ -237,8 +277,8 @@ export function DomainsTab() {
             onCancel={() => setAdding(false)}
             onDone={(rec) => {
               setAdding(false);
-              setJustAdded(rec);
-              reload();
+              setShown(rec);
+              void reload();
             }}
           />
         )}
@@ -270,9 +310,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   }
   return (
     <div className="flex items-center gap-2">
-      <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-ink-soft" dir="ltr">
-        {label}
-      </span>
+      <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-ink-soft">{label}</span>
       <code dir="ltr" className="min-w-0 flex-1 truncate rounded-lg bg-paper px-2 py-1 text-start text-xs text-ink">
         {value}
       </code>
@@ -283,16 +321,14 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DnsInstructions({ domain, onDismiss }: { domain: DomainRecord; onDismiss: () => void }) {
+function DnsInstructions({ hostname, record, onDismiss }: { hostname: string; record: DomainVerificationRecord; onDismiss: () => void }) {
   const t = useT(STRINGS);
-  const [host, token] = [domain.hostname, domain.verificationToken];
   return (
     <Alert variant="info" className="space-y-3 rounded-2xl">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-medium text-ink">
-            {t.finishTitle}{" "}
-            <bdi dir="ltr">{host}</bdi>
+            {t.finishTitle} <bdi dir="ltr">{hostname}</bdi>
           </p>
           <p className="text-xs text-ink-soft">{t.finishHint}</p>
         </div>
@@ -301,41 +337,46 @@ function DnsInstructions({ domain, onDismiss }: { domain: DomainRecord; onDismis
         </Button>
       </div>
       <div className="space-y-2 rounded-xl border border-line bg-paper-raised p-3">
-        <CopyRow label="TXT" value={`_zimos.${host}  →  ${token}`} />
-        <CopyRow label="CNAME" value={`${host}  →  ${CNAME_TARGET}`} />
+        <p className="text-xs font-semibold text-ink" dir="ltr">
+          {record.type}
+        </p>
+        <CopyRow label={t.txtName} value={record.name} />
+        <CopyRow label={t.txtValue} value={record.value} />
+      </div>
+      <div className="space-y-2 rounded-xl border border-line bg-paper-raised p-3">
+        <CopyRow label="CNAME" value={`${hostname}  →  ${CNAME_TARGET}`} />
       </div>
     </Alert>
   );
 }
 
-function AddDomainForm({ onCancel, onDone }: { onCancel: () => void; onDone: (rec: DomainRecord) => void }) {
+function AddDomainForm({ onCancel, onDone }: { onCancel: () => void; onDone: (rec: DomainDTO) => void }) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const c = useCommon();
-  const funnels = useAsync(() => mockApi.listFunnels(workspaceId), [workspaceId]);
+  const errorText = useDomainErrorText();
   const [hostname, setHostname] = useState("");
-  const [target, setTarget] = useState<string>("store");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const host = hostname.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const host = hostname.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/\.$/, "");
     if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) {
       setError(t.invalidHost);
       return;
     }
     setError(null);
+    setFormError(null);
     setSaving(true);
     try {
-      const funnel = (funnels.data ?? []).find((f) => f.id === target);
-      const rec = await mockApi.addDomain(workspaceId, {
-        hostname: host,
-        isPrimary: false,
-        target: funnel ? "funnel" : "store",
-        targetLabel: funnel ? funnel.name : "Store",
-      });
-      onDone(rec);
+      const res = await domainsAdd(apiClient, workspaceId, host);
+      onDone({ ...res.domain, record: res.record });
+    } catch (err) {
+      const fields = getFieldErrors(err);
+      if (fields.hostname) setError(fields.hostname);
+      else setFormError(errorText(err));
     } finally {
       setSaving(false);
     }
@@ -343,6 +384,7 @@ function AddDomainForm({ onCancel, onDone }: { onCancel: () => void; onDone: (re
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {formError && <Alert variant="danger">{formError}</Alert>}
       <TextField
         label={t.hostname}
         required
@@ -353,18 +395,6 @@ function AddDomainForm({ onCancel, onDone }: { onCancel: () => void; onDone: (re
         dir="ltr"
         autoFocus
       />
-      <Field label={t.pointsTo} required>
-        {({ id }) => (
-          <Select id={id} value={target} onChange={(e) => setTarget(e.target.value)}>
-            <option value="store">{t.targetStore}</option>
-            {(funnels.data ?? []).map((f) => (
-              <option key={f.id} value={f.id}>
-                {t.targetFunnel} · {f.name}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Field>
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           {c.cancel}

@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Label, cn } from "@store-builder/ui";
-import { ArrowRight, BadgeCheck, Camera, Check, Clock, MessageCircle, RotateCcw, Star, X } from "lucide-react";
-import type { ProductReview } from "@/mock/types2";
-import { mockApi } from "@/mock/api";
+import { ArrowRight, BadgeCheck, Check, Clock, Info, MessageCircle, Star, X } from "lucide-react";
+import { reviewsList, reviewsModerate, type ReviewDTO, type ReviewStatus } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
+import { ApiError, getErrorMessage } from "@/lib/errors";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
@@ -36,19 +36,20 @@ const STRINGS = {
     oneStar: "1 star",
     empty: "No reviews match these filters.",
     verifiedPurchase: "Verified purchase",
-    photos: "{n} photos",
-    onePhoto: "1 photo",
+    unknownProduct: "Product",
+    unknownCustomer: "Customer",
     approve: "Approve",
     reject: "Reject",
-    restore: "Restore",
     toastApproved: "Review published on the product page.",
     toastRejected: "Review hidden.",
-    toastPending: "Review restored to pending.",
+    permission: "You don't have permission to moderate reviews.",
+    subscription: "This workspace needs an active subscription to make changes.",
     requestsTitle: "Review requests",
     requestsBody:
-      "ZIMOS sends a WhatsApp message after delivery asking for a 1–5 rating. Replies land here as pending reviews. Stores that ask get roughly 6× more reviews than stores that wait.",
+      "Only customers with a delivered order can leave a review. Submissions land here as pending reviews.",
     askToggle: "Ask for a review 2 days after delivery",
     askToggleHint: "Only for delivered COD orders, once per order.",
+    notSavedHint: "This setting is not saved yet — automatic review requests are coming soon.",
     editInAutomations: "Edit the message in Automations",
   },
   ar: {
@@ -71,24 +72,22 @@ const STRINGS = {
     oneStar: "نجمة واحدة",
     empty: "لا توجد تقييمات تطابق هذه الفلاتر.",
     verifiedPurchase: "شراء مؤكَّد",
-    photos: "{n} صور",
-    onePhoto: "صورة واحدة",
+    unknownProduct: "منتج",
+    unknownCustomer: "عميل",
     approve: "اعتماد",
     reject: "رفض",
-    restore: "استرجاع",
     toastApproved: "تم نشر التقييم في صفحة المنتج.",
     toastRejected: "تم إخفاء التقييم.",
-    toastPending: "تمت إعادة التقييم إلى قيد المراجعة.",
+    permission: "ليست لديك صلاحية لمراجعة التقييمات.",
+    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإجراء التغييرات.",
     requestsTitle: "طلبات التقييم",
-    requestsBody:
-      "ZIMOS ترسل رسالة WhatsApp بعد التسليم تطلب تقييمًا من 1 إلى 5. تصل الردود هنا كتقييمات بانتظار المراجعة. المتاجر التي تطلب التقييم تحصل على تقييمات أكثر بنحو 6 أضعاف من المتاجر التي تنتظر.",
+    requestsBody: "يمكن فقط للعملاء الذين استلموا طلبهم ترك تقييم. تصل التقييمات هنا بانتظار المراجعة.",
     askToggle: "اطلب تقييمًا بعد يومين من التسليم",
     askToggleHint: "لطلبات الدفع عند الاستلام المُسلَّمة فقط، مرة واحدة لكل طلب.",
+    notSavedHint: "هذا الإعداد لا يُحفظ بعد — طلبات التقييم التلقائية قادمة قريبًا.",
     editInAutomations: "عدّل الرسالة من الأتمتة",
   },
 } satisfies Messages;
-
-type ReviewStatus = ProductReview["status"];
 
 const STATUS_LABEL: Record<Locale, Record<ReviewStatus, string>> = {
   en: { pending: "Pending", approved: "Approved", rejected: "Rejected" },
@@ -120,22 +119,37 @@ export function ReviewsPage() {
   const { locale, intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const list = useAsync(() => mockApi.listReviews(workspaceId), [workspaceId]);
+  // Always load the full list: KPIs need every status. The status filter is applied client-side.
+  const list = useAsync(() => reviewsList(apiClient, workspaceId), [workspaceId]);
+  // Product names by id (reviews already include product.name; this covers the filter and any missing join).
+  const productsQ = useAsync(async () => {
+    const { products } = await apiClient.listProducts(workspaceId, { limit: 200 });
+    return new Map(products.map((p) => [p.id, p.name]));
+  }, [workspaceId]);
 
   const [status, setStatus] = useState<"all" | ReviewStatus>("all");
   const [product, setProduct] = useState("all");
   const [rating, setRating] = useState("all");
-  const [askForReview, setAskForReview] = useState(true);
+  const [askForReview, setAskForReview] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const reviews = list.data ?? [];
-  const products = useMemo(() => Array.from(new Map(reviews.map((r) => [r.productId, r.productName])).entries()), [reviews]);
+
+  const productName = (r: ReviewDTO) => r.product?.name ?? productsQ.data?.get(r.productId) ?? t.unknownProduct;
+
+  const products = useMemo(
+    () =>
+      Array.from(
+        new Map(reviews.map((r) => [r.productId, r.product?.name ?? productsQ.data?.get(r.productId) ?? r.productId])).entries()
+      ),
+    [reviews, productsQ.data]
+  );
 
   const kpis = useMemo(() => {
     const approved = reviews.filter((r) => r.status === "approved");
     const avg = approved.length ? approved.reduce((a, r) => a + r.rating, 0) / approved.length : 0;
     const five = approved.length ? Math.round((approved.filter((r) => r.rating === 5).length / approved.length) * 100) : 0;
-    return { avg, approved: approved.length, pending: reviews.filter((r) => r.status === "pending").length, five };
+    return { avg, approved: approved.length, pending: reviews.filter((r) => r.status === "pending").length, five, hasApproved: approved.length > 0 };
   }, [reviews]);
 
   const rows = reviews
@@ -148,15 +162,23 @@ export function ReviewsPage() {
     return d.toLocaleDateString(intlLocale, { year: "numeric", month: "short", day: "numeric" });
   }
 
-  async function setSt(r: ProductReview, next: ReviewStatus) {
+  function actionError(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.status === 403) return t.permission;
+      if (err.status === 402 || err.code === "SUBSCRIPTION_REQUIRED") return t.subscription;
+    }
+    return getErrorMessage(err);
+  }
+
+  async function moderate(r: ReviewDTO, action: "approve" | "reject") {
     setBusy(r.id);
-    list.setData((prev) => (prev ?? []).map((x) => (x.id === r.id ? { ...x, status: next } : x)));
     try {
-      await mockApi.setReviewStatus(workspaceId, r.id, next);
-      toast.success(next === "approved" ? t.toastApproved : next === "rejected" ? t.toastRejected : t.toastPending);
+      const updated = await reviewsModerate(apiClient, workspaceId, r.id, action);
+      list.setData((prev) => (prev ?? []).map((x) => (x.id === r.id ? { ...x, status: updated.status } : x)));
+      toast.success(action === "approve" ? t.toastApproved : t.toastRejected);
     } catch (err) {
-      toast.error(getErrorMessage(err));
-      list.refresh({ silent: true });
+      toast.error(actionError(err));
+      void list.refresh({ silent: true });
     } finally {
       setBusy(null);
     }
@@ -170,15 +192,19 @@ export function ReviewsPage() {
         <KpiCard
           label={t.kpiAverage}
           value={
-            <span className="flex flex-wrap items-center gap-2">
-              <bdi className="tabular-nums">{kpis.avg.toFixed(1)}</bdi> <Stars rating={kpis.avg} />
-            </span>
+            kpis.hasApproved ? (
+              <span className="flex flex-wrap items-center gap-2">
+                <bdi className="tabular-nums">{kpis.avg.toFixed(1)}</bdi> <Stars rating={kpis.avg} />
+              </span>
+            ) : (
+              "—"
+            )
           }
           hint={t.kpiAverageHint}
         />
         <KpiCard label={t.kpiApproved} value={kpis.approved} hint={fmt(t.kpiApprovedHint, { n: reviews.length })} icon={<BadgeCheck />} />
         <KpiCard label={t.kpiPending} value={kpis.pending} hint={t.kpiPendingHint} icon={<Clock />} />
-        <KpiCard label={t.kpiFive} value={<bdi dir="ltr">{kpis.five}%</bdi>} hint={t.kpiFiveHint} icon={<Star />} />
+        <KpiCard label={t.kpiFive} value={kpis.hasApproved ? <bdi dir="ltr">{kpis.five}%</bdi> : "—"} hint={t.kpiFiveHint} icon={<Star />} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -227,52 +253,38 @@ export function ReviewsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Stars rating={r.rating} />
-                        {r.title && (
-                          <p className="text-sm font-semibold text-ink" dir="auto">
-                            {r.title}
-                          </p>
-                        )}
                         <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", STATUS_CLASS[r.status])}>
                           {STATUS_LABEL[locale][r.status]}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-ink" dir="auto">
-                        {r.body}
-                      </p>
+                      {r.comment && (
+                        <p className="mt-2 text-sm text-ink" dir="auto">
+                          {r.comment}
+                        </p>
+                      )}
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
-                        <span dir="auto">{r.customerName}</span>
+                        <span dir="auto">{r.customer?.fullName || t.unknownCustomer}</span>
                         <span aria-hidden>·</span>
                         <Link to={`/catalog/${r.productId}`} className="text-primary hover:underline" dir="auto">
-                          {r.productName}
+                          {productName(r)}
                         </Link>
-                        {r.verifiedPurchase && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
-                            <BadgeCheck className="size-3" /> {t.verifiedPurchase}
-                          </span>
-                        )}
-                        {r.photos > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px]">
-                            <Camera className="size-3" /> {r.photos === 1 ? t.onePhoto : fmt(t.photos, { n: r.photos })}
-                          </span>
-                        )}
+                        {/* The backend only accepts reviews from customers with a delivered order. */}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
+                          <BadgeCheck className="size-3" /> {t.verifiedPurchase}
+                        </span>
                         <span aria-hidden>·</span>
                         <span>{formatReviewDate(r.createdAt)}</span>
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-1">
                       {r.status !== "approved" && (
-                        <Button size="sm" variant="ghost" className="text-success" disabled={busy === r.id} onClick={() => setSt(r, "approved")}>
+                        <Button size="sm" variant="ghost" className="text-success" disabled={busy === r.id} onClick={() => moderate(r, "approve")}>
                           <Check /> {t.approve}
                         </Button>
                       )}
                       {r.status !== "rejected" && (
-                        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" disabled={busy === r.id} onClick={() => setSt(r, "rejected")}>
+                        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" disabled={busy === r.id} onClick={() => moderate(r, "reject")}>
                           <X /> {t.reject}
-                        </Button>
-                      )}
-                      {r.status !== "pending" && (
-                        <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => setSt(r, "pending")}>
-                          <RotateCcw /> {t.restore}
                         </Button>
                       )}
                     </div>
@@ -294,6 +306,9 @@ export function ReviewsPage() {
           <div className="mt-4">
             <Toggle label={t.askToggle} description={t.askToggleHint} checked={askForReview} onChange={setAskForReview} />
           </div>
+          <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
+            <Info className="mt-0.5 size-3 shrink-0" aria-hidden /> {t.notSavedHint}
+          </p>
           <Link to="/automations" className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
             {t.editInAutomations}
             <ArrowRight className="size-3 rtl:rotate-180" />
