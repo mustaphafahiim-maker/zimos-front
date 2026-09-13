@@ -1,11 +1,10 @@
 "use client";
 
 import { Suspense } from "react";
-import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { StoreLink } from "@/components/StoreRoute";
 
 function Confirmation() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
   const search = useSearchParams();
   const orderNumber = search.get("number");
   const phone = search.get("phone");
@@ -56,12 +55,12 @@ function Confirmation() {
         اللي كتبته لتأكيد الطلب.
       </p>
 
-      <Link
-        href={`/store/${workspaceId}`}
+      <StoreLink
+        href="/"
         className="mt-8 inline-block rounded-[0.5rem] border border-line px-5 py-2.5 text-sm text-ink transition-colors hover:border-primary hover:text-primary-dark"
       >
         العودة للمتجر
-      </Link>
+      </StoreLink>
     </main>
   );
 }

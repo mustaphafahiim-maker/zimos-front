@@ -1,15 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { StoreLink } from "@/components/StoreRoute";
 import { useCart } from "@/lib/CartProvider";
 
 /**
- * The `cart` element. The real cart — quantities, totals, checkout — lives at
- * /store/:workspaceId/cart and is deliberately not duplicated here; this block
+ * The `cart` element. The real cart — quantities, totals, checkout — lives on
+ * the store’s own /cart page and is deliberately not duplicated here; this block
  * is the live entry point to it, so a merchant who drops "Cart" onto a page
  * gets a count that is actually theirs rather than a mock.
  */
-export function CartSummary({ title, workspaceId }: { title: string; workspaceId: string }) {
+export function CartSummary({ title }: { title: string }) {
   const { itemCount, isLoading } = useCart();
 
   return (
@@ -22,12 +22,12 @@ export function CartSummary({ title, workspaceId }: { title: string; workspaceId
             ? "Your cart is empty."
             : `${itemCount} item${itemCount === 1 ? "" : "s"} in your cart.`}
       </p>
-      <Link
-        href={`/store/${workspaceId}/cart`}
+      <StoreLink
+        href="/cart"
         className="mt-4 inline-flex items-center rounded-[0.5rem] bg-primary px-4 py-2 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark"
       >
         View cart
-      </Link>
+      </StoreLink>
     </div>
   );
 }

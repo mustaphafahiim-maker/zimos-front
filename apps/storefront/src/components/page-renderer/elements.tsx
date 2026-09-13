@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { StoreLink } from "@/components/StoreRoute";
 import { Countdown } from "./Countdown";
 import {
   COLUMN_CLASS,
@@ -56,11 +56,11 @@ export function TextElement({ props, large }: { props: Props; large?: boolean })
   );
 }
 
-export function ImageElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
+export function ImageElement({ props }: { props: Props }) {
   const src = safeUrl(str(props, "src"));
   if (!src) return null;
   const alt = str(props, "alt");
-  const href = resolveHref(str(props, "href"), workspaceId);
+  const href = resolveHref(str(props, "href"));
 
   const img = (
     // Merchant images are arbitrary remote URLs (the media host is configurable
@@ -76,9 +76,9 @@ export function ImageElement({ props, workspaceId }: { props: Props; workspaceId
 
   if (!href) return img;
   return (
-    <Link href={href} className="block transition-opacity hover:opacity-90">
+    <StoreLink href={href} className="block transition-opacity hover:opacity-90">
       {img}
-    </Link>
+    </StoreLink>
   );
 }
 
@@ -115,10 +115,10 @@ const BUTTON_CLASS: Record<string, string> = {
   outline: "border border-line bg-transparent text-ink hover:border-primary hover:text-primary-dark",
 };
 
-export function ButtonElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
+export function ButtonElement({ props }: { props: Props }) {
   const label = str(props, "label");
   if (!label.trim()) return null;
-  const href = resolveHref(str(props, "href"), workspaceId);
+  const href = resolveHref(str(props, "href"));
   const variant = str(props, "variant", "primary");
   // `self-start` because a column is a stretching flex container — without it a
   // button would run the full width of the column instead of hugging its label.
@@ -130,9 +130,9 @@ export function ButtonElement({ props, workspaceId }: { props: Props; workspaceI
   // anchor would just frustrate the shopper.
   if (!href) return <span className={className}>{label}</span>;
   return (
-    <Link href={href} className={className}>
+    <StoreLink href={href} className={className}>
       {label}
-    </Link>
+    </StoreLink>
   );
 }
 

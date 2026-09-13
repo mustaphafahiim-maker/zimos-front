@@ -94,27 +94,27 @@ export function linkList(props: Props, key: string): LinkItem[] {
 }
 
 /**
- * Merchant-authored links are written as if the store were at the site root
- * ("/products" is the editor's own default), but this app serves each store
- * under `/store/:workspaceId`. Rewrite site-relative paths onto that prefix;
- * leave absolute URLs, anchors and mailto:/tel: alone.
+ * Merchant-authored links are written as if the store were at the site root —
+ * "/products" is the editor's own default — which is exactly what a shopper
+ * sees on the store's subdomain. Normalise them to that shape and let
+ * `StoreLink` decide what prefix, if any, the current host needs; absolute
+ * URLs, anchors and mailto:/tel: are left alone.
  *
  * Returns null for anything that isn't a usable link, so callers can render
  * plain text instead of a dead anchor.
  */
-export function resolveHref(raw: string, workspaceId: string): string | null {
+export function resolveHref(raw: string): string | null {
   const href = raw.trim();
   if (href === "") return null;
   if (/^(https?:|mailto:|tel:)/i.test(href)) return href;
   if (href.startsWith("#")) return href;
-  if (href.startsWith("/")) {
-    const base = `/store/${workspaceId}`;
-    // Already prefixed (a merchant may have pasted a full storefront path).
-    if (href === base || href.startsWith(`${base}/`)) return href;
-    return href === "/" ? base : `${base}${href}`;
-  }
+  // A merchant may have pasted a full internal path, `/store/<id>/about`; the
+  // store it names is the one being rendered, so only the tail matters.
+  const internal = href.match(/^\/store\/[^/]+(\/.*)?$/);
+  if (internal) return internal[1] || "/";
+  if (href.startsWith("/")) return href;
   // A bare word like "products" — treat it as site-relative too.
-  return `/store/${workspaceId}/${href}`;
+  return `/${href}`;
 }
 
 /** Only http(s) URLs are safe to drop into an <img>/<iframe> src. */

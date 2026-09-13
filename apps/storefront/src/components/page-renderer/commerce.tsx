@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { ApiError, formatMoney, type StorefrontProduct } from "@store-builder/api-client";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { ProductCard } from "@/components/ProductCard";
+import { StoreLink } from "@/components/StoreRoute";
 import { CartSummary } from "./CartSummary";
 import { COLUMN_CLASS, type Props, bool, num, str } from "./props";
 
@@ -66,12 +66,7 @@ export async function ProductListElement({
       <BlockTitle>{str(props, "title")}</BlockTitle>
       <div className={`grid gap-5 ${COLUMN_CLASS[columns]}`}>
         {products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            workspaceId={workspaceId}
-            currency={currency}
-          />
+          <ProductCard key={product.id} product={product} currency={currency} />
         ))}
       </div>
     </div>
@@ -133,12 +128,12 @@ export async function ProductCardElement({
                 disabled={!variant?.inStock}
               />
             ) : null}
-            <Link
-              href={`/store/${workspaceId}/products/${product.slug}`}
+            <StoreLink
+              href={`/products/${product.slug}`}
               className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
             >
               View details →
-            </Link>
+            </StoreLink>
           </div>
         </div>
       </div>
@@ -195,6 +190,6 @@ export async function CollectionListElement({
 }
 
 /** `cart` — a live count plus a link into the real cart page. */
-export function CartElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
-  return <CartSummary title={str(props, "title", "Your cart")} workspaceId={workspaceId} />;
+export function CartElement({ props }: { props: Props }) {
+  return <CartSummary title={str(props, "title", "Your cart")} />;
 }

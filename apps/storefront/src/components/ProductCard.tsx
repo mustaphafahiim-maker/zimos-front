@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { formatMoney, type StorefrontProduct } from "@store-builder/api-client";
+import { StoreLink } from "@/components/StoreRoute";
 
 export function ProductCard({
   product,
-  workspaceId,
   currency,
 }: {
   product: StorefrontProduct;
-  workspaceId: string;
   currency: string;
 }) {
   const defaultOffer = product.offers.find((o) => o.isDefault) ?? product.offers[0];
@@ -15,8 +13,8 @@ export function ProductCard({
   const anyInStock = product.variants.some((v) => v.inStock);
 
   return (
-    <Link
-      href={`/store/${workspaceId}/products/${product.slug}`}
+    <StoreLink
+      href={`/products/${product.slug}`}
       className="group block overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised transition-colors hover:border-primary"
     >
       <div className="aspect-square bg-primary-soft" />
@@ -31,6 +29,6 @@ export function ProductCard({
           )}
         </div>
       </div>
-    </Link>
+    </StoreLink>
   );
 }

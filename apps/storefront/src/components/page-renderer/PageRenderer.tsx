@@ -66,11 +66,11 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "rich_text":
       return <TextElement props={props} large />;
     case "image":
-      return <ImageElement props={props} workspaceId={ctx.workspaceId} />;
+      return <ImageElement props={props} />;
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
-      return <ButtonElement props={props} workspaceId={ctx.workspaceId} />;
+      return <ButtonElement props={props} />;
     case "video":
       return <VideoElement props={props} />;
     case "embed":
@@ -116,7 +116,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "collection_list":
       return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
     case "cart":
-      return <CartElement props={props} workspaceId={ctx.workspaceId} />;
+      return <CartElement props={props} />;
     default:
       // Unreachable for the 23 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.

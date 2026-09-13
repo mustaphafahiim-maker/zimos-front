@@ -1,57 +1,90 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  MARKETING_URL,
+  STORE_SLUG_HEADER,
+  isRootDomainHost,
+  storeSlugFromHost,
+} from "@/lib/domains";
 
 /**
- * Storefronts are reached two ways:
+ * Paths that are served as they are, whatever the host: Next's own internals,
+ * the route handlers, the metadata files, and anything that names a file.
  *
- *   • the canonical `store.zimos.co/store/<workspaceId>` path — used in local
- *     dev and for direct links — which is served untouched, and
- *   • a merchant's vanity host `<slug>.zimos.co`, where the slug stands in for
- *     the workspace id.
- *
- * This rewrites the vanity host onto the real `/store/<slug>` route *internally*
- * (a rewrite, not a redirect — contrast with marketing's `proxy.ts`), so the
- * merchant's own domain stays in the address bar.
+ * This is a check in code rather than a `config.matcher` because a matcher is
+ * compiled as a path pattern, not as the plain regular expression it looks
+ * like, and the difference is silent — the proxy simply stops running on most
+ * of the paths it was meant to cover.
  */
+function isPassThrough(pathname: string): boolean {
+  return (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/api/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    // A file extension on the last segment: `/logo.png`, `/fonts/x.woff2`.
+    /\.[^./]+$/.test(pathname)
+  );
+}
 
-const ROOT_DOMAIN = "zimos.co";
-const STOREFRONT_HOST = `store.${ROOT_DOMAIN}`;
-
-/** Dotted-quad IPv4, e.g. `127.0.0.1`. */
-const IPV4 = /^\d{1,3}(?:\.\d{1,3}){3}$/;
-
+/**
+ * Turns the host into the route.
+ *
+ * A shopper only ever sees `<slug>.zimos.co/products/xyz`, while the app's
+ * routes live under `/store/<workspaceId>/products/xyz`. This maps one onto the
+ * other with an internal rewrite — not a redirect, unlike marketing's proxy —
+ * so the merchant's own subdomain is what stays in the address bar. The slug
+ * goes through as the workspace id because the storefront API accepts either.
+ *
+ * Three kinds of host reach this app:
+ *
+ *   • a store — `<slug>.zimos.co`, or `<slug>.localhost:3000` in development;
+ *   • the root domain with no store in it (`zimos.co`, `www.zimos.co`,
+ *     `store.zimos.co`), which has nothing of its own to show and so goes to
+ *     the marketing site;
+ *   • anything else — plain `localhost`, an IP, the platform's own health
+ *     checks — left alone so development and deploys keep working.
+ */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (isPassThrough(pathname)) return NextResponse.next();
 
-  // Someone opened the store by its raw id (local testing, canonical deep
-  // links) — pass through with no changes.
-  if (pathname.startsWith("/store/")) return NextResponse.next();
+  const host = request.headers.get("host");
+  const slug = storeSlugFromHost(host);
 
-  // Strip the port; keep IPv6 literals (`[::1]:8080` -> `[::1]`) detectable.
-  const host = (request.headers.get("host") ?? "").replace(/:\d+$/, "").toLowerCase();
+  // The internal shape, reached directly: deep links that predate subdomains,
+  // the dashboard's preview route, and local development.
+  const isInternalPath = pathname === "/store" || pathname.startsWith("/store/");
 
-  const isLocalhost = host === "localhost" || host.endsWith(".localhost");
-  const isIp = IPV4.test(host) || host.startsWith("[") || host.includes(":");
-  if (!host || isLocalhost || isIp || host === STOREFRONT_HOST) {
-    return NextResponse.next();
-  }
-
-  // `<slug>.zimos.co`: ends with `.zimos.co`, isn't `store.zimos.co` (handled
-  // above), and has no further dot in the part before `.zimos.co`.
-  const suffix = `.${ROOT_DOMAIN}`;
-  if (host.endsWith(suffix)) {
-    const slug = host.slice(0, -suffix.length);
-    if (slug && !slug.includes(".")) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/store/${slug}${pathname === "/" ? "" : pathname}`;
-      return NextResponse.rewrite(url);
+  if (slug) {
+    if (isInternalPath) {
+      // The store's own subdomain asked for the internal path. Serving it would
+      // leave `/store/<slug>` in the address bar of a store that has a domain
+      // of its own, so send the shopper to the same page's public URL instead.
+      const prefix = `/store/${slug}`;
+      if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+        const url = request.nextUrl.clone();
+        url.pathname = pathname.slice(prefix.length) || "/";
+        return NextResponse.redirect(url);
+      }
+      // Another workspace's path on this store's host — not ours to rewrite.
+      return NextResponse.next();
     }
+
+    const url = request.nextUrl.clone();
+    url.pathname = `/store/${slug}${pathname === "/" ? "" : pathname}`;
+    const headers = new Headers(request.headers);
+    headers.set(STORE_SLUG_HEADER, slug);
+    return NextResponse.rewrite(url, { request: { headers } });
   }
+
+  if (isInternalPath) return NextResponse.next();
+
+  // No store in the host, and this app has no front page of its own to show.
+  // Temporary, not permanent: a browser caches a permanent redirect for the
+  // life of the profile, which would outlive any change of mind here.
+  if (isRootDomainHost(host)) return NextResponse.redirect(MARKETING_URL, 307);
 
   return NextResponse.next();
 }
-
-export const config = {
-  // Skip Next internals, the favicon, and anything with a file extension.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.).*)"],
-};

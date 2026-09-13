@@ -1,11 +1,55 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { ApiError, formatMoney } from "@store-builder/api-client";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreMeta } from "@/lib/storeMeta";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { StoreLink } from "@/components/StoreRoute";
 
 export const revalidate = 60;
+
+/**
+ * Deduped per request so `generateMetadata` and the page itself share one
+ * call — the same reason `getStoreMeta` is cached.
+ *
+ * Returns null for a product that isn't there, so callers can `notFound()`.
+ */
+const getProduct = cache(async (workspaceId: string, idOrSlug: string) => {
+  const client = await createServerStorefrontApiClient();
+  return client.getStorefrontProduct(workspaceId, idOrSlug).catch((err) => {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  });
+});
+
+/**
+ * The canonical URL is built from the product's slug, not from the `idOrSlug`
+ * that was asked for: the API answers to either, and only one of them should
+ * be the address search engines keep. It stays relative so the store layout's
+ * `metadataBase` resolves it onto the store's own subdomain.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string; idOrSlug: string }>;
+}): Promise<Metadata> {
+  const { workspaceId, idOrSlug } = await params;
+  const product = await getProduct(workspaceId, idOrSlug);
+  if (!product) return {};
+
+  return {
+    title: product.name,
+    description: product.description ?? undefined,
+    alternates: { canonical: `/products/${product.slug}` },
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description: product.description ?? undefined,
+      url: `/products/${product.slug}`,
+    },
+  };
+}
 
 export default async function ProductPage({
   params,
@@ -13,15 +57,12 @@ export default async function ProductPage({
   params: Promise<{ workspaceId: string; idOrSlug: string }>;
 }) {
   const { workspaceId, idOrSlug } = await params;
-  const client = await createServerStorefrontApiClient();
 
-  // getStoreMeta is React-cached, so this shares the layout's single fetch.
+  // Both are React-cached, so this shares the fetches the layout and
+  // generateMetadata already made.
   const [store, product] = await Promise.all([
     getStoreMeta(workspaceId),
-    client.getStorefrontProduct(workspaceId, idOrSlug).catch((err) => {
-      if (err instanceof ApiError && err.status === 404) return null;
-      throw err;
-    }),
+    getProduct(workspaceId, idOrSlug),
   ]);
 
   if (!store || !product) notFound();
@@ -34,9 +75,9 @@ export default async function ProductPage({
 
   return (
     <main className="mx-auto max-w-4xl flex-1 px-6 py-10">
-      <Link href={`/store/${workspaceId}`} className="text-sm text-primary hover:underline">
+      <StoreLink href="/" className="text-sm text-primary hover:underline">
         ← Back to {store.name}
-      </Link>
+      </StoreLink>
 
       <div className="mt-6 grid gap-10 md:grid-cols-2">
         <div className="aspect-square rounded-[var(--radius-card)] bg-primary-soft" />

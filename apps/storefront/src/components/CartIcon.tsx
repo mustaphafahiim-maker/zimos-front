@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
+import { StoreLink } from "@/components/StoreRoute";
 import { useCart } from "@/lib/CartProvider";
 
-export function CartIcon({ workspaceId }: { workspaceId: string }) {
+export function CartIcon() {
   const { itemCount } = useCart();
 
   return (
-    <Link
-      href={`/store/${workspaceId}/cart`}
+    <StoreLink
+      href="/cart"
       aria-label={itemCount > 0 ? `عربة التسوق — ${itemCount} عنصر` : "عربة التسوق"}
       className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-paper text-ink transition-colors hover:border-primary hover:text-primary-dark"
     >
@@ -31,6 +31,6 @@ export function CartIcon({ workspaceId }: { workspaceId: string }) {
           {itemCount}
         </span>
       )}
-    </Link>
+    </StoreLink>
   );
 }

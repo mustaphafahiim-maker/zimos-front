@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { StorefrontMeta } from "@store-builder/api-client";
 import { CartIcon } from "@/components/CartIcon";
+import { StoreLink } from "@/components/StoreRoute";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
@@ -10,12 +10,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
  */
 export function StoreHeader({
   store,
-  workspaceId,
   /** The home page is its own destination — don't link the title to itself. */
   linkHome = true,
 }: {
   store: StorefrontMeta;
-  workspaceId: string;
   linkHome?: boolean;
 }) {
   const title = (
@@ -37,16 +35,16 @@ export function StoreHeader({
       />
       <div className="absolute right-4 top-4 flex items-center gap-2 sm:right-6 sm:top-6">
         <ThemeToggle />
-        <CartIcon workspaceId={workspaceId} />
+        <CartIcon />
       </div>
       {store.logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={store.logoUrl} alt={store.name} className="mx-auto mb-4 h-10" />
       )}
       {linkHome ? (
-        <Link href={`/store/${workspaceId}`} className="inline-block transition-opacity hover:opacity-80">
+        <StoreLink href="/" className="inline-block transition-opacity hover:opacity-80">
           {title}
-        </Link>
+        </StoreLink>
       ) : (
         title
       )}

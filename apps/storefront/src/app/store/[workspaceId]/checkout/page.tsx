@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   ApiError,
@@ -11,6 +10,8 @@ import {
 } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
+import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
+import { storeHref } from "@/lib/storeHref";
 
 const PAYMENT_OPTIONS = [
   { value: "cod", label: "الدفع عند الاستلام", enabled: true },
@@ -92,6 +93,7 @@ function lineTitle(line: CartLine): string {
 export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const router = useRouter();
+  const basePath = useStoreBasePath();
   const { cart, clearCart } = useCart();
   const [client] = useState(() => createStorefrontApiClient());
 
@@ -152,7 +154,7 @@ export default function CheckoutPage() {
         number: order.orderNumber,
         phone: payload.contact.phone,
       });
-      router.push(`/store/${workspaceId}/orders/${order.id}?${query.toString()}`);
+      router.push(storeHref(basePath, `/orders/${order.id}?${query.toString()}`));
     } catch (err) {
       setError(
         err instanceof ApiError || err instanceof Error
@@ -165,12 +167,12 @@ export default function CheckoutPage() {
 
   return (
     <main dir="rtl" className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-      <Link
-        href={`/store/${workspaceId}/cart`}
+      <StoreLink
+        href="/cart"
         className="text-sm text-primary hover:underline"
       >
         → رجوع للسلة
-      </Link>
+      </StoreLink>
       <h1 className="mt-4 font-display text-2xl font-medium text-ink">إتمام الطلب</h1>
 
       <div className="mt-8 grid gap-10 md:grid-cols-[1fr_20rem]">

@@ -1,10 +1,26 @@
+import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { getStoreBasePath } from "@/lib/storeRoute";
+import { storeHref } from "@/lib/storeHref";
 import { PageRenderer } from "@/components/page-renderer";
 import { StoreHeader } from "@/components/StoreHeader";
 
 export const revalidate = 60;
+
+/**
+ * The page's one public address, on the store's own subdomain — resolved
+ * against the `metadataBase` the store layout sets.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ path: string[] }>;
+}): Promise<Metadata> {
+  const { path } = await params;
+  return { alternates: { canonical: `/${(path ?? []).join("/")}` } };
+}
 
 /**
  * Any page the merchant built in the website editor that isn't the home page —
@@ -26,19 +42,21 @@ export default async function CustomStorePage({
   const pagePath = `/${(path ?? []).join("/")}`;
 
   const client = await createServerStorefrontApiClient();
-  const [store, result] = await Promise.all([
+  const [store, result, basePath] = await Promise.all([
     getStoreMeta(workspaceId),
     client.getStorefrontPage(workspaceId, pagePath),
+    getStoreBasePath(workspaceId),
   ]);
 
   if (!store) notFound();
 
   // The page was renamed and the backend kept a redirect for its old path.
-  // `to` is a store-relative path, so it needs the /store/:workspaceId prefix.
+  // `to` is store-relative, which is already the shape a subdomain serves; on
+  // the shared host it still needs the /store/:workspaceId prefix.
   // A renamed page is a 301 server-side; keep it permanent so search engines
   // move with it rather than holding on to the old path.
   if (result.kind === "redirect") {
-    const target = `/store/${workspaceId}${result.to}`;
+    const target = storeHref(basePath, result.to);
     if (result.statusCode === 301 || result.statusCode === 308) permanentRedirect(target);
     redirect(target);
   }
@@ -50,7 +68,7 @@ export default async function CustomStorePage({
 
   return (
     <main className="flex-1">
-      <StoreHeader store={store} workspaceId={workspaceId} />
+      <StoreHeader store={store} />
       <PageRenderer tree={page.tree} workspaceId={workspaceId} currency={store.currency} />
     </main>
   );

@@ -1,11 +1,20 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { getStoreBasePath } from "@/lib/storeRoute";
+import { storeHref } from "@/lib/storeHref";
 import { PageRenderer } from "@/components/page-renderer";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreHeader } from "@/components/StoreHeader";
 
 export const revalidate = 60;
+
+/**
+ * The store's own address is its subdomain, whichever host actually served
+ * this request — the layout's `metadataBase` turns this into that absolute URL.
+ */
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /**
  * The store's front page.
@@ -30,15 +39,16 @@ export default async function StoreHomePage({
   const client = await createServerStorefrontApiClient();
 
   // getStoreMeta is React-cached, so this shares the layout's single fetch.
-  const [store, published] = await Promise.all([
+  const [store, published, basePath] = await Promise.all([
     getStoreMeta(workspaceId),
     client.getStorefrontPage(workspaceId, "/"),
+    getStoreBasePath(workspaceId),
   ]);
 
   if (!store) notFound();
 
   if (published.kind === "redirect") {
-    redirect(`/store/${workspaceId}${published.to}`);
+    redirect(storeHref(basePath, published.to));
   }
 
   const tree = published.kind === "page" ? published.data.page.tree : null;
@@ -47,7 +57,7 @@ export default async function StoreHomePage({
   if (hasContent) {
     return (
       <main className="flex-1">
-        <StoreHeader store={store} workspaceId={workspaceId} linkHome={false} />
+        <StoreHeader store={store} linkHome={false} />
         <PageRenderer tree={tree} workspaceId={workspaceId} currency={store.currency} />
       </main>
     );
@@ -57,7 +67,7 @@ export default async function StoreHomePage({
 
   return (
     <main className="flex-1">
-      <StoreHeader store={store} workspaceId={workspaceId} linkHome={false} />
+      <StoreHeader store={store} linkHome={false} />
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         {productList.products.length === 0 ? (
@@ -67,12 +77,7 @@ export default async function StoreHomePage({
         ) : (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {productList.products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                workspaceId={workspaceId}
-                currency={store.currency}
-              />
+              <ProductCard key={product.id} product={product} currency={store.currency} />
             ))}
           </div>
         )}

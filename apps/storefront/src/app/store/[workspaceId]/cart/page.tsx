@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { StoreLink } from "@/components/StoreRoute";
 import { formatMoney, type CartLine } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 
@@ -14,7 +13,6 @@ function lineTitle(line: CartLine): string {
 }
 
 export default function CartPage() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
   const { cart, isLoading, updateItem, removeItem } = useCart();
 
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -45,12 +43,12 @@ export default function CartPage() {
       ) : isEmpty ? (
         <div className="mt-10 rounded-[var(--radius-card)] border border-line bg-paper-raised px-6 py-12 text-center">
           <p className="text-sm text-ink-soft">سلة التسوق فاضية.</p>
-          <Link
-            href={`/store/${workspaceId}`}
+          <StoreLink
+            href="/"
             className="mt-4 inline-block text-sm text-primary hover:underline"
           >
             → ارجع للتسوق
-          </Link>
+          </StoreLink>
         </div>
       ) : (
         <>
@@ -143,20 +141,26 @@ export default function CartPage() {
               {formatMoney(cart.subtotal, currency)}
             </span>
           </div>
+          {/* The API has no shipping quote for a cart — shipping is priced
+              server-side from the delivery address when the order is placed —
+              so the cart says so instead of showing a total it can't know. */}
+          <p className="mt-1 text-xs text-ink-soft">
+            مصاريف الشحن بتتحسب حسب عنوان التوصيل وقت تأكيد الطلب.
+          </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-            <Link
-              href={`/store/${workspaceId}/checkout`}
+            <StoreLink
+              href="/checkout"
               className="rounded-[0.5rem] bg-primary px-6 py-3 text-center text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark"
             >
               إتمام الطلب
-            </Link>
-            <Link
-              href={`/store/${workspaceId}`}
+            </StoreLink>
+            <StoreLink
+              href="/"
               className="text-center text-sm text-primary hover:underline"
             >
               متابعة التسوق
-            </Link>
+            </StoreLink>
           </div>
         </>
       )}

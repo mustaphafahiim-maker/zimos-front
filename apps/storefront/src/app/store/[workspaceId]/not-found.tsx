@@ -5,13 +5,18 @@ import { usePathname } from "next/navigation";
 
 /**
  * The 404 for anything under a store — a path the merchant never published, or
- * a product that's gone. A client component so it can recover the workspace id
- * from the URL: a not-found boundary is rendered outside its segment, so route
- * params aren't handed to it.
+ * a product that's gone.
+ *
+ * A client component so it can work out where "the store" is from the URL: a
+ * not-found boundary is rendered outside its segment, so neither the route
+ * params nor the store layout's link prefix reach it. The pathname is the one
+ * the shopper sees, which on a store's own subdomain is already store-relative
+ * and on the shared host still carries the `/store/<workspaceId>` prefix.
  */
 export default function StoreNotFound() {
   const pathname = usePathname() ?? "";
   const workspaceId = pathname.match(/^\/store\/([^/]+)/)?.[1] ?? null;
+  const home = workspaceId ? `/store/${workspaceId}` : "/";
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
@@ -20,14 +25,12 @@ export default function StoreNotFound() {
       <p className="mt-2 max-w-md text-sm text-ink-soft">
         We couldn&rsquo;t find that page. It may have been moved or removed.
       </p>
-      {workspaceId && (
-        <Link
-          href={`/store/${workspaceId}`}
-          className="mt-6 inline-flex items-center rounded-[0.5rem] bg-primary px-5 py-2.5 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark"
-        >
-          Back to the store
-        </Link>
-      )}
+      <Link
+        href={home}
+        className="mt-6 inline-flex items-center rounded-[0.5rem] bg-primary px-5 py-2.5 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark"
+      >
+        Back to the store
+      </Link>
     </main>
   );
 }
