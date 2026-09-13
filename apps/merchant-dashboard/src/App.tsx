@@ -40,6 +40,21 @@ import { AnalyticsPage } from "@/pages/analytics/AnalyticsPage";
 import { InventoryPage } from "@/pages/inventory/InventoryPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { AppsPage } from "@/pages/apps/AppsPage";
+import { AdsPage } from "@/pages/ads/AdsPage";
+import { CampaignDetailPage } from "@/pages/ads/CampaignDetailPage";
+import { ProfitPage } from "@/pages/profit/ProfitPage";
+import { CallCenterPage } from "@/pages/callcenter/CallCenterPage";
+import { AgentsPage } from "@/pages/callcenter/AgentsPage";
+import { CallLogsPage } from "@/pages/callcenter/CallLogsPage";
+import { CallCenterSettingsPage } from "@/pages/callcenter/CallCenterSettingsPage";
+import { InboxPage } from "@/pages/inbox/InboxPage";
+import { WaBotPage } from "@/pages/inbox/WaBotPage";
+import { SettlementsPage } from "@/pages/settlements/SettlementsPage";
+import { ReturnsPage } from "@/pages/returns/ReturnsPage";
+import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
+import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
+import { SuppliersPage } from "@/pages/suppliers/SuppliersPage";
+import { StoresPage } from "@/pages/stores/StoresPage";
 
 export default function App() {
   return (
@@ -61,6 +76,27 @@ export default function App() {
                 <Route element={<RequireWorkspace />}>
                   <Route element={<DashboardLayout />}>
                     <Route path="/" element={<DashboardHomePage />} />
+                    <Route path="/stores" element={<StoresPage />} />
+
+                    {/* Phase 2: COD operations */}
+                    <Route path="/call-center" element={<CallCenterPage />} />
+                    <Route path="/call-center/agents" element={<AgentsPage />} />
+                    <Route path="/call-center/logs" element={<CallLogsPage />} />
+                    <Route path="/call-center/settings" element={<CallCenterSettingsPage />} />
+                    <Route path="/inbox" element={<InboxPage />} />
+                    <Route path="/inbox/bot" element={<WaBotPage />} />
+                    <Route path="/returns" element={<ReturnsPage />} />
+                    <Route path="/reviews" element={<ReviewsPage />} />
+
+                    {/* Phase 2: money */}
+                    <Route path="/profit" element={<ProfitPage />} />
+                    <Route path="/settlements" element={<SettlementsPage />} />
+
+                    {/* Phase 2: growth */}
+                    <Route path="/ads" element={<AdsPage />} />
+                    <Route path="/ads/:campaignId" element={<CampaignDetailPage />} />
+                    <Route path="/affiliates" element={<AffiliatesPage />} />
+                    <Route path="/suppliers" element={<SuppliersPage />} />
 
                     {/* Sell */}
                     <Route path="/orders" element={<OrdersListPage />} />

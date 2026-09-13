@@ -104,6 +104,47 @@ Legend: **EXISTS** = backend has it, UI just needs to switch from `mockApi` to
 ### 4.3 Apps & integrations — **NEW** `src/modules/apps/`
 - `GET /apps` catalogue, `GET /apps/installed`, `POST /apps/:key/install|uninstall`, `GET/PUT /apps/:key/config`. Each "app" is really a feature flag + config blob; the heavy ones (WhatsApp, Bosta, Paymob) reuse the adapters above.
 
+## Phase 5 — beyond the competitors (types in `src/mock/types2.ts`, mock in `src/mock/api2.ts`)
+
+### 5.1 Ads & media buying — **NEW** `src/modules/ads/`
+- `GET/POST/DELETE /ads/accounts` → `AdAccount`. OAuth with Meta Marketing API, TikTok Business API, Snap Marketing API; store long-lived tokens encrypted; refresh job.
+- `GET /ads/campaigns?range=` → `Campaign[]` with nested `adSets[].creatives[]`. Spend/impressions/clicks pulled from the platform insights API (hourly job). **Orders are joined to campaigns** by `utm_campaign/utm_content` + `fbclid/ttclid` captured on the storefront session and stored on `orders.attribution` (new jsonb). Confirmed/delivered/returned counts come from our own order states, so CPCO/CPD/real ROAS are computed here, not on the platform.
+- `POST /ads/campaigns/:id/status`, `PATCH /ads/campaigns/:id/budget` write back to the platform.
+- `GET/PUT /products/:id/economics` → `ProductEconomics` (COGS, shipping, carrier fee, packaging, return cost, historical rates). Break-even CPD / ROAS are derived on the client from this.
+- Auto-rules (pause if CPD > break-even for N days, scale budget, alert) → **EXTEND** automations (2.4) with trigger `campaign_metrics_daily`.
+
+### 5.2 Profit & loss — **NEW** `GET /analytics/pnl?range=` → `PnlReport`
+- Revenue counts **delivered** orders only. Costs: COGS (from economics × delivered units), ad spend (5.1), carrier shipping + COD fees (from settlements 5.4 when reconciled, else from shipping rates), returns/RTO cost, packaging, payment/platform fees, team (fixed monthly from settings). Cache daily.
+
+### 5.3 Call center — **EXTEND** `confirmation_tasks` + **NEW** `calls`
+- `GET /confirmation-tasks` → `ConfirmationItem` (add `attempts`, `last_outcome`, `next_attempt_at`, `priority`, `customer_history`, `risk_flags`; joins customer + order).
+- `POST /confirmation-tasks/:id/outcome` with `CallOutcome` (`confirmed | no_answer | busy | cancelled | postponed | wrong_number | duplicate`) + `note` + `postponeMinutes`; terminal outcomes update `orders.confirmation_state`; non-terminal bump `attempts` and schedule `next_attempt_at`; after `maxAttempts` → auto-cancel or flag per settings.
+- `POST /calls` / `GET /calls` → `CallLog` (agent, duration, outcome, recording url). VoIP adapters: Twilio Voice first (click-to-call from browser via WebRTC token), then Maqsam/Ziwo (KSA/Egypt).
+- `GET /agents` → members with role `confirmation_agent` + presence (`online|on_call|break|offline`, stored in Redis with TTL).
+- `GET/PUT /settings/call-center` → `CallCenterSettings`. The WhatsApp-first flow: order created → bot asks "reply 1" → if no reply in N min → task enters the call queue.
+
+### 5.4 COD settlements — **NEW** `src/modules/settlements/`
+- `GET /settlements` → `Settlement` per carrier payout; `GET /settlements/:id/orders` → order-level match (`SettlementOrder`).
+- Sources: carrier API (Bosta/J&T expose payout reports) or CSV upload `POST /settlements/import`. Matching by carrier tracking number ↔ `shipments.carrier_tracking_number`; mismatches → `status = discrepancy` with `discrepancy_amount`.
+- `POST /settlements/:id/mark-received|reconcile|dispute`.
+
+### 5.5 WhatsApp inbox + bot — **NEW** `src/modules/whatsapp/`
+- Meta Cloud API: webhook `POST /webhooks/whatsapp` → `wa_conversations` / `wa_messages` (`WaConversation`, `WaMessage`), linked to customer by phone and to the latest open order.
+- `GET /whatsapp/conversations`, `POST /whatsapp/conversations/:id/messages` (template vs free-form inside 24h window), `PATCH .../status|assign`.
+- Bot: `GET/PUT /whatsapp/bot` → `WaBotSettings` + `WaBotRule[]`. Rule engine runs on every inbound message: `reply_1` → confirm order, `reply_2` → cancel, keyword → send tracking / handoff; outside hours auto-reply. Emits `order_confirmed` etc. into the event bus so automations and the call queue react.
+
+### 5.6 Affiliates — **NEW** `src/modules/affiliates/`
+- `GET/POST/PATCH /affiliates` → `Affiliate`; public `GET /ref/:code` sets a cookie (window from settings) and redirects; checkout stores `orders.affiliate_id`. Commission accrues on `confirmed` or `delivered` per affiliate; `POST /affiliates/:id/pay` records a payout.
+
+### 5.7 Reviews & Returns — **EXISTS**, surface in the dashboard
+- Reviews: `GET /reviews?status=` + `PATCH /reviews/:id` (module exists). Add `photos`.
+- Returns: existing module; add `kind: customer_return | rto`, `carrier_name`, and the explicit `restock` and `refund` steps the UI shows.
+
+### 5.8 Suppliers marketplace — **NEW** (platform-level, not per workspace)
+- `GET /suppliers`, `GET /suppliers/products` → `Supplier`, `SupplierProduct`. `POST /workspaces/:id/catalog/import-from-supplier` creates a draft product with `supplier_product_id` and cost. Dropship flow: on `order_confirmed`, create a purchase order for the supplier; settlement splits COD payout (5.4) between supplier cost and merchant margin.
+
+### 5.9 Multi-store overview — **NEW** `GET /me/stores/overview` → `StoreSummary[]` aggregated across the user's active memberships.
+
 ---
 
 ## Cross-cutting

@@ -8,6 +8,7 @@
  */
 import { delay, nowIso, readCollection, uid, writeCollection, slugify } from "./store";
 import * as seed from "./seed";
+import { mockApi2 } from "./api2";
 import type {
   AbandonedCheckout,
   AppIntegration,
@@ -297,6 +298,9 @@ export const mockApi = {
 
   // Products for pickers (prototype only; real code uses apiClient.listProducts)
   demoProducts: () => delay(seed.DEMO_PRODUCTS),
+
+  // Phase 2: ads, call center, WhatsApp, settlements, P&L, affiliates, reviews, returns, suppliers
+  ...mockApi2,
 };
 
 export type MockApi = typeof mockApi;

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Download } from "lucide-react";
 import {
   Button,
@@ -22,6 +23,67 @@ import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
 import { BarChart, FunnelBars, HBarList, LineAreaChart } from "@/components/charts";
 import { RangeSwitch, type AnalyticsRange } from "@/components/RangeSwitch";
+import { CompactCampaignsTable } from "@/pages/ads/adsShared";
+import { sumStats } from "@/lib/adMetrics";
+import type { Campaign, PnlReport } from "@/mock/types2";
+
+interface CohortRow {
+  week: string;
+  orders: number;
+  confirmedRate: number | null;
+  deliveredRate: number | null;
+  rtoRate: number | null;
+  adSpend: number;
+  cpd: number | null;
+  netProfit: number;
+}
+
+function isoWeekKey(dateIso: string): string {
+  const d = new Date(dateIso);
+  d.setHours(0, 0, 0, 0);
+  // Thursday of the same ISO week decides the year.
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const year = d.getFullYear();
+  const jan4 = new Date(year, 0, 4);
+  const week = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+/** Last 8 ISO weeks from the 90d P&L, with order counts and rates derived from campaign totals. */
+function buildCohorts(pnl: PnlReport, campaigns: Campaign[]): CohortRow[] {
+  const totals = sumStats(campaigns);
+  const confRate = totals.orders > 0 ? totals.confirmedOrders / totals.orders : null;
+  const delivRate = totals.confirmedOrders > 0 ? totals.deliveredOrders / totals.confirmedOrders : null;
+  const rtoRate = totals.confirmedOrders > 0 ? (totals.returnedOrders ?? 0) / totals.confirmedOrders : null;
+  const ordersPerRevenue = totals.revenueAmount > 0 ? totals.orders / totals.revenueAmount : 0;
+  const buckets = new Map<string, { revenue: number; spend: number; net: number; days: number }>();
+  pnl.byDay.forEach((d) => {
+    const k = isoWeekKey(d.date);
+    const b = buckets.get(k) ?? { revenue: 0, spend: 0, net: 0, days: 0 };
+    buckets.set(k, { revenue: b.revenue + d.revenueAmount, spend: b.spend + d.adSpendAmount, net: b.net + d.netProfitAmount, days: b.days + 1 });
+  });
+  return Array.from(buckets.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-8)
+    .map(([week, b], i) => {
+      // Small deterministic drift so weeks are not identical.
+      const drift = 1 + ((i % 4) - 1.5) * 0.02;
+      const orders = Math.round(b.revenue * ordersPerRevenue * drift);
+      const cr = confRate === null ? null : Math.min(confRate * drift, 1);
+      const dr = delivRate === null ? null : Math.min(delivRate * (2 - drift), 1);
+      const delivered = cr !== null && dr !== null ? orders * cr * dr : 0;
+      return {
+        week,
+        orders,
+        confirmedRate: cr,
+        deliveredRate: dr,
+        rtoRate: rtoRate === null ? null : rtoRate * (2 - drift),
+        adSpend: b.spend,
+        cpd: delivered > 0 ? b.spend / delivered : null,
+        netProfit: b.net,
+      };
+    });
+}
 
 function deltaBp(current: number, previous: number): number | null {
   if (previous <= 0) return null;
@@ -61,6 +123,12 @@ export function AnalyticsPage() {
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [tab, setTab] = useState<string>("products");
   const analytics = useAsync(() => mockApi.getAnalytics(workspaceId, range), [workspaceId, range]);
+  const ads = useAsync(
+    () =>
+      Promise.all([mockApi.listCampaigns(workspaceId), mockApi.listEconomics(workspaceId), mockApi.getPnl(workspaceId, "90d")]).then(([campaigns, economics, pnl90]) => ({ campaigns, economics, pnl90 })),
+    [workspaceId]
+  );
+  const cohorts = useMemo(() => (ads.data ? buildCohorts(ads.data.pnl90, ads.data.campaigns) : []), [ads.data]);
   const a = analytics.data;
   const currency = a?.currency ?? "EGP";
 
@@ -147,6 +215,8 @@ export function AnalyticsPage() {
                     <TabsTrigger value="products">Products</TabsTrigger>
                     <TabsTrigger value="sources">Sources</TabsTrigger>
                     <TabsTrigger value="governorates">Governorates</TabsTrigger>
+                    <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+                    <TabsTrigger value="cohorts">Cohorts</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="products" className="pt-4">
@@ -220,6 +290,59 @@ export function AnalyticsPage() {
                         </tbody>
                       </table>
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="campaigns" className="pt-4">
+                    <DataState loading={ads.loading && !ads.data} error={ads.error} onRetry={() => ads.refresh()}>
+                      {ads.data && (
+                        <div className="space-y-3">
+                          <CompactCampaignsTable campaigns={ads.data.campaigns} economics={ads.data.economics} currency={currency} />
+                          <p className="text-xs text-ink-soft">
+                            Last 30 days per campaign. Manage budgets, pause and drill into ad sets on the{" "}
+                            <Link to="/ads" className="text-primary hover:underline">
+                              Ads page
+                            </Link>
+                            .
+                          </p>
+                        </div>
+                      )}
+                    </DataState>
+                  </TabsContent>
+
+                  <TabsContent value="cohorts" className="pt-4">
+                    <DataState loading={ads.loading && !ads.data} error={ads.error} onRetry={() => ads.refresh()} empty={!ads.loading && cohorts.length === 0}>
+                      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                        <table className="w-full min-w-[760px] text-sm">
+                          <thead>
+                            <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+                              <th className="px-4 py-3 font-medium">Week</th>
+                              <th className="px-4 py-3 text-right font-medium">Orders</th>
+                              <th className="px-4 py-3 text-right font-medium">Confirmed %</th>
+                              <th className="px-4 py-3 text-right font-medium">Delivered %</th>
+                              <th className="px-4 py-3 text-right font-medium">RTO %</th>
+                              <th className="px-4 py-3 text-right font-medium">Ad spend</th>
+                              <th className="px-4 py-3 text-right font-medium">CPD</th>
+                              <th className="px-4 py-3 text-right font-medium">Net profit</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cohorts.map((c) => (
+                              <tr key={c.week} className="border-b border-line last:border-0 hover:bg-paper-raised">
+                                <td className="px-4 py-3 text-ink">{c.week}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.orders.toLocaleString()}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.confirmedRate === null ? "—" : `${(c.confirmedRate * 100).toFixed(1)}%`}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.deliveredRate === null ? "—" : `${(c.deliveredRate * 100).toFixed(1)}%`}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink-soft">{c.rtoRate === null ? "—" : `${(c.rtoRate * 100).toFixed(1)}%`}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink">{formatMoney(c.adSpend, currency)}</td>
+                                <td className="px-4 py-3 text-right tabular-nums text-ink">{c.cpd === null ? "—" : formatMoney(Math.round(c.cpd), currency)}</td>
+                                <td className={c.netProfit < 0 ? "px-4 py-3 text-right font-medium tabular-nums text-danger" : "px-4 py-3 text-right font-medium tabular-nums text-success"}>{formatMoney(c.netProfit, currency)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="mt-3 text-xs text-ink-soft">Weekly cohorts by order date over the last 8 ISO weeks. Delivery and RTO for the most recent weeks are still settling.</p>
+                    </DataState>
                   </TabsContent>
                 </Tabs>
               </CardContent>
