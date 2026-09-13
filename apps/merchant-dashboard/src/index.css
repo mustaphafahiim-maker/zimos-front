@@ -23,6 +23,13 @@
   body {
     @apply bg-paper text-ink;
   }
+  /* Anchor absolutely positioned content in header cells (e.g. `sr-only`
+     labels) to the cell. Without a positioned ancestor they resolve against
+     the page, escape the table's `overflow-x-auto` wrapper and, in RTL, widen
+     the whole document. Utilities such as `sticky` still override this. */
+  th {
+    position: relative;
+  }
 }
 
 @layer utilities {

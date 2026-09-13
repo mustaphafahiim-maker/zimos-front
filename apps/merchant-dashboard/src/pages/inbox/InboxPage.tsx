@@ -186,6 +186,33 @@ function fabricateOrder(orderNumber: string) {
   return { item: items[idx], price: prices[idx], shipping: 5500, total: prices[idx] + 5500, ordersCount: 1 + (n % 5), reliability: 55 + (n % 45) };
 }
 
+/** Conversation tags are stored as stable keys; show them in the UI language. */
+const TAG_LABELS: Record<"en" | "ar", Record<string, string>> = {
+  en: {
+    confirmed: "Confirmed",
+    cancelled: "Cancelled",
+    delivered: "Delivered",
+    tracking: "Tracking",
+    address_change: "Address change",
+    question: "Question",
+    negotiation: "Price request",
+  },
+  ar: {
+    confirmed: "مؤكَّد",
+    cancelled: "ملغى",
+    delivered: "تم التسليم",
+    tracking: "تتبّع",
+    address_change: "تغيير العنوان",
+    question: "استفسار",
+    negotiation: "طلب خصم",
+  },
+};
+
+function tagLabel(tag: string, intlLocale: string): string {
+  const table = intlLocale.startsWith("ar") ? TAG_LABELS.ar : TAG_LABELS.en;
+  return table[tag] ?? tag.replace(/_/g, " ");
+}
+
 export function InboxPage() {
   const t = useT(STRINGS);
   const c = useCommon();
@@ -321,7 +348,7 @@ export function InboxPage() {
                         <span className="mt-1 flex flex-wrap gap-1">
                           {conv.tags.map((tag) => (
                             <span key={tag} className="rounded-full bg-paper px-1.5 py-px text-[10px] text-ink-soft ring-1 ring-line" dir="auto">
-                              {tag}
+                              {tagLabel(tag, intlLocale)}
                             </span>
                           ))}
                         </span>
