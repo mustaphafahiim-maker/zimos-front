@@ -50,15 +50,15 @@ export const mockApi2 = {
     return delay(acc, 900);
   },
   // BACKEND: GET /workspaces/:id/ads/campaigns?range=  (NEW — pulls spend from ad platforms, joins orders via utm_campaign / fbclid / ttclid)
-  listCampaigns: (ws: string) => delay(col<Campaign[]>(ws, "campaigns", seed.seedCampaigns).get(), 350),
+  listCampaigns: (ws: string) => delay(col<Campaign[]>(ws, "campaigns.v2", seed.seedCampaigns).get(), 350),
   // BACKEND: POST /workspaces/:id/ads/campaigns/:id/status  (NEW — writes back to the ad platform)
   setCampaignStatus: (ws: string, id: string, status: Campaign["status"]) => {
-    const c = col<Campaign[]>(ws, "campaigns", seed.seedCampaigns);
+    const c = col<Campaign[]>(ws, "campaigns.v2", seed.seedCampaigns);
     c.set(c.get().map((x) => (x.id === id ? { ...x, status } : x)));
     return delay(true);
   },
   setCampaignBudget: (ws: string, id: string, dailyBudgetAmount: number) => {
-    const c = col<Campaign[]>(ws, "campaigns", seed.seedCampaigns);
+    const c = col<Campaign[]>(ws, "campaigns.v2", seed.seedCampaigns);
     c.set(c.get().map((x) => (x.id === id ? { ...x, dailyBudgetAmount } : x)));
     return delay(true);
   },
@@ -127,12 +127,12 @@ export const mockApi2 = {
 
   // -------------------------------------------------------- Settlements --
   // BACKEND: GET /workspaces/:id/settlements  (NEW — one row per carrier payout; import carrier CSV or pull via API)
-  listSettlements: (ws: string) => delay(col<Settlement[]>(ws, "settlements", seed.seedSettlements).get()),
+  listSettlements: (ws: string) => delay(col<Settlement[]>(ws, "settlements.v2", seed.seedSettlements).get()),
   // BACKEND: GET /workspaces/:id/settlements/:id/orders  (NEW — order-level reconciliation)
   getSettlementOrders: (_ws: string, id: string) => delay(seed.seedSettlementOrders(id), 300),
   // BACKEND: POST /workspaces/:id/settlements/:id/reconcile | /mark-received  (NEW)
   setSettlementStatus: (ws: string, id: string, status: Settlement["status"]) => {
-    const c = col<Settlement[]>(ws, "settlements", seed.seedSettlements);
+    const c = col<Settlement[]>(ws, "settlements.v2", seed.seedSettlements);
     c.set(c.get().map((s) => (s.id === id ? { ...s, status, receivedAt: status === "received" || status === "reconciled" ? s.receivedAt ?? nowIso() : s.receivedAt } : s)));
     return delay(true);
   },
@@ -154,9 +154,9 @@ export const mockApi2 = {
 
   // ------------------------------------------------------------- Reviews --
   // BACKEND: GET /workspaces/:id/reviews?status= + PATCH /reviews/:id  (EXISTS — reviews module)
-  listReviews: (ws: string) => delay(col<ProductReview[]>(ws, "reviews", seed.seedReviews).get()),
+  listReviews: (ws: string) => delay(col<ProductReview[]>(ws, "reviews.v2", seed.seedReviews).get()),
   setReviewStatus: (ws: string, id: string, status: ProductReview["status"]) => {
-    const c = col<ProductReview[]>(ws, "reviews", seed.seedReviews);
+    const c = col<ProductReview[]>(ws, "reviews.v2", seed.seedReviews);
     c.set(c.get().map((r) => (r.id === id ? { ...r, status } : r)));
     return delay(true);
   },

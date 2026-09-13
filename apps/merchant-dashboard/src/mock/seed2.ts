@@ -139,10 +139,10 @@ function mkCampaign(
 
 export function seedCampaigns(): Campaign[] {
   return [
-    mkCampaign(1, "facebook", "aa-fb", "سماعة Pro — Conversions — Broad", "active", 0, "fn-1", 18400000, 611),
-    mkCampaign(2, "tiktok", "aa-tt", "Fit Band 5 — Spark Ads", "active", 1, "fn-2", 9600000, 302),
+    mkCampaign(1, "facebook", "aa-fb", "سماعة Pro — Conversions — Broad", "active", 0, "fn-1", 9800000, 611),
+    mkCampaign(2, "tiktok", "aa-tt", "Fit Band 5 — Spark Ads", "active", 1, "fn-2", 5200000, 302),
     mkCampaign(3, "facebook", "aa-fb", "طقم أواني — Mothers Day", "paused", 2, "fn-3", 6200000, 88),
-    mkCampaign(4, "facebook", "aa-fb", "عطر العود — Retargeting", "active", 3, null, 2100000, 96),
+    mkCampaign(4, "facebook", "aa-fb", "عطر العود — Retargeting", "active", 3, null, 1400000, 96),
     mkCampaign(5, "snapchat", "aa-sc", "حامل السيارة — Snap Story", "ended", 4, null, 1400000, 71),
     mkCampaign(6, "tiktok", "aa-tt", "لمبة LED — Test creatives", "active", 5, null, 900000, 24),
   ];
@@ -363,7 +363,7 @@ export function seedSettlements(): Settlement[] {
     const fees = orders * 5500;
     const cod = Math.round(collected * 0.01);
     return {
-      id: `st-${i}`,
+      id: `st-${carrierKey}-${i}`,
       carrierKey,
       carrierName,
       reference: `${carrierKey.toUpperCase()}-${2026090 + i}`,
@@ -396,7 +396,7 @@ export function seedSettlementOrders(settlementId: string): SettlementOrder[] {
     const p = DEMO_PRODUCTS[Math.floor(r() * DEMO_PRODUCTS.length)];
     const cod = p.price + 5500;
     const returned = r() > 0.85;
-    const mismatch = settlementId === "st-1" && (i === 4 || i === 11);
+    const mismatch = settlementId === "st-bosta-1" && (i === 4 || i === 11);
     return {
       orderNumber: `#10${300 + i}`,
       customerName: NAMES[Math.floor(r() * NAMES.length)],
@@ -425,7 +425,9 @@ export function seedReviews(): ProductReview[] {
   const bodies = ["جودة ممتازة والتوصيل كان سريع", "الصوت حلو بس البطارية أقل من المتوقع", "زي الوصف بالظبط، شكراً", "وصل متأخر يومين بس المنتج كويس", "مش زي الصور خالص", "أفضل من اللي اشتريته قبل كده بضعف السعر"];
   return Array.from({ length: 14 }, (_, i) => {
     const p = DEMO_PRODUCTS[Math.floor(r() * DEMO_PRODUCTS.length)];
-    const rating = (1 + Math.floor(r() * 5)) as ProductReview["rating"];
+    // Realistic skew: most COD reviews are 4-5 stars, a few complaints.
+    const roll = r();
+    const rating = (roll > 0.45 ? 5 : roll > 0.2 ? 4 : roll > 0.1 ? 3 : roll > 0.04 ? 2 : 1) as ProductReview["rating"];
     return {
       id: uid(),
       productId: p.id,
