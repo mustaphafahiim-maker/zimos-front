@@ -117,7 +117,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             <Faq title={t.product.faq} items={t.product.faqItems} />
           </div>
           <aside className="lg:pt-11">
-            <TrustStrip t={t} />
+            <TrustStrip t={t} inAside />
           </aside>
         </div>
       </div>

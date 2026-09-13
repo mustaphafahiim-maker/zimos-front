@@ -2,7 +2,16 @@ import type { Dictionary } from "@/lib/i18n";
 import { CashIcon, PhoneIcon, ReturnIcon, TruckIcon } from "./Icons";
 
 /** Text-only reassurance row — no invented numbers. */
-export function TrustStrip({ t, compact = false }: { t: Dictionary; compact?: boolean }) {
+export function TrustStrip({
+  t,
+  compact = false,
+  inAside = false,
+}: {
+  t: Dictionary;
+  compact?: boolean;
+  /** Rendered in a narrow side column (product page): never four across. */
+  inAside?: boolean;
+}) {
   const items = [
     { Icon: CashIcon, title: t.trust.cod, hint: t.trust.codHint },
     { Icon: TruckIcon, title: t.trust.fast, hint: t.trust.fastHint },
@@ -10,8 +19,14 @@ export function TrustStrip({ t, compact = false }: { t: Dictionary; compact?: bo
     ...(compact ? [] : [{ Icon: PhoneIcon, title: t.trust.secure, hint: t.trust.secureHint }]),
   ];
 
+  const columns = compact
+    ? "grid-cols-3"
+    : inAside
+      ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
+      : "grid-cols-2 lg:grid-cols-4";
+
   return (
-    <ul className={`grid gap-3 ${compact ? "grid-cols-3" : "grid-cols-2 lg:grid-cols-4"}`}>
+    <ul className={`grid gap-3 ${columns}`}>
       {items.map(({ Icon, title, hint }) => (
         <li
           key={title}
