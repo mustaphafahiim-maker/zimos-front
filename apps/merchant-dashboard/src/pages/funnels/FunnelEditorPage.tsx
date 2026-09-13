@@ -305,8 +305,8 @@ export function FunnelEditorPage() {
   }
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-4rem)] flex-col">
-      <div className="border-b border-line bg-paper-raised px-6 py-3">
+    <div className="-m-4 flex h-[calc(100dvh-4rem)] flex-col md:-m-6 lg:-m-8">
+      <div className="border-b border-line bg-paper-raised px-4 py-3 md:px-6">
         <DataState loading={loaded.loading} error={loaded.error} empty={!loaded.loading && !loaded.data} emptyMessage={t.notFound} onRetry={() => loaded.refresh()}>
           {funnel && (
             <>
@@ -383,8 +383,8 @@ export function FunnelEditorPage() {
       </div>
 
       {funnel && (
-        <div className="flex min-h-0 flex-1">
-          <aside className="flex w-64 shrink-0 flex-col border-e border-line bg-paper-raised">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+          <aside className="flex max-h-60 w-full shrink-0 flex-col border-b border-line bg-paper-raised lg:max-h-none lg:w-64 lg:border-b-0 lg:border-e">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.steps}</span>
               <AddStepMenu onAdd={addStep} />
@@ -404,7 +404,7 @@ export function FunnelEditorPage() {
 
           <FlowCanvas funnel={funnel} selectedKey={selectedKey} onSelect={setSelectedKey} onMove={(key, x, y) => updateStep(key, { x, y })} />
 
-          <aside className="w-80 shrink-0 overflow-y-auto border-s border-line bg-paper-raised">
+          <aside className="w-full shrink-0 border-t border-line bg-paper-raised lg:w-80 lg:overflow-y-auto lg:border-t-0 lg:border-s">
             {selected ? (
               <StepInspector
                 key={selected.key}
@@ -574,7 +574,7 @@ function FlowCanvas({
   }
 
   return (
-    <main ref={containerRef} dir="ltr" aria-label={EDITOR_STRINGS[locale].canvasLabel} className="relative min-w-0 flex-1 overflow-auto bg-paper" style={{ backgroundImage: "radial-gradient(var(--color-line) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
+    <main ref={containerRef} dir="ltr" aria-label={EDITOR_STRINGS[locale].canvasLabel} className="relative min-h-[380px] min-w-0 flex-1 shrink-0 overflow-auto bg-paper lg:min-h-0 lg:shrink" style={{ backgroundImage: "radial-gradient(var(--color-line) 1px, transparent 1px)", backgroundSize: "20px 20px" }}>
       <div className="relative" style={{ width, height }}>
         <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
           <defs>
