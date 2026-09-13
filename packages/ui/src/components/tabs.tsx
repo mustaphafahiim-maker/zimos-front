@@ -72,7 +72,11 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      // Base UI keeps the outgoing panel mounted (inert, with data-ending-style)
+      // until its exit transition finishes. These panels have no exit transition,
+      // so the old panel could stay visible above the new one. Hide it as soon as
+      // it starts leaving.
+      className={cn("flex-1 text-sm outline-none data-ending-style:hidden", className)}
       {...props}
     />
   )
