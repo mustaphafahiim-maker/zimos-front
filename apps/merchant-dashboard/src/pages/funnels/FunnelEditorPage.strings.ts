@@ -1,4 +1,4 @@
-import type { FunnelEdgeCondition, FunnelStatus, FunnelStepType } from "@/mock/types";
+import type { FunnelStatus, UiEdgeCondition, UiStepType } from "./funnelAdapter";
 import type { Locale, Messages } from "@/i18n/LocaleContext";
 
 export const EDITOR_STRINGS = {
@@ -11,6 +11,7 @@ export const EDITOR_STRINGS = {
     pause: "Pause",
     resume: "Resume",
     publish: "Publish",
+    republish: "Publish changes",
     cantPublish: "This funnel can’t be published yet:",
     steps: "Steps",
     selectHint: "Select a step on the canvas or in the list to edit it.",
@@ -23,6 +24,20 @@ export const EDITOR_STRINGS = {
     toastPaused: "Funnel paused.",
     toastResumed: "Funnel resumed.",
     canvasLabel: "Funnel flow canvas",
+    savingProgress: "Saving {done}/{total}…",
+    saveFailed: "Save stopped: {message} Changes made before this point were saved; reload to see the server state.",
+    reload: "Reload",
+    history: "History",
+    historyTitle: "Published revisions",
+    historyEmpty: "No revisions yet. Each publish creates one.",
+    revisionLabel: "Revision #{n}",
+    revisionSteps: "{n} steps",
+    revisionLive: "Live",
+    rollback: "Restore",
+    rollbackTitle: "Restore revision #{n}?",
+    rollbackDescription: "Visitors will see revision #{n} immediately. Your draft steps and edges are not changed.",
+    toastRolledBack: "Revision #{n} is live.",
+    publishedRevision: "Live: revision #{n}",
   },
   ar: {
     notFound: "مسار البيع هذا غير موجود.",
@@ -33,6 +48,7 @@ export const EDITOR_STRINGS = {
     pause: "إيقاف مؤقت",
     resume: "استئناف",
     publish: "نشر",
+    republish: "نشر التغييرات",
     cantPublish: "لا يمكن نشر مسار البيع هذا بعد:",
     steps: "الخطوات",
     selectHint: "اختر خطوة من اللوحة أو من القائمة لتعديلها.",
@@ -45,6 +61,20 @@ export const EDITOR_STRINGS = {
     toastPaused: "تم إيقاف مسار البيع مؤقتًا.",
     toastResumed: "تم استئناف مسار البيع.",
     canvasLabel: "لوحة تدفق مسار البيع",
+    savingProgress: "جارٍ الحفظ {done}/{total}…",
+    saveFailed: "توقف الحفظ: {message} ما تم قبل هذه الخطوة محفوظ؛ أعد التحميل لرؤية الحالة على الخادم.",
+    reload: "إعادة التحميل",
+    history: "السجل",
+    historyTitle: "النسخ المنشورة",
+    historyEmpty: "لا توجد نسخ بعد. كل عملية نشر تُنشئ نسخة.",
+    revisionLabel: "النسخة رقم {n}",
+    revisionSteps: "{n} خطوات",
+    revisionLive: "منشورة",
+    rollback: "استعادة",
+    rollbackTitle: "استعادة النسخة رقم {n}؟",
+    rollbackDescription: "سيرى الزوار النسخة رقم {n} فورًا. لن تتغير خطوات وروابط المسودة.",
+    toastRolledBack: "النسخة رقم {n} منشورة الآن.",
+    publishedRevision: "المنشور: النسخة رقم {n}",
   },
 } satisfies Messages;
 
@@ -65,10 +95,12 @@ export const CANVAS_STRINGS = {
   en: {
     entry: "entry",
     abRunning: "A/B test running",
+    statsUnavailable: "Stats appear once analytics is connected",
   },
   ar: {
     entry: "البداية",
     abRunning: "اختبار A/B قيد التشغيل",
+    statsUnavailable: "ستظهر الإحصاءات بعد ربط التحليلات",
   },
 } satisfies Messages;
 
@@ -78,14 +110,19 @@ export const INSPECTOR_STRINGS = {
     closeInspector: "Close inspector",
     name: "Name",
     type: "Type",
+    key: "Step key",
     offer: "Offer",
     product: "Product",
     pickProduct: "— Pick a product —",
+    offerLabel: "Offer",
+    pickOffer: "— Pick an offer —",
+    noOffers: "This product has no active offers. Create one on the product page.",
+    noProducts: "No products yet. Add a product and an offer first.",
+    offersError: "Couldn't load offers.",
     required: "Required before publishing.",
     offerPrice: "Offer price",
-    abTest: "A/B test this step",
-    abOn: "Traffic is split between variants.",
-    abOff: "Compare two versions of this step.",
+    offerPriceNone: "Uses variant prices",
+    abRunning: "An A/B experiment is attached to this step.",
     manageExperiments: "Manage in Experiments",
     edges: "Edges",
     thankYouEnds: "The thank-you page ends the funnel.",
@@ -94,21 +131,26 @@ export const INSPECTOR_STRINGS = {
     toStepOption: "→ {name}",
     removeEdge: "Remove edge",
     condition: "Condition",
-    priority: "Priority",
+    priority: "Priority (higher runs first)",
   },
   ar: {
     stepSettings: "إعدادات الخطوة",
     closeInspector: "إغلاق لوحة الإعدادات",
     name: "الاسم",
     type: "النوع",
+    key: "معرّف الخطوة",
     offer: "العرض",
     product: "المنتج",
     pickProduct: "— اختر منتجًا —",
+    offerLabel: "العرض",
+    pickOffer: "— اختر عرضًا —",
+    noOffers: "لا توجد عروض نشطة لهذا المنتج. أنشئ عرضًا من صفحة المنتج.",
+    noProducts: "لا توجد منتجات بعد. أضف منتجًا وعرضًا أولًا.",
+    offersError: "تعذّر تحميل العروض.",
     required: "مطلوب قبل النشر.",
     offerPrice: "سعر العرض",
-    abTest: "تشغيل اختبار A/B لهذه الخطوة",
-    abOn: "يتم تقسيم الزيارات بين النسخ.",
-    abOff: "قارن بين نسختين من هذه الخطوة.",
+    offerPriceNone: "يستخدم أسعار المتغيرات",
+    abRunning: "توجد تجربة A/B مرتبطة بهذه الخطوة.",
     manageExperiments: "الإدارة من صفحة التجارب",
     edges: "الروابط",
     thankYouEnds: "صفحة الشكر هي نهاية مسار البيع.",
@@ -117,69 +159,78 @@ export const INSPECTOR_STRINGS = {
     toStepOption: "← {name}",
     removeEdge: "إزالة الرابط",
     condition: "الشرط",
-    priority: "الأولوية",
+    priority: "الأولوية (الأعلى يُنفَّذ أولًا)",
   },
 } satisfies Messages;
 
+/** Client-side pre-check; mirrors backend funnelGraph.validateGraph (server messages win on publish). */
 export const VALIDATION_STRINGS = {
   en: {
-    noLanding: "Add exactly one landing page as the entry step.",
-    manyLanding: "Only one landing page is allowed (found {n}).",
+    noSteps: "A funnel needs at least one step.",
+    noEntry: "No entry step — every step has an incoming edge. Remove the edge into your first step.",
+    manyEntries: "Exactly one step may have no incoming edge (found {n}: {names}).",
     danglingEdge: "An edge points to a step that no longer exists ({from} → {to}).",
-    unreachable: "\"{name}\" can't be reached from the landing page.",
-    needsOffer: "\"{name}\" ({type}) needs an offer product.",
-    noOutgoing: "\"{name}\" has no outgoing edge — visitors would get stuck.",
+    unreachable: "\"{name}\" can't be reached from the entry step.",
+    needsOffer: "\"{name}\" ({type}) needs an offer.",
   },
   ar: {
-    noLanding: "أضف صفحة هبوط واحدة فقط كخطوة البداية.",
-    manyLanding: "مسموح بصفحة هبوط واحدة فقط (يوجد {n}).",
+    noSteps: "يحتاج مسار البيع إلى خطوة واحدة على الأقل.",
+    noEntry: "لا توجد خطوة بداية — كل خطوة لها رابط داخل إليها. احذف الرابط الداخل إلى خطوتك الأولى.",
+    manyEntries: "يجب أن تكون خطوة واحدة فقط بلا رابط داخل (يوجد {n}: {names}).",
     danglingEdge: "يوجد رابط يشير إلى خطوة لم تعد موجودة ({from} ← {to}).",
-    unreachable: "لا يمكن الوصول إلى «{name}» من صفحة الهبوط.",
-    needsOffer: "«{name}» ({type}) تحتاج إلى منتج للعرض.",
-    noOutgoing: "«{name}» ليس لها رابط خارج — سيتوقف الزائر عندها.",
+    unreachable: "لا يمكن الوصول إلى «{name}» من خطوة البداية.",
+    needsOffer: "«{name}» ({type}) تحتاج إلى عرض.",
   },
 } satisfies Messages;
 
-export const STEP_TYPE_LABELS: Record<Locale, Record<FunnelStepType, string>> = {
+export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
   en: {
     landing: "Landing page",
+    sales: "Sales page",
+    opt_in: "Opt-in",
     checkout: "Checkout",
-    order_bump: "Order bump",
     upsell: "Upsell",
     downsell: "Downsell",
     thank_you: "Thank you",
+    custom: "Custom page",
   },
   ar: {
     landing: "صفحة الهبوط",
+    sales: "صفحة البيع",
+    opt_in: "صفحة التسجيل",
     checkout: "صفحة الدفع",
-    order_bump: "عرض إضافي عند الدفع",
     upsell: "عرض بعد الشراء",
     downsell: "عرض بديل",
     thank_you: "صفحة الشكر",
+    custom: "صفحة مخصصة",
   },
 };
 
 /** Default display name for a freshly added step (becomes editable user data). */
-export const STEP_DEFAULT_NAMES: Record<Locale, Record<FunnelStepType, string>> = {
+export const STEP_DEFAULT_NAMES: Record<Locale, Record<UiStepType, string>> = {
   en: {
     landing: "Landing page",
+    sales: "Sales page",
+    opt_in: "Opt-in",
     checkout: "Checkout",
-    order_bump: "Order bump",
     upsell: "Upsell",
     downsell: "Downsell",
     thank_you: "Thank you",
+    custom: "Custom page",
   },
   ar: {
     landing: "صفحة الهبوط",
+    sales: "صفحة البيع",
+    opt_in: "تسجيل البيانات",
     checkout: "الدفع",
-    order_bump: "عرض إضافي عند الدفع",
     upsell: "عرض بعد الشراء",
     downsell: "عرض بديل",
     thank_you: "شكراً لطلبك",
+    custom: "صفحة مخصصة",
   },
 };
 
-export const CONDITION_LABELS: Record<Locale, Record<FunnelEdgeCondition, string>> = {
+export const CONDITION_LABELS: Record<Locale, Record<UiEdgeCondition, string>> = {
   en: {
     always: "Always",
     completed_checkout: "Completed checkout",

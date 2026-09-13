@@ -42,12 +42,12 @@ function col<T>(ws: string, name: string, seeder: () => T) {
 
 export const mockApi = {
   // ------------------------------------------------------------ Funnels --
-  // BACKEND: GET /workspaces/:id/funnels  (exists — funnelsService)
+  // BACKEND: WIRED — FunnelsPage uses GET /workspaces/:id/funnels via packages/api-client endpoints/funnels.ts (mock kept for OnboardingChecklist)
   listFunnels: (ws: string) => delay(col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws)).get()),
-  // BACKEND: GET /workspaces/:id/funnels/:funnelId  (exists)
+  // BACKEND: WIRED — FunnelEditorPage uses GET /workspaces/:id/funnels/:funnelId
   getFunnel: (ws: string, id: string) =>
     delay(col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws)).get().find((f) => f.id === id) ?? null),
-  // BACKEND: POST /workspaces/:id/funnels  (exists)
+  // BACKEND: WIRED — FunnelsPage uses POST /workspaces/:id/funnels (+ steps/edges for starters; mock kept for TemplatesPage)
   createFunnel: (ws: string, input: { name: string; templateId?: string | null }) => {
     const c = col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws));
     const list = c.get();
@@ -79,20 +79,20 @@ export const mockApi = {
     c.set([funnel, ...list]);
     return delay(funnel);
   },
-  // BACKEND: PATCH /workspaces/:id/funnels/:funnelId (+ steps/edges sub-routes exist)
+  // BACKEND: WIRED — FunnelEditorPage diff-saves via PATCH funnel + POST/PATCH/DELETE steps & edges
   saveFunnel: (ws: string, funnel: Funnel) => {
     const c = col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws));
     const next = { ...funnel, updatedAt: nowIso() };
     c.set(c.get().map((f) => (f.id === funnel.id ? next : f)));
     return delay(next);
   },
-  // BACKEND: POST /workspaces/:id/funnels/:funnelId/publish | /pause | /resume  (exist)
+  // BACKEND: WIRED — POST /workspaces/:id/funnels/:funnelId/publish | /pause | /resume
   setFunnelStatus: (ws: string, id: string, status: Funnel["status"]) => {
     const c = col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws));
     c.set(c.get().map((f) => (f.id === id ? { ...f, status, publishedAt: status === "published" ? nowIso() : f.publishedAt, updatedAt: nowIso() } : f)));
     return delay(true);
   },
-  // BACKEND: POST /workspaces/:id/funnels/:funnelId/duplicate  (NEW)
+  // BACKEND: WIRED — no duplicate endpoint; FunnelsPage duplicates client-side (create funnel + steps + edges)
   duplicateFunnel: (ws: string, id: string) => {
     const c = col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws));
     const list = c.get();
@@ -102,7 +102,7 @@ export const mockApi = {
     c.set([copy, ...list]);
     return delay(copy);
   },
-  // BACKEND: DELETE /workspaces/:id/funnels/:funnelId  (exists)
+  // BACKEND: WIRED — DELETE /workspaces/:id/funnels/:funnelId
   deleteFunnel: (ws: string, id: string) => {
     const c = col<Funnel[]>(ws, "funnels", () => seed.seedFunnels(ws));
     c.set(c.get().filter((f) => f.id !== id));
@@ -249,7 +249,7 @@ export const mockApi = {
   // BACKEND: GET/PUT /workspaces/:id/settings/camouflage  (NEW)
   getCamouflage: (ws: string) => delay(col<CamouflageSettings>(ws, "camouflage", seed.seedCamouflage).get()),
   saveCamouflage: (ws: string, s: CamouflageSettings) => delay(col<CamouflageSettings>(ws, "camouflage", seed.seedCamouflage).set(s)),
-  // BACKEND: GET/POST/DELETE /workspaces/:id/domains + /verify  (exists — needs `target` funnel|store)
+  // BACKEND: WIRED — DomainsTab uses domainsList/Add/Verify/Remove (@store-builder/api-client). No `target` field; domains point to the store.
   listDomains: (ws: string) => delay(col<DomainRecord[]>(ws, "domains", seed.seedDomains).get()),
   addDomain: (ws: string, d: Omit<DomainRecord, "id" | "createdAt" | "status" | "verificationToken">) => {
     const c = col<DomainRecord[]>(ws, "domains", seed.seedDomains);
@@ -278,9 +278,9 @@ export const mockApi = {
   getAnalytics: (_ws: string, range: "7d" | "30d" | "90d") => delay(seed.seedAnalytics(range), 350),
 
   // ---------------------------------------------------------- Inventory --
-  // BACKEND: GET /workspaces/:id/inventory?lowStock=true  (inventory module exists per-variant; needs a list)
+  // BACKEND: WIRED — InventoryPage uses catalog products + GET /inventory/:variantId (pages/inventory/inventoryAdapter.ts). Mock kept for DashboardHomePage/NotificationsDrawer.
   listInventory: (ws: string) => delay(col<InventoryRow[]>(ws, "inventory", seed.seedInventory).get()),
-  // BACKEND: POST /workspaces/:id/inventory/adjust  (exists)
+  // BACKEND: WIRED — InventoryPage uses POST /inventory/:variantId/adjust and /restock (pages/inventory/inventoryAdapter.ts).
   adjustInventory: (ws: string, variantId: string, deltaOnHand: number) => {
     const c = col<InventoryRow[]>(ws, "inventory", seed.seedInventory);
     c.set(c.get().map((r) => (r.variantId === variantId ? { ...r, onHand: r.onHand + deltaOnHand, available: r.onHand + deltaOnHand - r.reserved } : r)));
@@ -293,7 +293,7 @@ export const mockApi = {
   },
 
   // ---------------------------------------------------------- Templates --
-  // BACKEND: GET /templates  (exists — needs kind/category/price fields)
+  // BACKEND: WIRED — TemplatesPage uses apiClient.listWebsiteTemplates/getWebsiteTemplate + createWebsite. No kind/price fields.
   listTemplates: (): Promise<StoreTemplate[]> => delay(seed.seedTemplates()),
 
   // Products for pickers (prototype only; real code uses apiClient.listProducts)

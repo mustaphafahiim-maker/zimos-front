@@ -17,35 +17,62 @@ import {
   ArrowUpRight,
   CreditCard,
   ExternalLink,
+  FilePlus2,
   FlaskConical,
   GripVertical,
+  History,
   LayoutTemplate,
+  Megaphone,
   PartyPopper,
   Pause,
   Play,
   Plus,
   Rocket,
   Save,
-  ShoppingBag,
   Trash2,
+  UserPlus,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { Alert, Button, Input, Label, Spinner, cn } from "@store-builder/ui";
-import type { Funnel, FunnelEdge, FunnelEdgeCondition, FunnelStatus, FunnelStep, FunnelStepType } from "@/mock/types";
-import { mockApi } from "@/mock/api";
-import { uid } from "@/mock/store";
+import {
+  FUNNEL_OFFER_STEP_TYPES,
+  funnelsListRevisions,
+  funnelsPause,
+  funnelsProblemsOf,
+  funnelsPublish,
+  funnelsResume,
+  funnelsRollback,
+  type FunnelRevisionDto,
+  type FunnelStatus,
+  type Offer,
+  type Product,
+} from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { majorToMinor, minorToMajorInput } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale } from "@/i18n/LocaleContext";
+import {
+  CARD_GAP_X,
+  funnelPublicUrl,
+  loadUiFunnel,
+  saveFunnelDiff,
+  tempId,
+  uniqueStepKey,
+  useFunnelErrorMessage,
+  type SaveProgress,
+  type UiEdge,
+  type UiEdgeCondition,
+  type UiFunnel,
+  type UiStep,
+  type UiStepType,
+} from "./funnelAdapter";
 import {
   CANVAS_STRINGS,
   CONDITION_LABELS,
@@ -62,22 +89,24 @@ import {
 
 interface StepTypeMeta {
   icon: LucideIcon;
-  /** Whether an offer product is mandatory. */
+  /** Whether an offer is mandatory (backend OFFER_STEP_TYPES). */
   needsOffer: boolean;
 }
 
-export const STEP_TYPES: Record<FunnelStepType, StepTypeMeta> = {
+export const STEP_TYPES: Record<UiStepType, StepTypeMeta> = {
   landing: { icon: LayoutTemplate, needsOffer: false },
+  sales: { icon: Megaphone, needsOffer: false },
+  opt_in: { icon: UserPlus, needsOffer: false },
   checkout: { icon: CreditCard, needsOffer: false },
-  order_bump: { icon: ShoppingBag, needsOffer: true },
-  upsell: { icon: ArrowUpRight, needsOffer: true },
-  downsell: { icon: ArrowDownRight, needsOffer: true },
+  upsell: { icon: ArrowUpRight, needsOffer: FUNNEL_OFFER_STEP_TYPES.includes("upsell") },
+  downsell: { icon: ArrowDownRight, needsOffer: FUNNEL_OFFER_STEP_TYPES.includes("downsell") },
   thank_you: { icon: PartyPopper, needsOffer: false },
+  custom: { icon: FilePlus2, needsOffer: false },
 };
 
-const STEP_TYPE_ORDER: FunnelStepType[] = ["landing", "checkout", "order_bump", "upsell", "downsell", "thank_you"];
+const STEP_TYPE_ORDER: UiStepType[] = ["landing", "sales", "opt_in", "checkout", "upsell", "downsell", "thank_you", "custom"];
 
-const CONDITION_ORDER: FunnelEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer"];
+const CONDITION_ORDER: UiEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer"];
 
 const STATUS_TONE: Record<FunnelStatus, "neutral" | "success" | "warning"> = {
   draft: "neutral",
@@ -88,65 +117,92 @@ const STATUS_TONE: Record<FunnelStatus, "neutral" | "success" | "warning"> = {
 const CARD_W = 208;
 const CARD_H = 104;
 
-function rate(step: FunnelStep, intlLocale: string): string {
-  const value = step.views === 0 ? 0 : step.conversions / step.views;
-  return new Intl.NumberFormat(intlLocale, {
-    style: "percent",
-    minimumFractionDigits: step.views === 0 ? 0 : 1,
-    maximumFractionDigits: step.views === 0 ? 0 : 1,
-  }).format(value);
-}
-
-function StepIcon({ type, className }: { type: FunnelStepType; className?: string }) {
+function StepIcon({ type, className }: { type: UiStepType; className?: string }) {
   const Glyph = STEP_TYPES[type].icon;
   return <Glyph className={className} aria-hidden />;
 }
 
+/** Entry = the only step with no incoming edge (backend resolveEntry). */
+function entryKeysOf(funnel: UiFunnel): string[] {
+  const targeted = new Set(funnel.edges.map((e) => e.toStepKey));
+  return funnel.steps.filter((s) => !targeted.has(s.key)).map((s) => s.key);
+}
+
 // ------------------------------------------------------------ validation --
 
-export function validateFunnel(funnel: Funnel, locale: Locale = "en"): string[] {
+/** Pre-check mirroring backend funnelGraph.validateGraph. Server problems are authoritative on publish. */
+export function validateFunnel(funnel: UiFunnel, locale: Locale = "en"): string[] {
   const v = VALIDATION_STRINGS[locale];
   const typeLabels = STEP_TYPE_LABELS[locale];
   const problems: string[] = [];
   const keys = new Set(funnel.steps.map((s) => s.key));
-  const entries = funnel.steps.filter((s) => s.type === "landing");
-  if (entries.length !== 1) {
-    problems.push(entries.length === 0 ? v.noLanding : fmt(v.manyLanding, { n: entries.length }));
-  }
-  const entry = entries[0] ?? null;
+  const nameOf = (key: string) => funnel.steps.find((s) => s.key === key)?.name ?? key;
 
+  for (const s of funnel.steps) {
+    if (STEP_TYPES[s.type].needsOffer && !s.offerId) {
+      problems.push(fmt(v.needsOffer, { name: s.name, type: typeLabels[s.type] }));
+    }
+  }
   for (const e of funnel.edges) {
     if (!keys.has(e.fromStepKey) || !keys.has(e.toStepKey)) {
       problems.push(fmt(v.danglingEdge, { from: e.fromStepKey, to: e.toStepKey }));
     }
   }
 
-  if (entry) {
-    const seen = new Set<string>([entry.key]);
-    const queue = [entry.key];
-    while (queue.length > 0) {
-      const cur = queue.shift() as string;
-      for (const e of funnel.edges) {
-        if (e.fromStepKey === cur && keys.has(e.toStepKey) && !seen.has(e.toStepKey)) {
-          seen.add(e.toStepKey);
-          queue.push(e.toStepKey);
-        }
-      }
-    }
-    for (const s of funnel.steps) {
-      if (!seen.has(s.key)) problems.push(fmt(v.unreachable, { name: s.name }));
-    }
+  if (funnel.steps.length === 0) {
+    problems.push(v.noSteps);
+    return problems;
+  }
+  const entries = entryKeysOf(funnel);
+  if (entries.length === 0) {
+    problems.push(v.noEntry);
+    return problems;
+  }
+  if (entries.length > 1) {
+    problems.push(fmt(v.manyEntries, { n: entries.length, names: entries.map(nameOf).join(", ") }));
+    return problems;
   }
 
-  for (const s of funnel.steps) {
-    if (STEP_TYPES[s.type].needsOffer && !s.offerId) {
-      problems.push(fmt(v.needsOffer, { name: s.name, type: typeLabels[s.type] }));
-    }
-    if (s.type !== "thank_you" && !funnel.edges.some((e) => e.fromStepKey === s.key)) {
-      problems.push(fmt(v.noOutgoing, { name: s.name }));
+  const seen = new Set<string>([entries[0]]);
+  const queue = [entries[0]];
+  while (queue.length > 0) {
+    const cur = queue.shift() as string;
+    for (const e of funnel.edges) {
+      if (e.fromStepKey === cur && keys.has(e.toStepKey) && !seen.has(e.toStepKey)) {
+        seen.add(e.toStepKey);
+        queue.push(e.toStepKey);
+      }
     }
   }
+  for (const s of funnel.steps) {
+    if (!seen.has(s.key)) problems.push(fmt(v.unreachable, { name: s.name }));
+  }
   return problems;
+}
+
+// ---------------------------------------------------------- offer catalog --
+
+interface CatalogEntry {
+  product: Product;
+  /** Active offers only — the backend rejects inactive ones. */
+  offers: Offer[];
+}
+
+async function loadOfferCatalog(workspaceId: string): Promise<CatalogEntry[]> {
+  const products: Product[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < 10; page++) {
+    const res = await apiClient.listProducts(workspaceId, { limit: 100, cursor });
+    products.push(...res.products);
+    if (!res.nextCursor) break;
+    cursor = res.nextCursor;
+  }
+  const out: CatalogEntry[] = [];
+  for (const product of products) {
+    const offers = product.offers ?? (await apiClient.listOffers(workspaceId, product.id));
+    out.push({ product, offers: offers.filter((o) => o.status === "active") });
+  }
+  return out;
 }
 
 // ----------------------------------------------------------------- page --
@@ -159,25 +215,32 @@ export function FunnelEditorPage() {
   const t = useT(EDITOR_STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
+  const describeError = useFunnelErrorMessage();
 
-  const loaded = useAsync(() => mockApi.getFunnel(workspaceId, funnelId), [workspaceId, funnelId]);
+  const loaded = useAsync(() => loadUiFunnel(workspaceId, funnelId), [workspaceId, funnelId]);
+  const catalog = useAsync(() => loadOfferCatalog(workspaceId), [workspaceId]);
 
-  const [funnel, setFunnel] = useState<Funnel | null>(null);
-  const [baseline, setBaseline] = useState("");
-  const [seededId, setSeededId] = useState<string | null>(null);
-  if (loaded.data && loaded.data.id !== seededId) {
-    setSeededId(loaded.data.id);
+  const [funnel, setFunnel] = useState<UiFunnel | null>(null);
+  const [baseline, setBaseline] = useState<UiFunnel | null>(null);
+  const [seeded, setSeeded] = useState<UiFunnel | null>(null);
+  if (loaded.data && loaded.data !== seeded) {
+    setSeeded(loaded.data);
     setFunnel(loaded.data);
-    setBaseline(JSON.stringify(loaded.data));
+    setBaseline(loaded.data);
   }
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<FunnelStep | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<UiStep | null>(null);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState<SaveProgress | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [editingName, setEditingName] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
 
-  const dirty = funnel !== null && JSON.stringify(funnel) !== baseline;
+  const baselineJson = useMemo(() => (baseline ? JSON.stringify(baseline) : ""), [baseline]);
+  const dirty = funnel !== null && JSON.stringify(funnel) !== baselineJson;
 
   useEffect(() => {
     if (!dirty) return;
@@ -187,37 +250,46 @@ export function FunnelEditorPage() {
   }, [dirty]);
 
   const selected = funnel?.steps.find((s) => s.key === selectedKey) ?? null;
+  const entryKeys = useMemo(() => (funnel ? entryKeysOf(funnel) : []), [funnel]);
+  const publicUrl = funnel ? funnelPublicUrl(funnel.subdomain) : null;
 
-  const patch = useCallback((updater: (f: Funnel) => Funnel) => {
+  const patch = useCallback((updater: (f: UiFunnel) => UiFunnel) => {
     setFunnel((prev) => (prev ? updater(prev) : prev));
   }, []);
 
   const updateStep = useCallback(
-    (key: string, changes: Partial<FunnelStep>) => {
+    (key: string, changes: Partial<UiStep>) => {
       patch((f) => ({ ...f, steps: f.steps.map((s) => (s.key === key ? { ...s, ...changes } : s)) }));
     },
     [patch]
   );
 
-  function addStep(type: FunnelStepType) {
+  /** Replace draft + baseline with fresh server state. */
+  const adopt = useCallback(
+    (fresh: UiFunnel) => {
+      setSeeded(fresh);
+      setFunnel(fresh);
+      setBaseline(fresh);
+      loaded.setData(fresh);
+    },
+    [loaded]
+  );
+
+  function addStep(type: UiStepType) {
     patch((f) => {
-      const base: string = type;
-      let key: string = base;
-      let n = 2;
-      while (f.steps.some((s) => s.key === key)) key = `${base}-${n++}`;
+      // Keys are immutable server-side and deletes run last on save, so avoid
+      // reusing a key that still exists in the saved state too.
+      const key = uniqueStepKey(type.replace(/_/g, "-"), [...f.steps.map((s) => s.key), ...(baseline?.steps.map((s) => s.key) ?? [])]);
       const last = f.steps[f.steps.length - 1];
-      const step: FunnelStep = {
-        id: uid(),
+      const step: UiStep = {
+        id: null,
         key,
         name: STEP_DEFAULT_NAMES[locale][type],
         type,
         offerId: null,
-        offerName: null,
-        priceAmount: null,
         experimentId: null,
-        views: 0,
-        conversions: 0,
-        x: last ? last.x + 280 : 40,
+        seo: {},
+        x: last ? last.x + CARD_GAP_X : 40,
         y: last ? last.y : 120,
       };
       setSelectedKey(key);
@@ -225,12 +297,11 @@ export function FunnelEditorPage() {
     });
   }
 
-  function deleteStep(step: FunnelStep) {
+  function deleteStep(step: UiStep) {
     patch((f) => ({
       ...f,
       steps: f.steps.filter((s) => s.key !== step.key),
       edges: f.edges.filter((e) => e.fromStepKey !== step.key && e.toStepKey !== step.key),
-      entryStepKey: f.entryStepKey === step.key ? null : f.entryStepKey,
     }));
     setSelectedKey((k) => (k === step.key ? null : k));
     setPendingDelete(null);
@@ -254,22 +325,37 @@ export function FunnelEditorPage() {
     [patch]
   );
 
-  async function save(): Promise<Funnel | null> {
-    if (!funnel) return null;
+  async function reloadFromServer(): Promise<UiFunnel | null> {
+    const fresh = await loadUiFunnel(workspaceId, funnelId);
+    if (fresh) adopt(fresh);
+    return fresh;
+  }
+
+  async function save(): Promise<UiFunnel | null> {
+    if (!funnel || !baseline) return null;
+    if (!dirty) return funnel;
     setSaving(true);
+    setSaveError(null);
     try {
-      const entry = funnel.steps.find((s) => s.type === "landing");
-      const next = await mockApi.saveFunnel(workspaceId, { ...funnel, entryStepKey: entry?.key ?? null });
-      setFunnel(next);
-      setBaseline(JSON.stringify(next));
-      loaded.setData(next);
-      toast.success(t.toastSaved);
-      return next;
+      await saveFunnelDiff(workspaceId, baseline, funnel, setProgress);
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      const message = describeError(err);
+      setSaveError(fmt(t.saveFailed, { message }));
+      toast.error(message);
+      setSaving(false);
+      setProgress(null);
+      return null;
+    }
+    try {
+      const fresh = await reloadFromServer();
+      toast.success(t.toastSaved);
+      return fresh;
+    } catch (err) {
+      toast.error(describeError(err));
       return null;
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   }
 
@@ -281,28 +367,47 @@ export function FunnelEditorPage() {
       toast.error(t.toastFixProblems);
       return;
     }
-    const saved = dirty ? await save() : funnel;
+    const saved = await save();
     if (!saved) return;
-    await mockApi.setFunnelStatus(workspaceId, saved.id, "published");
-    const next: Funnel = { ...saved, status: "published", publishedAt: new Date().toISOString() };
-    setFunnel(next);
-    setBaseline(JSON.stringify(next));
-    toast.success(t.toastPublished);
+    setStatusBusy(true);
+    try {
+      await funnelsPublish(apiClient, workspaceId, saved.id);
+      await reloadFromServer();
+      setHistoryVersion((n) => n + 1);
+      toast.success(t.toastPublished);
+    } catch (err) {
+      const serverProblems = funnelsProblemsOf(err);
+      if (serverProblems.length > 0) {
+        setProblems(serverProblems.map((p) => p.message));
+        toast.error(t.toastFixProblems);
+      } else {
+        toast.error(describeError(err));
+      }
+    } finally {
+      setStatusBusy(false);
+    }
   }
 
-  async function setStatus(status: FunnelStatus) {
+  async function setStatus(status: "paused" | "published") {
     if (!funnel) return;
-    await mockApi.setFunnelStatus(workspaceId, funnel.id, status);
-    const next: Funnel = { ...funnel, status };
-    setFunnel(next);
-    setBaseline(JSON.stringify(next));
-    toast.success(status === "paused" ? t.toastPaused : t.toastResumed);
+    setStatusBusy(true);
+    try {
+      const next = status === "paused" ? await funnelsPause(apiClient, workspaceId, funnel.id) : await funnelsResume(apiClient, workspaceId, funnel.id);
+      setFunnel((f) => (f ? { ...f, status: next.status } : f));
+      setBaseline((b) => (b ? { ...b, status: next.status } : b));
+      toast.success(status === "paused" ? t.toastPaused : t.toastResumed);
+    } catch (err) {
+      toast.error(describeError(err));
+    } finally {
+      setStatusBusy(false);
+    }
   }
 
   function preview() {
-    if (!funnel) return;
-    window.open(`https://${funnel.slug}.zimos.test/`, "_blank", "noopener");
+    if (publicUrl) window.open(publicUrl, "_blank", "noopener");
   }
+
+  const busy = saving || statusBusy;
 
   return (
     <div className="-m-4 flex h-[calc(100dvh-4rem)] flex-col md:-m-6 lg:-m-8">
@@ -322,6 +427,7 @@ export function FunnelEditorPage() {
                     <Input
                       autoFocus
                       dir="auto"
+                      maxLength={200}
                       value={funnel.name}
                       onChange={(e) => patch((f) => ({ ...f, name: e.target.value }))}
                       onBlur={() => setEditingName(false)}
@@ -342,37 +448,67 @@ export function FunnelEditorPage() {
                     </button>
                   )}
                   <StatusBadge value={STATUS_LABELS[locale][funnel.status]} tone={STATUS_TONE[funnel.status]} />
+                  {funnel.publishedRevisionNumber !== null && (
+                    <span className="text-xs text-ink-soft">{fmt(t.publishedRevision, { n: funnel.publishedRevisionNumber })}</span>
+                  )}
                   {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" onClick={preview}>
-                    <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
-                  </Button>
-                  <Button onClick={() => void save()} disabled={!dirty || saving}>
+                  <HistoryMenu
+                    workspaceId={workspaceId}
+                    funnel={funnel}
+                    version={historyVersion}
+                    onRolledBack={() => {
+                      void reloadFromServer().catch((err) => toast.error(describeError(err)));
+                    }}
+                  />
+                  {publicUrl && (
+                    <Button variant="outline" onClick={preview}>
+                      <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
+                    </Button>
+                  )}
+                  <Button onClick={() => void save()} disabled={!dirty || busy}>
                     {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                    {saving ? c.saving : c.save}
+                    {saving ? (progress && progress.total > 0 ? fmt(t.savingProgress, { done: progress.done, total: progress.total }) : c.saving) : c.save}
                   </Button>
                   {funnel.status === "published" ? (
-                    <Button variant="outline" onClick={() => void setStatus("paused")}>
+                    <Button variant="outline" onClick={() => void setStatus("paused")} disabled={busy}>
                       <Pause className="size-4" aria-hidden /> {t.pause}
                     </Button>
                   ) : funnel.status === "paused" ? (
-                    <Button variant="outline" onClick={() => void setStatus("published")}>
+                    <Button variant="outline" onClick={() => void setStatus("published")} disabled={busy}>
                       <Play className="size-4" aria-hidden /> {t.resume}
                     </Button>
-                  ) : (
-                    <Button variant="outline" onClick={() => void publish()} disabled={saving}>
-                      <Rocket className="size-4" aria-hidden /> {t.publish}
-                    </Button>
-                  )}
+                  ) : null}
+                  <Button variant="outline" onClick={() => void publish()} disabled={busy}>
+                    {statusBusy ? <Spinner className="size-4" /> : <Rocket className="size-4" aria-hidden />}
+                    {funnel.status === "draft" ? t.publish : t.republish}
+                  </Button>
                 </div>
               </div>
+              {saveError && (
+                <Alert variant="danger" className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <span>{saveError}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSaveError(null);
+                      void reloadFromServer().catch((err) => toast.error(describeError(err)));
+                    }}
+                  >
+                    {t.reload}
+                  </Button>
+                </Alert>
+              )}
               {problems.length > 0 && (
                 <Alert variant="danger" className="mt-3">
                   <p className="font-medium">{t.cantPublish}</p>
                   <ul className="mt-1 list-disc space-y-0.5 ps-5">
                     {problems.map((p, i) => (
-                      <li key={i}>{p}</li>
+                      <li key={i} dir="auto">
+                        {p}
+                      </li>
                     ))}
                   </ul>
                 </Alert>
@@ -402,7 +538,7 @@ export function FunnelEditorPage() {
             </div>
           </aside>
 
-          <FlowCanvas funnel={funnel} selectedKey={selectedKey} onSelect={setSelectedKey} onMove={(key, x, y) => updateStep(key, { x, y })} />
+          <FlowCanvas funnel={funnel} entryKey={entryKeys.length === 1 ? entryKeys[0] : null} selectedKey={selectedKey} onSelect={setSelectedKey} onMove={(key, x, y) => updateStep(key, { x, y })} />
 
           <aside className="w-full shrink-0 border-t border-line bg-paper-raised lg:w-80 lg:overflow-y-auto lg:border-t-0 lg:border-s">
             {selected ? (
@@ -410,6 +546,9 @@ export function FunnelEditorPage() {
                 key={selected.key}
                 funnel={funnel}
                 step={selected}
+                catalog={catalog.data}
+                catalogLoading={catalog.loading}
+                catalogError={catalog.error}
                 onChange={(changes) => updateStep(selected.key, changes)}
                 onEdgesChange={(edges) => patch((f) => ({ ...f, edges }))}
                 onDelete={() => setPendingDelete(selected)}
@@ -443,9 +582,96 @@ export function FunnelEditorPage() {
   );
 }
 
+// --------------------------------------------------------------- history --
+
+function HistoryMenu({ workspaceId, funnel, version, onRolledBack }: { workspaceId: string; funnel: UiFunnel; version: number; onRolledBack: () => void }) {
+  const t = useT(EDITOR_STRINGS);
+  const c = useCommon();
+  const toast = useToast();
+  const describeError = useFunnelErrorMessage();
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<FunnelRevisionDto | null>(null);
+  const revisions = useAsync<FunnelRevisionDto[] | null>(
+    () => (open ? funnelsListRevisions(apiClient, workspaceId, funnel.id) : Promise.resolve(null)),
+    [open, workspaceId, funnel.id, funnel.publishedRevisionId, version]
+  );
+
+  async function confirmRollback() {
+    if (!target) return;
+    try {
+      await funnelsRollback(apiClient, workspaceId, funnel.id, target.id);
+    } catch (err) {
+      // ConfirmDialog shows the thrown message inline.
+      throw new Error(describeError(err));
+    }
+    toast.success(fmt(t.toastRolledBack, { n: target.revisionNumber }));
+    setTarget(null);
+    setOpen(false);
+    onRolledBack();
+  }
+
+  return (
+    <div className="relative">
+      <Button variant="outline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <History className="size-4" aria-hidden /> {t.history}
+      </Button>
+      {open && (
+        <>
+          <button type="button" aria-label={c.close} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div className="absolute end-0 z-20 mt-1 w-80 overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-lg">
+            <p className="border-b border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.historyTitle}</p>
+            <div className="max-h-80 overflow-y-auto p-2">
+              <DataState
+                loading={revisions.loading}
+                error={revisions.error}
+                empty={!revisions.loading && (revisions.data?.length ?? 0) === 0}
+                emptyMessage={t.historyEmpty}
+                onRetry={() => revisions.refresh()}
+              >
+                <ul className="space-y-1">
+                  {(revisions.data ?? []).map((r) => {
+                    const live = r.id === funnel.publishedRevisionId;
+                    return (
+                      <li key={r.id} className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 hover:bg-paper">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-ink">
+                            {fmt(t.revisionLabel, { n: r.revisionNumber })}
+                            {live && <span className="ms-2 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">{t.revisionLive}</span>}
+                          </p>
+                          <p className="truncate text-xs text-ink-soft">
+                            {formatDate(r.createdAt)} · {fmt(t.revisionSteps, { n: r.stepCount })}
+                            {r.note ? ` · ${r.note}` : ""}
+                          </p>
+                        </div>
+                        {!live && (
+                          <Button size="xs" variant="outline" onClick={() => setTarget(r)}>
+                            {t.rollback}
+                          </Button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </DataState>
+            </div>
+          </div>
+        </>
+      )}
+      <ConfirmDialog
+        open={target !== null}
+        title={target ? fmt(t.rollbackTitle, { n: target.revisionNumber }) : t.history}
+        description={target ? fmt(t.rollbackDescription, { n: target.revisionNumber }) : undefined}
+        confirmLabel={t.rollback}
+        onCancel={() => setTarget(null)}
+        onConfirm={confirmRollback}
+      />
+    </div>
+  );
+}
+
 // ------------------------------------------------------------- left pane --
 
-function AddStepMenu({ onAdd }: { onAdd: (type: FunnelStepType) => void }) {
+function AddStepMenu({ onAdd }: { onAdd: (type: UiStepType) => void }) {
   const [open, setOpen] = useState(false);
   const t = useT(LIST_STRINGS);
   const c = useCommon();
@@ -481,7 +707,7 @@ function AddStepMenu({ onAdd }: { onAdd: (type: FunnelStepType) => void }) {
   );
 }
 
-function SortableStepRow({ step, selected, onSelect, onDelete }: { step: FunnelStep; selected: boolean; onSelect: () => void; onDelete: () => void }) {
+function SortableStepRow({ step, selected, onSelect, onDelete }: { step: UiStep; selected: boolean; onSelect: () => void; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: step.key });
   const t = useT(LIST_STRINGS);
   const { locale } = useLocale();
@@ -525,11 +751,13 @@ function SortableStepRow({ step, selected, onSelect, onDelete }: { step: FunnelS
 
 function FlowCanvas({
   funnel,
+  entryKey,
   selectedKey,
   onSelect,
   onMove,
 }: {
-  funnel: Funnel;
+  funnel: UiFunnel;
+  entryKey: string | null;
   selectedKey: string | null;
   onSelect: (key: string) => void;
   onMove: (key: string, x: number, y: number) => void;
@@ -537,14 +765,13 @@ function FlowCanvas({
   const drag = useRef<{ key: string; dx: number; dy: number; moved: boolean } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const t = useT(CANVAS_STRINGS);
-  const { locale, dir, intlLocale } = useLocale();
-  const numberFmt = useMemo(() => new Intl.NumberFormat(intlLocale), [intlLocale]);
+  const { locale, dir } = useLocale();
 
   const byKey = useMemo(() => new Map(funnel.steps.map((s) => [s.key, s])), [funnel.steps]);
   const width = Math.max(900, ...funnel.steps.map((s) => s.x + CARD_W + 80));
   const height = Math.max(520, ...funnel.steps.map((s) => s.y + CARD_H + 80));
 
-  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>, step: FunnelStep) {
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>, step: UiStep) {
     if (e.button !== 0) return;
     const rect = containerRef.current?.getBoundingClientRect();
     const scrollLeft = containerRef.current?.scrollLeft ?? 0;
@@ -611,7 +838,7 @@ function FlowCanvas({
 
         {funnel.steps.map((s) => {
           const isSelected = s.key === selectedKey;
-          const isEntry = s.type === "landing";
+          const isEntry = s.key === entryKey;
           return (
             <div
               key={s.key}
@@ -645,11 +872,9 @@ function FlowCanvas({
                 </span>
                 {s.experimentId && <FlaskConical className="ms-auto size-3.5 shrink-0 text-accent-dark" aria-label={t.abRunning} />}
               </div>
-              <div className="mt-2 flex items-center justify-between text-xs tabular-nums">
-                <span className="text-ink-soft">
-                  {numberFmt.format(s.views)} → {numberFmt.format(s.conversions)}
-                </span>
-                <span className="rounded-full bg-success-soft px-2 py-0.5 font-medium text-success">{rate(s, intlLocale)}</span>
+              <div className="mt-2 flex items-center justify-between text-xs tabular-nums" title={t.statsUnavailable}>
+                <span className="text-ink-soft">— → —</span>
+                <span className="rounded-full bg-paper px-2 py-0.5 font-medium text-ink-soft">—</span>
               </div>
             </div>
           );
@@ -664,58 +889,55 @@ function FlowCanvas({
 function StepInspector({
   funnel,
   step,
+  catalog,
+  catalogLoading,
+  catalogError,
   onChange,
   onEdgesChange,
   onDelete,
   onClose,
 }: {
-  funnel: Funnel;
-  step: FunnelStep;
-  onChange: (changes: Partial<FunnelStep>) => void;
-  onEdgesChange: (edges: FunnelEdge[]) => void;
+  funnel: UiFunnel;
+  step: UiStep;
+  catalog: CatalogEntry[] | null;
+  catalogLoading: boolean;
+  catalogError: unknown;
+  onChange: (changes: Partial<UiStep>) => void;
+  onEdgesChange: (edges: UiEdge[]) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
-  const products = useAsync(() => mockApi.demoProducts(), []);
   const t = useT(INSPECTOR_STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
-  const [price, setPrice] = useState(minorToMajorInput(step.priceAmount));
   const needsOffer = STEP_TYPES[step.type].needsOffer;
-  const outgoing = funnel.edges.filter((e) => e.fromStepKey === step.key).sort((a, b) => a.priority - b.priority);
+  const outgoing = funnel.edges.filter((e) => e.fromStepKey === step.key).sort((a, b) => b.priority - a.priority);
   const others = funnel.steps.filter((s) => s.key !== step.key);
 
-  function commitPrice(value: string) {
-    setPrice(value);
-    const minor = majorToMinor(value);
-    onChange({ priceAmount: Number.isFinite(minor) && minor >= 0 ? String(minor) : null });
+  const entries = catalog ?? [];
+  const owner = step.offerId ? entries.find((e) => e.offers.some((o) => o.id === step.offerId)) ?? null : null;
+  const [productId, setProductId] = useState<string>(owner?.product.id ?? "");
+  const chosen = entries.find((e) => e.product.id === (owner?.product.id ?? productId)) ?? null;
+  const currentOffer = owner?.offers.find((o) => o.id === step.offerId) ?? null;
+
+  function pickProduct(id: string) {
+    setProductId(id);
+    if (step.offerId && owner?.product.id !== id) onChange({ offerId: null });
   }
 
-  function pickOffer(productId: string) {
-    const p = (products.data ?? []).find((x) => x.id === productId);
-    if (!p) {
-      onChange({ offerId: null, offerName: null });
-      return;
-    }
-    onChange({ offerId: p.id, offerName: p.name, priceAmount: step.priceAmount ?? String(p.price) });
-    if (!step.priceAmount) setPrice(minorToMajorInput(p.price));
-  }
-
-  function updateEdge(id: string, changes: Partial<FunnelEdge>) {
+  function updateEdge(id: string, changes: Partial<UiEdge>) {
     onEdgesChange(funnel.edges.map((e) => (e.id === id ? { ...e, ...changes } : e)));
   }
 
   function addEdge() {
     const target = others[0];
     if (!target) return;
-    onEdgesChange([...funnel.edges, { id: uid(), fromStepKey: step.key, toStepKey: target.key, condition: "always", priority: outgoing.length + 1 }]);
+    onEdgesChange([...funnel.edges, { id: tempId(), serverId: null, fromStepKey: step.key, toStepKey: target.key, condition: "always", priority: 0 }]);
   }
 
   function removeEdge(id: string) {
     onEdgesChange(funnel.edges.filter((e) => e.id !== id));
   }
-
-  const abEnabled = step.experimentId !== null;
 
   return (
     <div className="flex h-full flex-col">
@@ -732,12 +954,15 @@ function StepInspector({
       <div className="space-y-5 px-4 py-4">
         <div className="space-y-1.5">
           <Label htmlFor="step-name">{t.name}</Label>
-          <Input id="step-name" dir="auto" value={step.name} onChange={(e) => onChange({ name: e.target.value })} />
+          <Input id="step-name" dir="auto" maxLength={200} value={step.name} onChange={(e) => onChange({ name: e.target.value })} />
+          <p className="text-xs text-ink-soft">
+            {t.key}: <bdi dir="ltr">{step.key}</bdi>
+          </p>
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="step-type">{t.type}</Label>
-          <Select id="step-type" value={step.type} onChange={(e) => onChange({ type: e.target.value as FunnelStepType })}>
+          <Select id="step-type" value={step.type} onChange={(e) => onChange({ type: e.target.value as UiStepType })}>
             {STEP_TYPE_ORDER.map((type) => (
               <option key={type} value={type}>
                 {STEP_TYPE_LABELS[locale][type]}
@@ -746,50 +971,65 @@ function StepInspector({
           </Select>
         </div>
 
-        {needsOffer && (
+        {(needsOffer || step.offerId) && (
           <div className="space-y-3 rounded-2xl border border-line bg-paper p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.offer}</p>
-            <div className="space-y-1.5">
-              <Label htmlFor="step-offer">{t.product}</Label>
-              {products.loading ? (
-                <Spinner className="size-4" />
-              ) : (
-                <Select id="step-offer" value={step.offerId ?? ""} onChange={(e) => pickOffer(e.target.value)}>
-                  <option value="">{t.pickProduct}</option>
-                  {(products.data ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              {!step.offerId && <p className="text-xs text-danger">{t.required}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="step-price">{t.offerPrice}</Label>
-              <div className="relative">
-                <Input id="step-price" type="number" dir="ltr" min={0} step="0.01" value={price} onChange={(e) => commitPrice(e.target.value)} className="pe-12 text-start" />
-                <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-xs text-ink-soft" dir="ltr">
-                  {funnel.currency}
-                </span>
-              </div>
-            </div>
+            {catalogLoading ? (
+              <Spinner className="size-4" />
+            ) : catalogError ? (
+              <p className="text-xs text-danger">{t.offersError}</p>
+            ) : entries.length === 0 ? (
+              <p className="text-xs text-ink-soft">{t.noProducts}</p>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="step-product">{t.product}</Label>
+                  <Select id="step-product" value={chosen?.product.id ?? ""} onChange={(e) => pickProduct(e.target.value)}>
+                    <option value="">{t.pickProduct}</option>
+                    {entries.map((e) => (
+                      <option key={e.product.id} value={e.product.id}>
+                        {e.product.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {chosen && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="step-offer">{t.offerLabel}</Label>
+                    {chosen.offers.length === 0 ? (
+                      <p className="text-xs text-ink-soft">{t.noOffers}</p>
+                    ) : (
+                      <Select id="step-offer" value={step.offerId ?? ""} onChange={(e) => onChange({ offerId: e.target.value || null })}>
+                        <option value="">{t.pickOffer}</option>
+                        {chosen.offers.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                  </div>
+                )}
+                {currentOffer && (
+                  <p className="text-xs text-ink-soft">
+                    {t.offerPrice}:{" "}
+                    {currentOffer.priceAmount !== null ? <bdi dir="ltr">{formatMoney(currentOffer.priceAmount, currentOffer.currency)}</bdi> : t.offerPriceNone}
+                  </p>
+                )}
+              </>
+            )}
+            {needsOffer && !step.offerId && <p className="text-xs text-danger">{t.required}</p>}
           </div>
         )}
 
-        <div className="rounded-2xl border border-line bg-paper p-3">
-          <Toggle
-            label={t.abTest}
-            description={abEnabled ? t.abOn : t.abOff}
-            checked={abEnabled}
-            onChange={(next) => onChange({ experimentId: next ? `exp-${step.key}-${uid().slice(0, 6)}` : null })}
-          />
-          {abEnabled && (
+        {step.experimentId && (
+          <div className="rounded-2xl border border-line bg-paper p-3">
+            <p className="text-xs text-ink-soft">{t.abRunning}</p>
             <Link to="/experiments" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
               <FlaskConical className="size-3.5" aria-hidden /> {t.manageExperiments}
             </Link>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -817,14 +1057,14 @@ function StepInspector({
                     </button>
                   </div>
                   <div className="grid grid-cols-[1fr_64px] gap-2">
-                    <Select value={e.condition} onChange={(ev) => updateEdge(e.id, { condition: ev.target.value as FunnelEdgeCondition })} className="h-8 text-xs" aria-label={t.condition}>
+                    <Select value={e.condition} onChange={(ev) => updateEdge(e.id, { condition: ev.target.value as UiEdgeCondition })} className="h-8 text-xs" aria-label={t.condition}>
                       {CONDITION_ORDER.map((cond) => (
                         <option key={cond} value={cond}>
                           {CONDITION_LABELS[locale][cond]}
                         </option>
                       ))}
                     </Select>
-                    <Input type="number" dir="ltr" min={1} value={e.priority} onChange={(ev) => updateEdge(e.id, { priority: Math.max(1, Math.floor(Number(ev.target.value)) || 1) })} className="h-8 text-xs" aria-label={t.priority} title={t.priority} />
+                    <Input type="number" dir="ltr" min={0} value={e.priority} onChange={(ev) => updateEdge(e.id, { priority: Math.max(0, Math.floor(Number(ev.target.value)) || 0) })} className="h-8 text-xs" aria-label={t.priority} title={t.priority} />
                   </div>
                 </li>
               ))}
