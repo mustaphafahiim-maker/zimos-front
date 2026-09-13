@@ -85,3 +85,6 @@ export {
 } from "./components/sheet";
 
 export { cn } from "cn";
+
+// ZIMOS brand — official logo renderers + approved phrases.
+export { ZimosLogo, ZimosMark, ZIMOS_PHRASES, type ZimosLogoSurface } from "./brand/ZimosLogo";

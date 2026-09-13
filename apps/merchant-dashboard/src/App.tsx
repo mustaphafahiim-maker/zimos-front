@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { LocaleProvider } from "@/i18n/LocaleContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
@@ -59,6 +60,7 @@ import { StoresPage } from "@/pages/stores/StoresPage";
 export default function App() {
   return (
     <BrowserRouter>
+      <LocaleProvider>
       <AuthProvider>
         <WorkspaceProvider>
           <ToastProvider>
@@ -142,6 +144,7 @@ export default function App() {
           </ToastProvider>
         </WorkspaceProvider>
       </AuthProvider>
+      </LocaleProvider>
     </BrowserRouter>
   );
 }

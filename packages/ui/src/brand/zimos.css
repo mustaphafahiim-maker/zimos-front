@@ -1,0 +1,410 @@
+/* ==================================================================== *
+ * ZIMOS design tokens — shared by every app (dashboard, admin, storefront,
+ * marketing). Source: ZIMOS Universal AI Brand Prompt v1.0.
+ *
+ *   --zimos-blue  #0066FF  primary actions, emphasis
+ *   --zimos-sky   #66C2FF  supporting accent
+ *   --zimos-navy  #0B1F66  wordmark, important type, dark compositions
+ *   --zimos-ice   #E8F4FF  separators, soft fills
+ *   --zimos-cloud #F7FAFF  surfaces
+ *
+ * Status colours (success / warning / danger) are FUNCTIONAL only — never
+ * used as brand decoration. No purple, magenta, green, orange or rainbow
+ * gradients anywhere else.
+ *
+ * Every app imports this file, then maps nothing else: the semantic names
+ * (ink, paper, line, primary, accent …) that the existing pages already use
+ * are defined here, so a page written against them is on-brand for free.
+ * ==================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* --- raw brand ---------------------------------------------------- */
+  --zimos-blue: #0066ff;
+  --zimos-blue-hover: #0052d6;
+  --zimos-blue-active: #0044b3;
+  --zimos-sky: #66c2ff;
+  --zimos-navy: #0b1f66;
+  --zimos-ice: #e8f4ff;
+  --zimos-cloud: #f7faff;
+  --zimos-white: #ffffff;
+
+  /* --- semantic: text / surfaces / lines ------------------------------ */
+  --color-ink: #0b1f66;
+  --color-ink-soft: #4a5a85;
+  --color-ink-muted: #7b88a8;
+  --color-paper: #f7faff;
+  --color-paper-raised: #ffffff;
+  --color-line: #dbe7f7;
+  --color-line-strong: #bfd3ee;
+
+  /* --- semantic: brand ------------------------------------------------ */
+  --color-primary: #0066ff;
+  --color-primary-dark: #0b1f66;
+  --color-primary-soft: #e8f4ff;
+  --color-accent: #66c2ff;
+  --color-accent-dark: #0052d6;
+  --color-accent-soft: #e8f4ff;
+
+  /* --- functional status (status only, never decoration) -------------- */
+  --color-success: #16a34a;
+  --color-success-soft: #e9f8ef;
+  --color-warning: #b45309;
+  --color-warning-soft: #fff4e0;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-info: #0066ff;
+  --color-info-soft: #e8f4ff;
+
+  /* --- shadcn / Base UI tokens used by @store-builder/ui --------------- */
+  --background: #f7faff;
+  --foreground: #0b1f66;
+  --card: #ffffff;
+  --card-foreground: #0b1f66;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f66;
+  --primary: #0066ff;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f4ff;
+  --secondary-foreground: #0b1f66;
+  --muted: #f0f6ff;
+  --muted-foreground: #4a5a85;
+  --accent: #e8f4ff;
+  --accent-foreground: #0b1f66;
+  --destructive: #dc2626;
+  --border: #dbe7f7;
+  --input: #cfdef3;
+  --ring: #0066ff;
+  --chart-1: #0066ff;
+  --chart-2: #66c2ff;
+  --chart-3: #0b1f66;
+  --chart-4: #3d8bff;
+  --chart-5: #a9dcff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b1f66;
+  --sidebar-primary: #0066ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f4ff;
+  --sidebar-accent-foreground: #0b1f66;
+  --sidebar-border: #dbe7f7;
+  --sidebar-ring: #0066ff;
+
+  /* --- type ----------------------------------------------------------- */
+  --font-latin: "Inter Variable", "Inter", Arial, system-ui, sans-serif;
+  --font-arabic: "Noto Sans Arabic", "Inter Variable", "Inter", Arial, sans-serif;
+  --font-sans: var(--font-latin);
+  --font-display: var(--font-latin);
+
+  /* --- shape & elevation --------------------------------------------- */
+  --radius: 12px;
+  --radius-button: 10px;
+  --radius-card: 16px;
+  --radius-modal: 20px;
+  --shadow-card: 0 1px 2px rgba(11, 31, 102, 0.04), 0 4px 16px rgba(11, 31, 102, 0.05);
+  --shadow-pop: 0 12px 40px rgba(11, 31, 102, 0.14);
+  --focus-ring: 0 0 0 3px rgba(0, 102, 255, 0.28);
+
+  /* --- motion: quick, directional, never bouncy ----------------------- */
+  --ease-zimos: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+}
+
+/* Arabic gets the Arabic face first; Latin glyphs inside fall back to Inter. */
+[dir="rtl"],
+:lang(ar) {
+  --font-sans: var(--font-arabic);
+  --font-display: var(--font-arabic);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Deep navy, never pure black. */
+  --color-ink: #eaf2ff;
+  --color-ink-soft: #a9bddf;
+  --color-ink-muted: #7d91b8;
+  --color-paper: #081a4a;
+  --color-paper-raised: #0d2360;
+  --color-line: #1c3777;
+  --color-line-strong: #2a4a92;
+
+  --color-primary: #3d8bff;
+  --color-primary-dark: #cfe4ff;
+  --color-primary-soft: #12306f;
+  --color-accent: #66c2ff;
+  --color-accent-dark: #9fd8ff;
+  --color-accent-soft: #123a73;
+
+  --color-success: #4ade80;
+  --color-success-soft: #0f3a2a;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #3a2a0a;
+  --color-danger: #f87171;
+  --color-danger-soft: #3f1520;
+  --color-info: #66c2ff;
+  --color-info-soft: #12306f;
+
+  --background: #081a4a;
+  --foreground: #eaf2ff;
+  --card: #0d2360;
+  --card-foreground: #eaf2ff;
+  --popover: #0d2360;
+  --popover-foreground: #eaf2ff;
+  --primary: #3d8bff;
+  --primary-foreground: #ffffff;
+  --secondary: #12306f;
+  --secondary-foreground: #eaf2ff;
+  --muted: #10296a;
+  --muted-foreground: #a9bddf;
+  --accent: #12306f;
+  --accent-foreground: #eaf2ff;
+  --destructive: #f87171;
+  --border: #1c3777;
+  --input: #244283;
+  --ring: #66c2ff;
+  --sidebar: #0a1f57;
+  --sidebar-foreground: #eaf2ff;
+  --sidebar-primary: #3d8bff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #12306f;
+  --sidebar-accent-foreground: #eaf2ff;
+  --sidebar-border: #1c3777;
+  --sidebar-ring: #66c2ff;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* Expose the semantic tokens to Tailwind v4. `inline` keeps utilities pointing
+   at var(--color-*) so the .dark override cascades. */
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-paper: var(--color-paper);
+  --color-paper-raised: var(--color-paper-raised);
+  --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-info: var(--color-info);
+  --color-info-soft: var(--color-info-soft);
+
+  --color-zimos-blue: var(--zimos-blue);
+  --color-zimos-sky: var(--zimos-sky);
+  --color-zimos-navy: var(--zimos-navy);
+  --color-zimos-ice: var(--zimos-ice);
+  --color-zimos-cloud: var(--zimos-cloud);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  --radius-card: var(--radius-card);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: inherit;
+  }
+  [dir="rtl"] h1,
+  [dir="rtl"] h2,
+  [dir="rtl"] h3,
+  [dir="rtl"] h4,
+  [dir="rtl"] h5,
+  [dir="rtl"] h6 {
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--zimos-ice);
+    color: var(--zimos-navy);
+  }
+  .dark ::selection {
+    background: #1d4fb8;
+    color: #ffffff;
+  }
+}
+
+/* ==================================================================== *
+ * Official logo rendering.
+ *
+ * The approved ZIMOS logo currently exists only as raster exports with a
+ * background baked in (off-white for light, deep navy for dark). We never
+ * redraw it. Instead each export is shown on its matching surface with a
+ * blend mode that lets the baked background disappear into the page:
+ *   light export + `darken`  on light surfaces
+ *   dark export  + `lighten` on navy surfaces
+ * Swap for the official transparent SVG as soon as it is supplied — see
+ * public/brand/README.md in each app.
+ * ==================================================================== */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.zimos-logo .zimos-logo-on-light {
+  mix-blend-mode: darken;
+}
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
+  mix-blend-mode: lighten;
+}
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
+}
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
+}
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+/* Logos are never mirrored in RTL. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Signature motif: a restrained layered diagonal ribbon for hero / empty
+   states. Blue family only. Purely decorative. */
+.zimos-ribbons {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+}
+.zimos-ribbons::before,
+.zimos-ribbons::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  transform: rotate(-24deg);
+}
+.zimos-ribbons::before {
+  width: 140%;
+  height: 34%;
+  top: 18%;
+  inset-inline-start: -10%;
+  background: linear-gradient(90deg, rgba(0, 102, 255, 0.9), rgba(102, 194, 255, 0.85));
+}
+.zimos-ribbons::after {
+  width: 110%;
+  height: 12%;
+  top: 62%;
+  inset-inline-start: 5%;
+  background: linear-gradient(90deg, rgba(102, 194, 255, 0.7), rgba(232, 244, 255, 0.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

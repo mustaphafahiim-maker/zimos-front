@@ -1,24 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/zimos-icon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/zimos-icon-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F7FAFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#081A4A" media="(prefers-color-scheme: dark)" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Inter ships with the app (@fontsource-variable/inter); Arabic comes from Google Fonts. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <title>Store Builder — Merchant Dashboard</title>
-    <!-- Set the theme class before first paint — no flash of the wrong theme. -->
+    <title>ZIMOS — Merchant</title>
+    <!-- Set theme + direction before first paint — no flash of the wrong theme or layout. -->
     <script>
       (function () {
         try {
           var e = document.documentElement,
-            s = null;
+            s = null,
+            l = null;
           try {
             s = localStorage.getItem("theme");
+            l = localStorage.getItem("zimos.locale");
           } catch (_) {}
           var d =
             s === "dark" ||
@@ -26,6 +32,10 @@
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           e.classList.toggle("dark", d);
           e.style.colorScheme = d ? "dark" : "light";
+          if (l === "ar") {
+            e.lang = "ar";
+            e.dir = "rtl";
+          }
         } catch (_) {}
       })();
     </script>

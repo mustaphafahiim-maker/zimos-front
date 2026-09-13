@@ -5,10 +5,10 @@ type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const TONE_CLASS: Record<Tone, string> = {
   neutral: "bg-paper text-ink-soft border-line",
-  info: "bg-primary-soft text-primary-dark border-primary/30",
-  success: "bg-success-soft text-success border-success/30",
-  warning: "bg-accent-soft text-accent-dark border-accent/40",
-  danger: "bg-danger-soft text-danger border-danger/30",
+  info: "bg-primary-soft text-primary border-primary/25",
+  success: "bg-success-soft text-success border-success/25",
+  warning: "bg-warning-soft text-warning border-warning/30",
+  danger: "bg-danger-soft text-danger border-danger/25",
 };
 
 // Every order / shipment / return / product status the dashboard can render.

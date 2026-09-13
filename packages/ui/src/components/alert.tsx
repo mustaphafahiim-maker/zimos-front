@@ -3,20 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 rounded-lg border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
+  "group/alert relative grid w-full gap-0.5 rounded-xl border px-4 py-3 text-start text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-card text-card-foreground",
+        default: "border-line bg-zimos-cloud text-ink dark:bg-card",
         destructive:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+          "border-danger/25 bg-danger-soft text-danger *:data-[slot=alert-description]:text-danger/90 *:[svg]:text-current",
         // Deprecated aliases kept so the existing call sites in the apps keep
         // working. `danger` was the old destructive; `info` the old default.
         danger:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
+          "border-danger/25 bg-danger-soft text-danger *:data-[slot=alert-description]:text-danger/90 *:[svg]:text-current",
         success:
-          "bg-card text-emerald-700 *:data-[slot=alert-description]:text-emerald-700/90 *:[svg]:text-current dark:text-emerald-400 dark:*:data-[slot=alert-description]:text-emerald-400/90",
-        info: "bg-card text-card-foreground",
+          "border-success/25 bg-success-soft text-success *:data-[slot=alert-description]:text-success/90 *:[svg]:text-current",
+        warning:
+          "border-warning/25 bg-warning-soft text-warning *:data-[slot=alert-description]:text-warning/90 *:[svg]:text-current",
+        info: "border-primary/15 bg-primary-soft text-ink *:[svg]:text-primary",
       },
     },
     defaultVariants: {
@@ -75,7 +77,7 @@ function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="alert-action"
-      className={cn("absolute top-2.5 right-3", className)}
+      className={cn("absolute top-2.5 end-3", className)}
       {...props}
     />
   )
