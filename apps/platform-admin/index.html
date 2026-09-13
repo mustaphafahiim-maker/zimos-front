@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Store Builder — Platform Admin</title>
+    <!-- Set the theme class before first paint — no flash of the wrong theme. -->
+    <script>
+      (function () {
+        try {
+          var e = document.documentElement,
+            s = null;
+          try {
+            s = localStorage.getItem("theme");
+          } catch (_) {}
+          var d =
+            s === "dark" ||
+            (s !== "light" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          e.classList.toggle("dark", d);
+          e.style.colorScheme = d ? "dark" : "light";
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
