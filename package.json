@@ -15,11 +15,10 @@
     "build:admin": "npm run build -w apps/platform-admin",
     "build:storefront": "npm run build -w apps/storefront",
     "build:marketing": "npm run build -w apps/marketing",
-    "build:all": "npm run build:dashboard && npm run build:admin && npm run build:storefront && npm run build:marketing"
+    "build:all": "npm run build:dashboard && npm run build:admin && npm run build:storefront && npm run build:marketing",
+    "test:dashboard": "npm run test -w apps/merchant-dashboard"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
   }
 }
-
-
