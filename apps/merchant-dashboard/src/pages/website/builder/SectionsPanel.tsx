@@ -3,7 +3,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { ClipboardCopy, Copy, Eye, EyeOff, GripVertical, Pencil, Trash2, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import { fmt } from "@/i18n/LocaleContext";
 import type { NodePath, RendererLocale, Tree, TreeSection } from "@store-builder/store-renderer";
@@ -14,6 +14,7 @@ import { useBuilderT } from "./strings";
 function SortableSection({
   section,
   selected,
+  picked,
   selection,
   uiLocale,
   dispatch,
@@ -21,6 +22,7 @@ function SortableSection({
 }: {
   section: TreeSection;
   selected: boolean;
+  picked: boolean;
   selection: NodePath | null;
   uiLocale: RendererLocale;
   dispatch: Dispatch<EditorAction>;
@@ -37,7 +39,7 @@ function SortableSection({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={cn("rounded-lg border bg-paper-raised", selected ? "border-[#2563eb] ring-1 ring-[#2563eb]" : "border-line", isDragging && "relative z-10 shadow-pop")}
+      className={cn("rounded-lg border bg-paper-raised", picked ? "border-[#2563eb] bg-[#2563eb]/5 ring-1 ring-[#2563eb]" : selected ? "border-[#2563eb] ring-1 ring-[#2563eb]" : "border-line", isDragging && "relative z-10 shadow-pop")}
     >
       <div className="group flex items-center gap-1 px-1 py-1">
         <button ref={setActivatorNodeRef} type="button" className={cn(iconBtn, "cursor-grab active:cursor-grabbing")} aria-label={fmt(t.dragHandle, { name: label })} {...attributes} {...listeners}>
@@ -62,7 +64,8 @@ function SortableSection({
         ) : (
           <button
             type="button"
-            onClick={() => dispatch({ type: "select", path: section.id })}
+            onClick={(e) => dispatch(e.shiftKey || e.ctrlKey || e.metaKey ? { type: "toggleMulti", sectionId: section.id } : { type: "select", path: section.id })}
+            aria-pressed={picked || selected}
             onDoubleClick={() => setRenaming(true)}
             className={cn("min-w-0 flex-1 cursor-pointer truncate rounded-md px-1.5 py-1 text-start text-sm", hidden ? "text-ink-muted line-through" : "text-ink", selected && "font-semibold")}
             dir="auto"
@@ -86,7 +89,7 @@ function SortableSection({
           </button>
         </div>
       </div>
-      {selected && (
+      {selected && !picked && (
         <ul className="space-y-0.5 border-t border-line px-2 py-1.5">
           {section.rows.map((r) =>
             r.columns.map((c) =>
@@ -122,14 +125,20 @@ export function SectionsPanel({
   tree,
   selection,
   dispatch,
+  multi,
   uiLocale,
   onDelete,
+  onDeleteMany,
+  onCopy,
 }: {
   tree: Tree;
   selection: NodePath | null;
+  multi: string[];
   dispatch: Dispatch<EditorAction>;
   uiLocale: RendererLocale;
   onDelete: (path: NodePath) => void;
+  onDeleteMany: (ids: string[]) => void;
+  onCopy: (ids: string[]) => void;
 }) {
   const t = useBuilderT();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -144,7 +153,39 @@ export function SectionsPanel({
 
   return (
     <div className="space-y-2 p-3">
-      <p className="text-xs text-ink-soft">{t.sectionsHint}</p>
+      {multi.length > 1 ? (
+        <div role="toolbar" aria-label={fmt(t.selectedCount, { n: multi.length })} className="sticky top-0 z-20 flex items-center gap-1 rounded-lg bg-[#2563eb] px-2 py-1 text-white shadow">
+          <span className="flex-1 text-xs font-semibold">{fmt(t.selectedCount, { n: multi.length })}</span>
+          {(() => {
+            const allHidden = multi.every((id) => tree.sections.find((s) => s.id === id)?.settings?.hidden);
+            const bulk = "flex size-7 cursor-pointer items-center justify-center rounded-md hover:bg-white/20";
+            return (
+              <>
+                <button type="button" className={bulk} title={allHidden ? t.show : t.hide} aria-label={allHidden ? t.show : t.hide} onClick={() => dispatch({ type: "setHiddenMany", ids: multi, hidden: !allHidden })}>
+                  {allHidden ? <Eye className="size-3.5" aria-hidden /> : <EyeOff className="size-3.5" aria-hidden />}
+                </button>
+                <button type="button" className={bulk} title={t.duplicate} aria-label={t.duplicate} onClick={() => dispatch({ type: "duplicateSections", ids: multi })}>
+                  <Copy className="size-3.5" aria-hidden />
+                </button>
+                <button type="button" className={bulk} title={t.copy} aria-label={t.copy} onClick={() => onCopy(multi)}>
+                  <ClipboardCopy className="size-3.5" aria-hidden />
+                </button>
+                <button type="button" className={bulk} title={t.delete} aria-label={t.delete} onClick={() => onDeleteMany(multi)}>
+                  <Trash2 className="size-3.5" aria-hidden />
+                </button>
+                <button type="button" className={bulk} title={t.clearSelection} aria-label={t.clearSelection} onClick={() => dispatch({ type: "clearMulti" })}>
+                  <X className="size-3.5" aria-hidden />
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      ) : (
+        <p className="text-xs text-ink-soft">
+          {t.sectionsHint}
+          <span className="mt-0.5 block text-ink-muted">{t.multiHint}</span>
+        </p>
+      )}
       {tree.sections.length === 0 ? (
         <p className="rounded-lg border border-dashed border-line p-4 text-center text-sm text-ink-muted">{t.noSections}</p>
       ) : (
@@ -152,7 +193,7 @@ export function SectionsPanel({
           <SortableContext items={tree.sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             <ul aria-label={t.tabSections} className="space-y-1.5">
               {tree.sections.map((s) => (
-                <SortableSection key={s.id} section={s} selected={s.id === selectedSection} selection={selection} uiLocale={uiLocale} dispatch={dispatch} onDelete={onDelete} />
+                <SortableSection key={s.id} section={s} selected={s.id === selectedSection} picked={multi.length > 1 && multi.includes(s.id)} selection={selection} uiLocale={uiLocale} dispatch={dispatch} onDelete={onDelete} />
               ))}
             </ul>
           </SortableContext>

@@ -7,7 +7,11 @@ import { fmt } from "@/i18n/LocaleContext";
 import { ELEMENT_LABELS, ELEMENT_PALETTE } from "./elementLibrary";
 import { useBuilderT } from "./strings";
 
-export type DragData = { kind: "section"; presetId: string; label: string } | { kind: "element"; elementType: ElementType; label: string };
+export type DragData =
+  | { kind: "section"; presetId: string; label: string }
+  | { kind: "element"; elementType: ElementType; label: string }
+  /** An element already on the page, dragged from the canvas toolbar to another spot. */
+  | { kind: "move"; path: string; label: string };
 
 /* ---- CSS schematics: a tiny wireframe of each preset --------------------- */
 

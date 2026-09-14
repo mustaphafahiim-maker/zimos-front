@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { useNavigate, useParams } from "react-router-dom";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { cn, Spinner, Button } from "@store-builder/ui";
+import { PanelLeft, SlidersHorizontal } from "lucide-react";
 import {
   SECTION_BY_ID,
   THEMES,
@@ -15,6 +16,8 @@ import {
   type ThemePageKey,
   type ThemeSettings,
   type Tree,
+  type TreeElement,
+  type TreeSection,
 } from "@store-builder/store-renderer";
 import type { CreateWebsitePagePayload, PageTree, PublishProblem, Website } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -45,7 +48,7 @@ import { ThemePanel } from "./ThemePanel";
 import { Inspector } from "./Inspector";
 import { EMPTY_CATALOG, type CatalogData } from "./StoreChrome";
 import { createElement } from "./elementLibrary";
-import { ApplyThemeDialog, GUIDE_STEPS, GuideChecklist, HistoryDialog, LeaveDialog, ProblemList, PublishDialog, SmallScreenNotice, UndoToast, type GuideState, type GuideStep } from "./dialogs";
+import { ApplyThemeDialog, GUIDE_STEPS, GuideChecklist, HistoryDialog, LeaveDialog, ProblemList, PublishDialog, UndoToast, type GuideState, type GuideStep } from "./dialogs";
 import { useBuilderT, type BuilderStrings } from "./strings";
 
 const STOREFRONT_URL = ((import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? "http://localhost:3000").replace(/\/+$/, "");
@@ -63,6 +66,33 @@ function readGuide(websiteId: string): GuideState {
   } catch {
     return empty;
   }
+}
+
+/** Guide progress also lives in the workspace themeSettings blob so it follows the merchant across devices. */
+function guideFromBlob(raw: Record<string, unknown>): Partial<GuideState> | null {
+  const g = raw.builderGuide as { dismissed?: unknown; done?: unknown } | undefined;
+  if (!g || typeof g !== "object") return null;
+  const done = Array.isArray(g.done) ? (g.done.filter((x) => GUIDE_STEPS.includes(x as GuideStep)) as GuideStep[]) : [];
+  return { dismissed: g.dismissed === true, done: Object.fromEntries(GUIDE_STEPS.map((k) => [k, done.includes(k)])) as GuideState["done"] };
+}
+
+function mergeGuide(a: GuideState, b: Partial<GuideState> | null): GuideState {
+  if (!b) return a;
+  return { dismissed: a.dismissed || !!b.dismissed, done: Object.fromEntries(GUIDE_STEPS.map((k) => [k, a.done[k] || !!b.done?.[k]])) as GuideState["done"] };
+}
+
+const CLIPBOARD_KEY = "zimos.builder.clipboard";
+type Clipboard = { kind: "sections"; sections: TreeSection[] } | { kind: "element"; element: TreeElement };
+function readClipboard(): Clipboard | null {
+  try {
+    const raw = localStorage.getItem(CLIPBOARD_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Clipboard) : null;
+    if (parsed?.kind === "sections" && Array.isArray(parsed.sections)) return parsed;
+    if (parsed?.kind === "element" && parsed.element && typeof parsed.element.type === "string") return parsed;
+  } catch {
+    /* storage unavailable or corrupt */
+  }
+  return null;
 }
 
 /** One friendly message per backend failure class. */
@@ -114,7 +144,7 @@ export function BuilderPage() {
   const rawThemeRef = useRef<Record<string, unknown>>({});
 
   const [tab, setTab] = useState<Tab>("sections");
-  const [device, setDevice] = useState<Device>("desktop");
+  const [device, setDevice] = useState<Device>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "desktop"));
   const [fit, setFit] = useState(true);
   const [previewLocale, setPreviewLocale] = useState<RendererLocale>("ar");
   const [insertAt, setInsertAt] = useState<number | null>(null);
@@ -131,9 +161,10 @@ export function BuilderPage() {
   const [pageToDelete, setPageToDelete] = useState<EditorPage | null>(null);
   const [themeToApply, setThemeToApply] = useState<ThemeId | null>(null);
   const [applyingTheme, setApplyingTheme] = useState(false);
-  const [undoToast, setUndoToast] = useState<string | null>(null);
+  const [undoToast, setUndoToast] = useState<{ message: string; onUndo: () => void } | null>(null);
+  /** Narrow screens: the side panels become drawers. */
+  const [drawer, setDrawer] = useState<"start" | "end" | null>(null);
   const [guide, setGuide] = useState<GuideState>(() => readGuide(websiteId));
-  const [smallScreen, setSmallScreen] = useState(() => typeof window !== "undefined" && window.innerWidth < 900);
 
   const [dragKind, setDragKind] = useState<"section" | "element" | null>(null);
   const [dragPoint, setDragPoint] = useState<{ x: number; y: number } | null>(null);
@@ -151,6 +182,7 @@ export function BuilderPage() {
       setLiveRevisionId(detail.website.publishedRevisionId);
       const storeLocale = raw.defaultLocale === "en" ? "en" : currentWorkspace?.defaultLocale === "en" ? "en" : "ar";
       setPreviewLocale(storeLocale);
+      setGuide((g) => mergeGuide(g, guideFromBlob(raw)));
       dispatch({
         type: "load",
         pages: detail.pages.map((p) => ({ id: p.id, title: p.title, path: p.path, pageType: p.pageType, tree: p.draftData })),
@@ -180,31 +212,38 @@ export function BuilderPage() {
   }, [load]);
 
   // ---- guide ----------------------------------------------------------------
-  const markGuide = useCallback(
-    (step: GuideStep) => {
-      setGuide((g) => {
-        if (g.done[step]) return g;
-        const next = { ...g, done: { ...g.done, [step]: true } };
-        try {
-          localStorage.setItem(guideKey(websiteId), JSON.stringify(next));
-        } catch {
-          /* storage unavailable */
-        }
-        return next;
-      });
-    },
-    [websiteId]
-  );
-  const dismissGuide = () => {
-    setGuide((g) => {
-      const next = { ...g, dismissed: true };
+  const persistGuide = useCallback(
+    (next: GuideState) => {
       try {
         localStorage.setItem(guideKey(websiteId), JSON.stringify(next));
       } catch {
         /* storage unavailable */
       }
-      return next;
-    });
+      const saved = guideFromBlob(rawThemeRef.current);
+      if (saved && saved.dismissed === next.dismissed && GUIDE_STEPS.every((k) => !!saved.done?.[k] === next.done[k])) return;
+      // Only the stored blob plus this small key is sent: unsaved theme edits keep waiting for Save.
+      const blob = { ...rawThemeRef.current, builderGuide: { dismissed: next.dismissed, done: GUIDE_STEPS.filter((k) => next.done[k]) } };
+      if (Object.keys(blob).length > 50 || JSON.stringify(blob).length > 5000) return;
+      rawThemeRef.current = blob;
+      apiClient.updateWorkspace(workspaceId, { themeSettings: blob }).catch(() => undefined);
+    },
+    [websiteId, workspaceId]
+  );
+  const markGuide = useCallback(
+    (step: GuideStep) => {
+      setGuide((g) => {
+        if (g.done[step]) return g;
+        const next = { ...g, done: { ...g.done, [step]: true } };
+        queueMicrotask(() => persistGuide(next));
+        return next;
+      });
+    },
+    [persistGuide]
+  );
+  const dismissGuide = () => {
+    const next = { ...guide, dismissed: true };
+    setGuide(next);
+    persistGuide(next);
   };
 
   // ---- save -----------------------------------------------------------------
@@ -327,10 +366,66 @@ export function BuilderPage() {
       const s = stateRef.current;
       const kind = resolvePath(s.currentPageId ? s.trees[s.currentPageId] : undefined, path).kind;
       dispatch({ type: "deleteNode", path });
-      if (kind === "section" || kind === "element") setUndoToast(t.deletedToast);
+      if (kind === "section" || kind === "element") setUndoToast({ message: t.deletedToast, onUndo: () => dispatch({ type: "undo" }) });
     },
     [t.deletedToast]
   );
+
+  const deleteMany = useCallback(
+    (ids: string[]) => {
+      dispatch({ type: "deleteSections", ids });
+      setUndoToast({ message: fmt(t.deletedMany, { n: ids.length }), onUndo: () => dispatch({ type: "undo" }) });
+    },
+    [t.deletedMany]
+  );
+
+  const copy = useCallback(
+    (ids?: string[]) => {
+      const s = stateRef.current;
+      const current = s.currentPageId ? s.trees[s.currentPageId] : undefined;
+      if (!current) return;
+      let clip: Clipboard | null = null;
+      const pick = ids ?? (s.multi.length > 1 ? s.multi : null);
+      if (pick) clip = { kind: "sections", sections: current.sections.filter((x) => pick.includes(x.id)) };
+      else {
+        const r = resolvePath(current, s.selection);
+        if (r.kind === "element" && r.element) clip = { kind: "element", element: r.element };
+        else if (r.section) clip = { kind: "sections", sections: [r.section] };
+      }
+      if (!clip || (clip.kind === "sections" && clip.sections.length === 0)) return;
+      try {
+        localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(clip));
+      } catch {
+        return;
+      }
+      toast.success(t.copied);
+    },
+    [toast, t.copied]
+  );
+
+  const paste = useCallback(() => {
+    const clip = readClipboard();
+    if (!clip) {
+      toast.error(t.nothingToPaste);
+      return;
+    }
+    const s = stateRef.current;
+    const current = s.currentPageId ? s.trees[s.currentPageId] : undefined;
+    if (!current) return;
+    const r = resolvePath(current, s.selection);
+    if (clip.kind === "sections") {
+      dispatch({ type: "insertSections", sections: structuredClone(clip.sections), index: r.sectionIndex >= 0 ? r.sectionIndex + 1 : undefined });
+    } else {
+      const column = targetColumnPath(current, s.selection);
+      if (!column) {
+        toast.error(t.elementsHint);
+        return;
+      }
+      const index = r.kind === "element" && r.column && r.element ? r.column.elements.findIndex((e) => e.id === r.element!.id) + 1 : undefined;
+      dispatch({ type: "insertElement", columnPath: column, element: structuredClone(clip.element), index });
+    }
+    toast.success(t.pasted);
+  }, [toast, t.nothingToPaste, t.pasted, t.elementsHint]);
 
   function addSection(presetId: string, index?: number) {
     const preset = SECTION_BY_ID[presetId];
@@ -341,10 +436,10 @@ export function BuilderPage() {
     markGuide("content");
   }
 
-  function addElement(type: ElementType, columnPath?: string) {
+  function addElement(type: ElementType, columnPath?: string, index?: number) {
     const target = columnPath ?? targetColumnPath(tree, state.selection);
     if (!target) return;
-    dispatch({ type: "insertElement", columnPath: target, element: createElement(type, previewLocale) });
+    dispatch({ type: "insertElement", columnPath: target, element: createElement(type, previewLocale), index });
     markGuide("content");
   }
 
@@ -403,7 +498,15 @@ export function BuilderPage() {
       dispatch({ type: "addPage", page: { id: created.id, title: created.title, path: created.path, pageType: created.pageType }, tree: created.draftData as unknown as Tree });
       dispatch({ type: "setPage", pageId: created.id });
       setNewPageOpen(false);
-      toast.success(t.pageCreated);
+      setUndoToast({
+        message: t.pageAddedUndo,
+        onUndo: () => {
+          apiClient
+            .deletePage(workspaceId, websiteId, created.id)
+            .then(() => dispatch({ type: "removePage", pageId: created.id }))
+            .catch((err) => toast.error(errorText(err, t).message));
+        },
+      });
     } catch (err) {
       throw new Error(errorText(err, t).message);
     }
@@ -412,6 +515,8 @@ export function BuilderPage() {
   async function deletePage() {
     const page = pageToDelete;
     if (!page) return;
+    // Kept so the deletion can be undone by recreating the page with the same content.
+    const snapshot = stateRef.current.trees[page.id];
     try {
       await apiClient.deletePage(workspaceId, websiteId, page.id);
     } catch (err) {
@@ -419,7 +524,19 @@ export function BuilderPage() {
     }
     dispatch({ type: "removePage", pageId: page.id });
     setPageToDelete(null);
-    toast.success(t.pageDeleted);
+    setUndoToast({
+      message: t.pageDeleted,
+      onUndo: () => {
+        apiClient
+          .createPage(workspaceId, websiteId, { path: page.path, title: page.title, pageType: page.pageType as CreateWebsitePagePayload["pageType"], draftData: snapshot as unknown as PageTree })
+          .then((created) => {
+            dispatch({ type: "addPage", page: { id: created.id, title: created.title, path: created.path, pageType: created.pageType }, tree: snapshot });
+            dispatch({ type: "setPage", pageId: created.id });
+            toast.success(t.pageRestored);
+          })
+          .catch((err) => toast.error(errorText(err, t).message));
+      },
+    });
   }
 
   // ---- keyboard -------------------------------------------------------------
@@ -438,6 +555,24 @@ export function BuilderPage() {
         dispatch({ type: e.shiftKey ? "redo" : "undo" });
         return;
       }
+      if (mod && key === "c") {
+        if ((e.target as Node | null)?.ownerDocument?.getSelection()?.toString()) return;
+        e.preventDefault();
+        copy();
+        return;
+      }
+      if (mod && key === "v") {
+        e.preventDefault();
+        paste();
+        return;
+      }
+      if (mod && key === "d") {
+        const cur = stateRef.current;
+        e.preventDefault();
+        if (cur.multi.length > 1) dispatch({ type: "duplicateSections", ids: cur.multi });
+        else if (cur.selection) dispatch({ type: "duplicateSection", sectionId: cur.selection.split("/")[0] });
+        return;
+      }
       if (mod && key === "y") {
         e.preventDefault();
         dispatch({ type: "redo" });
@@ -447,6 +582,11 @@ export function BuilderPage() {
       const current = s.currentPageId ? s.trees[s.currentPageId] : undefined;
       if (e.key === "Escape") {
         dispatch({ type: "select", path: null });
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && s.multi.length > 1) {
+        e.preventDefault();
+        deleteMany(s.multi);
         return;
       }
       if ((e.key === "Delete" || e.key === "Backspace") && s.selection) {
@@ -461,7 +601,7 @@ export function BuilderPage() {
         dispatch({ type: "select", path: current.sections[nextIdx].id });
       }
     },
-    [save, deleteNode]
+    [save, deleteNode, deleteMany, copy, paste]
   );
 
   useEffect(() => {
@@ -482,7 +622,7 @@ export function BuilderPage() {
   function onDragStart(e: DragStartEvent) {
     const data = e.active.data.current as DragData | undefined;
     if (!data) return;
-    setDragKind(data.kind);
+    setDragKind(data.kind === "section" ? "section" : "element");
     const ev = e.activatorEvent as PointerEvent | undefined;
     if (ev && "clientX" in ev) setDragPoint({ x: ev.clientX, y: ev.clientY });
   }
@@ -494,10 +634,11 @@ export function BuilderPage() {
     setDragPoint(null);
     if (!data || !point) return;
     const { x, y } = point;
-    const drop = canvasRef.current?.resolveDrop(x, y, data.kind);
+    const drop = canvasRef.current?.resolveDrop(x, y, data.kind === "section" ? "section" : "element");
     if (!drop) return;
     if (data.kind === "section" && drop.kind === "section") addSection(data.presetId, drop.index);
-    else if (data.kind === "element" && drop.kind === "element") addElement(data.elementType, drop.columnPath);
+    else if (data.kind === "element" && drop.kind === "element") addElement(data.elementType, drop.columnPath, drop.index);
+    else if (data.kind === "move" && drop.kind === "element") dispatch({ type: "moveElementTo", path: data.path, columnPath: drop.columnPath, index: drop.index });
   }
 
   // ---- render -----------------------------------------------------------------
@@ -594,7 +735,14 @@ export function BuilderPage() {
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => { setDragKind(null); setDragPoint(null); }}>
         <div className="flex min-h-0 flex-1">
-          <aside className="flex w-72 shrink-0 flex-col border-e border-line bg-paper-raised">
+          {drawer && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-hidden onClick={() => setDrawer(null)} />}
+          <aside
+            aria-label={t.openPanels}
+            className={cn(
+              "flex w-72 shrink-0 flex-col border-e border-line bg-paper-raised max-lg:fixed max-lg:inset-y-0 max-lg:start-0 max-lg:z-40 max-lg:w-[min(20rem,88vw)] max-lg:shadow-pop",
+              drawer !== "start" && "max-lg:hidden"
+            )}
+          >
             <div role="tablist" className="flex border-b border-line">
               {tabs.map((x) => (
                 <button
@@ -613,7 +761,7 @@ export function BuilderPage() {
               ))}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {tab === "sections" && tree && <SectionsPanel tree={tree} selection={state.selection} dispatch={dispatch} uiLocale={uiLocale} onDelete={deleteNode} />}
+              {tab === "sections" && tree && <SectionsPanel tree={tree} selection={state.selection} multi={state.multi} dispatch={dispatch} uiLocale={uiLocale} onDelete={deleteNode} onDeleteMany={deleteMany} onCopy={copy} />}
               {tab === "add" && <AddPanel uiLocale={uiLocale} canAddElement={!!targetColumnPath(tree, state.selection)} onAddSection={(id) => addSection(id)} onAddElement={(type) => addElement(type)} />}
               {tab === "theme" && <ThemePanel theme={state.theme} uiLocale={uiLocale} onChange={changeTheme} onPickTheme={setThemeToApply} sizeError={themeSizeError} />}
             </div>
@@ -652,7 +800,13 @@ export function BuilderPage() {
             <div className="flex flex-1 items-center justify-center text-sm text-ink-soft">{t.noSections}</div>
           )}
 
-          <aside aria-label={t.inspectorTitle} className="flex w-80 shrink-0 flex-col border-s border-line bg-paper-raised">
+          <aside
+            aria-label={t.inspectorTitle}
+            className={cn(
+              "flex w-80 shrink-0 flex-col border-s border-line bg-paper-raised max-lg:fixed max-lg:inset-y-0 max-lg:end-0 max-lg:z-40 max-lg:w-[min(22rem,90vw)] max-lg:shadow-pop",
+              drawer !== "end" && "max-lg:hidden"
+            )}
+          >
             <h2 className="border-b border-line px-3 py-2.5 text-sm font-semibold text-ink">{t.inspectorTitle}</h2>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <Inspector
@@ -702,15 +856,24 @@ export function BuilderPage() {
       {guideVisible && <GuideChecklist state={guide} onAction={guideAction} onDismiss={dismissGuide} />}
       {undoToast && (
         <UndoToast
-          message={undoToast}
+          message={undoToast.message}
           onUndo={() => {
-            dispatch({ type: "undo" });
+            undoToast.onUndo();
             setUndoToast(null);
           }}
           onDismiss={() => setUndoToast(null)}
         />
       )}
-      {smallScreen && <SmallScreenNotice onContinue={() => setSmallScreen(false)} />}
+      <div className="fixed bottom-4 end-4 z-20 flex gap-2 lg:hidden">
+        <Button type="button" variant="outline" size="sm" className="bg-paper-raised shadow-pop" onClick={() => setDrawer("start")} aria-label={t.openPanels}>
+          <PanelLeft className="size-4 rtl:-scale-x-100" aria-hidden />
+          {t.tabSections}
+        </Button>
+        <Button type="button" size="sm" className="shadow-pop" onClick={() => setDrawer("end")} aria-label={t.openInspector}>
+          <SlidersHorizontal className="size-4" aria-hidden />
+          {t.openInspector}
+        </Button>
+      </div>
     </div>
   );
 }

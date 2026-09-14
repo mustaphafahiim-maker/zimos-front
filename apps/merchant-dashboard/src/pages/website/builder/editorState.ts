@@ -43,6 +43,8 @@ export interface EditorState {
   savedTheme: string;
   currentPageId: string | null;
   selection: NodePath | null;
+  /** Section ids picked together in the outline (Ctrl/Shift+click) for bulk actions. */
+  multi: string[];
   past: Snapshot[];
   future: Snapshot[];
   lastGroup: string | null;
@@ -67,6 +69,13 @@ export type EditorAction =
   | { type: "inlineEdit"; path: NodePath; field: string; value: string }
   | { type: "insertElement"; columnPath: NodePath; element: TreeElement; index?: number }
   | { type: "moveElement"; path: NodePath; delta: -1 | 1 }
+  | { type: "moveElementTo"; path: NodePath; columnPath: NodePath; index?: number }
+  | { type: "toggleMulti"; sectionId: string }
+  | { type: "clearMulti" }
+  | { type: "insertSections"; sections: TreeSection[]; index?: number }
+  | { type: "deleteSections"; ids: string[] }
+  | { type: "duplicateSections"; ids: string[] }
+  | { type: "setHiddenMany"; ids: string[]; hidden: boolean }
   | { type: "setRowColumns"; rowPath: NodePath; spans: number[] }
   | { type: "setTheme"; theme: ThemeSettings; group?: string; at?: number }
   | { type: "applyTheme"; theme: ThemeSettings; trees?: Record<string, Tree> }
@@ -96,6 +105,7 @@ export function initialEditorState(): EditorState {
     savedTheme: JSON.stringify(theme),
     currentPageId: null,
     selection: null,
+    multi: [],
     past: [],
     future: [],
     lastGroup: null,
@@ -303,10 +313,97 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
 
     case "setPage":
       if (!state.trees[action.pageId]) return state;
-      return { ...state, currentPageId: action.pageId, selection: null, lastGroup: null };
+      return { ...state, currentPageId: action.pageId, selection: null, multi: [], lastGroup: null };
 
     case "select":
-      return { ...state, selection: selectionExists(currentTree(state), action.path) };
+      return { ...state, selection: selectionExists(currentTree(state), action.path), multi: [] };
+
+    case "toggleMulti": {
+      const tree = currentTree(state);
+      if (!tree?.sections.some((s) => s.id === action.sectionId)) return state;
+      // The section already selected on its own joins the group first.
+      const base = state.multi.length === 0 && state.selection ? [state.selection.split("/")[0]] : state.multi;
+      const multi = base.includes(action.sectionId) ? base.filter((id) => id !== action.sectionId) : [...base, action.sectionId];
+      return { ...state, multi, selection: multi.length === 1 ? multi[0] : multi.length === 0 ? null : state.selection };
+    }
+
+    case "clearMulti":
+      return state.multi.length ? { ...state, multi: [] } : state;
+
+    case "insertSections": {
+      const tree = currentTree(state);
+      if (!tree || action.sections.length === 0) return state;
+      const inserted: TreeSection[] = [];
+      // Each pasted section must be unique against the page and the ones pasted before it.
+      for (const node of action.sections) inserted.push(ensureUniqueIds({ ...tree, sections: [...tree.sections, ...inserted] }, node));
+      const index = Math.max(0, Math.min(tree.sections.length, action.index ?? tree.sections.length));
+      const sections = [...tree.sections];
+      sections.splice(index, 0, ...inserted);
+      return withTree(state, { ...tree, sections }, { selection: inserted[inserted.length - 1].id, multi: inserted.length > 1 ? inserted.map((s) => s.id) : [] });
+    }
+
+    case "deleteSections": {
+      const tree = currentTree(state);
+      if (!tree || !action.ids.some((id) => tree.sections.some((s) => s.id === id))) return state;
+      const next = { ...tree, sections: tree.sections.filter((s) => !action.ids.includes(s.id)) };
+      return withTree(state, next, { selection: null, multi: [] });
+    }
+
+    case "duplicateSections": {
+      const tree = currentTree(state);
+      if (!tree) return state;
+      const taken = new Set(collectIds(tree));
+      const sections: TreeSection[] = [];
+      const copies: string[] = [];
+      for (const s of tree.sections) {
+        sections.push(s);
+        if (action.ids.includes(s.id)) {
+          const copy = cloneWithNewIds(s, taken);
+          sections.push(copy);
+          copies.push(copy.id);
+        }
+      }
+      if (copies.length === 0) return state;
+      return withTree(state, { ...tree, sections }, { multi: copies.length > 1 ? copies : [], selection: copies[copies.length - 1] });
+    }
+
+    case "setHiddenMany": {
+      const tree = currentTree(state);
+      if (!tree) return state;
+      const next = {
+        ...tree,
+        sections: tree.sections.map((s) => {
+          if (!action.ids.includes(s.id)) return s;
+          const settings = { ...(s.settings ?? {}) };
+          if (action.hidden) settings.hidden = true;
+          else delete settings.hidden;
+          return { ...s, settings };
+        }),
+      };
+      return withTree(state, next);
+    }
+
+    case "moveElementTo": {
+      const tree = currentTree(state);
+      const from = resolvePath(tree, action.path);
+      const to = resolvePath(tree, action.columnPath);
+      if (!tree || from.kind !== "element" || !from.element || !from.row || !from.column || to.kind !== "column" || !to.row || !to.column || !to.section) return state;
+      const element = from.element;
+      const sameColumn = from.column.id === to.column.id && from.row.id === to.row.id && from.section!.id === to.section.id;
+      const oldIndex = from.column.elements.findIndex((e) => e.id === element.id);
+      let index = Math.max(0, Math.min(to.column.elements.length, action.index ?? to.column.elements.length));
+      if (sameColumn) {
+        if (index > oldIndex) index -= 1;
+        if (index === oldIndex) return state;
+      }
+      let next = mapColumn(tree, from.section!.id, from.row.id, from.column.id, (c) => ({ ...c, elements: c.elements.filter((e) => e.id !== element.id) }));
+      next = mapColumn(next, to.section.id, to.row.id, to.column.id, (c) => {
+        const elements = [...c.elements];
+        elements.splice(Math.min(index, elements.length), 0, element);
+        return { ...c, elements };
+      });
+      return withTree(state, next, { selection: `${action.columnPath}/${element.id}` });
+    }
 
     case "insertSection": {
       const tree = currentTree(state);
@@ -494,6 +591,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         past: state.past.slice(0, -1),
         future: [snapshot(state), ...state.future].slice(0, HISTORY_LIMIT),
         selection: selectionExists(state.currentPageId ? trees[state.currentPageId] : undefined, state.selection),
+        multi: [],
         lastGroup: null,
         revision: state.revision + 1,
       };
@@ -510,6 +608,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         past: [...state.past, snapshot(state)].slice(-HISTORY_LIMIT),
         future: state.future.slice(1),
         selection: selectionExists(state.currentPageId ? trees[state.currentPageId] : undefined, state.selection),
+        multi: [],
         lastGroup: null,
         revision: state.revision + 1,
       };

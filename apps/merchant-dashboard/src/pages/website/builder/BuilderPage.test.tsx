@@ -65,6 +65,9 @@ describe("BuilderPage", () => {
     const tree = payload.draftData as unknown as { sections: Array<{ id: string; rows: Array<{ columns: Array<{ elements: Array<{ props: { text?: string } }> }> }> }> };
     expect(tree.sections).toHaveLength(2);
     expect(JSON.stringify(tree)).toContain("New hero title");
-    expect(api.updateWorkspace).not.toHaveBeenCalled();
+    // Only guide progress may reach the workspace blob — no theme was edited.
+    for (const [, body] of api.updateWorkspace.mock.calls) {
+      expect(Object.keys(body.themeSettings ?? {})).toEqual(["builderGuide"]);
+    }
   });
 });

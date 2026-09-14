@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type Ref } from "react";
-import { useDroppable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, LayoutTemplate, Palette, Plus, Trash2 } from "lucide-react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, GripVertical, LayoutTemplate, Palette, Plus, Trash2 } from "lucide-react";
 import { Button } from "@store-builder/ui";
 import { PageRenderer, type NodePath, type RendererLocale, type ThemeSettings, type Tree } from "@store-builder/store-renderer";
 import { resolvePath, sectionLabel, type EditorAction, type EditorPage } from "./editorState";
@@ -13,7 +13,7 @@ export type Device = "desktop" | "tablet" | "mobile";
 export const DEVICE_WIDTHS: Record<Device, number> = { desktop: 1280, tablet: 768, mobile: 390 };
 
 export interface CanvasHandle {
-  resolveDrop: (x: number, y: number, kind: "section" | "element") => { kind: "section"; index: number } | { kind: "element"; columnPath: string } | null;
+  resolveDrop: (x: number, y: number, kind: "section" | "element") => { kind: "section"; index: number } | { kind: "element"; columnPath: string; index: number } | null;
 }
 
 interface Box {
@@ -23,9 +23,19 @@ interface Box {
   height: number;
 }
 
-type Indicator = { kind: "section"; index: number; box: Box } | { kind: "element"; columnPath: string; box: Box };
+type Indicator = { kind: "section"; index: number; box: Box } | { kind: "element"; columnPath: string; index: number; box: Box; line: Box };
 
 const BLUE = "#2563eb";
+
+/** Grip in the floating toolbar: drags the selected element to any column on the page. */
+function MoveHandle({ path, label, className }: { path: string; label: string; className: string }) {
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: `move:${path}`, data: { kind: "move", path, label } });
+  return (
+    <button ref={setNodeRef} type="button" className={`${className} cursor-grab active:cursor-grabbing`} title={label} aria-label={label} {...attributes} {...listeners}>
+      <GripVertical className="size-4" aria-hidden />
+    </button>
+  );
+}
 
 /** The page inside the iframe. Memoised: overlay/hover updates never re-render the store. */
 const FrameContent = memo(function FrameContent({
@@ -333,7 +343,26 @@ export function Canvas({
       const path = column?.getAttribute("data-zr-path");
       if (!column || !path) return null;
       const box = toArea(column.getBoundingClientRect());
-      return box ? { kind: "element", columnPath: path, box } : null;
+      if (!box) return null;
+      // Direct children of this column only (nested columns never exist, but paths make it exact).
+      const children = Array.from(column.querySelectorAll('[data-zr-kind="element"]')).filter((n) => {
+        const p = n.getAttribute("data-zr-path") ?? "";
+        return p.startsWith(`${path}/`) && p.split("/").length === 4;
+      });
+      const rectOf = (n: Element) => ((n.classList.contains("zr-edit") ? n.firstElementChild : n) ?? n).getBoundingClientRect();
+      let index = children.length;
+      let lineY = children.length ? rectOf(children[children.length - 1]).bottom : column.getBoundingClientRect().top + 4;
+      for (let i = 0; i < children.length; i += 1) {
+        const r = rectOf(children[i]);
+        if (iy < r.top + r.height / 2) {
+          index = i;
+          lineY = r.top;
+          break;
+        }
+      }
+      const cr = column.getBoundingClientRect();
+      const line = toArea(new DOMRect(cr.left, lineY - 1, cr.width, 3));
+      return line ? { kind: "element", columnPath: path, index, box, line } : null;
     },
     [doc, scale, toArea]
   );
@@ -344,7 +373,7 @@ export function Canvas({
       resolveDrop: (x, y, kind) => {
         const r = resolve(x, y, kind);
         if (!r) return null;
-        return r.kind === "section" ? { kind: "section", index: r.index } : { kind: "element", columnPath: r.columnPath };
+        return r.kind === "section" ? { kind: "section", index: r.index } : { kind: "element", columnPath: r.columnPath, index: r.index };
       },
     }),
     [resolve]
@@ -411,8 +440,9 @@ export function Canvas({
             </span>
           </div>
         )}
-        {boxes.selected && resolved.kind && !dragKind && (
-          <div className="absolute" style={{ ...boxes.selected, boxShadow: `inset 0 0 0 2px ${BLUE}` }}>
+        {boxes.selected && resolved.kind && (
+          // Stays mounted while dragging so the move handle keeps its drag alive.
+          <div className={dragKind ? "absolute opacity-0" : "absolute"} style={{ ...boxes.selected, boxShadow: `inset 0 0 0 2px ${BLUE}` }}>
             <div className="absolute -top-0 flex w-full justify-end p-1.5">
               <div role="toolbar" aria-label={kindLabel(resolved.kind)} className="pointer-events-auto flex items-center gap-0.5 rounded-lg px-1 py-0.5 shadow-lg" style={{ background: BLUE }}>
                 <span className="px-1.5 text-[11px] font-semibold text-white/90">
@@ -439,6 +469,7 @@ export function Canvas({
                 )}
                 {resolved.kind === "element" && selection && (
                   <>
+                    <MoveHandle path={selection} label={t.dragToMove} className={toolBtn} />
                     <button type="button" className={toolBtn} title={t.moveUp} aria-label={t.moveUp} onClick={() => dispatch({ type: "moveElement", path: selection, delta: -1 })}>
                       <ArrowUp className="size-4" aria-hidden />
                     </button>
@@ -464,7 +495,12 @@ export function Canvas({
             </span>
           </div>
         )}
-        {indicator?.kind === "element" && <div className="absolute rounded-md" style={{ ...indicator.box, background: `${BLUE}14`, boxShadow: `inset 0 0 0 2px ${BLUE}` }} />}
+        {indicator?.kind === "element" && (
+          <>
+            <div className="absolute rounded-md" style={{ ...indicator.box, background: `${BLUE}14`, boxShadow: `inset 0 0 0 2px ${BLUE}` }} />
+            <div className="absolute rounded-full" style={{ ...indicator.line, background: BLUE }} />
+          </>
+        )}
       </div>
 
       {tree.sections.length === 0 && !dragKind && (

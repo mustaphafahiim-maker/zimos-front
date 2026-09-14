@@ -175,6 +175,59 @@ describe("editorReducer", () => {
     expect(undone.theme).toEqual(s0.theme);
   });
 
+  it("moves an element into another column at a position, undoably", () => {
+    const s0 = loaded(tree("image-text", "faq"));
+    const [a, b] = home(s0).sections;
+    const fromCol = a.rows[0].columns[0];
+    const el = fromCol.elements[0];
+    const toCol = b.rows[0].columns[0];
+    const path = `${a.id}/${a.rows[0].id}/${fromCol.id}/${el.id}`;
+    const target = `${b.id}/${b.rows[0].id}/${toCol.id}`;
+    const s1 = run(s0, { type: "moveElementTo", path, columnPath: target, index: 1 });
+    expect(resolvePath(home(s1), target).column!.elements[1].id).toBe(el.id);
+    expect(resolvePath(home(s1), `${a.id}/${a.rows[0].id}/${fromCol.id}`).column!.elements.map((e) => e.id)).not.toContain(el.id);
+    expect(s1.selection).toBe(`${target}/${el.id}`);
+    expectValid(s1);
+    expect(home(run(s1, { type: "undo" }))).toEqual(home(s0));
+
+    // Same column: dropping below itself is a no-op, below the next element swaps them.
+    const col = `${a.id}/${a.rows[0].id}/${fromCol.id}`;
+    expect(run(s0, { type: "moveElementTo", path, columnPath: col, index: 1 })).toBe(s0);
+    if (fromCol.elements.length > 1) {
+      const swapped = run(s0, { type: "moveElementTo", path, columnPath: col, index: 2 });
+      expect(resolvePath(home(swapped), col).column!.elements[1].id).toBe(el.id);
+    }
+  });
+
+  it("multi-selects sections for bulk hide, duplicate and delete", () => {
+    const s0 = loaded();
+    const [a, b, c] = ids(s0);
+    const picked = run(s0, { type: "select", path: a }, { type: "toggleMulti", sectionId: c });
+    expect(picked.multi).toEqual([a, c]);
+    const hidden = run(picked, { type: "setHiddenMany", ids: picked.multi, hidden: true });
+    expect(home(hidden).sections.filter((s) => s.settings?.hidden).map((s) => s.id)).toEqual([a, c]);
+    const dup = run(picked, { type: "duplicateSections", ids: picked.multi });
+    expect(home(dup).sections).toHaveLength(5);
+    expect(ids(dup)[0]).toBe(a);
+    expect(ids(dup)[2]).toBe(b);
+    expectValid(dup);
+    const del = run(picked, { type: "deleteSections", ids: picked.multi });
+    expect(ids(del)).toEqual([b]);
+    expect(del.multi).toEqual([]);
+    expect(run(del, { type: "undo" }).trees.home).toEqual(home(s0));
+    expect(run(picked, { type: "select", path: b }).multi).toEqual([]);
+  });
+
+  it("pastes copied sections with fresh ids on another page", () => {
+    const s0 = loaded();
+    const copied = structuredClone(home(s0).sections.slice(0, 2));
+    const onAbout = run(s0, { type: "setPage", pageId: "about" });
+    const pasted = run(onAbout, { type: "insertSections", sections: copied, index: 1 }, { type: "insertSections", sections: copied });
+    expect(pasted.trees.about.sections).toHaveLength(5);
+    expectValid(pasted);
+    expect(pasted.trees.home).toBe(home(s0));
+  });
+
   it("marks pages and theme saved", () => {
     const s = run(loaded(), { type: "moveSection", from: 0, to: 1 }, { type: "setTheme", theme: { ...loaded().theme, preset: "custom" } });
     expect(isDirty(s)).toBe(true);
