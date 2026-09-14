@@ -42,7 +42,6 @@ import {
   countdownHours,
   findTextProp,
   sectionAvailable,
-  sectionIdOf,
   sectionKeyOf,
 } from "./treeBuilder";
 import {
