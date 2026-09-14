@@ -85,10 +85,10 @@ const STRINGS = {
 type StepId = "product" | "template" | "domain" | "shipping" | "cod" | "whatsapp" | "ads" | "funnel";
 
 const STEPS: Array<{ id: StepId; to: string; icon: LucideIcon }> = [
-  { id: "product", to: "/catalog/new", icon: Package },
-  { id: "template", to: "/templates", icon: LayoutTemplate },
+  { id: "product", to: "/onboarding?step=product", icon: Package },
+  { id: "template", to: "/onboarding?step=look", icon: LayoutTemplate },
   { id: "domain", to: "/settings", icon: Globe },
-  { id: "shipping", to: "/shipping", icon: Truck },
+  { id: "shipping", to: "/onboarding?step=delivery", icon: Truck },
   { id: "cod", to: "/payments", icon: HandCoins },
   { id: "whatsapp", to: "/inbox/bot", icon: MessageCircle },
   { id: "ads", to: "/ads", icon: Target },

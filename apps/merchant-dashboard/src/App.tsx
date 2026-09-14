@@ -28,6 +28,7 @@ const ForgotPasswordPage = page(() => import("@/pages/ForgotPasswordPage"), "For
 const ResetPasswordPage = page(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage");
 const VerifyEmailPage = page(() => import("@/pages/VerifyEmailPage"), "VerifyEmailPage");
 const WorkspacePickerPage = page(() => import("@/pages/WorkspacePickerPage"), "WorkspacePickerPage");
+const OnboardingWizardPage = page(() => import("@/pages/onboarding/OnboardingWizardPage"), "OnboardingWizardPage");
 
 // Home
 const DashboardHomePage = page(() => import("@/pages/DashboardHomePage"), "DashboardHomePage");
@@ -113,6 +114,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/workspaces" element={<Screen><WorkspacePickerPage /></Screen>} />
+                  <Route path="/onboarding" element={<Screen><OnboardingWizardPage /></Screen>} />
 
                   <Route element={<RequireWorkspace />}>
                     <Route element={<DashboardLayout />}>

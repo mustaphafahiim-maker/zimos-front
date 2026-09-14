@@ -2,7 +2,6 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, LogOut, Plus, Store } from "lucide-react";
 import { Button, Input, Label, Alert, ZimosLogo, ZimosMark } from "@store-builder/ui";
-import { ApiError } from "@store-builder/api-client";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n/LocaleContext";
@@ -50,11 +49,11 @@ const STRINGS = {
 export function WorkspacePickerPage() {
   const t = useT(STRINGS);
   const { user, logout } = useAuth();
-  const { workspaces, loading, selectWorkspace, createWorkspace } = useWorkspace();
+  const { workspaces, loading, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
-  const [creating, setCreating] = useState(false);
+  const creating = false;
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,15 +68,9 @@ export function WorkspacePickerPage() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setCreating(true);
-    try {
-      await createWorkspace(name.trim());
-      navigate("/");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t.failed);
-    } finally {
-      setCreating(false);
-    }
+    // The onboarding wizard creates the store itself (name, address, currency…)
+    // and then walks through look, first product and delivery.
+    navigate("/onboarding", { state: { fresh: true, name: name.trim() } });
   }
 
   return (
