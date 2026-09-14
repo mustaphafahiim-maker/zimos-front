@@ -41,7 +41,7 @@ export function StoreHeader({
           ) : (
             <span
               aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-lg font-bold text-white"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground"
             >
               {store.name.trim().charAt(0).toUpperCase()}
             </span>
@@ -55,6 +55,12 @@ export function StoreHeader({
             className="hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary sm:inline-flex"
           >
             {t.common.trackOrder}
+          </Link>
+          <Link
+            href={`/store/${workspaceId}/my-orders`}
+            className="hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary md:inline-flex"
+          >
+            {t.myOrders.nav}
           </Link>
           <HeaderSearchButton workspaceId={workspaceId} />
           <LanguageSwitch />

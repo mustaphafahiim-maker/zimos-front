@@ -32,6 +32,7 @@ export function StoreFooter({
             <li><Link href={base} className={link}>{t.common.home}</Link></li>
             <li><Link href={`${base}/cart`} className={link}>{t.common.cart}</Link></li>
             <li><Link href={`${base}/track`} className={link}>{t.common.trackOrder}</Link></li>
+            <li><Link href={`${base}/my-orders`} className={link}>{t.myOrders.nav}</Link></li>
           </ul>
         </nav>
 

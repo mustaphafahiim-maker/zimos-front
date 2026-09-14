@@ -10,7 +10,7 @@ import { ProductBrowser } from "./ProductBrowser";
 const chip = (active: boolean) =>
   `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
     active
-      ? "border-primary bg-primary text-white"
+      ? "border-primary bg-primary text-primary-foreground"
       : "border-line bg-paper-raised text-ink-soft hover:border-primary hover:text-primary"
   }`;
 

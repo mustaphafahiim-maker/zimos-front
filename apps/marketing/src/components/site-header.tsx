@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/provider";
@@ -16,17 +16,62 @@ export function SiteHeader() {
   const { nav } = dict;
   const [open, setOpen] = useState(false);
   const menuId = useId();
+  const pathname = usePathname();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
+  // Close on any navigation (link click, back/forward, locale switch).
+  const [lastPath, setLastPath] = useState(pathname);
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
+    setOpen(false);
+  }
+
+  // While open: Escape closes and returns focus to the toggle, and Tab cycles
+  // within the toggle + menu panel so focus can't wander behind the menu.
   useEffect(() => {
     if (!open) return;
+    const toggle = toggleRef.current;
+    const focusables = () =>
+      [toggle, ...Array.from(panelRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), select, input") ?? [])].filter(
+        (el): el is HTMLElement => !!el && el.getClientRects().length > 0
+      );
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggle?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !items.includes(active)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    // The panel is lg:hidden — don't leave a trap active on a widened window.
+    const desktop = window.matchMedia("(min-width: 64rem)");
+    const onDesktop = () => {
+      if (desktop.matches) setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    desktop.addEventListener("change", onDesktop);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onDesktop);
+    };
   }, [open]);
 
-  const pathname = usePathname();
   const sections = [
     { href: `/${locale}/features`, label: nav.features },
     { href: `/${locale}/pricing`, label: nav.pricing },
@@ -81,8 +126,9 @@ export function SiteHeader() {
             {nav.startFree}
           </a>
           <button
+            ref={toggleRef}
             type="button"
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-line bg-paper-raised text-ink-soft transition-colors hover:text-ink lg:hidden"
+            className="inline-flex size-11 cursor-pointer items-center justify-center rounded-lg border border-line bg-paper-raised text-ink-soft transition-colors hover:text-ink lg:hidden"
             aria-expanded={open}
             aria-controls={menuId}
             aria-label={open ? nav.closeMenu : nav.openMenu}
@@ -94,6 +140,7 @@ export function SiteHeader() {
       </div>
 
       <div
+        ref={panelRef}
         id={menuId}
         hidden={!open}
         className="border-t border-line bg-paper-raised px-4 pt-3 pb-5 sm:px-6 lg:hidden"

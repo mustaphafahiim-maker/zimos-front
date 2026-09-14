@@ -189,6 +189,17 @@ export function ProductLanding({
     return () => io.disconnect();
   }, []);
 
+  // While the bar is showing, reserve room under the page (CSS in globals.css)
+  // so it never hides the footer or the last lines of content.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (formVisible) delete root.dataset.stickyBar;
+    else root.dataset.stickyBar = "";
+    return () => {
+      delete root.dataset.stickyBar;
+    };
+  }, [formVisible]);
+
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => {
@@ -283,7 +294,7 @@ export function ProductLanding({
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-ink">{x.label ?? t.common.piece(x.quantity)}</span>
                       {x.discountPct > 0 && (
-                        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
                           {t.common.save(x.discountPct)}
                         </span>
                       )}
@@ -419,7 +430,7 @@ export function ProductLanding({
 
       {/* Sticky mobile bar */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 py-3 shadow-pop backdrop-blur transition-transform duration-200 md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-pop backdrop-blur transition-transform duration-200 md:hidden ${
           formVisible ? "translate-y-full" : "translate-y-0"
         }`}
         aria-hidden={formVisible}

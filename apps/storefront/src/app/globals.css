@@ -41,6 +41,9 @@
  * ------------------------------------------------------------------ */
 .brand-theme {
   --color-primary: var(--brand-primary);
+  /* Set inline by brandStyle() from the merchant hex's luminance. */
+  --primary-foreground: var(--brand-on-primary, #ffffff);
+  --color-primary-foreground: var(--brand-on-primary, #ffffff);
   --color-primary-dark: color-mix(in oklab, var(--brand-primary) 70%, #0b1f66);
   --color-primary-soft: color-mix(in oklab, var(--brand-primary) 10%, #fff);
 
@@ -61,6 +64,13 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+  }
+  /* The product page's sticky mobile order bar (md:hidden) sets this while it
+     is visible: pad the page so the bar never covers the footer. */
+  @media (width < 48rem) {
+    html[data-sticky-bar] body {
+      padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
   }
   input,
   select,

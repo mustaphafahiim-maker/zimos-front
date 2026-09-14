@@ -331,7 +331,7 @@ function FunnelOfferCard({ offer, flow }: { offer: FunnelOffer | null; flow: Flo
   return (
     <section className={`${container} pb-16`} aria-labelledby="funnel-offer-title">
       <div className={`${card} mx-auto max-w-xl overflow-hidden`}>
-        <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-white">
+        <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground">
           {offer?.badge || t.funnel.offerBadge}
         </div>
         <div className="p-5 text-center sm:p-8">

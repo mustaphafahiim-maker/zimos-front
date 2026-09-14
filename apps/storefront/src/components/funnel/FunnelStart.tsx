@@ -68,6 +68,7 @@ export function FunnelStart({ workspaceId, funnelRef }: { workspaceId: string; f
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-24">
+      <h1 className="sr-only">{t.funnel.metaTitle}</h1>
       <p role="status" className="flex items-center gap-3 text-sm text-ink-soft">
         <span aria-hidden className="h-5 w-5 animate-spin rounded-full border-2 border-line-strong border-t-primary" />
         {t.funnel.starting}

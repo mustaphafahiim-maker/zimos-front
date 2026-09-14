@@ -66,7 +66,7 @@ function UpsellOfferView() {
         </p>
 
         <div className={`${card} mt-6 overflow-hidden`}>
-          <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-white">{t.upsell.eyebrow}</div>
+          <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground">{t.upsell.eyebrow}</div>
 
           {!offer ? (
             <p className="px-6 py-16 text-center text-sm text-ink-soft" role="status">

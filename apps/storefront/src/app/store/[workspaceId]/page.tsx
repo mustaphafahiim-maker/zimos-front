@@ -112,6 +112,7 @@ export default async function StoreHomePage({
         </>
       )}
 
+      {searching && <h1 className="sr-only">{store.name}</h1>}
       <div className={`${container} pb-16 ${searching ? "pt-8" : ""}`}>
         <CatalogSection
           workspaceId={workspaceId}

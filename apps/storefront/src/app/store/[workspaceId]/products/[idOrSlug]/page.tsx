@@ -83,7 +83,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const rating = ratingOf(product);
 
   return (
-    <main className="flex-1 pb-24 md:pb-0">
+    <main className="flex-1">
       <div className={`${container} py-6 sm:py-8`}>
         <Link
           href={`/store/${workspaceId}`}

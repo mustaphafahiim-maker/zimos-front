@@ -18,7 +18,7 @@ export function CartIcon({ workspaceId }: { workspaceId: string }) {
     >
       <CartGlyph />
       {itemCount > 0 && (
-        <span className="absolute -end-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-semibold text-white">
+        <span className="absolute -end-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-semibold text-primary-foreground">
           {new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-EG").format(itemCount)}
         </span>
       )}

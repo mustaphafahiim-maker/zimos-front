@@ -311,6 +311,12 @@ export function saveOrderSnapshot(workspaceId: string, snapshot: OrderSnapshot) 
   writeJson(ordersKey(workspaceId), next);
 }
 
+/** Every order this device placed in the store, newest first (max 20). */
+export function listOrderSnapshots(workspaceId: string): OrderSnapshot[] {
+  const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId));
+  return Array.isArray(list) ? list.filter((o) => o && typeof o.id === "string" && typeof o.orderNumber === "string") : [];
+}
+
 export function getOrderSnapshot(workspaceId: string, orderId: string): OrderSnapshot | null {
   const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];
   return list.find((o) => o.id === orderId) ?? null;

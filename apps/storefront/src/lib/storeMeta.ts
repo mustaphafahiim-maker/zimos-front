@@ -53,7 +53,28 @@ export function brandStyle(themeSettings: Record<string, unknown> | undefined): 
   const style: Record<string, string> = {};
   const primary = hex(themeSettings, "primaryColor");
   const secondary = hex(themeSettings, "secondaryColor");
-  if (primary) style["--brand-primary"] = primary;
+  if (primary) {
+    style["--brand-primary"] = primary;
+    // Text on the merchant's primary must stay readable (WCAG AA) whatever hex
+    // they pick: white on dark brands, navy ink on light ones (yellow, mint …).
+    style["--brand-on-primary"] = onColor(primary);
+  }
   if (secondary) style["--brand-secondary"] = secondary;
   return style as CSSProperties;
+}
+
+function luminance(hexColor: string): number {
+  const channel = (i: number) => {
+    const c = parseInt(hexColor.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+}
+
+/** White or ZIMOS navy — whichever contrasts more with `hexColor`. */
+export function onColor(hexColor: string): string {
+  const l = luminance(hexColor);
+  const vsWhite = 1.05 / (l + 0.05);
+  const vsNavy = (l + 0.05) / (luminance("#0b1f66") + 0.05);
+  return vsWhite >= vsNavy ? "#ffffff" : "#0b1f66";
 }
