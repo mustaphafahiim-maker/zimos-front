@@ -81,7 +81,7 @@ const AffiliatesPage = page(() => import("@/pages/affiliates/AffiliatesPage"), "
 
 // Storefront
 const WebsitePage = page(() => import("@/pages/website/WebsitePage"), "WebsitePage");
-const WebsiteEditorPage = page(() => import("@/pages/website/editor/WebsiteEditorPage"), "WebsiteEditorPage");
+const BuilderPage = page(() => import("@/pages/website/builder/BuilderPage"), "BuilderPage");
 const LandingGeneratorPage = page(() => import("@/pages/generator/LandingGeneratorPage"), "LandingGeneratorPage");
 const TemplatesPage = page(() => import("@/pages/templates/TemplatesPage"), "TemplatesPage");
 const ShippingTaxPage = page(() => import("@/pages/shipping/ShippingTaxPage"), "ShippingTaxPage");
@@ -135,6 +135,7 @@ export default function App() {
                   <Route path="/onboarding" element={<Screen><OnboardingWizardPage /></Screen>} />
 
                   <Route element={<RequireWorkspace />}>
+                    <Route path="/website/:websiteId/edit" element={<Screen><BuilderPage /></Screen>} />
                     <Route element={<DashboardLayout />}>
                       <Route path="/" element={<InShell><DashboardHomePage /></InShell>} />
                       <Route path="/stores" element={<InShell><StoresPage /></InShell>} />
@@ -185,7 +186,6 @@ export default function App() {
 
                       {/* Storefront */}
                       <Route path="/website" element={<InShell><WebsitePage /></InShell>} />
-                      <Route path="/website/:websiteId/edit" element={<InShell><WebsiteEditorPage /></InShell>} />
                       <Route path="/templates" element={<InShell><TemplatesPage /></InShell>} />
                       <Route path="/generator" element={<InShell><LandingGeneratorPage /></InShell>} />
                       <Route path="/shipping" element={<InShell><ShippingTaxPage /></InShell>} />

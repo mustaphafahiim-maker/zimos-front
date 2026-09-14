@@ -75,6 +75,8 @@ import type {
   UpdateWebsitePagePayload,
   Website,
   WebsiteDetail,
+  WebsiteRevisionSummary,
+  UpdateWebsitePayload,
   WebsitePage,
   WebsiteTemplateDetail,
   WebsiteTemplateSummary,
@@ -460,6 +462,34 @@ export class ApiClient {
    * The website row plus every one of its pages (each with its full
    * `draftData` tree) — one call is enough to open the editor.
    */
+  /** Renames the site or replaces its `globalStyles` / `seo` blobs. */
+  async updateWebsite(workspaceId: string, websiteId: string, payload: UpdateWebsitePayload) {
+    const { website } = await this.request<{ website: Website }>(
+      `/workspaces/${workspaceId}/websites/${websiteId}`,
+      { method: "PATCH", body: payload }
+    );
+    return website;
+  }
+
+  /** Every published snapshot of the site, newest first. */
+  async listWebsiteRevisions(workspaceId: string, websiteId: string) {
+    const { revisions } = await this.request<{ revisions: WebsiteRevisionSummary[] }>(
+      `/workspaces/${workspaceId}/websites/${websiteId}/revisions`
+    );
+    return revisions;
+  }
+
+  /**
+   * Makes an older revision the live one. Drafts are not touched — the store
+   * serves the revision snapshot, the editor keeps the current draft.
+   */
+  async rollbackWebsite(workspaceId: string, websiteId: string, revisionId: string) {
+    return this.request<PublishWebsiteResult>(
+      `/workspaces/${workspaceId}/websites/${websiteId}/revisions/${revisionId}/rollback`,
+      { method: "POST", body: {} }
+    );
+  }
+
   async getWebsite(workspaceId: string, websiteId: string) {
     return this.request<WebsiteDetail>(`/workspaces/${workspaceId}/websites/${websiteId}`);
   }

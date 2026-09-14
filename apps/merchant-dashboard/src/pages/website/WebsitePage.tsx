@@ -1,6 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, LayoutTemplate, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, LayoutTemplate, Paintbrush, Trash2 } from "lucide-react";
+import { THEMES, normalizeThemeSettings, type Tree } from "@store-builder/store-renderer";
+import { PreviewFrame } from "./builder/PreviewFrame";
+import { StaticStorePreview } from "./builder/StoreChrome";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import type { CreateWebsitePayload, Website, WebsiteTemplateSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -15,7 +18,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
@@ -43,6 +46,13 @@ const STRINGS = {
     deleteSiteConfirm: "Delete site",
     deleteSiteBody:
       "{name} and all of its pages, published revisions and any domain bound to it will be deleted permanently. This cannot be undone.",
+    editStore: "Edit store",
+    themeLabel: "Theme: {name}",
+    customTheme: "Custom",
+    statusDraft: "Draft",
+    statusPublished: "Live",
+    statusSuspended: "Suspended",
+    previewAria: "Home page preview of {name}",
     deleteLiveWarning:
       "This site is live right now. Deleting it takes it offline immediately — anyone visiting {subdomain} will stop seeing your store.",
   },
@@ -70,6 +80,13 @@ const STRINGS = {
     deleteSiteConfirm: "حذف الموقع",
     deleteSiteBody:
       "سيتم حذف {name} وكل صفحاته وإصداراته المنشورة وأي نطاق مرتبط به نهائيًا. لا يمكن التراجع عن ذلك.",
+    editStore: "تعديل المتجر",
+    themeLabel: "الثيم: {name}",
+    customTheme: "مخصص",
+    statusDraft: "مسودة",
+    statusPublished: "منشور",
+    statusSuspended: "موقوف",
+    previewAria: "معاينة الصفحة الرئيسية لـ {name}",
     deleteLiveWarning:
       "هذا الموقع منشور حاليًا. حذفه سيوقفه فورًا — ولن يتمكن زوّار {subdomain} من رؤية متجرك بعد ذلك.",
   },
@@ -266,6 +283,59 @@ function UseTemplateForm({
   );
 }
 
+/** One site: a live mini preview of its home page draft, theme name, status and the builder entry. */
+function SiteCard({ site, onDelete, deleteLabel }: { site: Website; onDelete: () => void; deleteLabel: string }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
+  const detail = useAsync(() => apiClient.getWebsite(workspaceId, site.id), [workspaceId, site.id]);
+  const theme = normalizeThemeSettings(currentWorkspace?.themeSettings ?? null);
+  const pages = detail.data?.pages ?? [];
+  const home = pages.find((p) => p.pageType === "home") ?? pages.find((p) => p.path === "/") ?? null;
+  const storeLocale = currentWorkspace?.themeSettings?.defaultLocale === "en" ? "en" : "ar";
+  const themeName = theme.preset !== "custom" && THEMES[theme.preset] ? THEMES[theme.preset].name[locale === "ar" ? "ar" : "en"] : t.customTheme;
+  const statusText = site.status === "published" ? t.statusPublished : site.status === "suspended" ? t.statusSuspended : t.statusDraft;
+  const statusCls = site.status === "published" ? "bg-success-soft text-success" : site.status === "suspended" ? "bg-danger-soft text-danger" : "bg-paper text-ink-soft";
+  const W = 1280;
+  const SCALE = 0.3;
+  return (
+    <li className="flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card">
+      <Link to={`/website/${site.id}/edit`} aria-label={fmt(t.previewAria, { name: site.name })} className="relative block h-56 overflow-hidden border-b border-line bg-paper">
+        {detail.loading ? (
+          <span className="flex h-full items-center justify-center"><Spinner className="size-5" /></span>
+        ) : (
+          <div className="pointer-events-none absolute start-0 top-0 origin-top-left rtl:origin-top-right" style={{ width: W, height: 56 * 4 / SCALE, transform: `scale(${SCALE})` }} aria-hidden>
+            <PreviewFrame title={fmt(t.previewAria, { name: site.name })} theme={theme} dir={storeLocale === "ar" ? "rtl" : "ltr"} lang={storeLocale} tabIndex={-1} className="block size-full border-0 bg-white">
+              <StaticStorePreview tree={(home?.draftData as unknown as Tree) ?? null} theme={theme} locale={storeLocale} storeName={currentWorkspace?.name ?? site.name} logoUrl={currentWorkspace?.logoUrl} />
+            </PreviewFrame>
+          </div>
+        )}
+      </Link>
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p dir="auto" className="truncate text-sm font-semibold text-ink">{site.name}</p>
+            <p className="truncate text-xs text-ink-soft"><bdi dir="ltr">{site.subdomain}</bdi> · {fmt(t.themeLabel, { name: themeName })}</p>
+          </div>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusCls}`}>{statusText}</span>
+        </div>
+        <div className="mt-auto flex items-center gap-2 pt-1">
+          <Button asChild size="sm" className="flex-1">
+            <Link to={`/website/${site.id}/edit`}>
+              <Paintbrush className="size-4" aria-hidden />
+              {t.editStore}
+            </Link>
+          </Button>
+          <Button size="sm" variant="ghost" aria-label={fmt(t.deleteSiteAria, { name: site.name })} title={deleteLabel} className="text-danger hover:bg-danger-soft hover:text-danger" onClick={onDelete}>
+            <Trash2 className="size-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 /**
  * Sites the workspace already has. Without this the editor is only reachable
  * in the moments right after creating a site — a reload would strand it.
@@ -299,36 +369,9 @@ function ExistingSites() {
   return (
     <section className="mb-8">
       <h2 className="mb-2 font-display text-base font-semibold text-ink">{t.yourSites}</h2>
-      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {list.map((site) => (
-          <li key={site.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0">
-              <p dir="auto" className="truncate text-sm font-semibold text-ink">
-                {site.name}
-              </p>
-              <p className="truncate text-xs text-ink-soft">
-                <bdi dir="ltr">{site.subdomain}</bdi> · {humanize(site.status)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link to={`/website/${site.id}/edit`}>
-                  <Pencil className="size-4" aria-hidden />
-                  {c.edit}
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={fmt(t.deleteSiteAria, { name: site.name })}
-                title={c.delete}
-                className="text-danger hover:bg-danger-soft hover:text-danger"
-                onClick={() => setPendingDelete(site)}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </Button>
-            </div>
-          </li>
+          <SiteCard key={site.id} site={site} onDelete={() => setPendingDelete(site)} deleteLabel={c.delete} />
         ))}
       </ul>
 

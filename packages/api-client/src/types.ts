@@ -278,6 +278,19 @@ export interface WebsiteRevision {
   createdAt: string;
 }
 
+/** GET .../websites/:websiteId/revisions entry. */
+export interface WebsiteRevisionSummary extends WebsiteRevision {
+  publishedByUserId: string | null;
+  pageCount: number;
+}
+
+/** PATCH body for a website. */
+export interface UpdateWebsitePayload {
+  name?: string;
+  globalStyles?: Record<string, unknown>;
+  seo?: Record<string, unknown>;
+}
+
 /** GET /workspaces/:workspaceId/websites/:websiteId */
 export interface WebsiteDetail {
   website: Website;

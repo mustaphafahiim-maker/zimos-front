@@ -795,8 +795,10 @@ export function SectionRenderer({ section, ctx, now }: { section: TreeSection; c
 
 function SectionView({ section, x }: { section: TreeSection; x: Internal }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
-  if (!x.editing && (rows.length === 0 || !sectionHasContent(section, x.now))) return null;
   const s = settingsOf(section);
+  // `hidden` keeps a section in the draft without showing it on the live store.
+  if (!x.editing && bool(s, "hidden")) return null;
+  if (!x.editing && (rows.length === 0 || !sectionHasContent(section, x.now))) return null;
   const variant = str(s, "variant", "default").replace(/[^a-z0-9-]/gi, "") || "default";
   const tone = oneOf(s, "tone", SECTION_TONES, "default");
   const width = oneOf(s, "width", SECTION_WIDTHS, "default");
@@ -811,6 +813,9 @@ function SectionView({ section, x }: { section: TreeSection; x: Internal }) {
     str(s, "align") === "center" ? "zr-sec--center" : "",
     bg ? "zr-sec--has-bg" : "",
     bool(s, "decor") ? "zr-sec--decor" : "",
+    bool(s, "hideOnMobile") ? "zr-hide-mobile" : "",
+    bool(s, "hideOnDesktop") ? "zr-hide-desktop" : "",
+    x.editing && bool(s, "hidden") ? "zr-sec--hidden" : "",
   ]
     .filter(Boolean)
     .join(" ");

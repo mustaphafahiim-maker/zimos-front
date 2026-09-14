@@ -797,6 +797,13 @@
   text-align: center;
 }
 
+/* Per-device section visibility (live store). In the builder they stay visible but faded. */
+@media (max-width: 767.98px) { .zr-hide-mobile:not(.zr-edit-node) { display: none; } }
+@media (min-width: 768px) { .zr-hide-desktop:not(.zr-edit-node) { display: none; } }
+.zr-sec--hidden { opacity: 0.45; }
+@media (max-width: 767.98px) { .zr-page--editing .zr-hide-mobile { opacity: 0.45; } }
+@media (min-width: 768px) { .zr-page--editing .zr-hide-desktop { opacity: 0.45; } }
+
 @media (prefers-reduced-motion: reduce) {
   .zr-btn,
   .zr-gallery__item .zr-img__el,
