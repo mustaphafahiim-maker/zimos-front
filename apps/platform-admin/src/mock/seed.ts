@@ -130,6 +130,7 @@ export function generateMeta(ws: Workspace, planIds: string[], index = 0): Works
     ownerName: `${first} ${last}`,
     ownerEmail,
     country,
+    ordersAllTime: null,
     ordersLast30d: orders30,
     ordersToday: Math.round(orders30 / 30 + rand() * 6),
     gmvLast30d: orders30 * avgOrder,
@@ -151,6 +152,8 @@ export function generateMeta(ws: Workspace, planIds: string[], index = 0): Works
         };
       }),
     ],
+    membersKnown: true,
+    domainsKnown: true,
     domains: [
       {
         id: `${ws.id}-d0`,

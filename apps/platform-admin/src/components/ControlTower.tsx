@@ -58,7 +58,16 @@ export function ControlTower() {
             <KpiCard label="Active" value={formatNumber(byStatus("active"))} hint="Subscription status" />
             <KpiCard label="Trialing" value={formatNumber(byStatus("trialing"))} hint="Subscription status" />
             <KpiCard label="Past due" value={formatNumber(byStatus("past_due"))} to="/subscriptions" hint="Subscription status" />
-            <KpiCard label="Orders (all time)" value={formatNumber(ws.rows.reduce((s, r) => s + r.orderCount, 0))} hint="Sum of orderCount" />
+            {(() => {
+              const known = ws.rows.filter((r) => typeof r.orderCount === "number");
+              return (
+                <KpiCard
+                  label="Orders (all time)"
+                  value={known.length ? formatNumber(known.reduce((s, r) => s + r.orderCount, 0)) : "—"}
+                  hint={known.length ? `Sum of orderCount · from ${known.length} workspace${known.length === 1 ? "" : "s"} with data` : "Not provided by the API yet"}
+                />
+              );
+            })()}
           </div>
         ) : (
           <Alert variant={ws.state === "forbidden" ? "warning" : "danger"}>

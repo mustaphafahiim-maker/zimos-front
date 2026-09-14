@@ -12,6 +12,7 @@ import { StatusBadge, humanize, type Tone } from "@/components/StatusBadge";
 import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
 import { SettingRow, useAction } from "@/components/controls";
+import { Known, LOCAL_ONLY_LABEL, LocalOnlyNote, NOT_EXPOSED_MESSAGE, UNKNOWN_HINT } from "@/components/workspace";
 import { openInvoiceWindow } from "@/pages/FinancePage";
 import { useAsync } from "@/lib/useAsync";
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatRelative } from "@/lib/format";
@@ -154,6 +155,8 @@ export function LimitsTab({ ws, ctl, onCtl }: Omit<WsProps, "onWs">) {
   const fmt = (v: number | null) => (v === null ? "Unlimited" : formatNumber(v));
 
   return (
+    <>
+    <LocalOnlyNote />
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       <Panel flush title="Limits" description={`Plan defaults from ${ws.plan?.name ?? "no plan"}; overrides apply to this workspace only.`}>
         <ul className="divide-y divide-line">
@@ -215,6 +218,7 @@ export function LimitsTab({ ws, ctl, onCtl }: Omit<WsProps, "onWs">) {
         </div>
       </Modal>
     </div>
+    </>
   );
 }
 
@@ -226,6 +230,17 @@ export function TeamControlTab({ ws, onWs, onCtl }: Omit<WsProps, "ctl">) {
   const [owner, setOwner] = useState<WorkspaceMember | null>(null);
   const [logout, setLogout] = useState<WorkspaceMember | "all" | null>(null);
 
+  if (!ws.meta.membersKnown) {
+    return (
+      <Panel
+        title="Members"
+        actions={<Button size="sm" variant="outline" disabled title={NOT_EXPOSED_MESSAGE}><LogOut /> Force logout everyone</Button>}
+      >
+        <EmptyBlock message={NOT_EXPOSED_MESSAGE} />
+        <p className="mt-3 text-xs text-ink-soft">Role changes, ownership transfer and forced logout are disabled until the admin API exposes members.</p>
+      </Panel>
+    );
+  }
   if (ws.meta.members.length === 0) return <EmptyBlock message="No team members." />;
   return (
     <Panel flush title="Members" description={`${ws.meta.members.length} people`} actions={<Button size="sm" variant="outline" className="text-danger" onClick={() => setLogout("all")}><LogOut /> Force logout everyone</Button>}>
@@ -279,18 +294,28 @@ export function StorefrontTab({ ws, ctl, onCtl, onWs }: WsProps) {
 
   return (
     <div className="space-y-4">
+      <LocalOnlyNote>Store status and theme reset are {LOCAL_ONLY_LABEL.toLowerCase()}.</LocalOnlyNote>
       <Panel title="Store status" actions={<StatusBadge tone={STORE_TONE[ctl.storeStatus]} dot>{humanize(ctl.storeStatus)}</StatusBadge>}>
         <SegmentedControl<StoreStatus> ariaLabel="Store status" value={ctl.storeStatus} onChange={(v) => { if (v !== ctl.storeStatus) { setMessage(ctl.maintenanceMessage); setNextStatus(v); } }}
           options={[{ value: "live", label: "Live" }, { value: "maintenance", label: "Maintenance" }, { value: "suspended", label: "Suspended" }]} />
         {ctl.storeStatus === "maintenance" && ctl.maintenanceMessage && <p className="mt-3 text-sm text-ink-soft">Shoppers see: “{ctl.maintenanceMessage}”</p>}
         <SettingRow className="mt-3 border-t" label="Reset theme" description={ctl.themeResetAt ? `Last reset ${formatRelative(ctl.themeResetAt)}` : "Restores the default template and clears custom CSS."}>
-          <a href={`https://${ws.meta.domains[0]?.hostname ?? `${ws.slug}.zimos.store`}`} target="_blank" rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-line px-3 text-sm hover:border-line-strong"><ExternalLink className="size-3.5" /> Visit store</a>
+          {ws.meta.domainsKnown ? (
+            <a href={`https://${ws.meta.domains[0]?.hostname ?? `${ws.slug}.zimos.store`}`} target="_blank" rel="noreferrer noopener" className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-line px-3 text-sm hover:border-line-strong"><ExternalLink className="size-3.5" /> Visit store</a>
+          ) : (
+            <Button size="sm" variant="outline" disabled title={NOT_EXPOSED_MESSAGE}><ExternalLink /> Visit store</Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => setThemeReset(true)}><Paintbrush /> Reset theme</Button>
         </SettingRow>
       </Panel>
 
       <Panel flush title="Custom domains">
-        {ws.meta.domains.length === 0 ? <div className="p-4"><EmptyBlock message="No domains connected." /></div> : (
+        {!ws.meta.domainsKnown ? (
+          <div className="p-4">
+            <EmptyBlock message={NOT_EXPOSED_MESSAGE} />
+            <p className="mt-3 text-xs text-ink-soft">Verify and remove are disabled until the admin API exposes domains.</p>
+          </div>
+        ) : ws.meta.domains.length === 0 ? <div className="p-4"><EmptyBlock message="No domains connected." /></div> : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader><TableRow className="hover:bg-transparent"><Th>Hostname</Th><Th>Verification</Th><Th>SSL</Th><Th>Last checked</Th><Th className="text-end">Actions</Th></TableRow></TableHeader>
@@ -422,10 +447,11 @@ export function RiskTab({ ws, ctl, onCtl }: Omit<WsProps, "onWs">) {
 
   return (
     <div className="space-y-4">
+      <LocalOnlyNote>Block and KYC decisions are {LOCAL_ONLY_LABEL.toLowerCase()}.{ws.origin === "api" ? " Fraud score and KYC history are mock values." : ""}</LocalOnlyNote>
       {ctl.blocked && <Alert variant="danger">Blocked from new orders{ctl.blockedReason ? `: ${ctl.blockedReason}` : "."}</Alert>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiCard label="Fraud score" value={<span className={scoreTone}>{ctl.fraudScore}/100</span>} hint="RTO rate, blocklist hits, velocity" />
-        <KpiCard label="RTO rate (30d)" value={`${ws.meta.rtoRate}%`} />
+        <KpiCard label="RTO rate (30d)" value={<Known value={ws.meta.rtoRate} format={(v) => `${v}%`} />} hint={ws.meta.rtoRate === null ? UNKNOWN_HINT : undefined} />
         <KpiCard label="KYC" value={<StatusBadge tone={KYC_TONE[ctl.kycStatus]} dot>{humanize(ctl.kycStatus)}</StatusBadge>} />
       </div>
       <Panel title="Controls">
@@ -475,7 +501,7 @@ export function NotesTab({ ws, ctl, onCtl }: Omit<WsProps, "onWs">) {
 
   return (
     <div className="space-y-4">
-      <Panel title="Add internal note" description="Visible to ZIMOS staff only.">
+      <Panel title="Add internal note" description={`Visible to ZIMOS staff only. ${LOCAL_ONLY_LABEL}.`}>
         <form onSubmit={(e) => { e.preventDefault(); void run("add", () => controlApi.addNote(ws.id, body), "Note added.").then((c) => { if (c) { onCtl(c); setBody(""); } }); }}>
           <Textarea aria-label="Note" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Context for the next person handling this merchant…" />
           <div className="mt-2 flex justify-end"><Button type="submit" disabled={!body.trim() || busy === "add"}>Add note</Button></div>
@@ -519,7 +545,7 @@ export function DangerControlTab({ ws, ctl, onCtl, onWs }: WsProps) {
     { key: "suspend", title: "Suspend workspace", body: "Storefront offline, dashboard blocked, team signed out. Data is kept.", label: "Suspend", destructive: true, icon: Ban, hidden: ws.meta.suspended },
     { key: "reactivate", title: "Reactivate workspace", body: "Lift suspension and put the storefront back live.", label: "Reactivate", destructive: false, icon: ShieldCheck, hidden: !ws.meta.suspended && ctl.storeStatus !== "suspended" },
     { key: "export", title: "Export data", body: ctl.lastExportAt ? `Last export requested ${formatRelative(ctl.lastExportAt)}.` : "Queue a full export (orders, customers, products, settings).", label: "Export data", destructive: false, icon: Download },
-    { key: "impersonate", title: "Log in as merchant", body: `Open the merchant dashboard as ${ws.meta.ownerEmail}. Every session is audited.`, label: "Impersonate", destructive: false, icon: Eye },
+    { key: "impersonate", title: "Log in as merchant", body: `Open the merchant dashboard as ${ws.meta.ownerEmail ?? "the workspace owner (email not provided by the API yet)"}. Every session is audited.`, label: "Impersonate", destructive: false, icon: Eye },
     ctl.deletionScheduledAt
       ? { key: "cancelDelete", title: "Deletion scheduled", body: `Permanent deletion on ${formatDateTime(ctl.deletionScheduledAt)}. Cancel to keep the workspace.`, label: "Cancel deletion", destructive: false, icon: RefreshCw }
       : { key: "delete", title: "Schedule deletion", body: "Deletes the workspace and all data after a 7-day grace period.", label: "Schedule deletion", destructive: true, icon: Trash2 },
@@ -533,10 +559,11 @@ export function DangerControlTab({ ws, ctl, onCtl, onWs }: WsProps) {
 
   return (
     <div className="space-y-4">
-      {ctl.deletionScheduledAt && <Alert variant="danger">This workspace will be permanently deleted {formatRelative(ctl.deletionScheduledAt)}.</Alert>}
+      <LocalOnlyNote>Suspension, export and deletion scheduling are {LOCAL_ONLY_LABEL.toLowerCase()} and written to the audit log.</LocalOnlyNote>
+      {ctl.deletionScheduledAt &&<Alert variant="danger">This workspace will be permanently deleted {formatRelative(ctl.deletionScheduledAt)}.</Alert>}
       {impersonated && (
         <Alert variant="warning">
-          The merchant dashboard opened in a new tab at {MERCHANT_DASHBOARD_URL}. Real impersonation needs backend support (a short-lived token scoped to {ws.meta.ownerEmail}); until then the tab opens with your own session or the login screen. The attempt was recorded in the audit log.
+          The merchant dashboard opened in a new tab at {MERCHANT_DASHBOARD_URL}. Real impersonation needs backend support (a short-lived token scoped to {ws.meta.ownerEmail ?? "the workspace owner"}); until then the tab opens with your own session or the login screen. The attempt was recorded in the audit log.
         </Alert>
       )}
       <Panel className="border-danger/30" title="Danger zone">
@@ -561,7 +588,7 @@ export function DangerControlTab({ ws, ctl, onCtl, onWs }: WsProps) {
         onConfirm={async () => { onWs(await controlApi.reactivateWorkspace(ws.id)); onCtl(await controlApi.getControl(ws.id)); toast.success("Workspace reactivated."); setAction(null); }} />
       <ConfirmDialog open={action === "export"} title="Export workspace data?" description="A full export is queued; it appears under Data & backups when ready." confirmLabel="Queue export" onCancel={() => setAction(null)}
         onConfirm={async () => { onCtl(await controlApi.exportWorkspaceData(ws.id)); toast.success("Export queued."); setAction(null); }} />
-      <ConfirmDialog open={action === "impersonate"} title={`Log in as ${ws.meta.ownerEmail}?`} description={`Opens ${MERCHANT_DASHBOARD_URL} in a new tab. Real impersonation is not implemented on the backend yet.`} confirmLabel="Open merchant dashboard" onCancel={() => setAction(null)}
+      <ConfirmDialog open={action === "impersonate"} title={`Log in as ${ws.meta.ownerEmail ?? "the workspace owner"}?`} description={`Opens ${MERCHANT_DASHBOARD_URL} in a new tab. Real impersonation is not implemented on the backend yet.`} confirmLabel="Open merchant dashboard" onCancel={() => setAction(null)}
         onConfirm={async () => { await controlApi.logImpersonation(ws.id); window.open(`${MERCHANT_DASHBOARD_URL}/?impersonate=${encodeURIComponent(ws.id)}`, "_blank", "noopener,noreferrer"); setImpersonated(true); setAction(null); }} />
       <ConfirmDialog open={action === "delete"} title={`Schedule deletion of ${ws.name}?`} description="After 7 days all data is permanently deleted. You can cancel during the grace period." confirmLabel="Schedule deletion" destructive confirmDisabled={typed !== ws.slug} onCancel={() => setAction(null)}
         onConfirm={async () => { onCtl(await controlApi.scheduleDeletion(ws.id)); toast.success("Deletion scheduled in 7 days."); setAction(null); }}>

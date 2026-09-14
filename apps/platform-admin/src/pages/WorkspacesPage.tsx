@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
 import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { WorkspaceStatus, countryName } from "@/components/workspace";
+import { DemoBadge, Known, UNKNOWN_HINT, Unknown, WorkspaceStatus, compareNullable, countryName, planLabel } from "@/components/workspace";
 import { useAsync } from "@/lib/useAsync";
 import { adminApi } from "@/mock/adminApi";
 import type { AdminWorkspace, SubscriptionStatus } from "@/mock/types";
@@ -21,6 +21,11 @@ function matchesStatus(ws: AdminWorkspace, f: StatusFilter) {
   return ws.meta.subscriptionStatus === f;
 }
 
+/** Api rows expose an all-time count; demo rows carry a generated 30-day count. */
+function ordersValue(ws: AdminWorkspace): number | null {
+  return ws.origin === "api" ? ws.meta.ordersAllTime : ws.meta.ordersLast30d;
+}
+
 export function WorkspacesPage() {
   const navigate = useNavigate();
   const { data, loading, error, refresh } = useAsync(() => adminApi.listWorkspaces(), []);
@@ -31,6 +36,7 @@ export function WorkspacesPage() {
   const [sort, setSort] = useState<SortState<SortKey>>({ key: "createdAt", dir: "desc" });
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
+  const isApi = data?.source === "api";
 
   const planOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -38,7 +44,10 @@ export function WorkspacesPage() {
     return Array.from(map.entries());
   }, [rows]);
 
-  const countryOptions = useMemo(() => Array.from(new Set(rows.map((w) => w.meta.country))).sort(), [rows]);
+  const countryOptions = useMemo(
+    () => Array.from(new Set(rows.map((w) => w.meta.country).filter((c): c is string => !!c))).sort(),
+    [rows]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -51,17 +60,17 @@ export function WorkspacesPage() {
           !q ||
           w.name.toLowerCase().includes(q) ||
           w.slug.toLowerCase().includes(q) ||
-          w.meta.ownerEmail.toLowerCase().includes(q) ||
-          w.meta.ownerName.toLowerCase().includes(q)
+          (w.meta.ownerEmail ?? "").toLowerCase().includes(q) ||
+          (w.meta.ownerName ?? "").toLowerCase().includes(q)
       )
       .sort((a, b) => {
         switch (sort.key) {
           case "name":
             return compareValues(a.name, b.name, sort.dir);
           case "orders":
-            return compareValues(a.meta.ordersLast30d, b.meta.ordersLast30d, sort.dir);
+            return compareNullable(ordersValue(a), ordersValue(b), sort.dir);
           case "gmv":
-            return compareValues(a.meta.gmvLast30d, b.meta.gmvLast30d, sort.dir);
+            return compareNullable(a.meta.gmvLast30d, b.meta.gmvLast30d, sort.dir);
           default:
             return compareValues(a.createdAt, b.createdAt, sort.dir);
         }
@@ -94,6 +103,11 @@ export function WorkspacesPage() {
         {data && (
           <>
             <SourceNotice result={data} />
+            {isApi && (
+              <p className="mb-3 text-xs text-ink-soft">
+                Name, plan, status and order count come from GET /admin/workspaces. Owner, country, GMV and 30-day metrics show “—”: {UNKNOWN_HINT.toLowerCase()}.
+              </p>
+            )}
             <div className="mb-4 flex flex-col gap-3">
               <FilterChips options={statusOptions} value={status} onChange={setStatus} />
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -106,14 +120,16 @@ export function WorkspacesPage() {
                     </option>
                   ))}
                 </NativeSelect>
-                <NativeSelect value={country} onChange={(e) => setCountry(e.target.value)} className="sm:w-48" aria-label="Filter by country">
-                  <option value="all">All countries</option>
-                  {countryOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {countryName(c)}
-                    </option>
-                  ))}
-                </NativeSelect>
+                {countryOptions.length > 0 && (
+                  <NativeSelect value={country} onChange={(e) => setCountry(e.target.value)} className="sm:w-48" aria-label="Filter by country">
+                    <option value="all">All countries</option>
+                    {countryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {countryName(c)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                )}
                 <span className="text-sm text-ink-soft sm:ms-auto">
                   {filtered.length} of {rows.length}
                 </span>
@@ -134,38 +150,57 @@ export function WorkspacesPage() {
                       <Th>Plan</Th>
                       <Th>Status</Th>
                       <Th>Country</Th>
-                      <SortHead label="Orders 30d" sortKey="orders" sort={sort} onSort={setSort} className="text-end" />
+                      <SortHead label={isApi ? "Orders (all time)" : "Orders 30d"} sortKey="orders" sort={sort} onSort={setSort} className="text-end" />
                       <SortHead label="GMV 30d" sortKey="gmv" sort={sort} onSort={setSort} className="text-end" />
                       <SortHead label="Created" sortKey="createdAt" sort={sort} onSort={setSort} />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((ws) => (
-                      <TableRow key={ws.id} className="cursor-pointer" onClick={() => navigate(`/workspaces/${ws.id}`)}>
-                        <Td>
-                          <Link
-                            to={`/workspaces/${ws.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="block font-medium text-ink hover:text-primary"
-                          >
-                            {ws.name}
-                          </Link>
-                          <span className="text-xs text-ink-soft">{ws.slug}</span>
-                        </Td>
-                        <Td>
-                          <span className="block">{ws.meta.ownerName}</span>
-                          <span className="text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
-                        </Td>
-                        <Td>{ws.plan?.name ?? "—"}</Td>
-                        <Td>
-                          <WorkspaceStatus ws={ws} />
-                        </Td>
-                        <Td className="text-ink-soft">{countryName(ws.meta.country)}</Td>
-                        <Td className="tabular text-end">{formatNumber(ws.meta.ordersLast30d)}</Td>
-                        <Td className="tabular text-end">{formatMoneyCompact(ws.meta.gmvLast30d)}</Td>
-                        <Td className="text-ink-soft">{formatDate(ws.createdAt)}</Td>
-                      </TableRow>
-                    ))}
+                    {filtered.map((ws) => {
+                      const plan = planLabel(ws);
+                      return (
+                        <TableRow key={ws.id} className="cursor-pointer" onClick={() => navigate(`/workspaces/${ws.id}`)}>
+                          <Td>
+                            <span className="flex items-center gap-2">
+                              <Link
+                                to={`/workspaces/${ws.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="block font-medium text-ink hover:text-primary"
+                              >
+                                {ws.name}
+                              </Link>
+                              {ws.origin === "demo" && <DemoBadge />}
+                            </span>
+                            <span className="text-xs text-ink-soft">{ws.slug}</span>
+                          </Td>
+                          <Td>
+                            {ws.meta.ownerName || ws.meta.ownerEmail ? (
+                              <>
+                                <span className="block">{ws.meta.ownerName ?? <Unknown />}</span>
+                                <span className="text-xs text-ink-soft">{ws.meta.ownerEmail ?? <Unknown />}</span>
+                              </>
+                            ) : (
+                              <Unknown />
+                            )}
+                          </Td>
+                          <Td>
+                            {plan ?? <Unknown />}
+                            {!ws.plan && plan && <span className="block text-xs text-ink-soft" title="Backend plan doesn't match a known plan">raw</span>}
+                          </Td>
+                          <Td>
+                            <WorkspaceStatus ws={ws} />
+                          </Td>
+                          <Td className="text-ink-soft">{countryName(ws.meta.country) ?? <Unknown />}</Td>
+                          <Td className="tabular text-end">
+                            <Known value={ordersValue(ws)} format={formatNumber} />
+                          </Td>
+                          <Td className="tabular text-end">
+                            <Known value={ws.meta.gmvLast30d} format={formatMoneyCompact} />
+                          </Td>
+                          <Td className="text-ink-soft">{formatDate(ws.createdAt)}</Td>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </Panel>

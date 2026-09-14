@@ -22,18 +22,19 @@ export function ChangePlanModal({
   onDone: (ws: AdminWorkspace) => void;
 }) {
   const toast = useToast();
-  const [planId, setPlanId] = useState(ws.meta.planId);
-  const [cycle, setCycle] = useState<BillingCycle>(ws.meta.billingCycle);
+  const initialPlan = ws.meta.planId ?? plans[0]?.id ?? "";
+  const [planId, setPlanId] = useState(initialPlan);
+  const [cycle, setCycle] = useState<BillingCycle>(ws.meta.billingCycle ?? "monthly");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setPlanId(ws.meta.planId);
-      setCycle(ws.meta.billingCycle);
+      setPlanId(initialPlan);
+      setCycle(ws.meta.billingCycle ?? "monthly");
       setError(null);
     }
-  }, [open, ws.meta.planId, ws.meta.billingCycle]);
+  }, [open, initialPlan, ws.meta.billingCycle]);
 
   const selected = plans.find((p) => p.id === planId);
 
@@ -42,7 +43,7 @@ export function ChangePlanModal({
     setError(null);
     try {
       const next = await adminApi.changePlan(ws.id, planId, cycle);
-      toast.success(`${ws.name} moved to ${selected?.name ?? "the new plan"} (${cycle}).`);
+      toast.success(`${ws.name} moved to ${selected?.name ?? "the new plan"} (${cycle}).${ws.origin === "api" ? " Saved locally (no backend endpoint yet)." : ""}`);
       onDone(next);
       onClose();
     } catch (err) {
@@ -145,7 +146,7 @@ export function ExtendTrialModal({
     setError(null);
     try {
       const next = await adminApi.extendTrial(ws.id, n);
-      toast.success(`Trial for ${ws.name} now ends ${formatDate(next.meta.trialEndsAt)}.`);
+      toast.success(`Trial for ${ws.name} now ends ${formatDate(next.meta.trialEndsAt)}.${ws.origin === "api" ? " Saved locally (no backend endpoint yet)." : ""}`);
       onDone(next);
       onClose();
     } catch (err) {

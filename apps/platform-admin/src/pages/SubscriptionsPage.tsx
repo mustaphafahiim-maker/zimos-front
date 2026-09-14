@@ -7,7 +7,7 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FilterChips, SearchInput } from "@/components/forms";
 import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
+import { DemoBadge, LOCAL_ONLY_LABEL, Unknown, WorkspaceStatus, planLabel } from "@/components/workspace";
 import { useToast } from "@/components/Toast";
 import { ExtendTrialModal } from "@/components/SubscriptionDialogs";
 import { useAsync } from "@/lib/useAsync";
@@ -45,7 +45,7 @@ export function SubscriptionsPage() {
     const q = query.trim().toLowerCase();
     return rows
       .filter((w) => filter === "all" || w.meta.subscriptionStatus === filter)
-      .filter((w) => !q || w.name.toLowerCase().includes(q) || w.meta.ownerEmail.toLowerCase().includes(q))
+      .filter((w) => !q || w.name.toLowerCase().includes(q) || (w.meta.ownerEmail ?? "").toLowerCase().includes(q))
       .sort((a, b) => {
         if (sort.key === "name") return compareValues(a.name, b.name, sort.dir);
         if (sort.key === "next") return compareValues(nextDate(a) || "9999", nextDate(b) || "9999", sort.dir);
@@ -98,6 +98,7 @@ export function SubscriptionsPage() {
         {data && (
           <>
             <SourceNotice result={data} />
+            <p className="mb-3 text-xs text-ink-soft">Retry, extend trial and cancel are {LOCAL_ONLY_LABEL.toLowerCase()}.</p>
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <FilterChips options={options} value={filter} onChange={setFilter} />
               <SearchInput value={query} onChange={setQuery} placeholder="Search workspace or owner email" />
@@ -128,14 +129,14 @@ export function SubscriptionsPage() {
                             <Link to={`/workspaces/${ws.id}?tab=subscription`} className="block font-medium text-ink hover:text-primary">
                               {ws.name}
                             </Link>
-                            <span className="text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
+                            <span className="flex items-center gap-2 text-xs text-ink-soft">{ws.meta.ownerEmail ?? <Unknown />}{ws.origin === "demo" && <DemoBadge />}</span>
                           </Td>
                           <Td>
-                            {ws.plan?.name ?? "—"}
-                            <span className="block text-xs text-ink-soft capitalize">{ws.meta.billingCycle}</span>
+                            {planLabel(ws) ?? <Unknown />}
+                            <span className="block text-xs text-ink-soft capitalize">{ws.meta.billingCycle ?? <Unknown />}</span>
                           </Td>
                           <Td>
-                            <Status value={s} />
+                            <WorkspaceStatus ws={{ ...ws, meta: { ...ws.meta, suspended: false } }} />
                           </Td>
                           <Td className="tabular text-end">{formatMoney(ws.mrr)}</Td>
                           <Td>

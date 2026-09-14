@@ -17,10 +17,9 @@ import { KpiCard } from "@/components/KpiCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DetailRow } from "@/components/Drawer";
 import { JsonBlock, Mono, Panel } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { ChangePlanModal, ExtendTrialModal } from "@/components/SubscriptionDialogs";
-import { WorkspaceStatus, countryName } from "@/components/workspace";
+import { DemoBadge, Known, LOCAL_ONLY_LABEL, LocalOnlyNote, UNKNOWN_HINT, Unknown, WorkspaceStatus, countryName, planLabel } from "@/components/workspace";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
@@ -122,8 +121,13 @@ export function WorkspaceDetailPage() {
     <div>
       <PageHeader
         title={ws.name}
-        titleBadge={<WorkspaceStatus ws={ws} />}
-        description={`${ws.slug} · ${ws.meta.ownerEmail} · ${countryName(ws.meta.country)}`}
+        titleBadge={
+          <span className="inline-flex items-center gap-2">
+            <WorkspaceStatus ws={ws} />
+            {ws.origin === "demo" && <DemoBadge />}
+          </span>
+        }
+        description={[ws.slug, ws.meta.ownerEmail ?? "Owner: —", countryName(ws.meta.country) ?? "Country: —"].join(" · ")}
         back={{ to: "/workspaces", label: "Workspaces" }}
       />
 
@@ -179,16 +183,24 @@ function OverviewTab({ ws }: { ws: AdminWorkspace }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <KpiCard label="Orders (30d)" value={formatNumber(ws.meta.ordersLast30d)} hint={`${formatNumber(ws.meta.ordersToday)} today`} />
-        <KpiCard label="GMV (30d)" value={formatMoneyCompact(ws.meta.gmvLast30d)} hint={formatMoney(ws.meta.gmvLast30d)} />
-        <KpiCard label="MRR" value={formatMoney(ws.mrr)} hint={ws.plan ? `${ws.plan.name} · ${ws.meta.billingCycle}` : "No plan"} />
-        <KpiCard label="Delivery rate" value={formatPercent(ws.meta.deliveryRate, 0)} hint="Delivered / shipped, 30d" />
+        {ws.origin === "api" ? (
+          <KpiCard label="Orders (all time)" value={<Known value={ws.meta.ordersAllTime} format={formatNumber} />} hint="orderCount from /admin/workspaces" />
+        ) : (
+          <KpiCard label="Orders (30d)" value={<Known value={ws.meta.ordersLast30d} format={formatNumber} />} hint={ws.meta.ordersToday === null ? UNKNOWN_HINT : `${formatNumber(ws.meta.ordersToday)} today`} />
+        )}
+        <KpiCard label="GMV (30d)" value={<Known value={ws.meta.gmvLast30d} format={formatMoneyCompact} />} hint={ws.meta.gmvLast30d === null ? UNKNOWN_HINT : formatMoney(ws.meta.gmvLast30d)} />
+        <KpiCard label="MRR" value={formatMoney(ws.mrr)} hint={ws.plan ? `${ws.plan.name}${ws.meta.billingCycle ? ` · ${ws.meta.billingCycle}` : ""}` : planLabel(ws) ? `${planLabel(ws)} (not a known plan)` : "No plan"} />
+        <KpiCard label="Delivery rate" value={<Known value={ws.meta.deliveryRate} format={(v) => formatPercent(v, 0)} />} hint={ws.meta.deliveryRate === null ? UNKNOWN_HINT : "Delivered / shipped, 30d"} />
         <KpiCard
           label="RTO rate"
-          value={<span className={cn(ws.meta.rtoRate >= 30 && "text-danger")}>{formatPercent(ws.meta.rtoRate, 0)}</span>}
-          hint={ws.meta.rtoRate >= 30 ? "Above the 30% attention threshold" : "Returned to origin, 30d"}
+          value={<Known value={ws.meta.rtoRate} format={(v) => <span className={cn(v >= 30 && "text-danger")}>{formatPercent(v, 0)}</span>} />}
+          hint={ws.meta.rtoRate === null ? UNKNOWN_HINT : ws.meta.rtoRate >= 30 ? "Above the 30% attention threshold" : "Returned to origin, 30d"}
         />
-        <KpiCard label="Team" value={formatNumber(ws.meta.members.length)} hint={`${ws.meta.domains.length} domain${ws.meta.domains.length === 1 ? "" : "s"}`} />
+        <KpiCard
+          label="Team"
+          value={ws.meta.membersKnown ? formatNumber(ws.meta.members.length) : <Unknown />}
+          hint={ws.meta.domainsKnown ? `${ws.meta.domains.length} domain${ws.meta.domains.length === 1 ? "" : "s"}` : UNKNOWN_HINT}
+        />
       </div>
       <Panel title="Details">
         <dl>
@@ -197,9 +209,9 @@ function OverviewTab({ ws }: { ws: AdminWorkspace }) {
           </DetailRow>
           <DetailRow label="Slug">{ws.slug}</DetailRow>
           <DetailRow label="Owner">
-            {ws.meta.ownerName} · {ws.meta.ownerEmail}
+            {ws.meta.ownerName || ws.meta.ownerEmail ? `${ws.meta.ownerName ?? "—"} · ${ws.meta.ownerEmail ?? "—"}` : <Unknown hint />}
           </DetailRow>
-          <DetailRow label="Country">{countryName(ws.meta.country)}</DetailRow>
+          <DetailRow label="Country">{countryName(ws.meta.country) ?? <Unknown hint />}</DetailRow>
           <DetailRow label="Store currency">{ws.currency}</DetailRow>
           <DetailRow label="Created">{formatDateTime(ws.createdAt)}</DetailRow>
         </dl>
@@ -236,19 +248,31 @@ function SubscriptionTab({ ws, onUpdated }: { ws: AdminWorkspace; onUpdated: (ws
       <Panel
         className="xl:col-span-2"
         title="Subscription"
-        actions={<Status value={status} />}
+        actions={<WorkspaceStatus ws={{ ...ws, meta: { ...ws.meta, suspended: false } }} />}
       >
+        <LocalOnlyNote>
+          {ws.origin === "api"
+            ? `Plan, status, trial end and period end come from the backend. Changes below are ${LOCAL_ONLY_LABEL.toLowerCase()} and recorded in the audit log.`
+            : undefined}
+        </LocalOnlyNote>
         <dl>
-          <DetailRow label="Plan">{ws.plan?.name ?? "—"}</DetailRow>
+          <DetailRow label="Plan">
+            {planLabel(ws) ?? <Unknown />}
+            {!ws.plan && ws.backend?.plan && <span className="ms-2 text-xs text-ink-soft">(backend plan not in the plan catalog)</span>}
+          </DetailRow>
           <DetailRow label="Billing cycle">
-            <span className="capitalize">{ws.meta.billingCycle}</span>
+            {ws.meta.billingCycle ? <span className="capitalize">{ws.meta.billingCycle}</span> : <Unknown hint />}
           </DetailRow>
           <DetailRow label="Price">
             {ws.plan ? (ws.meta.billingCycle === "yearly" ? `${formatMoney(ws.plan.yearlyPrice)} / year` : `${formatMoney(ws.plan.monthlyPrice)} / month`) : "—"}
           </DetailRow>
           <DetailRow label="MRR contribution">{formatMoney(ws.mrr)}</DetailRow>
-          {status === "trialing" && <DetailRow label="Trial ends">{formatDate(ws.meta.trialEndsAt)} ({formatRelative(ws.meta.trialEndsAt)})</DetailRow>}
-          {(status === "active" || status === "past_due") && <DetailRow label="Next billing">{formatDate(ws.meta.nextBillingAt)}</DetailRow>}
+          {(status === "trialing" || (ws.origin === "api" && ws.meta.trialEndsAt)) && (
+            <DetailRow label="Trial ends">{ws.meta.trialEndsAt ? `${formatDate(ws.meta.trialEndsAt)} (${formatRelative(ws.meta.trialEndsAt)})` : <Unknown />}</DetailRow>
+          )}
+          {(status === "active" || status === "past_due" || ws.origin === "api") && (
+            <DetailRow label={ws.origin === "api" ? "Current period end" : "Next billing"}>{ws.meta.nextBillingAt ? formatDate(ws.meta.nextBillingAt) : <Unknown />}</DetailRow>
+          )}
           {ws.meta.lastPaymentFailedAt && (
             <DetailRow label="Last payment failure">
               <span className="text-danger">{formatDateTime(ws.meta.lastPaymentFailedAt)}</span>

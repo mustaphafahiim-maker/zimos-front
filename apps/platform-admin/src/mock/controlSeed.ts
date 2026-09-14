@@ -75,7 +75,7 @@ export function seedControl(ws: AdminWorkspace): WorkspaceControl {
   const kycStatus = kycRoll < 0.55 ? "approved" : kycRoll < 0.75 ? "pending" : kycRoll < 0.85 ? "rejected" : "not_submitted";
   const carriers = ["Bosta", "Aramex", "J&T Express", "Mylerz"];
   const settlements = Array.from({ length: 4 }, (_, i) => {
-    const cod = Math.round((ws.meta.gmvLast30d / 4) * (0.7 + rand() * 0.4));
+    const cod = Math.round(((ws.meta.gmvLast30d ?? 0) / 4) * (0.7 + rand() * 0.4));
     return {
       id: `${ws.id}-st${i}`,
       carrier: pick(rand, carriers),
@@ -85,7 +85,7 @@ export function seedControl(ws: AdminWorkspace): WorkspaceControl {
       periodEnd: daysAgo(i * 7 + 1),
     };
   });
-  const score = Math.min(99, Math.round(ws.meta.rtoRate * 1.6 + rand() * 25));
+  const score = Math.min(99, Math.round((ws.meta.rtoRate ?? 0) * 1.6 + rand() * 25));
   return {
     workspaceId: ws.id,
     limitOverrides: {},
@@ -107,7 +107,7 @@ export function seedControl(ws: AdminWorkspace): WorkspaceControl {
     kycHistory:
       kycStatus === "not_submitted"
         ? []
-        : [{ id: uid("kyc"), status: "pending", note: "Commercial register & national ID uploaded.", actorName: ws.meta.ownerName, createdAt: daysAgo(between(rand, 5, 40)) }],
+        : [{ id: uid("kyc"), status: "pending", note: "Commercial register & national ID uploaded.", actorName: ws.meta.ownerName ?? "Workspace owner", createdAt: daysAgo(between(rand, 5, 40)) }],
     notes:
       rand() < 0.5
         ? [{ id: uid("note"), body: "Owner prefers WhatsApp contact. Asked about bulk import in onboarding call.", authorName: "Mona Adel", pinned: true, createdAt: daysAgo(between(rand, 2, 30)) }]
@@ -313,10 +313,10 @@ export function seedRefunds(): Refund[] {
 
 export function seedPayouts(rows: AdminWorkspace[]): Payout[] {
   return rows
-    .filter((w) => w.meta.ordersLast30d > 100)
+    .filter((w) => (w.meta.ordersLast30d ?? 0) > 100)
     .slice(0, 10)
     .map((w, i) => {
-      const cod = Math.round(w.meta.gmvLast30d / 4);
+      const cod = Math.round((w.meta.gmvLast30d ?? 0) / 4);
       const fees = Math.round(cod * 0.035);
       return {
         id: `po_${w.id}`,
@@ -446,7 +446,7 @@ export function seedExportRequests(rows: AdminWorkspace[]): DataExportRequest[] 
     id: `exp_${i}`,
     workspaceId: ws.id,
     workspaceName: ws.name,
-    requestedBy: ws.meta.ownerEmail,
+    requestedBy: ws.meta.ownerEmail ?? "Workspace owner",
     scope: (["full", "orders", "customers", "products"] as const)[i % 4],
     status: (i < 2 ? "pending" : i === 2 ? "processing" : "ready") as DataExportRequest["status"],
     createdAt: hoursAgo(i * 14 + 3),

@@ -649,8 +649,9 @@ async function getFinance(): Promise<FinanceSummary> {
   const paying = r.filter((w) => w.mrr > 0);
   const canceled = r.filter((w) => w.meta.subscriptionStatus === "canceled");
   const mrr = paying.reduce((s, w) => s + w.mrr, 0);
-  const transactionFees30d = Math.round(r.reduce((s, w) => s + (w.meta.gmvLast30d * (w.plan?.transactionFeeBp ?? 0)) / 10_000, 0));
-  const codFees30d = Math.round(r.reduce((s, w) => s + (w.meta.gmvLast30d * (w.plan?.codFeeBp ?? 0)) / 10_000, 0));
+  // Unknown GMV (api rows) contributes nothing rather than an invented amount.
+  const transactionFees30d = Math.round(r.reduce((s, w) => s + ((w.meta.gmvLast30d ?? 0) * (w.plan?.transactionFeeBp ?? 0)) / 10_000, 0));
+  const codFees30d = Math.round(r.reduce((s, w) => s + ((w.meta.gmvLast30d ?? 0) * (w.plan?.codFeeBp ?? 0)) / 10_000, 0));
   const refunds = refundsCol.all();
   return delay({
     mrr,

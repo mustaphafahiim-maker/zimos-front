@@ -27,27 +27,41 @@ export interface WorkspaceDomain {
   lastCheckedAt: string | null;
 }
 
+/**
+ * Enrichment for a workspace. For `origin: "api"` rows every field the backend does not
+ * return is `null` (or an empty array with `membersKnown` / `domainsKnown` = false) —
+ * never invented. Demo rows carry generated values for every field.
+ */
 export interface WorkspaceMeta {
   workspaceId: string;
-  planId: string;
-  subscriptionStatus: SubscriptionStatus;
-  billingCycle: BillingCycle;
+  /** Known plan id; null when the backend plan string matches no known plan. */
+  planId: string | null;
+  /** Null when the backend status isn't a known subscription status (raw text in AdminWorkspace.backend). */
+  subscriptionStatus: SubscriptionStatus | null;
+  /** Null for api rows until an admin sets it via "Change plan" (backend doesn't return it). */
+  billingCycle: BillingCycle | null;
   trialEndsAt: string | null;
   nextBillingAt: string | null;
   lastPaymentFailedAt: string | null;
   canceledAt: string | null;
-  ownerName: string;
-  ownerEmail: string;
-  country: string;
-  ordersLast30d: number;
-  ordersToday: number;
-  gmvLast30d: number;
-  deliveryRate: number;
-  rtoRate: number;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  country: string | null;
+  /** All-time order count (backend `orderCount`); null when unknown (demo rows). */
+  ordersAllTime: number | null;
+  ordersLast30d: number | null;
+  ordersToday: number | null;
+  gmvLast30d: number | null;
+  deliveryRate: number | null;
+  rtoRate: number | null;
+  /** Suspension is a local admin action (no backend endpoint yet). */
   suspended: boolean;
   suspendedReason: string | null;
   members: WorkspaceMember[];
+  /** False when members aren't exposed to the admin API (members is then empty). */
+  membersKnown: boolean;
   domains: WorkspaceDomain[];
+  domainsKnown: boolean;
 }
 
 export interface AdminWorkspace {
@@ -56,6 +70,10 @@ export interface AdminWorkspace {
   slug: string;
   createdAt: string;
   currency: string;
+  /** `api` = row from GET /admin/workspaces; `demo` = generated fallback row. */
+  origin: "api" | "demo";
+  /** Raw backend strings for api rows (shown when they don't map to a known plan/status). */
+  backend: { plan: string; status: string } | null;
   meta: WorkspaceMeta;
   plan: Plan | null;
   /** Monthly recurring revenue contribution in platform currency. */
@@ -350,9 +368,15 @@ export interface OverviewData {
     trialing: number;
     pastDue: number;
     mrr: number;
-    gmv30d: number;
-    ordersToday: number;
-    deliveryRate: number;
+    /** Sums over known values only; null when no workspace has data. */
+    gmv30d: number | null;
+    gmvKnownCount: number;
+    ordersToday: number | null;
+    ordersTodayKnownCount: number;
+    ordersAllTime: number | null;
+    ordersAllTimeKnownCount: number;
+    deliveryRate: number | null;
+    deliveryKnownCount: number;
   };
   signupsPerDay: ChartPoint[];
   mrrTrend: ChartPoint[];

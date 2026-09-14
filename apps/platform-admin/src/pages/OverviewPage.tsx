@@ -21,7 +21,11 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
 import { BarChart, ChartAxis, LineAreaChart } from "@/components/charts";
 import { Panel, SourceNotice, Td, Th } from "@/components/Panel";
-import { WorkspaceStatus } from "@/components/workspace";
+import { Known, UNKNOWN_HINT, Unknown, WorkspaceStatus, planLabel } from "@/components/workspace";
+
+function withData(label: string, n: number): string {
+  return n === 0 ? UNKNOWN_HINT : `${label} · from ${n} workspace${n === 1 ? "" : "s"} with data`;
+}
 import { useAsync } from "@/lib/useAsync";
 import { adminApi } from "@/mock/adminApi";
 import type { AttentionItem, OverviewData } from "@/mock/types";
@@ -74,23 +78,36 @@ function OverviewBody({ data }: { data: OverviewData }) {
         <KpiCard label="Trialing" value={formatNumber(kpis.trialing)} icon={<Hourglass />} to="/subscriptions" hint="Currently in free trial" />
         <KpiCard label="Past due" value={formatNumber(kpis.pastDue)} icon={<TriangleAlert />} to="/subscriptions" hint="Failed renewal payment" />
         <KpiCard label="MRR" value={formatMoneyCompact(kpis.mrr)} icon={<CircleDollarSign />} hint={formatMoney(kpis.mrr)} />
-        <KpiCard label="GMV processed" value={formatMoneyCompact(kpis.gmv30d)} icon={<Wallet />} hint="Last 30 days, all stores" />
-        <KpiCard label="Orders today" value={formatNumber(kpis.ordersToday)} icon={<ShoppingCart />} hint="Across all stores" />
-        <KpiCard label="Delivery rate" value={formatPercent(kpis.deliveryRate)} icon={<Truck />} hint="Platform-wide, weighted by orders" />
+        <KpiCard label="GMV processed" value={<Known value={kpis.gmv30d} format={formatMoneyCompact} />} icon={<Wallet />} hint={withData("Last 30 days", kpis.gmvKnownCount)} />
+        <KpiCard label="Orders today" value={<Known value={kpis.ordersToday} format={formatNumber} />} icon={<ShoppingCart />} hint={withData("Today", kpis.ordersTodayKnownCount)} />
+        <KpiCard label="Orders (all time)" value={<Known value={kpis.ordersAllTime} format={formatNumber} />} icon={<ShoppingCart />} hint={withData("orderCount", kpis.ordersAllTimeKnownCount)} />
+        <KpiCard label="Delivery rate" value={<Known value={kpis.deliveryRate} format={(v) => formatPercent(v)} />} icon={<Truck />} hint={withData("Weighted by orders", kpis.deliveryKnownCount)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel title="Signups per day" description={`Last 30 days · ${formatNumber(signupsTotal)} total`}>
-          <BarChart points={data.signupsPerDay} height={140} color="var(--color-primary)" format={(v) => `${v} signups`} />
-          <ChartAxis points={data.signupsPerDay} />
+        <Panel title="Signups per day" description={data.signupsPerDay.length ? `Last 30 days · ${formatNumber(signupsTotal)} total` : UNKNOWN_HINT}>
+          {data.signupsPerDay.length ? (
+            <>
+              <BarChart points={data.signupsPerDay} height={140} color="var(--color-primary)" format={(v) => `${v} signups`} />
+              <ChartAxis points={data.signupsPerDay} />
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-ink-muted">— {UNKNOWN_HINT}</p>
+          )}
         </Panel>
         <Panel title="MRR trend" description="Last 12 months">
           <LineAreaChart points={data.mrrTrend} height={140} format={formatMoney} />
           <ChartAxis points={data.mrrTrend} />
         </Panel>
-        <Panel title="Orders per day" description={`Last 30 days · ${formatCompact(ordersTotal)} total`}>
-          <BarChart points={data.ordersPerDay} height={140} color="var(--color-accent)" format={(v) => `${formatNumber(v)} orders`} />
-          <ChartAxis points={data.ordersPerDay} />
+        <Panel title="Orders per day" description={data.ordersPerDay.length ? `Last 30 days · ${formatCompact(ordersTotal)} total` : UNKNOWN_HINT}>
+          {data.ordersPerDay.length ? (
+            <>
+              <BarChart points={data.ordersPerDay} height={140} color="var(--color-accent)" format={(v) => `${formatNumber(v)} orders`} />
+              <ChartAxis points={data.ordersPerDay} />
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-ink-muted">— {UNKNOWN_HINT}</p>
+          )}
         </Panel>
       </div>
 
@@ -168,8 +185,8 @@ function OverviewBody({ data }: { data: OverviewData }) {
                         {ws.name}
                       </Link>
                     </Td>
-                    <Td className="text-ink-soft">{ws.meta.ownerEmail}</Td>
-                    <Td>{ws.plan?.name ?? "—"}</Td>
+                    <Td className="text-ink-soft">{ws.meta.ownerEmail ?? <Unknown />}</Td>
+                    <Td>{planLabel(ws) ?? <Unknown />}</Td>
                     <Td>
                       <WorkspaceStatus ws={ws} />
                     </Td>

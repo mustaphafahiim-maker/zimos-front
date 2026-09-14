@@ -5,7 +5,7 @@
  * become once the platform-admin API exists.
  */
 import type { Workspace } from "@store-builder/api-client";
-import { fetchAdminWorkspaces, overviewRowToWorkspace } from "@/lib/realAdmin";
+import { fetchAdminWorkspaces, overviewRowToWorkspace, type AdminOverviewRow } from "@/lib/realAdmin";
 import { getErrorMessage } from "@/lib/errors";
 import {
   collection,
@@ -59,6 +59,7 @@ import type {
   Provider,
   ProviderKind,
   ServiceTile,
+  SubscriptionStatus,
   Supplier,
   Template,
   TemplateInput,
@@ -133,14 +134,85 @@ function audit(input: {
 
 interface BaseCache {
   list: Workspace[];
+  /** Raw rows from GET /admin/workspaces, keyed by workspace id (api source only). */
+  apiRows: Map<string, AdminOverviewRow>;
   source: "api" | "demo";
   apiError: string | null;
 }
 
 let baseCache: BaseCache | null = null;
 
+/** Label for mutations that only change local admin metadata. */
+export const LOCAL_ONLY_LABEL = "Saved locally (no backend endpoint yet)";
+export const NOT_EXPOSED_MESSAGE = "Members/domains for this workspace aren't exposed to the admin API yet";
+
+/** Demo-row enrichment (generated). Never used for api rows. */
 function readMetaMap(): Record<string, WorkspaceMeta> {
   return readCollection<Record<string, WorkspaceMeta>>("workspaceMeta", () => ({}));
+}
+
+/** Local admin overrides for api rows — only fields an admin action in this UI may change. */
+const API_OVERRIDE_KEYS = [
+  "planId",
+  "billingCycle",
+  "subscriptionStatus",
+  "trialEndsAt",
+  "nextBillingAt",
+  "lastPaymentFailedAt",
+  "canceledAt",
+  "suspended",
+  "suspendedReason",
+] as const satisfies ReadonlyArray<keyof WorkspaceMeta>;
+type ApiOverride = Partial<Pick<WorkspaceMeta, (typeof API_OVERRIDE_KEYS)[number]>>;
+
+function readApiOverrides(): Record<string, ApiOverride> {
+  return readCollection<Record<string, ApiOverride>>("apiWorkspaceOverrides", () => ({}));
+}
+
+const SUBSCRIPTION_STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due", "canceled"];
+
+/** Backend status string → known enum (case-insensitive); null when unknown. */
+export function mapSubscriptionStatus(raw: string | null | undefined): SubscriptionStatus | null {
+  const s = (raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const norm = s === "cancelled" ? "canceled" : s;
+  return SUBSCRIPTION_STATUSES.find((x) => x === norm) ?? null;
+}
+
+/** Backend plan string → known plan by id/code/name (case-insensitive); null when no match. */
+export function matchPlan(raw: string | null | undefined, planList: Plan[]): Plan | null {
+  const r = (raw ?? "").trim().toLowerCase();
+  if (!r) return null;
+  return planList.find((p) => p.code.toLowerCase() === r || p.name.toLowerCase() === r || p.id.toLowerCase() === r) ?? null;
+}
+
+/** Meta for a real row: backend fields mapped, everything else explicitly unknown. */
+function apiMeta(row: AdminOverviewRow, planList: Plan[]): WorkspaceMeta {
+  const status = mapSubscriptionStatus(row.status);
+  return {
+    workspaceId: row.workspaceId,
+    planId: matchPlan(row.plan, planList)?.id ?? null,
+    subscriptionStatus: status,
+    billingCycle: null,
+    trialEndsAt: row.trialEndsAt ?? null,
+    nextBillingAt: row.currentPeriodEnd ?? null,
+    lastPaymentFailedAt: null,
+    canceledAt: null,
+    ownerName: null,
+    ownerEmail: null,
+    country: null,
+    ordersAllTime: typeof row.orderCount === "number" ? row.orderCount : null,
+    ordersLast30d: null,
+    ordersToday: null,
+    gmvLast30d: null,
+    deliveryRate: null,
+    rtoRate: null,
+    suspended: false,
+    suspendedReason: null,
+    members: [],
+    membersKnown: false,
+    domains: [],
+    domainsKnown: false,
+  };
 }
 
 function metaFor(ws: Workspace, index: number, map: Record<string, WorkspaceMeta>, planIds: string[]): { meta: WorkspaceMeta; created: boolean } {
@@ -159,12 +231,21 @@ function mrrOf(meta: WorkspaceMeta, plan: Plan | null): number {
 
 function buildRows(base: BaseCache): WorkspaceListResult {
   const map = readMetaMap();
+  const overrides = readApiOverrides();
   const planList = plans.all();
   const planIds = planList.map((p) => p.id);
   let dirty = false;
   const rows: AdminWorkspace[] = base.list.map((ws, i) => {
-    const { meta, created } = metaFor(ws, i, map, planIds);
-    if (created) dirty = true;
+    const apiRow = base.apiRows.get(ws.id);
+    let meta: WorkspaceMeta;
+    if (apiRow) {
+      // Stale generated meta for this id (older builds) is deliberately ignored.
+      meta = { ...apiMeta(apiRow, planList), ...(overrides[ws.id] ?? {}) };
+    } else {
+      const r = metaFor(ws, i, map, planIds);
+      if (r.created) dirty = true;
+      meta = r.meta;
+    }
     const plan = planList.find((p) => p.id === meta.planId) ?? null;
     return {
       id: ws.id,
@@ -172,6 +253,8 @@ function buildRows(base: BaseCache): WorkspaceListResult {
       slug: ws.slug,
       createdAt: ws.createdAt,
       currency: ws.defaultCurrency ?? "EGP",
+      origin: apiRow ? "api" : "demo",
+      backend: apiRow ? { plan: apiRow.plan ?? "", status: apiRow.status ?? "" } : null,
       meta,
       plan,
       mrr: mrrOf(meta, plan),
@@ -187,10 +270,11 @@ async function loadBase(force: boolean): Promise<BaseCache> {
     // BACKEND (real): GET /admin/workspaces → { workspaces: AdminOverviewRow[] }
     const { rows } = await fetchAdminWorkspaces();
     const list = rows.map(overviewRowToWorkspace);
-    baseCache = { list, source: "api", apiError: null };
+    baseCache = { list, apiRows: new Map(rows.map((r) => [r.workspaceId, r])), source: "api", apiError: null };
   } catch (err) {
     baseCache = {
       list: readCollection<Workspace[]>("demoWorkspaces", seedDemoWorkspaces),
+      apiRows: new Map(),
       source: "demo",
       apiError: getErrorMessage(err, "Couldn't load workspaces."),
     };
@@ -199,6 +283,16 @@ async function loadBase(force: boolean): Promise<BaseCache> {
 }
 
 function updateMeta(workspaceId: string, patch: Partial<WorkspaceMeta>): WorkspaceMeta {
+  if (baseCache?.apiRows.has(workspaceId)) {
+    const allowed = API_OVERRIDE_KEYS as ReadonlyArray<string>;
+    const blocked = Object.keys(patch).filter((k) => !allowed.includes(k));
+    if (blocked.length) fail(`${NOT_EXPOSED_MESSAGE}.`);
+    const all = readApiOverrides();
+    all[workspaceId] = { ...(all[workspaceId] ?? {}), ...(patch as ApiOverride) };
+    writeCollection("apiWorkspaceOverrides", all);
+    const row = buildRows(baseCache).rows.find((w) => w.id === workspaceId) ?? fail("Workspace not found.");
+    return row.meta;
+  }
   const map = readMetaMap();
   const current = map[workspaceId] ?? fail("Workspace not found.");
   const next = { ...current, ...patch };
@@ -239,8 +333,8 @@ async function searchWorkspaces(query: string): Promise<AdminWorkspace[]> {
       (w) =>
         w.name.toLowerCase().includes(q) ||
         w.slug.toLowerCase().includes(q) ||
-        w.meta.ownerEmail.toLowerCase().includes(q) ||
-        w.meta.ownerName.toLowerCase().includes(q)
+        (w.meta.ownerEmail ?? "").toLowerCase().includes(q) ||
+        (w.meta.ownerName ?? "").toLowerCase().includes(q)
     )
     .slice(0, 8);
 }
@@ -348,20 +442,36 @@ async function getOverview(): Promise<OverviewData> {
   // BACKEND: GET /admin/metrics/overview (KPIs + series) and GET /admin/alerts (needs attention)
   const workspaces = await listWorkspaces({ force: false });
   const rows = workspaces.rows;
-  const totalOrders30 = rows.reduce((s, w) => s + w.meta.ordersLast30d, 0);
+  /** Sum only known values; null when nothing is known. */
+  const sumKnown = (pick: (w: AdminWorkspace) => number | null) => {
+    const known = rows.map(pick).filter((v): v is number => v !== null);
+    return { total: known.length ? known.reduce((s, v) => s + v, 0) : null, count: known.length };
+  };
+  const gmv = sumKnown((w) => w.meta.gmvLast30d);
+  const today = sumKnown((w) => w.meta.ordersToday);
+  const allTime = sumKnown((w) => w.meta.ordersAllTime);
+  const deliveryRows = rows.filter((w) => w.meta.deliveryRate !== null && w.meta.ordersLast30d !== null);
+  const deliveryOrders = deliveryRows.reduce((s, w) => s + (w.meta.ordersLast30d ?? 0), 0);
   const kpis = {
     activeWorkspaces: rows.filter((w) => w.meta.subscriptionStatus === "active" && !w.meta.suspended).length,
     trialing: rows.filter((w) => w.meta.subscriptionStatus === "trialing").length,
     pastDue: rows.filter((w) => w.meta.subscriptionStatus === "past_due").length,
     mrr: rows.reduce((s, w) => s + w.mrr, 0),
-    gmv30d: rows.reduce((s, w) => s + w.meta.gmvLast30d, 0),
-    ordersToday: rows.reduce((s, w) => s + w.meta.ordersToday, 0),
-    deliveryRate: totalOrders30 === 0 ? 0 : rows.reduce((s, w) => s + w.meta.deliveryRate * w.meta.ordersLast30d, 0) / totalOrders30,
+    gmv30d: gmv.total,
+    gmvKnownCount: gmv.count,
+    ordersToday: today.total,
+    ordersTodayKnownCount: today.count,
+    ordersAllTime: allTime.total,
+    ordersAllTimeKnownCount: allTime.count,
+    deliveryRate:
+      deliveryRows.length === 0 ? null : deliveryOrders === 0 ? 0 : deliveryRows.reduce((s, w) => s + (w.meta.deliveryRate ?? 0) * (w.meta.ordersLast30d ?? 0), 0) / deliveryOrders,
+    deliveryKnownCount: deliveryRows.length,
   };
 
-  const signupsPerDay = seedSeries(30, 11, 0, 6);
-  const ordersPerDay = seedSeries(30, 23, Math.max(kpis.ordersToday * 0.6, 1), Math.max(kpis.ordersToday * 1.1, 2));
-  if (ordersPerDay.length) ordersPerDay[ordersPerDay.length - 1].value = kpis.ordersToday;
+  const signupsPerDay = workspaces.source === "api" ? [] : seedSeries(30, 11, 0, 6);
+  // Per-day orders aren't exposed by the API; the synthetic series is only drawn for demo data.
+  const ordersPerDay = kpis.ordersToday === null ? [] : seedSeries(30, 23, Math.max(kpis.ordersToday * 0.6, 1), Math.max(kpis.ordersToday * 1.1, 2));
+  if (ordersPerDay.length && kpis.ordersToday !== null) ordersPerDay[ordersPerDay.length - 1].value = kpis.ordersToday;
   const mrrTrend = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (11 - i), 1);
@@ -374,7 +484,7 @@ async function getOverview(): Promise<OverviewData> {
     if (w.meta.subscriptionStatus === "past_due") {
       attention.push({ id: `pd-${w.id}`, kind: "past_due", title: `${w.name} is past due`, detail: `${w.plan?.name ?? "Plan"} · payment failed`, to: `/workspaces/${w.id}?tab=subscription`, severity: "warning" });
     }
-    if (w.meta.rtoRate >= 30 && w.meta.ordersLast30d >= 50) {
+    if (w.meta.rtoRate !== null && w.meta.ordersLast30d !== null && w.meta.rtoRate >= 30 && w.meta.ordersLast30d >= 50) {
       attention.push({ id: `rto-${w.id}`, kind: "high_rto", title: `High RTO at ${w.name}`, detail: `${w.meta.rtoRate}% returned to origin over ${w.meta.ordersLast30d} orders (30d)`, to: `/workspaces/${w.id}`, severity: "danger" });
     }
     for (const d of w.meta.domains) {

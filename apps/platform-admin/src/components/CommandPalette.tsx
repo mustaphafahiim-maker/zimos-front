@@ -6,6 +6,7 @@ import { NAV_GROUPS } from "@/components/navConfig";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Status } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { statusValue } from "@/components/workspace";
 import { adminApi } from "@/mock/adminApi";
 import { controlApi } from "@/mock/controlApi";
 import type { AdminWorkspace } from "@/mock/types";
@@ -63,9 +64,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const match = (s: string) => !q || s.toLowerCase().includes(q);
     const wsItems: PaletteItem[] = q
       ? (workspaces ?? [])
-          .filter((w) => match(`${w.name} ${w.slug} ${w.id} ${w.meta.ownerEmail} ${w.meta.ownerName}`))
+          .filter((w) => match(`${w.name} ${w.slug} ${w.id} ${w.meta.ownerEmail ?? ""} ${w.meta.ownerName ?? ""}`))
           .slice(0, 6)
-          .map((w) => ({ id: `ws-${w.id}`, section: "Workspaces", label: w.name, hint: `${w.meta.ownerEmail} · ${w.id}`, icon: Building2, keywords: "", ws: w, run: () => go(`/workspaces/${w.id}`) }))
+          .map((w) => ({ id: `ws-${w.id}`, section: "Workspaces", label: w.name, hint: `${w.meta.ownerEmail ?? "Owner —"} · ${w.id}${w.origin === "demo" ? " · Demo data" : ""}`, icon: Building2, keywords: "", ws: w, run: () => go(`/workspaces/${w.id}`) }))
       : [];
     const pages: PaletteItem[] = NAV_GROUPS.flatMap((g) =>
       g.items.map((i) => ({ id: `page-${i.to}`, section: "Pages" as const, label: i.label, hint: g.label ?? undefined, icon: i.icon, keywords: `${i.label} ${g.label ?? ""} ${i.keywords ?? ""}`, run: () => go(i.to) }))
@@ -161,7 +162,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                           <span className="block truncate font-medium text-ink">{item.label}</span>
                           {item.hint && <span className="block truncate text-xs text-ink-soft">{item.hint}</span>}
                         </span>
-                        {item.ws && <Status value={item.ws.meta.suspended ? "suspended" : item.ws.meta.subscriptionStatus} />}
+                        {item.ws && <Status value={statusValue(item.ws)} />}
                         {i === active && <CornerDownLeft className="size-3.5 text-ink-muted" aria-hidden />}
                       </button>
                     </li>
