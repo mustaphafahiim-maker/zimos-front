@@ -6,13 +6,13 @@ import { Alert, Button, Table, TableBody, TableHeader, TableRow, cn } from "@sto
 import { useAuth } from "@/context/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
-import { Modal } from "@/components/Modal";
+import { Modal } from "@store-builder/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NativeSelect, SearchInput, TextField } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import { ADMIN_ROLES } from "@/mock/constants";

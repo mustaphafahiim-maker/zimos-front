@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, Boxes, Download, Layers, Package, Plus, Wallet } from "lucide-react";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,7 +13,7 @@ import { KpiCard } from "@/components/KpiCard";
 import { Modal } from "@/components/Modal";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import {

@@ -5,13 +5,13 @@ import { Alert, Button, Input, Table, TableBody, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Modal } from "@/components/Modal";
+import { Modal } from "@store-builder/ui";
 import { TextField } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge, humanize } from "@/components/StatusBadge";
 import { useAction } from "@/components/controls";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 import { controlApi } from "@/mock/controlApi";

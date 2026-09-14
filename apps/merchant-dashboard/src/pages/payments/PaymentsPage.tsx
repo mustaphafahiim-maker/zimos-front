@@ -4,7 +4,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Inpu
 import { mockApi } from "@/mock/api";
 import type { CheckoutSettings, CurrencySetting, PaymentGateway } from "@/mock/types";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { useCommon, useLocale, useT, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
 import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 
 const STRINGS = {

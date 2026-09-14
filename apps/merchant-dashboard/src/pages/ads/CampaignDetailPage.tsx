@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Award, Skull } from "lucide-react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney } from "@/lib/format";
 import { mockApi } from "@/mock/api";
 import type { Campaign, ProductEconomics } from "@/mock/types2";

@@ -4,14 +4,14 @@ import { Info } from "lucide-react";
 import type { CallCenterSettings } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { useT, useCommon, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 
 const STRINGS = {

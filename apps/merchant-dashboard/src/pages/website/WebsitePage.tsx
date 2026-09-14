@@ -6,7 +6,7 @@ import type { CreateWebsitePayload, Website, WebsiteTemplateSummary } from "@sto
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { humanize } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";

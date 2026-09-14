@@ -50,7 +50,7 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDate, formatMoney } from "@/lib/format";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";

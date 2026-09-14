@@ -20,7 +20,7 @@ import { JsonBlock, Mono, Panel } from "@/components/Panel";
 import { useToast } from "@/components/Toast";
 import { ChangePlanModal, ExtendTrialModal } from "@/components/SubscriptionDialogs";
 import { DemoBadge, Known, LOCAL_ONLY_LABEL, LocalOnlyNote, UNKNOWN_HINT, Unknown, WorkspaceStatus, countryName, planLabel } from "@/components/workspace";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import { PLAN_FEATURES } from "@/mock/constants";

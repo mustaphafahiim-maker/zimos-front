@@ -5,7 +5,7 @@ import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { mockApi } from "@/mock/api";
 import type { StoreSummary } from "@/mock/types2";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";

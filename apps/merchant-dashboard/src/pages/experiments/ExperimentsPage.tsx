@@ -5,7 +5,7 @@ import type { Experiment, ExperimentVariant } from "@/mock/types";
 import { mockApi } from "@/mock/api";
 import { uid, nowIso } from "@/mock/store";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
@@ -16,7 +16,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 
 const STATUS_TONE: Record<Experiment["status"], "neutral" | "info" | "warning" | "success"> = {

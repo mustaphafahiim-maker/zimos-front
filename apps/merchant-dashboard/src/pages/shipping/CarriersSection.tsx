@@ -5,7 +5,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn }
 import { mockApi } from "@/mock/api";
 import type { Carrier, CarrierAccount, CarrierKey } from "@/mock/types";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -13,7 +13,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 

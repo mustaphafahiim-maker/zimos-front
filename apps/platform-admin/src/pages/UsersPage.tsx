@@ -10,7 +10,7 @@ import { FilterChips, SearchInput } from "@/components/forms";
 import { Mono, Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useAction } from "@/components/controls";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDate, formatRelative, initials } from "@/lib/format";
 import { controlApi } from "@/mock/controlApi";
 import type { PlatformUser, PlatformUserStatus } from "@/mock/controlTypes";

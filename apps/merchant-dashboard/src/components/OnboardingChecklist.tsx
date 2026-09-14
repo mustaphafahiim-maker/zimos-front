@@ -16,7 +16,7 @@ import {
 import { Card, cn } from "@store-builder/ui";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { formatNumber, formatPercentValue } from "@/lib/format";

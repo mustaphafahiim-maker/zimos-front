@@ -7,7 +7,7 @@ import { DetailRow, Drawer } from "@/components/Drawer";
 import { NativeSelect, SearchInput } from "@/components/forms";
 import { JsonBlock, Mono, Panel, Td, Th } from "@/components/Panel";
 import { humanize } from "@/components/StatusBadge";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { adminApi } from "@/mock/adminApi";
 import type { AuditEntry } from "@/mock/types";
 import { formatDateTime, formatRelative } from "@/lib/format";

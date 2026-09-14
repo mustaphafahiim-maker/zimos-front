@@ -6,7 +6,7 @@ import { cn } from "@store-builder/ui";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";
 import { listInventoryItems } from "@/pages/inventory/inventoryAdapter";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { computeBreakEven, computeMetrics, verdictFor } from "@/lib/adMetrics";

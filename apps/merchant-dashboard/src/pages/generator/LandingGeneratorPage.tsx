@@ -15,7 +15,7 @@ import {
 } from "@store-builder/ui";
 import type { ProductMedia, WebsitePage } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ApiError, getErrorMessage } from "@/lib/errors";
@@ -27,7 +27,7 @@ import { Field, TextField } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { ColorField } from "@/components/ColorField";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";

@@ -5,14 +5,14 @@ import { Alert, Button, Chip, SegmentedControl, Table, TableBody, TableHeader, T
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Modal } from "@/components/Modal";
+import { Modal } from "@store-builder/ui";
 import { SelectField, TextAreaField, TextField } from "@/components/forms";
 import { Mono, Panel, Td, Th } from "@/components/Panel";
 import { StatusBadge, humanize } from "@/components/StatusBadge";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 import { Checklist, MarkdownPreview, SettingRow, renderTemplate, useAction } from "@/components/controls";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { adminApi } from "@/mock/adminApi";

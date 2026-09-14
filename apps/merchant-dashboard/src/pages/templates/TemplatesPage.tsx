@@ -5,7 +5,7 @@ import { Button, Card, Input, cn } from "@store-builder/ui";
 import type { WebsiteTemplateSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { ApiError, getErrorMessage } from "@/lib/errors";
 import { humanize } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";

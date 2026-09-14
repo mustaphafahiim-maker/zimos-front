@@ -12,7 +12,7 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";

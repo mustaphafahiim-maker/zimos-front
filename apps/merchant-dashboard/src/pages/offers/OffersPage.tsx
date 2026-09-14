@@ -5,7 +5,7 @@ import type { ConversionOffer, ConversionOfferType, OfferProductRef } from "@/mo
 import { mockApi } from "@/mock/api";
 import { uid, nowIso } from "@/mock/store";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import {
   basisPointsToPercentInput,
@@ -18,7 +18,7 @@ import { fmt, useCommon, useLocale, useT } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field, TextField } from "@/components/Field";

@@ -6,7 +6,7 @@ import { DataState } from "@/components/DataState";
 import { JsonBlock, Mono, Panel } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { API_BASE_URL, backendRootUrl } from "@/lib/apiClient";
 import { adminApi } from "@/mock/adminApi";

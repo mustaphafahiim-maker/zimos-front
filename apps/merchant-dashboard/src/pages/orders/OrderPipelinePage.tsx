@@ -5,7 +5,7 @@ import type { Order, PaymentMethod } from "@store-builder/api-client";
 import { Badge, Input, cn } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney } from "@/lib/format";
 import { useT, useCommon, fmt, type Messages } from "@/i18n/LocaleContext";
 import { DEMO_PRODUCTS } from "@/mock/seed";

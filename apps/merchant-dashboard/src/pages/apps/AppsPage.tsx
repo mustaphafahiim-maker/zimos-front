@@ -4,7 +4,7 @@ import { Button, Card, Input, cn } from "@store-builder/ui";
 import { mockApi } from "@/mock/api";
 import type { AppCategory, AppIntegration } from "@/mock/types";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";

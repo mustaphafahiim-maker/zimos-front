@@ -4,10 +4,10 @@ import { Alert, Button, cn } from "@store-builder/ui";
 import { mockApi } from "@/mock/api";
 import type { CamouflageSettings } from "@/mock/types";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { DataState } from "@/components/DataState";
 import { TextField, Field } from "@/components/Field";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 

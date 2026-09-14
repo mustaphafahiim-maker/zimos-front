@@ -5,12 +5,12 @@ import { ArrowRight, BadgeCheck, Check, Clock, Info, MessageCircle, Star, X } fr
 import { reviewsList, reviewsModerate, type ReviewDTO, type ReviewStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { ApiError, getErrorMessage } from "@/lib/errors";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";

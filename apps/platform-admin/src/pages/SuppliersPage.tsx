@@ -10,7 +10,7 @@ import { Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { countryName } from "@/components/workspace";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import type { Supplier, SupplierStatus } from "@/mock/types";

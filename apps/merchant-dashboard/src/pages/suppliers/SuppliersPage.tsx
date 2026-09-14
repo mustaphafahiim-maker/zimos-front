@@ -5,12 +5,12 @@ import { Alert, Button, Card, Input, Spinner, Tabs, TabsContent, TabsList, TabsT
 import { mockApi } from "@/mock/api";
 import type { Supplier, SupplierProduct } from "@/mock/types2";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { Modal } from "@/components/Modal";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";

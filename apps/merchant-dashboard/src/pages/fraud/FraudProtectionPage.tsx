@@ -4,7 +4,7 @@ import { Ban, Check, Flag, Info, Phone, ShieldAlert, ShieldCheck, Trash2, Truck 
 import type { BlockedEntry, FlaggedOrder, FraudRule, FraudRuleKey, FraudSettings } from "@/mock/types";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { useCommon, useLocale, useT, fmt } from "@/i18n/LocaleContext";
@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field, TextField } from "@/components/Field";

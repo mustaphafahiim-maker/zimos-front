@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ChevronDown, LogOut, Menu, RotateCcw, Search, X } from "lucide-react";
 import { Kbd, ZimosLogo, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@store-builder/ui";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NAV_GROUPS } from "@/components/navConfig";
@@ -261,7 +261,7 @@ export function AdminLayout() {
               <span className="size-1.5 rounded-full bg-warning" aria-hidden />
               {envLabel}
             </span>
-            <ThemeToggle />
+            <ThemeToggle variant="outline" />
             <UserMenu />
           </div>
         </header>

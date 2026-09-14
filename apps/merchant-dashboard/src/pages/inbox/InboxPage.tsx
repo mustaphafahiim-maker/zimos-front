@@ -5,7 +5,7 @@ import { ArrowLeft, Bot, Check, CheckCheck, FileText, MessageCircle, Package, Ph
 import type { WaConversation, WaMessage } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useT, useCommon, useLocale, fmt, type Messages } from "@/i18n/LocaleContext";

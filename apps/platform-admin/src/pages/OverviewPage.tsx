@@ -19,14 +19,14 @@ import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
-import { BarChart, ChartAxis, LineAreaChart } from "@/components/charts";
+import { BarChart, ChartAxis, LineAreaChart } from "@store-builder/ui";
 import { Panel, SourceNotice, Td, Th } from "@/components/Panel";
 import { Known, UNKNOWN_HINT, Unknown, WorkspaceStatus, planLabel } from "@/components/workspace";
 
 function withData(label: string, n: number): string {
   return n === 0 ? UNKNOWN_HINT : `${label} · from ${n} workspace${n === 1 ? "" : "s"} with data`;
 }
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { adminApi } from "@/mock/adminApi";
 import type { AttentionItem, OverviewData } from "@/mock/types";
 import { formatCompact, formatMoney, formatMoneyCompact, formatNumber, formatPercent, formatRelative } from "@/lib/format";

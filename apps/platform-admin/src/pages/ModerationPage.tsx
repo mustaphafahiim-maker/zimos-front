@@ -9,7 +9,7 @@ import { FilterChips } from "@/components/forms";
 import { Panel } from "@/components/Panel";
 import { Status, StatusBadge, humanize } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatRelative } from "@/lib/format";
 import { controlApi } from "@/mock/controlApi";
 import type { ModerationReport, ReportStatus } from "@/mock/controlTypes";

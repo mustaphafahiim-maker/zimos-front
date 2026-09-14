@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert, ZimosLogo } from "@store-builder/ui";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { BrandPanel } from "@/components/BrandPanel";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@store-builder/ui";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -40,7 +40,7 @@ export function LoginPage() {
     <div className="flex min-h-screen bg-paper">
       <BrandPanel />
       <div className="relative flex flex-1 items-center justify-center px-6 py-16">
-        <ThemeToggle className="absolute end-6 top-6" />
+        <ThemeToggle variant="outline" className="absolute end-6 top-6" />
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
             <ZimosLogo height={32} />

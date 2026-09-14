@@ -5,7 +5,7 @@ import { Plus, Search, Trash2, UserRound } from "lucide-react";
 import type { Customer, Order, PaymentMethod, Product, ShippingZone } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { formatMoney, variantLabel } from "@/lib/format";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";

@@ -5,7 +5,7 @@ import { Clock, Download, Phone, PhoneIncoming, Play, ThumbsUp } from "lucide-re
 import type { CallLog, CallOutcome } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDateTime } from "@/lib/format";
 import { useT, useCommon, useLocale, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";

@@ -3,7 +3,7 @@ import { Button, Card, cn } from "@store-builder/ui";
 import { mockApi } from "@/mock/api";
 import type { PlanInfo } from "@/mock/types";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDate, formatMoney, formatNumber, formatPercent } from "@/lib/format";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";

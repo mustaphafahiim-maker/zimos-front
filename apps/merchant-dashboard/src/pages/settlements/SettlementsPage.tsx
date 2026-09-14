@@ -4,7 +4,7 @@ import { AlertTriangle, Banknote, CalendarClock, Check, FileUp, Info, Scale, Wal
 import type { Settlement, SettlementOrder } from "@/mock/types2";
 import { mockApi } from "@/mock/api";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useCommon, useLocale, useT, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";

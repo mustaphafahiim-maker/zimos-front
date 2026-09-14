@@ -1,6 +1,8 @@
-import { cn } from "@store-builder/ui";
+"use client";
 
-interface ToggleProps {
+import { cn } from "cn";
+
+export interface ToggleProps {
   checked: boolean;
   onChange: (next: boolean) => void;
   label?: string;
@@ -11,7 +13,7 @@ interface ToggleProps {
   className?: string;
 }
 
-/** Accessible switch. Renders label/description at the start when provided. */
+/** Accessible switch. Renders label/description at the start when provided; the knob mirrors in RTL. */
 export function Toggle({ checked, onChange, label, hideLabel, description, disabled, className }: ToggleProps) {
   const control = (
     <button
@@ -29,7 +31,7 @@ export function Toggle({ checked, onChange, label, hideLabel, description, disab
     >
       <span
         className={cn(
-          "inline-block size-5 rounded-full bg-white shadow transition-transform",
+          "inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200",
           checked ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0.5 rtl:-translate-x-0.5"
         )}
       />

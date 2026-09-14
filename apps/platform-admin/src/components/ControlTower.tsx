@@ -5,7 +5,7 @@ import { KpiCard } from "@/components/KpiCard";
 import { Panel } from "@/components/Panel";
 import { EmptyBlock } from "@/components/DataState";
 import { StatusBadge, humanize } from "@/components/StatusBadge";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatNumber, formatRelative } from "@/lib/format";
 import { adminDashboardUrl, loadRealDashboard, type RealStatus } from "@/lib/realAdmin";
 import { controlApi } from "@/mock/controlApi";

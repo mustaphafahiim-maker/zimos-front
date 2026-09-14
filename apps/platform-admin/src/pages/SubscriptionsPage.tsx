@@ -10,7 +10,7 @@ import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } 
 import { DemoBadge, LOCAL_ONLY_LABEL, Unknown, WorkspaceStatus, planLabel } from "@/components/workspace";
 import { useToast } from "@/components/Toast";
 import { ExtendTrialModal } from "@/components/SubscriptionDialogs";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import type { AdminWorkspace, SubscriptionStatus, WorkspaceListResult } from "@/mock/types";

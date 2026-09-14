@@ -6,7 +6,7 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { Status } from "@/components/StatusBadge";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { adminApi } from "@/mock/adminApi";
 import type { TicketPriority, TicketStatus } from "@/mock/types";
 import { formatDateTime, formatRelative } from "@/lib/format";

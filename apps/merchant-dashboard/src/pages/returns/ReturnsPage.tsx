@@ -5,7 +5,7 @@ import { Check, Info, PackageCheck, RotateCcw, X, XCircle } from "lucide-react";
 import type { Order, ReturnRequest, ReturnStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { ApiError, getErrorMessage } from "@/lib/errors";
 import { formatDate, humanize } from "@/lib/format";
 import { useT, useCommon, useLocale, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";

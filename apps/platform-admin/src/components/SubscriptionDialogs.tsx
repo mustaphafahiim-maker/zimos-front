@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
-import { Modal } from "@/components/Modal";
+import { Modal } from "@store-builder/ui";
 import { Field, SelectField } from "@/components/forms";
 import { useToast } from "@/components/Toast";
 import { adminApi } from "@/mock/adminApi";

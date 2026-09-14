@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { mockApi } from "@/mock/api";
 import type { ProductEconomics } from "@/mock/types2";

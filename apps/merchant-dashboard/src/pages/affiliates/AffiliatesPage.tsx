@@ -5,7 +5,7 @@ import { mockApi } from "@/mock/api";
 import type { Affiliate } from "@/mock/types2";
 import { slugify, uid } from "@/mock/store";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import {
   basisPointsToPercentInput,
   formatMoney,
@@ -20,7 +20,7 @@ import { KpiCard } from "@/components/KpiCard";
 import { HBarList } from "@/components/charts";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { Toggle } from "@/components/Toggle";
+import { Toggle } from "@store-builder/ui";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";

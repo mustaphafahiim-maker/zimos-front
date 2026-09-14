@@ -5,7 +5,7 @@ import { Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { CollectionSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { useToast } from "@/components/Toast";
 import { Select } from "@/components/Select";

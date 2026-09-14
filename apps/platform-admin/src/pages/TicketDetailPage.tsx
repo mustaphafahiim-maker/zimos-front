@@ -9,7 +9,7 @@ import { SelectField } from "@/components/forms";
 import { Panel } from "@/components/Panel";
 import { Status } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import type { AdminUser, Ticket, TicketPriority, TicketStatus } from "@/mock/types";

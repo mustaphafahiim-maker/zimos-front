@@ -10,7 +10,7 @@ import { FilterChips, TextField } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { StatusBadge, humanize, type Tone } from "@/components/StatusBadge";
 import { downloadCsv, escapeHtml, useAction } from "@/components/controls";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDate, formatMoney, formatMoneyCompact, formatPercent, formatRelative } from "@/lib/format";
 import { controlApi, type FinanceSummary } from "@/mock/controlApi";
 import type { Invoice, InvoiceStatus, Payout, PayoutStatus } from "@/mock/controlTypes";

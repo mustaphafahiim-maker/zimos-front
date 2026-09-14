@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MessageCircle, Workflow } from "lucide-react";
 import { Button, Textarea } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { useT, useCommon, fmt, type Messages } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";

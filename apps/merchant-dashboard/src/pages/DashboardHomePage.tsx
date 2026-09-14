@@ -18,7 +18,7 @@ import {
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ZIMOS_PHRASES, cn } from "@store-builder/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { formatMoney, formatNumber, formatPercentValue, formatShortDate } from "@/lib/format";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { mockApi } from "@/mock/api";

@@ -7,7 +7,7 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
 import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } from "@/components/Panel";
 import { DemoBadge, Known, UNKNOWN_HINT, Unknown, WorkspaceStatus, compareNullable, countryName, planLabel } from "@/components/workspace";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { adminApi } from "@/mock/adminApi";
 import type { AdminWorkspace, SubscriptionStatus } from "@/mock/types";
 import { formatDate, formatMoneyCompact, formatNumber } from "@/lib/format";

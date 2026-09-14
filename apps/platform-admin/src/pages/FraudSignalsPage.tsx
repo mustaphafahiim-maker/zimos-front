@@ -9,7 +9,7 @@ import { FilterChips, SearchInput, TextAreaField } from "@/components/forms";
 import { Panel, SortHead, Td, Th, compareValues, type SortState } from "@/components/Panel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { adminApi } from "@/mock/adminApi";
 import type { FraudSignal } from "@/mock/types";
 import { formatDate, formatNumber, formatRelative } from "@/lib/format";

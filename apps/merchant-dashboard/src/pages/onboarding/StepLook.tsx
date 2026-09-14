@@ -5,7 +5,7 @@ import type { WebsiteTemplateSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
 import { fmt, useT } from "@/i18n/LocaleContext";
-import { useAsync } from "@/lib/useAsync";
+import { useAsync } from "@store-builder/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { FALLBACK_TINT, blankHomeTree } from "./data";
 import type { StepProps } from "./state";

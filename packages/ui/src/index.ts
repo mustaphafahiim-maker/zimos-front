@@ -102,3 +102,41 @@ export {
 
 // ZIMOS brand — official logo renderers + approved phrases.
 export { ZimosLogo, ZimosMark, ZIMOS_PHRASES, type ZimosLogoSurface } from "./brand/ZimosLogo";
+
+// App-shell primitives shared by merchant-dashboard and platform-admin. All
+// user-visible text is overridable via props (English defaults) so bilingual
+// apps pass translated strings; routing/error helpers are injected, never imported.
+export { Modal, type ModalProps } from "./components/modal";
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmDialogLabels } from "./components/confirm-dialog";
+export {
+  DataState,
+  EmptyBlock,
+  defaultErrorMessage,
+  type DataStateProps,
+  type DataStateLabels,
+} from "./components/data-state";
+export {
+  ToastProvider,
+  useToast,
+  type ToastKind,
+  type ToastContextValue,
+  type ToastProviderProps,
+} from "./components/toast";
+export { Toggle, type ToggleProps } from "./components/toggle";
+export { ThemeToggle, useTheme, toggleTheme, type Theme, type ThemeToggleProps } from "./components/theme-toggle";
+export { PageHeader, AnchorLink, type PageHeaderProps, type LinkComponent } from "./components/page-header";
+export { KpiCard, type KpiCardProps } from "./components/kpi-card";
+export {
+  LineAreaChart,
+  BarChart,
+  HBarList,
+  FunnelBars,
+  Sparkline,
+  ChartAxis,
+  type ChartPoint,
+  type LineAreaChartProps,
+  type BarChartProps,
+  type HBarListProps,
+  type FunnelBarsProps,
+} from "./components/charts";
+export { useAsync, type AsyncState } from "./hooks/useAsync";
