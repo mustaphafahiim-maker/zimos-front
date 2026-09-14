@@ -35,10 +35,12 @@ export interface Dictionary {
     homeAria: string;
     /** Accessible name of the primary <nav>. */
     primaryLabel: string;
-    product: string;
+    features: string;
     solutions: string;
     pricing: string;
-    faq: string;
+    help: string;
+    about: string;
+    contact: string;
     /** Visible label of the language switcher — the name of the OTHER language. */
     switchLanguage: string;
     switchLanguageAria: string;
@@ -144,6 +146,25 @@ export interface Dictionary {
     columns: [FooterColumn, FooterColumn, FooterColumn, FooterColumn];
     rights: string;
     languageLabel: string;
+  };
+
+  /** Labels shared by the inner pages. */
+  common: {
+    onThisPage: string;
+    lastUpdated: string;
+    templateBanner: string;
+    templateBannerBody: string;
+    backToTop: string;
+    placeholderHint: string;
+  };
+
+  notFound: {
+    title: string;
+    heading: string;
+    body: string;
+    home: string;
+    help: string;
+    contact: string;
   };
 }
 

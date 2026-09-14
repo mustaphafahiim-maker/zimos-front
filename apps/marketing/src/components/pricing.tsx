@@ -9,7 +9,14 @@ import { btnPrimary, btnSecondary, container } from "./ui";
  * No public prices exist, so plans show names, who they are for, and feature
  * lists only — no invented prices, and therefore no monthly/yearly toggle.
  */
-export function Pricing({ copy, locale }: { copy: Dictionary["pricing"]; locale: Locale }) {
+export function Pricing({
+  copy,
+  locale,
+}: {
+  /** `intro` may be omitted where the page hero already carries it. */
+  copy: Omit<Dictionary["pricing"], "intro"> & { intro?: string };
+  locale: Locale;
+}) {
   return (
     <section id="pricing" aria-labelledby="pricing-heading" className="bg-paper py-20 sm:py-28">
       <div className={container}>

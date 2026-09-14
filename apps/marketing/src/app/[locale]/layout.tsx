@@ -5,6 +5,7 @@ import { fontVariables } from "../fonts";
 import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { I18nProvider } from "@/i18n/provider";
+import { SITE_URL } from "@/lib/urls";
 
 type LocaleParams = { locale: string };
 
@@ -29,6 +30,7 @@ export async function generateMetadata({
   const { meta } = getDictionary(locale);
   // Icons come from the file conventions src/app/icon.png + apple-icon.png.
   return {
+    metadataBase: new URL(SITE_URL),
     title: meta.title,
     description: meta.description,
     applicationName: "ZIMOS",

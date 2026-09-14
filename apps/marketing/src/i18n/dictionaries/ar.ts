@@ -20,10 +20,12 @@ export const ar: Dictionary = {
     skipToContent: "تخطَّ إلى المحتوى",
     homeAria: "الصفحة الرئيسية لـ ZIMOS",
     primaryLabel: "القائمة الرئيسية",
-    product: "المنتج",
+    features: "المزايا",
     solutions: "الحلول",
     pricing: "الأسعار",
-    faq: "الأسئلة الشائعة",
+    help: "مركز المساعدة",
+    about: "من نحن",
+    contact: "تواصل معنا",
     switchLanguage: "English",
     switchLanguageAria: "تغيير اللغة إلى الإنجليزية",
     switchToDark: "التبديل إلى الوضع الداكن",
@@ -356,17 +358,16 @@ export const ar: Dictionary = {
       {
         title: "المنتج",
         links: [
-          { label: "المنصة", href: "#product" },
+          { label: "المزايا", href: "/features" },
           { label: "الحلول", href: "#solutions" },
-          { label: "الأسعار", href: "#pricing" },
-          { label: "الأسئلة الشائعة", href: "#faq" },
+          { label: "الأسعار", href: "/pricing" },
+          { label: "سجل التحديثات", href: "/changelog" },
         ],
       },
       {
         title: "الشركة",
         links: [
           { label: "من نحن", href: "/about" },
-          { label: "الوظائف", href: "/careers" },
           { label: "تواصل معنا", href: "/contact" },
         ],
       },
@@ -374,8 +375,7 @@ export const ar: Dictionary = {
         title: "الموارد",
         links: [
           { label: "مركز المساعدة", href: "/help" },
-          { label: "الأدلة", href: "/guides" },
-          { label: "المدونة", href: "/blog" },
+          { label: "الأسئلة الشائعة", href: "#faq" },
         ],
       },
       {
@@ -383,10 +383,31 @@ export const ar: Dictionary = {
         links: [
           { label: "شروط الخدمة", href: "/terms" },
           { label: "سياسة الخصوصية", href: "/privacy" },
+          { label: "سياسة الاسترداد", href: "/refund-policy" },
+          { label: "سياسة ملفات تعريف الارتباط", href: "/cookies" },
         ],
       },
     ],
     rights: "جميع الحقوق محفوظة.",
     languageLabel: "اللغة",
+  },
+
+  common: {
+    onThisPage: "في هذه الصفحة",
+    lastUpdated: "آخر تحديث",
+    templateBanner: "نموذج — يجب مراجعته من محامٍ قبل النشر",
+    templateBannerBody:
+      "هذه الوثيقة هيكل مبدئي وليست استشارة قانونية. يجب استكمال النصوص الموضوعة بين [أقواس]، ومراجعة الوثيقة كاملة وفق القوانين المعمول بها.",
+    backToTop: "العودة إلى الأعلى",
+    placeholderHint: "قيمة مؤقتة — يجب استكمالها",
+  },
+
+  notFound: {
+    title: "الصفحة غير موجودة",
+    heading: "لم نعثر على هذه الصفحة",
+    body: "ربما يكون الرابط قديمًا أو نُقلت الصفحة. يمكن لهذه الصفحات أن تساعدك على المتابعة.",
+    home: "الذهاب إلى الصفحة الرئيسية",
+    help: "زيارة مركز المساعدة",
+    contact: "تواصل معنا",
   },
 };

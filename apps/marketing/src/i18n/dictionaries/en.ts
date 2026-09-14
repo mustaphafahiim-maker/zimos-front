@@ -20,10 +20,12 @@ export const en: Dictionary = {
     skipToContent: "Skip to content",
     homeAria: "ZIMOS home",
     primaryLabel: "Main",
-    product: "Product",
+    features: "Features",
     solutions: "Solutions",
     pricing: "Pricing",
-    faq: "FAQ",
+    help: "Help center",
+    about: "About",
+    contact: "Contact",
     switchLanguage: "العربية",
     switchLanguageAria: "Switch language to Arabic",
     switchToDark: "Switch to dark theme",
@@ -357,17 +359,16 @@ export const en: Dictionary = {
       {
         title: "Product",
         links: [
-          { label: "Platform", href: "#product" },
+          { label: "Features", href: "/features" },
           { label: "Solutions", href: "#solutions" },
-          { label: "Pricing", href: "#pricing" },
-          { label: "FAQ", href: "#faq" },
+          { label: "Pricing", href: "/pricing" },
+          { label: "Changelog", href: "/changelog" },
         ],
       },
       {
         title: "Company",
         links: [
           { label: "About", href: "/about" },
-          { label: "Careers", href: "/careers" },
           { label: "Contact", href: "/contact" },
         ],
       },
@@ -375,8 +376,7 @@ export const en: Dictionary = {
         title: "Resources",
         links: [
           { label: "Help center", href: "/help" },
-          { label: "Guides", href: "/guides" },
-          { label: "Blog", href: "/blog" },
+          { label: "FAQ", href: "#faq" },
         ],
       },
       {
@@ -384,10 +384,31 @@ export const en: Dictionary = {
         links: [
           { label: "Terms of service", href: "/terms" },
           { label: "Privacy policy", href: "/privacy" },
+          { label: "Refund policy", href: "/refund-policy" },
+          { label: "Cookie policy", href: "/cookies" },
         ],
       },
     ],
     rights: "All rights reserved.",
     languageLabel: "Language",
+  },
+
+  common: {
+    onThisPage: "On this page",
+    lastUpdated: "Last updated",
+    templateBanner: "Template — must be reviewed by a lawyer before publishing",
+    templateBannerBody:
+      "This document is a starting structure, not legal advice. Text in [brackets] must be completed, and the whole document reviewed for your jurisdiction.",
+    backToTop: "Back to top",
+    placeholderHint: "Placeholder — to be completed",
+  },
+
+  notFound: {
+    title: "Page not found",
+    heading: "We couldn't find that page",
+    body: "The link may be out of date, or the page may have moved. These pages can help you get back on track.",
+    home: "Go to home page",
+    help: "Visit the help center",
+    contact: "Contact us",
   },
 };

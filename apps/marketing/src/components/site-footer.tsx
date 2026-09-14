@@ -5,8 +5,10 @@ import { container } from "./ui";
 import { ZimosLogo } from "./zimos-logo";
 
 /**
- * Logo, tagline, four link columns and the language switch. Route links are
- * placeholders prefixed with the active locale. The © year is computed at render.
+ * Logo, tagline, four link columns and the language switch. Every link is
+ * prefixed with the active locale: `/pricing` → `/ar/pricing`, and home-page
+ * anchors `#faq` → `/ar#faq` so they also work from inner pages.
+ * The © year is computed at render.
  */
 export function SiteFooter({
   copy,
@@ -40,7 +42,7 @@ export function SiteFooter({
                   {column.links.map((link) => (
                     <li key={link.href}>
                       <a
-                        href={link.href.startsWith("#") ? link.href : `/${locale}${link.href}`}
+                        href={`/${locale}${link.href}`}
                         className="text-sm text-ink-soft transition-colors hover:text-primary"
                       >
                         {link.label}

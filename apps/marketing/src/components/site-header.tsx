@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useI18n } from "@/i18n/provider";
 import { LOGIN_URL, REGISTER_URL } from "@/lib/urls";
 import { CloseIcon, MenuIcon } from "./icons";
@@ -25,12 +26,15 @@ export function SiteHeader() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const pathname = usePathname();
   const sections = [
-    { href: "#product", label: nav.product },
-    { href: "#solutions", label: nav.solutions },
-    { href: "#pricing", label: nav.pricing },
-    { href: "#faq", label: nav.faq },
+    { href: `/${locale}/features`, label: nav.features },
+    { href: `/${locale}/pricing`, label: nav.pricing },
+    { href: `/${locale}/help`, label: nav.help },
+    { href: `/${locale}/about`, label: nav.about },
+    { href: `/${locale}/contact`, label: nav.contact },
   ];
+  const current = (href: string) => (pathname === href ? ("page" as const) : undefined);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-paper-raised/85 backdrop-blur-md">
@@ -55,9 +59,13 @@ export function SiteHeader() {
           <ul className="flex items-center gap-1 text-sm">
             {sections.map((item) => (
               <li key={item.href}>
-                <a href={item.href} className={`${btnGhost} h-9 px-3`}>
+                <Link
+                  href={item.href}
+                  aria-current={current(item.href)}
+                  className={`${btnGhost} h-9 px-3 aria-[current=page]:text-primary`}
+                >
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -94,13 +102,14 @@ export function SiteHeader() {
           <ul className="flex flex-col gap-1 text-base">
             {sections.map((item) => (
               <li key={item.href}>
-                <a
+                <Link
                   href={item.href}
-                  className="block rounded-lg px-3 py-2.5 font-medium text-ink transition-colors hover:bg-primary-soft"
+                  aria-current={current(item.href)}
+                  className="block rounded-lg px-3 py-2.5 font-medium text-ink transition-colors hover:bg-primary-soft aria-[current=page]:text-primary"
                   onClick={() => setOpen(false)}
                 >
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
