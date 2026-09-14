@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Truck,
   Users,
+  WandSparkles,
   Workflow,
   Zap,
 } from "lucide-react";
@@ -125,6 +126,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: { en: "Website", ar: "الموقع" }, to: "/website", icon: Globe },
       { label: { en: "Templates", ar: "القوالب" }, to: "/templates", icon: LayoutTemplate },
+      { label: { en: "Landing page generator", ar: "مولّد صفحات الهبوط" }, to: "/generator", icon: WandSparkles, isNew: true },
       { label: { en: "Shipping & carriers", ar: "الشحن وشركات الشحن" }, to: "/shipping", icon: Truck },
     ],
   },
