@@ -30,11 +30,32 @@ const detail = fake<WebsiteDetail>({
 });
 
 describe("BuilderPage", () => {
+  it("stops a save when someone else saved the page, and can load their version", async () => {
+    localStorage.setItem("zimos.builder.guide.site_1", JSON.stringify({ dismissed: true, done: { theme: true, colors: true, content: true, publish: true } }));
+    api.getWebsite.mockResolvedValue(fake<WebsiteDetail>({ ...detail, pages: [{ ...home, updatedAt: "2026-09-01T10:00:00.000Z" }] }));
+    api.listProducts.mockResolvedValue(fake({ products: [], nextCursor: null }));
+    api.listCollections.mockResolvedValue([]);
+    const theirs = { version: 1, sections: [] };
+    api.getWebsitePage.mockResolvedValue(fake<WebsitePage>({ ...home, title: "Home", draftData: theirs, updatedAt: "2026-09-02T09:00:00.000Z" }));
+
+    const { user } = renderWithProviders(<BuilderPage />, { route: "/website/site_1/edit", path: "/website/:websiteId/edit" });
+    await user.click(await screen.findByRole("tab", { name: "Add" }));
+    await user.click(screen.getByRole("button", { name: "Add Announcement bar" }));
+    await user.click(within(screen.getByRole("banner")).getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("Someone else changed this store")).toBeInTheDocument();
+    expect(api.updateWebsitePage).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Load their version" }));
+    expect(await screen.findByText("This page is empty")).toBeInTheDocument();
+  });
+
   it("adds a section, edits a heading inline and saves the page draft", async () => {
     localStorage.setItem("zimos.builder.guide.site_1", JSON.stringify({ dismissed: true }));
     api.getWebsite.mockResolvedValue(detail);
     api.listProducts.mockResolvedValue(fake({ products: [], nextCursor: null }));
     api.listCollections.mockResolvedValue([]);
+    api.getWebsitePage.mockResolvedValue(home);
     api.updateWebsitePage.mockImplementation(async (_w, _s, id, payload) => fake<WebsitePage>({ ...home, id, draftData: payload.draftData }));
 
     const { user } = renderWithProviders(<BuilderPage />, { route: "/website/site_1/edit", path: "/website/:websiteId/edit" });

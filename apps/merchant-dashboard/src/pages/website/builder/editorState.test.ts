@@ -228,6 +228,16 @@ describe("editorReducer", () => {
     expect(pasted.trees.home).toBe(home(s0));
   });
 
+  it("reloads a page from the server as the new clean baseline", () => {
+    const s0 = run(loaded(), { type: "moveSection", from: 0, to: 1 });
+    expect(dirtyPageIds(s0)).toEqual(["home"]);
+    const theirs = tree("faq");
+    const s1 = run(s0, { type: "reloadPage", pageId: "home", tree: theirs });
+    expect(home(s1).sections.map((x) => x.id)).toEqual(theirs.sections.map((x) => x.id));
+    expect(isDirty(s1)).toBe(false);
+    expect(run(s1, { type: "reloadPage", pageId: "ghost", tree: theirs })).toBe(s1);
+  });
+
   it("marks pages and theme saved", () => {
     const s = run(loaded(), { type: "moveSection", from: 0, to: 1 }, { type: "setTheme", theme: { ...loaded().theme, preset: "custom" } });
     expect(isDirty(s)).toBe(true);

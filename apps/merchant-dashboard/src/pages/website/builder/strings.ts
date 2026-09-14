@@ -7,6 +7,13 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 export const BUILDER_STRINGS = {
   en: {
     back: "Back to websites",
+    conflictTitle: "Someone else changed this store",
+    conflictBody: "These pages were saved from another tab or by a teammate after you opened the builder.",
+    conflictPages: "Changed pages:",
+    conflictReload: "Load their version",
+    conflictOverwrite: "Save mine over it",
+    conflictReloaded: "Loaded the latest version",
+    more: "More",
     dragToMove: "Drag to move into any column",
     selectedCount: "{n} sections selected",
     multiHint: "Ctrl or Shift + click to pick several sections",
@@ -279,6 +286,13 @@ export const BUILDER_STRINGS = {
   },
   ar: {
     back: "رجوع للمواقع",
+    conflictTitle: "فيه حد تاني عدّل المتجر",
+    conflictBody: "الصفحات دي اتحفظت من تبويب تاني أو من حد في الفريق بعد ما فتحت المحرر.",
+    conflictPages: "الصفحات اللي اتغيرت:",
+    conflictReload: "حمّل نسختهم",
+    conflictOverwrite: "احفظ نسختي فوقها",
+    conflictReloaded: "اتحمّلت آخر نسخة",
+    more: "المزيد",
     dragToMove: "اسحبه لأي عمود",
     selectedCount: "{n} أقسام متحددة",
     multiHint: "دوس Ctrl أو Shift مع الضغط علشان تختار كذا قسم",

@@ -57,6 +57,8 @@ export type EditorAction =
   | { type: "load"; pages: Array<EditorPage & { tree: unknown }>; theme: unknown; currentPageId?: string | null }
   | { type: "addPage"; page: EditorPage; tree?: Tree }
   | { type: "removePage"; pageId: string }
+  /** Replaces a page with the server's copy (someone else saved it) — becomes the clean baseline. */
+  | { type: "reloadPage"; pageId: string; tree: unknown }
   | { type: "setPage"; pageId: string }
   | { type: "select"; path: NodePath | null }
   | { type: "insertSection"; section: TreeSection; index?: number }
@@ -299,6 +301,14 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         trees: { ...state.trees, [action.page.id]: tree },
         savedTrees: { ...state.savedTrees, [action.page.id]: JSON.stringify(tree) },
       };
+    }
+
+    case "reloadPage": {
+      if (!state.trees[action.pageId]) return state;
+      const tree = normalizeTree(action.tree);
+      const next = { ...state, trees: { ...state.trees, [action.pageId]: tree }, savedTrees: { ...state.savedTrees, [action.pageId]: JSON.stringify(tree) }, revision: state.revision + 1 };
+      if (state.currentPageId !== action.pageId) return next;
+      return { ...next, selection: selectionExists(tree, state.selection), multi: [] };
     }
 
     case "removePage": {

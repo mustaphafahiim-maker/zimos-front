@@ -183,6 +183,27 @@ export function HistoryDialog({
   );
 }
 
+/** Someone else saved a page after we loaded it: take theirs or overwrite with ours. */
+export function ConflictDialog({ pages, busy, onClose, onReload, onOverwrite }: { pages: string[]; busy: boolean; onClose: () => void; onReload: () => void; onOverwrite: () => void }) {
+  const t = useBuilderT();
+  return (
+    <Modal open={pages.length > 0} onClose={() => !busy && onClose()} title={t.conflictTitle} description={t.conflictBody} closeLabel={t.close}>
+      <div className="space-y-3">
+        <ProblemList title={t.conflictPages} items={pages} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" disabled={busy} onClick={onReload}>
+            {t.conflictReload}
+          </Button>
+          <Button type="button" disabled={busy} onClick={onOverwrite} className="bg-danger hover:bg-danger/90">
+            {busy && <Spinner className="size-4" />}
+            {t.conflictOverwrite}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function LeaveDialog({ open, busy, onClose, onSaveAndLeave, onLeave }: { open: boolean; busy: boolean; onClose: () => void; onSaveAndLeave: () => void; onLeave: () => void }) {
   const t = useBuilderT();
   return (

@@ -48,7 +48,7 @@ import { ThemePanel } from "./ThemePanel";
 import { Inspector } from "./Inspector";
 import { EMPTY_CATALOG, type CatalogData } from "./StoreChrome";
 import { createElement } from "./elementLibrary";
-import { ApplyThemeDialog, GUIDE_STEPS, GuideChecklist, HistoryDialog, LeaveDialog, ProblemList, PublishDialog, UndoToast, type GuideState, type GuideStep } from "./dialogs";
+import { ApplyThemeDialog, ConflictDialog, GUIDE_STEPS, GuideChecklist, HistoryDialog, LeaveDialog, ProblemList, PublishDialog, UndoToast, type GuideState, type GuideStep } from "./dialogs";
 import { useBuilderT, type BuilderStrings } from "./strings";
 
 const STOREFRONT_URL = ((import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? "http://localhost:3000").replace(/\/+$/, "");
@@ -142,6 +142,9 @@ export function BuilderPage() {
   const [catalog, setCatalog] = useState<CatalogData>(EMPTY_CATALOG);
   /** The themeSettings blob as the server last stored it (other keys are preserved on save). */
   const rawThemeRef = useRef<Record<string, unknown>>({});
+  /** Each page's server updatedAt as we last saw it — detects saves from another tab or teammate. */
+  const versionsRef = useRef<Record<string, string>>({});
+  const [conflicts, setConflicts] = useState<Array<{ id: string; title: string; tree: unknown; updatedAt: string }>>([]);
 
   const [tab, setTab] = useState<Tab>("sections");
   const [device, setDevice] = useState<Device>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "desktop"));
@@ -180,6 +183,7 @@ export function BuilderPage() {
       rawThemeRef.current = raw;
       setWebsite(detail.website);
       setLiveRevisionId(detail.website.publishedRevisionId);
+      versionsRef.current = Object.fromEntries(detail.pages.map((p) => [p.id, p.updatedAt]));
       const storeLocale = raw.defaultLocale === "en" ? "en" : currentWorkspace?.defaultLocale === "en" ? "en" : "ar";
       setPreviewLocale(storeLocale);
       setGuide((g) => mergeGuide(g, guideFromBlob(raw)));
@@ -252,7 +256,7 @@ export function BuilderPage() {
 
   const savingRef = useRef(false);
   const save = useCallback(
-    async (opts: { silent?: boolean } = {}): Promise<boolean> => {
+    async (opts: { silent?: boolean; force?: boolean } = {}): Promise<boolean> => {
       if (savingRef.current) return false;
       const s = stateRef.current;
       const pageIds = dirtyPageIds(s);
@@ -279,9 +283,19 @@ export function BuilderPage() {
       setSaveError(null);
       const sentTrees: Record<string, string> = {};
       try {
+        if (!opts.force) {
+          // BACKEND: no optimistic locking on pages, so the check is a read before write.
+          const remote = await Promise.all(pageIds.map((id) => apiClient.getWebsitePage(workspaceId, websiteId, id)));
+          const changed = remote.filter((p) => versionsRef.current[p.id] && p.updatedAt !== versionsRef.current[p.id]);
+          if (changed.length > 0) {
+            setConflicts(changed.map((p) => ({ id: p.id, title: p.title, tree: p.draftData, updatedAt: p.updatedAt })));
+            return false;
+          }
+        }
         for (const id of pageIds) {
           const tree = s.trees[id];
-          await apiClient.updateWebsitePage(workspaceId, websiteId, id, { draftData: tree as unknown as PageTree });
+          const updated = await apiClient.updateWebsitePage(workspaceId, websiteId, id, { draftData: tree as unknown as PageTree });
+          if (updated?.updatedAt) versionsRef.current[id] = updated.updatedAt;
           sentTrees[id] = JSON.stringify(tree);
         }
         let sentTheme: string | undefined;
@@ -308,14 +322,24 @@ export function BuilderPage() {
     [workspaceId, websiteId, t, toast, refreshWorkspaces]
   );
 
+  /** Publishing/rollback rewrite publishedData, which moves every page's updatedAt. */
+  const refreshVersions = useCallback(async () => {
+    try {
+      const detail = await apiClient.getWebsite(workspaceId, websiteId);
+      versionsRef.current = Object.fromEntries(detail.pages.map((p) => [p.id, p.updatedAt]));
+    } catch {
+      /* the next save re-checks anyway */
+    }
+  }, [workspaceId, websiteId]);
+
   const dirty = isDirty(state);
 
   // Autosave a short while after the last change.
   useEffect(() => {
-    if (!dirty || loading) return;
+    if (!dirty || loading || conflicts.length > 0) return;
     const id = window.setTimeout(() => void save({ silent: true }), AUTOSAVE_MS);
     return () => window.clearTimeout(id);
-  }, [state.revision, dirty, loading, save]);
+  }, [state.revision, dirty, loading, save, conflicts.length]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -340,6 +364,7 @@ export function BuilderPage() {
       const res = await apiClient.publishWebsite(workspaceId, websiteId);
       setWebsite(res.website);
       setLiveRevisionId(res.revision.id);
+      await refreshVersions();
       setPublishOpen(false);
       markGuide("publish");
       toast.success(fmt(t.published, { n: res.revision.revisionNumber }));
@@ -495,6 +520,7 @@ export function BuilderPage() {
   async function createPage(payload: CreateWebsitePagePayload) {
     try {
       const created = await apiClient.createPage(workspaceId, websiteId, payload);
+      versionsRef.current[created.id] = created.updatedAt;
       dispatch({ type: "addPage", page: { id: created.id, title: created.title, path: created.path, pageType: created.pageType }, tree: created.draftData as unknown as Tree });
       dispatch({ type: "setPage", pageId: created.id });
       setNewPageOpen(false);
@@ -530,6 +556,7 @@ export function BuilderPage() {
         apiClient
           .createPage(workspaceId, websiteId, { path: page.path, title: page.title, pageType: page.pageType as CreateWebsitePagePayload["pageType"], draftData: snapshot as unknown as PageTree })
           .then((created) => {
+            versionsRef.current[created.id] = created.updatedAt;
             dispatch({ type: "addPage", page: { id: created.id, title: created.title, path: created.path, pageType: created.pageType }, tree: snapshot });
             dispatch({ type: "setPage", pageId: created.id });
             toast.success(t.pageRestored);
@@ -835,6 +862,7 @@ export function BuilderPage() {
         onRolledBack={(w, n) => {
           setWebsite(w);
           setLiveRevisionId(w.publishedRevisionId);
+          void refreshVersions();
           toast.success(fmt(t.rolledBack, { n }));
         }}
       />
@@ -846,6 +874,23 @@ export function BuilderPage() {
         onSaveAndLeave={async () => {
           if (await save()) navigate("/website");
           else setLeaveOpen(false);
+        }}
+      />
+      <ConflictDialog
+        pages={conflicts.map((c) => c.title)}
+        busy={saving}
+        onClose={() => setConflicts([])}
+        onReload={() => {
+          for (const c of conflicts) {
+            dispatch({ type: "reloadPage", pageId: c.id, tree: c.tree });
+            versionsRef.current[c.id] = c.updatedAt;
+          }
+          setConflicts([]);
+          toast.success(t.conflictReloaded);
+        }}
+        onOverwrite={() => {
+          setConflicts([]);
+          void save({ force: true });
         }}
       />
       <NewPageDialog open={newPageOpen} onClose={() => setNewPageOpen(false)} onCreate={createPage} />
