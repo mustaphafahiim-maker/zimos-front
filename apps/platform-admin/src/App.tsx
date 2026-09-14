@@ -23,6 +23,13 @@ import { AuditLogPage } from "@/pages/AuditLogPage";
 import { SystemHealthPage } from "@/pages/SystemHealthPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { UsersPage } from "@/pages/UsersPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { FinancePage } from "@/pages/FinancePage";
+import { ContentPage } from "@/pages/ContentPage";
+import { ModerationPage } from "@/pages/ModerationPage";
+import { JobsPage } from "@/pages/JobsPage";
+import { BackupsPage } from "@/pages/BackupsPage";
 
 export default function App() {
   return (
@@ -54,6 +61,13 @@ export default function App() {
                 <Route path="/audit-log" element={<AuditLogPage />} />
                 <Route path="/system-health" element={<SystemHealthPage />} />
                 <Route path="/admin-users" element={<AdminUsersPage />} />
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/finance" element={<FinancePage />} />
+                <Route path="/content" element={<ContentPage />} />
+                <Route path="/moderation" element={<ModerationPage />} />
+                <Route path="/jobs" element={<JobsPage />} />
+                <Route path="/backups" element={<BackupsPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>

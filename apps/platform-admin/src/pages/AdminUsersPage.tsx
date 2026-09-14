@@ -1,4 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
+import { RoleMatrixPanel } from "@/components/RoleMatrixPanel";
 import { ShieldCheck, ShieldOff, UserPlus } from "lucide-react";
 import { Alert, Button, Table, TableBody, TableHeader, TableRow, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +24,12 @@ export function AdminUsersPage() {
   const { user } = useAuth();
   const { data, loading, error, refresh, setData } = useAsync(() => adminApi.listAdminUsers(), []);
   const [query, setQuery] = useState("");
-  const [inviting, setInviting] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [inviting, setInvitingState] = useState(params.get("invite") === "1");
+  const setInviting = (v: boolean) => {
+    setInvitingState(v);
+    if (!v && params.get("invite")) setParams({}, { replace: true });
+  };
   const [toggling, setToggling] = useState<AdminUser | null>(null);
 
   const rows = useMemo(() => data ?? [], [data]);
@@ -53,8 +60,8 @@ export function AdminUsersPage() {
   return (
     <div>
       <PageHeader
-        title="Admin users"
-        description="ZIMOS team members with access to this console."
+        title="Admin users & roles"
+        description="ZIMOS team members with access to this console, their roles and what each role can do."
         actions={
           <Button onClick={() => setInviting(true)}>
             <UserPlus /> Invite admin
@@ -62,7 +69,7 @@ export function AdminUsersPage() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {ADMIN_ROLES.map((r) => (
           <div key={r.value} className="rounded-[var(--radius-card)] border border-line bg-paper-raised px-4 py-3 shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between">
@@ -164,6 +171,10 @@ export function AdminUsersPage() {
           </Panel>
         )}
       </DataState>
+
+      <div className="mt-6">
+        <RoleMatrixPanel />
+      </div>
 
       {inviting && (
         <InviteModal

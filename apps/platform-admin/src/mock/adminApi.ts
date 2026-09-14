@@ -5,7 +5,7 @@
  * become once the platform-admin API exists.
  */
 import type { Workspace } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
+import { fetchAdminWorkspaces, overviewRowToWorkspace } from "@/lib/realAdmin";
 import { getErrorMessage } from "@/lib/errors";
 import {
   collection,
@@ -184,8 +184,9 @@ function buildRows(base: BaseCache): WorkspaceListResult {
 async function loadBase(force: boolean): Promise<BaseCache> {
   if (baseCache && !force) return baseCache;
   try {
-    // BACKEND (real): GET /admin/workspaces
-    const list = await apiClient.adminListWorkspaces();
+    // BACKEND (real): GET /admin/workspaces → { workspaces: AdminOverviewRow[] }
+    const { rows } = await fetchAdminWorkspaces();
+    const list = rows.map(overviewRowToWorkspace);
     baseCache = { list, source: "api", apiError: null };
   } catch (err) {
     baseCache = {
@@ -846,6 +847,16 @@ function resetAllMockData() {
 
 /** Relative timestamp helper used by a few seeds/pages. */
 export const mockClock = { hoursAgo };
+
+/** Shared by controlApi.ts so new mutations write to the same audit log. */
+export const recordAudit = audit;
+export function getMockActor() {
+  return actor;
+}
+/** Patch the enrichment record for a workspace (members, domains, suspension…). */
+export function patchWorkspaceMeta(workspaceId: string, patch: Partial<WorkspaceMeta>): WorkspaceMeta {
+  return updateMeta(workspaceId, patch);
+}
 
 export const adminApi = {
   setMockActor,

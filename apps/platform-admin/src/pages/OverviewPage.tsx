@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ControlTower } from "@/components/ControlTower";
 import {
   Building2,
   ChevronRight,
@@ -35,18 +37,22 @@ const ATTENTION_ICON: Record<AttentionItem["kind"], typeof CreditCard> = {
 
 export function OverviewPage() {
   const { data, loading, error, refresh } = useAsync(() => adminApi.getOverview(), []);
+  const [towerKey, setTowerKey] = useState(0);
 
   return (
     <div>
       <PageHeader
-        title="Overview"
-        description="Platform-wide state across every workspace."
+        title="Control tower"
+        description="Real backend numbers first, then alerts and platform-wide trends."
         actions={
-          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { setTowerKey((k) => k + 1); void refresh(); }} disabled={loading}>
             <RefreshCw /> Refresh
           </Button>
         }
       />
+      <div className="mb-6">
+        <ControlTower key={towerKey} />
+      </div>
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
         {data && <OverviewBody data={data} />}
       </DataState>

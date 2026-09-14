@@ -1,97 +1,44 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  Activity,
-  Ban,
-  Building2,
-  ChevronDown,
-  CreditCard,
-  Factory,
-  Flag,
-  LayoutDashboard,
-  LayoutTemplate,
-  Layers,
-  LifeBuoy,
-  LogOut,
-  Megaphone,
-  Menu,
-  MessageCircle,
-  Puzzle,
-  RotateCcw,
-  ScrollText,
-  Search,
-  ShieldAlert,
-  Truck,
-  UserCog,
-  Wallet,
-  X,
-} from "lucide-react";
-import { Spinner, ZimosLogo, cn } from "@store-builder/ui";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { ChevronDown, LogOut, Menu, RotateCcw, Search, X } from "lucide-react";
+import { Kbd, ZimosLogo, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Status } from "@/components/StatusBadge";
+import { CommandPalette } from "@/components/CommandPalette";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { NAV_GROUPS } from "@/components/navConfig";
 import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace } from "@/mock/types";
 import { initials } from "@/lib/format";
 
-interface NavItem {
-  label: string;
-  to: string;
-  icon: ComponentType<{ className?: string }>;
+const COLLAPSE_KEY = "zimos.admin.navCollapsed";
+
+function readCollapsed(): string[] {
+  try {
+    const raw = localStorage.getItem(COLLAPSE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
 }
 
-const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
-  { label: null, items: [{ label: "Overview", to: "/", icon: LayoutDashboard }] },
-  {
-    label: "Merchants",
-    items: [
-      { label: "Workspaces", to: "/workspaces", icon: Building2 },
-      { label: "Subscriptions", to: "/subscriptions", icon: CreditCard },
-      { label: "Plans", to: "/plans", icon: Layers },
-    ],
-  },
-  {
-    label: "Marketplace",
-    items: [
-      { label: "Templates", to: "/templates", icon: LayoutTemplate },
-      { label: "Suppliers", to: "/suppliers", icon: Factory },
-      { label: "Apps", to: "/apps", icon: Puzzle },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { label: "Carriers", to: "/carriers", icon: Truck },
-      { label: "Payment gateways", to: "/payment-gateways", icon: Wallet },
-      { label: "WhatsApp numbers", to: "/whatsapp-numbers", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Risk",
-    items: [
-      { label: "Fraud signals", to: "/fraud-signals", icon: ShieldAlert },
-      { label: "Blocklist (global)", to: "/blocklist", icon: Ban },
-    ],
-  },
-  {
-    label: "Support",
-    items: [
-      { label: "Tickets", to: "/tickets", icon: LifeBuoy },
-      { label: "Announcements", to: "/announcements", icon: Megaphone },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Feature flags", to: "/feature-flags", icon: Flag },
-      { label: "Audit log", to: "/audit-log", icon: ScrollText },
-      { label: "System health", to: "/system-health", icon: Activity },
-      { label: "Admin users", to: "/admin-users", icon: UserCog },
-    ],
-  },
-];
-
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState<string[]>(readCollapsed);
+
+  const toggle = (id: string) => {
+    setCollapsed((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try {
+        localStorage.setItem(COLLAPSE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const isActive = (to: string) => (to === "/" ? location.pathname === "/" : location.pathname === to || location.pathname.startsWith(`${to}/`));
+
   return (
     <>
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
@@ -101,178 +48,58 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </div>
       <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi} className={cn(gi > 0 && "mt-4")}>
-            {group.label && (
-              <p className="mb-1 px-3 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{group.label}</p>
-            )}
-            <ul className="space-y-0.5">
-              {group.items.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.to === "/"}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink",
-                        isActive && "bg-primary-soft text-primary"
-                      )
-                    }
-                  >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {NAV_GROUPS.map((group, gi) => {
+          const hasActive = group.items.some((i) => isActive(i.to));
+          const open = !group.label || hasActive || !collapsed.includes(group.id);
+          const listId = `nav-group-${group.id}`;
+          return (
+            <div key={group.id} className={cn(gi > 0 && "mt-3")}>
+              {group.label && (
+                <button
+                  type="button"
+                  onClick={() => toggle(group.id)}
+                  aria-expanded={open}
+                  aria-controls={listId}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase hover:text-ink"
+                >
+                  {group.label}
+                  <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90 rtl:rotate-90")} aria-hidden />
+                </button>
+              )}
+              {open && (
+                <ul id={listId} className="mt-0.5 space-y-0.5">
+                  {group.items.map((item) => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
+                        end={item.to === "/"}
+                        onClick={onNavigate}
+                        className={({ isActive: active }) =>
+                          cn(
+                            "relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink",
+                            active && "bg-primary-soft text-primary before:absolute before:inset-y-1.5 before:start-0 before:w-[3px] before:rounded-full before:bg-primary"
+                          )
+                        }
+                      >
+                        <item.icon className="size-4 shrink-0" />
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
     </>
-  );
-}
-
-function GlobalSearch() {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AdminWorkspace[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      adminApi
-        .searchWorkspaces(q)
-        .then((rows) => {
-          if (!cancelled) {
-            setResults(rows);
-            setActive(0);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setResults([]);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    }, 180);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [query]);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        wrapRef.current?.querySelector("input")?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-  function go(ws: AdminWorkspace) {
-    setOpen(false);
-    setQuery("");
-    navigate(`/workspaces/${ws.id}`);
-  }
-
-  return (
-    <div ref={wrapRef} className="relative w-full max-w-md">
-      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setActive((i) => Math.min(i + 1, Math.max(results.length - 1, 0)));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActive((i) => Math.max(i - 1, 0));
-          } else if (e.key === "Enter" && results[active]) {
-            e.preventDefault();
-            go(results[active]);
-          } else if (e.key === "Escape") {
-            setOpen(false);
-          }
-        }}
-        placeholder="Search workspaces or owner email…"
-        aria-label="Search workspaces by name or owner email"
-        role="combobox"
-        aria-expanded={open && query.trim().length > 0}
-        aria-controls="global-search-results"
-        className="h-9 w-full rounded-[10px] border border-input bg-paper px-3 ps-9 text-sm text-ink outline-none placeholder:text-ink-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      />
-      {open && query.trim() && (
-        <div
-          id="global-search-results"
-          role="listbox"
-          className="animate-zimos-slide-up absolute inset-x-0 top-11 z-40 overflow-hidden rounded-[12px] border border-line bg-paper-raised shadow-[var(--shadow-pop)]"
-        >
-          {loading ? (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-ink-soft">
-              <Spinner /> Searching…
-            </div>
-          ) : results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-ink-soft">No workspaces match “{query.trim()}”.</p>
-          ) : (
-            <ul className="max-h-80 overflow-y-auto py-1">
-              {results.map((ws, i) => (
-                <li key={ws.id} role="option" aria-selected={i === active}>
-                  <button
-                    type="button"
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => go(ws)}
-                    className={cn(
-                      "flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-start text-sm",
-                      i === active && "bg-primary-soft"
-                    )}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">{ws.name}</span>
-                      <span className="block truncate text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
-                    </span>
-                    <Status value={ws.meta.suspended ? "suspended" : ws.meta.subscriptionStatus} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
 function UserMenu() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const name = user?.fullName || user?.email || "Admin";
 
@@ -301,17 +128,12 @@ function UserMenu() {
         aria-expanded={open}
         className="flex cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised py-1 ps-1 pe-2 text-sm text-ink transition-colors hover:border-line-strong"
       >
-        <span className="flex size-7 items-center justify-center rounded-full bg-zimos-navy text-xs font-semibold text-white">
-          {initials(name)}
-        </span>
+        <span className="flex size-7 items-center justify-center rounded-full bg-zimos-navy text-xs font-semibold text-white">{initials(name)}</span>
         <span className="hidden max-w-32 truncate sm:inline">{name}</span>
         <ChevronDown className="size-3.5 text-ink-soft" aria-hidden />
       </button>
       {open && (
-        <div
-          role="menu"
-          className="animate-zimos-slide-up absolute end-0 top-11 z-40 w-64 overflow-hidden rounded-[12px] border border-line bg-paper-raised shadow-[var(--shadow-pop)]"
-        >
+        <div role="menu" className="animate-zimos-slide-up absolute end-0 top-11 z-40 w-64 overflow-hidden rounded-[12px] border border-line bg-paper-raised shadow-[var(--shadow-pop)]">
           <div className="border-b border-line px-4 py-3">
             <p className="truncate text-sm font-medium text-ink">{name}</p>
             <p className="truncate text-xs text-ink-soft">{user?.email}</p>
@@ -320,8 +142,8 @@ function UserMenu() {
             type="button"
             role="menuitem"
             onClick={() => {
-              adminApi.resetAllMockData();
-              window.location.reload();
+              setOpen(false);
+              setConfirmReset(true);
             }}
             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
           >
@@ -337,6 +159,18 @@ function UserMenu() {
           </button>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset all demo data?"
+        description="Clears every locally stored mock change and reloads the console."
+        confirmLabel="Reset"
+        destructive
+        onCancel={() => setConfirmReset(false)}
+        onConfirm={() => {
+          adminApi.resetAllMockData();
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }
@@ -344,6 +178,7 @@ function UserMenu() {
 export function AdminLayout() {
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -355,14 +190,19 @@ export function AdminLayout() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setMobileOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
+  }, []);
 
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   const envLabel = import.meta.env.DEV ? "Development" : import.meta.env.MODE === "production" ? "Production" : import.meta.env.MODE;
 
   return (
@@ -403,12 +243,21 @@ export function AdminLayout() {
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <GlobalSearch />
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Open command palette"
+            className="flex h-9 w-full max-w-md cursor-pointer items-center gap-2 rounded-[10px] border border-input bg-paper px-3 text-start text-sm text-ink-muted transition-colors hover:border-line-strong"
+          >
+            <Search className="size-4 shrink-0" aria-hidden />
+            <span className="flex-1 truncate">Search workspaces, pages, actions…</span>
+            <span className="hidden gap-1 sm:flex">
+              <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
+              <Kbd>K</Kbd>
+            </span>
+          </button>
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
-            <span
-              className="hidden items-center gap-1.5 rounded-full border border-warning/25 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning sm:inline-flex"
-              title="Environment"
-            >
+            <span className="hidden items-center gap-1.5 rounded-full border border-warning/25 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning sm:inline-flex" title="Environment">
               <span className="size-1.5 rounded-full bg-warning" aria-hidden />
               {envLabel}
             </span>
@@ -422,6 +271,8 @@ export function AdminLayout() {
           </div>
         </main>
       </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

@@ -319,7 +319,7 @@ export interface ServiceTile {
   lastIncidentSummary: string | null;
 }
 
-export type AdminRole = "super_admin" | "support" | "finance" | "ops";
+export type AdminRole = "super_admin" | "support" | "finance" | "ops" | "read_only";
 
 export interface AdminUser {
   id: string;

@@ -18,6 +18,7 @@ export const ADMIN_ROLES: Array<{ value: AdminRole; label: string; description: 
   { value: "support", label: "Support", description: "Workspaces, tickets and announcements." },
   { value: "finance", label: "Finance", description: "Subscriptions, plans and billing actions." },
   { value: "ops", label: "Ops", description: "Providers, risk and system health." },
+  { value: "read_only", label: "Read only", description: "Can view everything, change nothing." },
 ];
 
 export const COUNTRIES: Record<string, string> = {

@@ -1,18 +1,13 @@
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Ban, CircleCheck, Eye, RefreshCw, ShieldCheck } from "lucide-react";
+import { CircleCheck, RefreshCw } from "lucide-react";
 import {
   Alert,
   Button,
-  Table,
-  TableBody,
-  TableHeader,
-  TableRow,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  Textarea,
   buttonVariants,
   cn,
 } from "@store-builder/ui";
@@ -21,8 +16,8 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { KpiCard } from "@/components/KpiCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DetailRow } from "@/components/Drawer";
-import { JsonBlock, Mono, Panel, Td, Th } from "@/components/Panel";
-import { Status, StatusBadge } from "@/components/StatusBadge";
+import { JsonBlock, Mono, Panel } from "@/components/Panel";
+import { Status } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { ChangePlanModal, ExtendTrialModal } from "@/components/SubscriptionDialogs";
 import { WorkspaceStatus, countryName } from "@/components/workspace";
@@ -31,6 +26,19 @@ import { getErrorMessage } from "@/lib/errors";
 import { adminApi } from "@/mock/adminApi";
 import { PLAN_FEATURES } from "@/mock/constants";
 import type { AdminWorkspace } from "@/mock/types";
+import { controlApi } from "@/mock/controlApi";
+import type { WorkspaceControl } from "@/mock/controlTypes";
+import {
+  DangerControlTab,
+  LimitsTab,
+  NotesTab,
+  PaymentsTab,
+  RealOverviewStrip,
+  RiskTab,
+  StorefrontTab,
+  SubscriptionExtras,
+  TeamControlTab,
+} from "@/pages/workspace/ControlTabs";
 import {
   formatBp,
   formatDate,
@@ -45,8 +53,12 @@ import {
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "subscription", label: "Subscription" },
+  { key: "limits", label: "Limits & features" },
   { key: "team", label: "Team" },
-  { key: "domains", label: "Domains" },
+  { key: "storefront", label: "Storefront" },
+  { key: "payments", label: "Payments & payouts" },
+  { key: "risk", label: "Risk" },
+  { key: "notes", label: "Notes" },
   { key: "activity", label: "Activity" },
   { key: "danger", label: "Danger zone" },
 ] as const;
@@ -59,13 +71,20 @@ function isTab(v: string | null): v is TabKey {
 export function WorkspaceDetailPage() {
   const { id = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const tabParam = params.get("tab");
+  const rawTab = params.get("tab");
+  // Older links (overview attention list) use ?tab=domains.
+  const tabParam = rawTab === "domains" ? "storefront" : rawTab;
   const tab: TabKey = isTab(tabParam) ? tabParam : "overview";
   const { data, loading, error, refresh, setData } = useAsync(() => adminApi.getWorkspace(id), [id]);
+  const control = useAsync(() => controlApi.getControl(id), [id]);
   const [version, setVersion] = useState(0);
 
   const onUpdated = (ws: AdminWorkspace) => {
     setData(ws);
+    setVersion((v) => v + 1);
+  };
+  const onCtl = (c: WorkspaceControl) => {
+    control.setData(c);
     setVersion((v) => v + 1);
   };
 
@@ -97,6 +116,7 @@ export function WorkspaceDetailPage() {
   }
 
   const ws = data;
+  const ctl = control.data;
 
   return (
     <div>
@@ -124,24 +144,32 @@ export function WorkspaceDetailPage() {
             ))}
           </TabsList>
         </div>
-        <TabsContent value="overview" className="pt-4">
+        <TabsContent value="overview" className="space-y-4 pt-4">
+          <RealOverviewStrip ws={ws} />
           <OverviewTab ws={ws} />
         </TabsContent>
         <TabsContent value="subscription" className="pt-4">
           <SubscriptionTab ws={ws} onUpdated={onUpdated} />
-        </TabsContent>
-        <TabsContent value="team" className="pt-4">
-          <TeamTab ws={ws} />
-        </TabsContent>
-        <TabsContent value="domains" className="pt-4">
-          <DomainsTab ws={ws} onUpdated={onUpdated} />
+          {ctl && <SubscriptionExtras ws={ws} ctl={ctl} onCtl={onCtl} />}
         </TabsContent>
         <TabsContent value="activity" className="pt-4">
           <ActivityTab workspaceId={ws.id} version={version} />
         </TabsContent>
-        <TabsContent value="danger" className="pt-4">
-          <DangerTab ws={ws} onUpdated={onUpdated} />
-        </TabsContent>
+        {tab !== "overview" && tab !== "subscription" && tab !== "activity" && (
+          <DataState loading={control.loading} error={control.error} onRetry={() => void control.refresh()}>
+            {ctl && (
+              <>
+                <TabsContent value="limits" className="pt-4"><LimitsTab ws={ws} ctl={ctl} onCtl={onCtl} /></TabsContent>
+                <TabsContent value="team" className="pt-4"><TeamControlTab ws={ws} onWs={onUpdated} onCtl={onCtl} /></TabsContent>
+                <TabsContent value="storefront" className="pt-4"><StorefrontTab ws={ws} ctl={ctl} onCtl={onCtl} onWs={onUpdated} /></TabsContent>
+                <TabsContent value="payments" className="pt-4"><PaymentsTab ws={ws} ctl={ctl} onCtl={onCtl} /></TabsContent>
+                <TabsContent value="risk" className="pt-4"><RiskTab ws={ws} ctl={ctl} onCtl={onCtl} /></TabsContent>
+                <TabsContent value="notes" className="pt-4"><NotesTab ws={ws} ctl={ctl} onCtl={onCtl} /></TabsContent>
+                <TabsContent value="danger" className="pt-4"><DangerControlTab ws={ws} ctl={ctl} onCtl={onCtl} onWs={onUpdated} /></TabsContent>
+              </>
+            )}
+          </DataState>
+        )}
       </Tabs>
     </div>
   );
@@ -309,102 +337,6 @@ function SubscriptionTab({ ws, onUpdated }: { ws: AdminWorkspace; onUpdated: (ws
   );
 }
 
-function TeamTab({ ws }: { ws: AdminWorkspace }) {
-  if (ws.meta.members.length === 0) return <EmptyBlock message="No team members." />;
-  return (
-    <Panel flush title="Members" description={`${ws.meta.members.length} people`}>
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <Th>Name</Th>
-            <Th>Email</Th>
-            <Th>Role</Th>
-            <Th>Last active</Th>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {ws.meta.members.map((m) => (
-            <TableRow key={m.id}>
-              <Td className="font-medium">{m.name}</Td>
-              <Td className="text-ink-soft">{m.email}</Td>
-              <Td>
-                <StatusBadge tone={m.role === "owner" ? "primary" : "neutral"}>{m.role}</StatusBadge>
-              </Td>
-              <Td className="text-ink-soft">{m.lastActiveAt ? formatRelative(m.lastActiveAt) : "Never"}</Td>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Panel>
-  );
-}
-
-function DomainsTab({ ws, onUpdated }: { ws: AdminWorkspace; onUpdated: (ws: AdminWorkspace) => void }) {
-  const toast = useToast();
-  const [checking, setChecking] = useState<string | null>(null);
-
-  async function recheck(domainId: string, hostname: string) {
-    setChecking(domainId);
-    try {
-      const next = await adminApi.recheckDomain(ws.id, domainId);
-      onUpdated(next);
-      toast.success(`${hostname} verified.`);
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setChecking(null);
-    }
-  }
-
-  if (ws.meta.domains.length === 0) return <EmptyBlock message="No domains connected." />;
-  return (
-    <Panel flush title="Domains">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <Th>Hostname</Th>
-            <Th>Verification</Th>
-            <Th>SSL</Th>
-            <Th>Added</Th>
-            <Th>Last checked</Th>
-            <Th className="text-end">Actions</Th>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {ws.meta.domains.map((d) => (
-            <TableRow key={d.id}>
-              <Td className="font-medium">{d.hostname}</Td>
-              <Td>
-                {d.verified ? (
-                  <StatusBadge tone="success" dot>
-                    Verified
-                  </StatusBadge>
-                ) : (
-                  <StatusBadge tone="warning" dot>
-                    Unverified
-                  </StatusBadge>
-                )}
-              </Td>
-              <Td>
-                <StatusBadge tone={d.ssl === "active" ? "success" : d.ssl === "pending" ? "warning" : "danger"}>{d.ssl}</StatusBadge>
-              </Td>
-              <Td className="text-ink-soft">{formatDate(d.addedAt)}</Td>
-              <Td className="text-ink-soft">{formatRelative(d.lastCheckedAt)}</Td>
-              <Td className="text-end">
-                {!d.verified && (
-                  <Button size="sm" variant="outline" onClick={() => recheck(d.id, d.hostname)} disabled={checking === d.id}>
-                    <RefreshCw className={cn(checking === d.id && "animate-spin")} /> Re-check DNS
-                  </Button>
-                )}
-              </Td>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Panel>
-  );
-}
-
 function ActivityTab({ workspaceId, version }: { workspaceId: string; version: number }) {
   const { data, loading, error, refresh } = useAsync(() => adminApi.listWorkspaceActivity(workspaceId), [workspaceId, version]);
   return (
@@ -444,84 +376,5 @@ function ActivityTab({ workspaceId, version }: { workspaceId: string; version: n
         </ul>
       </Panel>
     </DataState>
-  );
-}
-
-function DangerTab({ ws, onUpdated }: { ws: AdminWorkspace; onUpdated: (ws: AdminWorkspace) => void }) {
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-
-  return (
-    <div className="space-y-4">
-      <Panel className="border-danger/30" title="Danger zone">
-        <div className="divide-y divide-line">
-          <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-ink">{ws.meta.suspended ? "Unsuspend workspace" : "Suspend workspace"}</p>
-              <p className="text-sm text-ink-soft">
-                {ws.meta.suspended
-                  ? "Restore access to the storefront and dashboard."
-                  : "Takes the storefront offline and blocks dashboard access. Data is kept."}
-              </p>
-            </div>
-            <Button
-              variant={ws.meta.suspended ? "outline" : "destructive"}
-              onClick={() => {
-                setReason("");
-                setOpen(true);
-              }}
-            >
-              {ws.meta.suspended ? <ShieldCheck /> : <Ban />}
-              {ws.meta.suspended ? "Unsuspend" : "Suspend"}
-            </Button>
-          </div>
-          <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-ink">Impersonate owner</p>
-              <p className="text-sm text-ink-soft">Open the merchant dashboard as {ws.meta.ownerEmail} for support. Every session is audited.</p>
-            </div>
-            <Button variant="outline" onClick={() => toast.info("Impersonation requires backend support")}>
-              <Eye /> Impersonate
-            </Button>
-          </div>
-        </div>
-      </Panel>
-
-      <ConfirmDialog
-        open={open}
-        title={ws.meta.suspended ? `Unsuspend ${ws.name}?` : `Suspend ${ws.name}?`}
-        description={
-          ws.meta.suspended
-            ? "The merchant regains access immediately."
-            : "The storefront goes offline and the team is signed out. The owner is notified by email."
-        }
-        confirmLabel={ws.meta.suspended ? "Unsuspend" : "Suspend workspace"}
-        destructive={!ws.meta.suspended}
-        confirmDisabled={!ws.meta.suspended && !reason.trim()}
-        onCancel={() => setOpen(false)}
-        onConfirm={async () => {
-          const next = ws.meta.suspended ? await adminApi.unsuspendWorkspace(ws.id) : await adminApi.suspendWorkspace(ws.id, reason);
-          onUpdated(next);
-          toast.success(next.meta.suspended ? "Workspace suspended." : "Workspace unsuspended.");
-          setOpen(false);
-        }}
-      >
-        {!ws.meta.suspended && (
-          <div className="space-y-1.5">
-            <label htmlFor="suspend-reason" className="text-sm font-medium text-ink">
-              Reason <span className="text-danger">*</span>
-            </label>
-            <Textarea
-              id="suspend-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Chargeback investigation, terms violation…"
-            />
-            <p className="text-xs text-ink-soft">Recorded in the audit log.</p>
-          </div>
-        )}
-      </ConfirmDialog>
-    </div>
   );
 }

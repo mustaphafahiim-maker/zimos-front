@@ -50,7 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await apiClient.login(payload);
         if (!result.user.platformAdmin) {
           apiClient.clearSession();
-          throw new ApiError("This account doesn't have platform admin access.", 403);
+          throw new ApiError(
+            "This account is not a platform admin. Signing in worked, but users.platform_admin is false for it — ask a ZIMOS super admin to grant access.",
+            403
+          );
         }
         setUser(result.user);
         setStatus("authenticated");
