@@ -1,5 +1,5 @@
 import { Suspense, lazy, type ComponentType, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/i18n/LocaleContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { BrandLoader } from "@/components/BrandLoader";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 // The sign-in screen is the most common cold entry point, so it ships in the
 // main bundle. Every other page is split into its own chunk and loaded on
 // first visit.
@@ -36,6 +38,7 @@ const StoresPage = page(() => import("@/pages/stores/StoresPage"), "StoresPage")
 
 // Sell & COD operations
 const OrdersListPage = page(() => import("@/pages/orders/OrdersListPage"), "OrdersListPage");
+const NewOrderPage = page(() => import("@/pages/orders/NewOrderPage"), "NewOrderPage");
 const OrderDetailPage = page(() => import("@/pages/orders/OrderDetailPage"), "OrderDetailPage");
 const OrderPipelinePage = page(() => import("@/pages/orders/OrderPipelinePage"), "OrderPipelinePage");
 const AbandonedCheckoutsPage = page(() => import("@/pages/orders/AbandonedCheckoutsPage"), "AbandonedCheckoutsPage");
@@ -90,12 +93,26 @@ const SettingsPage = page(() => import("@/pages/settings/SettingsPage"), "Settin
 
 /** Full-screen loader for pages rendered outside the dashboard shell. */
 function Screen({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<BrandLoader />}>{children}</Suspense>;
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<BrandLoader />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
-/** In-shell loader: keeps the sidebar and top bar visible while a page chunk loads. */
+/**
+ * In-shell loader: keeps the sidebar and top bar visible while a page chunk
+ * loads. The error boundary sits inside the shell so a crashing page (or a
+ * stale lazy chunk after a deploy) never takes down the navigation.
+ */
 function InShell({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<BrandLoader className="min-h-[60vh] bg-transparent" />}>{children}</Suspense>;
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<BrandLoader className="min-h-[60vh] bg-transparent" />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 export default function App() {
@@ -124,6 +141,7 @@ export default function App() {
 
                       {/* Sell & COD operations */}
                       <Route path="/orders" element={<InShell><OrdersListPage /></InShell>} />
+                      <Route path="/orders/new" element={<InShell><NewOrderPage /></InShell>} />
                       <Route path="/orders/pipeline" element={<InShell><OrderPipelinePage /></InShell>} />
                       <Route path="/orders/:orderId" element={<InShell><OrderDetailPage /></InShell>} />
                       <Route path="/confirmation-queue" element={<InShell><ConfirmationQueuePage /></InShell>} />
@@ -176,9 +194,13 @@ export default function App() {
                       <Route path="/analytics" element={<InShell><AnalyticsPage /></InShell>} />
                       <Route path="/apps" element={<InShell><AppsPage /></InShell>} />
                       <Route path="/settings" element={<InShell><SettingsPage /></InShell>} />
+
+                      <Route path="*" element={<NotFoundPage inShell />} />
                     </Route>
                   </Route>
                 </Route>
+
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </ToastProvider>
           </WorkspaceProvider>
