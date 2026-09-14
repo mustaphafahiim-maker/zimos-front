@@ -92,6 +92,14 @@ const en = {
     welcome: "Welcome to",
   },
   product: {
+    gallery: {
+      prev: "Previous image",
+      next: "Next image",
+      zoom: "Open full screen",
+      close: "Close",
+      zoomHint: "Tap the image to zoom · swipe to see more",
+      image: (i: number, n: number) => `Image ${i} of ${n}`,
+    },
     orderNow: "Order now",
     addToCart: "Add to cart",
     adding: "Adding…",
@@ -453,6 +461,14 @@ const ar: Dictionary = {
     welcome: "أهلًا بك في",
   },
   product: {
+    gallery: {
+      prev: "الصورة اللي قبلها",
+      next: "الصورة اللي بعدها",
+      zoom: "افتح الصورة كاملة",
+      close: "قفل",
+      zoomHint: "دوس على الصورة تكبّرها · اسحب تشوف الباقي",
+      image: (i: number, n: number) => `صورة ${i} من ${n}`,
+    },
     orderNow: "اطلب الآن",
     addToCart: "أضف للسلة",
     adding: "جارٍ الإضافة…",

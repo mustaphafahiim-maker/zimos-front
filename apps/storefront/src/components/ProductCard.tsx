@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, discountPercent, firstImage, priceOf } from "@/lib/product";
+import { compareAtOf, discountPercent, priceOf, productImages } from "@/lib/product";
 import { BoxIcon } from "./Icons";
 
 export function ProductCard({
@@ -20,7 +20,7 @@ export function ProductCard({
   const compareAt = compareAtOf(product);
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
   const anyInStock = product.variants.some((v) => v.inStock);
-  const image = firstImage(product);
+  const [image = null, hoverImage = null] = productImages(product);
   const href = `/store/${workspaceId}/products/${product.slug}`;
 
   return (
@@ -37,12 +37,26 @@ export function ProductCard({
             height={600}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out motion-safe:group-hover:scale-[1.04]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-primary/40">
             <BoxIcon size={48} />
           </div>
+        )}
+        {/* Second photo fades in on hover-capable devices only (touch keeps the first). */}
+        {hoverImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={hoverImage}
+            alt=""
+            width={600}
+            height={600}
+            loading="lazy"
+            decoding="async"
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 [@media(hover:hover)]:group-hover:opacity-100"
+          />
         )}
         {pct && (
           <span className="zr-pcard__compare absolute start-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
