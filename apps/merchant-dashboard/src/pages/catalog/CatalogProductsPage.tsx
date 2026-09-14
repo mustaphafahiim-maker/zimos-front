@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, LayoutGrid, List, Package } from "lucide-react";
+import { ArrowRight, Download, LayoutGrid, List, Package, Upload } from "lucide-react";
 import { Button, Input, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -17,6 +17,9 @@ import { ProductImage } from "@/components/ProductImage";
 import { LoadMore } from "@/components/LoadMore";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { downloadCsv } from "./import/csv";
+import { productsToRows } from "./import/productImport";
+import { ImportProductsModal } from "./import/ImportProductsModal";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -45,6 +48,10 @@ const STRINGS = {
     noVariants: "No variants",
     stockOne: "{total} in stock · 1 variant",
     stockMany: "{total} in stock · {count} variants",
+    importCsv: "Import CSV",
+    exportCsv: "Export CSV",
+    exporting: "Exporting…",
+    exportedToast: "Exported {count} products.",
   },
   ar: {
     title: "المنتجات",
@@ -71,6 +78,10 @@ const STRINGS = {
     noVariants: "لا توجد متغيّرات",
     stockOne: "{total} في المخزون · متغيّر واحد",
     stockMany: "{total} في المخزون · {count} متغيّرات",
+    importCsv: "استيراد CSV",
+    exportCsv: "تصدير CSV",
+    exporting: "جارٍ التصدير…",
+    exportedToast: "تم تصدير {count} منتج.",
   },
 } satisfies Messages;
 
@@ -119,6 +130,8 @@ export function CatalogProductsPage() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<CatalogView>(readView);
   const [toDelete, setToDelete] = useState<Product | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     try {
@@ -146,6 +159,25 @@ export function CatalogProductsPage() {
     );
   }, [list.items, search]);
 
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const products: Product[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await apiClient.listProducts(workspaceId, { limit: 200, cursor });
+        products.push(...page.products);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      downloadCsv(`products-${new Date().toISOString().slice(0, 10)}.csv`, productsToRows(products));
+      toast.success(fmt(t.exportedToast, { count: products.length }));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function confirmDelete() {
     if (!toDelete) return;
     const name = toDelete.name;
@@ -161,11 +193,23 @@ export function CatalogProductsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button asChild>
-            <Link to="/catalog/new">{t.newProduct}</Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="size-4" aria-hidden />
+              {t.importCsv}
+            </Button>
+            <Button variant="outline" onClick={exportCsv} disabled={exporting}>
+              <Download className="size-4" aria-hidden />
+              {exporting ? t.exporting : t.exportCsv}
+            </Button>
+            <Button asChild>
+              <Link to="/catalog/new">{t.newProduct}</Link>
+            </Button>
+          </div>
         }
       />
+
+      <ImportProductsModal open={importOpen} onClose={() => setImportOpen(false)} onImported={list.reload} />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div
