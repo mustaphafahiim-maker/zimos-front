@@ -25,7 +25,26 @@ export const DENSITIES = ["compact", "comfortable", "airy"] as const;
 export const HEADER_LAYOUTS = ["logo-start", "logo-center"] as const;
 export const IMAGE_RATIOS = ["square", "portrait"] as const;
 export const BASE_SIZES = [14, 15, 16, 17, 18] as const;
-export const THEME_IDS = ["nile", "souq", "luxe", "bazaar", "lamsa"] as const;
+export const THEME_IDS = [
+  "nile",
+  "souq",
+  "luxe",
+  "bazaar",
+  "lamsa",
+  // Niche stores
+  "moda",
+  "sitara",
+  "dahab",
+  "glow",
+  "oud",
+  "tech",
+  "turbo",
+  "beit",
+  "atfal",
+  "fit",
+  "taza",
+  "alifa",
+] as const;
 
 export type RadiusScale = (typeof RADIUS_SCALES)[number];
 export type ButtonStyle = (typeof BUTTON_STYLES)[number];

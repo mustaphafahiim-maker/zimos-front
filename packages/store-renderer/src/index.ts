@@ -12,6 +12,8 @@ export {
   THEME_PAGE_TYPES,
   THEME_PAGE_TITLES,
   RESERVED_THEME_PATHS,
+  NICHES,
+  type NicheId,
   type ThemePreset,
   type ThemePages,
   type ThemePageKey,

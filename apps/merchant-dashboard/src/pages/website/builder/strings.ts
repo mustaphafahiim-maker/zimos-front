@@ -7,6 +7,8 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 export const BUILDER_STRINGS = {
   en: {
     back: "Back to websites",
+    allNiches: "All",
+    themesCount: "{n} themes",
     conflictTitle: "Someone else changed this store",
     conflictBody: "These pages were saved from another tab or by a teammate after you opened the builder.",
     conflictPages: "Changed pages:",
@@ -286,6 +288,8 @@ export const BUILDER_STRINGS = {
   },
   ar: {
     back: "رجوع للمواقع",
+    allNiches: "الكل",
+    themesCount: "{n} ثيم",
     conflictTitle: "فيه حد تاني عدّل المتجر",
     conflictBody: "الصفحات دي اتحفظت من تبويب تاني أو من حد في الفريق بعد ما فتحت المحرر.",
     conflictPages: "الصفحات اللي اتغيرت:",

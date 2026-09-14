@@ -1,10 +1,12 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import {
   ARABIC_FONTS,
   BASE_SIZES,
   LATIN_FONTS,
+  NICHES,
+  type NicheId,
   THEME_LIST,
   contrastRatio,
   normalizeHex,
@@ -57,14 +59,24 @@ export function ThemePanel({
   const color = (key: keyof ThemeSettings["colors"]) => (v: string) => set("colors", { [key]: v } as Partial<ThemeSettings["colors"]>, `color:${key}`);
   const onPrimary = colors.buttonText === "auto" ? readableOn(colors.primary) : colors.buttonText;
   const ann = theme.header.announcement;
+  const [niche, setNiche] = useState<NicheId | "all">("all");
+  const shown = THEME_LIST.filter((p) => niche === "all" || p.niche === niche);
 
   return (
     <div>
       {sizeError && <p className="m-3 rounded-lg bg-danger-soft px-3 py-2 text-xs font-medium text-danger">{sizeError}</p>}
 
       <Group title={t.themesTitle} defaultOpen>
+        <div role="radiogroup" aria-label={t.themesTitle} className="flex flex-wrap gap-1">
+          {[{ id: "all" as const, label: { ar: t.allNiches, en: t.allNiches } }, ...NICHES.filter((n) => THEME_LIST.some((p) => p.niche === n.id))].map((n) => (
+            <button key={n.id} type="button" role="radio" aria-checked={niche === n.id} onClick={() => setNiche(n.id)} className={cn("cursor-pointer rounded-full border px-2.5 py-0.5 text-[11px] font-semibold", niche === n.id ? "border-primary bg-primary text-white" : "border-line text-ink-soft hover:border-primary hover:text-primary")}>
+              {n.label[uiLocale]}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-ink-muted">{fmt(t.themesCount, { n: shown.length })}</p>
         <ul className="grid gap-2">
-          {THEME_LIST.map((preset) => {
+          {shown.map((preset) => {
             const current = theme.preset === preset.id;
             const c = preset.settings.colors;
             return (
