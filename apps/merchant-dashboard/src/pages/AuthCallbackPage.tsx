@@ -38,6 +38,16 @@ export function AuthCallbackPage() {
   const [refreshFailed, setRefreshFailed] = useState(false);
   const handled = useRef(false);
 
+  // Tokens arrive in the query string. They are captured above; remove them
+  // from the address bar immediately so they do not stay in browser history,
+  // bookmarks, screenshots or shared links. This does not notify the router,
+  // so the values read on first render remain available to the effect below.
+  useEffect(() => {
+    if (window.location.search) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     if (!accessToken || !refreshToken || handled.current) return;
     handled.current = true;
