@@ -6,6 +6,7 @@ import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
+import { StorePage } from "@/components/StoreRenderer";
 import { ReviewsSection } from "@/components/product/Reviews";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
@@ -16,6 +17,7 @@ import { ratingOf, reviewsOf } from "@/lib/publicApi";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
+import { getThemePageTree } from "@/lib/themePages";
 
 export const revalidate = 60;
 
@@ -81,9 +83,14 @@ export default async function ProductPage({ params }: { params: Params }) {
   const t = getDictionary(locale);
   const bump = getOrderBump(catalogue, [product.id], locale);
   const rating = ratingOf(product);
+  const [themeTop, themeBottom] = await Promise.all([
+    getThemePageTree(workspaceId, "productTop"),
+    getThemePageTree(workspaceId, "productBottom"),
+  ]);
 
   return (
     <main className="flex-1">
+      {themeTop && <StorePage tree={themeTop} workspaceId={workspaceId} currency={store.currency} locale={locale} />}
       <div className={`${container} py-6 sm:py-8`}>
         <Link
           href={`/store/${workspaceId}`}
@@ -126,6 +133,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           </aside>
         </div>
       </div>
+      {themeBottom && <StorePage tree={themeBottom} workspaceId={workspaceId} currency={store.currency} locale={locale} />}
     </main>
   );
 }

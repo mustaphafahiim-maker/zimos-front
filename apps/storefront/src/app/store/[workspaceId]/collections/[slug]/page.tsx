@@ -4,6 +4,8 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { StorefrontCollection } from "@store-builder/api-client";
 import { CatalogSection } from "@/components/catalog/CatalogSection";
+import { StorePage } from "@/components/StoreRenderer";
+import { getThemePageTree } from "@/lib/themePages";
 import { ArrowIcon } from "@/components/Icons";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
@@ -58,8 +60,12 @@ export default async function CollectionPage({ params, searchParams }: { params:
   const t = getDictionary(locale);
   const q = typeof query.q === "string" ? query.q.trim().slice(0, 200) : "";
 
+  const intro = await getThemePageTree(workspaceId, "collectionIntro");
+
   return (
-    <main className={`${container} flex-1 py-6 pb-16 sm:py-8`}>
+    <main className="flex-1">
+      {intro && <StorePage tree={intro} workspaceId={workspaceId} currency={store.currency} locale={locale} />}
+      <div className={`${container} py-6 pb-16 sm:py-8`}>
       <Link
         href={`/store/${workspaceId}`}
         className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft transition-colors hover:text-primary"
@@ -81,6 +87,7 @@ export default async function CollectionPage({ params, searchParams }: { params:
         title={t.home.shopAll}
         emptyText={t.home.emptyCollection}
       />
+      </div>
     </main>
   );
 }

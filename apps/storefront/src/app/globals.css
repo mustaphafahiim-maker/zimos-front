@@ -1,64 +1,79 @@
 @import "tailwindcss";
 @import "../../../../packages/ui/src/brand/zimos.css";
+/* Shared store renderer styles (zr-*). Plain CSS, so it doesn't depend on
+   Tailwind scanning the package source. */
+@import "../../../../packages/store-renderer/src/store-renderer.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
-   an inline script in the root layout and toggled by the theme switch. */
+   an inline script in the root layout. Stores themselves follow the merchant's
+   ThemeSettings instead (see `.zr-theme.brand-theme` below). */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------ *
  * Storefront defaults.
  *
- * All semantic tokens (ink, paper, line, primary, accent, success, danger …)
- * come from the shared ZIMOS brand file imported above. The storefront only
- * adds two things on top:
- *
- *   1. the self-hosted next/font families (see src/app/fonts.ts) wired into
- *      the brand's --font-latin / --font-arabic slots, and
- *   2. the per-merchant colour override (`.brand-theme`).
+ * Semantic tokens (ink, paper, line, primary …) come from the shared ZIMOS
+ * brand file. Outside a store (root page, global 404) they apply as-is.
  * ------------------------------------------------------------------ */
 :root {
   --font-latin: var(--font-inter), "Inter", Arial, system-ui, sans-serif;
   --font-arabic: var(--font-noto-arabic), var(--font-inter), "Noto Sans Arabic", Arial, sans-serif;
 
-  /* Merchant branding. The store layout overrides these two per workspace from
-     `themeSettings`; with nothing saved the store falls back to ZIMOS Blue/Sky. */
   --brand-primary: #0066ff;
   --brand-secondary: #66c2ff;
 }
 
-.dark {
-  --brand-primary: #3d8bff;
-  --brand-secondary: #66c2ff;
-}
-
 /* ------------------------------------------------------------------ *
- * Per-store branding. The store layout puts this class on its wrapper and
- * sets --brand-primary / --brand-secondary inline from the workspace's
- * themeSettings; re-pointing the semantic primary/accent tokens at them
- * here means every `bg-primary` / `text-accent` / `border-primary` utility
- * inside the store picks up the merchant's colours. The -dark / -soft steps
- * are derived so a single hex still yields a coherent ramp.
+ * Per-store theme.
+ *
+ * The store layout puts `.zr-theme.brand-theme` on its wrapper with the
+ * merchant's `--zr-*` variables inline (themeCssVariables). Re-pointing the
+ * Tailwind semantic tokens at them here means every app page inside the
+ * store — cart, checkout, product landing, tracking — follows the theme's
+ * colours, fonts and radii, not just page-builder sections.
+ *
+ * A store's look is the merchant's decision, so the shopper-side dark mode
+ * does not recolour it: these tokens are set on the wrapper and win over the
+ * `.dark` tokens inherited from <html>.
  * ------------------------------------------------------------------ */
-.brand-theme {
-  --color-primary: var(--brand-primary);
-  /* Set inline by brandStyle() from the merchant hex's luminance. */
-  --primary-foreground: var(--brand-on-primary, #ffffff);
-  --color-primary-foreground: var(--brand-on-primary, #ffffff);
-  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 70%, #0b1f66);
-  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 10%, #fff);
+.zr-theme.brand-theme {
+  --brand-primary: var(--zr-primary);
+  --brand-secondary: var(--zr-secondary);
+  --brand-on-primary: var(--zr-on-primary);
 
-  --color-accent: var(--brand-secondary);
-  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 72%, #0b1f66);
-  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 14%, #fff);
+  --color-primary: var(--zr-primary);
+  --primary-foreground: var(--zr-on-primary);
+  --color-primary-foreground: var(--zr-on-primary);
+  --color-primary-dark: color-mix(in oklab, var(--zr-primary) 72%, #000);
+  --color-primary-soft: color-mix(in oklab, var(--zr-primary) 10%, var(--zr-bg));
+
+  --color-accent: var(--zr-secondary);
+  --color-accent-dark: color-mix(in oklab, var(--zr-secondary) 70%, #000);
+  --color-accent-soft: color-mix(in oklab, var(--zr-secondary) 16%, var(--zr-bg));
+
+  --color-ink: var(--zr-text);
+  --color-ink-soft: color-mix(in oklab, var(--zr-text) 76%, var(--zr-bg));
+  --color-ink-muted: var(--zr-muted);
+  --color-paper: var(--zr-bg);
+  --color-paper-raised: color-mix(in oklab, var(--zr-bg) 88%, #fff);
+  --color-line: var(--zr-border);
+  --color-line-strong: color-mix(in oklab, var(--zr-border) 72%, var(--zr-text));
+  --color-zimos-cloud: var(--zr-surface);
+
+  --radius-lg: var(--zr-radius-sm);
+  --radius-xl: var(--zr-radius);
+  --radius-2xl: var(--zr-radius-lg);
+
+  --font-sans: var(--zr-font-latin);
+  --font-display: var(--zr-font-latin);
+  font-size: var(--zr-font-size);
+  color-scheme: light;
 }
 
-/* On dark backgrounds the "soft" tints sink toward the navy paper rather than
-   white, or they read as glaring light blocks. */
-.dark .brand-theme {
-  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 60%, #fff);
-  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 22%, #081a4a);
-  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 60%, #fff);
-  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 20%, #081a4a);
+.zr-theme.brand-theme[dir="rtl"],
+.zr-theme.brand-theme :lang(ar) {
+  --font-sans: var(--zr-font-ar);
+  --font-display: var(--zr-font-ar);
 }
 
 @layer base {

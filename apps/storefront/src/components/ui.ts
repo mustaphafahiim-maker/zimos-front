@@ -8,11 +8,11 @@
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
-export const btnPrimary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
+export const btnPrimary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--zr-btn-radius,0.75rem)] bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
 export const btnPrimaryLg = `${btnPrimary} w-full text-base py-3.5`;
 
-export const btnSecondary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line-strong bg-paper-raised px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
+export const btnSecondary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--zr-btn-radius,0.75rem)] border border-line-strong bg-paper-raised px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
 export const btnGhost = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${focus}`;
 

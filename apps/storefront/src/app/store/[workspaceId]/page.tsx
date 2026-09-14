@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { StorefrontCollection } from "@store-builder/api-client";
 import { CatalogSection } from "@/components/catalog/CatalogSection";
-import { PageRenderer } from "@/components/page-renderer";
+import { StorePage } from "@/components/StoreRenderer";
 import { TrustStrip } from "@/components/TrustStrip";
 import { ArrowIcon } from "@/components/Icons";
 import { btnPrimary, btnSecondary, container } from "@/components/ui";
@@ -59,7 +59,7 @@ export default async function StoreHomePage({
   if (!searching && (tree?.sections?.length ?? 0) > 0) {
     return (
       <main className="flex-1">
-        <PageRenderer tree={tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
+        <StorePage tree={tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
       </main>
     );
   }

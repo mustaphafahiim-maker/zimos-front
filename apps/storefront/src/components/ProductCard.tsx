@@ -24,14 +24,15 @@ export function ProductCard({
   const href = `/store/${workspaceId}/products/${product.slug}`;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-pop">
-      <div className="relative aspect-square overflow-hidden bg-zimos-cloud dark:bg-primary-soft">
+    <article className="zr-pcard group relative flex w-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-pop">
+      {/* Image ratio (square/portrait), compare price and quick order follow ThemeSettings via zr-pcard* CSS hooks. */}
+      <div className="zr-pcard__media relative overflow-hidden bg-zimos-cloud">
         {image ? (
           // Merchant media are arbitrary remote URLs (no next/image allowlist).
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={image}
-            alt=""
+            alt={product.name}
             width={600}
             height={600}
             loading="lazy"
@@ -44,7 +45,7 @@ export function ProductCard({
           </div>
         )}
         {pct && (
-          <span className="absolute start-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
+          <span className="zr-pcard__compare absolute start-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">
             {t.common.save(pct)}
           </span>
         )}
@@ -67,12 +68,12 @@ export function ProductCard({
             {price !== undefined ? formatPrice(price, currency, locale) : "—"}
           </span>
           {compareAt && (
-            <span className="text-sm text-ink-muted line-through">{formatPrice(compareAt, currency, locale)}</span>
+            <span className="zr-pcard__compare text-sm text-ink-muted line-through">{formatPrice(compareAt, currency, locale)}</span>
           )}
         </p>
         <span
           aria-hidden
-          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
+          className="zr-pcard__quick mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
         >
           {anyInStock ? t.product.orderNow : t.product.viewDetails}
         </span>

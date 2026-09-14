@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
-import { PageRenderer } from "@/components/page-renderer";
+import { StorePage } from "@/components/StoreRenderer";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { isReservedThemePath } from "@/lib/themePages";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
 
@@ -24,6 +25,8 @@ function pathOf(path: string[] | undefined) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId, path } = await params;
+  // Theme product/collection blocks only render around their templates.
+  if (isReservedThemePath(pathOf(path))) notFound();
   const result = await getPublishedPage(workspaceId, pathOf(path));
   if (result.kind !== "page") return {};
   const { page } = result.data;
@@ -50,6 +53,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  */
 export default async function CustomStorePage({ params }: { params: Params }) {
   const { workspaceId, path } = await params;
+  // Theme product/collection blocks only render around their templates.
+  if (isReservedThemePath(pathOf(path))) notFound();
   const [store, result] = await Promise.all([
     getStoreMeta(workspaceId),
     getPublishedPage(workspaceId, pathOf(path)),
@@ -76,7 +81,7 @@ export default async function CustomStorePage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
-      <PageRenderer tree={page.tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
+      <StorePage tree={page.tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
     </main>
   );
 }

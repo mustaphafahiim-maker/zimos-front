@@ -38,7 +38,7 @@ import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { RatingSummary } from "./Reviews";
 import { CashIcon, CheckIcon } from "../Icons";
-import { Countdown } from "../page-renderer/Countdown";
+import { Countdown } from "./Countdown";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
 const FORM_PREFIX = "quick";
@@ -54,13 +54,17 @@ export function ProductLanding({
   bump,
   countdownHours,
   rating,
+  headingLevel = "h1",
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
   bump: OrderBumpOffer;
   countdownHours: number | null;
   rating?: ProductRating;
+  /** "h2" when embedded in a page-builder section, so the page keeps one h1. */
+  headingLevel?: "h1" | "h2";
 }) {
+  const ProductTitle = headingLevel;
   const { t, money, store } = useStore();
   const router = useRouter();
   const [client] = useState(() => createStorefrontApiClient());
@@ -211,7 +215,7 @@ export function ProductLanding({
     <div className="flex min-w-0 flex-col gap-6">
       {/* Title + price */}
       <div>
-        <h1 className="text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
+        <ProductTitle className="text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</ProductTitle>
         {rating && <RatingSummary rating={rating} />}
         <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-3xl font-bold text-ink">{money(unit)}</span>

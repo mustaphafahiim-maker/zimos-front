@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
-import { btnPrimary } from "../ui";
+import { btnPrimary } from "./ui";
 
 /**
- * The `cart` element. The real cart — quantities, totals, checkout — lives at
- * /store/:workspaceId/cart and is deliberately not duplicated here; this block
- * is the live entry point to it, so a merchant who drops "Cart" onto a page
- * gets a count that is actually theirs rather than a mock.
+ * The `cart` page-tree element. The real cart — quantities, totals, checkout —
+ * lives at /store/:workspaceId/cart; this block is a live entry point to it.
  */
 export function CartSummary({ title, workspaceId }: { title: string; workspaceId: string }) {
   const { itemCount, isLoading } = useCart();

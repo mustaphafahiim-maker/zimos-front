@@ -3,7 +3,7 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import type { PageTree, StorefrontProductDetail } from "@store-builder/api-client";
 import { FunnelDone, FunnelStepActions, FunnelUnavailable } from "@/components/funnel/FunnelStep";
-import { PageRenderer } from "@/components/page-renderer";
+import { StorePage } from "@/components/StoreRenderer";
 import { classifyFunnelError, getFunnelStep, type FunnelStepResponse } from "@/lib/publicApi";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
@@ -110,7 +110,7 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
-      <PageRenderer tree={step.tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
+      <StorePage tree={step.tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
       <FunnelStepActions
         key={step.key}
         workspaceId={workspaceId}

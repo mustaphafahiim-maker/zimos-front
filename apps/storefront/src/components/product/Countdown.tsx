@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 
 /**
- * The `countdown` element stores only `endsInHours` — a duration, with no
- * anchor date anywhere in the tree. The only coherent reading is "ends N hours
- * from now", so the deadline is computed in the browser on mount. It
- * deliberately is *not* computed on the server: these pages are cached
- * (`revalidate`), and a server-side deadline would be frozen into the cached
- * HTML and drift for every later visitor.
+ * The product page's optional offer countdown (`themeSettings.productCountdownHours`).
+ * The deadline is computed in the browser on mount — never on the server,
+ * where it would be frozen into cached HTML.
  */
 function parts(msLeft: number) {
   const total = Math.max(0, Math.floor(msLeft / 1000));
@@ -22,8 +19,6 @@ function parts(msLeft: number) {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function Countdown({ label, endsInHours }: { label: string; endsInHours: number }) {
-  // Seeded with the full duration so the server HTML and the first client
-  // render agree; the interval below takes over a second later.
   const [left, setLeft] = useState(() => endsInHours * 3600_000);
 
   useEffect(() => {

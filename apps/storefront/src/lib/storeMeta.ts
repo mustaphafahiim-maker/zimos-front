@@ -1,6 +1,11 @@
 import { cache } from "react";
 import type { CSSProperties } from "react";
-import { ApiError, type StorefrontMeta, type StorefrontProductDetail } from "@store-builder/api-client";
+import {
+  ApiError,
+  type StorefrontCollection,
+  type StorefrontMeta,
+  type StorefrontProductDetail,
+} from "@store-builder/api-client";
 import { createServerStorefrontApiClient } from "./serverApiClient";
 
 /**
@@ -35,6 +40,16 @@ export const getStorefrontProduct = cache(
     }
   }
 );
+
+/** The store's collections for header/footer navigation, deduped per request. Empty on failure. */
+export const getStoreCollections = cache(async (workspaceId: string): Promise<StorefrontCollection[]> => {
+  try {
+    const client = await createServerStorefrontApiClient();
+    return await client.listStorefrontCollections(workspaceId);
+  } catch {
+    return [];
+  }
+});
 
 /** Matches the keys the dashboard's Settings page writes into themeSettings. */
 const HEX = /^#[0-9a-f]{6}$/i;
