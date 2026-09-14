@@ -401,6 +401,9 @@ export function FunnelOrders({
     for (const o of readFollowOns(sessionId)) {
       list.push({ id: o.id, orderNumber: o.orderNumber, total: o.totalAmount, extra: true });
     }
+    // Order numbers come from this device's storage after mount so SSR and
+    // hydration agree; this one-time sync is intended.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRows(list);
   }, [workspaceId, sessionId, orderId]);
 

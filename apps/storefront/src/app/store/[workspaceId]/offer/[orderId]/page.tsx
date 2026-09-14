@@ -26,6 +26,9 @@ function UpsellOfferView() {
 
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
   useEffect(() => {
+    // Device-local data (localStorage) is read after mount on purpose so the
+    // server render and hydration match; this one-time sync is intended.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSnapshot(getOrderSnapshot(workspaceId, orderId));
   }, [workspaceId, orderId]);
 

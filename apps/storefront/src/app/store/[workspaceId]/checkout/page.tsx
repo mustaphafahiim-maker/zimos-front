@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
@@ -42,7 +42,7 @@ export default function CheckoutPage() {
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
   const [bumpOn, setBumpOn] = useState(false);
-  const bumpAdded = useRef(false);
+  const [bumpAdded, setBumpAdded] = useState(false);
 
   const currency = cart?.currency ?? "EGP";
   const items = cart?.items ?? [];
@@ -55,7 +55,7 @@ export default function CheckoutPage() {
   }, [loaded, products, locale]);
 
   // Once the bump is a real line in the cart, the cart subtotal already has it.
-  const bumpInTotals = bumpOn && bump && !bumpAdded.current ? bump.priceAmount : 0;
+  const bumpInTotals = bumpOn && bump && !bumpAdded ? bump.priceAmount : 0;
   const shipping = estimateShipping(values.governorate);
   const subtotal = cart?.subtotal ?? 0;
   const total = subtotal + bumpInTotals + (shipping ?? 0);
@@ -90,9 +90,9 @@ export default function CheckoutPage() {
     try {
       if (bumpOn && bump) {
         if (bump.real && bump.variantId) {
-          if (!bumpAdded.current) {
+          if (!bumpAdded) {
             await addItem(bump.variantId, bump.offerId, 1);
-            bumpAdded.current = true;
+            setBumpAdded(true);
           }
         } else {
           systemNotes.push(`Order bump: ${bump.name} (+${formatPrice(bump.priceAmount, currency, "en")})`);

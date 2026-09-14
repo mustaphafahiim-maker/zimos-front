@@ -28,6 +28,9 @@ function Confirmation() {
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
+    // Device-local data (localStorage) is read after mount on purpose so the
+    // server render and hydration match; this one-time sync is intended.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSnapshot(getOrderSnapshot(workspaceId, orderId));
     setUpsell(getAcceptedUpsell(workspaceId, orderId));
     setStoreUrl(`${window.location.origin}/store/${workspaceId}`);
