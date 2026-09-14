@@ -31,10 +31,12 @@ import {
   optionGroups,
   variantUnitPrice,
 } from "@/lib/product";
+import type { ProductRating } from "@/lib/publicApi";
 import { useStore } from "@/lib/StoreContext";
 import { AddToCartButton } from "../AddToCartButton";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
+import { RatingSummary } from "./Reviews";
 import { CashIcon, CheckIcon } from "../Icons";
 import { Countdown } from "../page-renderer/Countdown";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
@@ -51,11 +53,13 @@ export function ProductLanding({
   product,
   bump,
   countdownHours,
+  rating,
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
   bump: OrderBumpOffer;
   countdownHours: number | null;
+  rating?: ProductRating;
 }) {
   const { t, money, store } = useStore();
   const router = useRouter();
@@ -197,6 +201,7 @@ export function ProductLanding({
       {/* Title + price */}
       <div>
         <h1 className="text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
+        {rating && <RatingSummary rating={rating} />}
         <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-3xl font-bold text-ink">{money(unit)}</span>
           {compareAtUnit && (

@@ -6,11 +6,13 @@ import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
+import { ReviewsSection } from "@/components/product/Reviews";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { getOrderBump } from "@/lib/mockCommerce";
 import { firstImage, productImages } from "@/lib/product";
+import { ratingOf, reviewsOf } from "@/lib/publicApi";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
@@ -78,6 +80,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
   const bump = getOrderBump(catalogue, [product.id], locale);
+  const rating = ratingOf(product);
 
   return (
     <main className="flex-1 pb-24 md:pb-0">
@@ -99,6 +102,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             product={product}
             bump={bump}
             countdownHours={countdownHoursFrom(store.themeSettings)}
+            rating={rating}
           />
         </div>
 
@@ -114,6 +118,7 @@ export default async function ProductPage({ params }: { params: Params }) {
                 </div>
               </section>
             )}
+            <ReviewsSection workspaceId={workspaceId} productId={product.id} rating={rating} reviews={reviewsOf(product)} />
             <Faq title={t.product.faq} items={t.product.faqItems} />
           </div>
           <aside className="lg:pt-11">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { StorefrontMeta } from "@store-builder/api-client";
 import { getDictionary, type Locale } from "@/lib/i18n";
+import { HeaderSearchButton } from "./catalog/HeaderSearchButton";
 import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { ThemeToggle } from "./ThemeToggle";
@@ -55,6 +56,7 @@ export function StoreHeader({
           >
             {t.common.trackOrder}
           </Link>
+          <HeaderSearchButton workspaceId={workspaceId} />
           <LanguageSwitch />
           <ThemeToggle className="hidden sm:inline-flex" />
           <CartIcon workspaceId={workspaceId} />
