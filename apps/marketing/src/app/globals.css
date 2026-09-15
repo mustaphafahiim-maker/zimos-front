@@ -22,8 +22,27 @@
   --color-primary-dark: #1e3a8a;
   --color-primary-soft: #e7eefc;
   --color-accent: #d9a441;
-  --color-accent-dark: #b37f27;
+  /* Badge text on accent-soft (Pricing, order-lifecycle code chip) — deep
+     enough to hold 4.5:1 there. Same value as the apps' accent-dark. */
+  --color-accent-dark: #91641c;
   --color-accent-soft: #fbf0dc;
+  /* Functional status only, never decoration. Same values as the apps. */
+  --color-success: #357150;
+  --color-success-soft: #e5f0e9;
+
+  /* Component tokens read by the shared Card and Badge. They point at the
+     palette above, so those components use this site's colours and flip with
+     `.dark`. Values and rationale: packages/ui/DESIGN_SYSTEM.md. */
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  --muted: #e9eef6;
+  --muted-foreground: var(--color-ink-soft);
+  --border: var(--color-line);
+  --ring: var(--color-primary);
 }
 
 .dark {
@@ -40,6 +59,14 @@
   --color-accent: #e8b96a;
   --color-accent-dark: #d9a441;
   --color-accent-soft: #2b2013;
+  --color-success: #5cbf8f;
+  --color-success-soft: #132b1f;
+
+  /* The lifted dark primary is light, so text on it is dark. The other
+     component tokens are palette references and follow the overrides above. */
+  --primary-foreground: #0b1220;
+  --secondary-foreground: var(--color-primary);
+  --muted: #1a2540;
 }
 
 /* ------------------------------------------------------------------ *
@@ -55,10 +82,8 @@
 }
 
 .lang-ar {
-  --font-heading: var(--font-noto-kufi), "Noto Kufi Arabic", "Segoe UI", Tahoma,
-    sans-serif;
-  --font-body: var(--font-ibm-plex-arabic), "IBM Plex Sans Arabic", "Segoe UI",
-    Tahoma, sans-serif;
+  --font-heading: var(--font-tajawal), "Tajawal", "Segoe UI", Tahoma, sans-serif;
+  --font-body: var(--font-tajawal), "Tajawal", "Segoe UI", Tahoma, sans-serif;
 }
 
 /* ------------------------------------------------------------------ *
@@ -78,11 +103,28 @@
   --color-accent: var(--color-accent);
   --color-accent-dark: var(--color-accent-dark);
   --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
 
   --font-sans: var(--font-body);
   --font-heading: var(--font-heading);
 
   --radius-card: 1rem;
+
+  /* Motion: quick, directional, never bouncy. Used by the ribbon and layer
+     entrances and the order-lifecycle playhead. */
+  --ease-brisk: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @layer base {
@@ -92,6 +134,14 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Keep in-page anchors clear of the sticky header. */
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   body {
@@ -114,7 +164,13 @@
     letter-spacing: -0.02em;
   }
 
-  /* Kufi display type sets its own rhythm — no negative tracking, more leading. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Arabic display type sets its own rhythm — no negative tracking, more leading. */
   .lang-ar h1,
   .lang-ar h2,
   .lang-ar h3,
@@ -133,29 +189,208 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Hero order-lifecycle illustration. One playhead sweeps the four
- * stages; everything else is a quiet colour cross-fade tied to the
- * same step change. Reduced motion freezes it on the final frame.
+ * Graphic language: layered diagonal slabs derived from the Z. Purely
+ * decorative, and in the primary family only — the slabs sit behind
+ * body text, where the amber accent is not allowed to go. Each slab
+ * slides in once along its own axis: quick, directional, never bouncy.
  * ------------------------------------------------------------------ */
 @layer components {
+  .z-ribbons {
+    position: absolute;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .z-ribbon {
+    position: absolute;
+    inset-inline-start: -25%;
+    width: 150%;
+    border-radius: 24px;
+    transform: rotate(-24deg);
+    animation: z-ribbon-in 900ms var(--ease-brisk) both;
+  }
+
+  .z-ribbon-1 {
+    top: 30%;
+    height: 20%;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-primary) 12%, transparent),
+      color-mix(in oklab, var(--color-primary) 22%, transparent)
+    );
+  }
+
+  .z-ribbon-2 {
+    top: 52%;
+    height: 9%;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-primary) 20%, transparent),
+      transparent
+    );
+    animation-delay: 90ms;
+  }
+
+  .z-ribbon-3 {
+    top: 65%;
+    height: 4%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-primary) 16%, transparent)
+    );
+    animation-delay: 180ms;
+  }
+
+  /* On the deep closing band, where the slabs need more presence. */
+  .z-ribbons-deep .z-ribbon-1 {
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-primary) 45%, transparent),
+      color-mix(in oklab, #ffffff 20%, transparent)
+    );
+  }
+
+  .z-ribbons-deep .z-ribbon-2 {
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, #ffffff 22%, transparent),
+      transparent
+    );
+  }
+
+  .z-ribbons-deep .z-ribbon-3 {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, #ffffff 28%, transparent)
+    );
+  }
+
+  /* Illustration layers stacking into place. */
+  .z-layer {
+    animation: z-layer-in 560ms var(--ease-brisk) both;
+    animation-delay: var(--z-delay, 0ms);
+  }
+
+  /* Order-lifecycle illustration: one playhead sweeps the four stages, and
+     everything else is a quiet colour cross-fade tied to the same step. */
   .flow-playhead {
-    transition: block-size 620ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: block-size 620ms var(--ease-brisk);
   }
 
   .flow-step {
     transition:
-      color 380ms ease,
-      background-color 380ms ease,
-      border-color 380ms ease,
-      opacity 380ms ease;
+      color 320ms ease,
+      background-color 320ms ease,
+      border-color 320ms ease,
+      opacity 320ms ease;
   }
 
   .flow-code {
-    transition: opacity 420ms ease;
+    transition: opacity 360ms ease;
   }
 }
 
+@keyframes z-ribbon-in {
+  from {
+    opacity: 0;
+    translate: -6% 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes z-layer-in {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Official logo rendering.
+ *
+ * The approved exports carry real alpha, so they are drawn as plain
+ * transparent PNGs on any surface — no blend modes, no background-colour
+ * workarounds (see public/brand/README.md). We never redraw the logo;
+ * these rules only pick which of the two approved lockups is shown:
+ * the navy wordmark on light surfaces, the reversed white one on dark.
+ * ------------------------------------------------------------------ */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+
+/* Logos are never mirrored in RTL. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .z-ribbon,
+  .z-layer {
+    animation: none !important;
+  }
+
   .flow-playhead,
   .flow-step,
   .flow-code {

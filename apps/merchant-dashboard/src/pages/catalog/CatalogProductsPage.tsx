@@ -115,7 +115,7 @@ export function CatalogProductsPage() {
               className={cn(
                 "cursor-pointer rounded-[0.375rem] px-3 py-1.5 text-sm font-medium transition-colors",
                 status === tab.value
-                  ? "bg-primary-soft text-primary-dark"
+                  ? "bg-primary-soft text-primary-dark dark:text-primary"
                   : "text-ink-soft hover:text-ink"
               )}
             >
@@ -138,7 +138,7 @@ export function CatalogProductsPage() {
               aria-pressed={view === "list"}
               className={cn(
                 "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
-                view === "list" ? "bg-primary-soft text-primary-dark" : "text-ink-soft hover:text-ink"
+                view === "list" ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
               )}
             >
               <List className="size-4" aria-hidden />
@@ -149,7 +149,7 @@ export function CatalogProductsPage() {
               aria-pressed={view === "grid"}
               className={cn(
                 "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
-                view === "grid" ? "bg-primary-soft text-primary-dark" : "text-ink-soft hover:text-ink"
+                view === "grid" ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
               )}
             >
               <LayoutGrid className="size-4" aria-hidden />

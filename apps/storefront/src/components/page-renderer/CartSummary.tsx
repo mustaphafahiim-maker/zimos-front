@@ -1,7 +1,9 @@
 "use client";
 
 import { StoreLink } from "@/components/StoreRoute";
+import { btnPrimary } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
+import { useStore } from "@/lib/StoreContext";
 
 /**
  * The `cart` element. The real cart — quantities, totals, checkout — lives on
@@ -11,22 +13,20 @@ import { useCart } from "@/lib/CartProvider";
  */
 export function CartSummary({ title }: { title: string }) {
   const { itemCount, isLoading } = useCart();
+  const { t } = useStore();
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-5">
-      {title && <h3 className="font-display text-lg font-medium text-ink">{title}</h3>}
+    <div className="rounded-2xl border border-line bg-paper-raised p-5">
+      <h3 className="text-lg font-semibold text-ink">{title || t.renderer.yourCart}</h3>
       <p className="mt-1 text-sm text-ink-soft">
         {isLoading
-          ? "Loading your cart…"
+          ? t.renderer.cartLoading
           : itemCount === 0
-            ? "Your cart is empty."
-            : `${itemCount} item${itemCount === 1 ? "" : "s"} in your cart.`}
+            ? t.renderer.cartEmpty
+            : t.renderer.cartCount(itemCount)}
       </p>
-      <StoreLink
-        href="/cart"
-        className="mt-4 inline-flex items-center rounded-[0.5rem] bg-primary px-4 py-2 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark"
-      >
-        View cart
+      <StoreLink href="/cart" className={`${btnPrimary} mt-4`}>
+        {t.renderer.viewCart}
       </StoreLink>
     </div>
   );

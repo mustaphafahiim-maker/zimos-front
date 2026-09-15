@@ -15,7 +15,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Rocket, Save } from "lucide-react";
+import { Eye, Rocket, Save } from "lucide-react";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import type {
   CreateWebsitePagePayload,
@@ -33,6 +33,7 @@ import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { StorefrontPreview } from "@/components/StorefrontPreview";
 import { BlockLibrary } from "./BlockLibrary";
 import { SectionCard } from "./SectionCard";
 import { SectionInspector } from "./SectionInspector";
@@ -114,6 +115,7 @@ export function WebsiteEditorPage() {
   const [pendingPageDelete, setPendingPageDelete] = useState<WebsitePage | null>(null);
   /** Page the merchant asked to switch to while the canvas had unsaved edits. */
   const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Everything in the tree the editor doesn't touch, preserved across a save.
   const [treeMeta, setTreeMeta] = useState<Omit<PageTree, "sections">>({ version: 1 });
@@ -317,6 +319,16 @@ export function WebsiteEditorPage() {
           actions={
             <>
               {dirty && <span className="text-xs text-ink-soft">Unsaved changes</span>}
+              <Button
+                type="button"
+                variant={previewOpen ? "secondary" : "outline"}
+                aria-pressed={previewOpen}
+                disabled={!page}
+                onClick={() => setPreviewOpen((open) => !open)}
+              >
+                <Eye className="size-4" aria-hidden />
+                Preview
+              </Button>
               <Button type="button" onClick={() => void save()} disabled={!page || !dirty || saving}>
                 {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
                 {saving ? "Saving…" : "Save"}
@@ -443,6 +455,27 @@ export function WebsiteEditorPage() {
           </div>
         </DataState>
       </div>
+
+      {/* The storefront's own rendering of the open page, unsaved edits included.
+          A drawer, because the canvas already shares its row with two sidebars. */}
+      {previewOpen && page && (
+        <div className="fixed inset-y-0 inset-e-0 z-40 w-full border-s border-line shadow-xl lg:w-1/2">
+          <StorefrontPreview
+            workspaceId={workspaceId}
+            tree={{ ...treeMeta, sections }}
+            labels={{
+              title: "Preview",
+              hint: "Rendered by the storefront itself, unsaved changes included. Shoppers can't see this.",
+              refresh: "Refresh preview",
+              desktop: "Desktop width",
+              mobile: "Mobile width",
+              close: "Close preview",
+              frameTitle: "Storefront preview",
+            }}
+            onClose={() => setPreviewOpen(false)}
+          />
+        </div>
+      )}
 
       {/* Below xl the panel can't sit beside the canvas, so it becomes an overlay. */}
       {selected && (

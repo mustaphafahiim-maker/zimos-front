@@ -1,25 +1,53 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { PageRenderer } from "@/components/page-renderer";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { storeHref } from "@/lib/storeHref";
+import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
-import { storeHref } from "@/lib/storeHref";
-import { PageRenderer } from "@/components/page-renderer";
-import { StoreHeader } from "@/components/StoreHeader";
 
 export const revalidate = 60;
 
+type Params = Promise<{ workspaceId: string; path: string[] }>;
+
+/** Deduped so generateMetadata and the page share one API call. */
+const getPublishedPage = cache(async (workspaceId: string, pagePath: string) => {
+  const client = await createServerStorefrontApiClient();
+  return client.getStorefrontPage(workspaceId, pagePath);
+});
+
+function pathOf(path: string[] | undefined) {
+  // Next hands the segments already URL-decoded; the API normalises casing and
+  // trailing slashes itself.
+  return `/${(path ?? []).join("/")}`;
+}
+
 /**
- * The page's one public address, on the store's own subdomain — resolved
- * against the `metadataBase` the store layout sets.
+ * The page's own metadata, plus its one public address on the store's own
+ * subdomain — the canonical stays relative so the store layout's
+ * `metadataBase` resolves it there whichever host served this request.
  */
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ path: string[] }>;
-}): Promise<Metadata> {
-  const { path } = await params;
-  return { alternates: { canonical: `/${(path ?? []).join("/")}` } };
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { workspaceId, path } = await params;
+  const canonical = pathOf(path);
+  const result = await getPublishedPage(workspaceId, canonical);
+  if (result.kind !== "page") return { alternates: { canonical } };
+
+  const { page } = result.data;
+  const title = page.og?.title || page.title;
+  return {
+    title,
+    description: page.og?.description || undefined,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description: page.og?.description || undefined,
+      url: canonical,
+      ...(page.og?.image ? { images: [page.og.image] } : {}),
+    },
+  };
 }
 
 /**
@@ -27,24 +55,15 @@ export async function generateMetadata({
  * "/about", "/contact", "/help/shipping".
  *
  * This is the lowest-priority route under /store/[workspaceId]: Next resolves
- * the app's own routes first (`/cart`, `/checkout`, `/products/…`, `/orders/…`),
- * so those keep their commerce logic and only paths the app doesn't claim reach
- * the page builder. A path the merchant hasn't published is a plain 404.
+ * the app's own routes first (`/cart`, `/checkout`, `/products/…`, `/orders/…`,
+ * `/offer/…`, `/track`), so those keep their commerce logic and only paths the
+ * app doesn't claim reach the page builder. An unpublished path is a plain 404.
  */
-export default async function CustomStorePage({
-  params,
-}: {
-  params: Promise<{ workspaceId: string; path: string[] }>;
-}) {
+export default async function CustomStorePage({ params }: { params: Params }) {
   const { workspaceId, path } = await params;
-  // Next hands the segments already URL-decoded; the API normalises casing and
-  // trailing slashes itself.
-  const pagePath = `/${(path ?? []).join("/")}`;
-
-  const client = await createServerStorefrontApiClient();
   const [store, result, basePath] = await Promise.all([
     getStoreMeta(workspaceId),
-    client.getStorefrontPage(workspaceId, pagePath),
+    getPublishedPage(workspaceId, pathOf(path)),
     getStoreBasePath(workspaceId),
   ]);
 
@@ -66,10 +85,16 @@ export default async function CustomStorePage({
   const { page } = result.data;
   if ((page.tree?.sections?.length ?? 0) === 0) notFound();
 
+  const locale = await getStoreLocale(store);
+
   return (
     <main className="flex-1">
-      <StoreHeader store={store} />
-      <PageRenderer tree={page.tree} workspaceId={workspaceId} currency={store.currency} />
+      <PageRenderer
+        tree={page.tree}
+        workspaceId={workspaceId}
+        currency={store.currency}
+        locale={locale}
+      />
     </main>
   );
 }

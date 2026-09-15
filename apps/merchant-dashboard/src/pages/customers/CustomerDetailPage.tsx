@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Alert, Button, Input } from "@store-builder/ui";
-import type { Customer, CustomerAddress } from "@store-builder/api-client";
+import type { Customer, CustomerAddress, Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -13,6 +13,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { StatusBadge } from "@/components/StatusBadge";
+import { formatDate, formatMoney } from "@/lib/format";
 
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -44,12 +46,93 @@ export function CustomerDetailPage() {
         {customer && (
           <div className="space-y-6">
             <ContactForm customer={customer} onSaved={reload} />
+            <OrderHistorySection customer={customer} />
             <BlacklistSection customer={customer} onChanged={reload} />
             <AddressesSection customer={customer} onChanged={reload} />
           </div>
         )}
       </DataState>
     </div>
+  );
+}
+
+const HISTORY_PAGE_SIZE = 50;
+const HISTORY_MAX_PAGES = 20;
+
+/**
+ * The customer's orders, newest first.
+ *
+ * The API has no per-customer order list: a customer response carries no
+ * orders, and GET /orders filters only by state (paging by id, not date). So
+ * this pages through the store's orders and keeps this customer's, stopping as
+ * soon as it has found `totalOrders` of them — or after 1,000 orders, in which
+ * case it says the list may be incomplete. A customer with no orders costs no
+ * request at all.
+ */
+function OrderHistorySection({ customer }: { customer: Customer }) {
+  const workspaceId = useWorkspaceId();
+  const history = useAsync(async () => {
+    const found: Order[] = [];
+    if (customer.totalOrders === 0) return { orders: found, complete: true };
+    let cursor: string | undefined;
+    for (let page = 0; page < HISTORY_MAX_PAGES; page++) {
+      const { orders, nextCursor } = await apiClient.listOrders(workspaceId, {
+        limit: HISTORY_PAGE_SIZE,
+        cursor,
+      });
+      found.push(...orders.filter((order) => order.customerId === customer.id));
+      if (!nextCursor || found.length >= customer.totalOrders) {
+        found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        return { orders: found, complete: true };
+      }
+      cursor = nextCursor;
+    }
+    found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return { orders: found, complete: false };
+  }, [workspaceId, customer.id, customer.totalOrders]);
+
+  const orders = history.data?.orders ?? [];
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Orders</h2>
+      <p className="mt-1 text-sm text-ink-soft">Every order this customer has placed, newest first.</p>
+
+      <div className="mt-4">
+        <DataState
+          loading={history.loading}
+          error={history.error}
+          empty={orders.length === 0}
+          emptyMessage="No orders from this customer yet."
+          onRetry={() => history.refresh()}
+        >
+          <ul className="divide-y divide-line overflow-hidden rounded-[0.5rem] border border-line">
+            {orders.map((order) => (
+              <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <Link to={`/orders/${order.id}`} className="text-sm font-medium text-primary hover:underline">
+                    {order.orderNumber}
+                  </Link>
+                  <p className="text-xs text-ink-soft">{formatDate(order.createdAt)}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge label="Conf" value={order.confirmationState} />
+                  <StatusBadge label="Ship" value={order.fulfillmentState} />
+                  <span className="text-sm font-medium text-ink">
+                    {formatMoney(order.totalAmount, order.currency)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </DataState>
+        {history.data && !history.data.complete && (
+          <p className="mt-2 text-xs text-ink-soft">
+            Only the store&rsquo;s first 1,000 orders were searched, so this list may be incomplete.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

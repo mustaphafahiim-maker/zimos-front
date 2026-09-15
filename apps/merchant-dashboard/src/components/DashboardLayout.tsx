@@ -1,11 +1,13 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@store-builder/ui";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
+import { ZimosLogo } from "@/components/ZimosLogo";
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -13,15 +15,29 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
+  // The tab names the store being worked on, not the product — a merchant with
+  // several stores open in several tabs can tell them apart. Falls back to the
+  // product name until the workspace list resolves.
+  const storeName = currentWorkspace?.name;
+  useEffect(() => {
+    document.title = storeName ? `${storeName} — Dashboard` : "Zimos — Merchant Dashboard";
+  }, [storeName]);
+
   return (
     <div className="flex min-h-screen bg-paper">
       <aside className="hidden w-60 shrink-0 border-r border-line bg-paper-raised md:flex md:flex-col">
         <div className="px-5 py-5">
           <Link
             to="/"
-            className="font-display text-lg text-ink transition-opacity hover:opacity-80"
+            className="block transition-opacity hover:opacity-80"
+            aria-label={storeName ? `${storeName} — Zimos dashboard` : "Zimos dashboard"}
           >
-            Zimos
+            <ZimosLogo height={26} />
+            {storeName && (
+              <span className="mt-2 block truncate text-sm font-medium text-ink-soft">
+                {storeName}
+              </span>
+            )}
           </Link>
         </div>
         <nav className="flex-1 space-y-0.5 px-3">
@@ -102,6 +118,11 @@ export function DashboardLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-3 text-sm text-ink-soft">
+            {/* Dashboard-wide locale switch. Lives in the header (not the
+                sidebar footer beside ThemeToggle) so it stays reachable on
+                mobile, where the sidebar is hidden. */}
+            <LanguageSwitch className="hidden sm:inline-flex" />
+            <LanguageSwitch compact className="sm:hidden" />
             <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
             <div className="flex size-8 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-dark dark:text-primary">
               {(user?.fullName ?? user?.email ?? "?").charAt(0).toUpperCase()}

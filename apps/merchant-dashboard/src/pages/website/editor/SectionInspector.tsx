@@ -1,24 +1,43 @@
 import type { ReactNode } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label } from "@store-builder/ui";
-import type { PageElement, PageSection } from "@store-builder/api-client";
+import type { PageElement, PageElementType, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import {
   ELEMENT_SPECS,
+  elementPosition,
+  moveElement,
   sectionElements,
   sectionLabel,
   setElementProp,
   type FieldSpec,
 } from "./blocks";
+import { MoveButtons } from "./MoveButtons";
+import {
+  editorUi,
+  elementLabel,
+  fieldHint,
+  fieldLabel,
+  optionLabel,
+  useEditorLocale,
+  type EditorUi,
+} from "./editorLocale";
 import { ImageField, ImageListField } from "./ImageField";
 
 /**
  * The right-hand panel. A section has no editable fields of its own — the tree
  * gives sections no props — so this walks the section's elements and renders a
  * fieldset per element from that element type's `FieldSpec[]`.
+ *
+ * Content inputs are `dir="auto"`: merchants write Arabic and English copy,
+ * and each field should follow the text typed into it, whatever direction the
+ * editor chrome is in. URL-like fields stay left-to-right.
  */
+
+/** Prop keys that hold URLs or ids, which always read left-to-right. */
+const LTR_KEYS = new Set(["href", "url", "src", "productId", "name"]);
 
 // --- prop readers: props are `unknown`, so coerce defensively --------------
 
@@ -97,29 +116,32 @@ function StringListEditor({
   hint,
   itemLabel,
   value,
+  ui,
   onChange,
 }: {
   label: string;
   hint?: string;
   itemLabel: string;
   value: string[];
+  ui: EditorUi;
   onChange: (next: string[]) => void;
 }) {
   return (
-    <ListShell label={label} hint={hint} addLabel={`Add ${itemLabel.toLowerCase()}`} onAdd={() => onChange([...value, ""])}>
+    <ListShell label={label} hint={hint} addLabel={ui.addItem(itemLabel)} onAdd={() => onChange([...value, ""])}>
       <div className="space-y-2">
         {value.map((item, i) => (
           <div key={i} className="flex items-center gap-2">
             <Input
               value={item}
-              aria-label={`${itemLabel} ${i + 1}`}
+              dir="auto"
+              aria-label={ui.itemAria(itemLabel, i + 1)}
               onChange={(e) => onChange(value.map((v, j) => (j === i ? e.target.value : v)))}
             />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Remove ${itemLabel.toLowerCase()} ${i + 1}`}
+              aria-label={ui.removeItem(itemLabel, i + 1)}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               <X className="size-4" aria-hidden />
@@ -135,33 +157,36 @@ function QaListEditor({
   label,
   hint,
   value,
+  ui,
   onChange,
 }: {
   label: string;
   hint?: string;
   value: QaItem[];
+  ui: EditorUi;
   onChange: (next: QaItem[]) => void;
 }) {
   function patch(i: number, key: keyof QaItem, v: string) {
     onChange(value.map((item, j) => (j === i ? { ...item, [key]: v } : item)));
   }
   return (
-    <ListShell label={label} hint={hint} addLabel="Add question" onAdd={() => onChange([...value, { q: "", a: "" }])}>
+    <ListShell label={label} hint={hint} addLabel={ui.addQuestion} onAdd={() => onChange([...value, { q: "", a: "" }])}>
       <div className="space-y-3">
         {value.map((item, i) => (
           <div key={i} className="space-y-2 rounded-[0.5rem] border border-line p-3">
             <div className="flex items-center gap-2">
               <Input
                 value={item.q}
-                placeholder="Question"
-                aria-label={`Question ${i + 1}`}
+                dir="auto"
+                placeholder={ui.question}
+                aria-label={ui.questionAria(i + 1)}
                 onChange={(e) => patch(i, "q", e.target.value)}
               />
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label={`Remove question ${i + 1}`}
+                aria-label={ui.removeQuestion(i + 1)}
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
               >
                 <X className="size-4" aria-hidden />
@@ -169,8 +194,9 @@ function QaListEditor({
             </div>
             <Textarea
               value={item.a}
-              placeholder="Answer"
-              aria-label={`Answer ${i + 1}`}
+              dir="auto"
+              placeholder={ui.answer}
+              aria-label={ui.answerAria(i + 1)}
               rows={2}
               onChange={(e) => patch(i, "a", e.target.value)}
             />
@@ -185,11 +211,13 @@ function LinkListEditor({
   label,
   hint,
   value,
+  ui,
   onChange,
 }: {
   label: string;
   hint?: string;
   value: LinkItem[];
+  ui: EditorUi;
   onChange: (next: LinkItem[]) => void;
 }) {
   function patch(i: number, key: keyof LinkItem, v: string) {
@@ -199,7 +227,7 @@ function LinkListEditor({
     <ListShell
       label={label}
       hint={hint}
-      addLabel="Add link"
+      addLabel={ui.addLink}
       onAdd={() => onChange([...value, { platform: "", url: "" }])}
     >
       <div className="space-y-2">
@@ -207,22 +235,24 @@ function LinkListEditor({
           <div key={i} className="flex items-center gap-2">
             <Input
               value={item.platform}
+              dir="ltr"
               placeholder="instagram"
-              aria-label={`Platform ${i + 1}`}
+              aria-label={ui.platformAria(i + 1)}
               className="w-1/3"
               onChange={(e) => patch(i, "platform", e.target.value)}
             />
             <Input
               value={item.url}
+              dir="ltr"
               placeholder="https://…"
-              aria-label={`Link ${i + 1}`}
+              aria-label={ui.linkAria(i + 1)}
               onChange={(e) => patch(i, "url", e.target.value)}
             />
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`Remove link ${i + 1}`}
+              aria-label={ui.removeLink(i + 1)}
               onClick={() => onChange(value.filter((_, j) => j !== i))}
             >
               <X className="size-4" aria-hidden />
@@ -237,23 +267,31 @@ function LinkListEditor({
 // --- one field ------------------------------------------------------------
 
 function ElementField({
+  elementType,
   spec,
   props,
   onChange,
 }: {
+  elementType: PageElementType;
   spec: FieldSpec;
   props: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
   const raw = props[spec.key];
+  const label = fieldLabel(elementType, spec.key, spec.label, locale);
+  const hint = fieldHint(elementType, spec.key, spec.hint, locale);
+  const dir = LTR_KEYS.has(spec.key) ? "ltr" : "auto";
 
   switch (spec.kind) {
     case "text":
       return (
         <TextField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           placeholder={spec.placeholder}
+          dir={dir}
           value={asString(raw)}
           onChange={(e) => onChange(spec.key, e.target.value)}
         />
@@ -261,11 +299,12 @@ function ElementField({
 
     case "textarea":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Textarea
               id={id}
               rows={3}
+              dir={dir}
               placeholder={spec.placeholder}
               value={asString(raw)}
               onChange={(e) => onChange(spec.key, e.target.value)}
@@ -276,7 +315,7 @@ function ElementField({
 
     case "number":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Input
               id={id}
@@ -304,13 +343,13 @@ function ElementField({
             onChange={(e) => onChange(spec.key, e.target.checked)}
             className="size-4 rounded border-line text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
           />
-          {spec.label}
+          {label}
         </label>
       );
 
     case "select":
       return (
-        <Field label={spec.label} hint={spec.hint}>
+        <Field label={label} hint={hint}>
           {({ id }) => (
             <Select
               id={id}
@@ -325,7 +364,7 @@ function ElementField({
               <option value="">—</option>
               {spec.options.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {optionLabel(spec.key, o.value, o.label, locale)}
                 </option>
               ))}
             </Select>
@@ -336,8 +375,8 @@ function ElementField({
     case "image":
       return (
         <ImageField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asString(raw)}
           onChange={(url) => onChange(spec.key, url)}
         />
@@ -346,8 +385,8 @@ function ElementField({
     case "imageList":
       return (
         <ImageListField
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asStringList(raw)}
           onChange={(urls) => onChange(spec.key, urls)}
         />
@@ -356,10 +395,11 @@ function ElementField({
     case "stringList":
       return (
         <StringListEditor
-          label={spec.label}
-          hint={spec.hint}
-          itemLabel={spec.itemLabel}
+          label={label}
+          hint={hint}
+          itemLabel={locale === "ar" ? ui.listItem : spec.itemLabel}
           value={asStringList(raw)}
+          ui={ui}
           onChange={(next) => onChange(spec.key, next)}
         />
       );
@@ -367,9 +407,10 @@ function ElementField({
     case "qaList":
       return (
         <QaListEditor
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asQaList(raw)}
+          ui={ui}
           onChange={(next) => onChange(spec.key, next)}
         />
       );
@@ -377,22 +418,62 @@ function ElementField({
     case "linkList":
       return (
         <LinkListEditor
-          label={spec.label}
-          hint={spec.hint}
+          label={label}
+          hint={hint}
           value={asLinkList(raw)}
+          ui={ui}
           onChange={(next) => onChange(spec.key, next)}
         />
       );
   }
 }
 
-function ElementFieldset({
+/**
+ * Reorder controls for one element within its column. Renders nothing when the
+ * element has no neighbour to swap with.
+ */
+export function ElementMoveButtons({
+  section,
+  elementId,
+  label,
+  ui,
+  onChange,
+}: {
+  section: PageSection;
+  elementId: string;
+  label: string;
+  ui: EditorUi;
+  onChange: (next: PageSection) => void;
+}) {
+  const position = elementPosition(section, elementId);
+  if (!position || position.count < 2) return null;
+  return (
+    <MoveButtons
+      canMoveUp={position.index > 0}
+      canMoveDown={position.index < position.count - 1}
+      onMoveUp={() => onChange(moveElement(section, elementId, -1))}
+      onMoveDown={() => onChange(moveElement(section, elementId, 1))}
+      upLabel={ui.moveElementUp(label)}
+      downLabel={ui.moveElementDown(label)}
+    />
+  );
+}
+
+/**
+ * The fields of one element. Shared with the funnel builder's form view, which
+ * lays several of these out inline instead of in a side panel; `actions` puts
+ * extra controls (e.g. reordering) on the element's caption row.
+ */
+export function ElementFieldset({
   element,
   onPropChange,
+  actions,
 }: {
   element: PageElement;
   onPropChange: (element: PageElement, key: string, value: unknown) => void;
+  actions?: ReactNode;
 }) {
+  const locale = useEditorLocale();
   const spec = ELEMENT_SPECS[element.type];
   const Icon = spec.icon;
   const props = element.props ?? {};
@@ -401,11 +482,13 @@ function ElementFieldset({
     <div className="space-y-3 border-b border-line px-4 py-4 last:border-b-0">
       <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
         <Icon className="size-3.5" aria-hidden />
-        {spec.label}
+        <span className="min-w-0 flex-1 truncate">{elementLabel(element.type, spec.label, locale)}</span>
+        {actions}
       </div>
       {spec.fields.map((field) => (
         <ElementField
           key={field.key}
+          elementType={element.type}
           spec={field}
           props={props}
           onChange={(key, value) => onPropChange(element, key, value)}
@@ -426,6 +509,8 @@ export function SectionInspector({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
   const elements = sectionElements(section);
 
   return (
@@ -433,28 +518,33 @@ export function SectionInspector({
       <div className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate font-display text-sm font-medium text-ink">
-            {sectionLabel(section)}
+            {sectionLabel(section, locale)}
           </h2>
-          <p className="truncate text-xs text-ink-soft">
-            {elements.length} {elements.length === 1 ? "element" : "elements"}
-          </p>
+          <p className="truncate text-xs text-ink-soft">{ui.elementCount(elements.length)}</p>
         </div>
-        <Button type="button" size="icon" variant="ghost" aria-label="Close panel" onClick={onClose}>
+        <Button type="button" size="icon" variant="ghost" aria-label={ui.closePanel} onClick={onClose}>
           <X className="size-4" aria-hidden />
         </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {elements.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-soft">
-            This section has no elements to edit.
-          </p>
+          <p className="px-4 py-6 text-sm text-ink-soft">{ui.noElements}</p>
         ) : (
           elements.map((element) => (
             <ElementFieldset
               key={element.id}
               element={element}
               onPropChange={(el, key, value) => onChange(setElementProp(section, el, key, value))}
+              actions={
+                <ElementMoveButtons
+                  section={section}
+                  elementId={element.id}
+                  label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
+                  ui={ui}
+                  onChange={onChange}
+                />
+              }
             />
           ))
         )}
@@ -463,7 +553,7 @@ export function SectionInspector({
       <div className="border-t border-line px-4 py-3">
         <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
           <Trash2 className="size-4" aria-hidden />
-          Delete section
+          {ui.deleteSection}
         </Button>
       </div>
     </div>

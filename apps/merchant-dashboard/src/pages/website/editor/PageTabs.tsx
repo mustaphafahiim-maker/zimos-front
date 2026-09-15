@@ -52,7 +52,7 @@ export function PageTabs({
                   <span
                     className={cn(
                       "max-w-40 truncate",
-                      active ? "font-medium text-primary-dark" : "text-ink"
+                      active ? "font-medium text-primary-dark dark:text-primary" : "text-ink"
                     )}
                   >
                     {page.title}

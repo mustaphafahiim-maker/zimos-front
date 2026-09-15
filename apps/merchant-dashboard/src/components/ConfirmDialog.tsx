@@ -8,6 +8,9 @@ interface ConfirmDialogProps {
   title: string;
   description?: string;
   confirmLabel?: string;
+  cancelLabel?: string;
+  /** Shown on the confirm button while `onConfirm` runs. */
+  busyLabel?: string;
   destructive?: boolean;
   onCancel: () => void;
   /** Resolve to close. Throw to show the error inline and stay open. */
@@ -20,6 +23,8 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  busyLabel = "Working…",
   destructive = false,
   onCancel,
   onConfirm,
@@ -56,14 +61,14 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="outline" onClick={handleCancel} disabled={busy}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button
             variant={destructive ? "danger" : "primary"}
             onClick={handleConfirm}
             disabled={busy}
           >
-            {busy ? "Working…" : confirmLabel}
+            {busy ? busyLabel : confirmLabel}
           </Button>
         </>
       }

@@ -23,6 +23,7 @@
  * hold the light values here and are overridden under `.dark`, so any
  * token-based utility (bg-paper, text-ink, border-line, …) flips with
  * the theme without needing `dark:` variants.
+ * Values and rationale: packages/ui/DESIGN_SYSTEM.md.
  * ------------------------------------------------------------------ */
 :root {
   color-scheme: light;
@@ -38,82 +39,61 @@
   --color-primary-soft: #E8F0FE;
 
   --color-accent: #e2a33d;
-  --color-accent-dark: #b87f24;
+  /* Badge text on accent-soft — deep enough to hold 4.5:1 there. */
+  --color-accent-dark: #91641c;
   --color-accent-soft: #fbf0dc;
 
   --color-danger: #b3452f;
   --color-danger-soft: #f6e6e1;
-  --color-success: #3b7a57;
+  /* Badge / toast text on success-soft — deep enough to hold 4.5:1 there. */
+  --color-success: #357150;
   --color-success-soft: #e5f0e9;
 
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Tajawal follows each Latin family so Arabic copy (the funnel builder's
+     Arabic mode) draws in it; Latin text is unaffected. Same approach as the
+     storefront — see packages/ui/DESIGN_SYSTEM.md §2. */
+  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 0.625rem;
 
-  --background: oklch(1 0 0);
-
-  --foreground: oklch(0.145 0 0);
-
-  --card: oklch(1 0 0);
-
-  --card-foreground: oklch(0.145 0 0);
-
-  --popover: oklch(1 0 0);
-
-  --popover-foreground: oklch(0.145 0 0);
-
-  --primary: oklch(0.205 0 0);
-
-  --primary-foreground: oklch(0.985 0 0);
-
-  --secondary: oklch(0.97 0 0);
-
-  --secondary-foreground: oklch(0.205 0 0);
-
-  --muted: oklch(0.97 0 0);
-
-  --muted-foreground: oklch(0.556 0 0);
-
-  --accent: oklch(0.97 0 0);
-
-  --accent-foreground: oklch(0.205 0 0);
-
-  --destructive: oklch(0.577 0.245 27.325);
-
-  --border: oklch(0.922 0 0);
-
-  --input: oklch(0.922 0 0);
-
-  --ring: oklch(0.708 0 0);
-
-  --chart-1: oklch(0.87 0 0);
-
-  --chart-2: oklch(0.556 0 0);
-
-  --chart-3: oklch(0.439 0 0);
-
-  --chart-4: oklch(0.371 0 0);
-
-  --chart-5: oklch(0.269 0 0);
-
+  /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
+     `@store-builder/ui` are built against these. They point at the brand
+     palette above, so those components render in this app's colours and
+     flip with `.dark`, rather than in the library's neutral greys. */
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  --muted: #ecebe3;
+  --muted-foreground: var(--color-ink-soft);
+  /* `bg-accent` resolves to the brand amber, so its foreground is dark ink. */
+  --accent: var(--color-accent);
+  --accent-foreground: #16211f;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-dark);
+  --chart-4: var(--color-accent-dark);
+  --chart-5: var(--color-success);
   --radius: 0.625rem;
-
-  --sidebar: oklch(0.985 0 0);
-
-  --sidebar-foreground: oklch(0.145 0 0);
-
-  --sidebar-primary: oklch(0.205 0 0);
-
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-
-  --sidebar-accent: oklch(0.97 0 0);
-
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-
-  --sidebar-border: oklch(0.922 0 0);
-
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary-dark);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
 }
 
 .dark {
@@ -141,37 +121,39 @@
   --color-danger-soft: #2b1613;
   --color-success: #5cbf8f;
   --color-success-soft: #132b1f;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  /* The lifted dark primaries are light, so text on them is dark. */
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #0b1220;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary);
+  --muted: #1a2540;
+  --muted-foreground: var(--color-ink-soft);
+  --accent: var(--color-accent);
+  --accent-foreground: #0b1220;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: #2c3b57;
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-dark);
+  --chart-4: var(--color-accent-dark);
+  --chart-5: var(--color-success);
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #0b1220;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -301,4 +283,71 @@
   html {
     @apply font-sans;
   }
+}
+/* ------------------------------------------------------------------ *
+ * Official logo rendering.
+ *
+ * The approved ZIMOS exports carry real alpha, so they are drawn as plain
+ * transparent PNGs on any surface — no blend modes, no background-colour
+ * workarounds (see public/brand/README.md). We never redraw the logo;
+ * these rules only pick which of the two approved lockups is shown:
+ * the navy wordmark on light surfaces, the reversed white one on dark.
+ * Kept in sync with the marketing, storefront and platform-admin copies.
+ * ------------------------------------------------------------------ */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+
+/* Logos are never mirrored in RTL — and the dashboard ships an Arabic UI. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

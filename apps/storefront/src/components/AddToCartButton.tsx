@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useCart } from "@/lib/CartProvider";
+import { useStore } from "@/lib/StoreContext";
+import { CartGlyph, CheckIcon } from "./Icons";
+import { btnPrimary, btnSecondary } from "./ui";
 
 type Status = "idle" | "loading" | "added" | "error";
 
@@ -10,14 +13,19 @@ export function AddToCartButton({
   offerId,
   defaultQuantity = 1,
   disabled = false,
+  variant = "primary",
+  className = "",
 }: {
   variantId: string | undefined;
   offerId?: string;
   defaultQuantity?: number;
   /** e.g. the product/variant is out of stock. */
   disabled?: boolean;
+  variant?: "primary" | "secondary";
+  className?: string;
 }) {
   const { addItem } = useCart();
+  const { t } = useStore();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -33,31 +41,30 @@ export function AddToCartButton({
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
     } catch (err) {
       setStatus("error");
-      setError(err instanceof Error ? err.message : "تعذّر إضافة المنتج للسلة");
+      setError(err instanceof Error && err.message ? err.message : t.product.addFailed);
     }
   }
 
   return (
-    <div className="mt-6">
+    <div className={className}>
       <button
         type="button"
         onClick={handleClick}
         disabled={unavailable || status === "loading"}
-        className="cursor-pointer w-full rounded-[0.5rem] bg-primary px-5 py-3 text-sm font-medium text-paper-raised transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+        className={`${variant === "primary" ? btnPrimary : btnSecondary} w-full`}
       >
+        {status === "added" ? <CheckIcon /> : <CartGlyph />}
         {unavailable
-          ? "غير متوفر حاليًا"
+          ? t.product.unavailable
           : status === "loading"
-            ? "جارٍ الإضافة…"
-            : "أضف للسلة"}
+            ? t.product.adding
+            : status === "added"
+              ? t.product.added
+              : t.product.addToCart}
       </button>
-
-      {status === "added" && (
-        <p className="mt-2 text-sm text-primary-dark">تمت الإضافة للسلة ✓</p>
-      )}
-      {status === "error" && error && (
-        <p className="mt-2 text-sm text-danger">{error}</p>
-      )}
+      <p aria-live="polite" className="mt-2 min-h-0 text-sm text-danger empty:hidden">
+        {status === "error" && error ? error : ""}
+      </p>
     </div>
   );
 }

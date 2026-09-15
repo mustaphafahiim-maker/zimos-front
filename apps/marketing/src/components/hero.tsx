@@ -1,41 +1,61 @@
 import type { Dictionary } from "@/i18n/dictionary";
-import { OrderLifecycle } from "./order-lifecycle";
+import { REGISTER_URL } from "@/lib/urls";
+import { HeroVisual } from "./hero-visual";
+import { ArrowIcon } from "./icons";
+import { Ribbons } from "./ribbons";
+import { btnPrimary, btnSecondary, container } from "./ui";
 
-const REGISTER_URL = "https://app.zimos.co/register";
-
-export function Hero({ copy }: { copy: Dictionary["hero"] }) {
+export function Hero({
+  copy,
+  brand,
+}: {
+  copy: Dictionary["hero"];
+  brand: Dictionary["brand"];
+}) {
   return (
-    <section className="mx-auto grid max-w-6xl gap-12 px-4 pt-14 pb-20 sm:px-6 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-center lg:gap-16 lg:pt-24">
-      <div className="max-w-xl">
-        <p className="flex items-center gap-2 text-sm font-medium text-primary-dark">
-          <span aria-hidden className="h-px w-6 bg-accent-dark" />
-          {copy.kicker}
-        </p>
+    <section
+      aria-labelledby="hero-heading"
+      className="relative isolate overflow-hidden border-b border-line/70 bg-linear-to-b from-paper-raised to-paper"
+    >
+      <Ribbons className="inset-y-0 end-0 -z-10 w-full lg:w-[62%]" />
 
-        <h1 className="mt-4 text-4xl font-semibold text-balance sm:text-5xl lg:text-[3.25rem]">
-          {copy.headline}
-        </h1>
+      <div
+        className={`${container} grid gap-14 pt-12 pb-20 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:items-center lg:gap-12 lg:pt-24 lg:pb-28`}
+      >
+        <div className="max-w-xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-paper-raised/80 px-3 py-1 text-sm font-medium text-ink-soft">
+            <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+            {copy.kicker}
+          </p>
 
-        <p className="mt-5 text-lg text-pretty text-ink-soft">{copy.subheadline}</p>
+          <h1 id="hero-heading" className="mt-6 text-5xl font-bold text-ink sm:text-6xl lg:text-7xl">
+            {copy.headline}
+          </h1>
+          {brand.loopLatin ? (
+            <p className="mt-3 text-sm font-medium text-primary">
+              <span lang="en" dir="ltr">
+                {brand.loopLatin}
+              </span>
+            </p>
+          ) : null}
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a
-            href={REGISTER_URL}
-            className="inline-flex h-12 items-center rounded-full bg-primary px-5 text-base font-semibold text-white transition-colors hover:bg-primary-dark"
-          >
-            {copy.startStore}
-          </a>
-          <a
-            href="#how-it-works"
-            className="inline-flex h-12 items-center rounded-full border border-line bg-paper-raised px-5 text-base font-medium text-ink transition-colors hover:border-ink-soft"
-          >
-            {copy.seeHow}
-          </a>
+          <p className="mt-6 text-lg leading-relaxed text-pretty text-ink-soft sm:text-xl">
+            {copy.subheadline}
+          </p>
+
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a href={REGISTER_URL} className={`${btnPrimary} h-12 px-6 text-base`}>
+              {copy.primaryCta}
+              <ArrowIcon width="1.1rem" height="1.1rem" />
+            </a>
+            <a href="#how-it-works" className={`${btnSecondary} h-12 px-6 text-base`}>
+              {copy.secondaryCta}
+            </a>
+          </div>
+          <p className="mt-4 text-sm text-ink-soft">{copy.ctaNote}</p>
         </div>
-      </div>
 
-      <div className="lg:justify-self-end">
-        <OrderLifecycle />
+        <HeroVisual copy={copy.visual} />
       </div>
     </section>
   );

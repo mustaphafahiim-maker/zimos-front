@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { CSSProperties } from "react";
-import { ApiError, type StorefrontMeta } from "@store-builder/api-client";
+import { ApiError, type StorefrontMeta, type StorefrontProductDetail } from "@store-builder/api-client";
 import { createServerStorefrontApiClient } from "./serverApiClient";
 
 /**
@@ -19,6 +19,22 @@ export const getStoreMeta = cache(async (workspaceId: string): Promise<Storefron
     throw err;
   }
 });
+
+/**
+ * One product, deduped per request so `generateMetadata` and the page share a
+ * single API call. Null on 404.
+ */
+export const getStorefrontProduct = cache(
+  async (workspaceId: string, idOrSlug: string): Promise<StorefrontProductDetail | null> => {
+    const client = await createServerStorefrontApiClient();
+    try {
+      return await client.getStorefrontProduct(workspaceId, idOrSlug);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
+  }
+);
 
 /** Matches the keys the dashboard's Settings page writes into themeSettings. */
 const HEX = /^#[0-9a-f]{6}$/i;

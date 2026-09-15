@@ -1,54 +1,69 @@
 import type { StorefrontMeta } from "@store-builder/api-client";
-import { CartIcon } from "@/components/CartIcon";
 import { StoreLink } from "@/components/StoreRoute";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ZimosLogo } from "@/components/ZimosLogo";
+import { getDictionary, type Locale } from "@/lib/i18n";
+import { CartIcon } from "./CartIcon";
+import { LanguageSwitch } from "./LanguageSwitch";
+import { ThemeToggle } from "./ThemeToggle";
+import { container } from "./ui";
 
 /**
- * The store's masthead. Shared by the home page and by any page the merchant
- * built in the website editor, so a custom page ("About us") sits under the
+ * The store's masthead, rendered once by the store layout for every page — so a
+ * page the merchant built in the website editor ("About us") sits under the
  * same branding and keeps the cart within reach instead of looking orphaned.
+ *
+ * It carries the merchant's identity — their logo when they have uploaded one,
+ * and their name either way. A store that has not uploaded a logo yet falls
+ * back to the ZIMOS lockup, which is otherwise confined to the footer's
+ * "Powered by" line.
  */
-export function StoreHeader({
-  store,
-  /** The home page is its own destination — don't link the title to itself. */
-  linkHome = true,
-}: {
-  store: StorefrontMeta;
-  linkHome?: boolean;
-}) {
-  const title = (
-    <h1 className="font-display text-3xl font-medium" style={{ color: "var(--brand-primary)" }}>
-      {store.name}
-    </h1>
-  );
+export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: Locale }) {
+  const t = getDictionary(locale);
 
   return (
-    <header className="relative border-b border-line bg-paper-raised px-6 py-10 text-center">
+    <header className="sticky top-0 z-30 border-b border-line bg-paper-raised/95 backdrop-blur supports-[backdrop-filter]:bg-paper-raised/85">
       {/* Brand bar — the merchant's two colours, edge to edge. */}
       <div
-        className="absolute inset-x-0 top-0 h-1"
+        className="h-1 w-full"
         style={{
           backgroundImage:
             "linear-gradient(to right, var(--brand-primary), var(--brand-secondary))",
         }}
         aria-hidden
       />
-      <div className="absolute right-4 top-4 flex items-center gap-2 sm:right-6 sm:top-6">
-        <ThemeToggle />
-        <CartIcon />
-      </div>
-      {store.logoUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={store.logoUrl} alt={store.name} className="mx-auto mb-4 h-10" />
-      )}
-      {linkHome ? (
-        <StoreLink href="/" className="inline-block transition-opacity hover:opacity-80">
-          {title}
+      <div className={`${container} flex h-16 items-center justify-between gap-3`}>
+        <StoreLink
+          href="/"
+          className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85"
+        >
+          {store.logoUrl ? (
+            // Merchant logos are arbitrary remote URLs (no next/image allowlist).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={store.logoUrl}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-xl object-contain"
+            />
+          ) : (
+            <ZimosLogo height={32} surface="auto" className="shrink-0" />
+          )}
+          <span className="truncate font-display text-lg font-bold text-ink">{store.name}</span>
         </StoreLink>
-      ) : (
-        title
-      )}
-      {store.tagline && <p className="mt-2 text-sm text-ink-soft">{store.tagline}</p>}
+
+        <nav aria-label={t.common.menu} className="flex items-center gap-2">
+          <StoreLink
+            href="/track"
+            className="hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary sm:inline-flex"
+          >
+            {t.common.trackOrder}
+          </StoreLink>
+          <LanguageSwitch />
+          <ThemeToggle className="hidden sm:inline-flex" />
+          <CartIcon />
+        </nav>
+      </div>
     </header>
   );
 }

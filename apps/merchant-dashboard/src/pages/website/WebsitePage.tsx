@@ -31,7 +31,7 @@ function TemplateThumb({ url, name }: { url: string | null; name: string }) {
     );
   }
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center bg-primary-soft text-primary-dark">
+    <div className="flex aspect-[4/3] w-full items-center justify-center bg-primary-soft text-primary-dark dark:text-primary">
       <LayoutTemplate className="size-8" aria-hidden />
     </div>
   );

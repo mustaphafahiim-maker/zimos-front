@@ -1,57 +1,60 @@
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionary";
-
-const REGISTER_URL = "https://app.zimos.co/register";
-const LOGIN_URL = "https://app.zimos.co/login";
+import { LocaleSwitcher } from "./locale-switcher";
+import { container } from "./ui";
+import { ZimosLogo } from "./zimos-logo";
 
 /**
- * Wordmark, tagline, and the same handful of links the header carries.
- * No contact address or social links — none exist yet. Never links to
- * platform-admin. The © year is computed at render, not hardcoded.
+ * Logo, tagline, four link columns and the language switch. Route links are
+ * placeholders prefixed with the active locale. The © year is computed at render.
  */
 export function SiteFooter({
   copy,
-  nav,
+  brand,
+  locale,
 }: {
   copy: Dictionary["footer"];
-  nav: Dictionary["nav"];
+  brand: Dictionary["brand"];
+  locale: Locale;
 }) {
   const year = new Date().getFullYear();
 
   return (
     <footer className="border-t border-line bg-paper-raised">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
+      <div className={`${container} py-14 sm:py-16`}>
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <div className="max-w-xs">
-            <div className="flex items-center gap-2 font-heading text-lg font-semibold tracking-tight text-ink">
-              <span aria-hidden className="size-2.5 rounded-[3px] bg-primary" />
-              {nav.brand}
+            <ZimosLogo height={32} />
+            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{brand.tomorrow}</p>
+            <div className="mt-6 flex items-center gap-3">
+              <span className="text-sm text-ink-soft">{copy.languageLabel}</span>
+              <LocaleSwitcher />
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-              {copy.tagline}
-            </p>
           </div>
 
-          <nav
-            aria-label={copy.navLabel}
-            className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-ink-soft"
-          >
-            <a href="#features" className="transition-colors hover:text-ink">
-              {nav.features}
-            </a>
-            <a href="#pricing" className="transition-colors hover:text-ink">
-              {nav.pricing}
-            </a>
-            <a href={LOGIN_URL} className="transition-colors hover:text-ink">
-              {nav.login}
-            </a>
-            <a href={REGISTER_URL} className="transition-colors hover:text-ink">
-              {nav.startStore}
-            </a>
+          <nav aria-label={copy.navLabel} className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            {copy.columns.map((column) => (
+              <div key={column.title}>
+                <h2 className="text-sm font-semibold text-ink">{column.title}</h2>
+                <ul className="mt-4 space-y-3">
+                  {column.links.map((link) => (
+                    <li key={link.href}>
+                      <a
+                        href={link.href.startsWith("#") ? link.href : `/${locale}${link.href}`}
+                        className="text-sm text-ink-soft transition-colors hover:text-primary"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </nav>
         </div>
 
-        <p className="mt-10 text-sm text-ink-soft">
-          © {year} {nav.brand} · {copy.rights}
+        <p className="mt-12 border-t border-line pt-6 text-sm text-ink-soft">
+          © {year} {brand.name} · {copy.rights}
         </p>
       </div>
     </footer>

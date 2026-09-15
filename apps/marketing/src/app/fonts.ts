@@ -1,12 +1,7 @@
-import {
-  Fraunces,
-  IBM_Plex_Sans_Arabic,
-  Noto_Kufi_Arabic,
-  Plus_Jakarta_Sans,
-} from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans, Tajawal } from "next/font/google";
 
 /**
- * All four families are loaded on every route (the locale is only known
+ * All three families are loaded on every route (the locale is only known
  * per-request, below the root layout). Each exposes a CSS variable; the root
  * layout puts every `.variable` class on <html> plus a `lang-*` class, and
  * `globals.css` maps `--font-heading` / `--font-body` to the right pair for
@@ -28,25 +23,18 @@ export const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
 });
 
-// Arabic headings.
-export const notoKufiArabic = Noto_Kufi_Arabic({
+// Arabic headings and body (not a variable font — weights are explicit).
+// Tajawal has no 600, so `font-semibold` renders at 700.
+export const tajawal = Tajawal({
   subsets: ["arabic"],
+  weight: ["400", "500", "700"],
   display: "swap",
-  variable: "--font-noto-kufi",
-});
-
-// Arabic body (not a variable font — weights are explicit).
-export const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-ibm-plex-arabic",
+  variable: "--font-tajawal",
 });
 
 /** Space-separated `.variable` classes for every family. */
 export const fontVariables = [
   fraunces.variable,
   plusJakarta.variable,
-  notoKufiArabic.variable,
-  ibmPlexSansArabic.variable,
+  tajawal.variable,
 ].join(" ");

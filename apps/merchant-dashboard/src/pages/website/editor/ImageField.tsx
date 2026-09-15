@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
+import { editorUi, useEditorLocale } from "./editorLocale";
 
 /**
  * Image picker for a page element's props. Uploads through the same R2 flow the
@@ -16,6 +17,7 @@ import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from 
 
 function useUpload() {
   const workspaceId = useWorkspaceId();
+  const ui = editorUi(useEditorLocale());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +32,7 @@ function useUpload() {
       for (const file of files) prepared.push(await compressImageIfNeeded(file));
     } catch {
       setBusy(false);
-      setError("Could not prepare the selected image.");
+      setError(ui.prepareFailed);
       return [];
     }
 
@@ -65,6 +67,7 @@ function useUpload() {
 }
 
 function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
+  const ui = editorUi(useEditorLocale());
   const [broken, setBroken] = useState(false);
   return (
     <div className="group relative size-20 shrink-0 overflow-hidden rounded-[0.5rem] border border-line bg-paper">
@@ -78,8 +81,8 @@ function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Remove image"
-        className="cursor-pointer absolute right-1 top-1 rounded-full bg-ink/70 p-1 text-paper opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={ui.removeImage}
+        className="cursor-pointer absolute inset-e-1 top-1 rounded-full bg-ink/70 p-1 text-paper opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
         <X className="size-3" aria-hidden />
       </button>
@@ -101,6 +104,7 @@ export function ImageField({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const ui = editorUi(useEditorLocale());
 
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -128,7 +132,7 @@ export function ImageField({
             onClick={() => inputRef.current?.click()}
           >
             {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-            {value ? "Replace" : "Upload"}
+            {value ? ui.replace : ui.upload}
           </Button>
           {hint && <p className="text-xs text-ink-soft">{hint}</p>}
         </div>
@@ -162,6 +166,7 @@ export function ImageListField({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const ui = editorUi(useEditorLocale());
 
   async function add(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -192,12 +197,12 @@ export function ImageListField({
           onClick={() => inputRef.current?.click()}
         >
           {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-          Add images
+          {ui.addImages}
         </Button>
         {value.length > 0 && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange([])}>
             <Trash2 className="size-4" aria-hidden />
-            Clear
+            {ui.clear}
           </Button>
         )}
       </div>

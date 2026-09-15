@@ -34,6 +34,7 @@ import type {
   PageSection,
   PageTree,
 } from "@store-builder/api-client";
+import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 
 /**
  * The editor's model of the backend page tree (modules/pages/pageTree.js).
@@ -587,15 +588,16 @@ export function sectionElements(section: PageSection): PageElement[] {
  * the elements: an exact preset match wins (that's how a template's hero gets
  * called "Hero"), otherwise fall back to the first element's own label.
  */
-export function sectionLabel(section: PageSection): string {
+export function sectionLabel(section: PageSection, locale: EditorLocale = "en"): string {
   const types = sectionElements(section).map((el) => el.type);
-  if (types.length === 0) return "Empty section";
+  const ui = editorUi(locale);
+  if (types.length === 0) return ui.emptySection;
   const match = BLOCK_PRESETS.find(
     (p) => p.elements.length === types.length && p.elements.every((t, i) => t === types[i])
   );
-  if (match) return match.label;
-  const first = ELEMENT_SPECS[types[0]];
-  return types.length === 1 ? first.label : `${first.label} + ${types.length - 1} more`;
+  if (match) return presetText(match.key, match, locale).label;
+  const first = elementLabel(types[0], ELEMENT_SPECS[types[0]].label, locale);
+  return types.length === 1 ? first : ui.andMore(first, types.length - 1);
 }
 
 export function sectionIcon(section: PageSection): LucideIcon {
@@ -633,6 +635,45 @@ export function setElementProp(
 ): PageSection {
   const props = { ...(element.props ?? {}), [key]: value };
   return replaceElement(section, element.id, { ...element, props });
+}
+
+/** Where an element sits in its own column, or null when it isn't in the section. */
+export function elementPosition(
+  section: PageSection,
+  elementId: string
+): { index: number; count: number } | null {
+  for (const row of section.rows ?? []) {
+    for (const col of row.columns ?? []) {
+      const elements = col.elements ?? [];
+      const index = elements.findIndex((el) => el.id === elementId);
+      if (index !== -1) return { index, count: elements.length };
+    }
+  }
+  return null;
+}
+
+/**
+ * Moves an element one place up (-1) or down (+1) within its own column. Moves
+ * never cross into another column or row — every seeded section is a single
+ * column, and silently re-parenting an element in a hand-built multi-column
+ * tree would be surprising. A move past either end does nothing.
+ */
+export function moveElement(section: PageSection, elementId: string, delta: -1 | 1): PageSection {
+  return {
+    ...section,
+    rows: (section.rows ?? []).map((row) => ({
+      ...row,
+      columns: (row.columns ?? []).map((col) => {
+        const elements = col.elements ?? [];
+        const from = elements.findIndex((el) => el.id === elementId);
+        const to = from + delta;
+        if (from === -1 || to < 0 || to >= elements.length) return col;
+        const next = elements.slice();
+        [next[from], next[to]] = [next[to], next[from]];
+        return { ...col, elements: next };
+      }),
+    })),
+  };
 }
 
 export function moveSection(sections: PageSection[], from: number, to: number): PageSection[] {

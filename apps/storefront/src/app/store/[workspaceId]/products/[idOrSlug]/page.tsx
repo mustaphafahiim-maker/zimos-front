@@ -1,27 +1,28 @@
-import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ApiError, formatMoney } from "@store-builder/api-client";
-import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
-import { getStoreMeta } from "@/lib/storeMeta";
-import { AddToCartButton } from "@/components/AddToCartButton";
+import type { StorefrontProduct } from "@store-builder/api-client";
+import { ArrowIcon } from "@/components/Icons";
+import { Faq } from "@/components/product/Faq";
+import { ProductGallery } from "@/components/product/ProductGallery";
+import { ProductLanding } from "@/components/product/ProductLanding";
 import { StoreLink } from "@/components/StoreRoute";
+import { TrustStrip } from "@/components/TrustStrip";
+import { container } from "@/components/ui";
+import { getDictionary } from "@/lib/i18n";
+import { getOrderBump } from "@/lib/mockCommerce";
+import { firstImage, productImages } from "@/lib/product";
+import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { getStoreLocale } from "@/lib/storeLocale";
+import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 
 export const revalidate = 60;
 
-/**
- * Deduped per request so `generateMetadata` and the page itself share one
- * call — the same reason `getStoreMeta` is cached.
- *
- * Returns null for a product that isn't there, so callers can `notFound()`.
- */
-const getProduct = cache(async (workspaceId: string, idOrSlug: string) => {
-  const client = await createServerStorefrontApiClient();
-  return client.getStorefrontProduct(workspaceId, idOrSlug).catch((err) => {
-    if (err instanceof ApiError && err.status === 404) return null;
-    throw err;
-  });
-});
+type Params = Promise<{ workspaceId: string; idOrSlug: string }>;
+
+function seoString(seo: Record<string, unknown> | null, key: string): string | null {
+  const v = seo?.[key];
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
 
 /**
  * The canonical URL is built from the product's slug, not from the `idOrSlug`
@@ -29,87 +30,105 @@ const getProduct = cache(async (workspaceId: string, idOrSlug: string) => {
  * be the address search engines keep. It stays relative so the store layout's
  * `metadataBase` resolves it onto the store's own subdomain.
  */
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ workspaceId: string; idOrSlug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId, idOrSlug } = await params;
-  const product = await getProduct(workspaceId, idOrSlug);
-  if (!product) return {};
+  const [store, product] = await Promise.all([
+    getStoreMeta(workspaceId),
+    getStorefrontProduct(workspaceId, idOrSlug),
+  ]);
+  if (!store || !product) return {};
+
+  const locale = await getStoreLocale(store);
+  const title = seoString(product.seo, "title") ?? product.name;
+  const description =
+    seoString(product.seo, "description") ??
+    (product.description
+      ? product.description.replace(/\s+/g, " ").slice(0, 160)
+      : getDictionary(locale).meta.storeDescription(store.name));
+  const image = firstImage(product);
 
   return {
-    title: product.name,
-    description: product.description ?? undefined,
+    title,
+    description,
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
-      title: product.name,
-      description: product.description ?? undefined,
+      siteName: store.name,
+      title,
+      description,
       url: `/products/${product.slug}`,
+      ...(image ? { images: [{ url: image, alt: product.name }] } : {}),
     },
+    twitter: { card: image ? "summary_large_image" : "summary", title, description },
   };
 }
 
-export default async function ProductPage({
-  params,
-}: {
-  params: Promise<{ workspaceId: string; idOrSlug: string }>;
-}) {
+function countdownHoursFrom(themeSettings: Record<string, unknown>): number | null {
+  const raw = themeSettings?.productCountdownHours;
+  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 720) : null;
+}
+
+export default async function ProductPage({ params }: { params: Params }) {
   const { workspaceId, idOrSlug } = await params;
 
-  // Both are React-cached, so this shares the fetches the layout and
-  // generateMetadata already made.
+  // Both calls are React-cached, shared with the layout and generateMetadata.
   const [store, product] = await Promise.all([
     getStoreMeta(workspaceId),
-    getProduct(workspaceId, idOrSlug),
+    getStorefrontProduct(workspaceId, idOrSlug),
   ]);
-
   if (!store || !product) notFound();
 
-  const defaultOffer = product.offers.find((o) => o.isDefault) ?? product.offers[0];
-  const price = defaultOffer?.priceAmount ?? product.variants[0]?.priceAmount;
-  // No variant picker yet — default to the first in-stock variant.
-  const purchasableVariant =
-    product.variants.find((v) => v.inStock) ?? product.variants[0];
+  const client = await createServerStorefrontApiClient();
+  const catalogue = await client
+    .listStorefrontProducts(workspaceId, { limit: 24 })
+    .then((r) => r.products)
+    .catch((): StorefrontProduct[] => []);
+
+  const locale = await getStoreLocale(store);
+  const t = getDictionary(locale);
+  const bump = getOrderBump(catalogue, [product.id], locale);
 
   return (
-    <main className="mx-auto max-w-4xl flex-1 px-6 py-10">
-      <StoreLink href="/" className="text-sm text-primary hover:underline">
-        ← Back to {store.name}
-      </StoreLink>
+    <main className="flex-1 pb-24 md:pb-0">
+      <div className={`${container} py-6 sm:py-8`}>
+        <StoreLink
+          href="/"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft transition-colors hover:text-primary"
+        >
+          <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
+          {t.product.back}
+        </StoreLink>
 
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
-        <div className="aspect-square rounded-[var(--radius-card)] bg-primary-soft" />
-
-        <div>
-          <h1 className="font-display text-2xl font-medium text-ink">{product.name}</h1>
-          {price !== undefined && (
-            <p className="mt-2 text-xl text-primary-dark">{formatMoney(price, store.currency)}</p>
-          )}
-          {product.description && (
-            <p className="mt-4 text-sm leading-relaxed text-ink-soft">{product.description}</p>
-          )}
-
-          <div className="mt-6 space-y-2">
-            {product.variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="flex items-center justify-between rounded-[0.5rem] border border-line px-4 py-2 text-sm"
-              >
-                <span>{Object.values(variant.optionValues).join(" / ") || variant.sku}</span>
-                <span className={variant.inStock ? "text-ink-soft" : "text-danger"}>
-                  {variant.inStock ? "In stock" : "Out of stock"}
-                </span>
-              </div>
-            ))}
+        <div className="mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
+          <div className="md:sticky md:top-24 md:self-start">
+            <ProductGallery images={productImages(product)} name={product.name} />
           </div>
-
-          <AddToCartButton
-            variantId={purchasableVariant?.id}
-            offerId={defaultOffer?.id}
-            disabled={!purchasableVariant?.inStock}
+          <ProductLanding
+            workspaceId={workspaceId}
+            product={product}
+            bump={bump}
+            countdownHours={countdownHoursFrom(store.themeSettings)}
           />
+        </div>
+
+        <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
+          <div className="space-y-10">
+            {product.description && (
+              <section aria-labelledby="desc-title">
+                <h2 id="desc-title" className="font-display text-xl font-semibold text-ink">
+                  {t.product.description}
+                </h2>
+                <div className="mt-4 whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+                  {product.description}
+                </div>
+              </section>
+            )}
+            <Faq title={t.product.faq} items={t.product.faqItems} />
+          </div>
+          <aside className="lg:pt-11">
+            <TrustStrip t={t} inAside />
+          </aside>
         </div>
       </div>
     </main>

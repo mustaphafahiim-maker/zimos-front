@@ -27,9 +27,12 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
 
   const { meta } = getDictionary(locale);
+  // Icons come from src/app/favicon.ico; the brand PNGs in public/brand are
+  // rendered in-page by <ZimosLogo />.
   return {
     title: meta.title,
     description: meta.description,
+    applicationName: "ZIMOS",
     alternates: {
       canonical: `/${locale}`,
       languages: { ar: "/ar", en: "/en" },
@@ -37,12 +40,14 @@ export async function generateMetadata({
     openGraph: {
       title: meta.title,
       description: meta.description,
+      siteName: "ZIMOS",
       locale: locale === "ar" ? "ar_EG" : "en_US",
       type: "website",
     },
   };
 }
 
+// Matches the page background in each theme.
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },

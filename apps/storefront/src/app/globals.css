@@ -38,8 +38,14 @@
   --color-danger: #b3452f;
   --color-danger-soft: #f6e6e1;
 
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Functional status only, never decoration. Same values as the other apps. */
+  --color-success: #357150;
+  --color-success-soft: #e5f0e9;
+
+  /* Tajawal follows each Latin face: those have no Arabic glyphs, so Arabic
+     text falls through to it while Latin text renders unchanged. */
+  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 0.625rem;
 }
@@ -70,6 +76,8 @@
      hue-tinted ground with text light enough to read on it. */
   --color-danger: #e8846a;
   --color-danger-soft: #2b1613;
+  --color-success: #5cbf8f;
+  --color-success-soft: #132b1f;
 }
 
 /* ------------------------------------------------------------------ *
@@ -122,6 +130,8 @@
 
   --color-danger: var(--color-danger);
   --color-danger-soft: var(--color-danger-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-sans);
@@ -146,4 +156,75 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Official logo rendering.
+ *
+ * The approved exports carry real alpha, so they are drawn as plain
+ * transparent PNGs on any surface — no blend modes, no background-colour
+ * workarounds (see public/brand/README.md). We never redraw the logo;
+ * these rules only pick which of the two approved lockups is shown:
+ * the navy wordmark on light surfaces, the reversed white one on dark.
+ *
+ * Inside a store ZIMOS appears in the footer's "Powered by" line, and as
+ * the header fallback when the merchant has not uploaded a logo.
+ * ------------------------------------------------------------------ */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+
+/* Logos are never mirrored in RTL — and most stores here are Arabic. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

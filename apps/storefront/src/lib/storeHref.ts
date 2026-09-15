@@ -12,5 +12,9 @@
 export function storeHref(basePath: string, path: string): string {
   if (path === "" || path === "/") return basePath || "/";
   const normalized = path.startsWith("/") ? path : `/${path}`;
+  // The store root carrying only a query or a hash — `/?collection=x`. Behind a
+  // prefix that slash would become a trailing one, which the router redirects
+  // away, dropping the fragment with it; the prefix already ends the path.
+  if (basePath && /^\/[?#]/.test(normalized)) return `${basePath}${normalized.slice(1)}`;
   return `${basePath}${normalized}`;
 }

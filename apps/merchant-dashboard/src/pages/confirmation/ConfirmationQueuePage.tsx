@@ -53,7 +53,7 @@ export function ConfirmationQueuePage() {
         loading={queue.loading}
         error={queue.error}
         empty={tasks.length === 0}
-        emptyMessage="لا يوجد أوردرات مستنية تأكيد دلوقتي 🎉"
+        emptyMessage="لا يوجد أوردرات مستنية تأكيد دلوقتي "
         onRetry={() => queue.refresh()}
       >
         <div className="space-y-4">

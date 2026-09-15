@@ -3,12 +3,13 @@
  *
  * Both `dictionaries/ar.ts` and `dictionaries/en.ts` are typed as
  * `Dictionary`, so adding a key in one language forces a translation in the
- * other. Keep this limited to copy that is actually on screen — the homepage
- * ships the Nav, the Hero, the Features section, Pricing, and the Footer.
+ * other. Keep this limited to copy that is actually on screen.
+ *
+ * Copy rules (ZIMOS brand): no invented metrics, customer counts, ratings,
+ * testimonials or prices. Illustrations use generic UI labels only.
  */
 
 export interface Dictionary {
-  /** `dir` is informational for client code; the root layout sets it on <html>. */
   meta: {
     /** Document <title>. */
     title: string;
@@ -16,73 +17,161 @@ export interface Dictionary {
     description: string;
   };
 
+  /** Approved brand phrases, localized. `*Latin` is the English original, shown
+   *  as a small secondary line in Arabic; `null` where the main line already is it. */
+  brand: {
+    name: string;
+    limits: string;
+    limitsLatin: string | null;
+    loop: string;
+    loopLatin: string | null;
+    tomorrow: string;
+  };
+
   nav: {
-    /** Wordmark text. */
-    brand: string;
-    /** In-page section links (targets may not exist yet). */
-    features: string;
+    /** Visually hidden skip link, first focusable element. */
+    skipToContent: string;
+    /** Accessible name of the logo link. */
+    homeAria: string;
+    /** Accessible name of the primary <nav>. */
+    primaryLabel: string;
+    product: string;
+    solutions: string;
     pricing: string;
+    faq: string;
     /** Visible label of the language switcher — the name of the OTHER language. */
     switchLanguage: string;
-    /** Accessible name for the language switcher control. */
     switchLanguageAria: string;
-    /** Accessible name for the theme toggle, per current theme. */
     switchToDark: string;
     switchToLight: string;
-    /** Mobile disclosure button. */
     openMenu: string;
     closeMenu: string;
-    /** Auth actions — link out to app.zimos.co. */
-    login: string;
-    startStore: string;
+    /** Auth actions — link out to the dashboard. */
+    signIn: string;
+    startFree: string;
   };
 
   hero: {
-    /** Short framing line above the headline (sentence case, not an all-caps eyebrow). */
     kicker: string;
+    /** Main headline — the "Build. Sell. Grow." phrase. */
     headline: string;
     subheadline: string;
-    /** Primary CTA — same target as the nav CTA. */
-    startStore: string;
-    /** Lower-emphasis CTA — in-page anchor. */
-    seeHow: string;
-    /** Caption for the order-lifecycle illustration. */
+    primaryCta: string;
+    secondaryCta: string;
+    /** Microcopy under the CTAs. */
+    ctaNote: string;
+    visual: HeroVisual;
+  };
+
+  platform: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    items: [
+      Capability,
+      Capability,
+      Capability,
+      Capability,
+      Capability,
+      Capability,
+      Capability,
+      Capability,
+    ];
+  };
+
+  lifecycle: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    points: [string, string, string];
     flowCaption: string;
-    /** Accessible name for the illustration as a whole. */
     flowAria: string;
-    /** Label shown next to the generated tracking code. */
     trackingLabel: string;
-    /** The four stages of the order lifecycle, in order. */
     steps: [FlowStep, FlowStep, FlowStep, FlowStep];
   };
 
-  features: {
-    /** Short framing line above the heading (sentence case, not an eyebrow). */
+  howItWorks: {
     kicker: string;
     heading: string;
-    /** A sentence or two under the heading. */
     intro: string;
-    /** The three moments a merchant lives through, in order. */
-    stages: [FeatureStage, FeatureStage, FeatureStage];
+    /** Visible "Step" label preceding the ordinal. */
+    stepLabel: string;
+    steps: [HowStep, HowStep, HowStep];
+  };
+
+  deepDives: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    confirm: DeepDive & { visual: ConfirmVisual };
+    profit: DeepDive & { visual: ProfitVisual };
+    funnels: DeepDive & { visual: FunnelVisual };
+  };
+
+  integrations: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    groups: [IntegrationGroup, IntegrationGroup, IntegrationGroup];
+    note: string;
   };
 
   pricing: {
-    /** Small pill above the heading — states the real early-access status. */
-    badge: string;
+    kicker: string;
     heading: string;
+    intro: string;
+    badge: string;
+    plans: [Plan, Plan, Plan];
+    note: string;
+  };
+
+  faq: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    items: FaqItem[];
+  };
+
+  /** Navy closing band; its heading is `brand.limits`. */
+  finalCta: {
     body: string;
-    /** Microcopy under the CTA. The button label itself reuses `nav.startStore`. */
-    ctaNote: string;
+    primaryCta: string;
+    secondaryCta: string;
   };
 
   footer: {
-    /** One line under the wordmark. */
-    tagline: string;
-    /** Accessible name for the footer link list. */
     navLabel: string;
-    /** Follows the © year and wordmark. */
+    columns: [FooterColumn, FooterColumn, FooterColumn, FooterColumn];
     rights: string;
+    languageLabel: string;
   };
+}
+
+export interface HeroVisual {
+  aria: string;
+  storeLabel: string;
+  liveLabel: string;
+  funnelTitle: string;
+  funnelSteps: [string, string, string, string];
+  pipelineTitle: string;
+  columns: [string, string, string];
+  order: string;
+  confirmTitle: string;
+  confirmBody: string;
+}
+
+export interface Capability {
+  id:
+    | "store"
+    | "funnels"
+    | "confirmation"
+    | "shipping"
+    | "analytics"
+    | "fraud"
+    | "automations"
+    | "teams";
+  title: string;
+  body: string;
 }
 
 export interface FlowStep {
@@ -92,12 +181,74 @@ export interface FlowStep {
   detail: string;
 }
 
-export interface FeatureStage {
-  /** Stable id, not shown; also selects the stage icon. */
-  id: "setup" | "order" | "aftercare";
+export interface HowStep {
+  id: "build" | "sell" | "grow";
   title: string;
-  /** One line naming the moment. */
-  summary: string;
-  /** Concrete capabilities in this moment — 2 to 5 items. */
-  points: string[];
+  body: string;
+}
+
+export interface DeepDive {
+  kicker: string;
+  heading: string;
+  body: string;
+  points: [string, string, string];
+}
+
+export interface ConfirmVisual {
+  aria: string;
+  queueTitle: string;
+  order: string;
+  cities: [string, string, string];
+  statusCalling: string;
+  statusConfirmed: string;
+  statusWaiting: string;
+  chatTitle: string;
+  storeMessage: string;
+  customerReply: string;
+  systemMessage: string;
+}
+
+export interface ProfitVisual {
+  aria: string;
+  title: string;
+  illustrative: string;
+  bars: [string, string, string, string, string, string];
+  metrics: [string, string, string];
+}
+
+export interface FunnelVisual {
+  aria: string;
+  title: string;
+  landing: string;
+  checkout: string;
+  bump: string;
+  upsell: string;
+  accept: string;
+  decline: string;
+  downsell: string;
+  thankYou: string;
+}
+
+export interface IntegrationGroup {
+  label: string;
+  items: string[];
+}
+
+export interface Plan {
+  id: "starter" | "growth" | "scale";
+  name: string;
+  description: string;
+  features: string[];
+  cta: string;
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface FooterColumn {
+  title: string;
+  /** `#anchor` for in-page targets, `/path` for routes (locale is prefixed at render). */
+  links: { label: string; href: string }[];
 }

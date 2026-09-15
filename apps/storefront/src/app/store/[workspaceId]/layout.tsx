@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { storeOrigin } from "@/lib/domains";
-import { getStoreBasePath } from "@/lib/storeRoute";
-import { brandStyle, getStoreMeta } from "@/lib/storeMeta";
+import { StoreFooter } from "@/components/StoreFooter";
+import { StoreHeader } from "@/components/StoreHeader";
 import { StoreRouteProvider } from "@/components/StoreRoute";
+import { storeOrigin } from "@/lib/domains";
+import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
+import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
+import { getStoreLocale, storePhone } from "@/lib/storeLocale";
+import { brandStyle, getStoreMeta } from "@/lib/storeMeta";
+import { getStoreBasePath } from "@/lib/storeRoute";
 
 /**
  * Names the store for search engines and for anything that unfurls a link.
@@ -23,26 +28,37 @@ export async function generateMetadata({
   const store = await getStoreMeta(workspaceId);
   if (!store) return {};
 
+  const locale = await getStoreLocale(store);
+  const t = getDictionary(locale);
+  const description = store.tagline || t.meta.storeDescription(store.name);
+
   return {
     metadataBase: new URL(storeOrigin(store.slug)),
     title: { default: store.name, template: `%s — ${store.name}` },
-    description: store.tagline ?? undefined,
+    description,
     openGraph: {
       type: "website",
       siteName: store.name,
       title: store.name,
-      description: store.tagline ?? undefined,
-      images: store.logoUrl ? [store.logoUrl] : undefined,
+      description,
+      locale: intlLocaleFor(locale).replace("-", "_"),
+      ...(store.logoUrl ? { images: [{ url: store.logoUrl, alt: store.name }] } : {}),
     },
   };
 }
 
 /**
- * Wraps every page of one store. It establishes the merchant's brand colours
- * once, as CSS custom properties, so the whole subtree (header, buttons, links,
- * badges) picks them up through the semantic tokens — see the `.brand-theme`
- * block in globals.css — and it resolves the store's link prefix once for the
- * client components below it.
+ * Wraps every page of one store. It establishes:
+ *  - the merchant's brand colours as CSS custom properties, so the whole
+ *    subtree (header, buttons, links, badges) picks them up through the
+ *    semantic tokens — see the `.brand-theme` block in globals.css;
+ *  - the store's link prefix, resolved once for the client components below it,
+ *    since only a server component can tell how the request arrived;
+ *  - the store language: `lang`/`dir` on this wrapper, mirrored onto <html> by
+ *    <DocumentLocale> because the root layout can't know which store a request
+ *    is for;
+ *  - the shared header/footer, so every page of the store — including one the
+ *    merchant built in the website editor — sits under the same branding.
  */
 export default async function StoreLayout({
   children,
@@ -58,11 +74,30 @@ export default async function StoreLayout({
   ]);
   if (!store) notFound();
 
+  const locale = await getStoreLocale(store);
+  const info: StoreInfo = {
+    workspaceId,
+    name: store.name,
+    currency: store.currency,
+    logoUrl: store.logoUrl,
+    phone: storePhone(store),
+  };
+
   return (
     <StoreRouteProvider basePath={basePath}>
-      <div className="brand-theme flex min-h-full flex-1 flex-col" style={brandStyle(store.themeSettings)}>
-        {children}
-      </div>
+      <StoreContextProvider locale={locale} store={info}>
+        <div
+          lang={intlLocaleFor(locale)}
+          dir={dirFor(locale)}
+          className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
+          style={brandStyle(store.themeSettings)}
+        >
+          <DocumentLocale locale={locale} />
+          <StoreHeader store={store} locale={locale} />
+          <div className="flex flex-1 flex-col">{children}</div>
+          <StoreFooter store={store} locale={locale} />
+        </div>
+      </StoreContextProvider>
     </StoreRouteProvider>
   );
 }

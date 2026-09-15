@@ -124,3 +124,18 @@ export function formatPercent(bp: string | number | null | undefined): string {
   const text = basisPointsToPercentInput(bp);
   return text === "" ? "—" : `${text}%`;
 }
+
+/**
+ * 0.1234 -> "12.3%". Takes a ratio (not basis points) — used for
+ * period-over-period deltas on <KpiCard>, where the change is already a
+ * fraction. `formatPercent` above is the basis-points variant the discount
+ * and tax screens use.
+ */
+export function formatPercentValue(ratio: number | null | undefined, digits = 1): string {
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "—";
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(ratio);
+}

@@ -5,7 +5,8 @@ type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const TONE_CLASS: Record<Tone, string> = {
   neutral: "bg-paper text-ink-soft border-line",
-  info: "bg-primary-soft text-primary-dark border-primary/30",
+  // Dark primary-dark reads ~3:1 on primary-soft; the lifted primary holds 4.5:1.
+  info: "bg-primary-soft text-primary-dark dark:text-primary border-primary/30",
   success: "bg-success-soft text-success border-success/30",
   warning: "bg-accent-soft text-accent-dark border-accent/40",
   danger: "bg-danger-soft text-danger border-danger/30",
@@ -59,10 +60,12 @@ interface StatusBadgeProps {
   tone?: Tone;
   /** Small caption above the value, e.g. "Payment". */
   label?: string;
+  /** Shown instead of the humanized value, e.g. a translated status. */
+  text?: string;
   className?: string;
 }
 
-export function StatusBadge({ value, tone, label, className }: StatusBadgeProps) {
+export function StatusBadge({ value, tone, label, text, className }: StatusBadgeProps) {
   const resolved = tone ?? STATUS_TONE[value] ?? "neutral";
   return (
     <span
@@ -73,7 +76,7 @@ export function StatusBadge({ value, tone, label, className }: StatusBadgeProps)
       )}
     >
       {label && <span className="opacity-60">{label}:</span>}
-      {humanize(value)}
+      {text ?? humanize(value)}
     </span>
   );
 }

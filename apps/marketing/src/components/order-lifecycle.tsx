@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/provider";
 import type { FlowStep } from "@/i18n/dictionary";
-import { BarcodeIcon, ChatIcon, PackageCheckIcon, PhoneIcon } from "./icons";
+import { BarcodeIcon, ChatIcon, PackageCheckIcon, PhoneIcon, type IconComponent } from "./icons";
 
-/** Real Zimos tracking-code format: `zg` + 9 digits. */
+/** Real ZIMOS tracking-code format: `zg` + 9 digits. */
 const EXAMPLE_TRACKING_CODE = "zg482910573";
 
-const STEP_ICON: Record<FlowStep["id"], typeof ChatIcon> = {
+const STEP_ICON: Record<FlowStep["id"], IconComponent> = {
   placed: ChatIcon,
   confirmed: PhoneIcon,
   tracked: BarcodeIcon,
@@ -20,7 +20,7 @@ const HOLD = [1500, 1600, 2000, 2600];
 
 export function OrderLifecycle() {
   const { dict } = useI18n();
-  const { steps, flowCaption, flowAria, trackingLabel } = dict.hero;
+  const { steps, flowCaption, flowAria, trackingLabel } = dict.lifecycle;
   const last = steps.length - 1;
 
   // Server render and first client render both start at 0 — no mismatch.
@@ -56,21 +56,21 @@ export function OrderLifecycle() {
   }, [steps.length, last]);
 
   return (
-    <figure className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-5 shadow-sm sm:p-6">
-      <figcaption className="mb-5 text-sm text-ink-soft">{flowCaption}</figcaption>
+    <figure className="relative rounded-3xl border border-line bg-paper-raised p-5 sm:p-7">
+      <span
+        aria-hidden
+        className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-linear-to-r from-primary to-accent rtl:bg-linear-to-l"
+      />
+      <figcaption className="mb-6 text-sm font-semibold text-ink-soft">{flowCaption}</figcaption>
 
       <div className="relative" role="img" aria-label={flowAria}>
-        {/* Rail: a single track with one playhead that sweeps the stages.
-            Block axis (top/bottom) is not mirrored by `dir`; the inline
-            offset uses the logical `start-*` utility. */}
+        {/* Rail + playhead. Block axis isn't mirrored by `dir`; the inline
+            offset uses the logical `start-*` utility so it follows RTL. */}
+        <span aria-hidden className="absolute top-5 bottom-5 start-[calc(1.25rem-1px)] w-0.5 rounded-full bg-line" />
         <span
           aria-hidden
-          className="absolute top-4 bottom-4 start-[1.125rem] w-px bg-line"
-        />
-        <span
-          aria-hidden
-          className="flow-playhead absolute top-4 start-[1.125rem] w-px bg-primary"
-          style={{ blockSize: `calc((100% - 2rem) * ${step / last})` }}
+          className="flow-playhead absolute top-5 start-[calc(1.25rem-1px)] w-0.5 rounded-full bg-primary"
+          style={{ blockSize: `calc((100% - 2.5rem) * ${step / last})` }}
         />
 
         <ol className="relative space-y-6">
@@ -78,43 +78,31 @@ export function OrderLifecycle() {
             const Icon = STEP_ICON[flowStep.id];
             const reached = i <= step;
             return (
-              <li
-                key={flowStep.id}
-                className="grid grid-cols-[2.25rem_1fr] items-start gap-4"
-              >
+              <li key={flowStep.id} className="grid grid-cols-[2.5rem_1fr] items-start gap-4">
                 <span
-                  className={`flow-step relative z-10 flex size-9 items-center justify-center rounded-full border ${
+                  className={`flow-step relative z-10 flex size-10 items-center justify-center rounded-xl border ${
                     reached
-                      ? "border-primary bg-primary text-white"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-line bg-paper-raised text-ink-soft"
                   }`}
                 >
                   <Icon width="1.15rem" height="1.15rem" />
                 </span>
 
-                <div className={`flow-step ${reached ? "opacity-100" : "opacity-55"}`}>
-                  <p
-                    className={`font-medium ${reached ? "text-ink" : "text-ink-soft"}`}
-                  >
+                <div className={`flow-step pt-0.5 ${reached ? "opacity-100" : "opacity-60"}`}>
+                  <p className={`font-semibold ${reached ? "text-ink" : "text-ink-soft"}`}>
                     {flowStep.title}
                   </p>
-                  <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                    {flowStep.detail}
-                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-soft">{flowStep.detail}</p>
 
                   {flowStep.id === "tracked" && (
                     <span
-                      className={`flow-code mt-2 inline-flex items-center gap-2 rounded-lg border border-accent-dark/35 bg-accent-soft px-2.5 py-1 ${
+                      className={`flow-code mt-2.5 inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary-soft px-2.5 py-1 ${
                         step >= i ? "opacity-100" : "opacity-0"
                       }`}
                     >
-                      <span className="text-xs font-medium text-accent-dark">
-                        {trackingLabel}
-                      </span>
-                      <span
-                        dir="ltr"
-                        className="font-mono text-sm font-semibold tracking-wide text-ink"
-                      >
+                      <span className="text-xs font-medium text-primary-dark dark:text-primary">{trackingLabel}</span>
+                      <span dir="ltr" className="text-sm font-semibold tracking-wide text-ink tabular-nums">
                         {EXAMPLE_TRACKING_CODE}
                       </span>
                     </span>

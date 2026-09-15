@@ -30,7 +30,7 @@ export function BrandPanel() {
   return (
     <div className="relative hidden overflow-hidden bg-ink px-12 py-16 text-white lg:flex lg:w-[44%] lg:flex-col lg:justify-between dark:bg-primary-dark">
       <div className="relative z-10">
-        <span className="font-display text-lg tracking-tight">Store Builder</span>
+        <span className="font-display text-lg tracking-tight">Zimos</span>
         <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70">
           Platform Admin
         </span>
@@ -41,7 +41,7 @@ export function BrandPanel() {
           A clear view across every store on the platform.
         </h1>
         <p className="mt-5 text-[15px] leading-relaxed text-white/70">
-          Internal tooling for the Store Builder team — not a merchant-facing surface.
+          Internal tooling for the Zimos team — not a merchant-facing surface.
         </p>
       </div>
 
