@@ -31,6 +31,8 @@ import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { CheckoutSettingsTab } from "./CheckoutSettingsTab";
 import { DomainsTab } from "./DomainsTab";
+import { IntegrationsTab } from "./IntegrationsTab";
+import { useSearchParams } from "react-router-dom";
 import { PlanTab } from "./PlanTab";
 
 const STRINGS = {
@@ -42,6 +44,7 @@ const STRINGS = {
     tabCheckout: "Checkout",
     tabDomains: "Domains",
     tabPlan: "Plan & billing",
+    tabIntegrations: "Integrations",
 
     languageTitle: "Language",
     languageHint: "The language and direction of your dashboard. Saved on this device.",
@@ -106,6 +109,7 @@ const STRINGS = {
     tabCheckout: "صفحة الدفع",
     tabDomains: "النطاقات (الدومين)",
     tabPlan: "الخطة والفوترة",
+    tabIntegrations: "الربط (واتساب)",
 
     languageTitle: "اللغة",
     languageHint: "لغة لوحة التحكم واتجاهها. يُحفظ الاختيار على هذا الجهاز.",
@@ -171,17 +175,26 @@ const TH_ROW = "border-b border-line bg-paper text-start text-xs uppercase track
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "general";
+  const onTabChange = (value: unknown) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "general") next.delete("tab");
+    else next.set("tab", String(value));
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <div className="max-w-5xl">
       <PageHeader title={t.title} description={t.description} />
-      <Tabs defaultValue="general">
+      <Tabs value={tab} onValueChange={onTabChange}>
         <div className="-mx-1 overflow-x-auto px-1 pb-1">
           <TabsList className="flex-wrap">
             <TabsTrigger value="general">{t.tabGeneral}</TabsTrigger>
             <TabsTrigger value="team">{t.tabTeam}</TabsTrigger>
             <TabsTrigger value="checkout">{t.tabCheckout}</TabsTrigger>
             <TabsTrigger value="domains">{t.tabDomains}</TabsTrigger>
+            <TabsTrigger value="integrations">{t.tabIntegrations}</TabsTrigger>
             <TabsTrigger value="plan">{t.tabPlan}</TabsTrigger>
           </TabsList>
         </div>
@@ -197,6 +210,9 @@ export function SettingsPage() {
         </TabsContent>
         <TabsContent value="domains" className="max-w-3xl pt-4">
           <DomainsTab key={`domains-${workspaceId}`} />
+        </TabsContent>
+        <TabsContent value="integrations" className="max-w-3xl pt-4">
+          <IntegrationsTab key={`integrations-${workspaceId}`} />
         </TabsContent>
         <TabsContent value="plan" className="pt-4">
           <PlanTab key={`plan-${workspaceId}`} />

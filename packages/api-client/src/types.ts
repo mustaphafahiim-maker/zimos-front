@@ -1608,3 +1608,94 @@ export interface ConfirmationAgentsResponse {
   range: { days: number; since: string };
   agents: ConfirmationAgentStats[];
 }
+
+// ---------------------------------------------------------------------
+// WhatsApp Cloud API (/workspaces/:ws/whatsapp)
+// ---------------------------------------------------------------------
+
+export type WhatsappIntegrationStatus = "connected" | "error";
+
+export interface WhatsappIntegrationConnected {
+  connected: true;
+  status: WhatsappIntegrationStatus;
+  phoneNumberId: string;
+  businessAccountId: string | null;
+  displayPhoneNumber: string | null;
+  verifiedName: string | null;
+  accessTokenMask: string | null;
+  appSecretSet: boolean;
+  webhook: { url: string; verifyToken: string };
+  lastVerifiedAt: string | null;
+  lastError: string | null;
+}
+
+export type WhatsappIntegration = { connected: false } | WhatsappIntegrationConnected;
+
+export interface ConnectWhatsappPayload {
+  phoneNumberId: string;
+  accessToken: string;
+  businessAccountId?: string;
+  appSecret?: string;
+}
+
+export type WhatsappConversationStatus = "open" | "closed";
+
+export interface WhatsappConversation {
+  id: string;
+  phone: string;
+  customerName: string | null;
+  customerId: string | null;
+  status: WhatsappConversationStatus;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  canReply: boolean;
+}
+
+export interface WhatsappConversationListParams {
+  status?: WhatsappConversationStatus;
+  search?: string;
+  limit?: number;
+  before?: string;
+}
+
+export interface WhatsappConversationListResponse {
+  conversations: WhatsappConversation[];
+  nextCursor: string | null;
+}
+
+export type WhatsappMessageStatus = "received" | "sent" | "delivered" | "read" | "failed";
+
+export interface WhatsappMessage {
+  id: string;
+  direction: "in" | "out";
+  type: string;
+  body: string | null;
+  templateName: string | null;
+  status: WhatsappMessageStatus;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface WhatsappMessageListResponse {
+  messages: WhatsappMessage[];
+  nextCursor: string | null;
+}
+
+export interface WhatsappTemplatePayload {
+  name: string;
+  language: string;
+  params: string[];
+}
+
+export type SendWhatsappPayload = { to: string; text: string } | { to: string; template: WhatsappTemplatePayload };
+
+export interface SentWhatsappMessage {
+  id: string;
+  conversationId: string;
+  direction: "in" | "out";
+  type: string;
+  body: string | null;
+  status: WhatsappMessageStatus;
+  createdAt: string;
+}

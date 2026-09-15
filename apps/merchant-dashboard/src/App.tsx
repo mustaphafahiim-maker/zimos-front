@@ -46,6 +46,7 @@ const ConfirmationQueuePage = page(() => import("@/pages/confirmation/Confirmati
 const CallCenterPage = page(() => import("@/pages/callcenter/CallCenterPage"), "CallCenterPage");
 const AgentsPage = page(() => import("@/pages/callcenter/AgentsPage"), "AgentsPage");
 const CallLogsPage = page(() => import("@/pages/callcenter/CallLogsPage"), "CallLogsPage");
+const InboxPage = page(() => import("@/pages/inbox/InboxPage"), "InboxPage");
 const ReturnsPage = page(() => import("@/pages/returns/ReturnsPage"), "ReturnsPage");
 const FraudProtectionPage = page(() => import("@/pages/fraud/FraudProtectionPage"), "FraudProtectionPage");
 
@@ -137,6 +138,7 @@ export default function App() {
                       <Route path="/call-center" element={<InShell><CallCenterPage /></InShell>} />
                       <Route path="/call-center/agents" element={<InShell><AgentsPage /></InShell>} />
                       <Route path="/call-center/logs" element={<InShell><CallLogsPage /></InShell>} />
+                      <Route path="/inbox" element={<InShell><InboxPage /></InShell>} />
                       <Route path="/abandoned-checkouts" element={<InShell><AbandonedCheckoutsPage /></InShell>} />
                       <Route path="/returns" element={<InShell><ReturnsPage /></InShell>} />
                       <Route path="/fraud" element={<InShell><FraudProtectionPage /></InShell>} />

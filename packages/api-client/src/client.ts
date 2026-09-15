@@ -100,6 +100,14 @@ import type {
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceRole,
+  WhatsappIntegration,
+  ConnectWhatsappPayload,
+  WhatsappConversationListParams,
+  WhatsappConversationListResponse,
+  WhatsappConversationStatus,
+  WhatsappMessageListResponse,
+  SendWhatsappPayload,
+  SentWhatsappMessage,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -1498,4 +1506,61 @@ export class ApiClient {
     );
     return template;
   }
+
+  // ---------------------------------------------------------------------
+  // WhatsApp Cloud API — /workspaces/:ws/whatsapp
+  // ---------------------------------------------------------------------
+
+  async getWhatsappIntegration(workspaceId: string) {
+    const { integration } = await this.request<{ integration: WhatsappIntegration }>(
+      `/workspaces/${workspaceId}/whatsapp/integration`
+    );
+    return integration;
+  }
+
+  /** Verifies the credentials with Meta. 422 WHATSAPP_AUTH_FAILED / WHATSAPP_API_ERROR, 502 WHATSAPP_UNREACHABLE. */
+  async connectWhatsapp(workspaceId: string, payload: ConnectWhatsappPayload) {
+    const { integration } = await this.request<{ integration: WhatsappIntegration }>(
+      `/workspaces/${workspaceId}/whatsapp/integration`,
+      { method: "PUT", body: payload }
+    );
+    return integration;
+  }
+
+  async disconnectWhatsapp(workspaceId: string) {
+    return this.request<{ disconnected: boolean }>(`/workspaces/${workspaceId}/whatsapp/integration`, {
+      method: "DELETE",
+    });
+  }
+
+  async listWhatsappConversations(workspaceId: string, params: WhatsappConversationListParams = {}) {
+    return this.request<WhatsappConversationListResponse>(
+      `/workspaces/${workspaceId}/whatsapp/conversations${buildQuery({ ...params })}`
+    );
+  }
+
+  /** Oldest → newest. Also marks the conversation read. */
+  async listWhatsappMessages(workspaceId: string, conversationId: string, params: { limit?: number; before?: string } = {}) {
+    return this.request<WhatsappMessageListResponse>(
+      `/workspaces/${workspaceId}/whatsapp/conversations/${conversationId}/messages${buildQuery({ ...params })}`
+    );
+  }
+
+  async setWhatsappConversationStatus(workspaceId: string, conversationId: string, status: WhatsappConversationStatus) {
+    const { conversation } = await this.request<{ conversation: { id: string; status: WhatsappConversationStatus } }>(
+      `/workspaces/${workspaceId}/whatsapp/conversations/${conversationId}`,
+      { method: "PATCH", body: { status } }
+    );
+    return conversation;
+  }
+
+  /** 422 WHATSAPP_WINDOW_CLOSED for free text outside the 24h window; 422 WHATSAPP_NOT_CONNECTED. */
+  async sendWhatsappMessage(workspaceId: string, payload: SendWhatsappPayload) {
+    const { message } = await this.request<{ message: SentWhatsappMessage }>(
+      `/workspaces/${workspaceId}/whatsapp/messages`,
+      { method: "POST", body: payload }
+    );
+    return message;
+  }
 }
+
