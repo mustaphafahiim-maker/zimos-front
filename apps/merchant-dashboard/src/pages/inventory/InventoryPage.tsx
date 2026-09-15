@@ -53,7 +53,8 @@ const STRINGS = {
     colStockValue: "Stock value",
     colLowThreshold: "Low stock threshold",
     thresholdAria: "Low stock threshold for {product} {variant}",
-    thresholdDeviceHint: "Low-stock thresholds are saved on this device.",
+    thresholdDeviceHint: "Alert when available stock reaches this number.",
+    thresholdFailed: "Couldn't save the threshold.",
     adjust: "Adjust",
     adjustTitle: "Adjust stock",
     thresholdUpdated: "Threshold updated.",
@@ -95,7 +96,8 @@ const STRINGS = {
     colStockValue: "قيمة المخزون",
     colLowThreshold: "حد المخزون المنخفض",
     thresholdAria: "حد المخزون المنخفض لـ {product} {variant}",
-    thresholdDeviceHint: "حدود المخزون المنخفض محفوظة على هذا الجهاز فقط.",
+    thresholdDeviceHint: "هننبهك لما المتاح يوصل للرقم ده.",
+    thresholdFailed: "مقدرناش نحفظ الحد.",
     adjust: "تعديل",
     adjustTitle: "تعديل المخزون",
     thresholdUpdated: "تم تحديث حد التنبيه.",
@@ -193,9 +195,14 @@ export function InventoryPage() {
       return next;
     });
     if (raw.trim() === "" || !Number.isInteger(n) || n < 0 || n === r.lowStockThreshold) return;
-    writeThreshold(workspaceId, r.variantId, n);
+    const previous = r.lowStockThreshold;
     inventory.setData((prev) => (prev ?? []).map((x) => (x.variantId === r.variantId ? { ...x, lowStockThreshold: n } : x)));
-    toast.success(t.thresholdUpdated);
+    writeThreshold(workspaceId, r.variantId, n)
+      .then(() => toast.success(t.thresholdUpdated))
+      .catch(() => {
+        inventory.setData((prev) => (prev ?? []).map((x) => (x.variantId === r.variantId ? { ...x, lowStockThreshold: previous } : x)));
+        toast.error(t.thresholdFailed);
+      });
   }
 
   function exportCsv() {

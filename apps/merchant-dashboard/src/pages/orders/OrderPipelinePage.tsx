@@ -2,13 +2,12 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, Search } from "lucide-react";
 import type { Order, PaymentMethod } from "@store-builder/api-client";
-import { Badge, Input, cn } from "@store-builder/ui";
+import { Input, cn } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@store-builder/ui";
 import { formatMoney } from "@/lib/format";
-import { useT, useCommon, fmt, type Messages } from "@/i18n/LocaleContext";
-import { DEMO_PRODUCTS } from "@/mock/seed";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -95,123 +94,17 @@ function timeAgo(iso: string, t: Strings): string {
   return fmt(t.daysAgo, { n: d });
 }
 
-// ------------------------------------------------------------ demo data --
-
-const DEMO_NAMES = ["أحمد محمود", "سارة علي", "محمد حسن", "منى إبراهيم", "خالد عبدالله", "نورهان سمير", "يوسف كمال", "هبة فتحي"];
-
-interface DemoShape {
-  confirmationState: Order["confirmationState"];
-  fulfillmentState: Order["fulfillmentState"];
-  cancelled: boolean;
-  risk: string[];
-}
-
-const DEMO_SHAPES: DemoShape[] = [
-  { confirmationState: "pending", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "pending", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "pending", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "pending", fulfillmentState: "unfulfilled", cancelled: false, risk: ["duplicate_order_window"] },
-  { confirmationState: "postponed", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "unreachable", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "pending", fulfillmentState: "unfulfilled", cancelled: false, risk: ["max_orders_per_phone_per_day"] },
-  { confirmationState: "confirmed", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "fulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "fulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "partially_fulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "fulfilled", cancelled: false, risk: [] },
-  { confirmationState: "rejected", fulfillmentState: "unfulfilled", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "unfulfilled", cancelled: true, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "returned", cancelled: false, risk: [] },
-  { confirmationState: "confirmed", fulfillmentState: "returned", cancelled: false, risk: [] },
-];
-
-function buildDemoOrders(workspaceId: string): Order[] {
-  const now = Date.now();
-  return DEMO_SHAPES.map((s, i) => {
-    const product = DEMO_PRODUCTS[i % DEMO_PRODUCTS.length];
-    const qty = 1 + (i % 2);
-    const subtotal = product.price * qty;
-    const shipping = 5000;
-    const total = subtotal + shipping;
-    const createdAt = new Date(now - (i * 3 + 1) * 3600 * 1000).toISOString();
-    const id = `demo-${i + 1}`;
-    return {
-      id,
-      workspaceId,
-      websiteId: null,
-      funnelId: i % 3 === 0 ? "fn-1" : null,
-      customerId: `demo-c-${i}`,
-      orderNumber: `#10${500 + i}`,
-      confirmationState: s.confirmationState,
-      financialState: s.fulfillmentState === "fulfilled" ? "paid" : "pending",
-      fulfillmentState: s.fulfillmentState,
-      paymentMethod: i % 5 === 0 ? "card" : "cod",
-      currency: "EGP",
-      subtotalAmount: String(subtotal),
-      discountAmount: "0",
-      shippingAmount: String(shipping),
-      taxAmount: "0",
-      totalAmount: String(total),
-      amountPaid: s.fulfillmentState === "fulfilled" ? String(total) : "0",
-      amountRefunded: "0",
-      contactSnapshot: { fullName: DEMO_NAMES[i % DEMO_NAMES.length], phone: `010${String(12345678 + i * 97).slice(0, 8)}` },
-      shippingAddressSnapshot: { country: "EG", city: "القاهرة" },
-      discountsSnapshot: [],
-      notes: null,
-      riskFlags: s.risk,
-      cancelledAt: s.cancelled ? createdAt : null,
-      cancellationReason: s.cancelled ? "Customer changed mind" : null,
-      linkedFromOrderId: null,
-      createdAt,
-      updatedAt: createdAt,
-      items: [
-        {
-          id: `${id}-item`,
-          orderId: id,
-          productId: product.id,
-          variantId: null,
-          offerId: null,
-          productNameSnapshot: product.name,
-          variantOptionsSnapshot: null,
-          skuSnapshot: null,
-          offerNameSnapshot: null,
-          quantity: qty,
-          unitPriceAmount: String(product.price),
-          unitCostAmount: null,
-          lineDiscountAmount: "0",
-          lineTotalAmount: String(subtotal),
-          isOrderBump: false,
-          isUpsell: false,
-          createdAt,
-          updatedAt: createdAt,
-        },
-      ],
-    };
-  });
-}
-
 // ------------------------------------------------------------------ page --
 
 export function OrderPipelinePage() {
   const t = useT(STRINGS);
-  const c = useCommon();
   const label = useEnumLabel();
   const workspaceId = useWorkspaceId();
   const [search, setSearch] = useState("");
   const [payment, setPayment] = useState<PaymentMethod | "">("");
 
-  const orders = useAsync<{ list: Order[]; demo: boolean }>(
-    async () => {
-      try {
-        const r = await apiClient.listOrders(workspaceId, { limit: 100 });
-        if (r.orders.length > 0) return { list: r.orders, demo: false };
-      } catch {
-        /* fall through to demo */
-      }
-      return { list: buildDemoOrders(workspaceId), demo: true };
-    },
+  const orders = useAsync<{ list: Order[] }>(
+    async () => ({ list: (await apiClient.listOrders(workspaceId, { limit: 100 })).orders }),
     [workspaceId]
   );
 
@@ -239,7 +132,6 @@ export function OrderPipelinePage() {
     <div className="min-w-0">
       <PageHeader
         title={t.title}
-        titleBadge={orders.data?.demo ? <Badge variant="outline">{c.demoData}</Badge> : undefined}
         description={t.description}
         actions={
           <Link to="/orders" className="text-sm text-primary hover:underline">

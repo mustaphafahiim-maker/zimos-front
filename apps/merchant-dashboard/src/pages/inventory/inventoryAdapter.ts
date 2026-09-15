@@ -67,28 +67,12 @@ export interface InventoryItem {
 
 export const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 
-const thresholdKey = (workspaceId: string, variantId: string) => `zimos.inventory.threshold.${workspaceId}.${variantId}`;
-
-/** The backend has no threshold field, so thresholds live on this device only. */
-export function readThreshold(workspaceId: string, variantId: string): number {
-  try {
-    const raw = localStorage.getItem(thresholdKey(workspaceId, variantId));
-    const n = raw === null ? NaN : Number(raw);
-    return Number.isInteger(n) && n >= 0 ? n : DEFAULT_LOW_STOCK_THRESHOLD;
-  } catch {
-    return DEFAULT_LOW_STOCK_THRESHOLD;
-  }
+/** Saves the variant's low-stock threshold on the server (null = default). */
+export async function writeThreshold(workspaceId: string, variantId: string, value: number | null): Promise<void> {
+  await apiClient.request(`/workspaces/${workspaceId}/catalog/variants/${variantId}`, { method: "PATCH", body: { lowStockThreshold: value } });
 }
 
-export function writeThreshold(workspaceId: string, variantId: string, value: number): void {
-  try {
-    localStorage.setItem(thresholdKey(workspaceId, variantId), String(value));
-  } catch {
-    /* storage unavailable — keep the in-memory value */
-  }
-}
-
-function toItem(workspaceId: string, product: Product, v: Variant): InventoryItem {
+function toItem(product: Product, v: Variant): InventoryItem {
   const onHand = Number(v.stockOnHand) || 0;
   const reserved = Number(v.reservedStock) || 0;
   const cost = v.costAmount === null || v.costAmount === undefined || v.costAmount === "" ? null : Number(v.costAmount);
@@ -103,7 +87,7 @@ function toItem(workspaceId: string, product: Product, v: Variant): InventoryIte
     available: onHand - reserved,
     costAmount: cost !== null && Number.isFinite(cost) ? cost : null,
     currency: v.currency || "EGP",
-    lowStockThreshold: readThreshold(workspaceId, v.id),
+    lowStockThreshold: (v as { lowStockThreshold?: number | null }).lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
   };
 }
 
@@ -118,7 +102,7 @@ export async function listInventoryItems(workspaceId: string): Promise<Inventory
       for (const p of res.products) {
         for (const v of p.variants ?? []) {
           if ((v as { status?: string }).status === "archived") continue;
-          items.push(toItem(workspaceId, p, v));
+          items.push(toItem(p, v));
         }
       }
       if (!res.nextCursor || res.nextCursor === cursor) break;
