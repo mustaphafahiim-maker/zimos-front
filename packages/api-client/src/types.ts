@@ -1314,3 +1314,148 @@ export interface UpdateCustomerAddressPayload {
   notes?: string | null;
   isDefault?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Platform admin (/admin/...)
+//
+// These mirror the serializers in the backend's `platformAdmin` module. Money
+// fields are plain numbers in minor units of the platform currency — the
+// backend already converts the BIGINT columns for this surface, so the
+// `parseMoney` treatment the storefront needs does not apply here.
+// ---------------------------------------------------------------------------
+
+/** Feature keys a plan can grant. Mirrors the `plans.features` JSONB. */
+export type PlanFeatureKey =
+  | "custom_domain"
+  | "funnels"
+  | "whatsapp_confirmation"
+  | "abandoned_cart"
+  | "multi_warehouse"
+  | "api_access"
+  | "staff_accounts"
+  | "advanced_analytics"
+  | "remove_branding"
+  | "priority_support";
+
+/**
+ * One row of `GET /admin/workspaces`. This is a purpose-built overview row,
+ * not a full `Workspace`: it carries the workspace's identity fields plus a
+ * flattened billing summary and a real lifetime order count. Fields a
+ * `Workspace` has but this does not (locale, timezone, settings, owner) are
+ * simply not served by this endpoint.
+ */
+export interface AdminWorkspaceOverview {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  defaultCurrency: string;
+  createdAt: string;
+  /** Plan name, or "—" when the workspace has no subscription. */
+  plan: string;
+  planId: string | null;
+  billingCycle: BillingCycle | null;
+  /** "none" when the workspace has never subscribed. */
+  subscriptionStatus: SubscriptionStatus | "none";
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  /** Lifetime orders placed in this workspace. */
+  orderCount: number;
+}
+
+export interface AdminPlan {
+  id: string;
+  name: string;
+  /** The backend column is `key`; this surface calls it `code`. */
+  code: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  currency: string;
+  trialDays: number;
+  /** Orders per month; null = unlimited. */
+  orderQuota: number | null;
+  transactionFeeBp: number;
+  codFeeBp: number;
+  features: PlanFeatureKey[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminPlanInput = Omit<AdminPlan, "id" | "currency" | "createdAt" | "updatedAt"> & {
+  id?: string;
+  currency?: string;
+};
+
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "expired"
+  | "paused";
+
+export type BillingCycle = "monthly" | "yearly";
+
+export interface AdminSubscription {
+  id: string;
+  workspaceId: string;
+  workspaceName: string | null;
+  workspaceSlug: string | null;
+  planId: string;
+  planName: string | null;
+  planCode: string | null;
+  billingCycle: BillingCycle;
+  status: SubscriptionStatus;
+  trialEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  graceUntil: string | null;
+  cancelAtPeriodEnd: boolean;
+  externalProvider: string | null;
+  /** Monthly run rate in minor units; 0 unless active/past_due. */
+  mrr: number;
+  createdAt: string;
+}
+
+export interface AdminFeatureFlag {
+  id: string;
+  key: string;
+  description: string;
+  enabled: boolean;
+  /** 0–100 percentage of workspaces. */
+  rollout: number;
+  targetWorkspaceIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminFeatureFlagInput = Pick<
+  AdminFeatureFlag,
+  "key" | "description" | "enabled" | "rollout" | "targetWorkspaceIds"
+> & { id?: string };
+
+export type AnnouncementSeverity = "info" | "success" | "warning" | "critical";
+export type AnnouncementAudience = "all" | "plan" | "workspace";
+
+export interface AdminAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  severity: AnnouncementSeverity;
+  audience: AnnouncementAudience;
+  planId: string | null;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  dismissible: boolean;
+  /** Resolved admin name/email, set server-side. */
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export type AdminAnnouncementInput = Omit<
+  AdminAnnouncement,
+  "id" | "workspaceName" | "createdBy" | "createdAt"
+> & { id?: string };

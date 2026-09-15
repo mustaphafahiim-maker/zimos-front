@@ -12,7 +12,7 @@ import {
   getOrderSnapshot,
   type AcceptedUpsell,
   type OrderSnapshot,
-} from "@/lib/mockCommerce";
+} from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 
@@ -148,19 +148,8 @@ function Confirmation() {
                 <dt>{t.thankYou.total}</dt>
                 <dd>{money(snapshot.totalAmount, currency)}</dd>
               </div>
-              {snapshot.extras.map((extra, i) => (
-                <div key={i} className="flex justify-between text-ink-soft">
-                  <dt>{extra.label}</dt>
-                  <dd>
-                    {extra.amount < 0 ? "−" : "+"}
-                    {money(Math.abs(extra.amount), currency)}
-                  </dd>
-                </div>
-              ))}
             </dl>
-            {(snapshot.extras.length > 0 || upsell) && (
-              <p className="mt-3 text-xs text-ink-soft">{t.checkout.finalNote}</p>
-            )}
+            {upsell && <p className="mt-3 text-xs text-ink-soft">{t.checkout.finalNote}</p>}
           </section>
         )}
 

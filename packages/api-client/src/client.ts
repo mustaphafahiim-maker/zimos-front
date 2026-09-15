@@ -1,6 +1,14 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
   AddCustomerAddressPayload,
+  AdminAnnouncement,
+  AdminAnnouncementInput,
+  AdminFeatureFlag,
+  AdminFeatureFlagInput,
+  AdminPlan,
+  AdminPlanInput,
+  AdminSubscription,
+  AdminWorkspaceOverview,
   ArchivedResponse,
   AuthTokens,
   AuthUser,
@@ -618,10 +626,82 @@ export class ApiClient {
   async adminListWorkspaces() {
     // The endpoint wraps the rows: { workspaces: [...] }. Unwrap here so every
     // caller gets the array its type promises.
-    const { workspaces } = await this.request<{ workspaces: Workspace[] }>(
+    const { workspaces } = await this.request<{ workspaces: AdminWorkspaceOverview[] }>(
       "/admin/workspaces"
     );
     return workspaces ?? [];
+  }
+
+  // --- Plans ---
+  async adminListPlans() {
+    const { plans } = await this.request<{ plans: AdminPlan[] }>("/admin/plans");
+    return plans ?? [];
+  }
+
+  async adminSavePlan(payload: AdminPlanInput) {
+    // One entry point for both create and update: an `id` means PATCH.
+    const { id, ...body } = payload;
+    const { plan } = await this.request<{ plan: AdminPlan }>(
+      id ? `/admin/plans/${id}` : "/admin/plans",
+      { method: id ? "PATCH" : "POST", body }
+    );
+    return plan;
+  }
+
+  async adminDeletePlan(planId: string) {
+    return this.request<SuccessResponse>(`/admin/plans/${planId}`, { method: "DELETE" });
+  }
+
+  // --- Subscriptions ---
+  async adminListSubscriptions(params: { status?: string } = {}) {
+    const { subscriptions } = await this.request<{ subscriptions: AdminSubscription[] }>(
+      `/admin/subscriptions${buildQuery({ ...params })}`
+    );
+    return subscriptions ?? [];
+  }
+
+  // --- Feature flags ---
+  async adminListFeatureFlags() {
+    const { featureFlags } = await this.request<{ featureFlags: AdminFeatureFlag[] }>(
+      "/admin/feature-flags"
+    );
+    return featureFlags ?? [];
+  }
+
+  async adminSaveFeatureFlag(payload: AdminFeatureFlagInput) {
+    const { id, ...body } = payload;
+    const { featureFlag } = await this.request<{ featureFlag: AdminFeatureFlag }>(
+      id ? `/admin/feature-flags/${id}` : "/admin/feature-flags",
+      { method: id ? "PATCH" : "POST", body }
+    );
+    return featureFlag;
+  }
+
+  async adminDeleteFeatureFlag(flagId: string) {
+    return this.request<SuccessResponse>(`/admin/feature-flags/${flagId}`, { method: "DELETE" });
+  }
+
+  // --- Announcements ---
+  async adminListAnnouncements() {
+    const { announcements } = await this.request<{ announcements: AdminAnnouncement[] }>(
+      "/admin/announcements"
+    );
+    return announcements ?? [];
+  }
+
+  async adminSaveAnnouncement(payload: AdminAnnouncementInput) {
+    const { id, ...body } = payload;
+    const { announcement } = await this.request<{ announcement: AdminAnnouncement }>(
+      id ? `/admin/announcements/${id}` : "/admin/announcements",
+      { method: id ? "PATCH" : "POST", body }
+    );
+    return announcement;
+  }
+
+  async adminDeleteAnnouncement(announcementId: string) {
+    return this.request<SuccessResponse>(`/admin/announcements/${announcementId}`, {
+      method: "DELETE",
+    });
   }
 
   // ---------------------------------------------------------------------

@@ -10,20 +10,21 @@ import {
   getOrderSnapshot,
   getUpsellOffer,
   type OrderSnapshot,
-} from "@/lib/mockCommerce";
+} from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { useCatalog } from "@/lib/useCatalog";
 
 /**
  * Post-purchase one-click upsell. The order already exists; both answers
- * continue to the thank-you page. Accepting is simulated (see mockCommerce).
+ * continue to the thank-you page. Accepting is recorded on this device and
+ * confirmed on the merchant’s call — there is no append-to-order endpoint.
  */
 function UpsellOfferView() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
   const search = useSearchParams();
   const router = useRouter();
-  const { t, money, locale } = useStore();
+  const { t, money } = useStore();
   const { products, loaded } = useCatalog(workspaceId);
   const basePath = useStoreBasePath();
 
@@ -34,8 +35,8 @@ function UpsellOfferView() {
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
   const offer = useMemo(
-    () => (loaded ? getUpsellOffer(products ?? [], snapshot?.productIds ?? [], locale) : null),
-    [loaded, products, snapshot, locale]
+    () => (loaded ? getUpsellOffer(products ?? [], snapshot?.productIds ?? []) : null),
+    [loaded, products, snapshot]
   );
 
   const thankYouHref = storeHref(

@@ -9,7 +9,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
-import { getOrderBump } from "@/lib/mockCommerce";
+import { getOrderBump } from "@/lib/commerce";
 import { firstImage, productImages } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
@@ -87,7 +87,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const bump = getOrderBump(catalogue, [product.id], locale);
+  const bump = getOrderBump(catalogue, [product.id]);
 
   return (
     <main className="flex-1 pb-24 md:pb-0">

@@ -1,31 +1,46 @@
 /**
- * Formatting helpers. Platform billing and GMV figures in the mock layer are
- * expressed in a single platform currency (major units).
+ * Formatting helpers. Plan prices carry their own currency (`plans.currency`),
+ * so money formatters take one rather than assuming a single platform
+ * currency; the fallback only applies where no currency is known.
  */
 export const PLATFORM_CURRENCY = "EGP";
 
-const moneyFmt = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: PLATFORM_CURRENCY,
-  maximumFractionDigits: 0,
-});
+// Intl formatters are expensive to construct — one per currency, reused.
+const moneyFmts = new Map<string, Intl.NumberFormat>();
+const compactMoneyFmts = new Map<string, Intl.NumberFormat>();
 
-const compactMoneyFmt = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: PLATFORM_CURRENCY,
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+function moneyFmt(currency: string): Intl.NumberFormat {
+  let f = moneyFmts.get(currency);
+  if (!f) {
+    f = new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 });
+    moneyFmts.set(currency, f);
+  }
+  return f;
+}
+
+function compactMoneyFmt(currency: string): Intl.NumberFormat {
+  let f = compactMoneyFmts.get(currency);
+  if (!f) {
+    f = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+      notation: "compact",
+      maximumFractionDigits: 1,
+    });
+    compactMoneyFmts.set(currency, f);
+  }
+  return f;
+}
 
 const numberFmt = new Intl.NumberFormat("en");
 const compactFmt = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
 
-export function formatMoney(value: number): string {
-  return moneyFmt.format(value);
+export function formatMoney(value: number, currency: string = PLATFORM_CURRENCY): string {
+  return moneyFmt(currency).format(value);
 }
 
-export function formatMoneyCompact(value: number): string {
-  return compactMoneyFmt.format(value);
+export function formatMoneyCompact(value: number, currency: string = PLATFORM_CURRENCY): string {
+  return compactMoneyFmt(currency).format(value);
 }
 
 export function formatNumber(value: number): string {

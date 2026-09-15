@@ -9,8 +9,7 @@ import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
-import { formatPrice } from "@/lib/i18n";
-import { estimateShipping, getOrderBump, type OrderSnapshot } from "@/lib/mockCommerce";
+import { getOrderBump } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -32,7 +31,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { cart, addItem, clearCart } = useCart();
-  const { t, money, locale } = useStore();
+  const { t, money } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
   const { products, byVariant, loaded } = useCatalog(workspaceId);
 
@@ -51,15 +50,14 @@ export default function CheckoutPage() {
   const bump = useMemo(() => {
     if (!loaded) return null;
     const inCart = new Set(items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[]);
-    return getOrderBump(products ?? [], [...inCart], locale);
+    return getOrderBump(products ?? [], [...inCart]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, products, locale]);
+  }, [loaded, products]);
 
   // Once the bump is a real line in the cart, the cart subtotal already has it.
   const bumpInTotals = bumpOn && bump && !bumpAdded.current ? bump.priceAmount : 0;
-  const shipping = estimateShipping(values.governorate);
   const subtotal = cart?.subtotal ?? 0;
-  const total = subtotal + bumpInTotals + (shipping ?? 0);
+  const total = subtotal + bumpInTotals;
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -84,27 +82,19 @@ export default function CheckoutPage() {
     }
 
     const systemNotes: string[] = [];
-    const extras: OrderSnapshot["extras"] = [];
 
     setSubmitting(true);
     setFormError(null);
     try {
-      if (bumpOn && bump) {
-        if (bump.real && bump.variantId) {
-          if (!bumpAdded.current) {
-            await addItem(bump.variantId, bump.offerId, 1);
-            bumpAdded.current = true;
-          }
-        } else {
-          systemNotes.push(`Order bump: ${bump.name} (+${formatPrice(bump.priceAmount, currency, "en")})`);
-          extras.push({ label: bump.name, amount: bump.priceAmount });
-        }
+      if (bumpOn && bump && !bumpAdded.current) {
+        await addItem(bump.variantId, bump.offerId, 1);
+        bumpAdded.current = true;
       }
 
       const payload = toCheckoutPayload(values, { discountCode: appliedCode, systemNotes });
       const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
       clearCart();
-      router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone, extras }));
+      router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
       setFormError(orderErrorMessage(err, t.form.errors.generic));
       setSubmitting(false);
@@ -248,10 +238,8 @@ export default function CheckoutPage() {
                 </div>
               )}
               <div className="flex justify-between gap-3">
-                <dt className="text-ink-soft">{t.checkout.shippingEstimate}</dt>
-                <dd className="text-ink">
-                  {shipping !== null ? money(shipping, currency) : t.checkout.chooseGovernorateForShipping}
-                </dd>
+                <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
+                <dd className="text-ink">{t.checkout.shippingOnConfirmation}</dd>
               </div>
               <div className="flex justify-between gap-3 border-t border-line pt-3 text-base font-bold text-ink">
                 <dt>{t.checkout.totalEstimate}</dt>

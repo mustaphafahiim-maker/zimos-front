@@ -17,7 +17,6 @@ import {
   Menu,
   MessageCircle,
   Puzzle,
-  RotateCcw,
   ScrollText,
   Search,
   ShieldAlert,
@@ -31,8 +30,8 @@ import { useAuth } from "@/context/AuthContext";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Status } from "@/components/StatusBadge";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminWorkspaceRow } from "@/lib/adminApi";
 import { initials } from "@/lib/format";
 
 interface NavItem {
@@ -137,7 +136,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 function GlobalSearch() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AdminWorkspace[]>([]);
+  const [results, setResults] = useState<AdminWorkspaceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -192,10 +191,10 @@ function GlobalSearch() {
     };
   }, []);
 
-  function go(ws: AdminWorkspace) {
+  function go(row: AdminWorkspaceRow) {
     setOpen(false);
     setQuery("");
-    navigate(`/workspaces/${ws.id}`);
+    navigate(`/workspaces/${row.workspace.id}`);
   }
 
   return (
@@ -223,8 +222,8 @@ function GlobalSearch() {
             setOpen(false);
           }
         }}
-        placeholder="Search workspaces or owner email…"
-        aria-label="Search workspaces by name or owner email"
+        placeholder="Search workspaces…"
+        aria-label="Search workspaces by name or address"
         role="combobox"
         aria-expanded={open && query.trim().length > 0}
         aria-controls="global-search-results"
@@ -244,22 +243,22 @@ function GlobalSearch() {
             <p className="px-4 py-3 text-sm text-ink-soft">No workspaces match “{query.trim()}”.</p>
           ) : (
             <ul className="max-h-80 overflow-y-auto py-1">
-              {results.map((ws, i) => (
-                <li key={ws.id} role="option" aria-selected={i === active}>
+              {results.map((row, i) => (
+                <li key={row.workspace.id} role="option" aria-selected={i === active}>
                   <button
                     type="button"
                     onMouseEnter={() => setActive(i)}
-                    onClick={() => go(ws)}
+                    onClick={() => go(row)}
                     className={cn(
                       "flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-start text-sm",
                       i === active && "bg-primary-soft"
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">{ws.name}</span>
-                      <span className="block truncate text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
+                      <span className="block truncate font-medium text-ink">{row.workspace.name}</span>
+                      <span className="block truncate text-xs text-ink-soft">{row.workspace.slug}</span>
                     </span>
-                    <Status value={ws.meta.suspended ? "suspended" : ws.meta.subscriptionStatus} />
+                    {row.subscription && <Status value={row.subscription.status} />}
                   </button>
                 </li>
               ))}
@@ -320,17 +319,6 @@ function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              adminApi.resetAllMockData();
-              window.location.reload();
-            }}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
-          >
-            <RotateCcw className="size-4" aria-hidden /> Reset demo data
-          </button>
-          <button
-            type="button"
-            role="menuitem"
             onClick={() => void logout()}
             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-danger-soft hover:text-danger"
           >
@@ -343,13 +331,8 @@ function UserMenu() {
 }
 
 export function AdminLayout() {
-  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    if (user) adminApi.setMockActor({ name: user.fullName || user.email, email: user.email });
-  }, [user]);
 
   useEffect(() => {
     setMobileOpen(false);

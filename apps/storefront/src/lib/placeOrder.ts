@@ -1,5 +1,5 @@
 import { ApiError, type ApiClient, type CheckoutPayload, type Order } from "@store-builder/api-client";
-import { saveOrderSnapshot, snapshotFromOrder, type OrderSnapshot } from "./mockCommerce";
+import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import { storeHref } from "./storeHref";
 
 export interface OrderLine {
@@ -53,15 +53,13 @@ export function afterOrder({
   basePath,
   order,
   phone,
-  extras = [],
 }: {
   workspaceId: string;
   basePath: string;
   order: Order;
   phone: string;
-  extras?: OrderSnapshot["extras"];
 }): string {
-  saveOrderSnapshot(workspaceId, snapshotFromOrder(order, phone, extras));
+  saveOrderSnapshot(workspaceId, snapshotFromOrder(order, phone));
   const q = new URLSearchParams({ number: order.orderNumber });
   return storeHref(basePath, `/offer/${order.id}?${q.toString()}`);
 }

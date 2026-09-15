@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderBumpOffer } from "@/lib/mockCommerce";
+import type { OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { GiftIcon } from "../Icons";
 

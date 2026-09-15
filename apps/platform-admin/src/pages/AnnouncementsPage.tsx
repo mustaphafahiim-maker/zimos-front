@@ -11,8 +11,14 @@ import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, Announcement, AnnouncementAudience, AnnouncementSeverity, Plan } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminWorkspaceRow } from "@/lib/adminApi";
+import type {
+  AdminAnnouncement as Announcement,
+  AdminPlan as Plan,
+  AnnouncementAudience,
+  AnnouncementSeverity,
+} from "@store-builder/api-client";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 
 type Filter = "all" | "live" | "scheduled" | "ended";
@@ -58,7 +64,7 @@ export function AnnouncementBanner({ title, body, severity, dismissible }: { tit
 export function AnnouncementsPage() {
   const toast = useToast();
   const { data, loading, error, refresh, setData } = useAsync(
-    () => Promise.all([adminApi.listAnnouncements(), adminApi.listPlans(), adminApi.listWorkspaces({ force: false })]),
+    () => Promise.all([adminApi.listAnnouncements(), adminApi.listPlans(), adminApi.listWorkspaceRows()]),
     []
   );
   const [filter, setFilter] = useState<Filter>("all");
@@ -67,7 +73,7 @@ export function AnnouncementsPage() {
 
   const announcements = useMemo(() => data?.[0] ?? [], [data]);
   const plans = data?.[1] ?? [];
-  const workspaces = data?.[2].rows ?? [];
+  const workspaces = data?.[2] ?? [];
 
   const setAnnouncements = (fn: (list: Announcement[]) => Announcement[]) =>
     setData((prev) => {
@@ -198,7 +204,7 @@ function AnnouncementEditor({
 }: {
   initial: AnnouncementForm;
   plans: Plan[];
-  workspaces: AdminWorkspace[];
+  workspaces: AdminWorkspaceRow[];
   onClose: () => void;
   onSaved: (a: Announcement) => void;
 }) {
@@ -216,7 +222,6 @@ function AnnouncementEditor({
     setBusy(true);
     setError(null);
     try {
-      const ws = workspaces.find((w) => w.id === form.workspaceId);
       onSaved(
         await adminApi.saveAnnouncement({
           id: form.id,
@@ -226,7 +231,6 @@ function AnnouncementEditor({
           audience: form.audience,
           planId: form.planId || null,
           workspaceId: form.workspaceId || null,
-          workspaceName: ws?.name ?? null,
           startsAt: new Date(form.startsAt).toISOString(),
           endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
           dismissible: form.dismissible,
@@ -282,9 +286,9 @@ function AnnouncementEditor({
           {form.audience === "workspace" && (
             <SelectField label="Workspace" required value={form.workspaceId} onChange={(e) => set("workspaceId", e.target.value)}>
               <option value="">Choose a workspace…</option>
-              {workspaces.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
+              {workspaces.map(({ workspace }) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
                 </option>
               ))}
             </SelectField>

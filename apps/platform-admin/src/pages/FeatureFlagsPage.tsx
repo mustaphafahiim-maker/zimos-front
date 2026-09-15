@@ -12,8 +12,12 @@ import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, FeatureFlag, FeatureFlagInput } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminWorkspaceRow } from "@/lib/adminApi";
+import type {
+  AdminFeatureFlag as FeatureFlag,
+  AdminFeatureFlagInput as FeatureFlagInput,
+} from "@store-builder/api-client";
 import { formatRelative } from "@/lib/format";
 
 function toInput(flag: FeatureFlag): FeatureFlagInput {
@@ -23,7 +27,7 @@ function toInput(flag: FeatureFlag): FeatureFlagInput {
 export function FeatureFlagsPage() {
   const toast = useToast();
   const { data, loading, error, refresh, setData } = useAsync(
-    () => Promise.all([adminApi.listFlags(), adminApi.listWorkspaces({ force: false })]),
+    () => Promise.all([adminApi.listFlags(), adminApi.listWorkspaceRows()]),
     []
   );
   const [query, setQuery] = useState("");
@@ -32,7 +36,7 @@ export function FeatureFlagsPage() {
   const [deleting, setDeleting] = useState<FeatureFlag | null>(null);
 
   const flags = useMemo(() => data?.[0] ?? [], [data]);
-  const workspaces = data?.[1].rows ?? [];
+  const workspaces = data?.[1] ?? [];
 
   const upsert = (flag: FeatureFlag) =>
     setData((prev) => {
@@ -283,7 +287,7 @@ function TargetsModal({
   onSaved,
 }: {
   flag: FeatureFlag;
-  workspaces: AdminWorkspace[];
+  workspaces: AdminWorkspaceRow[];
   onClose: () => void;
   onSaved: (f: FeatureFlag) => void;
 }) {
@@ -292,11 +296,11 @@ function TargetsModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const known = new Set(workspaces.map((w) => w.id));
+  const known = new Set(workspaces.map((w) => w.workspace.id));
   const unknownIds = flag.targetWorkspaceIds.filter((id) => !known.has(id));
-  const visible = workspaces.filter((w) => {
+  const visible = workspaces.filter(({ workspace }) => {
     const q = query.trim().toLowerCase();
-    return !q || w.name.toLowerCase().includes(q) || w.slug.includes(q);
+    return !q || workspace.name.toLowerCase().includes(q) || workspace.slug.includes(q);
   });
 
   function toggle(id: string) {
@@ -349,12 +353,17 @@ function TargetsModal({
           {visible.length === 0 ? (
             <li className="px-3 py-4 text-center text-sm text-ink-soft">No workspaces match.</li>
           ) : (
-            visible.map((w) => (
-              <li key={w.id}>
+            visible.map(({ workspace, subscription }) => (
+              <li key={workspace.id}>
                 <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-primary-soft/50">
-                  <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={selected.has(w.id)} onChange={() => toggle(w.id)} />
-                  <span className="min-w-0 flex-1 truncate text-ink">{w.name}</span>
-                  <span className="text-xs text-ink-soft">{w.plan?.name ?? ""}</span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--color-primary)]"
+                    checked={selected.has(workspace.id)}
+                    onChange={() => toggle(workspace.id)}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-ink">{workspace.name}</span>
+                  <span className="text-xs text-ink-soft">{subscription?.planName ?? ""}</span>
                 </label>
               </li>
             ))

@@ -11,9 +11,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import { PLAN_FEATURES } from "@/mock/constants";
-import type { Plan, PlanFeatureKey } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import { PLAN_FEATURES } from "@/lib/planFeatures";
+import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
 import { formatBp, formatMoney, formatNumber, formatRelative } from "@/lib/format";
 
 interface PlanForm {
@@ -98,10 +98,12 @@ export function PlansPage() {
               <div className="flex-1 space-y-4 px-5 py-4">
                 <div>
                   <p className="tabular text-2xl font-semibold text-ink">
-                    {formatMoney(p.monthlyPrice)}
+                    {formatMoney(p.monthlyPrice, p.currency)}
                     <span className="text-sm font-normal text-ink-soft"> / month</span>
                   </p>
-                  <p className="tabular text-sm text-ink-soft">{formatMoney(p.yearlyPrice)} / year</p>
+                  <p className="tabular text-sm text-ink-soft">
+                    {formatMoney(p.yearlyPrice, p.currency)} / year
+                  </p>
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   <dt className="text-ink-soft">Trial</dt>
