@@ -200,6 +200,7 @@ export function Inspector({
             <NumberInput value={r.column.span ?? 12} min={1} max={12} onChange={(v) => settings(cPath, { span: v })} />
           </Field>
           <Switch label={t.columnCard} checked={s.card === true} onChange={(v) => settings(cPath, { card: v || "" })} />
+          <Switch label={t.columnHighlight} checked={s.highlight === true} onChange={(v) => settings(cPath, { highlight: v || "" })} />
           <Field label={t.align}>
             <Segmented
               label={t.align}

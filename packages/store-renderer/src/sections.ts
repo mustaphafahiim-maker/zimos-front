@@ -59,6 +59,49 @@ function preset(
 const SHOP_ALL = "/?search=1#products";
 
 export const SECTION_LIBRARY: SectionPreset[] = [
+  preset("marquee-strip", "trust", L("شريط مميزات متحرك", "Moving features strip"), L("شريط بيتحرك فيه مميزات متجرك", "A scrolling strip of your selling points"), (id, t) =>
+    P.marqueeSection(id, {
+      items: [
+        t(L("الدفع عند الاستلام", "Cash on delivery")),
+        t(L("توصيل لكل المحافظات", "Delivery nationwide")),
+        t(L("استبدال سهل", "Easy exchange")),
+        t(L("اكتب ميزة هنا", "Write a benefit here")),
+      ],
+    })
+  ),
+  preset("comparison", "trust", L("مقارنة: إحنا وغيرنا", "Us vs others"), L("جدول بعلامات صح وغلط يوضح ميزتك", "A ✓ / ✗ table showing why you're the better choice"), (id, t) =>
+    P.comparisonSection(id, {
+      eyebrow: t(L("ليه تختارنا؟", "Why choose us?")),
+      title: t(L("الفرق واضح", "See the difference")),
+      text: t(L("اكتب مقارنة حقيقية وعادلة. ✓ و ✗ بيتحولوا لعلامات ملونة.", "Keep it real and fair. ✓ and ✗ turn into coloured marks.")),
+      table: t(
+        L(
+          "الميزة | إحنا | غيرنا\nالدفع عند الاستلام | ✓ | ✗\nاكتب ميزة | ✓ | ✗\nاكتب ميزة | ✓ | ✗\nاكتب ميزة | ✓ | ✓",
+          "Feature | Us | Others\nCash on delivery | ✓ | ✗\nWrite a feature | ✓ | ✗\nWrite a feature | ✓ | ✗\nWrite a feature | ✓ | ✓"
+        )
+      ),
+    })
+  ),
+  preset("bundles", "products", L("عروض الكميات", "Bundle offers"), L("كروت لعروض قطعة وقطعتين و3 قطع", "Cards for 1, 2 and 3-piece offers"), (id, t) =>
+    P.bundleSection(id, {
+      eyebrow: t(L("وفّر أكتر", "Get more")),
+      title: t(L("اختار العرض المناسب", "Choose your offer")),
+      text: t(L("اكتب أسعار العروض الحقيقية بتاعتك في كل كارت.", "Write your real offer prices in each card.")),
+      tiers: [
+        { name: t(L("قطعة واحدة", "One piece")), text: t(L("اكتب هنا سعر القطعة", "Write the single price")), cta: { label: t(L("اختار", "Choose")), href: "#order" } },
+        { name: t(L("قطعتين", "Two pieces")), text: t(L("اكتب هنا سعر العرض الحقيقي", "Write the real offer price")), badge: t(L("العرض المقترح", "Suggested")), cta: { label: t(L("اختار العرض", "Choose offer")), href: "#order" } },
+        { name: t(L("3 قطع", "Three pieces")), text: t(L("اكتب هنا سعر العرض الحقيقي", "Write the real offer price")), cta: { label: t(L("اختار", "Choose")), href: "#order" } },
+      ],
+    })
+  ),
+  preset("before-after", "media", L("صور قبل وبعد", "Before & after"), L("صورتين فوق بعض بخط بيتسحب", "Two photos with a draggable divider"), (id, t) =>
+    P.beforeAfterSection(id, {
+      title: t(L("شوف الفرق بنفسك", "See the difference yourself")),
+      text: t(L("ارفع صور حقيقية بإذن أصحابها: الأولى قبل، والتانية بعد.", "Upload real photos with permission: first is before, second is after.")),
+      beforeLabel: t(L("قبل", "Before")),
+      afterLabel: t(L("بعد", "After")),
+    })
+  ),
   preset("announcement-bar", "announcement", L("شريط إعلان", "Announcement bar"), L("شريط رفيع ملوّن بجملة قصيرة ولينك", "Thin coloured strip with one line and a link"), (id, t) =>
     P.announcementSection(id, { text: t(L("اكتب هنا جملة قصيرة عن عرضك أو التوصيل", "Write a short line about your offer or delivery")), link: { label: t(L("اعرف أكتر", "Learn more")), href: SHOP_ALL } })
   ),

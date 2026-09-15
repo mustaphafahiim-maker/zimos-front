@@ -203,6 +203,55 @@ function Schematic({ id }: { id: string }) {
     case "divider":
       body = <div className="flex h-full items-center px-3">{line("100%", "h-px")}</div>;
       break;
+    case "marquee-strip":
+      body = (
+        <div className="flex h-full flex-col justify-center">
+          <div className="flex h-5 items-center gap-2 overflow-hidden bg-primary/80 px-1">
+            {line("22%", "bg-white/80 shrink-0")}
+            <span className="text-[8px] text-white">✦</span>
+            {line("22%", "bg-white/80 shrink-0")}
+            <span className="text-[8px] text-white">✦</span>
+            {line("22%", "bg-white/80 shrink-0")}
+          </div>
+        </div>
+      );
+      break;
+    case "comparison":
+      body = (
+        <div className="flex h-full flex-col justify-center gap-1 p-2">
+          {[0, 1, 2].map((r) => (
+            <div key={r} className="grid grid-cols-[2fr_1fr_1fr] items-center gap-1">
+              {line("80%")}
+              <span className="mx-auto text-[9px] font-bold text-green-600">✓</span>
+              <span className="mx-auto text-[9px] font-bold text-red-500">✗</span>
+            </div>
+          ))}
+        </div>
+      );
+      break;
+    case "bundles":
+      body = (
+        <div className="grid h-full grid-cols-3 items-center gap-1.5 p-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={cn("flex h-4/5 flex-col items-center justify-center gap-1 rounded border bg-white", i === 1 ? "border-primary ring-1 ring-primary" : "border-line")}>
+              {line("60%", "bg-ink/40")}
+              {line("45%")}
+              {pill(i === 1 ? "w-6" : "w-6 bg-primary/30")}
+            </div>
+          ))}
+        </div>
+      );
+      break;
+    case "before-after":
+      body = (
+        <div className="relative grid h-full grid-cols-2 gap-px p-2">
+          {img("h-full bg-ink/25")}
+          {img("h-full")}
+          <span className="absolute inset-y-2 left-1/2 w-0.5 -translate-x-1/2 bg-white shadow" />
+          <span className="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow" />
+        </div>
+      );
+      break;
     default:
       body = (
         <div className="flex h-full flex-col justify-center gap-1 p-3">

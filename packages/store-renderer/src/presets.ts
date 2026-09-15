@@ -320,6 +320,68 @@ export function logoStripSection(id: IdFactory, c: { title: string; count?: numb
   );
 }
 
+/** Endless strip of short selling points (list style "marquee"). */
+export function marqueeSection(id: IdFactory, c: { items: string[]; icon?: string }, l: SectionLook = {}): TreeSection {
+  return section(
+    id,
+    [row(id, [col(id, [el(id, "list", { title: "", items: c.items, style: "marquee", speed: 30, ...(c.icon ? { icon: c.icon } : {}) })])])],
+    look("marquee", { tone: "primary", padding: "sm", width: "full", ...l })
+  );
+}
+
+/** "Us vs others" table: first column = feature, second = your store (highlighted), ✓ / ✗ render as icons. */
+export function comparisonSection(id: IdFactory, c: { eyebrow?: string; title: string; text?: string; table: string }, l: SectionLook = {}): TreeSection {
+  return section(
+    id,
+    [headerRow(id, c), row(id, [col(id, [el(id, "rich_text", { text: c.table, format: "table", variant: "compare" })])])],
+    look("comparison", { width: "narrow", ...l })
+  );
+}
+
+/** Quantity/bundle offer cards; the tier with a badge is highlighted. Prices are written by the merchant. */
+export function bundleSection(
+  id: IdFactory,
+  c: { eyebrow?: string; title: string; text?: string; tiers: Array<{ name: string; text: string; badge?: string; cta: Cta }> },
+  l: SectionLook = {}
+): TreeSection {
+  const span = Math.max(3, Math.floor(12 / Math.max(1, c.tiers.length)));
+  return section(
+    id,
+    [
+      headerRow(id, c),
+      row(
+        id,
+        c.tiers.map((tier) =>
+          col(
+            id,
+            [
+              el(id, "heading", { text: tier.name, level: 3, ...(tier.badge ? { eyebrow: tier.badge } : {}) }),
+              el(id, "text", { text: tier.text }),
+              el(id, "button", { label: tier.cta.label, href: tier.cta.href, variant: tier.badge ? "primary" : "outline", size: "md" }),
+            ],
+            span,
+            { align: "center", ...(tier.badge ? { highlight: true } : {}) }
+          )
+        ),
+        { layout: "cards" }
+      ),
+    ],
+    look("bundles", { tone: "surface", ...l })
+  );
+}
+
+/** Before/after slider (gallery in "compare" mode: first image = before, second = after). */
+export function beforeAfterSection(id: IdFactory, c: { eyebrow?: string; title: string; text?: string; beforeLabel: string; afterLabel: string }, l: SectionLook = {}): TreeSection {
+  return section(
+    id,
+    [
+      headerRow(id, c),
+      row(id, [col(id, [el(id, "gallery", { title: "", images: [], mode: "compare", beforeLabel: c.beforeLabel, afterLabel: c.afterLabel, placeholderCount: 2 })])]),
+    ],
+    look("before-after", { width: "narrow", ...l })
+  );
+}
+
 export function spacerSection(id: IdFactory, height = 48): TreeSection {
   return section(id, [row(id, [col(id, [el(id, "spacer", { height })])])], look("spacer", { padding: "none" }));
 }

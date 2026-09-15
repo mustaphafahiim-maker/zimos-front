@@ -110,8 +110,11 @@ export const ELEMENT_FIELDS: Record<ElementType, FieldDef[]> = {
   ],
   gallery: [
     TITLE,
-    { key: "images", kind: "images", label: L("الصور", "Images"), required: true },
+    { key: "images", kind: "images", label: L("الصور", "Images"), required: true, hint: L("في وضع قبل وبعد: الصورة الأولى قبل والتانية بعد", "Before & after mode: first image = before, second = after") },
+    { key: "mode", kind: "select", label: L("طريقة العرض", "Display"), options: [opt("", "شبكة صور", "Grid"), opt("compare", "قبل وبعد (بخط بيتسحب)", "Before & after slider")] },
     { key: "columns", kind: "number", label: L("عدد الأعمدة", "Columns"), min: 1, max: 6, defaultValue: 3 },
+    { key: "beforeLabel", kind: "text", label: L("كلمة «قبل»", "“Before” label") },
+    { key: "afterLabel", kind: "text", label: L("كلمة «بعد»", "“After” label") },
   ],
   button: [
     { key: "label", kind: "text", label: L("كلام الزرار", "Label"), required: true },
@@ -142,7 +145,9 @@ export const ELEMENT_FIELDS: Record<ElementType, FieldDef[]> = {
   list: [
     TITLE,
     { key: "items", kind: "strList", label: L("النقاط", "Items"), required: true },
-    { key: "style", kind: "select", label: L("الشكل", "Style"), options: [opt("check", "علامة صح", "Check"), opt("dot", "نقطة", "Dot"), opt("number", "أرقام", "Numbers")] },
+    { key: "style", kind: "select", label: L("الشكل", "Style"), options: [opt("check", "علامة صح", "Check"), opt("dot", "نقطة", "Dot"), opt("number", "أرقام", "Numbers"), opt("marquee", "شريط متحرك", "Moving strip")] },
+    { key: "speed", kind: "number", label: L("مدة اللفة للشريط المتحرك (ثانية)", "Moving strip loop (seconds)"), min: 8, max: 120, defaultValue: 30 },
+    { key: "icon", kind: "select", label: L("أيقونة الشريط المتحرك", "Moving strip icon"), options: ICON_OPTIONS },
   ],
   accordion: QA,
   faq: QA,
@@ -180,7 +185,10 @@ export const ELEMENT_FIELDS: Record<ElementType, FieldDef[]> = {
   cart: [TITLE],
 };
 
-export const TABLE_FIELDS: FieldDef[] = [{ key: "text", kind: "table", label: L("الجدول", "Table"), required: true }];
+export const TABLE_FIELDS: FieldDef[] = [
+  { key: "text", kind: "table", label: L("الجدول", "Table"), required: true, hint: L("في جدول المقارنة اكتب ✓ أو ✗ في الخانة", "In a comparison table type ✓ or ✗ in a cell") },
+  { key: "variant", kind: "select", label: L("نوع الجدول", "Table type"), options: [opt("", "جدول عادي", "Plain table"), opt("compare", "مقارنة (إحنا وغيرنا)", "Comparison (us vs others)")] },
+];
 
 /** Palette order in the Add tab. */
 export const ELEMENT_PALETTE: ElementType[] = [

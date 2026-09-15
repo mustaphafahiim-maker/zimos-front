@@ -50,6 +50,7 @@ import { EMPTY_CATALOG, type CatalogData } from "./StoreChrome";
 import { createElement } from "./elementLibrary";
 import { ApplyThemeDialog, ConflictDialog, GUIDE_STEPS, GuideChecklist, HistoryDialog, LeaveDialog, ProblemList, PublishDialog, UndoToast, type GuideState, type GuideStep } from "./dialogs";
 import { useBuilderT, type BuilderStrings } from "./strings";
+import { MediaLibraryProvider } from "./mediaLibrary";
 
 const STOREFRONT_URL = ((import.meta.env.VITE_STOREFRONT_URL as string | undefined) ?? "http://localhost:3000").replace(/\/+$/, "");
 const AUTOSAVE_MS = 2500;
@@ -714,6 +715,7 @@ export function BuilderPage() {
   const guideVisible = !guide.dismissed && GUIDE_STEPS.some((s) => !guide.done[s]);
 
   return (
+    <MediaLibraryProvider workspaceId={workspaceId} trees={state.trees} catalog={catalog}>
     <div className="flex h-screen flex-col overflow-hidden bg-paper text-ink">
       <TopBar
         storeName={storeName}
@@ -920,5 +922,6 @@ export function BuilderPage() {
         </Button>
       </div>
     </div>
+    </MediaLibraryProvider>
   );
 }

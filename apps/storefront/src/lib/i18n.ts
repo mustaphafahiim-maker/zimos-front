@@ -196,6 +196,9 @@ const en = {
     item: "Product",
     summary: "Order summary",
     shippingAtCheckout: "Calculated at checkout",
+    itemsCount: (n: number) => (n === 1 ? "1 item" : `${n} items`),
+    youMayLike: "You may also like",
+    codReassure: "No payment now — you pay cash when the order arrives.",
   },
   checkout: {
     title: "Checkout",
@@ -262,6 +265,7 @@ const en = {
     track: "Track your order",
     backToStore: "Back to store",
     steps: "What happens next",
+    moreFromStore: "More from the store",
   },
   timeline: {
     placed: "Order placed",
@@ -565,6 +569,9 @@ const ar: Dictionary = {
     item: "منتج",
     summary: "ملخص الطلب",
     shippingAtCheckout: "يُحسب عند إتمام الطلب",
+    itemsCount: (n) => (n === 1 ? "منتج واحد" : n === 2 ? "منتجين" : `${n} منتجات`),
+    youMayLike: "ممكن يعجبك كمان",
+    codReassure: "مش هتدفع حاجة دلوقتي — الدفع كاش لما الطلب يوصلك.",
   },
   checkout: {
     title: "إتمام الطلب",
@@ -630,6 +637,7 @@ const ar: Dictionary = {
     track: "تتبع طلبك",
     backToStore: "العودة للمتجر",
     steps: "الخطوات الجاية",
+    moreFromStore: "حاجات تانية من المتجر",
   },
   timeline: {
     placed: "تم الطلب",

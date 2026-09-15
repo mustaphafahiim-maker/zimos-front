@@ -13,12 +13,15 @@ import {
   type AcceptedUpsell,
   type OrderSnapshot,
 } from "@/lib/mockCommerce";
+import { ProductCard } from "@/components/ProductCard";
 import { useStore } from "@/lib/StoreContext";
+import { useCatalog } from "@/lib/useCatalog";
 
 function Confirmation() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
   const search = useSearchParams();
-  const { t, money, store } = useStore();
+  const { t, money, store, locale } = useStore();
+  const { products } = useCatalog(workspaceId, 12);
 
   // Read on this device after mount (localStorage), so SSR and hydration agree.
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
@@ -41,6 +44,8 @@ function Confirmation() {
   const currency = snapshot?.currency ?? store?.currency;
   const wa = store?.phone ? whatsappNumber(store.phone) : null;
   const storeName = store?.name ?? "";
+  const ordered = new Set(snapshot?.productIds ?? []);
+  const more = (products ?? []).filter((p) => !ordered.has(p.id) && p.variants.some((v) => v.inStock)).slice(0, 4);
 
   async function copyLink() {
     try {
@@ -64,8 +69,9 @@ function Confirmation() {
     <main className={`${container} flex-1 py-10 sm:py-14`}>
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">
-            <CheckIcon size={32} />
+          <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-success-soft text-success motion-safe:animate-[zr-pop_520ms_cubic-bezier(.2,.9,.3,1.3)_both]">
+            <span className="absolute inset-0 rounded-full bg-success/25 motion-safe:animate-[zr-ring_1.2s_ease-out_both]" aria-hidden />
+            <CheckIcon size={40} />
           </span>
           <h1 className="mt-5 text-2xl font-bold text-ink sm:text-3xl">{t.thankYou.title}</h1>
           {orderNumber && (
@@ -214,6 +220,21 @@ function Confirmation() {
           </section>
         )}
       </div>
+
+      {more.length > 0 && (
+        <section className="mx-auto mt-14 max-w-5xl" aria-labelledby="more-title">
+          <h2 id="more-title" className="mb-5 text-center text-xl font-semibold text-ink">
+            {t.thankYou.moreFromStore}
+          </h2>
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {more.map((p) => (
+              <li key={p.id} className="flex">
+                <ProductCard product={p} workspaceId={workspaceId} currency={currency ?? "EGP"} locale={locale} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

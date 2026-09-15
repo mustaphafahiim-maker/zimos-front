@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import type { RenderContext } from "./context";
+import { BeforeAfter } from "./BeforeAfter";
 import { Countdown } from "./Countdown";
 import { Icon, ICON_PATHS } from "./icons";
 import {
@@ -62,6 +63,7 @@ export function isElementVisible(el: TreeElement, now = Date.now()): boolean {
     case "image":
       return !!safeUrl(str(p, "src")) || bool(p, "placeholder");
     case "gallery":
+      if (str(p, "mode") === "compare") return strList(p, "images").filter((u) => safeUrl(u)).length >= 2 || num(p, "placeholderCount", 0, 0, 12) > 0;
       return strList(p, "images").some((u) => safeUrl(u)) || num(p, "placeholderCount", 0, 0, 12) > 0;
     case "button":
       return str(p, "label").trim() !== "" && !!safeHref(str(p, "href"));
@@ -228,16 +230,41 @@ function Placeholder({ x, label, icon = "image", ratio }: { x: Internal; label: 
   );
 }
 
-function renderTable(text: string, x: Internal, path: string): ReactNode {
+const YES = /^(✓|✔|✅|نعم|أيوه|yes)$/i;
+const NO = /^(✗|✘|×|❌|x|لا|no)$/i;
+
+function renderTable(text: string, x: Internal, path: string, variant = ""): ReactNode {
+  const compare = variant === "compare";
   const rows = text
     .split("\n")
     .map((line) => line.split("|").map((c) => c.trim()))
     .filter((cells) => cells.some((c) => c !== ""));
   if (rows.length === 0) return null;
-  const [head, ...body] = rows;
+  const [rawHead, ...rawBody] = rows;
+  // Comparison tables show ✓ / ✗ as coloured icons (text kept for screen readers).
+  const mark = (c: string): ReactNode => {
+    if (!compare) return c;
+    if (YES.test(c))
+      return (
+        <span className="zr-mark zr-mark--yes">
+          <Icon name="check" size={16} strokeWidth={2.8} />
+          <span className="zr-sr">{c}</span>
+        </span>
+      );
+    if (NO.test(c))
+      return (
+        <span className="zr-mark zr-mark--no">
+          <Icon name="close" size={14} strokeWidth={2.8} />
+          <span className="zr-sr">{c}</span>
+        </span>
+      );
+    return c;
+  };
+  const head = rawHead;
+  const body = rawBody.map((cells) => cells.map((c) => c));
   return (
     <div className="zr-table-wrap" tabIndex={0} data-zr-field={x.editing ? "text" : undefined} data-zr-path={x.editing ? path : undefined}>
-      <table className="zr-table">
+      <table className={compare ? "zr-table zr-table--compare" : "zr-table"}>
         <thead>
           <tr>
             {head.map((c, i) => (
@@ -251,7 +278,7 @@ function renderTable(text: string, x: Internal, path: string): ReactNode {
           <tbody>
             {body.map((cells, ri) => (
               <tr key={ri}>
-                {head.map((_, ci) => (ci === 0 ? <th key={ci} scope="row">{cells[ci] ?? ""}</th> : <td key={ci}>{cells[ci] ?? ""}</td>))}
+                {head.map((_, ci) => (ci === 0 ? <th key={ci} scope="row">{cells[ci] ?? ""}</th> : <td key={ci}>{mark(cells[ci] ?? "")}</td>))}
               </tr>
             ))}
           </tbody>
@@ -290,7 +317,7 @@ function ElementView({ el, x, path }: { el: TreeElement; x: Internal; path: stri
     case "rich_text": {
       const text = str(p, "text");
       if (!text.trim() && !x.editing) return null;
-      if (str(p, "format") === "table") return renderTable(text, x, path);
+      if (str(p, "format") === "table") return renderTable(text, x, path, str(p, "variant"));
       return <Editable x={x} path={path} field="text" value={text} as="p" className="zr-text zr-rich" />;
     }
 
@@ -316,6 +343,33 @@ function ElementView({ el, x, path }: { el: TreeElement; x: Internal; path: stri
       const images = strList(p, "images").map(safeUrl).filter((u): u is string => !!u);
       const columns = num(p, "columns", 3, 1, 6);
       const title = str(p, "title");
+      if (str(p, "mode") === "compare") {
+        const beforeLabel = str(p, "beforeLabel");
+        const afterLabel = str(p, "afterLabel");
+        const heading = title.trim() ? <Editable x={x} path={path} field="title" value={title} as="h3" className="zr-h zr-h--3" /> : null;
+        if (images.length >= 2) {
+          return (
+            <div className="zr-gallery-block">
+              {heading}
+              <BeforeAfter before={images[0]} after={images[1]} beforeLabel={beforeLabel} afterLabel={afterLabel} />
+            </div>
+          );
+        }
+        if (!x.editing && num(p, "placeholderCount", 0, 0, 12) === 0) return null;
+        return (
+          <div className="zr-gallery-block">
+            {heading}
+            <div className="zr-ba zr-ba--ph">
+              {[beforeLabel || t.imagePlaceholder, afterLabel || t.imagePlaceholder].map((label, i) => (
+                <div key={i} className="zr-ba__half">
+                  <Placeholder x={x} label={label} ratio={{ aspectRatio: "4 / 5" }} />
+                  {label && <span className={`zr-ba__tag zr-ba__tag--${i === 0 ? "before" : "after"}`}>{label}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
       const placeholders = images.length === 0 ? num(p, "placeholderCount", x.editing ? 3 : 0, 0, 12) : 0;
       if (images.length === 0 && placeholders === 0) return null;
       return (
@@ -435,7 +489,29 @@ function ElementView({ el, x, path }: { el: TreeElement; x: Internal; path: stri
       const items = strList(p, "items");
       const title = str(p, "title");
       if (items.length === 0) return x.editing ? <EditorHint>{t.editorEmptyBlock("list")}</EditorHint> : null;
-      const style = oneOf(p, "style", ["check", "dot", "number"] as const, "check");
+      const style = oneOf(p, "style", ["check", "dot", "number", "marquee"] as const, "check");
+      if (style === "marquee") {
+        // Two identical tracks loop seamlessly; the copy is hidden from screen readers.
+        const icon = str(p, "icon").trim().toLowerCase();
+        const track = (hidden: boolean) => (
+          <ul className="zr-marquee__track" aria-hidden={hidden || undefined}>
+            {items.map((item, i) => (
+              <li key={i}>
+                <span className="zr-marquee__dot" aria-hidden>
+                  {icon && ICON_PATHS[icon] ? <Icon name={icon} size={16} strokeWidth={2.4} /> : "✦"}
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        );
+        return (
+          <div className="zr-marquee" style={{ ["--zr-marquee-dur" as string]: `${num(p, "speed", 30, 8, 120)}s` }}>
+            {track(false)}
+            {track(true)}
+          </div>
+        );
+      }
       const Tag = style === "number" ? "ol" : "ul";
       return (
         <div className="zr-list-block">
@@ -728,6 +804,7 @@ function ColumnView({ column, x, basePath }: { column: TreeColumn; x: Internal; 
   const cls = [
     "zr-col",
     bool(s, "card") ? "zr-col--card" : "",
+    bool(s, "highlight") ? "zr-col--highlight" : "",
     str(s, "align") === "center" ? "zr-col--center" : "",
     str(s, "valign") === "center" ? "zr-col--vcenter" : "",
   ]

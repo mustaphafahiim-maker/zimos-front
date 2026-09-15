@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { Image as ImageIcon, Trash2, Upload, X } from "lucide-react";
+import { Image as ImageIcon, Images, Trash2, Upload, X } from "lucide-react";
 import { Alert, Button, Label, Spinner } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { MediaLibraryDialog, useMediaLibrary } from "../builder/mediaLibrary";
 
 const STRINGS = {
   en: {
@@ -15,6 +16,7 @@ const STRINGS = {
     upload: "Upload",
     addImages: "Add images",
     clear: "Clear",
+    library: "From library",
   },
   ar: {
     prepareFailed: "تعذّر تجهيز الصورة المحددة.",
@@ -23,6 +25,7 @@ const STRINGS = {
     upload: "رفع صورة",
     addImages: "إضافة صور",
     clear: "مسح الكل",
+    library: "من المكتبة",
   },
 } satisfies Messages;
 
@@ -32,11 +35,15 @@ const STRINGS = {
  * the returned **absolute** `url` in the tree: unlike the dashboard's product
  * images, a page tree is rendered by the public storefront on a different host,
  * where a host-relative path would not resolve.
+ *
+ * Inside the builder, a store image library is also available (see
+ * builder/mediaLibrary.tsx); every upload is added to it.
  */
 
 function useUpload() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
+  const lib = useMediaLibrary();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +86,7 @@ function useUpload() {
     } finally {
       setBusy(false);
     }
+    lib?.remember(urls);
     return urls;
   }
 
@@ -110,7 +118,7 @@ function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
   );
 }
 
-/** Single image: one thumbnail plus an upload button. */
+/** Single image: one thumbnail plus upload / library buttons. */
 export function ImageField({
   label,
   value,
@@ -125,6 +133,8 @@ export function ImageField({
   const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const lib = useMediaLibrary();
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -144,16 +154,18 @@ export function ImageField({
           </div>
         )}
         <div className="min-w-0 space-y-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-            {value ? t.replace : t.upload}
-          </Button>
+          <div className="flex flex-wrap gap-1.5">
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
+              {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
+              {value ? t.replace : t.upload}
+            </Button>
+            {lib && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => setLibraryOpen(true)}>
+                <Images className="size-4" aria-hidden />
+                {t.library}
+              </Button>
+            )}
+          </div>
           {hint && <p className="text-xs text-ink-soft">{hint}</p>}
         </div>
       </div>
@@ -168,11 +180,12 @@ export function ImageField({
         }}
       />
       {error && <Alert variant="danger">{error}</Alert>}
+      {lib && <MediaLibraryDialog open={libraryOpen} onClose={() => setLibraryOpen(false)} onPick={([url]) => url && onChange(url)} />}
     </div>
   );
 }
 
-/** Multiple images (gallery): a strip of thumbnails plus multi-file upload. */
+/** Multiple images (gallery): a strip of thumbnails plus multi-file upload / library. */
 export function ImageListField({
   label,
   value,
@@ -187,6 +200,8 @@ export function ImageListField({
   const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const lib = useMediaLibrary();
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   async function add(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -200,25 +215,21 @@ export function ImageListField({
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((src, i) => (
-            <Thumb
-              key={`${src}-${i}`}
-              src={src}
-              onRemove={() => onChange(value.filter((_, j) => j !== i))}
-            />
+            <Thumb key={`${src}-${i}`} src={src} onRemove={() => onChange(value.filter((_, j) => j !== i))} />
           ))}
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-        >
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
           {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
           {t.addImages}
         </Button>
+        {lib && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setLibraryOpen(true)}>
+            <Images className="size-4" aria-hidden />
+            {t.library}
+          </Button>
+        )}
         {value.length > 0 && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange([])}>
             <Trash2 className="size-4" aria-hidden />
@@ -239,6 +250,7 @@ export function ImageListField({
       />
       {hint && <p className="text-xs text-ink-soft">{hint}</p>}
       {error && <Alert variant="danger">{error}</Alert>}
+      {lib && <MediaLibraryDialog open={libraryOpen} multiple onClose={() => setLibraryOpen(false)} onPick={(urls) => onChange([...value, ...urls])} />}
     </div>
   );
 }
