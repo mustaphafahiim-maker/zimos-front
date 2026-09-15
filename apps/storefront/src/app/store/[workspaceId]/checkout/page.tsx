@@ -11,6 +11,7 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { getOrderBump } from "@/lib/offers";
 import { useShippingQuote } from "@/lib/shipping";
+import { useCheckoutSession } from "@/lib/checkoutSession";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -64,6 +65,14 @@ export default function CheckoutPage() {
     items.reduce((n, l) => n + l.quantity, 0) + (bumpInTotals > 0 ? 1 : 0)
   );
   const total = subtotal + bumpInTotals + (shipping ?? 0);
+
+  // Lets the merchant follow up if the shopper leaves after typing their number.
+  useCheckoutSession(workspaceId, {
+    fullName: values.fullName,
+    phone: values.phone,
+    email: values.email,
+    items: items.map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity })),
+  });
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));

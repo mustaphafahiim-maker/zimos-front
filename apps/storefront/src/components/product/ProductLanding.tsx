@@ -6,6 +6,7 @@ import { parseMoney, type StorefrontProductDetail } from "@store-builder/api-cli
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/offers";
 import { useShippingQuote } from "@/lib/shipping";
+import { useCheckoutSession } from "@/lib/checkoutSession";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -120,6 +121,17 @@ export function ProductLanding({
     (tier ? tier.quantity : quantity) + (bumpOn && bump ? 1 : 0)
   );
   const total = pricing.total + bumpAmount + (shipping ?? 0);
+
+  // Lets the merchant follow up if the shopper leaves after typing their number.
+  useCheckoutSession(workspaceId, {
+    fullName: values.fullName,
+    phone: values.phone,
+    email: values.email,
+    items: [
+      ...(mainLine ? [mainLine] : []),
+      ...(bumpOn && bump ? [{ variantId: bump.variantId, ...(bump.offerId ? { offerId: bump.offerId } : {}), quantity: 1 }] : []),
+    ],
+  });
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
