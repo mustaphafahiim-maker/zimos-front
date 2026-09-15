@@ -1,3 +1,17 @@
+import type {
+  AutomationListResponse,
+  AutomationRule,
+  AutomationRulePayload,
+  AutomationRunListParams,
+  AutomationRunListResponse,
+  CreateSettlementPayload,
+  SettlementDetail,
+  SettlementListResponse,
+  SettlementStatus,
+  SettlementSummary,
+  UnsettledResponse,
+  UpdateSettlementPayload,
+} from "./types";
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
   AddCustomerAddressPayload,
@@ -1562,5 +1576,85 @@ export class ApiClient {
     );
     return message;
   }
-}
+  // ---------------------------------------------------------------------
+  // COD settlements — /workspaces/:ws/settlements (amounts in minor units)
+  // ---------------------------------------------------------------------
 
+  async getSettlementSummary(workspaceId: string) {
+    const { summary } = await this.request<{ summary: SettlementSummary }>(`/workspaces/${workspaceId}/settlements/summary`);
+    return summary;
+  }
+
+  async listUnsettledOrders(workspaceId: string, params: { carrierCode?: string } = {}) {
+    return this.request<UnsettledResponse>(`/workspaces/${workspaceId}/settlements/unsettled${buildQuery({ ...params })}`);
+  }
+
+  async listSettlements(workspaceId: string, params: { status?: SettlementStatus; limit?: number; before?: string } = {}) {
+    return this.request<SettlementListResponse>(`/workspaces/${workspaceId}/settlements${buildQuery({ ...params })}`);
+  }
+
+  async getSettlement(workspaceId: string, settlementId: string) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(`/workspaces/${workspaceId}/settlements/${settlementId}`);
+    return settlement;
+  }
+
+  /** 422 ORDER_NOT_SETTLEABLE / COLLECTED_EXCEEDS_DUE / SETTLEMENT_EMPTY. */
+  async createSettlement(workspaceId: string, payload: CreateSettlementPayload) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(`/workspaces/${workspaceId}/settlements`, {
+      method: "POST",
+      body: payload,
+    });
+    return settlement;
+  }
+
+  /** Drafts only — 409 SETTLEMENT_CONFIRMED. */
+  async updateSettlement(workspaceId: string, settlementId: string, payload: UpdateSettlementPayload) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(`/workspaces/${workspaceId}/settlements/${settlementId}`, {
+      method: "PATCH",
+      body: payload,
+    });
+    return settlement;
+  }
+
+  /** Drafts only — 409 SETTLEMENT_CONFIRMED. */
+  async deleteSettlement(workspaceId: string, settlementId: string) {
+    return this.request<{ deleted: boolean; id: string }>(`/workspaces/${workspaceId}/settlements/${settlementId}`, { method: "DELETE" });
+  }
+
+  /** Records a payment on every order in the settlement and locks it. */
+  async confirmSettlement(workspaceId: string, settlementId: string) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(`/workspaces/${workspaceId}/settlements/${settlementId}/confirm`, {
+      method: "POST",
+    });
+    return settlement;
+  }
+
+  // ---------------------------------------------------------------------
+  // Automations — /workspaces/:ws/automations
+  // ---------------------------------------------------------------------
+
+  async listAutomations(workspaceId: string) {
+    return this.request<AutomationListResponse>(`/workspaces/${workspaceId}/automations`);
+  }
+
+  async createAutomation(workspaceId: string, payload: AutomationRulePayload) {
+    const { rule } = await this.request<{ rule: AutomationRule }>(`/workspaces/${workspaceId}/automations`, { method: "POST", body: payload });
+    return rule;
+  }
+
+  async updateAutomation(workspaceId: string, ruleId: string, payload: Partial<AutomationRulePayload>) {
+    const { rule } = await this.request<{ rule: AutomationRule }>(`/workspaces/${workspaceId}/automations/${ruleId}`, {
+      method: "PATCH",
+      body: payload,
+    });
+    return rule;
+  }
+
+  async deleteAutomation(workspaceId: string, ruleId: string) {
+    return this.request<{ deleted: boolean; id: string }>(`/workspaces/${workspaceId}/automations/${ruleId}`, { method: "DELETE" });
+  }
+
+  async listAutomationRuns(workspaceId: string, params: AutomationRunListParams = {}) {
+    return this.request<AutomationRunListResponse>(`/workspaces/${workspaceId}/automations/runs${buildQuery({ ...params })}`);
+  }
+}

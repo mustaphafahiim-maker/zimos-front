@@ -1699,3 +1699,171 @@ export interface SentWhatsappMessage {
   status: WhatsappMessageStatus;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// COD settlements — /workspaces/:ws/settlements (amounts in minor units)
+// ---------------------------------------------------------------------------
+
+export type SettlementStatus = "draft" | "confirmed";
+
+export interface SettlementSummary {
+  unsettledOrders: number;
+  dueFromCouriers: number;
+  received: number;
+  courierFees: number;
+  draftSettlements: number;
+}
+
+export interface UnsettledOrder {
+  orderId: string;
+  orderNumber: string;
+  customerName: string | null;
+  carrierCode: string;
+  shipmentId: string | null;
+  waybillNumber: string | null;
+  deliveredAt: string | null;
+  currency: string;
+  totalAmount: number;
+  amountPaid: number;
+  dueAmount: number;
+}
+
+export interface UnsettledCarrier {
+  carrierCode: string;
+  orders: number;
+  dueAmount: number;
+}
+
+export interface UnsettledResponse {
+  orders: UnsettledOrder[];
+  carriers: UnsettledCarrier[];
+}
+
+export interface SettlementListItem {
+  id: string;
+  carrierCode: string;
+  reference: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  status: SettlementStatus;
+  currency?: string;
+  collectedAmount: number;
+  feesAmount: number;
+  netAmount: number;
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface SettlementLine {
+  orderId: string;
+  orderNumber: string | null;
+  customerName: string | null;
+  orderTotal: number | null;
+  financialState: string | null;
+  collectedAmount: number;
+  feeAmount: number;
+}
+
+export interface SettlementDetail extends SettlementListItem {
+  notes: string | null;
+  lines: SettlementLine[];
+}
+
+export interface SettlementListResponse {
+  settlements: SettlementListItem[];
+  nextCursor: string | null;
+}
+
+export interface SettlementLinePayload {
+  orderId: string;
+  collectedAmount?: number;
+  feeAmount: number;
+}
+
+export interface CreateSettlementPayload {
+  carrierCode: string;
+  reference?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  notes?: string | null;
+  lines: SettlementLinePayload[];
+}
+
+export type UpdateSettlementPayload = Partial<CreateSettlementPayload>;
+
+// ---------------------------------------------------------------------------
+// Automations — /workspaces/:ws/automations
+// ---------------------------------------------------------------------------
+
+export type AutomationTrigger =
+  | "order.created"
+  | "order.confirmed"
+  | "order.rejected"
+  | "order.cancelled"
+  | "order.shipped"
+  | "order.out_for_delivery"
+  | "order.delivered";
+
+export type AutomationPaymentMethod = "cod" | "card" | "wallet" | "bank_transfer";
+
+export interface AutomationConditions {
+  paymentMethod?: AutomationPaymentMethod | null;
+  minTotalAmount?: number | null;
+}
+
+export interface AutomationWhatsappAction {
+  type: "whatsapp_template";
+  template: string;
+  language: string;
+  params: string[];
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: AutomationTrigger;
+  isActive: boolean;
+  conditions: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+  createdAt: string;
+  updatedAt: string;
+  stats: { sent: number; skipped: number; failed: number; lastRunAt: string | null };
+}
+
+export interface AutomationListResponse {
+  rules: AutomationRule[];
+  triggers: AutomationTrigger[];
+  tokens: string[];
+}
+
+export interface AutomationRulePayload {
+  name: string;
+  trigger: AutomationTrigger;
+  isActive?: boolean;
+  conditions?: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+}
+
+export type AutomationRunStatus = "sent" | "skipped" | "failed";
+
+export interface AutomationRun {
+  id: string;
+  ruleId: string;
+  trigger: AutomationTrigger;
+  status: AutomationRunStatus;
+  detail: string | null;
+  createdAt: string;
+  order: { id: string; orderNumber: string | null } | null;
+}
+
+export interface AutomationRunListParams {
+  ruleId?: string;
+  status?: AutomationRunStatus;
+  limit?: number;
+  before?: string;
+}
+
+export interface AutomationRunListResponse {
+  runs: AutomationRun[];
+  nextCursor: string | null;
+}

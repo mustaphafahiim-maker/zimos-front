@@ -52,6 +52,8 @@ const FraudProtectionPage = page(() => import("@/pages/fraud/FraudProtectionPage
 
 // Money
 const ProfitPage = page(() => import("@/pages/profit/ProfitPage"), "ProfitPage");
+const SettlementsPage = page(() => import("@/pages/settlements/SettlementsPage"), "SettlementsPage");
+const AutomationsPage = page(() => import("@/pages/automations/AutomationsPage"), "AutomationsPage");
 
 // Catalog
 const CatalogProductsPage = page(() => import("@/pages/catalog/CatalogProductsPage"), "CatalogProductsPage");
@@ -145,6 +147,8 @@ export default function App() {
 
                       {/* Money */}
                       <Route path="/profit" element={<InShell><ProfitPage /></InShell>} />
+                      <Route path="/settlements" element={<InShell><SettlementsPage /></InShell>} />
+                      <Route path="/automations" element={<InShell><AutomationsPage /></InShell>} />
 
                       {/* Catalog */}
                       <Route path="/catalog" element={<InShell><CatalogProductsPage /></InShell>} />

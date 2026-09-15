@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Banknote,
   BarChart3,
+  Bot,
   Boxes,
   Building2,
   Filter,
@@ -83,6 +85,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: { en: "Money", ar: "المالية" },
     items: [
       { label: { en: "Profit & loss", ar: "الأرباح والخسائر" }, to: "/profit", icon: TrendingUp, isNew: true },
+      { label: { en: "COD settlements", ar: "تحصيل الشحن" }, to: "/settlements", icon: Banknote, isNew: true },
     ],
   },
   {
@@ -103,6 +106,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: { en: "Offers & bundles", ar: "العروض والباقات" }, to: "/offers", icon: Zap },
       { label: { en: "Discounts", ar: "الخصومات" }, to: "/discounts", icon: Tag },
       { label: { en: "Pixels & tracking", ar: "البكسلات والتتبع" }, to: "/marketing", icon: Megaphone },
+      { label: { en: "Automations", ar: "الأتمتة" }, to: "/automations", icon: Bot, isNew: true },
     ],
   },
   {
