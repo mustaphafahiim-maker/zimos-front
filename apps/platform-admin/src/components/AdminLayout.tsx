@@ -1,14 +1,45 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronDown, LogOut, Menu, RotateCcw, Search, X } from "lucide-react";
-import { Kbd, ZimosLogo, cn } from "@store-builder/ui";
+import { ChevronDown, Languages, LogOut, Menu, Search, X } from "lucide-react";
+import { Button, Kbd, ThemeToggle, ZimosLogo, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
-import { ThemeToggle } from "@store-builder/ui";
 import { CommandPalette } from "@/components/CommandPalette";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { NAV_GROUPS } from "@/components/navConfig";
-import { adminApi } from "@/mock/adminApi";
 import { initials } from "@/lib/format";
+import { useLocale, useT } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    badge: "Platform Admin",
+    main: "Main",
+    navigation: "Navigation",
+    closeNav: "Close navigation",
+    openNav: "Open navigation",
+    openPalette: "Open command palette",
+    searchHint: "Search workspaces and pages…",
+    signOut: "Sign out",
+    environment: "Environment",
+    development: "Development",
+    production: "Production",
+    language: "العربية",
+    admin: "Admin",
+  },
+  ar: {
+    badge: "أدمن المنصة",
+    main: "الرئيسية",
+    navigation: "التنقل",
+    closeNav: "اقفل القائمة",
+    openNav: "افتح القائمة",
+    openPalette: "افتح البحث السريع",
+    searchHint: "دوّر على مساحات العمل والصفحات…",
+    signOut: "تسجيل الخروج",
+    environment: "البيئة",
+    development: "تطوير",
+    production: "إنتاج",
+    language: "English",
+    admin: "أدمن",
+  },
+};
 
 const COLLAPSE_KEY = "zimos.admin.navCollapsed";
 
@@ -23,6 +54,8 @@ function readCollapsed(): string[] {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
+  const { locale } = useLocale();
+  const t = useT(STRINGS);
   const [collapsed, setCollapsed] = useState<string[]>(readCollapsed);
 
   const toggle = (id: string) => {
@@ -43,11 +76,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <ZimosLogo height={28} />
-        <span className="rounded-full border border-line bg-primary-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-primary uppercase">
-          Platform Admin
-        </span>
+        <span className="rounded-full border border-line bg-primary-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-primary uppercase">{t.badge}</span>
       </div>
-      <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
+      <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label={t.main}>
         {NAV_GROUPS.map((group, gi) => {
           const hasActive = group.items.some((i) => isActive(i.to));
           const open = !group.label || hasActive || !collapsed.includes(group.id);
@@ -62,7 +93,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   aria-controls={listId}
                   className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-muted uppercase hover:text-ink"
                 >
-                  {group.label}
+                  {group.label[locale]}
                   <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90 rtl:rotate-90")} aria-hidden />
                 </button>
               )}
@@ -82,7 +113,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         }
                       >
                         <item.icon className="size-4 shrink-0" />
-                        {item.label}
+                        {item.label[locale]}
                       </NavLink>
                     </li>
                   ))}
@@ -98,10 +129,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 function UserMenu() {
   const { user, logout } = useAuth();
+  const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const name = user?.fullName || user?.email || "Admin";
+  const name = user?.fullName || user?.email || t.admin;
 
   useEffect(() => {
     if (!open) return;
@@ -141,49 +172,32 @@ function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              setConfirmReset(true);
-            }}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
-          >
-            <RotateCcw className="size-4" aria-hidden /> Reset demo data
-          </button>
-          <button
-            type="button"
-            role="menuitem"
             onClick={() => void logout()}
             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-danger-soft hover:text-danger"
           >
-            <LogOut className="size-4" aria-hidden /> Sign out
+            <LogOut className="size-4" aria-hidden /> {t.signOut}
           </button>
         </div>
       )}
-      <ConfirmDialog
-        open={confirmReset}
-        title="Reset all demo data?"
-        description="Clears every locally stored mock change and reloads the console."
-        confirmLabel="Reset"
-        destructive
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={() => {
-          adminApi.resetAllMockData();
-          window.location.reload();
-        }}
-      />
     </div>
   );
 }
 
+export function LocaleToggle({ className }: { className?: string }) {
+  const { toggleLocale } = useLocale();
+  const t = useT(STRINGS);
+  return (
+    <Button variant="outline" size="sm" onClick={toggleLocale} className={className}>
+      <Languages /> {t.language}
+    </Button>
+  );
+}
+
 export function AdminLayout() {
-  const { user } = useAuth();
+  const t = useT(STRINGS);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    if (user) adminApi.setMockActor({ name: user.fullName || user.email, email: user.email });
-  }, [user]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -203,7 +217,7 @@ export function AdminLayout() {
   }, []);
 
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-  const envLabel = import.meta.env.DEV ? "Development" : import.meta.env.MODE === "production" ? "Production" : import.meta.env.MODE;
+  const envLabel = import.meta.env.DEV ? t.development : import.meta.env.MODE === "production" ? t.production : import.meta.env.MODE;
 
   return (
     <div className="flex min-h-screen bg-paper">
@@ -216,14 +230,14 @@ export function AdminLayout() {
           <aside
             role="dialog"
             aria-modal="true"
-            aria-label="Navigation"
+            aria-label={t.navigation}
             onMouseDown={(e) => e.stopPropagation()}
             className="animate-zimos-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col border-e border-line bg-paper-raised shadow-[var(--shadow-pop)]"
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              aria-label="Close navigation"
+              aria-label={t.closeNav}
               className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
               <X className="size-4" aria-hidden />
@@ -238,7 +252,7 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            aria-label="Open navigation"
+            aria-label={t.openNav}
             className="cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink lg:hidden"
           >
             <Menu className="size-5" aria-hidden />
@@ -246,21 +260,22 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            aria-label="Open command palette"
+            aria-label={t.openPalette}
             className="flex h-9 w-full max-w-md cursor-pointer items-center gap-2 rounded-[10px] border border-input bg-paper px-3 text-start text-sm text-ink-muted transition-colors hover:border-line-strong"
           >
             <Search className="size-4 shrink-0" aria-hidden />
-            <span className="flex-1 truncate">Search workspaces, pages, actions…</span>
-            <span className="hidden gap-1 sm:flex">
+            <span className="flex-1 truncate">{t.searchHint}</span>
+            <span className="hidden gap-1 sm:flex" dir="ltr">
               <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
               <Kbd>K</Kbd>
             </span>
           </button>
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full border border-warning/25 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning sm:inline-flex" title="Environment">
+            <span className="hidden items-center gap-1.5 rounded-full border border-warning/25 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning sm:inline-flex" title={t.environment}>
               <span className="size-1.5 rounded-full bg-warning" aria-hidden />
               {envLabel}
             </span>
+            <LocaleToggle />
             <ThemeToggle variant="outline" />
             <UserMenu />
           </div>

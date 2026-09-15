@@ -1,223 +1,257 @@
-import { useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { Button, Input, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { Fragment, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ChevronDown, RefreshCw } from "lucide-react";
+import { Button, Input, Table, TableBody, TableHeader, TableRow, cn, useAsync } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState, EmptyBlock } from "@/components/DataState";
-import { DetailRow, Drawer } from "@/components/Drawer";
-import { NativeSelect, SearchInput } from "@/components/forms";
+import { DataState } from "@/components/DataState";
 import { JsonBlock, Mono, Panel, Td, Th } from "@/components/Panel";
-import { humanize } from "@/components/StatusBadge";
-import { useAsync } from "@store-builder/ui";
-import { adminApi } from "@/mock/adminApi";
-import type { AuditEntry } from "@/mock/types";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { NativeSelect } from "@/components/forms";
+import { useToast } from "@/components/Toast";
+import { adminApi, type AdminAuditLog } from "@/lib/adminApi";
+import { getErrorMessage } from "@/lib/errors";
+import { formatDateTime } from "@/lib/format";
+import { useCommon, useT } from "@/i18n/LocaleContext";
 
-const PAGE = 25;
-const PERIODS: Array<{ value: string; label: string; hours: number | null }> = [
-  { value: "24h", label: "Last 24 hours", hours: 24 },
-  { value: "7d", label: "Last 7 days", hours: 24 * 7 },
-  { value: "30d", label: "Last 30 days", hours: 24 * 30 },
-  { value: "all", label: "All time", hours: null },
-];
+const STRINGS = {
+  en: {
+    title: "Audit log",
+    description: "Every recorded action across the platform, newest first.",
+    action: "Action starts with",
+    actionPlaceholder: "e.g. admin. or user.login",
+    entityType: "Entity type",
+    entityPlaceholder: "e.g. Workspace",
+    workspace: "Workspace",
+    allWorkspaces: "All workspaces",
+    apply: "Apply",
+    clear: "Clear",
+    when: "When",
+    actor: "Actor",
+    entity: "Entity",
+    ip: "IP",
+    system: "System",
+    empty: "No audit entries match these filters.",
+    before: "Before",
+    after: "After",
+    details: "Show details",
+    end: "End of log.",
+  },
+  ar: {
+    title: "سجل العمليات",
+    description: "كل العمليات المتسجلة على المنصة، الأحدث الأول.",
+    action: "العملية بتبدأ بـ",
+    actionPlaceholder: "مثلاً admin. أو user.login",
+    entityType: "نوع الكيان",
+    entityPlaceholder: "مثلاً Workspace",
+    workspace: "مساحة العمل",
+    allWorkspaces: "كل مساحات العمل",
+    apply: "طبّق",
+    clear: "امسح",
+    when: "الوقت",
+    actor: "المنفّذ",
+    entity: "الكيان",
+    ip: "IP",
+    system: "النظام",
+    empty: "مفيش عمليات بالفلاتر دي.",
+    before: "قبل",
+    after: "بعد",
+    details: "اعرض التفاصيل",
+    end: "آخر السجل.",
+  },
+};
+
+const PAGE = 50;
 
 export function AuditLogPage() {
-  const { data, loading, error, refresh } = useAsync(() => adminApi.listAudit(), []);
-  const [actor, setActor] = useState("");
-  const [action, setAction] = useState("all");
-  const [entityType, setEntityType] = useState("all");
-  const [workspace, setWorkspace] = useState("");
-  const [period, setPeriod] = useState("30d");
-  const [limit, setLimit] = useState(PAGE);
-  const [selected, setSelected] = useState<AuditEntry | null>(null);
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const filters = { action: params.get("action") ?? "", entityType: params.get("entityType") ?? "", workspaceId: params.get("workspaceId") ?? "" };
+  const [draft, setDraft] = useState(filters);
+  const [logs, setLogs] = useState<AdminAuditLog[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+  const workspaces = useAsync(() => adminApi.listWorkspaces(), []);
 
-  const rows = useMemo(() => data ?? [], [data]);
-  const actions = useMemo(() => Array.from(new Set(rows.map((r) => r.action))).sort(), [rows]);
-  const entityTypes = useMemo(() => Array.from(new Set(rows.map((r) => r.entityType))).sort(), [rows]);
+  const first = useAsync(
+    () => adminApi.listAuditLogs({ limit: PAGE, action: filters.action || undefined, entityType: filters.entityType || undefined, workspaceId: filters.workspaceId || undefined }),
+    [filters.action, filters.entityType, filters.workspaceId]
+  );
 
-  const filtered = useMemo(() => {
-    const a = actor.trim().toLowerCase();
-    const w = workspace.trim().toLowerCase();
-    const hours = PERIODS.find((p) => p.value === period)?.hours ?? null;
-    const since = hours === null ? 0 : Date.now() - hours * 3_600_000;
-    return rows.filter(
-      (r) =>
-        (!a || r.actorName.toLowerCase().includes(a) || r.actorEmail.toLowerCase().includes(a)) &&
-        (action === "all" || r.action === action) &&
-        (entityType === "all" || r.entityType === entityType) &&
-        (!w || (r.workspaceName ?? "").toLowerCase().includes(w) || (r.workspaceId ?? "").toLowerCase() === w) &&
-        new Date(r.createdAt).getTime() >= since
-    );
-  }, [rows, actor, action, entityType, workspace, period]);
+  useEffect(() => {
+    if (first.data) {
+      setLogs(first.data.logs);
+      setCursor(first.data.nextCursor);
+    }
+  }, [first.data]);
 
-  const resetPaging = () => setLimit(PAGE);
+  useEffect(() => {
+    setDraft(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
+  const apply = (next: typeof filters) => {
+    const p: Record<string, string> = {};
+    for (const [k, v] of Object.entries(next)) if (v.trim()) p[k] = v.trim();
+    setParams(p, { replace: true });
+  };
+
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await adminApi.listAuditLogs({ limit: PAGE, before: cursor, action: filters.action || undefined, entityType: filters.entityType || undefined, workspaceId: filters.workspaceId || undefined });
+      setLogs((prev) => [...prev, ...res.logs]);
+      setCursor(res.nextCursor);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div>
       <PageHeader
-        title="Audit log"
-        description="Every change made by the ZIMOS team through this console."
+        title={t.title}
+        description={t.description}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw /> Refresh
+          <Button variant="outline" size="sm" onClick={() => void first.refresh()} disabled={first.loading}>
+            <RefreshCw /> {c.refresh}
           </Button>
         }
       />
-      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
-          <SearchInput
-            className="sm:w-full"
-            value={actor}
-            onChange={(v) => {
-              setActor(v);
-              resetPaging();
-            }}
-            placeholder="Actor name or email"
-          />
-          <NativeSelect
-            aria-label="Action"
-            value={action}
-            onChange={(e) => {
-              setAction(e.target.value);
-              resetPaging();
-            }}
-          >
-            <option value="all">All actions</option>
-            {actions.map((a) => (
-              <option key={a} value={a}>
-                {a}
+
+      <form
+        className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          apply(draft);
+        }}
+      >
+        <label className="space-y-1.5 text-sm">
+          <span className="text-ink-soft">{t.action}</span>
+          <Input value={draft.action} onChange={(e) => setDraft((d) => ({ ...d, action: e.target.value }))} placeholder={t.actionPlaceholder} dir="ltr" />
+        </label>
+        <label className="space-y-1.5 text-sm">
+          <span className="text-ink-soft">{t.entityType}</span>
+          <Input value={draft.entityType} onChange={(e) => setDraft((d) => ({ ...d, entityType: e.target.value }))} placeholder={t.entityPlaceholder} dir="ltr" />
+        </label>
+        <label className="space-y-1.5 text-sm">
+          <span className="text-ink-soft">{t.workspace}</span>
+          <NativeSelect value={draft.workspaceId} onChange={(e) => apply({ ...draft, workspaceId: e.target.value })}>
+            <option value="">{t.allWorkspaces}</option>
+            {(workspaces.data ?? []).map((w) => (
+              <option key={w.workspaceId} value={w.workspaceId}>
+                {w.workspaceName}
               </option>
             ))}
+            {filters.workspaceId && !workspaces.data?.some((w) => w.workspaceId === filters.workspaceId) && <option value={filters.workspaceId}>{filters.workspaceId}</option>}
           </NativeSelect>
-          <NativeSelect
-            aria-label="Entity type"
-            value={entityType}
-            onChange={(e) => {
-              setEntityType(e.target.value);
-              resetPaging();
-            }}
-          >
-            <option value="all">All entities</option>
-            {entityTypes.map((t) => (
-              <option key={t} value={t}>
-                {humanize(t)}
-              </option>
-            ))}
-          </NativeSelect>
-          <Input
-            aria-label="Workspace"
-            placeholder="Workspace name or id"
-            value={workspace}
-            onChange={(e) => {
-              setWorkspace(e.target.value);
-              resetPaging();
-            }}
-          />
-          <NativeSelect
-            aria-label="Time period"
-            value={period}
-            onChange={(e) => {
-              setPeriod(e.target.value);
-              resetPaging();
-            }}
-          >
-            {PERIODS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </NativeSelect>
+        </label>
+        <div className="flex items-end gap-2">
+          <Button type="submit">{t.apply}</Button>
+          <Button type="button" variant="outline" onClick={() => apply({ action: "", entityType: "", workspaceId: "" })}>
+            {t.clear}
+          </Button>
         </div>
+      </form>
 
-        {filtered.length === 0 ? (
-          <EmptyBlock message={rows.length === 0 ? "No audit entries yet." : "No entries match these filters."} />
-        ) : (
-          <>
-            <Panel flush>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <Th>Time</Th>
-                    <Th>Actor</Th>
-                    <Th>Action</Th>
-                    <Th>Entity</Th>
-                    <Th>Workspace</Th>
-                    <Th>IP</Th>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.slice(0, limit).map((r) => (
-                    <TableRow key={r.id} className="cursor-pointer" onClick={() => setSelected(r)}>
-                      <Td className="text-ink-soft">
-                        <span title={formatDateTime(r.createdAt)}>{formatRelative(r.createdAt)}</span>
-                      </Td>
-                      <Td>
-                        <span className="block">{r.actorName}</span>
-                        <span className="text-xs text-ink-soft">{r.actorEmail}</span>
-                      </Td>
-                      <Td>
-                        <Mono>{r.action}</Mono>
-                      </Td>
-                      <Td>
-                        <span className="block">{r.entityLabel}</span>
-                        <span className="text-xs text-ink-soft">{humanize(r.entityType)}</span>
-                      </Td>
-                      <Td className="text-ink-soft">{r.workspaceName ?? "—"}</Td>
-                      <Td className="tabular font-mono text-xs text-ink-soft">{r.ip}</Td>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Panel>
-            <div className="mt-3 flex items-center justify-between text-sm text-ink-soft">
-              <span>
-                Showing {Math.min(limit, filtered.length)} of {filtered.length}
-              </span>
-              {limit < filtered.length && (
-                <Button variant="outline" size="sm" onClick={() => setLimit((l) => l + PAGE)}>
-                  Load more
-                </Button>
-              )}
-            </div>
-          </>
-        )}
-      </DataState>
-
-      <Drawer open={!!selected} onClose={() => setSelected(null)} title={selected?.action ?? ""} description={selected ? formatDateTime(selected.createdAt) : undefined}>
-        {selected && (
-          <div className="space-y-5">
-            <dl>
-              <DetailRow label="Actor">
-                {selected.actorName} · {selected.actorEmail}
-              </DetailRow>
-              <DetailRow label="Action">
-                <Mono>{selected.action}</Mono>
-              </DetailRow>
-              <DetailRow label="Entity">
-                {humanize(selected.entityType)} · {selected.entityLabel}
-              </DetailRow>
-              <DetailRow label="Entity ID">
-                <Mono>{selected.entityId}</Mono>
-              </DetailRow>
-              <DetailRow label="Workspace">{selected.workspaceName ?? "—"}</DetailRow>
-              <DetailRow label="IP address">{selected.ip}</DetailRow>
-              <DetailRow label="User agent">
-                <span className="text-xs">{selected.userAgent || "—"}</span>
-              </DetailRow>
-              <DetailRow label="Entry ID">
-                <Mono>{selected.id}</Mono>
-              </DetailRow>
-            </dl>
-            <div>
-              <h3 className="mb-1.5 text-sm font-semibold text-ink">Before</h3>
-              <JsonBlock value={selected.before} />
-            </div>
-            <div>
-              <h3 className="mb-1.5 text-sm font-semibold text-ink">After</h3>
-              <JsonBlock value={selected.after} />
-            </div>
+      <DataState loading={first.loading} error={first.error} onRetry={() => void first.refresh()} empty={!!first.data && logs.length === 0} emptyMessage={t.empty}>
+        <Panel flush>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <Th>{t.when}</Th>
+                  <Th>{t.action}</Th>
+                  <Th>{t.actor}</Th>
+                  <Th>{t.workspace}</Th>
+                  <Th>{t.entity}</Th>
+                  <Th>{t.ip}</Th>
+                  <Th />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => {
+                  const expanded = open === log.id;
+                  const hasDiff = log.before !== null || log.after !== null;
+                  return (
+                    <Fragment key={log.id}>
+                      <TableRow>
+                        <Td className="whitespace-nowrap text-ink-soft">{formatDateTime(log.createdAt)}</Td>
+                        <Td>
+                          <Mono>{log.action}</Mono>
+                        </Td>
+                        <Td>{log.actor ? <span title={log.actor.email}>{log.actor.fullName || log.actor.email}</span> : <span className="text-ink-muted">{t.system}</span>}</Td>
+                        <Td>
+                          {log.workspace ? (
+                            <Link to={`/workspaces/${log.workspace.id}`} className="hover:text-primary">
+                              {log.workspace.name}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </Td>
+                        <Td className="text-ink-soft">
+                          {log.entityType}
+                          {log.entityId && (
+                            <span className="block font-mono text-xs text-ink-muted" dir="ltr">
+                              {log.entityId.slice(0, 8)}
+                            </span>
+                          )}
+                        </Td>
+                        <Td className="font-mono text-xs text-ink-soft" >
+                          <span dir="ltr">{log.ipAddress || "—"}</span>
+                        </Td>
+                        <Td className="text-end">
+                          {hasDiff && (
+                            <button
+                              type="button"
+                              aria-expanded={expanded}
+                              aria-label={t.details}
+                              onClick={() => setOpen(expanded ? null : log.id)}
+                              className="cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
+                            >
+                              <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} aria-hidden />
+                            </button>
+                          )}
+                        </Td>
+                      </TableRow>
+                      {expanded && (
+                        <TableRow className="hover:bg-transparent">
+                          <Td colSpan={7}>
+                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2" dir="ltr">
+                              <div>
+                                <p className="mb-1 text-xs font-medium text-ink-soft">{t.before}</p>
+                                <JsonBlock value={log.before} />
+                              </div>
+                              <div>
+                                <p className="mb-1 text-xs font-medium text-ink-soft">{t.after}</p>
+                                <JsonBlock value={log.after} />
+                              </div>
+                            </div>
+                          </Td>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </Drawer>
+        </Panel>
+        <div className="mt-4 flex justify-center">
+          {cursor ? (
+            <Button variant="outline" onClick={() => void loadMore()} disabled={loadingMore}>
+              {loadingMore ? c.loading : c.loadMore}
+            </Button>
+          ) : (
+            logs.length > 0 && <p className="text-sm text-ink-muted">{t.end}</p>
+          )}
+        </div>
+      </DataState>
     </div>
   );
 }

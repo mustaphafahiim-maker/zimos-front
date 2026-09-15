@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@store-builder/ui";
+import { useLocale } from "@/i18n/LocaleContext";
 
 export type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "primary";
 
@@ -21,83 +22,62 @@ const DOT_CLASS: Record<Tone, string> = {
   neutral: "bg-ink-muted",
 };
 
-export function StatusBadge({
-  tone,
-  children,
-  dot = false,
-  className,
-}: {
-  tone: Tone;
-  children: ReactNode;
-  dot?: boolean;
-  className?: string;
-}) {
+export function StatusBadge({ tone, children, dot = false, className }: { tone: Tone; children: ReactNode; dot?: boolean; className?: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex h-6 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-xs font-medium",
-        TONE_CLASS[tone],
-        className
-      )}
-    >
+    <span className={cn("inline-flex h-6 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-xs font-medium", TONE_CLASS[tone], className)}>
       {dot && <span className={cn("size-1.5 rounded-full", DOT_CLASS[tone])} aria-hidden />}
       {children}
     </span>
   );
 }
 
-/** Human label from a snake_case / kebab value. */
+const STATUS_TONES: Record<string, Tone> = {
+  trialing: "info",
+  active: "success",
+  past_due: "warning",
+  cancelled: "neutral",
+  canceled: "neutral",
+  suspended: "danger",
+  closed: "neutral",
+  pending_verification: "warning",
+  published: "success",
+  draft: "neutral",
+  unpublished: "neutral",
+};
+
+const STATUS_LABELS: Record<string, { en: string; ar: string }> = {
+  trialing: { en: "Trialing", ar: "فترة تجريبية" },
+  active: { en: "Active", ar: "نشط" },
+  past_due: { en: "Past due", ar: "متأخر في الدفع" },
+  cancelled: { en: "Cancelled", ar: "ملغي" },
+  canceled: { en: "Cancelled", ar: "ملغي" },
+  suspended: { en: "Suspended", ar: "موقوف" },
+  closed: { en: "Closed", ar: "مقفول" },
+  pending_verification: { en: "Pending verification", ar: "مستني التأكيد" },
+  published: { en: "Published", ar: "منشور" },
+  draft: { en: "Draft", ar: "مسودة" },
+  unpublished: { en: "Unpublished", ar: "مش منشور" },
+  monthly: { en: "Monthly", ar: "شهري" },
+  yearly: { en: "Yearly", ar: "سنوي" },
+};
+
+/** Human label from a snake_case value. */
 export function humanize(value: string): string {
   const s = value.replace(/[_-]+/g, " ");
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const STATUS_TONES: Record<string, Tone> = {
-  // subscriptions
-  trialing: "info",
-  active: "success",
-  past_due: "warning",
-  canceled: "neutral",
-  suspended: "danger",
-  // health
-  operational: "success",
-  degraded: "warning",
-  down: "danger",
-  unknown: "neutral",
-  // moderation
-  pending: "warning",
-  approved: "success",
-  rejected: "danger",
-  // apps
-  live: "success",
-  beta: "info",
-  hidden: "neutral",
-  // tickets
-  open: "primary",
-  resolved: "success",
-  closed: "neutral",
-  // priority
-  low: "neutral",
-  normal: "info",
-  high: "warning",
-  urgent: "danger",
-  // announcements
-  scheduled: "info",
-  ended: "neutral",
-  // credentials
-  configured: "success",
-  missing: "danger",
-  expired: "warning",
-  // admin users
-  invited: "warning",
-  disabled: "neutral",
-};
+/** Localized label for a backend status value. */
+export function useStatusLabel() {
+  const { locale } = useLocale();
+  return (value: string) => STATUS_LABELS[value]?.[locale] ?? humanize(value);
+}
 
-/** Status pill with the tone looked up from a shared status vocabulary. */
-export function Status({ value, label, className }: { value: string; label?: string; className?: string }) {
+export function Status({ value, className }: { value: string; className?: string }) {
+  const label = useStatusLabel();
   return (
     <StatusBadge tone={STATUS_TONES[value] ?? "neutral"} dot className={className}>
-      {label ?? humanize(value)}
+      {label(value)}
     </StatusBadge>
   );
 }

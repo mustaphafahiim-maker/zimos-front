@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@store-builder/ui";
+import { useCommon } from "@/i18n/LocaleContext";
 
 interface DrawerProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface DrawerProps {
 
 /** Side panel anchored to the inline-end edge. */
 export function Drawer({ open, onClose, title, description, children, footer, className }: DrawerProps) {
+  const c = useCommon();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -45,7 +47,7 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={c.close}
             className="cursor-pointer rounded-md p-1 text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink"
           >
             <X className="size-4" aria-hidden />

@@ -1,270 +1,172 @@
-import { useCallback, useEffect, useState } from "react";
-import { Database, HardDrive, Layers, Mail, MessageCircle, MessageSquare, RefreshCw, Server } from "lucide-react";
-import { Button, Spinner, cn } from "@store-builder/ui";
+import type { ReactNode } from "react";
+import { RefreshCw } from "lucide-react";
+import { Alert, Button, useAsync } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { JsonBlock, Mono, Panel } from "@/components/Panel";
-import { Status, StatusBadge } from "@/components/StatusBadge";
-import { useToast } from "@/components/Toast";
-import { useAsync } from "@store-builder/ui";
-import { getErrorMessage } from "@/lib/errors";
-import { API_BASE_URL, backendRootUrl } from "@/lib/apiClient";
-import { adminApi } from "@/mock/adminApi";
-import type { ServiceTile } from "@/mock/types";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { DetailRow } from "@/components/Drawer";
+import { Mono, Panel } from "@/components/Panel";
+import { StatusBadge } from "@/components/StatusBadge";
+import { adminApi, type AdminSystem } from "@/lib/adminApi";
+import { formatDuration, formatNumber } from "@/lib/format";
+import { fmt, useCommon, useT } from "@/i18n/LocaleContext";
 
-interface ProbeResult {
-  label: string;
-  path: string;
-  url: string;
-  running: boolean;
-  ok: boolean | null;
-  httpStatus: number | null;
-  latencyMs: number | null;
-  body: unknown;
-  error: string | null;
-  checkedAt: string | null;
-}
-
-const PROBES = [
-  { label: "Liveness", path: "/health", description: "Process is up and serving HTTP." },
-  { label: "Readiness", path: "/health/ready", description: "Dependencies (database, queue) are reachable." },
-] as const;
-
-const TIMEOUT_MS = 8000;
-
-function initialProbe(label: string, path: string): ProbeResult {
-  return { label, path, url: `${backendRootUrl()}${path}`, running: true, ok: null, httpStatus: null, latencyMs: null, body: null, error: null, checkedAt: null };
-}
-
-async function runProbe(label: string, path: string): Promise<ProbeResult> {
-  const url = `${backendRootUrl()}${path}`;
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
-  const started = performance.now();
-  const base = { label, path, url, running: false, checkedAt: new Date().toISOString() };
-  try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" }, cache: "no-store" });
-    const latencyMs = Math.round(performance.now() - started);
-    const type = res.headers.get("content-type") ?? "";
-    const text = await res.text();
-    if (!type.includes("json")) {
-      return {
-        ...base,
-        ok: false,
-        httpStatus: res.status,
-        latencyMs,
-        body: null,
-        error: type.includes("html")
-          ? "Received an HTML page instead of JSON — the request did not reach the backend (check the dev proxy / API base URL)."
-          : `Unexpected content type “${type || "none"}”.`,
-      };
-    }
-    let body: unknown = text;
-    try {
-      body = JSON.parse(text) as unknown;
-    } catch {
-      /* keep raw text */
-    }
-    return { ...base, ok: res.ok, httpStatus: res.status, latencyMs, body, error: res.ok ? null : `HTTP ${res.status} ${res.statusText}`.trim() };
-  } catch (err) {
-    return {
-      ...base,
-      ok: false,
-      httpStatus: null,
-      latencyMs: null,
-      body: null,
-      error: controller.signal.aborted ? `Timed out after ${TIMEOUT_MS / 1000}s.` : `Backend unreachable — ${getErrorMessage(err, "network error")}`,
-    };
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-const SERVICE_ICON: Record<string, typeof Database> = {
-  svc_db: Database,
-  svc_queue: Layers,
-  svc_email: Mail,
-  svc_sms: MessageSquare,
-  svc_whatsapp: MessageCircle,
-  svc_storage: HardDrive,
+const STRINGS = {
+  en: {
+    title: "System health",
+    description: "What is actually configured on the API server right now.",
+    runtime: "Runtime",
+    environment: "Environment",
+    node: "Node.js",
+    uptime: "Uptime",
+    database: "Database",
+    connection: "Connection",
+    connected: "Connected",
+    unreachable: "Unreachable",
+    migrations: "Migrations",
+    migrationsValue: "{applied} of {files} applied",
+    pending: "Pending migrations",
+    noPending: "None",
+    pendingWarn: "{n} migration(s) haven't been applied on this server.",
+    integrations: "Integrations",
+    storage: "Media storage",
+    email: "Email provider",
+    sms: "SMS provider",
+    whatsapp: "WhatsApp provider",
+    webhook: "Billing webhook secret",
+    gateway: "Payment gateway",
+    google: "Google sign-in",
+    configured: "Configured",
+    notConfigured: "Not configured",
+    connectedGw: "Connected",
+    notConnected: "Not connected",
+    consoleProvider: "console (messages are only logged)",
+  },
+  ar: {
+    title: "صحة النظام",
+    description: "اللي متظبط فعلًا على سيرفر الـ API دلوقتي.",
+    runtime: "التشغيل",
+    environment: "البيئة",
+    node: "Node.js",
+    uptime: "مدة التشغيل",
+    database: "قاعدة البيانات",
+    connection: "الاتصال",
+    connected: "متصلة",
+    unreachable: "مش متاحة",
+    migrations: "الـ Migrations",
+    migrationsValue: "{applied} من {files} اتطبقت",
+    pending: "Migrations مستنية",
+    noPending: "مفيش",
+    pendingWarn: "فيه {n} migration لسه ماتطبقتش على السيرفر ده.",
+    integrations: "التكاملات",
+    storage: "تخزين الميديا",
+    email: "مزود الإيميل",
+    sms: "مزود الرسائل SMS",
+    whatsapp: "مزود واتساب",
+    webhook: "سر webhook الفوترة",
+    gateway: "بوابة الدفع",
+    google: "الدخول بجوجل",
+    configured: "متظبط",
+    notConfigured: "مش متظبط",
+    connectedGw: "متوصلة",
+    notConnected: "مش متوصلة",
+    consoleProvider: "console (الرسايل بتتسجل بس)",
+  },
 };
 
 export function SystemHealthPage() {
-  const toast = useToast();
-  const [probes, setProbes] = useState<ProbeResult[]>(() => PROBES.map((p) => initialProbe(p.label, p.path)));
-  const services = useAsync(() => adminApi.listServices(), []);
-  const [recheckingServices, setRecheckingServices] = useState(false);
-
-  const runProbes = useCallback(async () => {
-    setProbes((prev) => prev.map((p) => ({ ...p, running: true })));
-    const results = await Promise.all(PROBES.map((p) => runProbe(p.label, p.path)));
-    setProbes(results);
-  }, []);
-
-  useEffect(() => {
-    void runProbes();
-  }, [runProbes]);
-
-  async function recheckAll() {
-    setRecheckingServices(true);
-    try {
-      const [, next] = await Promise.all([runProbes(), adminApi.recheckServices()]);
-      services.setData(next);
-      toast.success("Health checks refreshed.");
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setRecheckingServices(false);
-    }
-  }
-
-  const anyRunning = probes.some((p) => p.running) || recheckingServices;
-
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const { data, loading, error, refresh } = useAsync(() => adminApi.system(), []);
   return (
     <div>
       <PageHeader
-        title="System health"
-        description="Live backend probes plus the status of platform dependencies."
+        title={t.title}
+        description={t.description}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void recheckAll()} disabled={anyRunning}>
-            <RefreshCw className={cn(anyRunning && "animate-spin")} /> Re-run checks
+          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+            <RefreshCw /> {c.refresh}
           </Button>
         }
       />
-
-      <section className="mb-6">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Server className="size-4 text-primary" aria-hidden />
-          <h2 className="text-sm font-semibold text-ink">Backend API</h2>
-          <StatusBadge tone="primary">Live</StatusBadge>
-          <span className="text-xs text-ink-soft">
-            API base <Mono>{API_BASE_URL}</Mono>
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {probes.map((p, i) => (
-            <Panel
-              key={p.path}
-              title={
-                <span className="flex items-center gap-2">
-                  {p.label} <Mono>GET {p.path}</Mono>
-                </span>
-              }
-              description={PROBES[i].description}
-              actions={
-                p.running ? (
-                  <Spinner className="text-ink-soft" />
-                ) : p.ok ? (
-                  <StatusBadge tone="success" dot>
-                    Healthy
-                  </StatusBadge>
-                ) : (
-                  <StatusBadge tone="danger" dot>
-                    {p.httpStatus === 503 ? "Not ready" : "Failing"}
-                  </StatusBadge>
-                )
-              }
-            >
-              {p.running && p.checkedAt === null ? (
-                <p className="text-sm text-ink-soft">Checking…</p>
-              ) : (
-                <div className="space-y-3">
-                  <dl className="grid grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <dt className="text-xs text-ink-soft">HTTP status</dt>
-                      <dd className={cn("tabular font-semibold", p.ok ? "text-success" : "text-danger")}>{p.httpStatus ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-ink-soft">Latency</dt>
-                      <dd className={cn("tabular font-semibold", (p.latencyMs ?? 0) > 1000 ? "text-warning" : "text-ink")}>
-                        {p.latencyMs !== null ? `${p.latencyMs} ms` : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-ink-soft">Checked</dt>
-                      <dd className="text-ink" title={formatDateTime(p.checkedAt)}>
-                        {formatRelative(p.checkedAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="truncate text-xs text-ink-soft" title={p.url}>
-                    {p.url}
-                  </p>
-                  {p.error && <p className="rounded-[10px] border border-danger/25 bg-danger-soft px-3 py-2 text-sm text-danger">{p.error}</p>}
-                  {p.body !== null && <JsonBlock value={p.body} className="max-h-48" />}
-                </div>
-              )}
-            </Panel>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-semibold text-ink">Platform services</h2>
-          <StatusBadge tone="neutral">Mock data</StatusBadge>
-        </div>
-        <DataState loading={services.loading} error={services.error} onRetry={() => void services.refresh()} empty={services.data?.length === 0}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {(services.data ?? []).map((s) => (
-              <ServiceCard key={s.id} service={s} />
-            ))}
-          </div>
-        </DataState>
-      </section>
+      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
+        {data && <Body s={data} />}
+      </DataState>
     </div>
   );
 }
 
-function ServiceCard({ service: s }: { service: ServiceTile }) {
-  const Icon = SERVICE_ICON[s.id] ?? Server;
+function Flag({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   return (
-    <article
-      className={cn(
-        "rounded-[var(--radius-card)] border bg-paper-raised p-4 shadow-[var(--shadow-card)]",
-        s.status === "down" ? "border-danger/40" : s.status === "degraded" ? "border-warning/40" : "border-line"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
-            <Icon className="size-4" aria-hidden />
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-ink">{s.name}</h3>
-            <p className="text-xs text-ink-soft">{s.description}</p>
-          </div>
-        </div>
-        <Status value={s.status} />
+    <StatusBadge tone={ok ? "success" : "warning"} dot>
+      {ok ? yes : no}
+    </StatusBadge>
+  );
+}
+
+function Body({ s }: { s: AdminSystem }) {
+  const t = useT(STRINGS);
+  const provider = (v?: string): ReactNode => (!v ? "—" : v === "console" ? <StatusBadge tone="warning" dot>{t.consoleProvider}</StatusBadge> : <Mono>{v}</Mono>);
+  const dbOk = s.database === "connected";
+  return (
+    <div className="space-y-4">
+      {s.migrations.pending.length > 0 && <Alert variant="warning">{fmt(t.pendingWarn, { n: s.migrations.pending.length })}</Alert>}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Panel title={t.runtime}>
+          <dl>
+            <DetailRow label={t.environment}>
+              <Mono>{s.environment}</Mono>
+            </DetailRow>
+            <DetailRow label={t.node}>
+              <Mono>{s.node}</Mono>
+            </DetailRow>
+            <DetailRow label={t.uptime}>
+              <span dir="ltr">{formatDuration(s.uptimeSeconds)}</span>
+            </DetailRow>
+          </dl>
+        </Panel>
+        <Panel title={t.database}>
+          <dl>
+            <DetailRow label={t.connection}>
+              <StatusBadge tone={dbOk ? "success" : "danger"} dot>
+                {dbOk ? t.connected : t.unreachable}
+              </StatusBadge>
+            </DetailRow>
+            <DetailRow label={t.migrations}>{fmt(t.migrationsValue, { applied: formatNumber(s.migrations.applied), files: formatNumber(s.migrations.files) })}</DetailRow>
+            <DetailRow label={t.pending}>
+              {s.migrations.pending.length === 0 ? (
+                t.noPending
+              ) : (
+                <ul className="space-y-1" dir="ltr">
+                  {s.migrations.pending.map((m) => (
+                    <li key={m}>
+                      <Mono>{m}</Mono>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </DetailRow>
+          </dl>
+        </Panel>
+        <Panel title={t.integrations} className="xl:col-span-2">
+          <dl>
+            <DetailRow label={t.storage}>
+              <Mono>{s.storage}</Mono>
+            </DetailRow>
+            <DetailRow label={t.email}>{provider(s.notifications.email)}</DetailRow>
+            <DetailRow label={t.sms}>{provider(s.notifications.sms)}</DetailRow>
+            <DetailRow label={t.whatsapp}>{provider(s.notifications.whatsapp)}</DetailRow>
+            <DetailRow label={t.webhook}>
+              <Flag ok={s.billingWebhookSecretConfigured} yes={t.configured} no={t.notConfigured} />
+            </DetailRow>
+            <DetailRow label={t.gateway}>
+              <Flag ok={s.paymentGatewayConnected} yes={t.connectedGw} no={t.notConnected} />
+            </DetailRow>
+            <DetailRow label={t.google}>
+              <Flag ok={s.googleOAuthConfigured} yes={t.configured} no={t.notConfigured} />
+            </DetailRow>
+          </dl>
+        </Panel>
       </div>
-      <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
-        <div>
-          <dt className="text-xs text-ink-soft">Latency</dt>
-          <dd className="tabular font-medium text-ink">{s.latencyMs !== null ? `${s.latencyMs} ms` : "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-soft">Uptime 30d</dt>
-          <dd className="tabular font-medium text-ink">{s.uptime30d.toFixed(2)}%</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-soft">Checked</dt>
-          <dd className="font-medium text-ink">{formatRelative(s.lastCheckAt)}</dd>
-        </div>
-      </dl>
-      <div className="mt-3 border-t border-line pt-3 text-xs">
-        <p className="font-medium text-ink-soft">Last incident</p>
-        {s.lastIncidentAt ? (
-          <p className="mt-0.5 text-ink">
-            <span className="text-ink-soft" title={formatDateTime(s.lastIncidentAt)}>
-              {formatRelative(s.lastIncidentAt)} ·{" "}
-            </span>
-            {s.lastIncidentSummary}
-          </p>
-        ) : (
-          <p className="mt-0.5 text-ink-soft">No incidents recorded.</p>
-        )}
-      </div>
-    </article>
+    </div>
   );
 }

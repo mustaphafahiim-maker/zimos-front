@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { Alert, TableCell, TableHead, cn } from "@store-builder/ui";
-import type { WorkspaceListResult } from "@/mock/types";
+import { TableCell, TableHead, cn } from "@store-builder/ui";
 
 /** Bordered surface with an optional header. Used instead of Card where padding must be controlled. */
 export function Panel({
@@ -103,17 +102,6 @@ export function SortHead<K extends string>({
 export function compareValues(a: string | number, b: string | number, dir: SortDir): number {
   const r = typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
   return dir === "asc" ? r : -r;
-}
-
-/** Shown when the real workspaces endpoint failed and demo rows are displayed. */
-export function SourceNotice({ result }: { result: Pick<WorkspaceListResult, "source" | "apiError"> }) {
-  if (result.source === "api") return null;
-  return (
-    <Alert variant="warning" className="mb-4">
-      Couldn't load GET /admin/workspaces ({result.apiError ?? "unknown error"}). Showing demo workspaces so the console
-      stays usable — changes are stored locally.
-    </Alert>
-  );
 }
 
 export function JsonBlock({ value, className }: { value: unknown; className?: string }) {

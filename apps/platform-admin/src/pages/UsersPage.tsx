@@ -1,206 +1,272 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { KeyRound, MailCheck, ShieldCheck, ShieldOff, UserX, UserCheck } from "lucide-react";
-import { Alert, Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Ban, CheckCircle2, RefreshCw, ShieldCheck, ShieldOff } from "lucide-react";
+import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState, EmptyBlock } from "@/components/DataState";
-import { Drawer, DetailRow } from "@/components/Drawer";
+import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Panel, Td, Th } from "@/components/Panel";
 import { FilterChips, SearchInput } from "@/components/forms";
-import { Mono, Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
-import { useAction } from "@/components/controls";
-import { useAsync } from "@store-builder/ui";
-import { formatDate, formatRelative, initials } from "@/lib/format";
-import { controlApi } from "@/mock/controlApi";
-import type { PlatformUser, PlatformUserStatus } from "@/mock/controlTypes";
+import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { adminApi, type AdminUser } from "@/lib/adminApi";
+import { getErrorMessage } from "@/lib/errors";
+import { formatDate, formatNumber, formatRelative } from "@/lib/format";
+import { fmt, useCommon, useT } from "@/i18n/LocaleContext";
 
-type StatusFilter = "all" | PlatformUserStatus;
-type AdminFilter = "any" | "admins" | "non_admins";
-type Pending = { kind: "suspend" | "reactivate" | "grant" | "revoke" | "reset"; user: PlatformUser } | null;
+const STRINGS = {
+  en: {
+    title: "Users",
+    description: "Every account on the platform. Platform admins can open this console.",
+    search: "Search by email or name…",
+    everyone: "Everyone",
+    admins: "Platform admins",
+    user: "User",
+    workspaces: "Workspaces",
+    verified: "Email verified",
+    lastLogin: "Last login",
+    joined: "Joined",
+    admin: "Admin",
+    you: "You",
+    promote: "Make admin",
+    demote: "Remove admin",
+    suspend: "Suspend",
+    activate: "Activate",
+    promoteTitle: "Give {email} platform admin access?",
+    promoteDesc: "They'll be able to open this console and change any workspace, plan or user.",
+    demoteTitle: "Remove platform admin access from {email}?",
+    demoteDesc: "They lose access to this console immediately. Their merchant access is unchanged.",
+    suspendTitle: "Suspend {email}?",
+    suspendDesc: "They won't be able to sign in until the account is activated again.",
+    activateTitle: "Activate {email}?",
+    activateDesc: "The account becomes active and can sign in.",
+    updated: "{email} updated.",
+    empty: "No users found.",
+    noAdmins: "No platform admins found.",
+    loaded: "Showing {n} user(s)",
+    selfHint: "You can't change your own admin access or status.",
+  },
+  ar: {
+    title: "المستخدمين",
+    description: "كل الحسابات على المنصة. أدمن المنصة بس هو اللي يقدر يفتح اللوحة دي.",
+    search: "دوّر بالإيميل أو الاسم…",
+    everyone: "الكل",
+    admins: "أدمن المنصة",
+    user: "المستخدم",
+    workspaces: "مساحات العمل",
+    verified: "الإيميل متأكد",
+    lastLogin: "آخر دخول",
+    joined: "انضم",
+    admin: "أدمن",
+    you: "إنت",
+    promote: "خليه أدمن",
+    demote: "شيل الأدمن",
+    suspend: "إيقاف",
+    activate: "تفعيل",
+    promoteTitle: "تدي {email} صلاحية أدمن المنصة؟",
+    promoteDesc: "هيقدر يفتح اللوحة دي ويعدّل أي مساحة عمل أو باقة أو مستخدم.",
+    demoteTitle: "تشيل صلاحية أدمن المنصة من {email}؟",
+    demoteDesc: "هيفقد الوصول للوحة دي فورًا. صلاحياته كتاجر مش هتتغير.",
+    suspendTitle: "توقف {email}؟",
+    suspendDesc: "مش هيقدر يسجل دخول لحد ما الحساب يتفعّل تاني.",
+    activateTitle: "تفعّل {email}؟",
+    activateDesc: "الحساب هيبقى نشط ويقدر يسجل دخول.",
+    updated: "{email} اتعدّل.",
+    empty: "مفيش مستخدمين.",
+    noAdmins: "مفيش أدمن للمنصة.",
+    loaded: "بنعرض {n} مستخدم",
+    selfHint: "مينفعش تغيّر صلاحية الأدمن أو الحالة بتاعتك.",
+  },
+};
+
+type Pending = { user: AdminUser; kind: "promote" | "demote" | "suspend" | "activate" } | null;
+const PAGE = 100;
 
 export function UsersPage() {
-  const { data, loading, error, refresh, setData } = useAsync(() => controlApi.listUsers(), []);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [adminFilter, setAdminFilter] = useState<AdminFilter>("any");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const toast = useToast();
+  const { user: me } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const adminsOnly = params.get("admins") === "1";
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [pending, setPending] = useState<Pending>(null);
-  const { busy, run } = useAction();
 
-  const rows = useMemo(() => data ?? [], [data]);
-  const replace = (u: PlatformUser) => setData((prev) => (prev ?? []).map((x) => (x.id === u.id ? u : x)));
-  const selected = rows.find((u) => u.id === selectedId) ?? null;
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(search.trim()), 300);
+    return () => window.clearTimeout(id);
+  }, [search]);
 
-  const filtered = rows.filter((u) => {
-    const q = query.trim().toLowerCase();
-    if (q && !`${u.name} ${u.email} ${u.id} ${u.phone ?? ""}`.toLowerCase().includes(q)) return false;
-    if (status !== "all" && u.status !== status) return false;
-    if (adminFilter === "admins" && !u.platformAdmin) return false;
-    if (adminFilter === "non_admins" && u.platformAdmin) return false;
-    return true;
-  });
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        // The backend has no admin filter, so the admins view walks every page.
+        let res = await adminApi.listUsers({ search: debounced, limit: PAGE });
+        let all = res.users;
+        while (adminsOnly && res.nextCursor && !cancelled) {
+          res = await adminApi.listUsers({ search: debounced, limit: PAGE, before: res.nextCursor });
+          all = [...all, ...res.users];
+        }
+        if (cancelled) return;
+        setUsers(all);
+        setCursor(res.nextCursor);
+      } catch (err) {
+        if (!cancelled) setError(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced, adminsOnly, reloadKey]);
 
-  const count = (s: PlatformUserStatus) => rows.filter((u) => u.status === s).length;
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await adminApi.listUsers({ search: debounced, limit: PAGE, before: cursor });
+      setUsers((prev) => [...prev, ...res.users]);
+      setCursor(res.nextCursor);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const shown = useMemo(() => (adminsOnly ? users.filter((u) => u.platformAdmin) : users), [users, adminsOnly]);
+
+  const copy = pending
+    ? {
+        promote: { title: t.promoteTitle, desc: t.promoteDesc, label: t.promote, destructive: false },
+        demote: { title: t.demoteTitle, desc: t.demoteDesc, label: t.demote, destructive: true },
+        suspend: { title: t.suspendTitle, desc: t.suspendDesc, label: t.suspend, destructive: true },
+        activate: { title: t.activateTitle, desc: t.activateDesc, label: t.activate, destructive: false },
+      }[pending.kind]
+    : null;
 
   return (
     <div>
-      <PageHeader title="Users" description="Every account on the platform — merchants, staff and ZIMOS admins." />
-      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <FilterChips<StatusFilter>
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: "all", label: "All", count: rows.length },
-              { value: "active", label: "Active", count: count("active") },
-              { value: "pending", label: "Pending", count: count("pending") },
-              { value: "suspended", label: "Suspended", count: count("suspended") },
-            ]}
-          />
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <FilterChips<AdminFilter>
-              value={adminFilter}
-              onChange={setAdminFilter}
-              options={[
-                { value: "any", label: "Anyone" },
-                { value: "admins", label: "Platform admins", count: rows.filter((u) => u.platformAdmin).length },
-                { value: "non_admins", label: "Non-admins" },
-              ]}
-            />
-            <SearchInput value={query} onChange={setQuery} placeholder="Search name, email, id" />
-          </div>
-        </div>
-
-        {filtered.length === 0 ? (
-          <EmptyBlock message={rows.length === 0 ? "No users yet." : "No users match these filters."} />
-        ) : (
-          <Panel flush>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <Th>User</Th>
-                    <Th>Status</Th>
-                    <Th>Email</Th>
-                    <Th>Workspaces</Th>
-                    <Th>Last login</Th>
-                    <Th>Joined</Th>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((u) => (
-                    <TableRow key={u.id} className="cursor-pointer" onClick={() => setSelectedId(u.id)}>
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)} disabled={loading}>
+            <RefreshCw /> {c.refresh}
+          </Button>
+        }
+      />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FilterChips
+          value={adminsOnly ? "admins" : "all"}
+          onChange={(v) => setParams(v === "admins" ? { admins: "1" } : {}, { replace: true })}
+          options={[
+            { value: "all", label: t.everyone },
+            { value: "admins", label: t.admins },
+          ]}
+        />
+        <SearchInput value={search} onChange={setSearch} placeholder={t.search} />
+      </div>
+      <DataState loading={loading} error={error} onRetry={() => setReloadKey((k) => k + 1)} empty={!loading && shown.length === 0} emptyMessage={adminsOnly ? t.noAdmins : t.empty}>
+        <Panel flush>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <Th>{t.user}</Th>
+                  <Th>{c.status}</Th>
+                  <Th className="text-end">{t.workspaces}</Th>
+                  <Th>{t.verified}</Th>
+                  <Th>{t.lastLogin}</Th>
+                  <Th>{t.joined}</Th>
+                  <Th className="text-end">{c.actions}</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.map((u) => {
+                  const self = u.id === me?.id;
+                  return (
+                    <TableRow key={u.id}>
                       <Td>
-                        <div className="flex items-center gap-3">
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-zimos-navy text-xs font-semibold text-white" aria-hidden>
-                            {initials(u.name)}
-                          </span>
-                          <div className="min-w-0">
-                            <button type="button" className="block cursor-pointer truncate text-start font-medium hover:text-primary" onClick={() => setSelectedId(u.id)}>
-                              {u.name}
-                            </button>
-                            <span className="block truncate text-xs text-ink-soft">{u.email}</span>
-                          </div>
-                          {u.platformAdmin && <StatusBadge tone="primary">Admin</StatusBadge>}
+                        <span className="flex flex-wrap items-center gap-1.5 font-medium">
+                          {u.fullName || "—"}
+                          {u.platformAdmin && (
+                            <StatusBadge tone="primary" dot>
+                              {t.admin}
+                            </StatusBadge>
+                          )}
+                          {self && <StatusBadge tone="neutral">{t.you}</StatusBadge>}
+                        </span>
+                        <span className="block text-xs text-ink-soft" dir="ltr">
+                          {u.email}
+                        </span>
+                      </Td>
+                      <Td>
+                        <Status value={u.status} />
+                      </Td>
+                      <Td className="tabular text-end">{formatNumber(u.workspaces)}</Td>
+                      <Td className="text-ink-soft">{u.emailVerifiedAt ? formatDate(u.emailVerifiedAt) : c.no}</Td>
+                      <Td className="text-ink-soft">{formatRelative(u.lastLoginAt)}</Td>
+                      <Td className="text-ink-soft">{formatDate(u.createdAt)}</Td>
+                      <Td className="text-end">
+                        <div className="flex justify-end gap-2" title={self ? t.selfHint : undefined}>
+                          <Button variant="outline" size="sm" disabled={self} onClick={() => setPending({ user: u, kind: u.platformAdmin ? "demote" : "promote" })}>
+                            {u.platformAdmin ? <ShieldOff /> : <ShieldCheck />} {u.platformAdmin ? t.demote : t.promote}
+                          </Button>
+                          {u.status === "suspended" ? (
+                            <Button variant="outline" size="sm" disabled={self} onClick={() => setPending({ user: u, kind: "activate" })}>
+                              <CheckCircle2 /> {t.activate}
+                            </Button>
+                          ) : (
+                            <Button variant="destructive" size="sm" disabled={self} onClick={() => setPending({ user: u, kind: "suspend" })}>
+                              <Ban /> {t.suspend}
+                            </Button>
+                          )}
                         </div>
                       </Td>
-                      <Td><Status value={u.status} /></Td>
-                      <Td>{u.emailVerified ? <StatusBadge tone="success">Verified</StatusBadge> : <StatusBadge tone="warning">Unverified</StatusBadge>}</Td>
-                      <Td className="text-ink-soft">{u.workspaces.length}</Td>
-                      <Td className="text-ink-soft">{u.lastLoginAt ? formatRelative(u.lastLoginAt) : "Never"}</Td>
-                      <Td className="text-ink-soft">{formatDate(u.createdAt)}</Td>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Panel>
-        )}
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Panel>
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <p className="text-xs text-ink-muted">{fmt(t.loaded, { n: formatNumber(shown.length) })}</p>
+          {cursor && !adminsOnly && (
+            <Button variant="outline" onClick={() => void loadMore()} disabled={loadingMore}>
+              {loadingMore ? c.loading : c.loadMore}
+            </Button>
+          )}
+        </div>
       </DataState>
 
-      <Drawer open={!!selected} onClose={() => setSelectedId(null)} title={selected?.name ?? "User"} description={selected?.email}>
-        {selected && (
-          <div className="space-y-5">
-            {selected.status === "suspended" && <Alert variant="danger">This account is suspended and can't sign in.</Alert>}
-            <dl>
-              <DetailRow label="User ID"><Mono>{selected.id}</Mono></DetailRow>
-              <DetailRow label="Status"><Status value={selected.status} /></DetailRow>
-              <DetailRow label="Email">{selected.emailVerified ? "Verified" : "Not verified"}</DetailRow>
-              <DetailRow label="Phone">{selected.phone ?? "—"}</DetailRow>
-              <DetailRow label="Platform admin">{selected.platformAdmin ? "Yes" : "No"}</DetailRow>
-              <DetailRow label="Last login">{selected.lastLoginAt ? formatRelative(selected.lastLoginAt) : "Never"}</DetailRow>
-              <DetailRow label="Password reset">{selected.passwordResetSentAt ? `Link sent ${formatRelative(selected.passwordResetSentAt)}` : "—"}</DetailRow>
-            </dl>
-
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-ink">Workspaces</h3>
-              {selected.workspaces.length === 0 ? (
-                <p className="text-sm text-ink-soft">Not a member of any workspace.</p>
-              ) : (
-                <ul className="divide-y divide-line rounded-[10px] border border-line">
-                  {selected.workspaces.map((w) => (
-                    <li key={w.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                      <Link to={`/workspaces/${w.id}`} className="truncate font-medium text-ink hover:text-primary">{w.name}</Link>
-                      <StatusBadge tone={w.role === "owner" ? "primary" : "neutral"}>{w.role}</StatusBadge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Button variant="outline" disabled={selected.emailVerified || busy === "verify"} onClick={() => void run("verify", () => controlApi.verifyUserEmail(selected.id), "Email marked as verified.").then((u) => u && replace(u))}>
-                <MailCheck /> Verify email manually
-              </Button>
-              <Button variant="outline" onClick={() => setPending({ kind: "reset", user: selected })}>
-                <KeyRound /> Send password reset
-              </Button>
-              {selected.status === "suspended" ? (
-                <Button variant="outline" onClick={() => setPending({ kind: "reactivate", user: selected })}><UserCheck /> Reactivate</Button>
-              ) : (
-                <Button variant="destructive" onClick={() => setPending({ kind: "suspend", user: selected })}><UserX /> Suspend</Button>
-              )}
-              {selected.platformAdmin ? (
-                <Button variant="outline" className="text-danger" onClick={() => setPending({ kind: "revoke", user: selected })}><ShieldOff /> Revoke platform admin</Button>
-              ) : (
-                <Button variant="outline" onClick={() => setPending({ kind: "grant", user: selected })}><ShieldCheck /> Grant platform admin</Button>
-              )}
-            </div>
-            <p className="text-xs text-ink-soft">Platform admin changes are mock-only — the backend has no route for toggling users.platform_admin yet.</p>
-          </div>
-        )}
-      </Drawer>
-
       <ConfirmDialog
-        open={!!pending}
-        title={
-          pending?.kind === "suspend" ? `Suspend ${pending.user.name}?`
-          : pending?.kind === "reactivate" ? `Reactivate ${pending.user.name}?`
-          : pending?.kind === "grant" ? `Grant platform admin to ${pending.user.name}?`
-          : pending?.kind === "revoke" ? `Revoke platform admin from ${pending.user.name}?`
-          : `Send password reset to ${pending?.user.email ?? ""}?`
-        }
-        description={
-          pending?.kind === "suspend" ? "They are signed out everywhere and can't sign in. Their workspaces stay online."
-          : pending?.kind === "grant" ? "They get full access to this console. Only grant to ZIMOS staff."
-          : pending?.kind === "revoke" ? "They lose access to this console immediately."
-          : pending?.kind === "reset" ? "They receive an email with a one-time reset link (mock)."
-          : "They can sign in again."
-        }
-        destructive={pending?.kind === "suspend" || pending?.kind === "revoke" || pending?.kind === "grant"}
-        confirmLabel={pending?.kind === "reset" ? "Send link" : "Confirm"}
+        open={pending !== null}
+        title={copy && pending ? fmt(copy.title, { email: pending.user.email }) : ""}
+        description={copy?.desc}
+        confirmLabel={copy?.label}
+        destructive={copy?.destructive}
         onCancel={() => setPending(null)}
         onConfirm={async () => {
           if (!pending) return;
-          const u = pending.user;
-          const next =
-            pending.kind === "suspend" ? await controlApi.setUserStatus(u.id, "suspended")
-            : pending.kind === "reactivate" ? await controlApi.setUserStatus(u.id, "active")
-            : pending.kind === "grant" ? await controlApi.setPlatformAdmin(u.id, true)
-            : pending.kind === "revoke" ? await controlApi.setPlatformAdmin(u.id, false)
-            : await controlApi.sendPasswordReset(u.id);
-          replace(next);
+          const patch =
+            pending.kind === "promote" ? { platformAdmin: true } : pending.kind === "demote" ? { platformAdmin: false } : { status: pending.kind === "suspend" ? "suspended" : "active" };
+          const updated = await adminApi.updateUser(pending.user.id, patch);
+          setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, status: updated.status, platformAdmin: updated.platformAdmin } : u)));
+          toast.success(fmt(t.updated, { email: updated.email }));
           setPending(null);
         }}
       />

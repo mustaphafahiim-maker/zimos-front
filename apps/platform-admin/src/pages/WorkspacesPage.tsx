@@ -1,212 +1,145 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
-import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { Button, Table, TableBody, TableHeader, TableRow, useAsync } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState, EmptyBlock } from "@/components/DataState";
+import { DataState } from "@/components/DataState";
+import { Panel, SortHead, Td, Th, compareValues, type SortState } from "@/components/Panel";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
-import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { DemoBadge, Known, UNKNOWN_HINT, Unknown, WorkspaceStatus, compareNullable, countryName, planLabel } from "@/components/workspace";
-import { useAsync } from "@store-builder/ui";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, SubscriptionStatus } from "@/mock/types";
-import { formatDate, formatMoneyCompact, formatNumber } from "@/lib/format";
+import { Status, useStatusLabel } from "@/components/StatusBadge";
+import { adminApi, type AdminWorkspaceRow } from "@/lib/adminApi";
+import { formatDate, formatNumber } from "@/lib/format";
+import { fmt, useCommon, useT } from "@/i18n/LocaleContext";
 
-type SortKey = "name" | "createdAt" | "orders" | "gmv";
-type StatusFilter = "all" | SubscriptionStatus | "suspended";
+const STRINGS = {
+  en: {
+    title: "Workspaces",
+    description: "{n} workspaces on the platform.",
+    search: "Search by name or id…",
+    allPlans: "All plans",
+    plan: "Plan",
+    name: "Workspace",
+    subscription: "Subscription",
+    trialEnds: "Trial ends",
+    periodEnd: "Period ends",
+    orders: "Orders",
+    empty: "No workspaces yet.",
+    noMatch: "No workspaces match these filters.",
+  },
+  ar: {
+    title: "مساحات العمل",
+    description: "{n} مساحة عمل على المنصة.",
+    search: "دوّر بالاسم أو الـ id…",
+    allPlans: "كل الباقات",
+    plan: "الباقة",
+    name: "مساحة العمل",
+    subscription: "الاشتراك",
+    trialEnds: "نهاية التجربة",
+    periodEnd: "نهاية الفترة",
+    orders: "الطلبات",
+    empty: "مفيش مساحات عمل لسه.",
+    noMatch: "مفيش مساحات عمل بالفلاتر دي.",
+  },
+};
 
-function matchesStatus(ws: AdminWorkspace, f: StatusFilter) {
-  if (f === "all") return true;
-  if (f === "suspended") return ws.meta.suspended;
-  return ws.meta.subscriptionStatus === f;
-}
-
-/** Api rows expose an all-time count; demo rows carry a generated 30-day count. */
-function ordersValue(ws: AdminWorkspace): number | null {
-  return ws.origin === "api" ? ws.meta.ordersAllTime : ws.meta.ordersLast30d;
-}
+type SortKey = "workspaceName" | "plan" | "status" | "currentPeriodEnd" | "orderCount";
 
 export function WorkspacesPage() {
-  const navigate = useNavigate();
+  const t = useT(STRINGS);
+  const c = useCommon();
+  const statusLabel = useStatusLabel();
   const { data, loading, error, refresh } = useAsync(() => adminApi.listWorkspaces(), []);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [planId, setPlanId] = useState("all");
-  const [country, setCountry] = useState("all");
-  const [sort, setSort] = useState<SortState<SortKey>>({ key: "createdAt", dir: "desc" });
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("all");
+  const [plan, setPlan] = useState("");
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: "orderCount", dir: "desc" });
 
-  const rows = useMemo(() => data?.rows ?? [], [data]);
-  const isApi = data?.source === "api";
-
-  const planOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    rows.forEach((w) => w.plan && map.set(w.plan.id, w.plan.name));
-    return Array.from(map.entries());
-  }, [rows]);
-
-  const countryOptions = useMemo(
-    () => Array.from(new Set(rows.map((w) => w.meta.country).filter((c): c is string => !!c))).sort(),
-    [rows]
-  );
+  const rows = data ?? [];
+  const statuses = useMemo(() => [...new Set(rows.map((r) => r.status))], [rows]);
+  const plans = useMemo(() => [...new Set(rows.map((r) => r.plan).filter(Boolean))], [rows]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const needle = q.trim().toLowerCase();
     return rows
-      .filter((w) => matchesStatus(w, status))
-      .filter((w) => planId === "all" || w.meta.planId === planId)
-      .filter((w) => country === "all" || w.meta.country === country)
-      .filter(
-        (w) =>
-          !q ||
-          w.name.toLowerCase().includes(q) ||
-          w.slug.toLowerCase().includes(q) ||
-          (w.meta.ownerEmail ?? "").toLowerCase().includes(q) ||
-          (w.meta.ownerName ?? "").toLowerCase().includes(q)
-      )
-      .sort((a, b) => {
-        switch (sort.key) {
-          case "name":
-            return compareValues(a.name, b.name, sort.dir);
-          case "orders":
-            return compareNullable(ordersValue(a), ordersValue(b), sort.dir);
-          case "gmv":
-            return compareNullable(a.meta.gmvLast30d, b.meta.gmvLast30d, sort.dir);
-          default:
-            return compareValues(a.createdAt, b.createdAt, sort.dir);
-        }
-      });
-  }, [rows, query, status, planId, country, sort]);
-
-  const statusOptions: Array<{ value: StatusFilter; label: string; count: number }> = (
-    [
-      ["all", "All"],
-      ["active", "Active"],
-      ["trialing", "Trialing"],
-      ["past_due", "Past due"],
-      ["canceled", "Canceled"],
-      ["suspended", "Suspended"],
-    ] as Array<[StatusFilter, string]>
-  ).map(([value, label]) => ({ value, label, count: rows.filter((w) => matchesStatus(w, value)).length }));
+      .filter((r) => (status === "all" || r.status === status) && (!plan || r.plan === plan) && (!needle || `${r.workspaceName} ${r.workspaceId}`.toLowerCase().includes(needle)))
+      .sort((a: AdminWorkspaceRow, b: AdminWorkspaceRow) => compareValues(a[sort.key] ?? "", b[sort.key] ?? "", sort.dir));
+  }, [rows, q, status, plan, sort]);
 
   return (
     <div>
       <PageHeader
-        title="Workspaces"
-        description="Every store created on the platform."
+        title={t.title}
+        description={data ? fmt(t.description, { n: formatNumber(rows.length) }) : undefined}
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw /> Refresh
+            <RefreshCw /> {c.refresh}
           </Button>
         }
       />
-      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-        {data && (
-          <>
-            <SourceNotice result={data} />
-            {isApi && (
-              <p className="mb-3 text-xs text-ink-soft">
-                Name, plan, status and order count come from GET /admin/workspaces. Owner, country, GMV and 30-day metrics show “—”: {UNKNOWN_HINT.toLowerCase()}.
-              </p>
-            )}
-            <div className="mb-4 flex flex-col gap-3">
-              <FilterChips options={statusOptions} value={status} onChange={setStatus} />
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <SearchInput value={query} onChange={setQuery} placeholder="Search name, slug or owner email" />
-                <NativeSelect value={planId} onChange={(e) => setPlanId(e.target.value)} className="sm:w-44" aria-label="Filter by plan">
-                  <option value="all">All plans</option>
-                  {planOptions.map(([id, name]) => (
-                    <option key={id} value={id}>
-                      {name}
-                    </option>
-                  ))}
-                </NativeSelect>
-                {countryOptions.length > 0 && (
-                  <NativeSelect value={country} onChange={(e) => setCountry(e.target.value)} className="sm:w-48" aria-label="Filter by country">
-                    <option value="all">All countries</option>
-                    {countryOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {countryName(c)}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                )}
-                <span className="text-sm text-ink-soft sm:ms-auto">
-                  {filtered.length} of {rows.length}
-                </span>
-              </div>
-            </div>
-
-            {rows.length === 0 ? (
-              <EmptyBlock message="No workspaces have been created yet." />
-            ) : filtered.length === 0 ? (
-              <EmptyBlock message="No workspaces match these filters." />
-            ) : (
-              <Panel flush>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <SortHead label="Workspace" sortKey="name" sort={sort} onSort={setSort} />
-                      <Th>Owner</Th>
-                      <Th>Plan</Th>
-                      <Th>Status</Th>
-                      <Th>Country</Th>
-                      <SortHead label={isApi ? "Orders (all time)" : "Orders 30d"} sortKey="orders" sort={sort} onSort={setSort} className="text-end" />
-                      <SortHead label="GMV 30d" sortKey="gmv" sort={sort} onSort={setSort} className="text-end" />
-                      <SortHead label="Created" sortKey="createdAt" sort={sort} onSort={setSort} />
+      <DataState loading={loading} error={error} onRetry={() => void refresh()} empty={!!data && rows.length === 0} emptyMessage={t.empty}>
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <FilterChips
+            value={status}
+            onChange={setStatus}
+            options={[{ value: "all", label: c.all, count: rows.length }, ...statuses.map((s) => ({ value: s, label: statusLabel(s), count: rows.filter((r) => r.status === s).length }))]}
+          />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <NativeSelect value={plan} onChange={(e) => setPlan(e.target.value)} aria-label={t.plan} className="sm:w-44">
+              <option value="">{t.allPlans}</option>
+              {plans.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </NativeSelect>
+            <SearchInput value={q} onChange={setQ} placeholder={t.search} />
+          </div>
+        </div>
+        <Panel flush>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <SortHead label={t.name} sortKey="workspaceName" sort={sort} onSort={setSort} />
+                  <SortHead label={t.plan} sortKey="plan" sort={sort} onSort={setSort} />
+                  <SortHead label={t.subscription} sortKey="status" sort={sort} onSort={setSort} />
+                  <Th>{t.trialEnds}</Th>
+                  <SortHead label={t.periodEnd} sortKey="currentPeriodEnd" sort={sort} onSort={setSort} />
+                  <SortHead label={t.orders} sortKey="orderCount" sort={sort} onSort={setSort} className="text-end" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <Td colSpan={6} className="py-10 text-center text-ink-soft">
+                      {t.noMatch}
+                    </Td>
+                  </TableRow>
+                ) : (
+                  filtered.map((r) => (
+                    <TableRow key={r.workspaceId}>
+                      <Td>
+                        <Link to={`/workspaces/${r.workspaceId}`} className="font-medium text-ink hover:text-primary">
+                          {r.workspaceName}
+                        </Link>
+                        <span className="block font-mono text-xs text-ink-muted" dir="ltr">
+                          {r.workspaceId.slice(0, 8)}
+                        </span>
+                      </Td>
+                      <Td>{r.plan || "—"}</Td>
+                      <Td>
+                        <Status value={r.status} />
+                      </Td>
+                      <Td className="text-ink-soft">{formatDate(r.trialEndsAt)}</Td>
+                      <Td className="text-ink-soft">{formatDate(r.currentPeriodEnd)}</Td>
+                      <Td className="tabular text-end">{formatNumber(r.orderCount)}</Td>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((ws) => {
-                      const plan = planLabel(ws);
-                      return (
-                        <TableRow key={ws.id} className="cursor-pointer" onClick={() => navigate(`/workspaces/${ws.id}`)}>
-                          <Td>
-                            <span className="flex items-center gap-2">
-                              <Link
-                                to={`/workspaces/${ws.id}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="block font-medium text-ink hover:text-primary"
-                              >
-                                {ws.name}
-                              </Link>
-                              {ws.origin === "demo" && <DemoBadge />}
-                            </span>
-                            <span className="text-xs text-ink-soft">{ws.slug}</span>
-                          </Td>
-                          <Td>
-                            {ws.meta.ownerName || ws.meta.ownerEmail ? (
-                              <>
-                                <span className="block">{ws.meta.ownerName ?? <Unknown />}</span>
-                                <span className="text-xs text-ink-soft">{ws.meta.ownerEmail ?? <Unknown />}</span>
-                              </>
-                            ) : (
-                              <Unknown />
-                            )}
-                          </Td>
-                          <Td>
-                            {plan ?? <Unknown />}
-                            {!ws.plan && plan && <span className="block text-xs text-ink-soft" title="Backend plan doesn't match a known plan">raw</span>}
-                          </Td>
-                          <Td>
-                            <WorkspaceStatus ws={ws} />
-                          </Td>
-                          <Td className="text-ink-soft">{countryName(ws.meta.country) ?? <Unknown />}</Td>
-                          <Td className="tabular text-end">
-                            <Known value={ordersValue(ws)} format={formatNumber} />
-                          </Td>
-                          <Td className="tabular text-end">
-                            <Known value={ws.meta.gmvLast30d} format={formatMoneyCompact} />
-                          </Td>
-                          <Td className="text-ink-soft">{formatDate(ws.createdAt)}</Td>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </Panel>
-            )}
-          </>
-        )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Panel>
       </DataState>
     </div>
   );

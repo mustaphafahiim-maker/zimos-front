@@ -1,75 +1,57 @@
-/**
- * Formatting helpers. Platform billing and GMV figures in the mock layer are
- * expressed in a single platform currency (major units).
- */
-export const PLATFORM_CURRENCY = "EGP";
+/** Locale-aware formatting helpers. Money from the backend is integer minor units. */
+import { getIntlLocale } from "@/i18n/LocaleContext";
 
-const moneyFmt = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: PLATFORM_CURRENCY,
-  maximumFractionDigits: 0,
-});
-
-const compactMoneyFmt = new Intl.NumberFormat("en", {
-  style: "currency",
-  currency: PLATFORM_CURRENCY,
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-const numberFmt = new Intl.NumberFormat("en");
-const compactFmt = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
-
-export function formatMoney(value: number): string {
-  return moneyFmt.format(value);
+function fractionDigits(currency: string): number {
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
 }
 
-export function formatMoneyCompact(value: number): string {
-  return compactMoneyFmt.format(value);
+/** Minor units → localized currency string. */
+export function formatMinor(amount: number, currency: string): string {
+  const digits = fractionDigits(currency);
+  const major = amount / 10 ** digits;
+  try {
+    return new Intl.NumberFormat(getIntlLocale(), { style: "currency", currency, maximumFractionDigits: digits }).format(major);
+  } catch {
+    return `${major.toFixed(digits)} ${currency}`;
+  }
+}
+
+/** Major-unit input value → minor units. */
+export function toMinor(major: number, currency: string): number {
+  return Math.round(major * 10 ** fractionDigits(currency));
+}
+
+export function toMajor(minor: number, currency: string): number {
+  return minor / 10 ** fractionDigits(currency);
 }
 
 export function formatNumber(value: number): string {
-  return numberFmt.format(value);
-}
-
-export function formatCompact(value: number): string {
-  return compactFmt.format(value);
-}
-
-export function formatPercent(value: number, digits = 1): string {
-  return `${value.toFixed(digits)}%`;
-}
-
-/** Basis points → "2.50%". */
-export function formatBp(bp: number): string {
-  return `${(bp / 100).toFixed(2)}%`;
+  return new Intl.NumberFormat(getIntlLocale()).format(value);
 }
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(getIntlLocale(), { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(iso).toLocaleString(getIntlLocale(), { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function formatRelative(iso: string | null | undefined): string {
   if (!iso) return "—";
   const diffMs = new Date(iso).getTime() - Date.now();
   const abs = Math.abs(diffMs);
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(getIntlLocale(), { numeric: "auto" });
   const minute = 60_000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (abs < minute) return "just now";
+  if (abs < minute) return rtf.format(0, "second");
   if (abs < hour) return rtf.format(Math.round(diffMs / minute), "minute");
   if (abs < day) return rtf.format(Math.round(diffMs / hour), "hour");
   if (abs < 30 * day) return rtf.format(Math.round(diffMs / day), "day");
@@ -82,12 +64,16 @@ export function toDateInput(iso: string | null | undefined): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-/** yyyy-mm-ddThh:mm (local) for <input type="datetime-local">. */
-export function toDateTimeInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** yyyy-mm-dd → ISO at end of that UTC day. */
+export function fromDateInput(value: string): string {
+  return new Date(`${value}T23:59:59.000Z`).toISOString();
+}
+
+export function formatDuration(seconds: number): string {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return [d ? `${d}d` : "", h ? `${h}h` : "", `${m}m`].filter(Boolean).join(" ");
 }
 
 export function initials(name: string): string {

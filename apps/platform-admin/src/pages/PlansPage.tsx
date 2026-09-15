@@ -1,286 +1,288 @@
-import { useState, type FormEvent } from "react";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
-import { Alert, Button } from "@store-builder/ui";
+import { useState } from "react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
+import { Alert, Button, Modal, Table, TableBody, TableHeader, TableRow, Toggle, useAsync } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { Modal } from "@store-builder/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Panel, Td, Th, Mono } from "@/components/Panel";
 import { TextField } from "@/components/forms";
-import { Toggle } from "@store-builder/ui";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useAsync } from "@store-builder/ui";
+import { adminApi, type AdminPlan } from "@/lib/adminApi";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import { PLAN_FEATURES } from "@/mock/constants";
-import type { Plan, PlanFeatureKey } from "@/mock/types";
-import { formatBp, formatMoney, formatNumber, formatRelative } from "@/lib/format";
+import { formatMinor, formatNumber, toMajor, toMinor } from "@/lib/format";
+import { fmt, useCommon, useT } from "@/i18n/LocaleContext";
 
-interface PlanForm {
-  id?: string;
-  name: string;
-  code: string;
-  monthlyPrice: string;
-  yearlyPrice: string;
-  trialDays: string;
-  orderQuota: string;
-  transactionFeeBp: string;
-  codFeeBp: string;
-  features: PlanFeatureKey[];
-  active: boolean;
-}
-
-const EMPTY: PlanForm = {
-  name: "",
-  code: "",
-  monthlyPrice: "0",
-  yearlyPrice: "0",
-  trialDays: "14",
-  orderQuota: "",
-  transactionFeeBp: "100",
-  codFeeBp: "75",
-  features: [],
-  active: true,
+const STRINGS = {
+  en: {
+    title: "Plans",
+    description: "Pricing plans merchants subscribe to. Prices are stored in minor units.",
+    newPlan: "New plan",
+    name: "Name",
+    key: "Key",
+    keyHint: "Lowercase letters, numbers, - or _. Can't be changed later.",
+    monthly: "Monthly price",
+    yearly: "Yearly price",
+    currency: "Currency",
+    trialDays: "Trial days",
+    quota: "Soft order quota",
+    quotaHint: "Leave empty for unlimited.",
+    subscribers: "Subscribers",
+    active: "Active",
+    inactive: "Inactive",
+    activeLabel: "Available for new subscriptions",
+    unlimited: "Unlimited",
+    empty: "No plans yet.",
+    editTitle: "Edit {name}",
+    createTitle: "Create plan",
+    created: "Plan created.",
+    updated: "Plan updated.",
+    deactivateTitle: "Deactivate {name}?",
+    deactivateDesc: "Existing subscribers keep it; it just stops being offered to new ones.",
+    deactivate: "Deactivate",
+    activated: "{name} is active.",
+    deactivated: "{name} is inactive.",
+    invalid: "Fill name, key and valid non-negative prices.",
+  },
+  ar: {
+    title: "الباقات",
+    description: "باقات الأسعار اللي التجار بيشتركوا فيها. الأسعار بتتخزن بأصغر وحدة للعملة.",
+    newPlan: "باقة جديدة",
+    name: "الاسم",
+    key: "المفتاح",
+    keyHint: "حروف إنجليزي صغيرة وأرقام و - أو _. مينفعش يتغير بعدين.",
+    monthly: "السعر الشهري",
+    yearly: "السعر السنوي",
+    currency: "العملة",
+    trialDays: "أيام التجربة",
+    quota: "حد الطلبات التقريبي",
+    quotaHint: "سيبه فاضي لو مفيش حد.",
+    subscribers: "المشتركين",
+    active: "نشطة",
+    inactive: "متوقفة",
+    activeLabel: "متاحة لاشتراكات جديدة",
+    unlimited: "مفتوح",
+    empty: "مفيش باقات لسه.",
+    editTitle: "تعديل {name}",
+    createTitle: "إنشاء باقة",
+    created: "الباقة اتعملت.",
+    updated: "الباقة اتعدّلت.",
+    deactivateTitle: "توقف {name}؟",
+    deactivateDesc: "المشتركين الحاليين هيفضلوا عليها، بس مش هتتعرض على مشتركين جداد.",
+    deactivate: "إيقاف",
+    activated: "{name} بقت نشطة.",
+    deactivated: "{name} اتوقفت.",
+    invalid: "اكتب الاسم والمفتاح وأسعار صحيحة مش سالبة.",
+  },
 };
 
-function toForm(p: Plan): PlanForm {
-  return {
-    id: p.id,
-    name: p.name,
-    code: p.code,
-    monthlyPrice: String(p.monthlyPrice),
-    yearlyPrice: String(p.yearlyPrice),
-    trialDays: String(p.trialDays),
-    orderQuota: p.orderQuota === null ? "" : String(p.orderQuota),
-    transactionFeeBp: String(p.transactionFeeBp),
-    codFeeBp: String(p.codFeeBp),
-    features: [...p.features],
-    active: p.active,
-  };
+interface FormState {
+  key: string;
+  name: string;
+  currency: string;
+  monthly: string;
+  yearly: string;
+  trialDays: string;
+  quota: string;
+  isActive: boolean;
 }
 
+const emptyForm: FormState = { key: "", name: "", currency: "EGP", monthly: "0", yearly: "0", trialDays: "14", quota: "", isActive: true };
+
 export function PlansPage() {
+  const t = useT(STRINGS);
+  const c = useCommon();
   const toast = useToast();
   const { data, loading, error, refresh } = useAsync(() => adminApi.listPlans(), []);
-  const [editing, setEditing] = useState<PlanForm | null>(null);
-  const [deleting, setDeleting] = useState<Plan | null>(null);
+  const [editing, setEditing] = useState<AdminPlan | "new" | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deactivating, setDeactivating] = useState<AdminPlan | null>(null);
+
+  const openEdit = (p: AdminPlan | "new") => {
+    setFormError(null);
+    setForm(
+      p === "new"
+        ? emptyForm
+        : {
+            key: p.key,
+            name: p.name,
+            currency: p.currency,
+            monthly: String(toMajor(p.monthlyPriceAmount, p.currency)),
+            yearly: String(toMajor(p.yearlyPriceAmount, p.currency)),
+            trialDays: String(p.trialDays),
+            quota: p.softOrderQuota === null ? "" : String(p.softOrderQuota),
+            isActive: p.isActive,
+          }
+    );
+    setEditing(p);
+  };
+
+  const save = async () => {
+    const monthly = Number(form.monthly);
+    const yearly = Number(form.yearly);
+    const trialDays = Number(form.trialDays);
+    const cur = form.currency.trim().toUpperCase();
+    if (!form.name.trim() || (editing === "new" && !/^[a-z0-9_-]{2,50}$/.test(form.key)) || !(monthly >= 0) || !(yearly >= 0) || !Number.isInteger(trialDays) || trialDays < 0 || cur.length !== 3) {
+      setFormError(t.invalid);
+      return;
+    }
+    const body = {
+      name: form.name.trim(),
+      currency: cur,
+      monthlyPriceAmount: toMinor(monthly, cur),
+      yearlyPriceAmount: toMinor(yearly, cur),
+      trialDays,
+      softOrderQuota: form.quota.trim() === "" ? null : Math.max(0, Math.floor(Number(form.quota))),
+      isActive: form.isActive,
+    };
+    setSaving(true);
+    setFormError(null);
+    try {
+      if (editing === "new") {
+        await adminApi.createPlan({ key: form.key, ...body });
+        toast.success(t.created);
+      } else if (editing) {
+        await adminApi.updatePlan(editing.id, body);
+        toast.success(t.updated);
+      }
+      setEditing(null);
+      void refresh({ silent: true });
+    } catch (err) {
+      setFormError(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setActive = async (p: AdminPlan, isActive: boolean) => {
+    try {
+      await adminApi.updatePlan(p.id, { isActive });
+      toast.success(fmt(isActive ? t.activated : t.deactivated, { name: p.name }));
+      void refresh({ silent: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  const set = (k: keyof FormState) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
     <div>
       <PageHeader
-        title="Plans"
-        description="Subscription plans offered to merchants."
+        title={t.title}
+        description={t.description}
         actions={
-          <Button onClick={() => setEditing({ ...EMPTY })}>
-            <Plus /> New plan
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+              <RefreshCw /> {c.refresh}
+            </Button>
+            <Button size="sm" onClick={() => openEdit("new")}>
+              <Plus /> {t.newPlan}
+            </Button>
+          </>
         }
       />
-      <DataState
-        loading={loading}
-        error={error}
-        onRetry={() => void refresh()}
-        empty={!!data && data.length === 0}
-        emptyMessage="No plans yet. Create the first plan merchants can subscribe to."
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {(data ?? []).map((p) => (
-            <article key={p.id} className="flex flex-col rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-[var(--shadow-card)]">
-              <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-ink">{p.name}</h2>
-                  <p className="font-mono text-xs text-ink-soft">{p.code}</p>
-                </div>
-                <StatusBadge tone={p.active ? "success" : "neutral"} dot>
-                  {p.active ? "Active" : "Inactive"}
-                </StatusBadge>
-              </div>
-              <div className="flex-1 space-y-4 px-5 py-4">
-                <div>
-                  <p className="tabular text-2xl font-semibold text-ink">
-                    {formatMoney(p.monthlyPrice)}
-                    <span className="text-sm font-normal text-ink-soft"> / month</span>
-                  </p>
-                  <p className="tabular text-sm text-ink-soft">{formatMoney(p.yearlyPrice)} / year</p>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-ink-soft">Trial</dt>
-                  <dd className="text-end text-ink">{p.trialDays} days</dd>
-                  <dt className="text-ink-soft">Order quota</dt>
-                  <dd className="text-end text-ink">{p.orderQuota === null ? "Unlimited" : `${formatNumber(p.orderQuota)}/mo`}</dd>
-                  <dt className="text-ink-soft">Transaction fee</dt>
-                  <dd className="text-end text-ink">{formatBp(p.transactionFeeBp)}</dd>
-                  <dt className="text-ink-soft">COD fee</dt>
-                  <dd className="text-end text-ink">{formatBp(p.codFeeBp)}</dd>
-                </dl>
-                <ul className="space-y-1">
-                  {PLAN_FEATURES.map((f) => {
-                    const on = p.features.includes(f.key);
-                    return (
-                      <li key={f.key} className={on ? "flex items-center gap-2 text-sm text-ink" : "flex items-center gap-2 text-sm text-ink-muted line-through"}>
-                        <Check className={on ? "size-3.5 text-primary" : "size-3.5 opacity-30"} aria-hidden />
-                        {f.label}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-              <div className="flex items-center justify-between gap-2 border-t border-line px-5 py-3">
-                <span className="text-xs text-ink-soft">Updated {formatRelative(p.updatedAt)}</span>
-                <div className="flex gap-1.5">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(toForm(p))}>
-                    <Pencil /> Edit
-                  </Button>
-                  <Button size="icon-sm" variant="ghost" aria-label={`Delete ${p.name}`} onClick={() => setDeleting(p)}>
-                    <Trash2 className="text-danger" />
-                  </Button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
+      <DataState loading={loading} error={error} onRetry={() => void refresh()} empty={!!data && data.length === 0} emptyMessage={t.empty}>
+        <Panel flush>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <Th>{t.name}</Th>
+                  <Th>{t.monthly}</Th>
+                  <Th>{t.yearly}</Th>
+                  <Th>{t.trialDays}</Th>
+                  <Th>{t.quota}</Th>
+                  <Th className="text-end">{t.subscribers}</Th>
+                  <Th>{c.status}</Th>
+                  <Th className="text-end">{c.actions}</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(data ?? []).map((p) => (
+                  <TableRow key={p.id}>
+                    <Td>
+                      <span className="block font-medium">{p.name}</span>
+                      <Mono>{p.key}</Mono>
+                    </Td>
+                    <Td className="tabular">{formatMinor(p.monthlyPriceAmount, p.currency)}</Td>
+                    <Td className="tabular">{formatMinor(p.yearlyPriceAmount, p.currency)}</Td>
+                    <Td className="tabular">{formatNumber(p.trialDays)}</Td>
+                    <Td className="tabular">{p.softOrderQuota === null ? t.unlimited : formatNumber(p.softOrderQuota)}</Td>
+                    <Td className="tabular text-end">{formatNumber(p.subscribers ?? 0)}</Td>
+                    <Td>
+                      <Toggle
+                        checked={p.isActive}
+                        onChange={(next) => (next ? void setActive(p, true) : setDeactivating(p))}
+                        label={p.isActive ? t.active : t.inactive}
+                      />
+                    </Td>
+                    <Td className="text-end">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
+                        <Pencil /> {c.edit}
+                      </Button>
+                    </Td>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Panel>
       </DataState>
 
-      {editing && (
-        <PlanEditor
-          initial={editing}
-          onClose={() => setEditing(null)}
-          onSaved={(p) => {
-            toast.success(`Plan “${p.name}” saved.`);
-            setEditing(null);
-            void refresh({ silent: true });
-          }}
-        />
-      )}
+      <Modal
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        title={editing === "new" ? t.createTitle : fmt(t.editTitle, { name: editing?.name ?? "" })}
+        closeLabel={c.close}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>
+              {c.cancel}
+            </Button>
+            <Button onClick={() => void save()} disabled={saving}>
+              {saving ? c.working : editing === "new" ? c.create : c.save}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TextField label={t.name} value={form.name} onChange={set("name")} required />
+            <TextField label={t.key} value={form.key} onChange={set("key")} disabled={editing !== "new"} hint={editing === "new" ? t.keyHint : undefined} dir="ltr" required />
+            <TextField label={t.currency} value={form.currency} onChange={set("currency")} maxLength={3} dir="ltr" />
+            <TextField label={t.trialDays} type="number" min={0} max={365} value={form.trialDays} onChange={set("trialDays")} />
+            <TextField label={t.monthly} type="number" min={0} step="0.01" value={form.monthly} onChange={set("monthly")} />
+            <TextField label={t.yearly} type="number" min={0} step="0.01" value={form.yearly} onChange={set("yearly")} />
+            <TextField label={t.quota} type="number" min={0} value={form.quota} onChange={set("quota")} hint={t.quotaHint} />
+          </div>
+          <Toggle checked={form.isActive} onChange={(v) => setForm((f) => ({ ...f, isActive: v }))} label={t.activeLabel} />
+          {editing && editing !== "new" && !form.isActive && editing.isActive && (
+            <StatusBadge tone="warning" dot>
+              {t.deactivateDesc}
+            </StatusBadge>
+          )}
+        </div>
+      </Modal>
 
       <ConfirmDialog
-        open={!!deleting}
-        title={`Delete plan “${deleting?.name ?? ""}”?`}
-        description="Plans with active workspaces can't be deleted — mark them inactive instead."
-        confirmLabel="Delete plan"
+        open={deactivating !== null}
+        title={fmt(t.deactivateTitle, { name: deactivating?.name ?? "" })}
+        description={t.deactivateDesc}
+        confirmLabel={t.deactivate}
         destructive
-        onCancel={() => setDeleting(null)}
+        onCancel={() => setDeactivating(null)}
         onConfirm={async () => {
-          if (!deleting) return;
-          await adminApi.deletePlan(deleting.id);
-          toast.success("Plan deleted.");
-          setDeleting(null);
+          if (!deactivating) return;
+          await adminApi.updatePlan(deactivating.id, { isActive: false });
+          toast.success(fmt(t.deactivated, { name: deactivating.name }));
+          setDeactivating(null);
           void refresh({ silent: true });
         }}
       />
     </div>
-  );
-}
-
-function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose: () => void; onSaved: (p: Plan) => void }) {
-  const [form, setForm] = useState<PlanForm>(initial);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((f) => ({ ...f, [key]: value }));
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const nums = [form.monthlyPrice, form.yearlyPrice, form.trialDays, form.transactionFeeBp, form.codFeeBp].map(Number);
-    if (nums.some((n) => !Number.isFinite(n))) {
-      setError("Prices, trial days and fees must be numbers.");
-      return;
-    }
-    const quota = form.orderQuota.trim() === "" ? null : Number(form.orderQuota);
-    if (quota !== null && (!Number.isInteger(quota) || quota < 1)) {
-      setError("Order quota must be a whole number, or empty for unlimited.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const saved = await adminApi.savePlan({
-        id: form.id,
-        name: form.name,
-        code: form.code,
-        monthlyPrice: nums[0],
-        yearlyPrice: nums[1],
-        trialDays: Math.max(0, Math.round(nums[2])),
-        orderQuota: quota,
-        transactionFeeBp: Math.round(nums[3]),
-        codFeeBp: Math.round(nums[4]),
-        features: form.features,
-        active: form.active,
-      });
-      onSaved(saved);
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal
-      open
-      onClose={() => !busy && onClose()}
-      title={form.id ? `Edit ${initial.name}` : "New plan"}
-      className="max-w-2xl"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
-          </Button>
-          <Button type="submit" form="plan-form" disabled={busy}>
-            {busy ? "Saving…" : "Save plan"}
-          </Button>
-        </>
-      }
-    >
-      <form id="plan-form" onSubmit={submit} className="space-y-4">
-        {error && <Alert variant="danger">{error}</Alert>}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField label="Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
-          <TextField label="Code" hint="Lowercase identifier used by billing. Derived from the name if empty." value={form.code} onChange={(e) => set("code", e.target.value)} />
-          <TextField label="Monthly price" type="number" min={0} step="1" required value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} />
-          <TextField label="Yearly price" type="number" min={0} step="1" required value={form.yearlyPrice} onChange={(e) => set("yearlyPrice", e.target.value)} />
-          <TextField label="Trial days" type="number" min={0} max={90} required value={form.trialDays} onChange={(e) => set("trialDays", e.target.value)} />
-          <TextField label="Order quota / month" type="number" min={1} hint="Leave empty for unlimited." value={form.orderQuota} onChange={(e) => set("orderQuota", e.target.value)} />
-          <TextField
-            label="Transaction fee (bp)"
-            type="number"
-            min={0}
-            required
-            hint={Number.isFinite(Number(form.transactionFeeBp)) ? `= ${formatBp(Number(form.transactionFeeBp))} per online payment` : undefined}
-            value={form.transactionFeeBp}
-            onChange={(e) => set("transactionFeeBp", e.target.value)}
-          />
-          <TextField
-            label="COD fee (bp)"
-            type="number"
-            min={0}
-            required
-            hint={Number.isFinite(Number(form.codFeeBp)) ? `= ${formatBp(Number(form.codFeeBp))} per COD order` : undefined}
-            value={form.codFeeBp}
-            onChange={(e) => set("codFeeBp", e.target.value)}
-          />
-        </div>
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium text-ink">Features</legend>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {PLAN_FEATURES.map((f) => {
-              const checked = form.features.includes(f.key);
-              return (
-                <label key={f.key} className="flex cursor-pointer items-center gap-2.5 rounded-[10px] border border-line px-3 py-2 text-sm text-ink hover:border-line-strong">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-[var(--color-primary)]"
-                    checked={checked}
-                    onChange={() => set("features", checked ? form.features.filter((k) => k !== f.key) : [...form.features, f.key])}
-                  />
-                  {f.label}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        <Toggle label="Active" description="Inactive plans stay on existing workspaces but can't be chosen for new ones." checked={form.active} onChange={(v) => set("active", v)} />
-      </form>
-    </Modal>
   );
 }
