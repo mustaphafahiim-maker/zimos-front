@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { AlertTriangle, BellOff, Boxes, CheckCheck, Coins, Globe, PhoneCall, ShoppingCart, Target, TrendingDown, X } from "lucide-react";
-import { cn } from "@store-builder/ui";
+import { BellOff, Boxes, CheckCheck, PhoneCall, X } from "lucide-react";
+import { cn, useAsync } from "@store-builder/ui";
 import { fmt, useT } from "@/i18n/LocaleContext";
-import { mockApi } from "@/mock/api";
+import { apiClient } from "@/lib/apiClient";
 import { listInventoryItems } from "@/pages/inventory/inventoryAdapter";
-import { useAsync } from "@store-builder/ui";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useLocalStorage } from "@/lib/useLocalStorage";
-import { computeBreakEven, computeMetrics, verdictFor } from "@/lib/adMetrics";
-import { formatMoney, formatNumber, formatRelativeTime } from "@/lib/format";
+import { formatNumber, formatRelativeTime } from "@/lib/format";
 
 const STRINGS = {
   en: {
@@ -20,78 +18,47 @@ const STRINGS = {
     all: "All",
     orders: "Orders",
     operations: "Operations",
-    system: "System",
     empty: "You're all caught up",
-    emptyHint: "New alerts about orders and operations will show up here.",
+    emptyHint: "Orders waiting for confirmation and low-stock alerts will show up here.",
     unread: "Unread",
-    flaggedTitle: "Order {order} needs review",
-    flaggedBody: "{name} matched your fraud protection rules.",
-    abandonedTitle: "Abandoned checkout",
-    abandonedBody: "{name} left a cart worth {amount}.",
     confirmationTitle: "{count} orders awaiting confirmation",
     confirmationBody: "Call or WhatsApp customers to confirm their COD orders.",
-    settlementTitle: "Settlement discrepancy",
-    settlementBody: "{carrier} · {ref}: a difference of {amount}.",
-    campaignTitle: "Campaign above break-even",
-    campaignBody: "“{name}” costs more per delivered order than it earns. Consider pausing it.",
     stockTitle: "Low stock",
     stockBody: "{product} ({variant}): {available} left.",
-    adAccountTitle: "Ad account needs reconnecting",
-    adAccountBody: "{name} has stopped syncing spend data.",
-    domainTitle: "Domain not verified",
-    domainBody: "{host} is waiting for DNS verification.",
   },
   ar: {
     title: "الإشعارات",
-    close: "إغلاق الإشعارات",
-    markAll: "تعليم الكل كمقروء",
+    close: "اقفل الإشعارات",
+    markAll: "علّم الكل كمقروء",
     all: "الكل",
     orders: "الطلبات",
     operations: "العمليات",
-    system: "النظام",
-    empty: "لا توجد إشعارات جديدة",
-    emptyHint: "ستظهر هنا التنبيهات الجديدة الخاصة بالطلبات والعمليات.",
-    unread: "غير مقروء",
-    flaggedTitle: "الطلب {order} يحتاج إلى مراجعة",
-    flaggedBody: "طابق {name} قواعد الحماية من الاحتيال.",
-    abandonedTitle: "سلة متروكة",
-    abandonedBody: "ترك {name} سلة بقيمة {amount}.",
-    confirmationTitle: "{count} طلبات بانتظار التأكيد",
-    confirmationBody: "تواصل مع العملاء هاتفيًا أو عبر واتساب لتأكيد طلبات الدفع عند الاستلام.",
-    settlementTitle: "فرق في تسوية",
-    settlementBody: "{carrier} · {ref}: فرق بقيمة {amount}.",
-    campaignTitle: "حملة تتجاوز نقطة التعادل",
-    campaignBody: "تكلفة الطلب المُسلَّم في حملة «{name}» أعلى من عائده. يُفضَّل إيقافها.",
-    stockTitle: "مخزون منخفض",
-    stockBody: "{product} ({variant}): متبقٍ {available}.",
-    adAccountTitle: "حساب إعلاني يحتاج إلى إعادة ربط",
-    adAccountBody: "توقفت مزامنة بيانات الإنفاق من {name}.",
-    domainTitle: "النطاق غير مُتحقَّق منه",
-    domainBody: "{host} بانتظار التحقق من سجلات DNS.",
+    empty: "مفيش جديد",
+    emptyHint: "الطلبات اللي مستنية تأكيد وتنبيهات المخزون القليل هتظهر هنا.",
+    unread: "مش مقروء",
+    confirmationTitle: "{count} طلب مستني تأكيد",
+    confirmationBody: "كلّم العملاء أو ابعتلهم واتساب عشان تأكد طلبات الدفع عند الاستلام.",
+    stockTitle: "المخزون قليل",
+    stockBody: "{product} ({variant}): فاضل {available}.",
   },
 };
 
-export type NotificationCategory = "orders" | "operations" | "system";
-type NotificationKind = "flagged" | "abandoned" | "confirmation" | "settlement" | "campaign" | "stock" | "adAccount" | "domain";
+export type NotificationCategory = "orders" | "operations";
+type NotificationKind = "confirmation" | "stock";
 
 export interface NotificationItem {
   id: string;
   kind: NotificationKind;
   category: NotificationCategory;
-  at: string;
+  /** When the signal happened; null when the source has no timestamp. */
+  at: string | null;
   to: string;
   params: Record<string, string | number>;
 }
 
 const KIND_META: Record<NotificationKind, { icon: LucideIcon; tone: "danger" | "warning" | "info" }> = {
-  flagged: { icon: AlertTriangle, tone: "danger" },
-  abandoned: { icon: ShoppingCart, tone: "info" },
   confirmation: { icon: PhoneCall, tone: "warning" },
-  settlement: { icon: Coins, tone: "danger" },
-  campaign: { icon: TrendingDown, tone: "danger" },
   stock: { icon: Boxes, tone: "warning" },
-  adAccount: { icon: Target, tone: "warning" },
-  domain: { icon: Globe, tone: "info" },
 };
 
 const TONE_CLASS = {
@@ -111,61 +78,25 @@ export interface NotificationsState {
   markAllRead: () => void;
 }
 
-/** Builds notifications from existing mock data. Safe to call once in the layout. */
+/** Builds notifications from real store signals. Safe to call once in the layout. */
 export function useNotifications(): NotificationsState {
   const ws = useWorkspaceId();
   const [read, setRead] = useLocalStorage<string[]>(READ_KEY, []);
 
   const data = useAsync(async (): Promise<NotificationItem[]> => {
     if (!ws) return [];
-    const [flagged, abandoned, queue, settlements, campaigns, economics, inventory, adAccounts, domains] = await Promise.all([
-      mockApi.listFlagged(ws),
-      mockApi.listAbandoned(ws),
-      mockApi.listConfirmationQueue(ws),
-      mockApi.listSettlements(ws),
-      mockApi.listCampaigns(ws),
-      mockApi.listEconomics(ws),
-      // Real stock (same source as the Inventory page); a failure only hides stock alerts.
+    // A failing source only hides its own alerts.
+    const [queue, inventory] = await Promise.all([
+      apiClient.listConfirmationQueue(ws, { status: "queued" }).catch(() => []),
       listInventoryItems(ws).catch(() => []),
-      mockApi.listAdAccounts(ws),
-      mockApi.listDomains(ws),
     ]);
-    const now = Date.now();
-    const hoursAgo = (h: number) => new Date(now - h * 3600_000).toISOString();
     const items: NotificationItem[] = [];
 
-    flagged
-      .filter((f) => f.status === "flagged")
-      .slice(0, 5)
-      .forEach((f) =>
-        items.push({
-          id: `flagged:${f.id}`,
-          kind: "flagged",
-          category: "orders",
-          at: f.createdAt,
-          to: "/fraud",
-          params: { order: f.orderNumber, name: f.customerName },
-        })
-      );
-
-    abandoned
-      .filter((a) => a.recoveryStatus === "not_contacted")
-      .slice(0, 5)
-      .forEach((a) =>
-        items.push({
-          id: `abandoned:${a.id}`,
-          kind: "abandoned",
-          category: "orders",
-          at: a.lastActivityAt,
-          to: "/abandoned-checkouts",
-          params: { name: a.customerName ?? a.phone ?? "—", amount: Number(a.totalAmount), currency: a.currency },
-        })
-      );
-
     if (queue.length > 0) {
-      const latest = queue.reduce((m, q) => (q.createdAt > m ? q.createdAt : m), queue[0].createdAt);
+      const dates = queue.map((q) => q.order?.createdAt).filter((d): d is string => typeof d === "string");
+      const latest = dates.length > 0 ? dates.reduce((m, d) => (d > m ? d : m)) : null;
       items.push({
-        id: `confirmation:${queue.length}:${latest}`,
+        id: `confirmation:${queue.length}:${latest ?? ""}`,
         kind: "confirmation",
         category: "orders",
         at: latest,
@@ -174,78 +105,21 @@ export function useNotifications(): NotificationsState {
       });
     }
 
-    settlements
-      .filter((s) => s.status === "discrepancy")
-      .forEach((s) =>
-        items.push({
-          id: `settlement:${s.id}`,
-          kind: "settlement",
-          category: "operations",
-          at: s.receivedAt ?? s.periodTo,
-          to: "/settlements",
-          params: { carrier: s.carrierName, ref: s.reference, amount: s.discrepancyAmount, currency: "EGP" },
-        })
-      );
-
-    campaigns
-      .filter((c) => c.status === "active")
-      .forEach((c) => {
-        const econ = economics.find((e) => e.productId === c.productId);
-        if (!econ) return;
-        const verdict = verdictFor(computeMetrics(c).cpd, computeBreakEven(econ).cpd);
-        if (verdict !== "kill") return;
-        const lastDay = c.daily[c.daily.length - 1]?.date;
-        items.push({
-          id: `campaign:${c.id}`,
-          kind: "campaign",
-          category: "operations",
-          at: lastDay ?? hoursAgo(2),
-          to: `/ads/${c.id}`,
-          params: { name: c.name },
-        });
-      });
-
     inventory
       .filter((r) => r.available <= r.lowStockThreshold)
       .slice(0, 5)
-      .forEach((r, i) =>
+      .forEach((r) =>
         items.push({
           id: `stock:${r.variantId}:${r.available}`,
           kind: "stock",
           category: "operations",
-          at: hoursAgo(3 + i * 5),
+          at: null,
           to: "/inventory",
           params: { product: r.productName, variant: r.variantLabel, available: r.available },
         })
       );
 
-    adAccounts
-      .filter((a) => a.status !== "connected")
-      .forEach((a) =>
-        items.push({
-          id: `adAccount:${a.id}:${a.status}`,
-          kind: "adAccount",
-          category: "system",
-          at: a.lastSyncAt ?? hoursAgo(24),
-          to: "/ads",
-          params: { name: a.name },
-        })
-      );
-
-    domains
-      .filter((d) => d.status === "pending_verification" || d.status === "failed")
-      .forEach((d) =>
-        items.push({
-          id: `domain:${d.id}:${d.status}`,
-          kind: "domain",
-          category: "system",
-          at: d.createdAt,
-          to: "/settings",
-          params: { host: d.hostname },
-        })
-      );
-
-    return items.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+    return items.sort((a, b) => ((a.at ?? "") < (b.at ?? "") ? 1 : (a.at ?? "") > (b.at ?? "") ? -1 : 0));
   }, [ws]);
 
   const items = useMemo(() => data.data ?? [], [data.data]);
@@ -266,14 +140,12 @@ export function useNotifications(): NotificationsState {
 }
 
 type Tab = "all" | NotificationCategory;
-const TABS: Tab[] = ["all", "orders", "operations", "system"];
+const TABS: Tab[] = ["all", "orders", "operations"];
 
 function renderParams(params: Record<string, string | number>): Record<string, string | number> {
   const out: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(params)) {
-    if (k === "currency") continue;
-    if (k === "amount" && typeof v === "number") out[k] = formatMoney(v, String(params.currency ?? "EGP"));
-    else if (typeof v === "number") out[k] = formatNumber(v);
+    if (typeof v === "number") out[k] = formatNumber(v);
     else out[k] = v;
   }
   return out;
@@ -306,7 +178,7 @@ export function NotificationsDrawer({ open, onClose, state }: NotificationsDrawe
 
   if (!open) return null;
 
-  const tabLabel: Record<Tab, string> = { all: t.all, orders: t.orders, operations: t.operations, system: t.system };
+  const tabLabel: Record<Tab, string> = { all: t.all, orders: t.orders, operations: t.operations };
   const visible = tab === "all" ? state.items : state.items.filter((i) => i.category === tab);
 
   return (
@@ -426,7 +298,7 @@ export function NotificationsDrawer({ open, onClose, state }: NotificationsDrawe
                           )}
                         </span>
                         <span className="mt-0.5 block text-xs text-ink-soft">{fmt(t[`${item.kind}Body`], values)}</span>
-                        <span className="mt-1 block text-[11px] text-ink-muted">{formatRelativeTime(item.at)}</span>
+                        {item.at && <span className="mt-1 block text-[11px] text-ink-muted">{formatRelativeTime(item.at)}</span>}
                       </span>
                     </Link>
                   </li>

@@ -29,8 +29,6 @@ import {
   type ConfirmationOutcome,
   type ConfirmationTaskRow,
 } from "@store-builder/api-client";
-import type { CallCenterSettings } from "@/mock/types2";
-import { mockApi } from "@/mock/api";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -49,12 +47,11 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { Toggle } from "@store-builder/ui";
 import { useToast } from "@/components/Toast";
-import { agentStatusLabel, dueLabel, isDueNow, isToday, outcomeLabel, type BadgeTone } from "./shared";
+import { dueLabel, isDueNow, isToday, outcomeLabel, type BadgeTone } from "./shared";
 import { CANCEL_REASON_LABELS, STRINGS, riskFlagLabel, type CancelReason } from "./CallCenterPage.strings";
 import { createDetailsLoader, internationalDigits, toOutcomePayload, toQueueItem, type QueueItem, type UiOutcome } from "./queueAdapter";
 
 type QueueFilter = "all" | "due" | "flagged" | "mine";
-type MyStatus = "online" | "break" | "offline";
 type Strings = (typeof STRINGS)["en"];
 
 interface OutcomeDef {
@@ -130,10 +127,6 @@ export function CallCenterPage() {
   // Real queue: queued + in_progress tasks. Done tasks only feed the "confirmed today" stat.
   const tasks = useAsync(() => confirmationListOpenTasks(apiClient, workspaceId), [workspaceId]);
   const doneTasks = useAsync(() => confirmationListDoneTasks(apiClient, workspaceId), [workspaceId]);
-  // Still mock: agent presence toggle and call-center settings (no backend yet).
-  const agents = useAsync(() => mockApi.listAgents(workspaceId), [workspaceId]);
-  const settings = useAsync(() => mockApi.getCallCenterSettings(workspaceId), [workspaceId]);
-  const me = agents.data?.[0] ?? null;
 
   const [detailsVersion, setDetailsVersion] = useState(0);
   const loader = useMemo(
@@ -260,18 +253,6 @@ export function CallCenterPage() {
     [items, userId, claiming, claimItem, reloadTasks, toast, t.toastQueueClear]
   );
 
-  async function setMyStatus(status: MyStatus) {
-    if (!me) return;
-    try {
-      await mockApi.setAgentStatus(workspaceId, me.id, status);
-      agents.setData((prev) => (prev ?? []).map((a) => (a.id === me.id ? { ...a, status } : a)));
-      const label = agentStatusLabel(status, locale);
-      toast.success(fmt(t.toastStatus, { status: locale === "en" ? label.toLowerCase() : label }));
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    }
-  }
-
   async function handleOutcome(item: QueueItem, input: OutcomeInput) {
     if (!userId) return;
     // The backend only accepts an outcome from the lock holder — claim first if needed.
@@ -322,8 +303,6 @@ export function CallCenterPage() {
     }
   }
 
-  const myStatus: MyStatus = me ? (me.status === "on_call" ? "online" : me.status) : "offline";
-
   const filterLabel: Record<QueueFilter, string> = {
     all: c.all,
     due: t.filterDue,
@@ -346,9 +325,6 @@ export function CallCenterPage() {
             <Link to="/call-center/logs" className="text-sm text-ink-soft hover:text-primary">
               {t.navLogs}
             </Link>
-            <Link to="/call-center/settings" className="text-sm text-ink-soft hover:text-primary">
-              {t.navSettings}
-            </Link>
           </div>
         }
       />
@@ -361,34 +337,6 @@ export function CallCenterPage() {
           <Stat label={t.statConfirmedToday} value={stats.confirmedToday ?? "—"} tone="text-success" />
           <Stat label={t.statNoAnswerToday} value={tasks.data ? stats.noAnswerToday : "—"} />
           <Stat label={t.statAvgHandle} value="—" />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-ink-soft">
-            {t.myStatus}
-            {user ? ` · ` : ""}
-            {user && (
-              <span className="text-ink" dir="auto">
-                {user.fullName ?? user.email}
-              </span>
-            )}
-          </span>
-          <div className="inline-flex rounded-lg border border-line bg-paper p-0.5">
-            {(["online", "break", "offline"] as MyStatus[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                disabled={!me}
-                onClick={() => setMyStatus(s)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-colors",
-                  myStatus === s ? "bg-primary text-white" : "text-ink-soft hover:text-ink"
-                )}
-              >
-                <span className={cn("size-1.5 rounded-full", s === "online" ? "bg-success" : s === "break" ? "bg-warning" : "bg-ink-soft/50", myStatus === s && "bg-white")} />
-                {agentStatusLabel(s, locale)}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -448,7 +396,6 @@ export function CallCenterPage() {
               item={selected}
               userId={userId}
               storeName={storeName}
-              settings={settings.data}
               claiming={claiming}
               onClaim={async () => {
                 if (!(await claimItem(selected))) {
@@ -552,14 +499,13 @@ interface CallPanelProps {
   item: QueueItem;
   userId: string;
   storeName: string;
-  settings: CallCenterSettings | null;
   claiming: boolean;
   onClaim: () => Promise<void>;
   onOutcome: (input: OutcomeInput) => Promise<void>;
   onAddressSave: (next: { governorate: string; address: string }) => Promise<boolean>;
 }
 
-function CallPanel({ item, userId, storeName, settings, claiming, onClaim, onOutcome, onAddressSave }: CallPanelProps) {
+function CallPanel({ item, userId, storeName, claiming, onClaim, onOutcome, onAddressSave }: CallPanelProps) {
   const t = useT(STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
@@ -641,7 +587,8 @@ function CallPanel({ item, userId, storeName, settings, claiming, onClaim, onOut
   }
 
   const phoneDigits = internationalDigits(item.phone);
-  const voipConnected = settings !== null && settings.voipProvider !== "none";
+  // No VoIP integration exists yet: calls go through the device dialer or WhatsApp.
+  const voipConnected = false;
   const firstName = item.customerName.split(" ")[0] ?? item.customerName;
   const totalMajor = (Number(item.totalAmount) / 100).toLocaleString("en-EG", { maximumFractionDigits: 0 });
   const script = `أهلاً ${firstName}، معاك ${storeName} بخصوص طلبك رقم ${item.orderNumber} بقيمة ${totalMajor} جنيه، هيتوصل خلال 2-3 أيام، نأكد الطلب؟`;
@@ -722,11 +669,7 @@ function CallPanel({ item, userId, storeName, settings, claiming, onClaim, onOut
           <Alert variant="info" className="mt-4 border-accent/40 bg-accent-soft/40 text-sm">
             <AlertTriangle />
             <span>
-              {t.voipBefore}{" "}
-              <Link to="/call-center/settings" className="font-medium text-primary underline-offset-4 hover:underline">
-                {t.navSettings}
-              </Link>{" "}
-              {t.voipAfter}
+              {t.voipBefore} {t.voipAfter}
             </span>
           </Alert>
         )}
@@ -771,7 +714,7 @@ function CallPanel({ item, userId, storeName, settings, claiming, onClaim, onOut
             <Row label={t.totalCod} value={<bdi className="font-medium text-ink">{formatMoney(item.totalAmount, item.currency)}</bdi>} />
             <Row label={t.source} value={<span dir="auto">{item.source}</span>} />
             <Row label={t.created} value={formatDateTime(item.createdAt)} />
-            <Row label={t.attempts} value={<span dir="ltr">{`${item.attempts}${settings ? ` / ${settings.maxAttempts}` : ""}`}</span>} />
+            <Row label={t.attempts} value={<span dir="ltr">{item.attempts}</span>} />
           </dl>
         </Card>
 

@@ -34,6 +34,15 @@ import type {
   InviteMemberPayload,
   LoginPayload,
   MediaUploadResponse,
+  MediaListResponse,
+  BillingOverview,
+  AuditLogListParams,
+  AuditLogListResponse,
+  CursorParams,
+  InvoiceListResponse,
+  ConfirmationAttemptListParams,
+  ConfirmationAttemptListResponse,
+  ConfirmationAgentsResponse,
   Membership,
   Offer,
   Order,
@@ -1202,6 +1211,50 @@ export class ApiClient {
       body: form,
     });
     return res.json() as Promise<MediaUploadResponse>;
+  }
+
+  /** GET /workspaces/:id/media, newest first; pass nextCursor as `before` for the next page. */
+  async listMedia(workspaceId: string, params: CursorParams = {}) {
+    return this.request<MediaListResponse>(`/workspaces/${workspaceId}/media${buildQuery({ ...params })}`);
+  }
+
+  async deleteMedia(workspaceId: string, mediaId: string) {
+    return this.request<{ deleted: boolean; id: string }>(`/workspaces/${workspaceId}/media/${mediaId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Billing, audit logs, invoices
+  // ---------------------------------------------------------------------
+
+  async getBilling(workspaceId: string) {
+    const { billing } = await this.request<{ billing: BillingOverview }>(`/workspaces/${workspaceId}/billing`);
+    return billing;
+  }
+
+  async listAuditLogs(workspaceId: string, params: AuditLogListParams = {}) {
+    return this.request<AuditLogListResponse>(`/workspaces/${workspaceId}/audit-logs${buildQuery({ ...params })}`);
+  }
+
+  async listInvoices(workspaceId: string, params: CursorParams = {}) {
+    return this.request<InvoiceListResponse>(`/workspaces/${workspaceId}/invoices${buildQuery({ ...params })}`);
+  }
+
+  // ---------------------------------------------------------------------
+  // Confirmation reporting (call logs + per-agent stats)
+  // ---------------------------------------------------------------------
+
+  async listConfirmationAttempts(workspaceId: string, params: ConfirmationAttemptListParams = {}) {
+    return this.request<ConfirmationAttemptListResponse>(
+      `${this.confirmationTasksBase(workspaceId)}/attempts${buildQuery({ ...params })}`
+    );
+  }
+
+  async listConfirmationAgents(workspaceId: string, days?: number) {
+    return this.request<ConfirmationAgentsResponse>(
+      `${this.confirmationTasksBase(workspaceId)}/agents${buildQuery({ days })}`
+    );
   }
 
   // ---------------------------------------------------------------------

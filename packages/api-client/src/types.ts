@@ -546,7 +546,7 @@ export interface ProductMedia {
 }
 
 /** Response of POST /workspaces/:workspaceId/media (same shape as one media entry). */
-export type MediaUploadResponse = ProductMedia;
+export type MediaUploadResponse = ProductMedia & { id?: string };
 
 export interface Variant {
   id: string;
@@ -1355,4 +1355,158 @@ export interface ShippingQuote {
   amount: number;
   currency: string;
   freeShippingThreshold: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Media library, billing, audit logs, invoices, confirmation reporting
+// ---------------------------------------------------------------------------
+
+export interface CursorParams {
+  limit?: number;
+  /** ISO timestamp cursor: the previous page's nextCursor. */
+  before?: string;
+}
+
+export interface MediaItem {
+  id: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface MediaListResponse {
+  media: MediaItem[];
+  nextCursor: string | null;
+}
+
+export interface BillingPlan {
+  id: string;
+  key: string;
+  name: string;
+  monthlyPriceAmount: number;
+  yearlyPriceAmount: number;
+  currency: string;
+  trialDays: number;
+  softOrderQuota: number | null;
+  features: Record<string, unknown>;
+}
+
+export type SubscriptionStatus = "trialing" | "active" | "past_due" | "suspended" | "cancelled";
+
+export interface BillingSubscription {
+  status: SubscriptionStatus;
+  billingCycle: string;
+  trialEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  graceUntil: string | null;
+  cancelAtPeriodEnd: boolean;
+  plan: BillingPlan | null;
+}
+
+export interface BillingOverview {
+  subscription: BillingSubscription | null;
+  usage: { ordersThisPeriod: number; softOrderQuota: number | null };
+  plans: BillingPlan[];
+  gatewayConnected: boolean;
+}
+
+export interface AuditActor {
+  id: string;
+  fullName: string | null;
+  email: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  createdAt: string;
+  ipAddress: string | null;
+  actor: AuditActor | null;
+  before: unknown;
+  after: unknown;
+}
+
+export interface AuditLogListParams extends CursorParams {
+  entityType?: string;
+  action?: string;
+}
+
+export interface AuditLogListResponse {
+  logs: AuditLogEntry[];
+  nextCursor: string | null;
+}
+
+export interface InvoiceCreditNote {
+  id: string;
+  creditNoteNumber: string;
+  amount: number;
+  reason: string | null;
+  issuedAt: string;
+}
+
+export interface InvoiceEntry {
+  id: string;
+  invoiceNumber: string;
+  issuedAt: string;
+  currency: string;
+  totalAmount: number;
+  lineItems: unknown[];
+  order: { id: string; orderNumber: string; customerName: string | null } | null;
+  creditNotes: InvoiceCreditNote[];
+}
+
+export interface InvoiceListResponse {
+  invoices: InvoiceEntry[];
+  nextCursor: string | null;
+}
+
+export interface ConfirmationAttemptEntry {
+  id: string;
+  outcome: ConfirmationOutcome;
+  notes: string | null;
+  createdAt: string;
+  taskId: string;
+  attemptNumber: number;
+  agent: AuditActor;
+  order: {
+    id: string;
+    orderNumber: string;
+    customerName: string | null;
+    phone: string | null;
+    totalAmount: number;
+    currency: string;
+  } | null;
+}
+
+export interface ConfirmationAttemptListParams extends CursorParams {
+  agentUserId?: string;
+  outcome?: ConfirmationOutcome;
+}
+
+export interface ConfirmationAttemptListResponse {
+  attempts: ConfirmationAttemptEntry[];
+  nextCursor: string | null;
+}
+
+export interface ConfirmationAgentStats {
+  userId: string;
+  fullName: string | null;
+  email: string;
+  role: { key: string; name: string } | null;
+  attempts: number;
+  confirmed: number;
+  rejected: number;
+  unreachable: number;
+  postponed: number;
+  confirmationRate: number | null;
+  tasksInProgress: number;
+}
+
+export interface ConfirmationAgentsResponse {
+  range: { days: number; since: string };
+  agents: ConfirmationAgentStats[];
 }

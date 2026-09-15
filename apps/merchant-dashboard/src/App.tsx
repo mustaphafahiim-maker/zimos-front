@@ -46,7 +46,6 @@ const ConfirmationQueuePage = page(() => import("@/pages/confirmation/Confirmati
 const CallCenterPage = page(() => import("@/pages/callcenter/CallCenterPage"), "CallCenterPage");
 const AgentsPage = page(() => import("@/pages/callcenter/AgentsPage"), "AgentsPage");
 const CallLogsPage = page(() => import("@/pages/callcenter/CallLogsPage"), "CallLogsPage");
-const CallCenterSettingsPage = page(() => import("@/pages/callcenter/CallCenterSettingsPage"), "CallCenterSettingsPage");
 const InboxPage = page(() => import("@/pages/inbox/InboxPage"), "InboxPage");
 const WaBotPage = page(() => import("@/pages/inbox/WaBotPage"), "WaBotPage");
 const ReturnsPage = page(() => import("@/pages/returns/ReturnsPage"), "ReturnsPage");
@@ -149,7 +148,6 @@ export default function App() {
                       <Route path="/call-center" element={<InShell><CallCenterPage /></InShell>} />
                       <Route path="/call-center/agents" element={<InShell><AgentsPage /></InShell>} />
                       <Route path="/call-center/logs" element={<InShell><CallLogsPage /></InShell>} />
-                      <Route path="/call-center/settings" element={<InShell><CallCenterSettingsPage /></InShell>} />
                       <Route path="/inbox" element={<InShell><InboxPage /></InShell>} />
                       <Route path="/inbox/bot" element={<InShell><WaBotPage /></InShell>} />
                       <Route path="/abandoned-checkouts" element={<InShell><AbandonedCheckoutsPage /></InShell>} />
