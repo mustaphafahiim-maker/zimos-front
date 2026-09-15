@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
 import { CartGlyph, CheckIcon } from "./Icons";
 import { btnPrimary, btnSecondary } from "./ui";
 
@@ -37,6 +38,7 @@ export function AddToCartButton({
     setError(null);
     try {
       await addItem(variantId, offerId, defaultQuantity);
+      track("AddToCart", { contentIds: [variantId], numItems: defaultQuantity });
       setStatus("added");
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
     } catch (err) {

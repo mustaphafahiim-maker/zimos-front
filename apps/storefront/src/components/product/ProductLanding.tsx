@@ -7,6 +7,8 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/offers";
 import { useShippingQuote } from "@/lib/shipping";
 import { useCheckoutSession } from "@/lib/checkoutSession";
+import { isEgyptianMobile } from "@/lib/egypt";
+import { track } from "@/lib/track";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -197,6 +199,21 @@ export function ProductLanding({
       delete root.dataset.stickyBar;
     };
   }, [formVisible]);
+
+  // Ad pixels: product viewed once per product.
+  useEffect(() => {
+    track("ViewContent", { valueMinor: unit, currency: variant?.currency, contentIds: [product.id], contentName: product.name });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  // …and the checkout started the first time the shopper types a valid number.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || !isEgyptianMobile(values.phone)) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", { valueMinor: pricing.total, currency: variant?.currency, contentIds: [product.id], numItems: tier ? tier.quantity : quantity });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.phone]);
 
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });

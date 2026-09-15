@@ -13,6 +13,7 @@ import { whatsappNumber } from "@/lib/egypt";
 import { getOrderRef, lookupOrder, type OrderRef } from "@/lib/orders";
 import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
+import { trackPurchaseOnce } from "@/lib/track";
 
 type Load = { status: "loading" } | { status: "ready"; ref: OrderRef | null; order: ShopperOrder | null } | { status: "error"; ref: OrderRef | null };
 
@@ -44,7 +45,19 @@ function Confirmation() {
     }
     let cancelled = false;
     lookupOrder(createStorefrontApiClient(), workspaceId, { orderId, phone: ref.phone })
-      .then((order) => !cancelled && setLoad({ status: "ready", ref, order }))
+      .then((order) => {
+        if (cancelled) return;
+        setLoad({ status: "ready", ref, order });
+        // Ad pixels: the real order total, once per order on this device.
+        if (order && order.stage !== "cancelled") {
+          trackPurchaseOnce(order.id, {
+            valueMinor: order.totalAmount,
+            currency: order.currency,
+            contentIds: order.items.map((i) => i.productId).filter((id): id is string => !!id),
+            numItems: order.items.reduce((n, i) => n + i.quantity, 0),
+          });
+        }
+      })
       .catch(() => !cancelled && setLoad({ status: "error", ref }));
     return () => {
       cancelled = true;

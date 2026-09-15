@@ -40,7 +40,16 @@ export interface WorkspaceSettings {
   default_shipping_rate_amount?: number | null;
   /** Whether tax rates are applied at checkout. Defaults to false. */
   tax_enabled?: boolean;
+  tracking_pixels?: TrackingPixelIds | null;
   [key: string]: unknown;
+}
+
+/** Browser ad pixel IDs (settings.tracking_pixels). */
+export interface TrackingPixelIds {
+  meta?: string | null;
+  tiktok?: string | null;
+  snapchat?: string | null;
+  google_tag?: string | null;
 }
 
 export interface Workspace {
@@ -84,6 +93,7 @@ export interface UpdateWorkspacePayload {
     free_shipping_threshold_amount?: number | null;
     default_shipping_rate_amount?: number | null;
     tax_enabled?: boolean;
+    tracking_pixels?: TrackingPixelIds | null;
   };
 }
 
@@ -357,6 +367,8 @@ export interface StorefrontMeta {
   /** Opaque per-theme blob — the frontend owns its shape, backend just stores it. */
   themeSettings: Record<string, unknown>;
   currency: string;
+  /** Public pixel IDs configured by the merchant (only the ones set). */
+  tracking?: { meta?: string; tiktok?: string; snapchat?: string; googleTag?: string };
 }
 
 export interface StorefrontVariant {

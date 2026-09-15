@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties } from "react";
+import { TrackingPixels } from "@/components/TrackingPixels";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { googleFontsHref, normalizeThemeSettings, themeClassName, themeCssVariables } from "@store-builder/store-renderer";
@@ -78,6 +79,9 @@ export default async function StoreLayout({
         style={themeCssVariables(theme) as CSSProperties}
       >
         <DocumentLocale locale={locale} />
+        <Suspense fallback={null}>
+          <TrackingPixels ids={store.tracking ?? {}} />
+        </Suspense>
         <a
           href="#store-main"
           className="sr-only z-50 rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:start-3 focus:top-3"

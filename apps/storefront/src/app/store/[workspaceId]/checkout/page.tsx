@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
@@ -12,6 +12,7 @@ import { useCart } from "@/lib/CartProvider";
 import { getOrderBump } from "@/lib/offers";
 import { useShippingQuote } from "@/lib/shipping";
 import { useCheckoutSession } from "@/lib/checkoutSession";
+import { track } from "@/lib/track";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -46,7 +47,7 @@ export default function CheckoutPage() {
   const [bumpAdded, setBumpAdded] = useState(false);
 
   const currency = cart?.currency ?? "EGP";
-  const items = cart?.items ?? [];
+  const items = useMemo(() => cart?.items ?? [], [cart]);
 
   const bump = useMemo(() => {
     if (!loaded) return null;
@@ -65,6 +66,19 @@ export default function CheckoutPage() {
     items.reduce((n, l) => n + l.quantity, 0) + (bumpInTotals > 0 ? 1 : 0)
   );
   const total = subtotal + bumpInTotals + (shipping ?? 0);
+
+  // Ad pixels: checkout started, once the cart has loaded.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", {
+      valueMinor: subtotal,
+      currency,
+      contentIds: items.map((l) => byVariant.get(l.variantId)?.id).filter((id): id is string => !!id),
+      numItems: items.reduce((n, l) => n + l.quantity, 0),
+    });
+  }, [items, subtotal, currency, byVariant]);
 
   // Lets the merchant follow up if the shopper leaves after typing their number.
   useCheckoutSession(workspaceId, {
