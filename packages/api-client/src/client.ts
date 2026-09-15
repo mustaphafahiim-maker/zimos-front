@@ -1,6 +1,10 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
   AddCustomerAddressPayload,
+  AddToBlocklistPayload,
+  BlocklistEntry,
+  FlaggedOrderListParams,
+  FlaggedOrderListResponse,
   ArchivedResponse,
   AuthTokens,
   AuthUser,
@@ -1131,6 +1135,37 @@ export class ApiClient {
       { method: "PATCH", body: payload }
     );
     return customer;
+  }
+
+  // ---- Fraud protection (/workspaces/:ws/fraud) ----
+
+  async listFlaggedOrders(workspaceId: string, params: FlaggedOrderListParams = {}) {
+    return this.request<FlaggedOrderListResponse>(
+      `/workspaces/${workspaceId}/fraud/flagged-orders${buildQuery({ ...params })}`
+    );
+  }
+
+  async approveFlaggedOrder(workspaceId: string, orderId: string) {
+    const { order } = await this.request<{ order: { id: string; riskFlags: string[] } }>(
+      `/workspaces/${workspaceId}/fraud/flagged-orders/${orderId}/approve`,
+      { method: "POST" }
+    );
+    return order;
+  }
+
+  async listBlocklist(workspaceId: string) {
+    const { entries } = await this.request<{ entries: BlocklistEntry[] }>(
+      `/workspaces/${workspaceId}/fraud/blocklist`
+    );
+    return entries;
+  }
+
+  async addToBlocklist(workspaceId: string, body: AddToBlocklistPayload) {
+    const { entry } = await this.request<{ entry: BlocklistEntry }>(
+      `/workspaces/${workspaceId}/fraud/blocklist`,
+      { method: "POST", body }
+    );
+    return entry;
   }
 
   async addCustomerAddress(

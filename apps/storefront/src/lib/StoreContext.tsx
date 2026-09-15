@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import type { StorefrontCheckoutConfig } from "@store-builder/api-client";
 import {
   DEFAULT_LOCALE,
   dirFor,
@@ -18,6 +19,8 @@ export interface StoreInfo {
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
+  /** Merchant checkout-form settings from GET /store/:ws (null = backend defaults). */
+  checkout: StorefrontCheckoutConfig | null;
 }
 
 export interface StoreContextValue {

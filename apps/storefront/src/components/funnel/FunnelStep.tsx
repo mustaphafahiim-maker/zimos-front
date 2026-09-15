@@ -173,7 +173,7 @@ function FunnelCheckout({
   product: StorefrontProductDetail | null;
   flow: Flow;
 }) {
-  const { t, money } = useStore();
+  const { t, money, store } = useStore();
   const { cart, clearCart } = useCart();
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<OrderFormErrors>({});
@@ -204,7 +204,7 @@ function FunnelCheckout({
       return;
     }
 
-    const found = validateOrderForm(values, t);
+    const found = validateOrderForm(values, t, store?.checkout);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -222,6 +222,7 @@ function FunnelCheckout({
     try {
       const payload = {
         ...toCheckoutPayload(values, {
+          config: store?.checkout,
           item: useCartLines || !variant ? undefined : { variantId: variant.id, offerId, quantity: 1 },
         }),
         funnelId,
@@ -306,7 +307,7 @@ function FunnelCheckout({
 
         <fieldset className="mt-6" disabled={!!placedOrderId}>
           <legend className="sr-only">{t.checkout.shipping}</legend>
-          <OrderFormFields idPrefix={FORM_PREFIX} values={values} errors={errors} onChange={onFieldChange} showAltPhone />
+          <OrderFormFields idPrefix={FORM_PREFIX} values={values} errors={errors} onChange={onFieldChange} />
         </fieldset>
 
         <p className="mt-5 flex items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 text-sm text-ink">

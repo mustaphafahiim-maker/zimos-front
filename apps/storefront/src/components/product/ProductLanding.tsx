@@ -61,7 +61,7 @@ export function ProductLanding({
   headingLevel?: "h1" | "h2";
 }) {
   const ProductTitle = headingLevel;
-  const { t, money } = useStore();
+  const { t, money, store } = useStore();
   const router = useRouter();
   const [client] = useState(() => createStorefrontApiClient());
 
@@ -144,7 +144,7 @@ export function ProductLanding({
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t);
+    const found = validateOrderForm(values, t, store?.checkout);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -159,6 +159,7 @@ export function ProductLanding({
 
     const bumpLine: OrderLine | null = bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
     const payload = toCheckoutPayload(values, {
+      config: store?.checkout,
       item: bumpLine ? undefined : mainLine,
     });
 

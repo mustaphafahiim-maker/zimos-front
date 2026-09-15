@@ -41,7 +41,81 @@ export interface WorkspaceSettings {
   /** Whether tax rates are applied at checkout. Defaults to false. */
   tax_enabled?: boolean;
   tracking_pixels?: TrackingPixelIds | null;
+  fraud_rules?: FraudRules | null;
+  checkout_settings?: CheckoutSettings | null;
   [key: string]: unknown;
+}
+
+/** settings.fraud_rules — applied by the backend to storefront orders only. */
+export interface FraudRules {
+  action: "flag" | "block";
+  block_blacklisted: boolean;
+  /** 1..10080, null = rule off. */
+  duplicate_window_minutes: number | null;
+  /** 1..100, null = rule off. */
+  max_orders_per_phone_per_day: number | null;
+  /** 1..100, null = rule off. */
+  high_rejection_threshold: number | null;
+}
+
+export type CheckoutFieldVisibility = "hidden" | "optional" | "required";
+
+/** settings.checkout_settings — enforced at POST /store/:ws/checkout. */
+export interface CheckoutSettings {
+  email: CheckoutFieldVisibility;
+  alternate_phone: CheckoutFieldVisibility;
+  notes: CheckoutFieldVisibility;
+  allow_discount_codes: boolean;
+  /** At most 300 characters. */
+  thank_you_message: string | null;
+}
+
+export type OrderRiskFlag =
+  | "blacklisted_customer"
+  | "duplicate_order"
+  | "phone_daily_limit"
+  | "high_rejection_customer";
+
+export interface FlaggedOrder {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  /** Usually OrderRiskFlag values; unknown strings are possible. */
+  riskFlags: string[];
+  customerName: string | null;
+  phone: string | null;
+  totalAmount: number;
+  currency: string;
+  confirmationState: string;
+  cancelled: boolean;
+}
+
+export interface FlaggedOrderListParams {
+  limit?: number;
+  before?: string;
+  includeResolved?: boolean;
+}
+
+export interface FlaggedOrderListResponse {
+  orders: FlaggedOrder[];
+  nextCursor: string | null;
+}
+
+export interface BlocklistEntry {
+  customerId: string;
+  fullName: string | null;
+  phone: string | null;
+  reason: string | null;
+  totalOrders: number;
+  totalRejectedOrders: number;
+  blockedAt: string | null;
+}
+
+export interface AddToBlocklistPayload {
+  phone: string;
+  /** 2..300 characters. */
+  reason: string;
+  fullName?: string;
 }
 
 /** Browser ad pixel IDs (settings.tracking_pixels). */
@@ -94,6 +168,8 @@ export interface UpdateWorkspacePayload {
     default_shipping_rate_amount?: number | null;
     tax_enabled?: boolean;
     tracking_pixels?: TrackingPixelIds | null;
+    fraud_rules?: FraudRules | null;
+    checkout_settings?: CheckoutSettings | null;
   };
 }
 
@@ -369,6 +445,16 @@ export interface StorefrontMeta {
   currency: string;
   /** Public pixel IDs configured by the merchant (only the ones set). */
   tracking?: { meta?: string; tiktok?: string; snapchat?: string; googleTag?: string };
+  /** Merchant checkout-form configuration (defaults: optional fields, codes allowed). */
+  checkout?: StorefrontCheckoutConfig;
+}
+
+export interface StorefrontCheckoutConfig {
+  email: CheckoutFieldVisibility;
+  alternatePhone: CheckoutFieldVisibility;
+  notes: CheckoutFieldVisibility;
+  allowDiscountCodes: boolean;
+  thankYouMessage: string | null;
 }
 
 export interface StorefrontVariant {

@@ -31,18 +31,16 @@ import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { CheckoutSettingsTab } from "./CheckoutSettingsTab";
 import { DomainsTab } from "./DomainsTab";
-import { CamouflageTab } from "./CamouflageTab";
 import { PlanTab } from "./PlanTab";
 
 const STRINGS = {
   en: {
     title: "Settings",
-    description: "Store profile, team, checkout, domains, ad review shield and your plan.",
+    description: "Store profile, team, checkout, domains and your plan.",
     tabGeneral: "General",
     tabTeam: "Team",
     tabCheckout: "Checkout",
     tabDomains: "Domains",
-    tabCamouflage: "Ad review shield",
     tabPlan: "Plan & billing",
 
     languageTitle: "Language",
@@ -102,12 +100,11 @@ const STRINGS = {
   },
   ar: {
     title: "الإعدادات",
-    description: "ملف المتجر، الفريق، صفحة الدفع، النطاقات، حماية مراجعة الإعلانات والخطة.",
+    description: "ملف المتجر، الفريق، صفحة الدفع، النطاقات والخطة.",
     tabGeneral: "عام",
     tabTeam: "الفريق",
     tabCheckout: "صفحة الدفع",
     tabDomains: "النطاقات (الدومين)",
-    tabCamouflage: "حماية مراجعة الإعلانات",
     tabPlan: "الخطة والفوترة",
 
     languageTitle: "اللغة",
@@ -185,7 +182,6 @@ export function SettingsPage() {
             <TabsTrigger value="team">{t.tabTeam}</TabsTrigger>
             <TabsTrigger value="checkout">{t.tabCheckout}</TabsTrigger>
             <TabsTrigger value="domains">{t.tabDomains}</TabsTrigger>
-            <TabsTrigger value="camouflage">{t.tabCamouflage}</TabsTrigger>
             <TabsTrigger value="plan">{t.tabPlan}</TabsTrigger>
           </TabsList>
         </div>
@@ -201,9 +197,6 @@ export function SettingsPage() {
         </TabsContent>
         <TabsContent value="domains" className="max-w-3xl pt-4">
           <DomainsTab key={`domains-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="camouflage" className="max-w-3xl pt-4">
-          <CamouflageTab key={`camo-${workspaceId}`} />
         </TabsContent>
         <TabsContent value="plan" className="pt-4">
           <PlanTab key={`plan-${workspaceId}`} />

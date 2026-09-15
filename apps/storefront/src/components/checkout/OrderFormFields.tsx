@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { GOVERNORATES } from "@/lib/egypt";
-import type { OrderFormErrors, OrderFormField, OrderFormValues } from "@/lib/orderForm";
+import { DEFAULT_CHECKOUT_CONFIG, type OrderFormErrors, type OrderFormField, type OrderFormValues } from "@/lib/orderForm";
 import { useStore } from "@/lib/StoreContext";
 import { input, label as labelClass } from "../ui";
 
@@ -59,23 +59,26 @@ function Field({
 /**
  * The COD address/contact fields. Controlled; validation lives in
  * lib/orderForm.ts so the product quick form and checkout behave identically.
+ * Email, alternative phone and notes follow the merchant's checkout settings
+ * (hidden / optional / required).
  */
 export function OrderFormFields({
   idPrefix,
   values,
   errors,
   onChange,
-  showAltPhone = false,
-  showEmail = false,
 }: {
   idPrefix: string;
   values: OrderFormValues;
   errors: OrderFormErrors;
   onChange: (field: OrderFormField, value: string) => void;
-  showAltPhone?: boolean;
-  showEmail?: boolean;
 }) {
-  const { t, locale } = useStore();
+  const { t, locale, store } = useStore();
+  const config = store?.checkout ?? DEFAULT_CHECKOUT_CONFIG;
+  const showAltPhone = config.alternatePhone !== "hidden";
+  const showEmail = config.email !== "hidden";
+  const showNotes = config.notes !== "hidden";
+  const req = (v: string) => (v === "required" ? { required: true } : { optionalLabel: t.common.optional });
 
   const a11y = (field: OrderFormField, hasHint = false) => {
     const id = fieldId(idPrefix, field);
@@ -127,13 +130,14 @@ export function OrderFormFields({
       </Field>
 
       {showAltPhone && (
-        <Field id={fieldId(idPrefix, "altPhone")} label={t.form.altPhone} optionalLabel={t.common.optional} error={errors.altPhone}>
+        <Field id={fieldId(idPrefix, "altPhone")} label={t.form.altPhone} {...req(config.alternatePhone)} error={errors.altPhone}>
           <input
             {...a11y("altPhone")}
             type="tel"
             inputMode="tel"
             autoComplete="off"
             dir="ltr"
+            required={config.alternatePhone === "required"}
             maxLength={16}
             placeholder={t.form.phonePlaceholder}
             value={values.altPhone}
@@ -147,7 +151,7 @@ export function OrderFormFields({
         <Field
           id={fieldId(idPrefix, "email")}
           label={t.form.email}
-          optionalLabel={t.common.optional}
+          {...req(config.email)}
           error={errors.email}
           className="sm:col-span-2"
         >
@@ -157,6 +161,7 @@ export function OrderFormFields({
             inputMode="email"
             autoComplete="email"
             dir="ltr"
+            required={config.email === "required"}
             value={values.email}
             onChange={(e) => onChange("email", e.target.value)}
             className={`${input} text-start rtl:text-end`}
@@ -221,16 +226,19 @@ export function OrderFormFields({
         />
       </Field>
 
-      <Field id={fieldId(idPrefix, "notes")} label={t.form.notes} optionalLabel={t.common.optional} className="sm:col-span-2">
+      {showNotes && (
+      <Field id={fieldId(idPrefix, "notes")} label={t.form.notes} {...req(config.notes)} error={errors.notes} className="sm:col-span-2">
         <textarea
           {...a11y("notes")}
           rows={2}
+          required={config.notes === "required"}
           placeholder={t.form.notesPlaceholder}
           value={values.notes}
           onChange={(e) => onChange("notes", e.target.value)}
           className={`${input} min-h-20 resize-y`}
         />
       </Field>
+      )}
     </div>
   );
 }

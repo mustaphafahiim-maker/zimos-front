@@ -33,7 +33,9 @@ export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const router = useRouter();
   const { cart, addItem, clearCart } = useCart();
-  const { t, money } = useStore();
+  const { t, money, store } = useStore();
+  const checkoutConfig = store?.checkout ?? null;
+  const allowDiscountCodes = checkoutConfig?.allowDiscountCodes !== false;
   const [client] = useState(() => createStorefrontApiClient());
   const { products, byVariant, loaded } = useCatalog(workspaceId);
 
@@ -97,7 +99,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t);
+    const found = validateOrderForm(values, t, checkoutConfig);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -119,7 +121,7 @@ export default function CheckoutPage() {
         setBumpAdded(true);
       }
 
-      const payload = toCheckoutPayload(values, { discountCode: appliedCode });
+      const payload = toCheckoutPayload(values, { discountCode: appliedCode, config: checkoutConfig });
       const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
       clearCart();
       router.push(afterOrder(workspaceId, order, payload.contact.phone));
@@ -152,8 +154,6 @@ export default function CheckoutPage() {
                 values={values}
                 errors={errors}
                 onChange={onFieldChange}
-                showAltPhone
-                showEmail
               />
             </div>
           </section>
@@ -215,6 +215,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
+            {allowDiscountCodes && (
             <div className="mt-5 border-t border-line pt-4">
               <label htmlFor="discount-code" className="mb-1.5 block text-sm font-medium text-ink">
                 {t.checkout.discountCode}
@@ -253,6 +254,7 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+            )}
 
             <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">
               <div className="flex justify-between gap-3">

@@ -99,6 +99,11 @@ function Confirmation() {
             <CheckIcon size={40} />
           </span>
           <h1 className="mt-5 text-2xl font-bold text-ink sm:text-3xl">{t.thankYou.title}</h1>
+          {store?.checkout?.thankYouMessage && (
+            <p dir="auto" className="mt-2 max-w-md whitespace-pre-line text-base text-ink-soft">
+              {store.checkout.thankYouMessage}
+            </p>
+          )}
           {orderNumber && (
             <p className="mt-3 text-sm text-ink-soft">
               {t.thankYou.orderNumber}:{" "}

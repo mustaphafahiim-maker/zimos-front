@@ -65,6 +65,7 @@ export default async function StoreLayout({
     currency: store.currency,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    checkout: store.checkout ?? null,
   };
 
   return (
