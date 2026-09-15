@@ -23,17 +23,17 @@ export function OrderSummary({ order }: { order: Order }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="py-2 pr-3 font-medium">Product</th>
-                  <th className="py-2 pr-3 font-medium">Qty</th>
-                  <th className="py-2 pr-3 font-medium">Unit price</th>
-                  <th className="py-2 font-medium text-right">Line total</th>
+                <tr className="border-b border-line text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="py-2 pe-3 font-medium">Product</th>
+                  <th className="py-2 pe-3 font-medium">Qty</th>
+                  <th className="py-2 pe-3 font-medium">Unit price</th>
+                  <th className="py-2 font-medium text-end">Line total</th>
                 </tr>
               </thead>
               <tbody>
                 {order.items.map((item) => (
                   <tr key={item.id} className="border-b border-line last:border-0 align-top">
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3">
                       <div className="font-medium text-ink">{item.productNameSnapshot}</div>
                       {formatOptions(item.variantOptionsSnapshot) && (
                         <div className="text-xs text-ink-soft">
@@ -47,11 +47,11 @@ export function OrderSummary({ order }: { order: Order }) {
                         <div className="text-xs text-ink-soft">SKU: {item.skuSnapshot}</div>
                       )}
                     </td>
-                    <td className="py-2 pr-3 text-ink-soft">{item.quantity}</td>
-                    <td className="py-2 pr-3 text-ink-soft">
+                    <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
+                    <td className="py-2 pe-3 text-ink-soft">
                       {formatMoney(item.unitPriceAmount, c)}
                     </td>
-                    <td className="py-2 text-right text-ink-soft">
+                    <td className="py-2 text-end text-ink-soft">
                       {formatMoney(item.lineTotalAmount, c)}
                     </td>
                   </tr>

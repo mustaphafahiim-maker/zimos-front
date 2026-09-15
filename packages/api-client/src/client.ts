@@ -616,7 +616,12 @@ export class ApiClient {
   // ---------------------------------------------------------------------
 
   async adminListWorkspaces() {
-    return this.request<Workspace[]>("/admin/workspaces");
+    // The endpoint wraps the rows: { workspaces: [...] }. Unwrap here so every
+    // caller gets the array its type promises.
+    const { workspaces } = await this.request<{ workspaces: Workspace[] }>(
+      "/admin/workspaces"
+    );
+    return workspaces ?? [];
   }
 
   // ---------------------------------------------------------------------

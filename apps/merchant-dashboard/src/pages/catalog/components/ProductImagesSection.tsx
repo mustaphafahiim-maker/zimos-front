@@ -181,7 +181,7 @@ export function ProductImagesSection(props: Props) {
 
         {errors.length > 0 && (
           <Alert variant="danger" className="mb-4">
-            <ul className="list-disc space-y-0.5 pl-4">
+            <ul className="list-disc space-y-0.5 ps-4">
               {errors.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}
@@ -237,7 +237,7 @@ export function ProductImagesSection(props: Props) {
               >
                 <ProductImage media={m} alt={`Image ${i + 1}`} className="aspect-square w-full" />
                 {i === 0 && (
-                  <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
+                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
                     <Star className="size-3" aria-hidden /> Primary
                   </span>
                 )}

@@ -116,7 +116,7 @@ function CollectionProducts({ collectionId }: { collectionId: string }) {
           <Link to={`/catalog/${p.id}`} className="text-primary hover:underline">
             {p.name}
           </Link>
-          <span className="ml-2 text-xs text-ink-soft">{p.status}</span>
+          <span className="ms-2 text-xs text-ink-soft">{p.status}</span>
         </li>
       ))}
     </ul>
@@ -179,7 +179,7 @@ export function CollectionsPage() {
                       {expanded === c.id ? "Hide products" : "Show products"}
                     </button>
                     {expanded === c.id && (
-                      <div className="mt-2 border-l-2 border-line pl-3">
+                      <div className="mt-2 border-s-2 border-line ps-3">
                         <CollectionProducts collectionId={c.id} />
                       </div>
                     )}

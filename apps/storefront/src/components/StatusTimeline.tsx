@@ -36,7 +36,7 @@ export function StatusTimeline({ stage }: { stage: TrackStage }) {
             <span
               className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${
                 done
-                  ? "border-primary bg-primary text-paper-raised"
+                  ? "border-primary bg-primary text-on-primary"
                   : current
                     ? "border-primary bg-primary-soft text-primary"
                     : "border-line bg-paper-raised text-ink-soft"

@@ -1,19 +1,111 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_ITEMS } from "@/lib/navigation";
+import { NAV_ITEMS, NAV_LABELS } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 
+const STRINGS = {
+  en: {
+    signOut: "Sign out",
+    selectStore: "Select a store",
+    newStore: "+ New store",
+    openNav: "Open navigation",
+    closeNav: "Close navigation",
+    navLabel: "Main navigation",
+    dashboardAria: "Zimos dashboard",
+    dashboardAriaNamed: "{name} — Zimos dashboard",
+    switchStore: "Switch store",
+  },
+  ar: {
+    signOut: "تسجيل الخروج",
+    selectStore: "اختر متجرًا",
+    newStore: "+ متجر جديد",
+    openNav: "فتح القائمة",
+    closeNav: "إغلاق القائمة",
+    navLabel: "القائمة الرئيسية",
+    dashboardAria: "لوحة تحكم زيموس",
+    dashboardAriaNamed: "{name} — لوحة تحكم زيموس",
+    switchStore: "تبديل المتجر",
+  },
+} satisfies Messages;
+
+/**
+ * Sidebar body — rendered twice: once in the desktop rail and once inside the
+ * mobile drawer. `onNavigate` lets the drawer close itself when a link is
+ * followed. Same approach as the platform-admin console.
+ */
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const { logout } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  const t = useT(STRINGS);
+  const navLabels = useT(NAV_LABELS);
+  const storeName = currentWorkspace?.name;
+
+  return (
+    <>
+      <div className="px-5 py-5">
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="block transition-opacity hover:opacity-80"
+          aria-label={storeName ? fmt(t.dashboardAriaNamed, { name: storeName }) : t.dashboardAria}
+        >
+          <ZimosLogo height={26} />
+          {storeName && (
+            <span className="mt-2 block truncate text-sm font-medium text-ink-soft">
+              {storeName}
+            </span>
+          )}
+        </Link>
+      </div>
+      <nav aria-label={t.navLabel} className="flex-1 space-y-0.5 px-3">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              // Dark primary-dark stays deep (white text sits on it elsewhere),
+              // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
+              cn(
+                "block rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
+                isActive && "bg-primary-soft text-primary-dark dark:text-primary"
+              )
+            }
+          >
+            {navLabels[item.key]}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="flex items-center gap-2 border-t border-line px-3 py-4">
+        <button
+          onClick={() => logout()}
+          className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
+        >
+          {t.signOut}
+        </button>
+        <ThemeToggle />
+      </div>
+    </>
+  );
+}
+
 export function DashboardLayout() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { currentWorkspace, workspaces, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
+  const location = useLocation();
+  const t = useT(STRINGS);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // The tab names the store being worked on, not the product — a merchant with
   // several stores open in several tabs can tell them apart. Falls back to the
@@ -23,104 +115,119 @@ export function DashboardLayout() {
     document.title = storeName ? `${storeName} — Dashboard` : "Zimos — Merchant Dashboard";
   }, [storeName]);
 
+  // A drawer left open across navigation would cover the page it just opened.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
   return (
     <div className="flex min-h-screen bg-paper">
-      <aside className="hidden w-60 shrink-0 border-r border-line bg-paper-raised md:flex md:flex-col">
-        <div className="px-5 py-5">
-          <Link
-            to="/"
-            className="block transition-opacity hover:opacity-80"
-            aria-label={storeName ? `${storeName} — Zimos dashboard` : "Zimos dashboard"}
-          >
-            <ZimosLogo height={26} />
-            {storeName && (
-              <span className="mt-2 block truncate text-sm font-medium text-ink-soft">
-                {storeName}
-              </span>
-            )}
-          </Link>
-        </div>
-        <nav className="flex-1 space-y-0.5 px-3">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }) =>
-                // Dark primary-dark stays deep (white text sits on it elsewhere),
-                // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
-                cn(
-                  "block rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
-                  isActive && "bg-primary-soft text-primary-dark dark:text-primary"
-                )
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2 border-t border-line px-3 py-4">
-          <button
-            onClick={() => logout()}
-            className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-left text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
-          >
-            Sign out
-          </button>
-          <ThemeToggle />
-        </div>
+      <aside className="hidden w-60 shrink-0 border-e border-line bg-paper-raised md:flex md:flex-col">
+        <SidebarContent />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-4 border-b border-line bg-paper-raised px-6">
-          <div className="flex min-w-0 items-center gap-1">
-          <div className="relative shrink-0 max-w-[40vw] sm:max-w-none">
+      {/* Mobile drawer — below `md` the rail above is hidden, so without this
+          the dashboard has no navigation at all on a phone. */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-primary-dark/40 md:hidden dark:bg-black/60"
+          onMouseDown={() => setMobileOpen(false)}
+        >
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.navLabel}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-e border-line bg-paper-raised shadow-lg"
+          >
             <button
-              onClick={() => setSwitcherOpen((v) => !v)}
-              className="cursor-pointer flex items-center gap-2 rounded-[0.5rem] px-2 py-1.5 text-sm font-medium text-ink hover:bg-paper"
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label={t.closeNav}
+              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
-              {currentWorkspace?.name ?? "Select a store"}
-              <span className="text-ink-soft">▾</span>
+              <X className="size-4" aria-hidden />
             </button>
-            {switcherOpen && (
-              <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-[0.5rem] border border-line bg-paper-raised py-1 shadow-lg">
-                {workspaces.map((workspace) => (
+            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 items-center justify-between gap-2 border-b border-line bg-paper-raised px-4 sm:gap-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              aria-label={t.openNav}
+              aria-expanded={mobileOpen}
+              className="-ms-1 shrink-0 cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink md:hidden"
+            >
+              <Menu className="size-5" aria-hidden />
+            </button>
+
+            <div className="relative max-w-[40vw] shrink-0 sm:max-w-none">
+              <button
+                onClick={() => setSwitcherOpen((v) => !v)}
+                aria-label={t.switchStore}
+                aria-expanded={switcherOpen}
+                className="cursor-pointer flex items-center gap-2 rounded-[0.5rem] px-2 py-1.5 text-sm font-medium text-ink hover:bg-paper"
+              >
+                <span className="truncate">{currentWorkspace?.name ?? t.selectStore}</span>
+                <span className="text-ink-soft" aria-hidden>
+                  ▾
+                </span>
+              </button>
+              {switcherOpen && (
+                <div className="absolute start-0 top-full z-20 mt-1 w-64 rounded-[0.5rem] border border-line bg-paper-raised py-1 shadow-lg">
+                  {workspaces.map((workspace) => (
+                    <button
+                      key={workspace.id}
+                      onClick={() => {
+                        selectWorkspace(workspace.id);
+                        setSwitcherOpen(false);
+                      }}
+                      className={cn(
+                        "block w-full cursor-pointer px-3 py-2 text-start text-sm hover:bg-primary-soft",
+                        workspace.id === currentWorkspace?.id &&
+                          "font-medium text-primary-dark dark:text-primary"
+                      )}
+                    >
+                      {workspace.name}
+                    </button>
+                  ))}
+                  <div className="my-1 border-t border-line" />
                   <button
-                    key={workspace.id}
                     onClick={() => {
-                      selectWorkspace(workspace.id);
                       setSwitcherOpen(false);
+                      navigate("/workspaces");
                     }}
-                    className={cn(
-                      "block w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-primary-soft",
-                      workspace.id === currentWorkspace?.id && "font-medium text-primary-dark dark:text-primary"
-                    )}
+                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-primary hover:bg-primary-soft"
                   >
-                    {workspace.name}
+                    {t.newStore}
                   </button>
-                ))}
-                <div className="my-1 border-t border-line" />
-                <button
-                  onClick={() => {
-                    setSwitcherOpen(false);
-                    navigate("/workspaces");
-                  }}
-                  className="cursor-pointer block w-full px-3 py-2 text-left text-sm text-primary hover:bg-primary-soft"
-                >
-                  + New store
-                </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+
+            {/* The store's public link, beside the store it belongs to: on every
+                page, and it changes with the switcher above. */}
+            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
           </div>
 
-          {/* The store's public link, beside the store it belongs to: on every
-              page, and it changes with the switcher above. */}
-          {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-3 text-sm text-ink-soft">
+          <div className="flex shrink-0 items-center gap-2 text-sm text-ink-soft sm:gap-3">
             {/* Dashboard-wide locale switch. Lives in the header (not the
                 sidebar footer beside ThemeToggle) so it stays reachable on
-                mobile, where the sidebar is hidden. */}
+                mobile, where the sidebar collapses into the drawer. */}
             <LanguageSwitch className="hidden sm:inline-flex" />
             <LanguageSwitch compact className="sm:hidden" />
             <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
@@ -130,7 +237,7 @@ export function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

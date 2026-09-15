@@ -75,7 +75,7 @@ export function StatusBadge({ value, tone, label, text, className }: StatusBadge
         className
       )}
     >
-      {label && <span className="opacity-60">{label}:</span>}
+      {label && <span className="font-normal">{label}:</span>}
       {text ?? humanize(value)}
     </span>
   );

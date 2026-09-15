@@ -280,7 +280,7 @@ export function ProductLanding({
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-ink">{x.label ?? t.common.piece(x.quantity)}</span>
                       {x.discountPct > 0 && (
-                        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-paper-raised">
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-on-primary">
                           {t.common.save(x.discountPct)}
                         </span>
                       )}

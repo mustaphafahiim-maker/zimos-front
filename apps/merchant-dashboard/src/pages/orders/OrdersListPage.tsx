@@ -68,6 +68,7 @@ export function OrdersListPage() {
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Select
+          aria-label="Filter by confirmation state"
           value={confirmationState}
           onChange={(e) => setConfirmationState(e.target.value as ConfirmationState | "")}
         >
@@ -79,6 +80,7 @@ export function OrdersListPage() {
           ))}
         </Select>
         <Select
+          aria-label="Filter by payment state"
           value={financialState}
           onChange={(e) => setFinancialState(e.target.value as FinancialState | "")}
         >
@@ -90,6 +92,7 @@ export function OrdersListPage() {
           ))}
         </Select>
         <Select
+          aria-label="Filter by fulfilment state"
           value={fulfillmentState}
           onChange={(e) => setFulfillmentState(e.target.value as FulfillmentState | "")}
         >
@@ -112,7 +115,7 @@ export function OrdersListPage() {
         <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
           <table className="w-full min-w-[820px] text-sm">
             <thead>
-              <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+              <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                 <th className="px-4 py-3 font-medium">Order</th>
                 <th className="px-4 py-3 font-medium">Customer</th>
                 <th className="px-4 py-3 font-medium">Total</th>

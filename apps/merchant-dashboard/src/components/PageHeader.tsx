@@ -29,11 +29,11 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
           <h1 className="font-display text-2xl font-medium text-ink">
             {title}
             {titleMeta && (
-              <span className="ml-2 align-middle text-base font-normal text-ink-soft">
+              <span className="ms-2 align-middle text-base font-normal text-ink-soft">
                 · {titleMeta}
               </span>
             )}
-            {titleBadge && <span className="ml-2 align-middle">{titleBadge}</span>}
+            {titleBadge && <span className="ms-2 align-middle">{titleBadge}</span>}
           </h1>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
         </div>

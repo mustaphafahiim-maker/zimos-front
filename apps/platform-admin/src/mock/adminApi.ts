@@ -186,6 +186,11 @@ async function loadBase(force: boolean): Promise<BaseCache> {
   try {
     // BACKEND (real): GET /admin/workspaces
     const list = await apiClient.adminListWorkspaces();
+    // A 200 with an unexpected shape resolves, so the catch below never sees
+    // it. Guard here or buildRows() dies on `base.list.map`.
+    if (!Array.isArray(list)) {
+      throw new Error("Workspace list came back in an unexpected shape.");
+    }
     baseCache = { list, source: "api", apiError: null };
   } catch (err) {
     baseCache = {

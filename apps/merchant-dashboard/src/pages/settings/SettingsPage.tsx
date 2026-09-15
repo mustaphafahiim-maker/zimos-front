@@ -322,7 +322,7 @@ function TeamSection() {
           <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                   <th className="px-4 py-3 font-medium">Member</th>
                   <th className="px-4 py-3 font-medium">Role</th>
                   <th className="px-4 py-3 font-medium" />
@@ -337,7 +337,7 @@ function TeamSection() {
                         <div className="font-medium text-ink">
                           {member.user?.fullName || member.user?.email || "—"}
                           {isSelf && (
-                            <span className="ml-1.5 text-xs font-normal text-ink-soft">(you)</span>
+                            <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
                           )}
                         </div>
                         {member.user?.email && (
@@ -362,7 +362,7 @@ function TeamSection() {
                           </Select>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-end">
                         {isSelf ? (
                           <span
                             className="text-xs text-ink-soft"
@@ -394,7 +394,7 @@ function TeamSection() {
               <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead>
-                    <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                       <th className="px-4 py-3 font-medium">Email</th>
                       <th className="px-4 py-3 font-medium">Role</th>
                       <th className="px-4 py-3 font-medium" />
@@ -410,7 +410,7 @@ function TeamSection() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-ink-soft">{invite.role.name}</td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
                             Resend
                           </Button>

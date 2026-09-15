@@ -35,7 +35,7 @@ export function StoreAddressField({
       <Label htmlFor={id}>Store address</Label>
       <div
         className={cn(
-          "flex items-center rounded-[0.5rem] border border-line bg-paper-raised pr-3 transition-colors focus-within:ring-2 focus-within:ring-primary/30",
+          "flex items-center rounded-[0.5rem] border border-line-strong bg-paper-raised pe-3 transition-colors focus-within:ring-2 focus-within:ring-primary/30",
           invalid && "border-danger focus-within:ring-danger/30",
           state.status === "available" && "border-success",
           disabled && "opacity-50"

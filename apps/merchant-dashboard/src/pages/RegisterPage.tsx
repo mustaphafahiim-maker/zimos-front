@@ -164,7 +164,7 @@ export function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="pr-10"
+                  className="pe-10"
                   aria-describedby="password-rules"
                 />
                 <button
@@ -172,7 +172,7 @@ export function RegisterPage() {
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
                   aria-pressed={showPassword}
-                  className="cursor-pointer absolute inset-y-0 right-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
+                  className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" aria-hidden />
@@ -204,14 +204,14 @@ export function RegisterPage() {
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="••••••••"
-                  className="pr-10"
+                  className="pe-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
                   aria-label={showConfirm ? "إخفاء الباسورد" : "إظهار الباسورد"}
                   aria-pressed={showConfirm}
-                  className="cursor-pointer absolute inset-y-0 right-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
+                  className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
                 >
                   {showConfirm ? (
                     <EyeOff className="size-4" aria-hidden />

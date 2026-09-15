@@ -35,7 +35,7 @@ export function PageTabs({
             <li key={page.id} className="shrink-0">
               <div
                 className={cn(
-                  "group flex items-center gap-1 rounded-[0.5rem] border pl-2.5 pr-1 transition-colors",
+                  "group flex items-center gap-1 rounded-[0.5rem] border ps-2.5 pe-1 transition-colors",
                   active
                     ? "border-primary bg-primary-soft"
                     : "border-transparent hover:border-line hover:bg-paper"
@@ -82,7 +82,7 @@ export function PageTabs({
       <button
         type="button"
         onClick={onAdd}
-        className="cursor-pointer ml-1 flex shrink-0 items-center gap-1 rounded-[0.5rem] border border-dashed border-line px-2.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary-dark"
+        className="cursor-pointer ms-1 flex shrink-0 items-center gap-1 rounded-[0.5rem] border border-dashed border-line px-2.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary-dark"
       >
         <Plus className="size-3.5" aria-hidden />
         New page

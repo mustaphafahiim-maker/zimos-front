@@ -48,7 +48,7 @@ function TemplateCard({
     <button
       type="button"
       onClick={onSelect}
-      className="cursor-pointer flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-left transition-colors hover:border-primary"
+      className="cursor-pointer flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-start transition-colors hover:border-primary"
     >
       <TemplateThumb url={template.thumbnailUrl} name={template.name} />
       <div className="flex flex-1 flex-col gap-1 p-4">

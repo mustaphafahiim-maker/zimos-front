@@ -52,31 +52,31 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="py-2 pr-3 font-medium">Variant</th>
-                  <th className="py-2 pr-3 font-medium">SKU</th>
-                  <th className="py-2 pr-3 font-medium">Price</th>
-                  <th className="py-2 pr-3 font-medium">Stock</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
+                <tr className="border-b border-line text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="py-2 pe-3 font-medium">Variant</th>
+                  <th className="py-2 pe-3 font-medium">SKU</th>
+                  <th className="py-2 pe-3 font-medium">Price</th>
+                  <th className="py-2 pe-3 font-medium">Stock</th>
+                  <th className="py-2 pe-3 font-medium">Status</th>
                   <th className="py-2 font-medium" />
                 </tr>
               </thead>
               <tbody>
                 {variants.map((v) => (
                   <tr key={v.id} className="border-b border-line last:border-0">
-                    <td className="py-2 pr-3 text-ink">
+                    <td className="py-2 pe-3 text-ink">
                       {formatOptions(v.optionValues) || <span className="text-ink-soft">—</span>}
                     </td>
-                    <td className="py-2 pr-3 text-ink-soft">{v.sku || "—"}</td>
-                    <td className="py-2 pr-3 text-ink-soft">{formatMoney(v.priceAmount, v.currency)}</td>
-                    <td className="py-2 pr-3 text-ink-soft">
+                    <td className="py-2 pe-3 text-ink-soft">{v.sku || "—"}</td>
+                    <td className="py-2 pe-3 text-ink-soft">{formatMoney(v.priceAmount, v.currency)}</td>
+                    <td className="py-2 pe-3 text-ink-soft">
                       {v.stockOnHand}
                       {v.reservedStock ? ` (−${v.reservedStock})` : ""}
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3">
                       <StatusBadge value={v.status} />
                     </td>
-                    <td className="py-2 text-right whitespace-nowrap">
+                    <td className="py-2 text-end whitespace-nowrap">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(v)}>
                         Edit
                       </Button>

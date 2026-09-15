@@ -86,7 +86,7 @@ export default async function StoreHomePage({
   const chip = (active: boolean) =>
     `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
       active
-        ? "border-primary bg-primary text-paper-raised"
+        ? "border-primary bg-primary text-on-primary"
         : "border-line bg-paper-raised text-ink-soft hover:border-primary hover:text-primary"
     }`;
 

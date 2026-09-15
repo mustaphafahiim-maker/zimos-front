@@ -479,7 +479,7 @@ export function WebsiteEditorPage() {
 
       {/* Below xl the panel can't sit beside the canvas, so it becomes an overlay. */}
       {selected && (
-        <div className="fixed inset-y-0 right-0 z-30 w-80 max-w-full border-l border-line bg-paper-raised shadow-xl xl:hidden">
+        <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-l border-line bg-paper-raised shadow-xl xl:hidden">
           <SectionInspector
             section={selected}
             onChange={updateSection}

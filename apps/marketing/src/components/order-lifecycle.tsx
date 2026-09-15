@@ -89,7 +89,7 @@ export function OrderLifecycle() {
                   <Icon width="1.15rem" height="1.15rem" />
                 </span>
 
-                <div className={`flow-step pt-0.5 ${reached ? "opacity-100" : "opacity-60"}`}>
+                <div className={`flow-step pt-0.5 ${reached ? "opacity-100" : "opacity-85"}`}>
                   <p className={`font-semibold ${reached ? "text-ink" : "text-ink-soft"}`}>
                     {flowStep.title}
                   </p>

@@ -228,7 +228,7 @@ function ShippingTaxBody() {
           <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Country</th>
                   <th className="px-4 py-3 font-medium">Rate</th>
@@ -245,7 +245,7 @@ function ShippingTaxBody() {
                     <td className="px-4 py-3 text-ink-soft">{formatPercent(t.rateBasisPoints)}</td>
                     <td className="px-4 py-3 text-ink-soft">{t.appliesToShipping ? "✓" : "—"}</td>
                     <td className="px-4 py-3 text-ink-soft">{t.pricesIncludeTax ? "✓" : "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                    <td className="whitespace-nowrap px-4 py-3 text-end">
                       <Button size="sm" variant="ghost" onClick={() => setTaxForm(t)}>
                         Edit
                       </Button>
@@ -416,7 +416,7 @@ function ZoneCard({
           <div className="overflow-x-auto rounded-[0.5rem] border border-line">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                   <th className="px-3 py-2 font-medium">Rate</th>
                   <th className="px-3 py-2 font-medium">Type</th>
                   <th className="px-3 py-2 font-medium">Detail</th>
@@ -443,7 +443,7 @@ function ZoneCard({
                     <td className="px-3 py-2">
                       <StatusBadge value={rate.isActive ? "active" : "inactive"} />
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                    <td className="whitespace-nowrap px-3 py-2 text-end">
                       <Button size="sm" variant="ghost" onClick={() => onToggleRate(rate)}>
                         {rate.isActive ? "Deactivate" : "Activate"}
                       </Button>
@@ -813,7 +813,7 @@ function RateForm({
                 />
               </div>
               {tiers.length > 1 && (
-                <div className="mt-2 text-right">
+                <div className="mt-2 text-end">
                   <Button
                     type="button"
                     size="sm"
@@ -1010,9 +1010,9 @@ function TaxRateForm({
               step="0.01"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
-              className="pr-8"
+              className="pe-8"
             />
-            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-ink-soft">
+            <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3 text-sm text-ink-soft">
               %
             </span>
           </div>

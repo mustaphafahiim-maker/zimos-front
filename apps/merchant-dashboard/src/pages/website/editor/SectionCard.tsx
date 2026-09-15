@@ -130,7 +130,7 @@ export function SectionCard({
         <button
           type="button"
           onClick={onSelect}
-          className="cursor-pointer flex min-w-0 flex-1 items-center gap-2 rounded-[0.375rem] px-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="cursor-pointer flex min-w-0 flex-1 items-center gap-2 rounded-[0.375rem] px-1 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <NodeIcon icon={icon} className="size-4 shrink-0 text-primary" />
           <span className="truncate text-sm font-medium text-ink">{sectionLabel(section)}</span>
@@ -149,7 +149,7 @@ export function SectionCard({
       <button
         type="button"
         onClick={onSelect}
-        className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         {elements.length === 0 ? (
           <span className="text-sm text-ink-soft">Empty section</span>
@@ -162,7 +162,7 @@ export function SectionCard({
                 <NodeIcon icon={spec.icon} className="mt-0.5 size-3.5 shrink-0 text-ink-soft" />
                 <span className="min-w-0 flex-1">
                   <span className="text-ink-soft">{spec.label}</span>
-                  {summary && <span className="ml-2 text-ink">{summary}</span>}
+                  {summary && <span className="ms-2 text-ink">{summary}</span>}
                 </span>
               </span>
             );

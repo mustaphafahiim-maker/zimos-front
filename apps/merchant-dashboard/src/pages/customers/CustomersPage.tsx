@@ -53,7 +53,7 @@ export function CustomersPage() {
         <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
           <table className="w-full min-w-[760px] text-sm">
             <thead>
-              <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+              <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Orders</th>

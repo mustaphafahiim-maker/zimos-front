@@ -93,7 +93,7 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-ink">{s.trackingCode}</span>
-                    <span className="ml-2 text-sm text-ink-soft">via {s.carrierCode}</span>
+                    <span className="ms-2 text-sm text-ink-soft">via {s.carrierCode}</span>
                   </div>
                   <StatusBadge value={s.status} />
                 </div>

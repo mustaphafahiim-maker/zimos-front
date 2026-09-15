@@ -98,7 +98,7 @@ export function WorkspacePickerPage() {
                   <button
                     key={workspace.id}
                     onClick={() => goToDashboard(workspace.id)}
-                    className="cursor-pointer flex w-full items-center justify-between rounded-[var(--radius-card)] border border-line bg-paper-raised px-5 py-4 text-left transition-colors hover:border-primary"
+                    className="cursor-pointer flex w-full items-center justify-between rounded-[var(--radius-card)] border border-line bg-paper-raised px-5 py-4 text-start transition-colors hover:border-primary"
                   >
                     <div>
                       <p className="font-medium text-ink">{workspace.name}</p>

@@ -35,7 +35,7 @@ export function ColorField({
           aria-label={`${label} colour picker`}
           value={swatch}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="size-10 shrink-0 cursor-pointer rounded-[0.5rem] border border-line bg-paper-raised p-1"
+          className="size-10 shrink-0 cursor-pointer rounded-[0.5rem] border border-line-strong bg-paper-raised p-1"
         />
         <Input
           value={value}

@@ -11,6 +11,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { formatAddress, formatMoney } from "@/lib/format";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { TextField, Field } from "@/components/Field";
@@ -19,15 +20,71 @@ import { useToast } from "@/components/Toast";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
 
-const OUTCOME_LABEL: Record<ConfirmationOutcome, string> = {
-  confirmed: "Confirmed",
-  rejected: "Rejected",
-  unreachable: "Unreachable",
-  postponed: "Postponed",
-};
+const STRINGS = {
+  en: {
+    title: "Confirmation Queue",
+    description: "Call each customer to confirm their order before it moves to fulfilment.",
+    empty: "No orders are waiting for confirmation right now.",
+    outcomeConfirmed: "Confirmed",
+    outcomeRejected: "Rejected",
+    outcomeUnreachable: "Unreachable",
+    outcomePostponed: "Postponed",
+    itemsOne: "1 item",
+    itemsOther: "{n} items",
+    attemptsOne: "1 previous attempt",
+    attemptsOther: "{n} previous attempts",
+    unnamedCustomer: "Unnamed customer",
+    noPhone: "No phone number",
+    claiming: "Claiming…",
+    claimAndCall: "Claim & call",
+    rejectionReason: "Rejection reason",
+    rejectionPlaceholder: "Customer changed their mind",
+    notes: "Notes",
+    notesPlaceholder: "Anything worth recording from the call (optional).",
+    saving: "Saving…",
+    saveOutcome: "Save outcome",
+    toastMarked: "{order} marked {outcome}.",
+  },
+  ar: {
+    title: "قائمة التأكيد",
+    description: "اتصل بكل عميل لتأكيد طلبه قبل أن ينتقل إلى التجهيز.",
+    empty: "لا توجد طلبات بانتظار التأكيد حاليًا.",
+    outcomeConfirmed: "مؤكد",
+    outcomeRejected: "مرفوض",
+    outcomeUnreachable: "تعذّر الوصول",
+    outcomePostponed: "مؤجل",
+    itemsOne: "منتج واحد",
+    itemsOther: "{n} منتجات",
+    attemptsOne: "محاولة سابقة واحدة",
+    attemptsOther: "{n} محاولات سابقة",
+    unnamedCustomer: "عميل بدون اسم",
+    noPhone: "لا يوجد رقم هاتف",
+    claiming: "جارٍ الاستلام…",
+    claimAndCall: "استلام واتصال",
+    rejectionReason: "سبب الرفض",
+    rejectionPlaceholder: "غيّر العميل رأيه",
+    notes: "ملاحظات",
+    notesPlaceholder: "أي شيء يستحق التسجيل من المكالمة (اختياري).",
+    saving: "جارٍ الحفظ…",
+    saveOutcome: "حفظ النتيجة",
+    toastMarked: "تم تعيين {order} كـ {outcome}.",
+  },
+} satisfies Messages;
+
+/** Outcome buttons and the toast, in the active locale. */
+function useOutcomeLabels(): Record<ConfirmationOutcome, string> {
+  const t = useT(STRINGS);
+  return {
+    confirmed: t.outcomeConfirmed,
+    rejected: t.outcomeRejected,
+    unreachable: t.outcomeUnreachable,
+    postponed: t.outcomePostponed,
+  };
+}
 
 export function ConfirmationQueuePage() {
   const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
   const queue = useAsync(
     () => apiClient.listConfirmationQueue(workspaceId, { status: "queued", limit: 200 }),
     [workspaceId]
@@ -44,16 +101,13 @@ export function ConfirmationQueuePage() {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader
-        title="Confirmation Queue"
-        description="Call each customer to confirm their order before it moves to fulfilment."
-      />
+      <PageHeader title={t.title} description={t.description} />
 
       <DataState
         loading={queue.loading}
         error={queue.error}
         empty={tasks.length === 0}
-        emptyMessage="لا يوجد أوردرات مستنية تأكيد دلوقتي "
+        emptyMessage={t.empty}
         onRetry={() => queue.refresh()}
       >
         <div className="space-y-4">
@@ -82,6 +136,8 @@ function ConfirmationCard({
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(STRINGS);
+  const outcomeLabel = useOutcomeLabels();
   const { order } = task;
   const contact = order.contactSnapshot;
 
@@ -117,13 +173,22 @@ function ConfirmationCard({
       if (notes.trim()) payload.notes = notes.trim();
       if (outcome === "rejected") payload.rejectionReason = rejectionReason.trim();
       await apiClient.recordConfirmationOutcome(workspaceId, task.id, payload);
-      toast.success(`${order.orderNumber} marked ${OUTCOME_LABEL[outcome].toLowerCase()}.`);
+      // Arabic has no letter case, so lowercasing is a no-op there.
+      toast.success(
+        fmt(t.toastMarked, {
+          order: order.orderNumber,
+          outcome: outcomeLabel[outcome].toLowerCase(),
+        })
+      );
       onResolved(task.id);
     } catch (err) {
       setError(getErrorMessage(err));
       setBusy(false);
     }
   }
+
+  const itemCount = order.items.length;
+  const attempts = task.attemptCount;
 
   return (
     <Card className="space-y-4 p-5">
@@ -136,26 +201,26 @@ function ConfirmationCard({
             {order.orderNumber}
           </Link>
           <p className="mt-0.5 text-sm text-ink-soft">
-            {order.items.length} item{order.items.length === 1 ? "" : "s"} ·{" "}
+            {itemCount === 1 ? t.itemsOne : fmt(t.itemsOther, { n: itemCount })} ·{" "}
             {formatMoney(order.totalAmount, order.currency)}
           </p>
         </div>
-        {task.attemptCount > 0 && (
+        {attempts > 0 && (
           <span className="rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
-            {task.attemptCount} previous attempt{task.attemptCount === 1 ? "" : "s"}
+            {attempts === 1 ? t.attemptsOne : fmt(t.attemptsOther, { n: attempts })}
           </span>
         )}
       </div>
 
       <div className="rounded-[0.5rem] bg-paper px-4 py-3">
-        <p className="text-sm font-medium text-ink">{contact.fullName || "Unnamed customer"}</p>
+        <p className="text-sm font-medium text-ink">{contact.fullName || t.unnamedCustomer}</p>
         <p className="mt-0.5 font-display text-xl font-medium text-ink">
           {contact.phone ? (
-            <a href={`tel:${contact.phone}`} className="hover:text-primary">
+            <a href={`tel:${contact.phone}`} className="hover:text-primary" dir="ltr">
               {contact.phone}
             </a>
           ) : (
-            <span className="text-ink-soft">No phone number</span>
+            <span className="text-ink-soft">{t.noPhone}</span>
           )}
         </p>
         <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
@@ -165,7 +230,7 @@ function ConfirmationCard({
 
       {task.status === "queued" ? (
         <Button onClick={claim} disabled={busy}>
-          {busy ? "Claiming…" : "Claim & call"}
+          {busy ? t.claiming : t.claimAndCall}
         </Button>
       ) : (
         <div className="space-y-4">
@@ -179,34 +244,34 @@ function ConfirmationCard({
                 onClick={() => setOutcome(o)}
                 disabled={busy}
               >
-                {OUTCOME_LABEL[o]}
+                {outcomeLabel[o]}
               </Button>
             ))}
           </div>
 
           {outcome === "rejected" && (
             <TextField
-              label="Rejection reason"
+              label={t.rejectionReason}
               required
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Customer changed their mind"
+              placeholder={t.rejectionPlaceholder}
             />
           )}
 
-          <Field label="Notes">
+          <Field label={t.notes}>
             {({ id }) => (
               <Textarea
                 id={id}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anything worth recording from the call (optional)."
+                placeholder={t.notesPlaceholder}
               />
             )}
           </Field>
 
           <Button onClick={save} disabled={busy || !outcome || rejectionMissing}>
-            {busy ? "Saving…" : "Save outcome"}
+            {busy ? t.saving : t.saveOutcome}
           </Button>
         </div>
       )}

@@ -130,7 +130,7 @@ export function CatalogProductsPage() {
           className="max-w-xs"
         />
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ms-auto flex items-center gap-3">
           <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
             <button
               onClick={() => setView("list")}
@@ -208,7 +208,7 @@ function ProductTable({
     <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
       <table className="w-full min-w-[720px] text-sm">
         <thead>
-          <tr className="border-b border-line bg-paper-raised text-left text-xs uppercase tracking-wide text-ink-soft">
+          <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
             <th className="w-14 px-4 py-3 font-medium" />
             <th className="px-4 py-3 font-medium">Product</th>
             <th className="px-4 py-3 font-medium">Status</th>
@@ -220,7 +220,7 @@ function ProductTable({
         <tbody>
           {products.map((product) => (
             <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
-              <td className="py-2 pl-4">
+              <td className="py-2 ps-4">
                 <ProductImage
                   media={primaryImage(product)}
                   alt={product.name}
@@ -235,7 +235,7 @@ function ProductTable({
                   {product.name}
                 </Link>
                 {formatProductCode(product.productCode) && (
-                  <span className="ml-1.5 text-xs text-ink-soft">
+                  <span className="ms-1.5 text-xs text-ink-soft">
                     · {formatProductCode(product.productCode)}
                   </span>
                 )}
@@ -246,7 +246,7 @@ function ProductTable({
               </td>
               <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
               <td className="px-4 py-3 text-ink-soft">{stockSummary(product)}</td>
-              <td className="px-4 py-3 text-right">
+              <td className="px-4 py-3 text-end">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -296,7 +296,7 @@ function ProductGrid({
                   {product.name}
                 </Link>
                 {formatProductCode(product.productCode) && (
-                  <span className="ml-1.5 text-xs text-ink-soft">
+                  <span className="ms-1.5 text-xs text-ink-soft">
                     · {formatProductCode(product.productCode)}
                   </span>
                 )}
