@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderBumpOffer } from "@/lib/mockCommerce";
+import type { OrderBumpOffer } from "@/lib/offers";
 import { useStore } from "@/lib/StoreContext";
 import { GiftIcon } from "../Icons";
 
@@ -56,9 +56,6 @@ export function OrderBumpCard({
         )}
         <span className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
           <span className="text-sm font-bold text-ink">{t.bump.only(money(bump.priceAmount))}</span>
-          {bump.compareAtAmount && (
-            <span className="text-xs text-ink-muted line-through">{money(bump.compareAtAmount)}</span>
-          )}
         </span>
       </span>
     </label>

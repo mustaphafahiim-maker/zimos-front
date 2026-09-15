@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
 import type { CollectionListQuery, ProductGridQuery, ProductRef } from "@store-builder/store-renderer";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { getOrderBump } from "@/lib/mockCommerce";
+import { getOrderBump } from "@/lib/offers";
 import { compareAtOf, defaultOfferOf, firstImage, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { ratingOf } from "@/lib/publicApi";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -165,16 +165,16 @@ export async function ProductCardBlock({
 export async function FeaturedProductBlock({
   productRef,
   workspaceId,
-  locale,
 }: {
   productRef: ProductRef;
   workspaceId: string;
+  /** Passed by the renderer for every block; the landing reads the locale from the store context. */
   locale: Locale;
 }) {
   const product = await resolveProduct(workspaceId, productRef.productId);
   if (!product) return null;
   const catalogue = await listProducts(workspaceId, 24);
-  const bump = getOrderBump(catalogue, [product.id], locale);
+  const bump = getOrderBump(catalogue, [product.id]);
 
   return (
     <div className="grid gap-6 rounded-2xl border border-line bg-paper-raised p-4 shadow-card sm:p-6 md:grid-cols-2 lg:gap-10">

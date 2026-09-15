@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 /**
  * Orders this browser placed in this store. There are no customer accounts:
  * the list is the per-workspace order snapshots saved after checkout
- * (lib/mockCommerce.ts `saveOrderSnapshot`), so only the list itself is a
+ * (lib/orders.ts `rememberOrder`, status fetched live), so only the list itself is a
  * client component — the heading and the device notice render on the server.
  */
 export default async function MyOrdersPage({ params }: { params: Params }) {

@@ -4,15 +4,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { parseMoney, type StorefrontProductDetail } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { formatPrice } from "@/lib/i18n";
-import {
-  bundlePricing,
-  bundleTiers,
-  estimateShipping,
-  tierForQuantity,
-  type OrderBumpOffer,
-  type OrderSnapshot,
-} from "@/lib/mockCommerce";
+import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/offers";
+import { useShippingQuote } from "@/lib/shipping";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -58,17 +51,16 @@ export function ProductLanding({
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
-  bump: OrderBumpOffer;
+  bump: OrderBumpOffer | null;
   countdownHours: number | null;
   rating?: ProductRating;
   /** "h2" when embedded in a page-builder section, so the page keeps one h1. */
   headingLevel?: "h1" | "h2";
 }) {
   const ProductTitle = headingLevel;
-  const { t, money, store } = useStore();
+  const { t, money } = useStore();
   const router = useRouter();
   const [client] = useState(() => createStorefrontApiClient());
-  const currency = store?.currency ?? product.variants[0]?.currency ?? "EGP";
 
   // --- variant selection -------------------------------------------------
   const groups = useMemo(() => optionGroups(product.variants), [product.variants]);
@@ -90,12 +82,12 @@ export function ProductLanding({
 
   // --- bundles / quantity --------------------------------------------------
   const tiers = useMemo(() => bundleTiers(product), [product]);
-  const realTiers = tiers.some((x) => x.real);
+  const realTiers = tiers.length > 0;
   const [quantity, setQuantity] = useState(1);
   const [realTierId, setRealTierId] = useState(() =>
     realTiers ? (product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? "") : ""
   );
-  const tier = realTiers ? tiers.find((x) => x.id === realTierId) : tierForQuantity(tiers, quantity);
+  const tier = realTiers ? tiers.find((x) => x.id === realTierId) : undefined;
   const unit = variantUnitPrice(product, variant);
   const pricing = bundlePricing(unit, quantity, tier);
   const compareAtUnit =
@@ -120,8 +112,14 @@ export function ProductLanding({
   const [submitting, setSubmitting] = useState(false);
   const [bumpOn, setBumpOn] = useState(false);
 
-  const shipping = estimateShipping(values.governorate);
-  const total = pricing.total + (bumpOn ? bump.priceAmount : 0) + (shipping ?? 0);
+  const bumpAmount = bumpOn && bump ? bump.priceAmount : 0;
+  const { amount: shipping } = useShippingQuote(
+    workspaceId,
+    values.governorate,
+    pricing.total + bumpAmount,
+    (tier ? tier.quantity : quantity) + (bumpOn && bump ? 1 : 0)
+  );
+  const total = pricing.total + bumpAmount + (shipping ?? 0);
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -145,24 +143,8 @@ export function ProductLanding({
       return;
     }
 
-    const systemNotes: string[] = [];
-    const extras: OrderSnapshot["extras"] = [];
-    if (tier && !tier.real && tier.discountPct > 0) {
-      // BACKEND: simulated bundle discount (see mockCommerce.bundleTiers).
-      systemNotes.push(
-        `Bundle offer: ${quantity} pcs -${tier.discountPct}% (shown ${formatPrice(pricing.total, currency, "en")})`
-      );
-      extras.push({ label: t.checkout.bundleSaving, amount: -pricing.saving });
-    }
-    if (bumpOn && !bump.real) {
-      systemNotes.push(`Order bump: ${bump.name} (+${formatPrice(bump.priceAmount, currency, "en")})`);
-      extras.push({ label: bump.name, amount: bump.priceAmount });
-    }
-
-    const bumpLine: OrderLine | null =
-      bumpOn && bump.real && bump.variantId ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
+    const bumpLine: OrderLine | null = bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
     const payload = toCheckoutPayload(values, {
-      systemNotes,
       item: bumpLine ? undefined : mainLine,
     });
 
@@ -175,7 +157,7 @@ export function ProductLanding({
         payload,
         lines: bumpLine ? [mainLine, bumpLine] : undefined,
       });
-      router.push(afterOrder(workspaceId, order, payload.contact.phone, extras));
+      router.push(afterOrder(workspaceId, order, payload.contact.phone));
     } catch (err) {
       setFormError(orderErrorMessage(err, t.form.errors.generic));
       setSubmitting(false);
@@ -275,10 +257,10 @@ export function ProductLanding({
         <fieldset>
           <legend className="mb-2 text-sm font-semibold text-ink">{t.product.chooseOffer}</legend>
           <div className="grid gap-2">
-            {tiers.map((x, i) => {
+            {tiers.map((x) => {
               const selected = tier?.id === x.id;
               const p = bundlePricing(unit, x.quantity, x);
-              const badge = x.real ? x.badge : i === 1 ? t.product.popular : i === 2 ? t.product.bestValue : null;
+              const badge = x.badge;
               return (
                 <label
                   key={x.id}
@@ -291,7 +273,7 @@ export function ProductLanding({
                     name="bundle"
                     value={x.id}
                     checked={selected}
-                    onChange={() => (x.real ? setRealTierId(x.id) : setQuantity(x.quantity))}
+                    onChange={() => setRealTierId(x.id)}
                     className="h-5 w-5 shrink-0 cursor-pointer accent-primary"
                   />
                   <span className="min-w-0 flex-1">
@@ -386,7 +368,7 @@ export function ProductLanding({
           <dl className="space-y-2 rounded-xl bg-zimos-cloud p-4 text-sm dark:bg-primary-soft">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">
-                {product.name} × {tier?.real ? tier.quantity : quantity}
+                {product.name} × {tier ? tier.quantity : quantity}
               </dt>
               <dd className="shrink-0 text-ink">{money(pricing.full)}</dd>
             </div>
@@ -396,7 +378,7 @@ export function ProductLanding({
                 <dd className="shrink-0">−{money(pricing.saving)}</dd>
               </div>
             )}
-            {bumpOn && (
+            {bumpOn && bump && (
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{bump.name}</dt>
                 <dd className="shrink-0 text-ink">{money(bump.priceAmount)}</dd>
@@ -414,7 +396,7 @@ export function ProductLanding({
             </div>
           </dl>
 
-          <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
+          {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
             {formError && (

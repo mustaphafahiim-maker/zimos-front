@@ -10,7 +10,7 @@ import { btnPrimary, btnPrimaryLg, btnSecondary, card, container, input, label a
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { getDictionary } from "@/lib/i18n";
-import { getOrderSnapshot, saveOrderSnapshot, snapshotFromOrder } from "@/lib/mockCommerce";
+import { getOrderRef, rememberOrder } from "@/lib/orders";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -232,7 +232,7 @@ function FunnelCheckout({
         payload,
         cartToken: useCartLines ? cart?.guestToken : undefined,
       });
-      saveOrderSnapshot(workspaceId, snapshotFromOrder(order, payload.contact.phone));
+      rememberOrder(workspaceId, order, payload.contact.phone);
       if (useCartLines) clearCart();
       setPlacedOrderId(order.id);
       setSubmitting(false);
@@ -395,8 +395,8 @@ export function FunnelOrders({
   useEffect(() => {
     const list: OrderRow[] = [];
     if (orderId) {
-      const snap = getOrderSnapshot(workspaceId, orderId);
-      list.push({ id: orderId, orderNumber: snap?.orderNumber ?? null, total: snap?.totalAmount ?? null, currency: snap?.currency, extra: false });
+      const ref = getOrderRef(workspaceId, orderId);
+      list.push({ id: orderId, orderNumber: ref?.orderNumber ?? null, total: null, extra: false });
     }
     for (const o of readFollowOns(sessionId)) {
       list.push({ id: o.id, orderNumber: o.orderNumber, total: o.totalAmount, extra: true });

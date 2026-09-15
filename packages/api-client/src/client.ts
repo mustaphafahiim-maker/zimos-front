@@ -74,6 +74,9 @@ import type {
   Variant,
   UpdateWebsitePagePayload,
   Website,
+  AnalyticsSummary,
+  ShopperOrder,
+  ShippingQuote,
   WebsiteDetail,
   WebsiteRevisionSummary,
   UpdateWebsitePayload,
@@ -1204,6 +1207,34 @@ export class ApiClient {
   // ---------------------------------------------------------------------
   // Public storefront — no auth, safe to call from the server or browser
   // ---------------------------------------------------------------------
+
+  /** Store performance from real orders (GET /workspaces/:ws/analytics/summary). */
+  async getAnalyticsSummary(workspaceId: string, range: { from?: string; to?: string } = {}) {
+    const { summary } = await this.request<{ summary: AnalyticsSummary }>(
+      `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...range })}`
+    );
+    return summary;
+  }
+
+  /** Shopper order lookup: needs the order number (or id) AND the phone used on it. */
+  async lookupStorefrontOrder(workspaceId: string, body: { orderNumber?: string; orderId?: string; phone: string }) {
+    const { order } = await this.request<{ order: ShopperOrder }>(`/store/${workspaceId}/orders/lookup`, {
+      method: "POST",
+      body,
+    });
+    return order;
+  }
+
+  /** Shipping price checkout would charge for a destination and cart shape. */
+  async quoteStorefrontShipping(
+    workspaceId: string,
+    params: { country?: string; region?: string; subtotal?: number; quantity?: number; weightGrams?: number }
+  ) {
+    const { quote } = await this.request<{ quote: ShippingQuote }>(
+      `/store/${workspaceId}/shipping/quote${buildQuery({ ...params })}`
+    );
+    return quote;
+  }
 
   async getStorefrontMeta(workspaceId: string) {
     const { store } = await this.request<{ store: StorefrontMeta }>(`/store/${workspaceId}`, {

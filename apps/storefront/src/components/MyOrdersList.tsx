@@ -1,41 +1,43 @@
 "use client";
 
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listOrderSnapshots, type OrderSnapshot } from "@/lib/mockCommerce";
+import type { ShopperOrder } from "@store-builder/api-client";
+import { createStorefrontApiClient } from "@/lib/apiClient";
+import { listOrderRefs, lookupOrder, type OrderRef } from "@/lib/orders";
 import { useStore } from "@/lib/StoreContext";
 import { btnPrimary, btnSecondary, card } from "./ui";
 
-function subscribe(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  return () => window.removeEventListener("storage", onChange);
-}
+type Row = { ref: OrderRef; order: ShopperOrder | null };
 
 /**
- * This device's saved orders. The server snapshot is null ("loading"), so SSR
- * and hydration agree; the list appears once the client reads localStorage and
- * stays in sync if another tab places an order.
+ * Orders placed from this browser, with their LIVE status from the server.
+ * The device only remembers which orders it placed; everything shown is real.
  */
 export function MyOrdersList({ workspaceId }: { workspaceId: string }) {
   const { t, money, intlLocale } = useStore();
   const base = `/store/${workspaceId}`;
+  const [rows, setRows] = useState<Row[] | null>(null);
 
-  // getSnapshot must return a stable reference while storage is unchanged.
-  const cache = useRef<{ key: string; value: OrderSnapshot[] } | null>(null);
-  const getSnapshot = useCallback(() => {
-    let raw = "";
-    try {
-      raw = window.localStorage.getItem(`zimos_orders_${workspaceId}`) ?? "";
-    } catch {
-      /* storage blocked */
+  useEffect(() => {
+    const refs = listOrderRefs(workspaceId);
+    if (refs.length === 0) {
+      // Device-local list read after mount on purpose so SSR and hydration agree.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRows([]);
+      return;
     }
-    const key = `${workspaceId}:${raw}`;
-    if (cache.current?.key !== key) cache.current = { key, value: listOrderSnapshots(workspaceId) };
-    return cache.current.value;
+    let cancelled = false;
+    const client = createStorefrontApiClient();
+    Promise.all(refs.map((ref) => lookupOrder(client, workspaceId, { orderId: ref.id, phone: ref.phone }).catch(() => null))).then((orders) => {
+      if (!cancelled) setRows(refs.map((ref, i) => ({ ref, order: orders[i] })));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId]);
-  const orders = useSyncExternalStore<OrderSnapshot[] | null>(subscribe, getSnapshot, () => null);
 
-  if (orders === null) {
+  if (rows === null) {
     return (
       <p role="status" className="mt-8 text-sm text-ink-soft">
         {t.myOrders.loading}
@@ -43,7 +45,7 @@ export function MyOrdersList({ workspaceId }: { workspaceId: string }) {
     );
   }
 
-  if (orders.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className={`${card} mt-8 p-6 text-center`} role="status">
         <p className="font-semibold text-ink">{t.myOrders.empty}</p>
@@ -59,38 +61,41 @@ export function MyOrdersList({ workspaceId }: { workspaceId: string }) {
 
   return (
     <ul className="mt-8 space-y-4">
-      {orders.map((order) => {
-        const count = order.items.reduce((n, item) => n + item.quantity, 0);
-        const created = new Date(order.createdAt);
+      {rows.map(({ ref, order }) => {
+        const createdAt = order?.createdAt ?? ref.createdAt;
+        const created = new Date(createdAt);
+        const count = order?.items.reduce((n, item) => n + item.quantity, 0) ?? 0;
         return (
-          <li key={order.id} className={`${card} p-5`}>
+          <li key={ref.id} className={`${card} p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-ink">
-                  <span dir="ltr">#{order.orderNumber}</span>
+                <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink">
+                  <span dir="ltr">#{ref.orderNumber}</span>
+                  {order && <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">{t.myOrders.stage[order.stage]}</span>}
                 </h2>
-                <p className="mt-1 text-sm text-ink-soft">
-                  {t.myOrders.placedOn}:{" "}
-                  <time dateTime={order.createdAt}>
-                    {Number.isNaN(created.getTime()) ? order.createdAt : date.format(created)}
-                  </time>
-                </p>
+                {createdAt && (
+                  <p className="mt-1 text-sm text-ink-soft">
+                    {t.myOrders.placedOn}: <time dateTime={createdAt}>{Number.isNaN(created.getTime()) ? createdAt : date.format(created)}</time>
+                  </p>
+                )}
                 {count > 0 && <p className="mt-0.5 text-sm text-ink-soft">{t.myOrders.items(count)}</p>}
+                {!order && <p className="mt-1 text-xs text-ink-muted">{t.myOrders.unavailable}</p>}
               </div>
-              <p className="text-sm text-ink-soft">
-                {t.myOrders.total}:{" "}
-                <span className="text-base font-bold text-ink">{money(order.totalAmount, order.currency)}</span>
-              </p>
+              {order && (
+                <p className="text-sm text-ink-soft">
+                  {t.myOrders.total}: <span className="text-base font-bold text-ink">{money(order.totalAmount, order.currency)}</span>
+                </p>
+              )}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Link
-                href={`${base}/orders/${encodeURIComponent(order.id)}?number=${encodeURIComponent(order.orderNumber)}`}
-                aria-label={t.myOrders.viewOrder(order.orderNumber)}
+                href={`${base}/orders/${encodeURIComponent(ref.id)}?number=${encodeURIComponent(ref.orderNumber)}`}
+                aria-label={t.myOrders.viewOrder(ref.orderNumber)}
                 className={btnSecondary}
               >
                 {t.thankYou.summary}
               </Link>
-              <Link href={`${base}/track`} aria-label={t.myOrders.trackOrder(order.orderNumber)} className={btnSecondary}>
+              <Link href={`${base}/track`} aria-label={t.myOrders.trackOrder(ref.orderNumber)} className={btnSecondary}>
                 {t.myOrders.track}
               </Link>
             </div>

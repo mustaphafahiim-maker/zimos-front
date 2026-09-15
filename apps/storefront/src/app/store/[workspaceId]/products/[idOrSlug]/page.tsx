@@ -11,7 +11,7 @@ import { ReviewsSection } from "@/components/product/Reviews";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
-import { getOrderBump } from "@/lib/mockCommerce";
+import { getOrderBump } from "@/lib/offers";
 import { firstImage, productImages } from "@/lib/product";
 import { ratingOf, reviewsOf } from "@/lib/publicApi";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -81,7 +81,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const bump = getOrderBump(catalogue, [product.id], locale);
+  const bump = getOrderBump(catalogue, [product.id]);
   const rating = ratingOf(product);
   const [themeTop, themeBottom] = await Promise.all([
     getThemePageTree(workspaceId, "productTop"),

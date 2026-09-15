@@ -2,8 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
+import type { ShopperOrder } from "@store-builder/api-client";
+import { createStorefrontApiClient } from "@/lib/apiClient";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
-import { trackOrder, type TrackResult } from "@/lib/mockCommerce";
+import { lookupOrder } from "@/lib/orders";
 import { useStore } from "@/lib/StoreContext";
 import { SearchIcon } from "./Icons";
 import { StatusTimeline } from "./StatusTimeline";
@@ -11,13 +13,14 @@ import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 export function TrackOrder() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { t, intlLocale } = useStore();
+  const { t, intlLocale, money } = useStore();
+  const [client] = useState(() => createStorefrontApiClient());
 
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
   const [errors, setErrors] = useState<{ phone?: string; number?: string }>({});
-  const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
-  const [result, setResult] = useState<TrackResult | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [result, setResult] = useState<ShopperOrder | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,9 +32,16 @@ export function TrackOrder() {
     if (next.number) return document.getElementById("track-number")?.focus();
 
     setStatus("loading");
-    setResult(await trackOrder(workspaceId, normalizePhone(phone), number));
-    setStatus("done");
+    try {
+      setResult(await lookupOrder(client, workspaceId, { orderNumber: number.replace(/^#/, "").trim(), phone: normalizePhone(phone) }));
+      setStatus("done");
+    } catch {
+      setResult(null);
+      setStatus("error");
+    }
   }
+
+  const latest = result?.shipments[result.shipments.length - 1];
 
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
@@ -75,7 +85,6 @@ export function TrackOrder() {
             <input
               id="track-number"
               type="text"
-              inputMode="text"
               autoComplete="off"
               dir="ltr"
               placeholder={t.track.orderNumberPlaceholder}
@@ -97,9 +106,8 @@ export function TrackOrder() {
         </form>
 
         <div aria-live="polite" className="mt-6">
-          {status === "done" && !result && (
-            <p className="rounded-2xl bg-danger-soft px-5 py-4 text-sm text-danger">{t.track.notFound}</p>
-          )}
+          {status === "error" && <p className="rounded-2xl bg-danger-soft px-5 py-4 text-sm text-danger">{t.form.errors.generic}</p>}
+          {status === "done" && !result && <p className="rounded-2xl bg-danger-soft px-5 py-4 text-sm text-danger">{t.track.notFound}</p>}
           {status === "done" && result && (
             <section className={`${card} p-5 sm:p-6`} aria-labelledby="track-status-title">
               <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
@@ -111,14 +119,26 @@ export function TrackOrder() {
                 </span>
               </div>
               <StatusTimeline stage={result.stage} />
-              {result.updatedAt && (
-                <p className="mt-5 text-xs text-ink-muted">
-                  {t.track.lastUpdate}:{" "}
-                  {new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }).format(
-                    new Date(result.updatedAt)
-                  )}
-                </p>
-              )}
+              <dl className="mt-5 space-y-1.5 border-t border-line pt-4 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{t.thankYou.total}</dt>
+                  <dd className="font-semibold text-ink">{money(result.totalAmount, result.currency)}</dd>
+                </div>
+                {latest?.trackingUrl && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-soft">{t.track.courier}</dt>
+                    <dd>
+                      <a href={latest.trackingUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">
+                        {t.track.courierLink}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              <p className="mt-4 text-xs text-ink-muted">
+                {t.track.lastUpdate}:{" "}
+                {new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(latest?.updatedAt ?? result.createdAt))}
+              </p>
             </section>
           )}
         </div>

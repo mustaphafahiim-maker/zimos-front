@@ -9,8 +9,8 @@ import { ArrowIcon, CashIcon } from "@/components/Icons";
 import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
-import { formatPrice } from "@/lib/i18n";
-import { estimateShipping, getOrderBump, type OrderSnapshot } from "@/lib/mockCommerce";
+import { getOrderBump } from "@/lib/offers";
+import { useShippingQuote } from "@/lib/shipping";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -31,7 +31,7 @@ export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const router = useRouter();
   const { cart, addItem, clearCart } = useCart();
-  const { t, money, locale } = useStore();
+  const { t, money } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
   const { products, byVariant, loaded } = useCatalog(workspaceId);
 
@@ -50,14 +50,19 @@ export default function CheckoutPage() {
   const bump = useMemo(() => {
     if (!loaded) return null;
     const inCart = new Set(items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[]);
-    return getOrderBump(products ?? [], [...inCart], locale);
+    return getOrderBump(products ?? [], [...inCart]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, products, locale]);
+  }, [loaded, products]);
 
   // Once the bump is a real line in the cart, the cart subtotal already has it.
   const bumpInTotals = bumpOn && bump && !bumpAdded ? bump.priceAmount : 0;
-  const shipping = estimateShipping(values.governorate);
   const subtotal = cart?.subtotal ?? 0;
+  const { amount: shipping } = useShippingQuote(
+    workspaceId,
+    values.governorate,
+    subtotal + bumpInTotals,
+    items.reduce((n, l) => n + l.quantity, 0) + (bumpInTotals > 0 ? 1 : 0)
+  );
   const total = subtotal + bumpInTotals + (shipping ?? 0);
 
   function onFieldChange(field: OrderFormField, value: string) {
@@ -82,28 +87,19 @@ export default function CheckoutPage() {
       return;
     }
 
-    const systemNotes: string[] = [];
-    const extras: OrderSnapshot["extras"] = [];
-
     setSubmitting(true);
     setFormError(null);
     try {
-      if (bumpOn && bump) {
-        if (bump.real && bump.variantId) {
-          if (!bumpAdded) {
-            await addItem(bump.variantId, bump.offerId, 1);
-            setBumpAdded(true);
-          }
-        } else {
-          systemNotes.push(`Order bump: ${bump.name} (+${formatPrice(bump.priceAmount, currency, "en")})`);
-          extras.push({ label: bump.name, amount: bump.priceAmount });
-        }
+      // The bump is a real product: it becomes a real cart line priced by the backend.
+      if (bumpOn && bump && !bumpAdded) {
+        await addItem(bump.variantId, bump.offerId, 1);
+        setBumpAdded(true);
       }
 
-      const payload = toCheckoutPayload(values, { discountCode: appliedCode, systemNotes });
+      const payload = toCheckoutPayload(values, { discountCode: appliedCode });
       const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
       clearCart();
-      router.push(afterOrder(workspaceId, order, payload.contact.phone, extras));
+      router.push(afterOrder(workspaceId, order, payload.contact.phone));
     } catch (err) {
       setFormError(orderErrorMessage(err, t.form.errors.generic));
       setSubmitting(false);

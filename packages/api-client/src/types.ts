@@ -1274,3 +1274,85 @@ export interface UpdateCustomerAddressPayload {
   notes?: string | null;
   isDefault?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Analytics (GET /workspaces/:ws/analytics/summary)
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsSummary {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  orders: {
+    placed: number;
+    pending: number;
+    confirmed: number;
+    rejected: number;
+    unreachable: number;
+    postponed: number;
+    cancelled: number;
+    delivered: number;
+    returned: number;
+  };
+  /** Percentages with one decimal, or null when there is nothing to divide by. */
+  rates: { confirmation: number | null; delivery: number | null; return: number | null };
+  revenue: {
+    gross: number;
+    delivered: number;
+    collected: number;
+    refunded: number;
+    shippingCharged: number;
+    discounts: number;
+    averageOrderValue: number;
+  };
+  profit: {
+    deliveredItemsRevenue: number;
+    discounts: number;
+    productCost: number;
+    refunded: number;
+    grossProfit: number;
+    /** % of delivered quantity that had a cost price set (null when nothing delivered). */
+    costCoverage: number | null;
+  };
+  series: Array<{ date: string; orders: number; revenue: number; delivered: number }>;
+  topProducts: Array<{ productId: string | null; name: string; quantity: number; revenue: number }>;
+  newCustomers: number;
+}
+
+// ---------------------------------------------------------------------------
+// Public order lookup & shipping quote (storefront)
+// ---------------------------------------------------------------------------
+
+export type ShopperOrderStage = "placed" | "confirmed" | "shipped" | "out_for_delivery" | "delivered" | "cancelled" | "returned";
+
+export interface ShopperOrder {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  stage: ShopperOrderStage;
+  confirmationState: string;
+  fulfillmentState: string;
+  paymentMethod: string;
+  currency: string;
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  contact: { fullName: string | null };
+  shippingCity: string | null;
+  items: Array<{
+    productId: string | null;
+    name: string;
+    options: Record<string, string> | null;
+    offerName: string | null;
+    quantity: number;
+    unitPriceAmount: number;
+    lineTotalAmount: number;
+  }>;
+  shipments: Array<{ carrierCode: string; status: string; trackingUrl: string | null; trackingCode: string | null; updatedAt: string }>;
+}
+
+export interface ShippingQuote {
+  amount: number;
+  currency: string;
+  freeShippingThreshold: number | null;
+}

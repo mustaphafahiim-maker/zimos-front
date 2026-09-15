@@ -1,5 +1,5 @@
 import { ApiError, type ApiClient, type CheckoutPayload, type Order } from "@store-builder/api-client";
-import { saveOrderSnapshot, snapshotFromOrder, type OrderSnapshot } from "./mockCommerce";
+import { rememberOrder } from "./orders";
 
 export interface OrderLine {
   variantId: string;
@@ -42,16 +42,11 @@ export async function placeCodOrder({
   return client.checkout(workspaceId, payload, cartToken);
 }
 
-/** Remember the order on this device (thank-you + tracking) and return the next URL. */
-export function afterOrder(
-  workspaceId: string,
-  order: Order,
-  phone: string,
-  extras: OrderSnapshot["extras"] = []
-): string {
-  saveOrderSnapshot(workspaceId, snapshotFromOrder(order, phone, extras));
+/** Remember the order reference on this device and return the thank-you URL. */
+export function afterOrder(workspaceId: string, order: Order, phone: string): string {
+  rememberOrder(workspaceId, order, phone);
   const q = new URLSearchParams({ number: order.orderNumber });
-  return `/store/${workspaceId}/offer/${order.id}?${q.toString()}`;
+  return `/store/${workspaceId}/orders/${order.id}?${q.toString()}`;
 }
 
 export function orderErrorMessage(err: unknown, fallback: string): string {

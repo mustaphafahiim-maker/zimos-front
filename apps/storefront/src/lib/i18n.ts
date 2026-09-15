@@ -242,6 +242,7 @@ const en = {
     acceptedHint: "We'll include it when we call to confirm your order.",
   },
   thankYou: {
+    otherDevice: "This order's details are saved on the device it was placed from. You can track it with the order number and phone.",
     title: "Thank you! Your order is placed",
     orderNumber: "Order number",
     received: "We received your order.",
@@ -268,6 +269,10 @@ const en = {
     moreFromStore: "More from the store",
   },
   timeline: {
+    cancelled: "This order was cancelled. Contact us if you need help.",
+    outForDelivery: "Out for delivery",
+    returned: "Returned",
+    returnedHint: "The order was returned to the store.",
     placed: "Order placed",
     placedHint: "We received your order.",
     confirmation: "Confirmation",
@@ -280,6 +285,8 @@ const en = {
     done: "Completed",
   },
   track: {
+    courier: "Courier",
+    courierLink: "Track with the courier",
     title: "Track your order",
     subtitle: "Enter the mobile number and order number you used.",
     orderNumber: "Order number",
@@ -300,6 +307,16 @@ const en = {
     rights: (store: string, year: number) => `© ${year} ${store}. All rights reserved.`,
   },
   myOrders: {
+    unavailable: "We couldn't load this order's status right now.",
+    stage: {
+      placed: "Placed",
+      confirmed: "Confirmed",
+      shipped: "Shipped",
+      out_for_delivery: "Out for delivery",
+      delivered: "Delivered",
+      cancelled: "Cancelled",
+      returned: "Returned",
+    },
     nav: "My orders",
     title: "My orders on this device",
     notice:
@@ -615,6 +632,7 @@ const ar: Dictionary = {
     acceptedHint: "هنأكده معاك في مكالمة تأكيد الطلب.",
   },
   thankYou: {
+    otherDevice: "تفاصيل الطلب ده محفوظة على الجهاز اللي اتعمل منه. تقدر تتابعه برقم الطلب والموبايل.",
     title: "شكرًا! طلبك اتسجل",
     orderNumber: "رقم الطلب",
     received: "استلمنا طلبك.",
@@ -640,6 +658,10 @@ const ar: Dictionary = {
     moreFromStore: "حاجات تانية من المتجر",
   },
   timeline: {
+    cancelled: "الطلب ده اتلغى. لو محتاج مساعدة كلمنا.",
+    outForDelivery: "مع المندوب في الطريق",
+    returned: "اترجع",
+    returnedHint: "الطلب اترجع للمتجر.",
     placed: "تم الطلب",
     placedHint: "استلمنا طلبك.",
     confirmation: "التأكيد",
@@ -652,6 +674,8 @@ const ar: Dictionary = {
     done: "مكتملة",
   },
   track: {
+    courier: "شركة الشحن",
+    courierLink: "تتبع مع شركة الشحن",
     title: "تتبع طلبك",
     subtitle: "اكتب رقم الموبايل ورقم الطلب اللي استخدمتهم.",
     orderNumber: "رقم الطلب",
@@ -672,6 +696,16 @@ const ar: Dictionary = {
     rights: (store, year) => `© ${year} ${store}. جميع الحقوق محفوظة.`,
   },
   myOrders: {
+    unavailable: "مش قادرين نجيب حالة الطلب ده دلوقتي.",
+    stage: {
+      placed: "اتسجل",
+      confirmed: "اتأكد",
+      shipped: "اتشحن",
+      out_for_delivery: "مع المندوب",
+      delivered: "وصل",
+      cancelled: "اتلغى",
+      returned: "اترجع",
+    },
     nav: "طلباتي",
     title: "طلباتي على الجهاز ده",
     notice:
