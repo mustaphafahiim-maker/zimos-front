@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
   Boxes,
@@ -9,10 +8,9 @@ import {
   Package,
   PhoneCall,
   Plus,
-  ShoppingCart,
   Tag,
   TrendingUp,
-  Users,
+  CheckCircle2,
   Workflow,
 } from "lucide-react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ZIMOS_PHRASES, cn } from "@store-builder/ui";
@@ -20,11 +18,12 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@store-builder/ui";
 import { formatMoney, formatNumber, formatPercentValue, formatShortDate } from "@/lib/format";
+import { deltaBp, pctRatio, useAnalyticsSummary } from "@/lib/analyticsSummary";
 import { fmt, useT } from "@/i18n/LocaleContext";
-import { mockApi } from "@/mock/api";
 import { listInventoryItems } from "@/pages/inventory/inventoryAdapter";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
 import { HBarList, LineAreaChart } from "@/components/charts";
 import { RangeSwitch, type AnalyticsRange } from "@/components/RangeSwitch";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -40,82 +39,65 @@ const STRINGS = {
     connectPixel: "Connect pixel",
     revenue: "Revenue",
     orders: "Orders",
-    conversion: "Conversion rate",
+    confirmation: "Confirmation rate",
     aov: "Avg order value",
     revenueDesc: "Daily revenue over the selected range.",
+    noRevenue: "No orders in this range yet.",
     viewReports: "View reports",
     pipeline: "Order pipeline",
-    pipelineDesc: "Where your orders are right now.",
+    pipelineDesc: "Where the orders from this range stand now.",
     openBoard: "Open board",
-    stageNew: "New",
     stageAwaiting: "Awaiting confirmation",
     stageConfirmed: "Confirmed",
-    stageShipped: "Shipped",
     stageDelivered: "Delivered",
     stageReturned: "Returned",
+    stageCancelled: "Cancelled",
     attention: "Needs attention",
     attentionDesc: "Things worth a look today.",
     awaitingLabel: "Orders awaiting confirmation",
     awaitingHint: "Call or WhatsApp customers to confirm COD orders.",
-    flaggedLabel: "Orders flagged by fraud rules",
-    flaggedHint: "Review before shipping to avoid fake orders.",
-    abandonedLabel: "Abandoned checkouts to recover",
-    abandonedHint: "Customers who left contact details but did not finish.",
     lowStockLabel: "Variants low on stock",
     lowStockHint: "Below their low-stock threshold.",
     topProducts: "Top products",
     topProductsDesc: "By revenue in this range.",
+    noProducts: "No product sales in this range yet.",
     units: "{count} units",
-    bySource: "Sales by source",
-    bySourceDesc: "Where orders come from.",
-    ordersCount: "{count} orders",
   },
   ar: {
-    welcome: "مرحبًا بعودتك",
-    welcomeNamed: "مرحبًا بعودتك، {name}",
-    intro: "إليك نظرة سريعة على أداء متجرك.",
+    welcome: "أهلًا بيك تاني",
+    welcomeNamed: "أهلًا بيك تاني، {name}",
+    intro: "دي نظرة سريعة على أداء متجرك.",
     createFunnel: "إنشاء مسار بيع",
     addProduct: "إضافة منتج",
     createDiscount: "إنشاء خصم",
     connectPixel: "ربط البكسل",
-    revenue: "الإيرادات",
+    revenue: "المبيعات",
     orders: "الطلبات",
-    conversion: "معدل التحويل",
+    confirmation: "نسبة التأكيد",
     aov: "متوسط قيمة الطلب",
-    revenueDesc: "الإيرادات اليومية خلال الفترة المحددة.",
+    revenueDesc: "المبيعات كل يوم في الفترة اللي اخترتها.",
+    noRevenue: "مفيش طلبات في الفترة دي لسه.",
     viewReports: "عرض التقارير",
     pipeline: "مسار الطلبات",
-    pipelineDesc: "أين تقف طلباتك الآن.",
+    pipelineDesc: "طلبات الفترة دي وصلت لفين.",
     openBoard: "فتح اللوحة",
-    stageNew: "جديد",
-    stageAwaiting: "بانتظار التأكيد",
-    stageConfirmed: "مؤكَّد",
-    stageShipped: "تم الشحن",
-    stageDelivered: "تم التوصيل",
+    stageAwaiting: "مستني التأكيد",
+    stageConfirmed: "متأكد",
+    stageDelivered: "اتسلّم",
     stageReturned: "مرتجع",
-    attention: "يحتاج إلى متابعة",
-    attentionDesc: "أمور تستحق نظرة اليوم.",
-    awaitingLabel: "طلبات بانتظار التأكيد",
-    awaitingHint: "تواصل مع العملاء هاتفيًا أو عبر واتساب لتأكيد طلبات الدفع عند الاستلام.",
-    flaggedLabel: "طلبات علّمتها قواعد الاحتيال",
-    flaggedHint: "راجعها قبل الشحن لتجنّب الطلبات الوهمية.",
-    abandonedLabel: "سلات متروكة يمكن استردادها",
-    abandonedHint: "عملاء تركوا بيانات التواصل ولم يُكملوا الطلب.",
-    lowStockLabel: "خيارات منتجات بمخزون منخفض",
-    lowStockHint: "أقل من حد التنبيه المحدد للمخزون.",
-    topProducts: "المنتجات الأكثر مبيعًا",
-    topProductsDesc: "حسب الإيرادات خلال هذه الفترة.",
+    stageCancelled: "ملغي",
+    attention: "محتاج متابعة",
+    attentionDesc: "حاجات تستاهل تبص عليها النهارده.",
+    awaitingLabel: "طلبات مستنية التأكيد",
+    awaitingHint: "كلّم العملاء أو ابعتلهم واتساب عشان تأكد طلبات الدفع عند الاستلام.",
+    lowStockLabel: "منتجات مخزونها قليل",
+    lowStockHint: "أقل من حد التنبيه بتاع المخزون.",
+    topProducts: "أكتر المنتجات مبيعًا",
+    topProductsDesc: "حسب المبيعات في الفترة دي.",
+    noProducts: "مفيش مبيعات منتجات في الفترة دي لسه.",
     units: "{count} قطعة",
-    bySource: "المبيعات حسب المصدر",
-    bySourceDesc: "من أين تأتي طلباتك.",
-    ordersCount: "{count} طلب",
   },
 };
-
-function deltaBp(current: number, previous: number): number | null {
-  if (previous <= 0) return null;
-  return Math.round(((current - previous) / previous) * 10000);
-}
 
 export function DashboardHomePage() {
   const t = useT(STRINGS);
@@ -123,22 +105,14 @@ export function DashboardHomePage() {
   const workspaceId = useWorkspaceId();
   const [range, setRange] = useState<AnalyticsRange>("30d");
 
-  const analytics = useAsync(() => mockApi.getAnalytics(workspaceId, range), [workspaceId, range]);
+  const analytics = useAnalyticsSummary(workspaceId, range);
 
-  const attention = useAsync(
+  // Real stock (same source as the Inventory page); a failure hides the item.
+  const lowStock = useAsync(
     () =>
-      Promise.all([
-        mockApi.listFlagged(workspaceId),
-        mockApi.listAbandoned(workspaceId),
-        // Real stock (same source as the Inventory page); a failure only hides the count.
-        listInventoryItems(workspaceId).catch(() => []),
-      ]).then(
-        ([flagged, abandoned, inventory]) => ({
-          flagged: flagged.filter((f) => f.status === "flagged").length,
-          abandoned: abandoned.filter((a) => a.recoveryStatus === "not_contacted").length,
-          lowStock: inventory.filter((r) => r.available <= r.lowStockThreshold).length,
-        })
-      ),
+      listInventoryItems(workspaceId)
+        .then((inventory) => inventory.filter((r) => r.available <= r.lowStockThreshold).length)
+        .catch(() => null),
     [workspaceId]
   );
 
@@ -149,50 +123,41 @@ export function DashboardHomePage() {
     { label: t.connectPixel, to: "/marketing", icon: <Megaphone /> },
   ];
 
-  const a = analytics.data;
+  const a = analytics.data?.current ?? null;
+  const prev = analytics.data?.previous ?? null;
   const currency = a?.currency ?? "EGP";
 
   const pipeline = a
     ? [
-        { label: t.stageNew, value: a.pipeline.newOrders, tone: "text-ink" },
-        { label: t.stageAwaiting, value: a.pipeline.awaitingConfirmation, tone: "text-warning" },
-        { label: t.stageConfirmed, value: a.pipeline.confirmed, tone: "text-info" },
-        { label: t.stageShipped, value: a.pipeline.shipped, tone: "text-info" },
-        { label: t.stageDelivered, value: a.pipeline.delivered, tone: "text-success" },
-        { label: t.stageReturned, value: a.pipeline.returned, tone: "text-danger" },
+        { label: t.stageAwaiting, value: a.orders.pending, tone: "text-warning" },
+        { label: t.stageConfirmed, value: a.orders.confirmed, tone: "text-info" },
+        { label: t.stageDelivered, value: a.orders.delivered, tone: "text-success" },
+        { label: t.stageReturned, value: a.orders.returned, tone: "text-danger" },
+        { label: t.stageCancelled, value: a.orders.cancelled, tone: "text-ink-soft" },
       ]
     : [];
 
-  const attentionItems = [
-    {
+  const attentionItems: Array<{ label: string; count: string; active: boolean; to: string; icon: ReactNode; hint: string }> = [];
+  if (a) {
+    attentionItems.push({
       label: t.awaitingLabel,
-      count: a?.pipeline.awaitingConfirmation ?? 0,
+      count: formatNumber(a.orders.pending),
+      active: a.orders.pending > 0,
       to: "/confirmation-queue",
       icon: <PhoneCall />,
       hint: t.awaitingHint,
-    },
-    {
-      label: t.flaggedLabel,
-      count: attention.data?.flagged ?? 0,
-      to: "/fraud",
-      icon: <AlertTriangle />,
-      hint: t.flaggedHint,
-    },
-    {
-      label: t.abandonedLabel,
-      count: attention.data?.abandoned ?? 0,
-      to: "/abandoned-checkouts",
-      icon: <ShoppingCart />,
-      hint: t.abandonedHint,
-    },
-    {
+    });
+  }
+  if (lowStock.loading || lowStock.data !== null) {
+    attentionItems.push({
       label: t.lowStockLabel,
-      count: attention.data?.lowStock ?? 0,
+      count: lowStock.loading ? "…" : formatNumber(lowStock.data ?? 0),
+      active: (lowStock.data ?? 0) > 0,
       to: "/inventory",
       icon: <Boxes />,
       hint: t.lowStockHint,
-    },
-  ];
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -228,32 +193,29 @@ export function DashboardHomePage() {
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <KpiCard
                 label={t.revenue}
-                value={formatMoney(a.totals.revenueAmount, currency)}
-                deltaBasisPoints={deltaBp(a.totals.revenueAmount, a.previous.revenueAmount)}
+                value={formatMoney(a.revenue.gross, currency)}
+                deltaBasisPoints={deltaBp(a.revenue.gross, prev?.revenue.gross)}
                 icon={<TrendingUp />}
                 to="/analytics"
               />
               <KpiCard
                 label={t.orders}
-                value={formatNumber(a.totals.orders)}
-                deltaBasisPoints={deltaBp(a.totals.orders, a.previous.orders)}
+                value={formatNumber(a.orders.placed)}
+                deltaBasisPoints={deltaBp(a.orders.placed, prev?.orders.placed)}
                 icon={<Package />}
                 to="/orders"
               />
               <KpiCard
-                label={t.conversion}
-                value={formatPercentValue(a.totals.conversionBasisPoints / 10000, 2)}
-                deltaBasisPoints={deltaBp(a.totals.conversionBasisPoints, a.previous.conversionBasisPoints)}
-                icon={<Users />}
-                to="/analytics"
+                label={t.confirmation}
+                value={formatPercentValue(pctRatio(a.rates.confirmation))}
+                deltaBasisPoints={deltaBp(a.rates.confirmation, prev?.rates.confirmation)}
+                icon={<CheckCircle2 />}
+                to="/confirmation-queue"
               />
               <KpiCard
                 label={t.aov}
-                value={formatMoney(a.totals.averageOrderAmount, currency)}
-                deltaBasisPoints={deltaBp(
-                  a.totals.averageOrderAmount,
-                  a.previous.orders > 0 ? Math.round(a.previous.revenueAmount / a.previous.orders) : 0
-                )}
+                value={formatMoney(a.revenue.averageOrderValue, currency)}
+                deltaBasisPoints={deltaBp(a.revenue.averageOrderValue, prev?.revenue.averageOrderValue)}
                 icon={<BarChart3 />}
               />
             </div>
@@ -271,11 +233,17 @@ export function DashboardHomePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <LineAreaChart
-                  points={a.daily.map((d) => ({ label: formatShortDate(d.date), value: d.revenueAmount }))}
-                  format={(v) => formatMoney(v, currency)}
-                  height={200}
-                />
+                {a.orders.placed === 0 || a.series.length === 0 ? (
+                  <EmptyState title={t.noRevenue} />
+                ) : (
+                  <div dir="ltr">
+                    <LineAreaChart
+                      points={a.series.map((d) => ({ label: formatShortDate(d.date), value: d.revenue }))}
+                      format={(v) => formatMoney(v, currency)}
+                      height={200}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -295,7 +263,7 @@ export function DashboardHomePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                   {pipeline.map((p) => (
                     <Link
                       key={p.label}
@@ -310,8 +278,8 @@ export function DashboardHomePage() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <Card className="lg:col-span-1">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
                 <CardHeader>
                   <CardTitle>{t.attention}</CardTitle>
                   <CardDescription>{t.attentionDesc}</CardDescription>
@@ -324,7 +292,7 @@ export function DashboardHomePage() {
                           <span
                             className={cn(
                               "flex size-8 shrink-0 items-center justify-center rounded-[10px] [&>svg]:size-4",
-                              item.count > 0 ? "bg-primary-soft text-primary" : "bg-paper text-ink-muted"
+                              item.active ? "bg-primary-soft text-primary" : "bg-paper text-ink-muted"
                             )}
                           >
                             {item.icon}
@@ -335,9 +303,7 @@ export function DashboardHomePage() {
                             </span>
                             <span className="block text-xs text-ink-muted">{item.hint}</span>
                           </span>
-                          <span className="tabular shrink-0 text-lg font-semibold text-ink">
-                            {attention.loading && item.to !== "/confirmation-queue" ? "…" : formatNumber(item.count)}
-                          </span>
+                          <span className="tabular shrink-0 text-lg font-semibold text-ink">{item.count}</span>
                         </Link>
                       </li>
                     ))}
@@ -351,30 +317,18 @@ export function DashboardHomePage() {
                   <CardDescription>{t.topProductsDesc}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <HBarList
-                    rows={a.topProducts.map((p) => ({
-                      label: p.name,
-                      value: p.revenueAmount,
-                      caption: `${fmt(t.units, { count: formatNumber(p.units) })} · ${formatMoney(p.revenueAmount, currency)}`,
-                    }))}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t.bySource}</CardTitle>
-                  <CardDescription>{t.bySourceDesc}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <HBarList
-                    color="var(--color-accent)"
-                    rows={a.bySource.map((s) => ({
-                      label: s.source,
-                      value: s.orders,
-                      caption: fmt(t.ordersCount, { count: formatNumber(s.orders) }),
-                    }))}
-                  />
+                  {a.topProducts.length === 0 ? (
+                    <EmptyState title={t.noProducts} />
+                  ) : (
+                    <HBarList
+                      rows={a.topProducts.map((p) => ({
+                        label: p.name,
+                        value: p.revenue,
+                        caption: `${fmt(t.units, { count: formatNumber(p.quantity) })} · ${formatMoney(p.revenue, currency)}`,
+                      }))}
+                      format={(v) => formatMoney(v, currency)}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </div>
