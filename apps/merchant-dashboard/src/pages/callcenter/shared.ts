@@ -1,4 +1,53 @@
-import type { Agent, CallLog, CallOutcome, ConfirmationItem } from "@/mock/types2";
+/* Call-center view-model types (local; mirror the workstation UI). */
+export type CallOutcome = "confirmed" | "no_answer" | "busy" | "cancelled" | "postponed" | "wrong_number" | "duplicate";
+
+export interface CallLog {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  agentId: string;
+  agentName: string;
+  startedAt: string;
+  durationSeconds: number;
+  outcome: CallOutcome;
+  note: string | null;
+  recordingUrl: string | null;
+}
+
+export interface ConfirmationItem {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  phone: string;
+  alternatePhone: string | null;
+  governorate: string;
+  address: string;
+  items: Array<{ productName: string; variant: string | null; quantity: number; unitPriceAmount: number }>;
+  totalAmount: number;
+  shippingAmount: number;
+  currency: string;
+  source: string;
+  attempts: number;
+  lastOutcome: CallOutcome | null;
+  nextAttemptAt: string | null;
+  priority: "normal" | "high" | "flagged";
+  assignedAgentId: string | null;
+  createdAt: string;
+  customerHistory: { totalOrders: number; delivered: number; returned: number; reliabilityScore: number };
+  riskFlags: string[];
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  status: "online" | "on_call" | "break" | "offline";
+  callsToday: number;
+  confirmedToday: number;
+  avgHandleSeconds: number;
+  extension: string;
+}
+
 import type { Locale } from "@/i18n/LocaleContext";
 
 export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";

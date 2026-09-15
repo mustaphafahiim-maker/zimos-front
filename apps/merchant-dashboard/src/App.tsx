@@ -46,37 +46,27 @@ const ConfirmationQueuePage = page(() => import("@/pages/confirmation/Confirmati
 const CallCenterPage = page(() => import("@/pages/callcenter/CallCenterPage"), "CallCenterPage");
 const AgentsPage = page(() => import("@/pages/callcenter/AgentsPage"), "AgentsPage");
 const CallLogsPage = page(() => import("@/pages/callcenter/CallLogsPage"), "CallLogsPage");
-const InboxPage = page(() => import("@/pages/inbox/InboxPage"), "InboxPage");
-const WaBotPage = page(() => import("@/pages/inbox/WaBotPage"), "WaBotPage");
 const ReturnsPage = page(() => import("@/pages/returns/ReturnsPage"), "ReturnsPage");
 const FraudProtectionPage = page(() => import("@/pages/fraud/FraudProtectionPage"), "FraudProtectionPage");
 
 // Money
 const ProfitPage = page(() => import("@/pages/profit/ProfitPage"), "ProfitPage");
-const SettlementsPage = page(() => import("@/pages/settlements/SettlementsPage"), "SettlementsPage");
-const PaymentsPage = page(() => import("@/pages/payments/PaymentsPage"), "PaymentsPage");
 
 // Catalog
 const CatalogProductsPage = page(() => import("@/pages/catalog/CatalogProductsPage"), "CatalogProductsPage");
 const CollectionsPage = page(() => import("@/pages/catalog/CollectionsPage"), "CollectionsPage");
 const ProductEditPage = page(() => import("@/pages/catalog/ProductEditPage"), "ProductEditPage");
 const InventoryPage = page(() => import("@/pages/inventory/InventoryPage"), "InventoryPage");
-const SuppliersPage = page(() => import("@/pages/suppliers/SuppliersPage"), "SuppliersPage");
 const CustomersPage = page(() => import("@/pages/customers/CustomersPage"), "CustomersPage");
 const CustomerDetailPage = page(() => import("@/pages/customers/CustomerDetailPage"), "CustomerDetailPage");
 const ReviewsPage = page(() => import("@/pages/reviews/ReviewsPage"), "ReviewsPage");
 
 // Grow
-const AdsPage = page(() => import("@/pages/ads/AdsPage"), "AdsPage");
-const CampaignDetailPage = page(() => import("@/pages/ads/CampaignDetailPage"), "CampaignDetailPage");
 const FunnelsPage = page(() => import("@/pages/funnels/FunnelsPage"), "FunnelsPage");
 const FunnelEditorPage = page(() => import("@/pages/funnels/FunnelEditorPage"), "FunnelEditorPage");
 const OffersPage = page(() => import("@/pages/offers/OffersPage"), "OffersPage");
-const ExperimentsPage = page(() => import("@/pages/experiments/ExperimentsPage"), "ExperimentsPage");
 const DiscountsPage = page(() => import("@/pages/discounts/DiscountsPage"), "DiscountsPage");
 const MarketingPage = page(() => import("@/pages/marketing/MarketingPage"), "MarketingPage");
-const AutomationsPage = page(() => import("@/pages/automations/AutomationsPage"), "AutomationsPage");
-const AffiliatesPage = page(() => import("@/pages/affiliates/AffiliatesPage"), "AffiliatesPage");
 
 // Storefront
 const WebsitePage = page(() => import("@/pages/website/WebsitePage"), "WebsitePage");
@@ -87,7 +77,6 @@ const ShippingTaxPage = page(() => import("@/pages/shipping/ShippingTaxPage"), "
 
 // Insights
 const AnalyticsPage = page(() => import("@/pages/analytics/AnalyticsPage"), "AnalyticsPage");
-const AppsPage = page(() => import("@/pages/apps/AppsPage"), "AppsPage");
 const SettingsPage = page(() => import("@/pages/settings/SettingsPage"), "SettingsPage");
 
 /** Full-screen loader for pages rendered outside the dashboard shell. */
@@ -148,16 +137,12 @@ export default function App() {
                       <Route path="/call-center" element={<InShell><CallCenterPage /></InShell>} />
                       <Route path="/call-center/agents" element={<InShell><AgentsPage /></InShell>} />
                       <Route path="/call-center/logs" element={<InShell><CallLogsPage /></InShell>} />
-                      <Route path="/inbox" element={<InShell><InboxPage /></InShell>} />
-                      <Route path="/inbox/bot" element={<InShell><WaBotPage /></InShell>} />
                       <Route path="/abandoned-checkouts" element={<InShell><AbandonedCheckoutsPage /></InShell>} />
                       <Route path="/returns" element={<InShell><ReturnsPage /></InShell>} />
                       <Route path="/fraud" element={<InShell><FraudProtectionPage /></InShell>} />
 
                       {/* Money */}
                       <Route path="/profit" element={<InShell><ProfitPage /></InShell>} />
-                      <Route path="/settlements" element={<InShell><SettlementsPage /></InShell>} />
-                      <Route path="/payments" element={<InShell><PaymentsPage /></InShell>} />
 
                       {/* Catalog */}
                       <Route path="/catalog" element={<InShell><CatalogProductsPage /></InShell>} />
@@ -165,22 +150,16 @@ export default function App() {
                       <Route path="/catalog/new" element={<InShell><ProductEditPage /></InShell>} />
                       <Route path="/catalog/:productId" element={<InShell><ProductEditPage /></InShell>} />
                       <Route path="/inventory" element={<InShell><InventoryPage /></InShell>} />
-                      <Route path="/suppliers" element={<InShell><SuppliersPage /></InShell>} />
                       <Route path="/customers" element={<InShell><CustomersPage /></InShell>} />
                       <Route path="/customers/:customerId" element={<InShell><CustomerDetailPage /></InShell>} />
                       <Route path="/reviews" element={<InShell><ReviewsPage /></InShell>} />
 
                       {/* Grow */}
-                      <Route path="/ads" element={<InShell><AdsPage /></InShell>} />
-                      <Route path="/ads/:campaignId" element={<InShell><CampaignDetailPage /></InShell>} />
                       <Route path="/funnels" element={<InShell><FunnelsPage /></InShell>} />
                       <Route path="/funnels/:funnelId" element={<InShell><FunnelEditorPage /></InShell>} />
                       <Route path="/offers" element={<InShell><OffersPage /></InShell>} />
-                      <Route path="/experiments" element={<InShell><ExperimentsPage /></InShell>} />
                       <Route path="/discounts" element={<InShell><DiscountsPage /></InShell>} />
                       <Route path="/marketing" element={<InShell><MarketingPage /></InShell>} />
-                      <Route path="/automations" element={<InShell><AutomationsPage /></InShell>} />
-                      <Route path="/affiliates" element={<InShell><AffiliatesPage /></InShell>} />
 
                       {/* Storefront */}
                       <Route path="/website" element={<InShell><WebsitePage /></InShell>} />
@@ -190,7 +169,6 @@ export default function App() {
 
                       {/* Insights */}
                       <Route path="/analytics" element={<InShell><AnalyticsPage /></InShell>} />
-                      <Route path="/apps" element={<InShell><AppsPage /></InShell>} />
                       <Route path="/settings" element={<InShell><SettingsPage /></InShell>} />
 
                       <Route path="*" element={<NotFoundPage inShell />} />

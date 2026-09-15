@@ -10,7 +10,6 @@ import {
   Plus,
   Search,
   SearchX,
-  Sparkles,
   SunMoon,
   Tag,
   Workflow,
@@ -143,7 +142,6 @@ function PaletteDialog({ onClose, recent }: { onClose: () => void; recent: strin
       { id: "a-funnel", section: "actions", label: { en: "Create funnel", ar: "إنشاء مسار بيع" }, icon: Workflow, run: go("/funnels") },
       { id: "a-product", section: "actions", label: { en: "Add product", ar: "إضافة منتج" }, icon: Plus, run: go("/catalog/new") },
       { id: "a-discount", section: "actions", label: { en: "Create discount", ar: "إنشاء خصم" }, icon: Tag, run: go("/discounts") },
-      { id: "a-automation", section: "actions", label: { en: "New automation", ar: "أتمتة جديدة" }, icon: Sparkles, run: go("/automations") },
       { id: "a-callcenter", section: "actions", label: { en: "Open call center", ar: "فتح مركز الاتصال" }, icon: Headphones, run: go("/call-center") },
       { id: "a-theme", section: "actions", label: { en: "Toggle theme", ar: "تبديل المظهر" }, icon: SunMoon, run: toggleTheme },
       {

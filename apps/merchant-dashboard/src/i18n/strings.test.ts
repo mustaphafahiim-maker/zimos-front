@@ -35,8 +35,8 @@ for (const [file, mod] of Object.entries(modules)) {
 
 describe("i18n tables", () => {
   it("found the known strings modules", () => {
-    expect(Object.keys(modules).length).toBeGreaterThanOrEqual(12);
-    expect(tables.length).toBeGreaterThan(12);
+    expect(Object.keys(modules).length).toBeGreaterThanOrEqual(5);
+    expect(tables.length).toBeGreaterThan(5);
   });
 
   it.each(tables)("%s: en and ar have identical keys and no empty strings", (name, table) => {

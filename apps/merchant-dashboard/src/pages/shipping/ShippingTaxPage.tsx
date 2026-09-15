@@ -32,7 +32,6 @@ import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
-import { CarriersSection } from "./CarriersSection";
 import { RATE_TYPE_LABEL, SHIPPING_TAX_STRINGS, type ShippingTaxStrings } from "./ShippingTaxPage.strings";
 
 /** Unicode isolates so LTR runs like "2–5" keep their order inside Arabic text. */
@@ -168,18 +167,13 @@ function ShippingTaxBody() {
     <div className="max-w-5xl space-y-8">
       <PageHeader title={t.pageTitle} description={t.pageDescription} />
 
-      <Tabs defaultValue="carriers">
+      <Tabs defaultValue="zones">
         <div className="-mx-1 overflow-x-auto px-1">
           <TabsList>
-            <TabsTrigger value="carriers">{t.tabCarriers}</TabsTrigger>
             <TabsTrigger value="zones">{t.tabZones}</TabsTrigger>
             <TabsTrigger value="tax">{t.tabTax}</TabsTrigger>
           </TabsList>
         </div>
-
-        <TabsContent value="carriers" className="pt-4">
-          <CarriersSection />
-        </TabsContent>
 
         <TabsContent value="zones" className="space-y-12 pt-4">
           <StoreShippingTaxSettings

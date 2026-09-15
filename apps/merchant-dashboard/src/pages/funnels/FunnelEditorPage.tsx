@@ -1025,9 +1025,6 @@ function StepInspector({
         {step.experimentId && (
           <div className="rounded-2xl border border-line bg-paper p-3">
             <p className="text-xs text-ink-soft">{t.abRunning}</p>
-            <Link to="/experiments" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              <FlaskConical className="size-3.5" aria-hidden /> {t.manageExperiments}
-            </Link>
           </div>
         )}
 

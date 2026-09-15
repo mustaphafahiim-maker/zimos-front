@@ -9,7 +9,7 @@ function renderShell() {
     <Routes>
       <Route element={<DashboardLayout />}>
         <Route path="/orders" element={<p>Orders content</p>} />
-        <Route path="/settlements" element={<p>Settlements content</p>} />
+        <Route path="/shipping" element={<p>Shipping content</p>} />
       </Route>
     </Routes>,
     { route: "/orders" }
@@ -41,12 +41,12 @@ describe("DashboardLayout", () => {
     const input = await screen.findByPlaceholderText("Search pages and actions…");
     expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
 
-    await user.type(input, "settlements");
-    expect(screen.getByRole("option", { name: /COD settlements/ })).toBeInTheDocument();
+    await user.type(input, "shipping");
+    expect(screen.getByRole("option", { name: /Shipping/ })).toBeInTheDocument();
     await user.keyboard("{Enter}");
 
-    expect(await screen.findByText("Settlements content")).toBeInTheDocument();
-    expect(currentPath()).toBe("/settlements");
+    expect(await screen.findByText("Shipping content")).toBeInTheDocument();
+    expect(currentPath()).toBe("/shipping");
     expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
   });
 });

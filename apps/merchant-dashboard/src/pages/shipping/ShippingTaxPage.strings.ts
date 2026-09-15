@@ -5,7 +5,6 @@ export const SHIPPING_TAX_STRINGS = {
   en: {
     pageTitle: "Shipping & carriers",
     pageDescription: "Carrier accounts, shipping zones and their rates, plus the tax rates applied at checkout.",
-    tabCarriers: "Carriers",
     tabZones: "Zones & rates",
     tabTax: "Tax",
 
@@ -126,7 +125,6 @@ export const SHIPPING_TAX_STRINGS = {
   ar: {
     pageTitle: "الشحن وشركات الشحن",
     pageDescription: "حسابات شركات الشحن، ومناطق الشحن وأسعارها، ونسب الضرائب المطبّقة عند إتمام الطلب.",
-    tabCarriers: "شركات الشحن",
     tabZones: "مناطق الشحن والأسعار",
     tabTax: "الضرائب",
 

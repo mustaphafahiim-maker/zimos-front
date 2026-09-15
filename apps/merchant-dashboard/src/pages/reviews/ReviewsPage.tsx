@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Label, cn } from "@store-builder/ui";
-import { ArrowRight, BadgeCheck, Check, Clock, Info, MessageCircle, Star, X } from "lucide-react";
+import { BadgeCheck, Check, Clock, Info, MessageCircle, Star, X } from "lucide-react";
 import { reviewsList, reviewsModerate, type ReviewDTO, type ReviewStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -50,7 +50,6 @@ const STRINGS = {
     askToggle: "Ask for a review 2 days after delivery",
     askToggleHint: "Only for delivered COD orders, once per order.",
     notSavedHint: "This setting is not saved yet — automatic review requests are coming soon.",
-    editInAutomations: "Edit the message in Automations",
   },
   ar: {
     title: "التقييمات",
@@ -85,7 +84,6 @@ const STRINGS = {
     askToggle: "اطلب تقييمًا بعد يومين من التسليم",
     askToggleHint: "لطلبات الدفع عند الاستلام المُسلَّمة فقط، مرة واحدة لكل طلب.",
     notSavedHint: "هذا الإعداد لا يُحفظ بعد — طلبات التقييم التلقائية قادمة قريبًا.",
-    editInAutomations: "عدّل الرسالة من الأتمتة",
   },
 } satisfies Messages;
 
@@ -309,10 +307,6 @@ export function ReviewsPage() {
           <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
             <Info className="mt-0.5 size-3 shrink-0" aria-hidden /> {t.notSavedHint}
           </p>
-          <Link to="/automations" className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-            {t.editInAutomations}
-            <ArrowRight className="size-3 rtl:rotate-180" />
-          </Link>
         </aside>
       </div>
     </div>

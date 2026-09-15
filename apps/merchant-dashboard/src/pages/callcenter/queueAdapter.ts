@@ -24,7 +24,7 @@
  */
 import type { ConfirmationOutcome, Customer, Order, RecordConfirmationOutcomePayload } from "@store-builder/api-client";
 import type { ConfirmationTaskRow } from "@store-builder/api-client";
-import type { CallOutcome } from "@/mock/types2";
+import type { CallOutcome } from "./shared";
 
 /** Orders at or above this total (minor units, 1,500 EGP) are shown as high priority. */
 export const HIGH_PRIORITY_TOTAL_MINOR = 150_000;
