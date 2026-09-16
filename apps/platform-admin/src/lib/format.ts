@@ -113,3 +113,89 @@ export function initials(name: string): string {
     .map((p) => p.charAt(0).toUpperCase())
     .join("");
 }
+
+// ------------------------------------------------------------ minor units
+
+/**
+ * How many decimal places a currency's minor unit occupies (USD/EGP 2, JPY 0,
+ * KWD 3). Read from Intl rather than assumed to be 2, and cached because
+ * constructing a formatter to ask is not cheap.
+ */
+const minorDigits = new Map<string, number>();
+
+function minorUnitDigits(currency: string): number {
+  let digits = minorDigits.get(currency);
+  if (digits === undefined) {
+    // The shared formatters pin maximumFractionDigits to 0, so this asks a
+    // clean one for the currency's own default instead.
+    // Typed as optional because it is absent for non-currency formatters; for
+    // a currency one it is always the currency's own exponent. Falls back to
+    // the near-universal 2 rather than to 0, which would silently render an
+    // amount 100x too high on the one path this helper exists to get right.
+    digits =
+      new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
+        .maximumFractionDigits ?? 2;
+    minorDigits.set(currency, digits);
+  }
+  return digits;
+}
+
+/**
+ * Minor units (piasters, cents) → a formatted amount.
+ *
+ * Every money field on the `/admin` surface is stored and served in minor
+ * units: `plans.monthly_price_amount` is a BIGINT of 29900 for a $299.00 plan,
+ * and `AdminSubscription.mrr` and the overview's `mrr`/`gmv30d` follow it.
+ * Passing those straight to `formatMoney` renders them 100x too high.
+ *
+ * NOTE: `PlansPage` and `SubscriptionsPage` currently do exactly that and are
+ * overstating every price and MRR figure by 100x. Not corrected here — those
+ * pages are outside this change — but they want this helper.
+ */
+export function formatMinorMoney(minor: number, currency: string = PLATFORM_CURRENCY): string {
+  return formatMoney(minor / 10 ** minorUnitDigits(currency), currency);
+}
+
+export function formatMinorMoneyCompact(
+  minor: number,
+  currency: string = PLATFORM_CURRENCY
+): string {
+  return formatMoneyCompact(minor / 10 ** minorUnitDigits(currency), currency);
+}
+
+/** A 0..1 fraction → "94.2%". Distinct from `formatPercent`, which takes 0..100. */
+export function formatRate(fraction: number, digits = 1): string {
+  return formatPercent(fraction * 100, digits);
+}
+
+// ------------------------------------------------------------ chart labels
+
+/**
+ * An ISO bucket key from a metrics series → a short display label.
+ *
+ * Handles exactly the two shapes the overview endpoint commits to —
+ * "2026-09-16" (daily) and "2026-09" (monthly) — and passes anything else
+ * through untouched. The match is an explicit pattern test rather than a
+ * `new Date()` parse attempt: strings like "Sep 2026" also parse, so sniffing
+ * would silently rewrite labels that were already display-ready.
+ *
+ * Formatted in UTC because the server buckets in UTC. Formatting in local time
+ * would shift a bucket across midnight and label the wrong day.
+ */
+export function formatChartLabel(label: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(label)) {
+    return new Date(`${label}T00:00:00Z`).toLocaleDateString("en", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  }
+  if (/^\d{4}-\d{2}$/.test(label)) {
+    return new Date(`${label}-01T00:00:00Z`).toLocaleDateString("en", {
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  }
+  return label;
+}

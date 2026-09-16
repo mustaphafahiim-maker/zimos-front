@@ -64,6 +64,10 @@ const STATUS_TONES: Record<string, Tone> = {
   degraded: "warning",
   down: "danger",
   unknown: "neutral",
+  // Deliberately switched off, not broken — neutral, never a warning colour.
+  // It shares the fallback's tone, but must be listed: an unmapped status is
+  // indistinguishable from a typo'd one, and this lookup fails silently.
+  not_configured: "neutral",
   // moderation
   pending: "warning",
   approved: "success",

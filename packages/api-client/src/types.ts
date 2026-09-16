@@ -1459,3 +1459,275 @@ export type AdminAnnouncementInput = Omit<
   AdminAnnouncement,
   "id" | "workspaceName" | "createdBy" | "createdAt"
 > & { id?: string };
+
+/**
+ * One row of `GET /admin/audit-log`.
+ *
+ * The columns `audit_logs` stores as nullable stay nullable here: entries
+ * written by background jobs carry no actor and no request, so IP and user
+ * agent are absent on them. `actorName`, `actorEmail`, `entityLabel` and
+ * `workspaceName` are resolved server-side by joining the actor and the
+ * target record, and are null when that record no longer exists — the log
+ * outlives the things it describes.
+ */
+export interface AdminAuditEntry {
+  id: string;
+  /**
+   * The acting user's id, or null. Null for background-job entries and for
+   * entries whose actor has since been deleted — the FK is ON DELETE SET NULL,
+   * so those two cases are genuinely indistinguishable, here and server-side.
+   *
+   * This is the ONLY way to filter by actor: the endpoint takes `actorUserId`
+   * and has no name or email search, so a UI that filters by actor must pick
+   * an id rather than accept typed text.
+   */
+  actorUserId: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  entityLabel: string | null;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  /** Entity state around the action; null when the action recorded neither. */
+  before: unknown;
+  after: unknown;
+}
+
+/**
+ * Query for `GET /admin/audit-log`. Every filter is applied server-side.
+ *
+ * `workspaceId` and `actorUserId` must be UUIDs — the endpoint validates them
+ * as such and answers 422 otherwise, so neither can carry free text. `action`,
+ * `entityType` and `entityId` are exact matches, not substring searches.
+ */
+export interface AdminAuditLogParams {
+  workspaceId?: string;
+  actorUserId?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  /** ISO timestamps bounding `createdAt`. `to` must not precede `from`. */
+  from?: string;
+  to?: string;
+  /** Server default 50, hard cap 200 — a larger value is rejected, not clamped. */
+  limit?: number;
+  offset?: number;
+}
+
+/** One window of `GET /admin/audit-log`, with the size of the full match set. */
+export interface AdminAuditLogPage {
+  rows: AdminAuditEntry[];
+  /**
+   * How many entries match the filters across the WHOLE log, not just this
+   * window — so `total > rows.length` means older matches exist beyond it.
+   *
+   * Null when the server did not report one. That is a real possibility (an
+   * older build predating `total`), and it has to stay distinguishable from a
+   * genuine 0: callers must fall back to hedged wording rather than claiming a
+   * count they were never given.
+   */
+  total: number | null;
+}
+
+// --------------------------------------------------------------- system health
+
+/**
+ * Result of a browser-side probe against one of the backend's root-level
+ * health endpoints.
+ *
+ * `reachable` is the load-bearing field. A probe that never got a response
+ * cannot tell "the service is down" apart from "the browser refused to make
+ * the call" — the health endpoints sit behind the API's CORS allowlist, so a
+ * console served from an origin the backend doesn't list gets an opaque
+ * network failure that looks exactly like an outage. Callers must render
+ * `reachable: false` as *unknown*, never as *down*.
+ */
+export interface HealthProbeResult {
+  /** The response arrived, whatever its status. False = no response at all. */
+  reachable: boolean;
+  /** HTTP status, or null when the request never completed. */
+  status: number | null;
+  /** Parsed JSON body when the response carried one. */
+  body: unknown;
+  /** Round-trip time in ms, measured around the fetch. Null if it never returned. */
+  latencyMs: number | null;
+  /** Failure reason when `reachable` is false — a network, CORS, or timeout error. */
+  error: string | null;
+  /** When the probe ran, ISO. */
+  checkedAt: string;
+}
+
+/**
+ * The four verdicts the server can reach about a service it probed itself.
+ *
+ * `not_configured` is neutral, NOT a failure: the integration is deliberately
+ * switched off in this environment (`EMAIL_PROVIDER` is not Brevo, payments
+ * run in-process), so there was nothing to reach. Rendering it as an error
+ * would report a healthy deployment as broken.
+ *
+ * `unknown` is deliberately absent — that verdict belongs to the browser-side
+ * fallback, which cannot tell a dead service from a blocked request. A probe
+ * the server ran always has a real outcome.
+ */
+export type AdminServiceStatus = "operational" | "degraded" | "down" | "not_configured";
+
+/**
+ * One service from `GET /admin/system/services` (and from the POST `/check`).
+ *
+ * Verified against the implementation: five tiles keyed `postgres`, `storage`,
+ * `email`, `sms`, `payments`, each probed in parallel with a 5s timeout.
+ *
+ * `uptime30d`, `lastIncidentAt` and `lastIncidentSummary` are always null in
+ * v1 — there is no `service_checks` table and no recorder, so no history
+ * exists to compute them from. The fields are live in the payload and reserve
+ * the names. Render them as unavailable: a hardcoded "100%" uptime is worse
+ * than an honest blank.
+ */
+export interface AdminServiceTile {
+  /** Stable identifier: "postgres" | "storage" | "email" | "sms" | "payments". */
+  key: string;
+  name: string;
+  status: AdminServiceStatus;
+  latencyMs: number | null;
+  /**
+   * One line about the reading — what was reached ("brevo account …"), why the
+   * probe failed, or, for `not_configured`, which setting switched it off.
+   * Null when the probe reported nothing beyond its status.
+   */
+  detail: string | null;
+  /** When THIS probe ran, not when the response was served. A cached response repeats the original stamp. */
+  checkedAt: string;
+  /** Fraction over the trailing 30 days. Null until a check recorder exists. */
+  uptime30d: number | null;
+  /** Null until a check recorder exists. */
+  lastIncidentAt: string | null;
+  /** Null until a check recorder exists. */
+  lastIncidentSummary: string | null;
+}
+
+/** Both system-services endpoints answer with this envelope. */
+export interface AdminServiceReport {
+  services: AdminServiceTile[];
+  /**
+   * True when the server replayed a recent reading instead of probing. The GET
+   * caches for a short window so a page refresh does not fire real requests at
+   * Brevo and Twilio; the POST `/check` always probes and always reports false.
+   */
+  cached: boolean;
+}
+
+// -------------------------------------------------------------------- overview
+
+/**
+ * One point on an overview trend series.
+ *
+ * `label` is a raw ISO bucket key, never a pre-formatted display string:
+ * "2026-09-16" for daily series, "2026-09" for monthly. Confirmed with the
+ * backend — it keeps the label re-formattable for the console's Arabic mode,
+ * which a server-rendered "Sep 16" would not be. Buckets are UTC calendar
+ * days/months, so render them in UTC too or the last bar lands on the wrong
+ * day for anyone east or west of it.
+ */
+export interface AdminChartPoint {
+  label: string;
+  value: number;
+}
+
+/**
+ * Kinds the needs-attention queue can raise.
+ *
+ * `carrier_error` is declared but NOT committed for v1 — the backend has no
+ * table behind it. Expect three of the four, and treat the union as open:
+ * the server may add kinds without a release here, so readers must degrade on
+ * an unrecognised kind rather than throw or drop the row.
+ */
+export type AdminAttentionKind = "past_due" | "high_rto" | "carrier_error" | "unverified_domain";
+
+/**
+ * One row of the overview's needs-attention queue.
+ *
+ * Deliberately carries no route and no prose. The backend declined to encode
+ * frontend routes (they break silently on a rename) or to author English copy
+ * (it cannot be translated client-side), so it sends the identity and one
+ * number and the console phrases the rest.
+ *
+ * `value`'s meaning is keyed to `kind`:
+ * - `past_due` — whole days the subscription is overdue
+ * - `high_rto` — return rate as a 0..1 fraction
+ * - `unverified_domain` — whole days since the domain was added
+ * - anything else — undefined; render the row without interpreting it.
+ */
+export interface AdminAttentionItem {
+  id: string;
+  kind: AdminAttentionKind;
+  severity: "warning" | "danger" | "info";
+  workspaceId: string | null;
+  workspaceName: string | null;
+  value: number | null;
+}
+
+/**
+ * `GET /admin/metrics/overview` -> `{ overview: {...} }`.
+ *
+ * NOT IMPLEMENTED SERVER-SIDE YET — contract confirmed with the backend ahead
+ * of the endpoint, with no ETA. Callers must handle its absence and fall back;
+ * see `adminApi.loadOverview`.
+ *
+ * Money (`mrr`, `gmv30d`) is JS numbers in MINOR units — confirmed, not
+ * assumed. Postgres hands BIGINT to the driver as a string and there is no
+ * type-parser override, but every `/admin` serializer casts with `Number()` on
+ * the way out, so these arrive summable. That is specific to `/admin`:
+ * order-facing endpoints elsewhere in this API still emit raw BIGINT strings.
+ *
+ * There is no FX layer anywhere in the backend, so no amount here is ever
+ * converted. When the rows behind a total span more than one currency, the
+ * amount *and* its currency both come back null rather than as a meaningless
+ * sum. Null is load-bearing: render it as unavailable, never as zero.
+ */
+export interface AdminOverview {
+  /** When the server computed this, ISO. Use it to show staleness. */
+  generatedAt: string;
+  kpis: {
+    activeWorkspaces: number;
+    trialing: number;
+    pastDue: number;
+    /** Minor units. Null when contributing plans span several currencies. */
+    mrr: number | null;
+    /** ISO code for `mrr`, or null alongside a null `mrr`. */
+    mrrCurrency: string | null;
+    /** Minor units, trailing 30 days. Null on mixed currencies. */
+    gmv30d: number | null;
+    /** ISO code for `gmv30d`, or null alongside a null `gmv30d`. */
+    gmv30dCurrency: string | null;
+    /** UTC calendar day, not the viewer's. */
+    ordersToday: number;
+    /**
+     * Delivered / (delivered + failed + returned) over the trailing 30 days —
+     * terminal shipments only, so in-flight ones do not drag it down.
+     *
+     * A FRACTION (0..1), not a percentage. Null when nothing has reached a
+     * terminal state, because "nothing delivered" and "nothing shipped" are
+     * not the same statement and 0 would conflate them.
+     */
+    deliveryRate: number | null;
+  };
+  /** Last 30 days, zero-filled by the server — every bucket is present. */
+  signupsPerDay: AdminChartPoint[];
+  /**
+   * Last 12 months, zero-filled, built from paid invoices bucketed by period
+   * start — real history, not today's MRR projected backwards (which would
+   * draw a flat line and pass it off as a trend).
+   *
+   * Null — not `[]`, not twelve zeros — when no paid invoice exists anywhere
+   * in the window. Hide the chart rather than drawing an empty one.
+   */
+  mrrTrend: AdminChartPoint[] | null;
+  /** Last 30 days, zero-filled by the server — every bucket is present. */
+  ordersPerDay: AdminChartPoint[];
+  attention: AdminAttentionItem[];
+}

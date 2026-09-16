@@ -3,10 +3,16 @@ import type {
   AddCustomerAddressPayload,
   AdminAnnouncement,
   AdminAnnouncementInput,
+  AdminAuditEntry,
+  AdminAuditLogPage,
+  AdminAuditLogParams,
   AdminFeatureFlag,
   AdminFeatureFlagInput,
+  AdminOverview,
   AdminPlan,
   AdminPlanInput,
+  AdminServiceReport,
+  AdminServiceTile,
   AdminSubscription,
   AdminWorkspaceOverview,
   ArchivedResponse,
@@ -39,6 +45,7 @@ import type {
   DeletedResponse,
   Discount,
   DiscountStatus,
+  HealthProbeResult,
   InviteMemberPayload,
   LoginPayload,
   MediaUploadResponse,
@@ -125,6 +132,91 @@ export class ApiError extends Error {
     this.details = details;
     this.retryAfter = retryAfter;
   }
+}
+
+/**
+ * Unwraps `{ <key>: [...] }`, also accepting a bare array.
+ *
+ * The older admin methods destructure their envelope and fall back to `[]`,
+ * which turns an envelope mismatch into an empty screen. For a log or a
+ * status board "nothing here" is a meaningful reading, so these throw instead:
+ * an admin must never be shown a clean slate that is really a parse failure.
+ */
+function unwrapList<T>(body: unknown, key: string): T[] {
+  if (Array.isArray(body)) return body as T[];
+  if (body && typeof body === "object") {
+    const record = body as Record<string, unknown>;
+    const value = record[key];
+    if (Array.isArray(value)) return value as T[];
+    // An explicit null is the server stating there are no rows. A key that is
+    // ABSENT is an envelope mismatch — the very case this helper exists to
+    // catch — so it must fall through to the throw. Reading a missing key as
+    // empty is how `{ entries: [...] }` would render as a clean, empty log.
+    if (value === null && key in record) return [];
+  }
+  throw new ApiError(
+    `Unexpected response shape: expected an array or { ${key}: [...] }.`,
+    500,
+    "unexpected_response",
+    body
+  );
+}
+
+/**
+ * Reads a boolean flag that sits alongside a payload in the envelope.
+ *
+ * Unlike `unwrapList` this never throws: the flag is metadata about the
+ * payload, not the payload itself, and an older server that omits it must not
+ * fail a response whose rows are perfectly readable. Absent or non-boolean
+ * reads as false — the conservative direction for a "was this cached?" flag,
+ * since it claims less than the server did rather than more.
+ */
+function readFlag(body: unknown, key: string): boolean {
+  if (body && typeof body === "object") {
+    return (body as Record<string, unknown>)[key] === true;
+  }
+  return false;
+}
+
+/**
+ * Unwraps `{ <key>: {...} }`, requiring the envelope key.
+ *
+ * Same contract as `unwrapList`, for endpoints that answer with a single
+ * record: a dashboard that renders zeroes because the envelope moved is worse
+ * than one that says it could not read the response.
+ *
+ * Deliberately does NOT fall back to treating the whole body as the record.
+ * That tolerance looks harmless and is not: under it a renamed envelope
+ * (`{ metrics: {...} }`) hands back the envelope itself as though it were the
+ * payload, and the caller reads every field as undefined instead of being told
+ * the shape was wrong.
+ */
+function unwrapObject<T>(body: unknown, key: string): T {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const value = (body as Record<string, unknown>)[key];
+    if (value && typeof value === "object" && !Array.isArray(value)) return value as T;
+  }
+  throw new ApiError(
+    `Unexpected response shape: expected { ${key}: {...} }.`,
+    500,
+    "unexpected_response",
+    body
+  );
+}
+
+/**
+ * Reads a numeric envelope field, or null when the server sent none.
+ *
+ * Null rather than 0 on purpose: "the server did not report a total" and "the
+ * total is zero" are different statements, and only the second one licenses
+ * the UI to print a count.
+ */
+function numberField(body: unknown, key: string): number | null {
+  if (body && typeof body === "object") {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return null;
 }
 
 export interface ApiClientOptions {
@@ -702,6 +794,151 @@ export class ApiClient {
     return this.request<SuccessResponse>(`/admin/announcements/${announcementId}`, {
       method: "DELETE",
     });
+  }
+
+  // --- Audit log ---
+  /**
+   * `GET /admin/audit-log` → `{ auditLog, total, limit, offset }`, newest first.
+   *
+   * Ordered `createdAt DESC, id DESC` server-side. The id tiebreak matters for
+   * paging: entries written by one request share a timestamp, so without it a
+   * row could shift between windows and be shown twice or skipped.
+   *
+   * Every filter is applied server-side, so the rows returned are the whole
+   * match set narrowed to this window — not a window that still needs
+   * filtering. `total` counts the full match set, which is what makes "older
+   * entries exist beyond this window" a fact rather than an inference from a
+   * full-looking page.
+   */
+  async adminListAuditLog(params: AdminAuditLogParams = {}): Promise<AdminAuditLogPage> {
+    const body = await this.request<unknown>(`/admin/audit-log${buildQuery({ ...params })}`);
+    return { rows: unwrapList<AdminAuditEntry>(body, "auditLog"), total: numberField(body, "total") };
+  }
+
+  // --- System health ---
+
+  /**
+   * Origin the API is served from, i.e. `baseUrl` minus its `/api/vN` suffix.
+   *
+   * The liveness and readiness probes are mounted at the server root, outside
+   * the versioned API, so they can't be reached through `request()`. With the
+   * relative `baseUrl` the consoles use in development (`/api/v1`) this is the
+   * empty string, making probes same-origin and therefore proxied by the Vite
+   * dev server — which is the only reason they work at all, since the backend's
+   * CORS allowlist does not include the dev servers.
+   *
+   * A `baseUrl` with no version suffix is left untouched and probes hang off it
+   * directly; that is a guess, and a wrong one shows up as an unreachable probe.
+   */
+  private get rootUrl(): string {
+    return this.baseUrl.replace(/\/api\/v\d+$/, "");
+  }
+
+  /**
+   * Probes a root-level health endpoint and reports what came back.
+   *
+   * Deliberately does NOT go through `request()` and never throws: for a status
+   * board every outcome is a reading, not an error. A 503 from `/health/ready`
+   * is the endpoint working correctly and telling us the database is gone, and
+   * treating it as a thrown failure would lose the body that says so.
+   *
+   * Sends no Authorization header — these endpoints are unauthenticated, and
+   * routing them through the authenticated path would let a probe trip the
+   * 401-refresh machinery and, on failure, sign the admin out for looking at a
+   * status page.
+   */
+  async probeHealth(
+    path: string,
+    opts: { timeoutMs?: number } = {}
+  ): Promise<HealthProbeResult> {
+    const { timeoutMs = 8000 } = opts;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const startedAt = Date.now();
+    const checkedAt = new Date().toISOString();
+
+    try {
+      const res = await fetch(`${this.rootUrl}${path}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+        // No credentials: a probe must not depend on cookies being allowed.
+      });
+      const latencyMs = Date.now() - startedAt;
+      const isJson = res.headers.get("content-type")?.includes("application/json");
+      const body = isJson ? await res.json().catch(() => null) : null;
+      return { reachable: true, status: res.status, body, latencyMs, error: null, checkedAt };
+    } catch (err) {
+      // Includes the CORS case, which surfaces as an opaque TypeError that is
+      // indistinguishable from the server being down. Never upgrade this to a
+      // "down" verdict — the caller renders it as unknown.
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      return {
+        reachable: false,
+        status: null,
+        body: null,
+        latencyMs: null,
+        error: aborted
+          ? `No response within ${timeoutMs} ms.`
+          : err instanceof Error
+            ? err.message
+            : "Request failed.",
+        checkedAt,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * `GET /admin/system/services` → `{ services: [...], cached: boolean }`.
+   * Implemented server-side; envelope verified against the route.
+   *
+   * A cache miss probes five dependencies in parallel with a 5s timeout each,
+   * so the worst case is one timeout rather than five — but it is still bound
+   * by third parties, not by our own database. Expect it to be slower than
+   * every other admin call.
+   *
+   * Keep handling failure: the fallback probes exist precisely for when the
+   * API cannot answer this at all.
+   */
+  async adminListSystemServices(): Promise<AdminServiceReport> {
+    const body = await this.request<unknown>("/admin/system/services");
+    return {
+      services: unwrapList<AdminServiceTile>(body, "services"),
+      cached: readFlag(body, "cached"),
+    };
+  }
+
+  /**
+   * `POST /admin/system/services/check` — force a fresh server-side probe,
+   * bypassing the GET's cache.
+   *
+   * Same envelope and same tile shape as the GET, so a caller can reuse one
+   * rendering path for both. Always answers `cached: false`.
+   */
+  async adminCheckSystemServices(): Promise<AdminServiceReport> {
+    const body = await this.request<unknown>("/admin/system/services/check", { method: "POST" });
+    return {
+      services: unwrapList<AdminServiceTile>(body, "services"),
+      cached: readFlag(body, "cached"),
+    };
+  }
+
+  // --- Overview metrics ---
+
+  /**
+   * `GET /admin/metrics/overview` → `{ overview: {...} }` (path and envelope
+   * both confirmed with the backend, matching plans / subscriptions /
+   * featureFlags / announcements).
+   *
+   * NOT IMPLEMENTED SERVER-SIDE YET (agreed contract, no ETA) — callers must
+   * handle a 404 and fall back; `adminApi.loadOverview` derives what it can
+   * from the workspace and subscription lists instead.
+   */
+  async adminGetOverview() {
+    const body = await this.request<unknown>("/admin/metrics/overview");
+    return unwrapObject<AdminOverview>(body, "overview");
   }
 
   // ---------------------------------------------------------------------
