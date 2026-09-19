@@ -20,6 +20,8 @@ import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
+import { ReturnsPage } from "@/pages/returns/ReturnsPage";
+import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { CustomersPage } from "@/pages/customers/CustomersPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
@@ -56,12 +58,14 @@ export default function App() {
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
+                      <Route path="/returns" element={<ReturnsPage />} />
 
                       <Route path="/catalog" element={<CatalogProductsPage />} />
                       <Route path="/catalog/collections" element={<CollectionsPage />} />
                       <Route path="/catalog/new" element={<ProductEditPage />} />
                       <Route path="/catalog/:productId" element={<ProductEditPage />} />
 
+                      <Route path="/reviews" element={<ReviewsPage />} />
                       <Route path="/customers" element={<CustomersPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />

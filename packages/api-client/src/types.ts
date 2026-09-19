@@ -1011,6 +1011,47 @@ export interface ReturnListParams {
 }
 
 // ---------------------------------------------------------------------
+// Product reviews (staff moderation, /workspaces/:workspaceId/reviews)
+// A review is written by a customer who actually received the product, and
+// stays `pending` until a staff member approves or rejects it. Only approved
+// reviews reach the storefront. One row per (workspace, product, customer) —
+// a resubmission updates that row and drops it back to `pending`.
+// ---------------------------------------------------------------------
+
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export interface ReviewProductRef {
+  id: string;
+  name: string;
+}
+
+export interface ReviewCustomerRef {
+  id: string;
+  fullName: string | null;
+}
+
+export interface Review {
+  id: string;
+  workspaceId: string;
+  productId: string;
+  customerId: string;
+  orderId: string | null;
+  rating: number;
+  comment: string | null;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** Joined in by the staff list only — the moderation response returns the
+   * bare row, and the join is a LEFT JOIN, so neither is guaranteed. */
+  product?: ReviewProductRef | null;
+  customer?: ReviewCustomerRef | null;
+}
+
+export interface ReviewListParams {
+  status?: ReviewStatus;
+}
+
+// ---------------------------------------------------------------------
 // Confirmation queue (auth, /workspaces/:workspaceId/confirmation-tasks/...)
 // A work queue for phone-confirming orders before fulfilment. A `queued`
 // task is claimed (locked to the caller) and then closed by recording an

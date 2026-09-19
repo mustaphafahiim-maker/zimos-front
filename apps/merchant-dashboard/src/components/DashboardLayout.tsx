@@ -1,8 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_ITEMS, NAV_LABELS } from "@/lib/navigation";
+import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
@@ -22,6 +22,8 @@ const STRINGS = {
     dashboardAria: "Zimos dashboard",
     dashboardAriaNamed: "{name} — Zimos dashboard",
     switchStore: "Switch store",
+    collapseGroup: "Collapse {group}",
+    expandGroup: "Expand {group}",
   },
   ar: {
     signOut: "تسجيل الخروج",
@@ -33,8 +35,22 @@ const STRINGS = {
     dashboardAria: "لوحة تحكم زيموس",
     dashboardAriaNamed: "{name} — لوحة تحكم زيموس",
     switchStore: "تبديل المتجر",
+    collapseGroup: "طي {group}",
+    expandGroup: "توسيع {group}",
   },
 } satisfies Messages;
+
+const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed";
+
+function readCollapsedGroups(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, boolean>;
+  } catch {
+    /* private mode or malformed — fall through to every group open */
+  }
+  return {};
+}
 
 /**
  * Sidebar body — rendered twice: once in the desktop rail and once inside the
@@ -44,9 +60,24 @@ const STRINGS = {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { logout } = useAuth();
   const { currentWorkspace } = useWorkspace();
+  const location = useLocation();
   const t = useT(STRINGS);
   const navLabels = useT(NAV_LABELS);
+  const groupLabels = useT(NAV_GROUP_LABELS);
   const storeName = currentWorkspace?.name;
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(readCollapsedGroups);
+  useEffect(() => {
+    try {
+      localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* private mode — non-fatal */
+    }
+  }, [collapsed]);
+
+  // Collapsing a group hides everything in it except the page you are on, so
+  // the sidebar never loses track of where you are.
+  const activeTo = findNavItem(location.pathname)?.to;
 
   return (
     <>
@@ -65,25 +96,63 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           )}
         </Link>
       </div>
-      <nav aria-label={t.navLabel} className="flex-1 space-y-0.5 px-3">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              // Dark primary-dark stays deep (white text sits on it elsewhere),
-              // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
-              cn(
-                "block rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
-                isActive && "bg-primary-soft text-primary-dark dark:text-primary"
-              )
-            }
-          >
-            {navLabels[item.key]}
-          </NavLink>
-        ))}
+      <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
+        {NAV_GROUPS.map((group, index) => {
+          const heading = group.labelKey ? groupLabels[group.labelKey] : null;
+          const isClosed = Boolean(collapsed[group.id]);
+          const items = isClosed ? group.items.filter((i) => i.to === activeTo) : group.items;
+
+          return (
+            <div key={group.id} className={cn(index > 0 && "mt-4")}>
+              {heading && (
+                <button
+                  type="button"
+                  onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
+                  aria-expanded={!isClosed}
+                  aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
+                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase transition-colors hover:text-ink rtl:tracking-normal"
+                >
+                  <span className="flex-1 text-start">{heading}</span>
+                  <ChevronDown
+                    className={cn("size-3.5 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
+                    aria-hidden
+                  />
+                </button>
+              )}
+              <div className="space-y-0.5">
+                {items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/"}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      // Dark primary-dark stays deep (white text sits on it elsewhere),
+                      // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
+                      cn(
+                        "relative flex items-center gap-2.5 rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
+                        isActive && "bg-primary-soft text-primary-dark dark:text-primary"
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span
+                            aria-hidden
+                            className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary"
+                          />
+                        )}
+                        <item.icon className="size-[18px] shrink-0" aria-hidden />
+                        <span className="min-w-0 truncate">{navLabels[item.key]}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </nav>
       <div className="flex items-center gap-2 border-t border-line px-3 py-4">
         <button

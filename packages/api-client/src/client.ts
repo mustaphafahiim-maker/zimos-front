@@ -62,6 +62,8 @@ import type {
   RegisterPayload,
   ReturnListParams,
   ReturnRequest,
+  Review,
+  ReviewListParams,
   Shipment,
   ShippingRate,
   ShippingZone,
@@ -1219,6 +1221,27 @@ export class ApiClient {
       { method: "POST" }
     );
     return updated;
+  }
+
+  // ---------------------------------------------------------------------
+  // Product reviews — staff moderation
+  // (/workspaces/:workspaceId/reviews). Shoppers submit through the public
+  // storefront route; everything here needs products.manage.
+  // ---------------------------------------------------------------------
+
+  async listReviews(workspaceId: string, params: ReviewListParams = {}) {
+    const { reviews } = await this.request<{ reviews: Review[] }>(
+      `/workspaces/${workspaceId}/reviews${buildQuery({ ...params })}`
+    );
+    return reviews;
+  }
+
+  async moderateReview(workspaceId: string, reviewId: string, action: "approve" | "reject") {
+    const { review } = await this.request<{ review: Review }>(
+      `/workspaces/${workspaceId}/reviews/${reviewId}`,
+      { method: "PATCH", body: { action } }
+    );
+    return review;
   }
 
   // ---------------------------------------------------------------------
