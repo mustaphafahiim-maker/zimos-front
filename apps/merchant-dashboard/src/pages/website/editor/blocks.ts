@@ -1,11 +1,15 @@
 import {
   AlignLeft,
+  BadgeCheck,
   Box,
+  Camera,
   ChevronDown,
   CircleDot,
   Code2,
   Columns3,
+  Contrast,
   FormInput,
+  Gift,
   Grid3x3,
   Heading1,
   HelpCircle,
@@ -15,19 +19,24 @@ import {
   LayoutGrid,
   List,
   Map,
+  MessageSquareQuote,
   Minus,
   MousePointerClick,
   MoveVertical,
   Orbit,
   Quote,
+  Scale,
   Share2,
+  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
   Timer,
+  Truck,
   Type,
   Video,
   Waves,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -411,6 +420,101 @@ export interface BlockPreset {
   group: "Layout" | "Content" | "Media" | "Commerce";
   /** The element types this preset drops into one full-width column. */
   elements: PageElementType[];
+  /**
+   * Optional starting props per element, aligned index-for-index with
+   * `elements` and merged over that type's `defaultProps`. Without it two
+   * presets built from the same element types would land identical on the
+   * canvas, which is what makes a "library" of ready-made sections worth
+   * having. A missing entry keeps the plain defaults, so the presets written
+   * before this existed are untouched.
+   *
+   * Every string in here is starting copy the merchant replaces — it says what
+   * to write, never what the store promises.
+   */
+  content?: Array<Record<string, unknown> | undefined>;
+  /** Optional starting `section.settings` (see SECTION_SETTING_SPECS). */
+  settings?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Section settings — the little bit of look a section carries itself
+// ---------------------------------------------------------------------------
+
+/**
+ * `section.settings` is a free-form object the backend passes through
+ * untouched (pageTree.js only ever checks node *structure*), so the storefront
+ * reads it defensively and falls back to the look it always had. Each spec's
+ * first option IS that current look, which is why "" and an unknown value both
+ * mean "leave it alone".
+ */
+export interface SectionSettingSpec {
+  key: string;
+  label: string;
+  /** The value that reproduces the storefront's default section look. */
+  defaultValue: string;
+  options: Array<{ value: string; label: string }>;
+}
+
+export const SECTION_SETTING_SPECS: SectionSettingSpec[] = [
+  {
+    key: "background",
+    label: "Background",
+    defaultValue: "none",
+    options: [
+      { value: "none", label: "None" },
+      { value: "paper", label: "Paper" },
+      { value: "raised", label: "Raised" },
+      { value: "primary-soft", label: "Brand tint" },
+    ],
+  },
+  {
+    key: "padding",
+    label: "Vertical space",
+    defaultValue: "normal",
+    options: [
+      { value: "compact", label: "Compact" },
+      { value: "normal", label: "Normal" },
+      { value: "roomy", label: "Roomy" },
+    ],
+  },
+  {
+    key: "width",
+    label: "Content width",
+    defaultValue: "normal",
+    options: [
+      { value: "normal", label: "Normal" },
+      { value: "wide", label: "Wide" },
+      { value: "full", label: "Full width" },
+    ],
+  },
+];
+
+/** The stored value of one section setting, or "" when the section leaves it at the default. */
+export function sectionSetting(section: PageSection, key: string): string {
+  const settings: unknown = section.settings;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return "";
+  const value = (settings as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Sets one section setting. Choosing the default (or clearing the field) drops
+ * the key instead of writing it, so a section the merchant never styled keeps
+ * the `settings`-free shape the templates seed.
+ */
+export function setSectionSetting(section: PageSection, key: string, value: string): PageSection {
+  const current: unknown = section.settings;
+  const base: Record<string, unknown> =
+    current && typeof current === "object" && !Array.isArray(current)
+      ? { ...(current as Record<string, unknown>) }
+      : {};
+  const spec = SECTION_SETTING_SPECS.find((s) => s.key === key);
+  if (value === "" || value === spec?.defaultValue) delete base[key];
+  else base[key] = value;
+  const next: PageSection = { ...section };
+  if (Object.keys(base).length === 0) delete next.settings;
+  else next.settings = base;
+  return next;
 }
 
 export const BLOCK_PRESETS: BlockPreset[] = [
@@ -638,6 +742,244 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     group: "Content",
     elements: ["scroll_story"],
   },
+
+  // -------------------------------------------------------------------------
+  // Ready-made sections. Everything above drops a bare element with its own
+  // defaults; everything below drops a section that already looks like a
+  // section — starting copy per element, and the section settings that keep it
+  // from reading as one more stack of text on white.
+  //
+  // The copy is Egyptian Arabic written AT the merchant ("اكتب هنا…"), never a
+  // claim on the store's behalf: no names, no ratings, no delivery times, no
+  // guarantees. Anything that would be a promise is left empty on purpose.
+  // -------------------------------------------------------------------------
+  {
+    key: "hero-trust",
+    label: "Hero with trust line",
+    description: "An opening screen plus the few reasons a first-time shopper should trust you.",
+    icon: ShieldCheck,
+    group: "Layout",
+    elements: ["heading", "text", "button", "list"],
+    settings: { padding: "roomy" },
+    content: [
+      { text: "اكتب هنا الجملة اللي بتوصف متجرك في سطر", level: 1 },
+      { text: "اشرح في سطرين بتبيع إيه ولمين، وسيب الباقي للمنتجات." },
+      { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+      {
+        title: "",
+        items: [
+          "اكتب هنا أول سبب يخلي العميل يثق فيك",
+          "اكتب هنا سياسة الاستبدال أو الضمان بتاعتك",
+          "اكتب هنا طريقة تواصلك مع العملاء",
+        ],
+      },
+    ],
+  },
+  {
+    key: "living-hero-intro",
+    label: "Living hero with copy",
+    description: "The moving opening screen, with a title, a line of text and a button already in it.",
+    icon: Waves,
+    group: "Layout",
+    elements: ["shader_hero"],
+    content: [
+      {
+        title: "اكتب هنا عنوان الواجهة",
+        subtitle: "اكتب سطر واحد يوضّح إيه اللي يميّز متجرك.",
+        ctaLabel: "تسوّق دلوقتي",
+        ctaHref: "/products",
+        height: 520,
+      },
+    ],
+  },
+  {
+    key: "features",
+    label: "Features row",
+    description: "A short title and the benefits you want the shopper to remember.",
+    icon: BadgeCheck,
+    group: "Content",
+    elements: ["heading", "text", "list"],
+    settings: { background: "paper" },
+    content: [
+      { text: "ليه تختارنا", level: 2 },
+      { text: "اكتب سطر تمهيدي قصير عن اللي بتقدّمه." },
+      {
+        title: "",
+        items: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"],
+      },
+    ],
+  },
+  {
+    key: "why-us",
+    label: "Why buy from us",
+    description: "Answers to what stops a shopper buying — one row per worry.",
+    icon: Scale,
+    group: "Content",
+    elements: ["heading", "accordion"],
+    settings: { background: "primary-soft", padding: "roomy" },
+    content: [
+      { text: "ليه تشتري من عندنا؟", level: 2 },
+      {
+        title: "",
+        items: [
+          {
+            q: "اكتب هنا اللي بيقلق العميل قبل ما يشتري",
+            a: "اكتب هنا إجابتك إنت — من غير ما تقارن بحد بالاسم.",
+          },
+          { q: "اكتب هنا نقطة تانية بتفرّقك", a: "اكتب هنا تفاصيلها." },
+          { q: "اكتب هنا نقطة تالتة", a: "اكتب هنا تفاصيلها." },
+        ],
+      },
+    ],
+  },
+  {
+    key: "bundle-offer",
+    label: "Bundles & offers",
+    description: "A line about the bundle, the products in it and a button to the rest.",
+    icon: Gift,
+    group: "Commerce",
+    elements: ["heading", "text", "product_list", "button"],
+    settings: { background: "paper" },
+    content: [
+      { text: "عروض وباقات", level: 2 },
+      { text: "اشرح في سطر إيه اللي جوه الباقة وإيه شروطها." },
+      { title: "", source: "featured", limit: 3, columns: 3 },
+      { label: "شوف كل العروض", href: "/products", variant: "primary" },
+    ],
+  },
+  {
+    key: "before-after",
+    label: "Before & after",
+    description: "Two scroll steps — the state before, then after. Add a picture to each.",
+    icon: Contrast,
+    group: "Content",
+    elements: ["scroll_story"],
+    settings: { padding: "roomy" },
+    content: [
+      {
+        title: "قبل وبعد",
+        steps: [
+          { title: "قبل", body: "اكتب هنا وصف الحالة قبل المنتج، وارفع صورتها.", image: "" },
+          { title: "بعد", body: "اكتب هنا وصف الحالة بعد المنتج، وارفع صورتها.", image: "" },
+        ],
+      },
+    ],
+  },
+  {
+    key: "product-showcase-3d",
+    label: "3D product showcase",
+    description: "A title, a line of copy and the product the shopper turns with a finger.",
+    icon: Box,
+    group: "Commerce",
+    elements: ["heading", "text", "product_3d"],
+    settings: { background: "paper", padding: "roomy" },
+    content: [
+      { text: "لفّه بصباعك", level: 2 },
+      { text: "اكتب سطر يشجّع العميل يقلّب المنتج بنفسه." },
+      { title: "", productId: "", modelUrl: "" },
+    ],
+  },
+  {
+    key: "orbit-showcase",
+    label: "Turning showcase",
+    description: "A titled carousel of products on a drum that turns.",
+    icon: Orbit,
+    group: "Commerce",
+    elements: ["heading", "orbit_gallery"],
+    settings: { width: "wide" },
+    content: [
+      { text: "اختار من مجموعتنا", level: 2 },
+      { title: "", limit: 8, collectionId: "" },
+    ],
+  },
+  {
+    key: "lookbook",
+    label: "Lookbook",
+    description: "A titled grid of photos for a collection or a season.",
+    icon: Camera,
+    group: "Media",
+    elements: ["heading", "text", "gallery"],
+    settings: { width: "wide" },
+    content: [
+      { text: "لوك بوك", level: 2 },
+      { text: "اكتب سطر عن المجموعة دي، وارفع صورها تحت." },
+      { title: "", images: [], columns: 3 },
+    ],
+  },
+  {
+    key: "faq-cta",
+    label: "FAQ with a next step",
+    description: "Questions and answers, then a way to reach you for the rest.",
+    icon: HelpCircle,
+    group: "Content",
+    elements: ["faq", "text", "button"],
+    settings: { background: "paper" },
+    content: [
+      {
+        title: "الأسئلة الشائعة",
+        items: [
+          { q: "اكتب هنا سؤال بيتكرر من العملاء", a: "اكتب هنا إجابتك." },
+          { q: "اكتب هنا سؤال تاني", a: "اكتب هنا إجابتك." },
+          { q: "اكتب هنا سؤال تالت", a: "اكتب هنا إجابتك." },
+        ],
+      },
+      { text: "لسه عندك سؤال؟ إحنا موجودين." },
+      { label: "تواصل معانا", href: "/contact", variant: "outline" },
+    ],
+  },
+  {
+    key: "flash-offer",
+    label: "Limited-time offer",
+    description: "A countdown over the offer's own terms and a buy button.",
+    icon: Zap,
+    group: "Commerce",
+    elements: ["heading", "countdown", "text", "button"],
+    settings: { background: "primary-soft", padding: "compact" },
+    content: [
+      { text: "عرض لفترة محدودة", level: 2 },
+      { label: "ينتهي العرض خلال", endsInHours: 48 },
+      { text: "اكتب هنا تفاصيل العرض ومدته وشروطه." },
+      { label: "اشتري دلوقتي", href: "/products", variant: "primary" },
+    ],
+  },
+  {
+    key: "shipping-returns",
+    label: "Delivery & returns",
+    description: "Where you ship, how you swap and what you accept — in your own words.",
+    icon: Truck,
+    group: "Content",
+    elements: ["heading", "accordion", "text"],
+    settings: { background: "paper" },
+    content: [
+      { text: "الشحن والاستبدال", level: 2 },
+      {
+        title: "",
+        items: [
+          { q: "الشحن", a: "اكتب هنا مناطق الشحن ومواعيده وتكلفته." },
+          { q: "الاستبدال والاسترجاع", a: "اكتب هنا سياسة الاستبدال والاسترجاع بتاعتك." },
+          { q: "الدفع", a: "اكتب هنا طرق الدفع اللي بتقبلها." },
+        ],
+      },
+      { text: "اكتب هنا أي ملاحظة أخيرة عن الطلبات." },
+    ],
+  },
+  {
+    key: "testimonials",
+    label: "Testimonials",
+    description: "Three empty quote cards — fill them in from real customers of yours.",
+    icon: MessageSquareQuote,
+    group: "Content",
+    elements: ["heading", "testimonial", "testimonial", "testimonial"],
+    settings: { background: "paper", padding: "roomy" },
+    content: [
+      { text: "آراء العملاء", level: 2 },
+      // Left empty on purpose: a quote, a name and a rating are claims about
+      // real people, so nothing here may ship with words already in it.
+      { quote: "", author: "", rating: 0 },
+      { quote: "", author: "", rating: 0 },
+      { quote: "", author: "", rating: 0 },
+    ],
+  },
 ];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = ["Layout", "Content", "Media", "Commerce"];
@@ -659,8 +1001,13 @@ function uid(prefix: string): string {
   return `${prefix}-${rand}`;
 }
 
-function createElement(type: PageElementType): PageElement {
-  return { id: uid(type), type, props: { ...ELEMENT_SPECS[type].defaultProps } };
+/**
+ * `content` is a preset's starting props for this one element, laid over the
+ * type's own defaults — so a preset states only what it changes and still gets
+ * every default key the storefront reader expects.
+ */
+function createElement(type: PageElementType, content?: Record<string, unknown>): PageElement {
+  return { id: uid(type), type, props: { ...ELEMENT_SPECS[type].defaultProps, ...content } };
 }
 
 /** One section → one row → one span-12 column, matching the seeder's `oneCol`. */
@@ -670,10 +1017,14 @@ export function createSection(preset: BlockPreset): PageSection {
     id: `${base}-c`,
     type: "column",
     span: 12,
-    elements: preset.elements.map(createElement),
+    elements: preset.elements.map((type, i) => createElement(type, preset.content?.[i])),
   };
   const row: PageRow = { id: `${base}-r`, type: "row", columns: [column] };
-  return { id: base, type: "section", rows: [row] };
+  const section: PageSection = { id: base, type: "section", rows: [row] };
+  // Only presets that actually want a look carry `settings`; the rest keep the
+  // exact shape the seeded templates write.
+  if (preset.settings) section.settings = { ...preset.settings };
+  return section;
 }
 
 /** Every element in a section, in document order, across all rows/columns. */

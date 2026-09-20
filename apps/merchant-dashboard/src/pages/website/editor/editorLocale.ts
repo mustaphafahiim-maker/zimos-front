@@ -84,6 +84,12 @@ const FIELD_LABEL_AR: Record<string, string> = {
   showBuyButton: "إظهار زرار الشراء",
   source: "المعروض",
   limit: "العدد",
+  subtitle: "السطر التحتاني",
+  ctaLabel: "نص الزرار",
+  ctaHref: "رابط الزرار",
+  modelUrl: "ملف 3D (.glb)",
+  collectionId: "المجموعة",
+  steps: "الخطوات",
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
@@ -91,6 +97,12 @@ const FIELD_HINT_AR: Record<string, string> = {
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "embed.url": "رابط للتضمين. السيرفر بيرفض الـ HTML الخام.",
   "product_card.productId": "سيبه فاضي علشان يتعرض أحدث منتج.",
+  "shader_hero.height": "الخلفية بتتحرك بألوان متجرك نفسه.",
+  "product_3d.productId": "سيبه فاضي علشان يتعرض أحدث منتج.",
+  "product_3d.modelUrl":
+    "سيبه فاضي علشان يستخدم ملف الـ GLB المرفوع مع صور المنتج. من غير ملف، البلوك ده بيتخفي.",
+  "orbit_gallery.collectionId": "سيبه فاضي علشان يشتغل على الكتالوج كله.",
+  "scroll_story.steps": "كل خطوة ليها صورتها وهي بتظهر مع سكرول العميل.",
 };
 
 /** Keyed "<propKey>.<optionValue>". */
@@ -131,6 +143,67 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   cart: { label: "السلة", description: "محتويات سلة العميل." },
   divider: { label: "فاصل", description: "خط أفقي بين الأقسام." },
   spacer: { label: "مسافة", description: "مساحة فاضية بين الأقسام." },
+
+  // الأقسام الجاهزة — بتيجي وفيها كلام مبدئي إنت بتغيّره.
+  "living-hero": { label: "واجهة متحركة", description: "شاشة افتتاحية بتتحرك بالراحة بألوان متجرك." },
+  "product-3d": { label: "منتج مجسّم", description: "العميل بيلف المنتج بصباعه. محتاج ملف ‎.glb‎." },
+  "orbit-gallery": { label: "عرض دوّار", description: "منتجات على أسطوانة بتلف، بدل الشبكة العادية." },
+  "scroll-story": { label: "قصة بالسكرول", description: "قبل وبعد، أو إزاي بيتعمل — خطوة خطوة مع السكرول." },
+  "hero-trust": {
+    label: "واجهة + أسباب ثقة",
+    description: "شاشة افتتاحية ومعاها الأسباب اللي تخلي عميل لأول مرة يثق فيك.",
+  },
+  "living-hero-intro": {
+    label: "واجهة متحركة بكلام",
+    description: "الشاشة الافتتاحية المتحركة، وفيها عنوان وسطر كلام وزرار جاهزين.",
+  },
+  features: { label: "مميزاتك", description: "عنوان قصير والمميزات اللي عايز العميل يفتكرها." },
+  "why-us": {
+    label: "ليه تشتري من عندنا",
+    description: "إجابات على اللي بيوقّف العميل عن الشراء — صف لكل قلق.",
+  },
+  "bundle-offer": { label: "عروض وباقات", description: "سطر عن الباقة، والمنتجات اللي فيها، وزرار لباقي العروض." },
+  "before-after": {
+    label: "قبل وبعد",
+    description: "خطوتين بالسكرول — الحالة قبل وبعد. حط صورة لكل واحدة.",
+  },
+  "product-showcase-3d": {
+    label: "عرض منتج مجسّم",
+    description: "عنوان وسطر كلام والمنتج اللي العميل بيلفّه بصباعه.",
+  },
+  "orbit-showcase": { label: "عرض دوّار بعنوان", description: "عرض دوّار للمنتجات على أسطوانة بتلف، بعنوان فوقه." },
+  lookbook: { label: "لوك بوك", description: "شبكة صور بعنوان، لمجموعة أو موسم." },
+  "faq-cta": { label: "أسئلة شائعة + خطوة تانية", description: "أسئلة وإجاباتها، وبعدين طريقة يوصلك بيها لباقي الأسئلة." },
+  "flash-offer": { label: "عرض لفترة محدودة", description: "عدّاد تنازلي فوق شروط العرض نفسه وزرار شراء." },
+  "shipping-returns": {
+    label: "الشحن والاستبدال",
+    description: "بتشحن فين، وبتستبدل إزاي، وبتقبل إيه — بكلامك إنت.",
+  },
+  testimonials: {
+    label: "آراء العملاء",
+    description: "تلات كروت آراء فاضية — إملاها من عملاء حقيقيين عندك.",
+  },
+};
+
+/** Keyed by SectionSettingSpec.key. */
+const SECTION_SETTING_LABEL_AR: Record<string, string> = {
+  background: "الخلفية",
+  padding: "المسافة فوق وتحت",
+  width: "عرض المحتوى",
+};
+
+/** Keyed "<settingKey>.<optionValue>". */
+const SECTION_SETTING_OPTION_AR: Record<string, string> = {
+  "background.none": "بدون",
+  "background.paper": "لون الصفحة",
+  "background.raised": "لون بارز",
+  "background.primary-soft": "لون العلامة الفاتح",
+  "padding.compact": "ضيقة",
+  "padding.normal": "عادية",
+  "padding.roomy": "واسعة",
+  "width.normal": "عادي",
+  "width.wide": "عريض",
+  "width.full": "عرض الشاشة",
 };
 
 const GROUP_AR: Record<string, string> = {
@@ -176,6 +249,19 @@ export function presetText(
   return locale === "ar" ? (PRESET_AR[key] ?? fallback) : fallback;
 }
 
+export function sectionSettingLabel(key: string, fallback: string, locale: EditorLocale): string {
+  return locale === "ar" ? (SECTION_SETTING_LABEL_AR[key] ?? fallback) : fallback;
+}
+
+export function sectionSettingOption(
+  key: string,
+  value: string,
+  fallback: string,
+  locale: EditorLocale
+): string {
+  return locale === "ar" ? (SECTION_SETTING_OPTION_AR[`${key}.${value}`] ?? fallback) : fallback;
+}
+
 export function groupLabel(group: string, locale: EditorLocale): string {
   return locale === "ar" ? (GROUP_AR[group] ?? group) : group;
 }
@@ -218,6 +304,8 @@ const UI_EN = {
   prepareFailed: "Could not prepare the selected image.",
   moveElementUp: (label: string) => `Move ${label} up`,
   moveElementDown: (label: string) => `Move ${label} down`,
+  sectionStyle: "Section style",
+  sectionStyleHint: "How this whole section sits on the page.",
 };
 
 export type EditorUi = typeof UI_EN;
@@ -260,6 +348,8 @@ const UI_AR: EditorUi = {
   prepareFailed: "مقدرناش نجهّز الصورة اللي اخترتها.",
   moveElementUp: (label) => `تحريك ${label} لفوق`,
   moveElementDown: (label) => `تحريك ${label} لتحت`,
+  sectionStyle: "شكل القسم",
+  sectionStyleHint: "القسم كله بيقعد إزاي في الصفحة.",
 };
 
 export function editorUi(locale: EditorLocale): EditorUi {

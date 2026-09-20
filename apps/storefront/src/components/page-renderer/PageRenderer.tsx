@@ -163,13 +163,63 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   );
 }
 
+/**
+ * A section's optional `settings` — the small amount of look a section carries
+ * itself, written by the editor's block presets and its section panel
+ * (merchant-dashboard .../editor/blocks.ts, SECTION_SETTING_SPECS).
+ *
+ * The backend never validates what is inside `settings` (pageTree.js checks
+ * node structure only), so this is read exactly as defensively as element
+ * props in props.ts: anything missing, misspelt or of the wrong type falls
+ * through to the first entry of each table, which IS the look every section
+ * had before these existed. A page saved without settings renders identically.
+ *
+ * Tailwind cannot build a class from a runtime value, so each choice is a
+ * whole class string, like COLUMN_CLASS / SPAN_CLASS.
+ */
+const SECTION_BACKGROUND: Record<string, string> = {
+  none: "",
+  paper: "bg-paper",
+  raised: "bg-paper-raised",
+  "primary-soft": "bg-primary-soft",
+};
+
+const SECTION_PADDING: Record<string, string> = {
+  normal: "py-10 sm:py-14",
+  compact: "py-6 sm:py-8",
+  roomy: "py-16 sm:py-24",
+};
+
+const SECTION_WIDTH: Record<string, string> = {
+  normal: "max-w-6xl",
+  wide: "max-w-7xl",
+  full: "max-w-none",
+};
+
+/** One setting as a class string; the `fallback` key whenever the stored value is unusable. */
+function sectionClass(
+  settings: unknown,
+  key: string,
+  table: Record<string, string>,
+  fallback: string
+): string {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return table[fallback];
+  const value = (settings as Record<string, unknown>)[key];
+  return typeof value === "string" && value in table ? table[value] : table[fallback];
+}
+
 function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
+  const settings = section.settings;
+  const background = sectionClass(settings, "background", SECTION_BACKGROUND, "none");
+  const padding = sectionClass(settings, "padding", SECTION_PADDING, "normal");
+  const width = sectionClass(settings, "width", SECTION_WIDTH, "normal");
+
   return (
-    <section className="px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <section className={`px-4 sm:px-6 ${padding} ${background}`.trimEnd()}>
+      <div className={`mx-auto flex flex-col gap-6 ${width}`}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
         ))}

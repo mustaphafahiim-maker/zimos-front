@@ -274,6 +274,12 @@ export interface PageSection {
   id: string;
   type: "section";
   rows: PageRow[];
+  /**
+   * Free-form look settings the backend stores and passes through untouched
+   * (pageTree.js validates node structure, never this). Optional everywhere:
+   * a section without it renders the way sections always have.
+   */
+  settings?: Record<string, unknown>;
 }
 
 export interface PageTree {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Palette, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label } from "@store-builder/ui";
 import type { PageElement, PageElementType, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
@@ -7,11 +7,14 @@ import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import {
   ELEMENT_SPECS,
+  SECTION_SETTING_SPECS,
   elementPosition,
   moveElement,
   sectionElements,
   sectionLabel,
+  sectionSetting,
   setElementProp,
+  setSectionSetting,
   type FieldSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
@@ -21,15 +24,20 @@ import {
   fieldHint,
   fieldLabel,
   optionLabel,
+  sectionSettingLabel,
+  sectionSettingOption,
   useEditorLocale,
   type EditorUi,
 } from "./editorLocale";
 import { ImageField, ImageListField } from "./ImageField";
 
 /**
- * The right-hand panel. A section has no editable fields of its own — the tree
- * gives sections no props — so this walks the section's elements and renders a
- * fieldset per element from that element type's `FieldSpec[]`.
+ * The right-hand panel. A section has no *props* of its own — the tree gives
+ * sections none — so this walks the section's elements and renders a fieldset
+ * per element from that element type's `FieldSpec[]`. Above them sits the one
+ * thing a section does carry, its optional `settings`: background, vertical
+ * space and content width, every one of them defaulting to the look the
+ * storefront already had.
  *
  * Content inputs are `dir="auto"`: merchants write Arabic and English copy,
  * and each field should follow the text typed into it, whatever direction the
@@ -588,6 +596,54 @@ export function ElementFieldset({
   );
 }
 
+/**
+ * The section's own look — the one thing on a section that isn't an element.
+ * Rendered with the same `Field`/`Select` pair as an element's select field so
+ * it reads as one more fieldset, not a new kind of panel. Every control
+ * defaults to the storefront's existing look, and choosing that default clears
+ * the key again (setSectionSetting).
+ */
+function SectionStyleFieldset({
+  section,
+  onChange,
+}: {
+  section: PageSection;
+  onChange: (next: PageSection) => void;
+}) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+
+  return (
+    <div className="space-y-3 border-b border-line px-4 py-4">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
+        <Palette className="size-3.5" aria-hidden />
+        <span className="min-w-0 flex-1 truncate">{ui.sectionStyle}</span>
+      </div>
+      {SECTION_SETTING_SPECS.map((spec, i) => (
+        <Field
+          key={spec.key}
+          label={sectionSettingLabel(spec.key, spec.label, locale)}
+          hint={i === 0 ? ui.sectionStyleHint : undefined}
+        >
+          {({ id }) => (
+            <Select
+              id={id}
+              value={sectionSetting(section, spec.key) || spec.defaultValue}
+              onChange={(e) => onChange(setSectionSetting(section, spec.key, e.target.value))}
+            >
+              {spec.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {sectionSettingOption(spec.key, o.value, o.label, locale)}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      ))}
+    </div>
+  );
+}
+
 export function SectionInspector({
   section,
   onChange,
@@ -618,6 +674,7 @@ export function SectionInspector({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
+        <SectionStyleFieldset section={section} onChange={onChange} />
         {elements.length === 0 ? (
           <p className="px-4 py-6 text-sm text-ink-soft">{ui.noElements}</p>
         ) : (
