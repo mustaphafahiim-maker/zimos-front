@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
+import { OrderTicket } from "@/components/immersive/OrderTicket";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
@@ -100,7 +101,19 @@ function Confirmation() {
           </div>
         )}
 
-        <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
+        {orderNumber && (
+          <div className="mt-8">
+            <OrderTicket
+              orderNumber={orderNumber}
+              total={snapshot?.totalAmount}
+              currency={currency}
+              storeName={storeName}
+              note={t.thankYou.payOnDelivery}
+            />
+          </div>
+        )}
+
+        <section className={`${card} mt-6 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
             {t.thankYou.steps}
           </h2>

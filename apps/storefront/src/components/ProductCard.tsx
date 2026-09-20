@@ -3,6 +3,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
 import { compareAtOf, discountPercent, firstImage, priceOf } from "@/lib/product";
 import { BoxIcon } from "./Icons";
+import { TiltCard } from "./immersive/TiltCard";
 
 export function ProductCard({
   product,
@@ -21,7 +22,11 @@ export function ProductCard({
   const image = firstImage(product);
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
+    // The tilt is a wrapper, not a rewrite: it leans the card towards the
+    // pointer (or the phone's tilt) and switches itself off entirely for
+    // reduced motion, metered connections and weak devices.
+    <TiltCard className="h-full rounded-2xl" max={7}>
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden bg-paper">
         {image ? (
           // Merchant media are arbitrary remote URLs (no next/image allowlist).
@@ -80,5 +85,6 @@ export function ProductCard({
         </span>
       </div>
     </article>
+    </TiltCard>
   );
 }

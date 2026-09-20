@@ -13,6 +13,16 @@ export const btnPrimary = `inline-flex min-h-11 cursor-pointer items-center just
 
 export const btnPrimaryLg = `${btnPrimary} w-full text-base py-3.5`;
 
+/**
+ * The buy button, given some weight: a brushed-metal gradient in the store's
+ * own primary colour, a highlight along the top edge and a real press. Pure
+ * CSS on top of btnPrimary, so it keeps the same size, focus ring and
+ * disabled behaviour.
+ */
+export const btnMetal = `${btnPrimary} relative overflow-hidden border border-primary-dark/40 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-primary)_82%,white)_0%,var(--color-primary)_45%,var(--color-primary-dark)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_2px_6px_rgba(0,0,0,0.18)] transition-[transform,box-shadow] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_4px_10px_rgba(0,0,0,0.22)] active:translate-y-px active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] motion-reduce:transition-none`;
+
+export const btnMetalLg = `${btnMetal} w-full text-base py-3.5`;
+
 export const btnSecondary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-paper-raised px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
 export const btnGhost = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${focus}`;

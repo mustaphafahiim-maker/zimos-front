@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { CartGlyph, CheckIcon } from "./Icons";
-import { btnPrimary, btnSecondary } from "./ui";
+import { btnMetal, btnSecondary } from "./ui";
 
 type Status = "idle" | "loading" | "added" | "error";
 
@@ -51,7 +51,7 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         disabled={unavailable || status === "loading"}
-        className={`${variant === "primary" ? btnPrimary : btnSecondary} w-full`}
+        className={`${variant === "primary" ? btnMetal : btnSecondary} w-full`}
       >
         {status === "added" ? <CheckIcon /> : <CartGlyph />}
         {unavailable

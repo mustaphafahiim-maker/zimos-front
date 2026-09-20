@@ -332,6 +332,8 @@ const en = {
     carousel: "Product carousel",
     previous: "Previous",
     next: "Next",
+    ticketOrder: "Order",
+    ticketTotal: "Total",
   },
   meta: {
     storeDescription: (store: string) => `Shop ${store} — cash on delivery across Egypt.`,
@@ -621,6 +623,8 @@ const ar: Dictionary = {
     carousel: "عرض المنتجات",
     previous: "السابق",
     next: "التالي",
+    ticketOrder: "طلب رقم",
+    ticketTotal: "الإجمالي",
   },
   meta: {
     storeDescription: (store) => `تسوّق من ${store} — الدفع عند الاستلام في كل مصر.`,
