@@ -32,6 +32,12 @@ import {
   TextElement,
   VideoElement,
 } from "./elements";
+import {
+  OrbitGalleryElement,
+  Product3DElement,
+  ScrollStoryElement,
+  ShaderHeroElement,
+} from "./immersive";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -114,6 +120,16 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
     case "cart":
       return <CartElement props={props} />;
+    case "shader_hero":
+      return <ShaderHeroElement props={props} locale={ctx.locale} />;
+    case "product_3d":
+      return <Product3DElement props={props} workspaceId={ctx.workspaceId} locale={ctx.locale} />;
+    case "orbit_gallery":
+      return (
+        <OrbitGalleryElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
+      );
+    case "scroll_story":
+      return <ScrollStoryElement props={props} />;
     default:
       // Unreachable for the 23 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.

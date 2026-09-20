@@ -70,6 +70,20 @@ function asQaList(v: unknown): QaItem[] {
   });
 }
 
+interface StoryStepItem {
+  title: string;
+  body: string;
+  image: string;
+}
+
+function asStepList(v: unknown): StoryStepItem[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((item) => {
+    const o = (item ?? {}) as Record<string, unknown>;
+    return { title: asString(o.title), body: asString(o.body), image: asString(o.image) };
+  });
+}
+
 interface LinkItem {
   platform: string;
   url: string;
@@ -200,6 +214,71 @@ function QaListEditor({
               rows={2}
               onChange={(e) => patch(i, "a", e.target.value)}
             />
+          </div>
+        ))}
+      </div>
+    </ListShell>
+  );
+}
+
+/**
+ * `scroll_story` steps — a title, a line of text and a picture per step. The
+ * picture reuses the same uploader as every other image field, so a step image
+ * lands in the store's media library like all the rest.
+ */
+function StepListEditor({
+  label,
+  hint,
+  value,
+  ui,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: StoryStepItem[];
+  ui: EditorUi;
+  onChange: (next: StoryStepItem[]) => void;
+}) {
+  function patch(i: number, key: keyof StoryStepItem, v: string) {
+    onChange(value.map((item, j) => (j === i ? { ...item, [key]: v } : item)));
+  }
+  return (
+    <ListShell
+      label={label}
+      hint={hint}
+      addLabel={ui.addStep}
+      onAdd={() => onChange([...value, { title: "", body: "", image: "" }])}
+    >
+      <div className="space-y-3">
+        {value.map((item, i) => (
+          <div key={i} className="space-y-2 rounded-[0.5rem] border border-line p-3">
+            <div className="flex items-center gap-2">
+              <Input
+                value={item.title}
+                dir="auto"
+                placeholder={ui.stepTitle}
+                aria-label={ui.stepTitleAria(i + 1)}
+                onChange={(e) => patch(i, "title", e.target.value)}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={ui.removeStep(i + 1)}
+                onClick={() => onChange(value.filter((_, j) => j !== i))}
+              >
+                <X className="size-4" aria-hidden />
+              </Button>
+            </div>
+            <Textarea
+              value={item.body}
+              dir="auto"
+              placeholder={ui.stepBody}
+              aria-label={ui.stepBodyAria(i + 1)}
+              rows={2}
+              onChange={(e) => patch(i, "body", e.target.value)}
+            />
+            <ImageField label={ui.stepImageAria(i + 1)} value={item.image} onChange={(url) => patch(i, "image", url)} />
           </div>
         ))}
       </div>
@@ -410,6 +489,17 @@ function ElementField({
           label={label}
           hint={hint}
           value={asQaList(raw)}
+          ui={ui}
+          onChange={(next) => onChange(spec.key, next)}
+        />
+      );
+
+    case "stepList":
+      return (
+        <StepListEditor
+          label={label}
+          hint={hint}
+          value={asStepList(raw)}
           ui={ui}
           onChange={(next) => onChange(spec.key, next)}
         />

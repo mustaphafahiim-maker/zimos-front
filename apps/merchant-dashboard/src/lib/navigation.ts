@@ -1,13 +1,20 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   Bot,
   ClipboardCheck,
   Globe,
+  Headset,
+  Images,
   LayoutDashboard,
+  Megaphone,
   MessageCircle,
   Package,
+  PiggyBank,
   Settings,
+  ShieldAlert,
   ShoppingBag,
+  ShoppingCart,
   Star,
   Tag,
   Truck,
@@ -22,10 +29,17 @@ export type NavKey =
   | "overview"
   | "orders"
   | "confirmationQueue"
+  | "callCenter"
+  | "abandonedCheckouts"
   | "returns"
   | "settlements"
   | "inbox"
   | "automations"
+  | "marketing"
+  | "fraud"
+  | "analytics"
+  | "profit"
+  | "media"
   | "catalog"
   | "reviews"
   | "customers"
@@ -36,7 +50,7 @@ export type NavKey =
   | "settings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "sell" | "catalog" | "grow" | "storefront";
+export type NavGroupKey = "sell" | "catalog" | "grow" | "insights" | "storefront";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
@@ -73,8 +87,11 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "orders", to: "/orders", icon: ShoppingBag },
       { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
+      { key: "callCenter", to: "/call-center", icon: Headset },
+      { key: "abandonedCheckouts", to: "/abandoned-checkouts", icon: ShoppingCart },
       { key: "returns", to: "/returns", icon: Undo2 },
       { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "fraud", to: "/fraud", icon: ShieldAlert },
     ],
   },
   {
@@ -84,6 +101,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "catalog", to: "/catalog", icon: Package },
       { key: "reviews", to: "/reviews", icon: Star },
       { key: "customers", to: "/customers", icon: Users },
+      { key: "media", to: "/media", icon: Images },
     ],
   },
   {
@@ -92,8 +110,17 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "inbox", to: "/inbox", icon: MessageCircle },
       { key: "automations", to: "/automations", icon: Bot },
+      { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "discounts", to: "/discounts", icon: Tag },
+    ],
+  },
+  {
+    id: "insights",
+    labelKey: "insights",
+    items: [
+      { key: "analytics", to: "/analytics", icon: BarChart3 },
+      { key: "profit", to: "/profit", icon: PiggyBank },
     ],
   },
   {
@@ -133,14 +160,21 @@ export const NAV_LABELS = {
     overview: "Overview",
     orders: "Orders",
     confirmationQueue: "Confirmation Queue",
+    callCenter: "Call Centre",
+    abandonedCheckouts: "Abandoned Checkouts",
     returns: "Returns",
     settlements: "COD Settlements",
+    fraud: "Fraud Protection",
     inbox: "WhatsApp Inbox",
     automations: "Automations",
+    marketing: "Marketing Pixels",
     catalog: "Catalog",
     reviews: "Reviews",
     customers: "Customers",
+    media: "Media Library",
     discounts: "Discounts",
+    analytics: "Analytics",
+    profit: "Profit",
     shipping: "Shipping & Tax",
     website: "Website",
     funnels: "Funnels",
@@ -150,14 +184,21 @@ export const NAV_LABELS = {
     overview: "نظرة عامة",
     orders: "الطلبات",
     confirmationQueue: "قائمة التأكيد",
+    callCenter: "الكول سنتر",
+    abandonedCheckouts: "السلات المتروكة",
     returns: "المرتجعات",
     settlements: "تحصيل الشحن",
+    fraud: "الحماية من النصب",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
+    marketing: "بيكسلات الإعلانات",
     catalog: "الكتالوج",
     reviews: "التقييمات",
     customers: "العملاء",
+    media: "مكتبة الصور",
     discounts: "الخصومات",
+    analytics: "التحليلات",
+    profit: "الأرباح",
     shipping: "الشحن والضرائب",
     website: "الموقع",
     funnels: "مسارات البيع",
@@ -171,12 +212,14 @@ export const NAV_GROUP_LABELS = {
     sell: "Sell",
     catalog: "Catalog",
     grow: "Grow",
+    insights: "Insights",
     storefront: "Storefront",
   },
   ar: {
     sell: "البيع",
     catalog: "الكتالوج",
     grow: "النمو",
+    insights: "التقارير",
     storefront: "واجهة المتجر",
   },
 } satisfies Messages<NavGroupKey>;

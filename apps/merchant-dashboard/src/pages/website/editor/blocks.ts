@@ -1,5 +1,6 @@
 import {
   AlignLeft,
+  Box,
   ChevronDown,
   CircleDot,
   Code2,
@@ -10,12 +11,14 @@ import {
   HelpCircle,
   Image,
   Images,
+  Layers,
   LayoutGrid,
   List,
   Map,
   Minus,
   MousePointerClick,
   MoveVertical,
+  Orbit,
   Quote,
   Share2,
   ShoppingBag,
@@ -24,6 +27,7 @@ import {
   Timer,
   Type,
   Video,
+  Waves,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -73,6 +77,7 @@ export type FieldSpec =
   | { key: string; label: string; kind: "stringList"; itemLabel: string; hint?: string }
   | { key: string; label: string; kind: "imageList"; hint?: string }
   | { key: string; label: string; kind: "qaList"; hint?: string }
+  | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "linkList"; hint?: string };
 
 interface ElementSpec {
@@ -328,6 +333,69 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { title: "Your cart" },
     fields: [{ key: "title", label: "Title", kind: "text" }],
   },
+
+  // Immersive sections. Each one falls back to a still, readable version on a
+  // slow connection, a weak device, or when the shopper asks for less motion —
+  // so they are safe to put on a live store.
+  shader_hero: {
+    label: "Living hero",
+    icon: Waves,
+    defaultProps: { title: "", subtitle: "", ctaLabel: "", ctaHref: "/products", height: 460 },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "subtitle", label: "Subtitle", kind: "text" },
+      { key: "ctaLabel", label: "Button text", kind: "text" },
+      { key: "ctaHref", label: "Button links to", kind: "text", placeholder: "/products" },
+      {
+        key: "height",
+        label: "Height",
+        kind: "number",
+        min: 260,
+        max: 760,
+        hint: "The background moves in your store's own colours.",
+      },
+    ],
+  },
+  product_3d: {
+    label: "3D product",
+    icon: Box,
+    defaultProps: { title: "", productId: "", modelUrl: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      {
+        key: "productId",
+        label: "Product",
+        kind: "text",
+        placeholder: "Product id or slug",
+        hint: "Leave empty to use the newest product.",
+      },
+      {
+        key: "modelUrl",
+        label: "3D file (.glb)",
+        kind: "text",
+        hint: "Leave empty to use the GLB file uploaded with the product's images. Without one, this block is hidden.",
+      },
+    ],
+  },
+  orbit_gallery: {
+    label: "Turning carousel",
+    icon: Orbit,
+    defaultProps: { title: "", limit: 8, collectionId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "limit", label: "How many", kind: "number", min: 3, max: 16 },
+      { key: "collectionId", label: "Collection", kind: "text", hint: "Leave empty for the whole catalogue." },
+    ],
+  },
+  scroll_story: {
+    label: "Scroll story",
+    icon: Layers,
+    defaultProps: { title: "", steps: [] },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "steps", label: "Steps", kind: "stepList", hint: "Each step gets its own picture as the shopper scrolls." },
+    ],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -537,6 +605,38 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     icon: MoveVertical,
     group: "Layout",
     elements: ["spacer"],
+  },
+  {
+    key: "living-hero",
+    label: "Living hero",
+    description: "An opening screen that moves slowly in your store's colours.",
+    icon: Waves,
+    group: "Layout",
+    elements: ["shader_hero"],
+  },
+  {
+    key: "product-3d",
+    label: "3D product",
+    description: "The shopper turns the product with a finger. Needs a .glb file.",
+    icon: Box,
+    group: "Commerce",
+    elements: ["product_3d"],
+  },
+  {
+    key: "orbit-gallery",
+    label: "Turning carousel",
+    description: "Products on a drum that turns, instead of a flat grid.",
+    icon: Orbit,
+    group: "Commerce",
+    elements: ["orbit_gallery"],
+  },
+  {
+    key: "scroll-story",
+    label: "Scroll story",
+    description: "Before and after, or how it's made — step by step as the page scrolls.",
+    icon: Layers,
+    group: "Content",
+    elements: ["scroll_story"],
   },
 ];
 

@@ -76,6 +76,16 @@ function elementSummary(element: PageElement): string {
       return truncate(str("title") || "Cart");
     case "divider":
       return "";
+    case "shader_hero":
+      return truncate(str("title") || str("subtitle") || "Living hero");
+    case "product_3d":
+      return truncate(str("title") || str("productId") || "3D product");
+    case "orbit_gallery":
+      return truncate([str("title"), props.limit && `${props.limit} products`].filter(Boolean).join(" · "));
+    case "scroll_story": {
+      const n = Array.isArray(props.steps) ? props.steps.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "step" : "steps"}`].filter(Boolean).join(" · "));
+    }
   }
 }
 

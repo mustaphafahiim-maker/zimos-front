@@ -1,0 +1,273 @@
+/**
+ * The dashboard's three chart shapes, as plain inline SVG.
+ *
+ * No charting library: these are small, single-series figures and a dependency
+ * would cost more than it saves. Rules they all follow:
+ *
+ * - One series each, so there is no legend and no categorical palette — the
+ *   card title names what is plotted and the colour is a brand token, which
+ *   means dark mode is handled by the tokens rather than by a second palette.
+ * - Marks are thin, grid and axis lines are recessive, and values are written
+ *   in ink tokens, never in the series colour.
+ * - Every mark carries a `<title>`, so hovering (and a screen reader) gives the
+ *   exact value instead of making the merchant read it off an axis.
+ * - The figure is wrapped in `dir="ltr"` by its caller: a time axis runs
+ *   left-to-right in Arabic too.
+ */
+import { useId, type ReactNode } from "react";
+import { cn } from "@store-builder/ui";
+
+export interface ChartPoint {
+  label: string;
+  value: number;
+}
+
+const AXIS_CLASS = "fill-[var(--color-ink-soft)] text-[10px]";
+
+/** Nothing to draw — every value is zero, or there are no points at all. */
+function isFlat(points: ChartPoint[]): boolean {
+  return points.length === 0 || points.every((p) => p.value === 0);
+}
+
+interface AxisProps {
+  points: ChartPoint[];
+  /** Turns a value into the text shown in tooltips and on the max label. */
+  format: (value: number) => string;
+  height?: number;
+  className?: string;
+  /** Sentence describing the whole figure, for screen readers. */
+  summary: string;
+}
+
+/**
+ * Revenue-over-time: a 2px line over a faint fill. Only the peak is labelled —
+ * a number on every point is noise at 30+ days.
+ */
+export function LineAreaChart({ points, format, height = 200, className, summary }: AxisProps) {
+  const gradientId = useId();
+  const width = 600;
+  const padTop = 18;
+  const padBottom = 20;
+  const plot = height - padTop - padBottom;
+
+  if (isFlat(points)) return <EmptyPlot height={height} className={className} label={summary} />;
+
+  const max = Math.max(...points.map((p) => p.value));
+  const step = points.length > 1 ? width / (points.length - 1) : 0;
+  const x = (i: number) => (points.length > 1 ? i * step : width / 2);
+  const y = (value: number) => padTop + plot - (value / max) * plot;
+
+  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(points.length - 1).toFixed(1)},${padTop + plot} L${x(0).toFixed(1)},${padTop + plot} Z`;
+  const peak = points.reduce((best, p, i) => (p.value > points[best].value ? i : best), 0);
+  const last = points.length - 1;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={cn("h-auto w-full", className)}
+      role="img"
+      aria-label={summary}
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Baseline only: a full grid would compete with a line this thin. */}
+      <line
+        x1="0"
+        x2={width}
+        y1={padTop + plot}
+        y2={padTop + plot}
+        stroke="var(--color-line)"
+        strokeWidth="1"
+      />
+      <path d={area} fill={`url(#${gradientId})`} />
+      <path
+        d={line}
+        fill="none"
+        stroke="var(--color-primary)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx={x(last)} cy={y(points[last].value)} r="4" fill="var(--color-primary)" />
+      <text
+        x={Math.min(width - 4, Math.max(4, x(peak)))}
+        y={Math.max(10, y(points[peak].value) - 6)}
+        textAnchor={peak > points.length / 2 ? "end" : "start"}
+        className={AXIS_CLASS}
+      >
+        {format(points[peak].value)}
+      </text>
+      {/* Hit areas: wider than the line, so hovering anywhere near works. */}
+      {points.map((p, i) => (
+        <rect
+          key={p.label}
+          x={Math.max(0, x(i) - step / 2)}
+          y={padTop}
+          width={Math.max(step, 6)}
+          height={plot}
+          fill="transparent"
+        >
+          <title>{`${p.label}: ${format(p.value)}`}</title>
+        </rect>
+      ))}
+      <text x="0" y={height - 6} className={AXIS_CLASS}>
+        {points[0].label}
+      </text>
+      <text x={width} y={height - 6} textAnchor="end" className={AXIS_CLASS}>
+        {points[last].label}
+      </text>
+    </svg>
+  );
+}
+
+/** Counts per day. Bars sit on the baseline with a rounded top and a 2px gap. */
+export function BarChart({
+  points,
+  format,
+  height = 200,
+  className,
+  summary,
+  color = "var(--color-primary)",
+}: AxisProps & { color?: string }) {
+  const width = 600;
+  const padTop = 12;
+  const padBottom = 20;
+  const plot = height - padTop - padBottom;
+
+  if (isFlat(points)) return <EmptyPlot height={height} className={className} label={summary} />;
+
+  const max = Math.max(...points.map((p) => p.value));
+  const slot = width / points.length;
+  const barWidth = Math.max(1, slot - 2);
+  const radius = Math.min(4, barWidth / 2);
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={cn("h-auto w-full", className)}
+      role="img"
+      aria-label={summary}
+      preserveAspectRatio="none"
+    >
+      <line
+        x1="0"
+        x2={width}
+        y1={padTop + plot}
+        y2={padTop + plot}
+        stroke="var(--color-line)"
+        strokeWidth="1"
+      />
+      {points.map((p, i) => {
+        const barHeight = max > 0 ? (p.value / max) * plot : 0;
+        const x = i * slot + 1;
+        const y = padTop + plot - barHeight;
+        const r = Math.min(radius, barHeight);
+        // Rounded at the data end, square where it meets the baseline.
+        const d =
+          barHeight <= 0
+            ? ""
+            : `M${x},${padTop + plot} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + barWidth - r},${y} Q${x + barWidth},${y} ${x + barWidth},${y + r} L${x + barWidth},${padTop + plot} Z`;
+        return (
+          <g key={p.label}>
+            {d && <path d={d} fill={color} />}
+            <rect x={x} y={padTop} width={barWidth} height={plot} fill="transparent">
+              <title>{`${p.label}: ${format(p.value)}`}</title>
+            </rect>
+          </g>
+        );
+      })}
+      <text x="0" y={height - 6} className={AXIS_CLASS}>
+        {points[0].label}
+      </text>
+      <text x={width} y={height - 6} textAnchor="end" className={AXIS_CLASS}>
+        {points[points.length - 1].label}
+      </text>
+    </svg>
+  );
+}
+
+export interface HBarRow {
+  label: string;
+  value: number;
+  /** Small line under the label, e.g. "12 units · EGP 3,400". */
+  caption?: string;
+}
+
+/**
+ * Ranked rows — order status, top products. Not an SVG: it is a list with a
+ * proportional track behind each row, so every value is also plain text and
+ * the whole thing reads as a table without a chart-specific fallback.
+ */
+export function HBarList({
+  rows,
+  format,
+  className,
+  emptyLabel,
+}: {
+  rows: HBarRow[];
+  format?: (value: number) => string;
+  className?: string;
+  emptyLabel?: ReactNode;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  if (rows.length === 0) return <>{emptyLabel ?? null}</>;
+  return (
+    <ul className={cn("space-y-2.5", className)}>
+      {rows.map((row) => (
+        <li key={row.label}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate text-sm text-ink" dir="auto">
+              {row.label}
+            </span>
+            <span className="tabular-nums shrink-0 text-sm font-medium text-ink">
+              <bdi dir="ltr">{format ? format(row.value) : row.value}</bdi>
+            </span>
+          </div>
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-paper">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${Math.round((row.value / max) * 100)}%` }}
+            />
+          </div>
+          {row.caption && (
+            <p className="mt-0.5 text-xs text-ink-soft" dir="auto">
+              {row.caption}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Keeps the card the same height when the range has no activity in it. */
+function EmptyPlot({
+  height,
+  className,
+  label,
+}: {
+  height: number;
+  className?: string;
+  label: string;
+}) {
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      style={{ height }}
+      className={cn(
+        "flex items-center justify-center rounded-[0.5rem] border border-dashed border-line text-xs text-ink-soft",
+        className
+      )}
+    >
+      {label}
+    </div>
+  );
+}

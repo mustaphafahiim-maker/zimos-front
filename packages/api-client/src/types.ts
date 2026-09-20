@@ -239,6 +239,11 @@ export const PAGE_ELEMENT_TYPES = [
   "product_list",
   "collection_list",
   "cart",
+  // Immersive sections (backend pageTree.js accepts these too).
+  "shader_hero",
+  "product_3d",
+  "orbit_gallery",
+  "scroll_story",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */
@@ -2073,4 +2078,363 @@ export interface AutomationRunListParams {
 export interface AutomationRunListResponse {
   runs: AutomationRun[];
   nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Abandoned checkouts — /workspaces/:ws/checkout-sessions
+// The storefront upserts a session while the shopper is still typing, so a row
+// exists as soon as there is a phone or an email to follow up with. The server
+// derives `abandoned` from inactivity (30 minutes) rather than storing it, so
+// an `in_progress` row can come back as `abandoned` on the next read.
+// ---------------------------------------------------------------------------
+
+/** How far the merchant has got with winning the shopper back. */
+export type CheckoutRecoveryStatus = "not_contacted" | "contacted" | "recovered" | "lost";
+
+/** Which slice of the sessions table to read. */
+export type CheckoutSessionView = "abandoned" | "converted" | "all";
+
+export type CheckoutSessionStatus = "in_progress" | "abandoned" | "converted";
+
+/** A priced line, snapshotted from the catalogue — never prices sent by the client. */
+export interface CheckoutSessionItem {
+  productId: string;
+  variantId: string;
+  productName: string | null;
+  options: Record<string, string> | null;
+  offerName: string | null;
+  quantity: number;
+  /** Integer minor units. */
+  lineTotalAmount: number;
+}
+
+export interface CheckoutSession {
+  id: string;
+  status: CheckoutSessionStatus;
+  recoveryStatus: CheckoutRecoveryStatus;
+  customerName: string | null;
+  phone: string | null;
+  email: string | null;
+  items: CheckoutSessionItem[];
+  /** Integer minor units. */
+  subtotalAmount: number;
+  currency: string;
+  source: "store" | "funnel";
+  lastActivityAt: string;
+  contactedAt: string | null;
+  createdAt: string;
+  /** Set once the shopper came back and ordered. */
+  convertedOrder: { id: string; orderNumber: string } | null;
+}
+
+export interface CheckoutSessionListParams {
+  view?: CheckoutSessionView;
+  recoveryStatus?: CheckoutRecoveryStatus;
+  limit?: number;
+  /** `lastActivityAt` of the last row of the previous page. */
+  before?: string;
+}
+
+export interface CheckoutSessionListResponse {
+  sessions: CheckoutSession[];
+  nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Marketing & fraud settings — stored in the workspace's `settings` JSONB and
+// read/written through `PATCH /workspaces/:id`.
+//
+// `WorkspaceSettings` above carries an open index signature, so these blobs
+// arrive typed as `unknown`; the shapes below name them. No money is involved:
+// pixels are IDs, rules are counts and minutes.
+// ---------------------------------------------------------------------------
+
+/**
+ * Browser ad pixels loaded on the public store. IDs only, never secrets — the
+ * storefront echoes them back in its public `tracking` block. The backend
+ * validates each against the network's own format and rejects anything else
+ * with a 422, so a typo fails the save rather than silently breaking tracking.
+ */
+export interface TrackingPixels {
+  /** Meta (Facebook) pixel ID — 5–20 digits. */
+  meta?: string | null;
+  /** TikTok pixel ID — 10–30 upper-case letters and digits. */
+  tiktok?: string | null;
+  /** Snapchat pixel ID — a UUID-shaped string. */
+  snapchat?: string | null;
+  /** Google tag — `G-`, `AW-` or `GT-` followed by 4–20 characters. */
+  google_tag?: string | null;
+}
+
+/**
+ * Evaluated on storefront orders only, so staff-created orders are never
+ * blocked. `flag` records the reasons on the order's `riskFlags`; `block`
+ * refuses the order outright with 422 ORDER_BLOCKED.
+ */
+export interface FraudRules {
+  action?: "flag" | "block";
+  /** Refuse orders from a blacklisted phone outright. */
+  block_blacklisted?: boolean;
+  /** Same customer, same variant, inside this many minutes. 1–10080. */
+  duplicate_window_minutes?: number | null;
+  /** Orders from one phone in 24h before it is flagged. 1–100. */
+  max_orders_per_phone_per_day?: number | null;
+  /** Lifetime rejected orders before the customer is flagged. 1–100. */
+  high_rejection_threshold?: number | null;
+}
+
+/**
+ * The settings keys this branch adds. Sent as a partial merge: an omitted key
+ * keeps its stored value, `null` clears it back to "not configured".
+ */
+export interface UpdateWorkspaceSettingsPayload {
+  tracking_pixels?: TrackingPixels | null;
+  fraud_rules?: FraudRules | null;
+}
+
+// ---------------------------------------------------------------------------
+// Fraud protection — /workspaces/:ws/fraud
+// Flagged orders are ordinary orders carrying `riskFlags`; the blocklist is
+// the set of blacklisted customers, keyed by phone.
+// ---------------------------------------------------------------------------
+
+/** Reasons the rule engine can attach to an order. Treat as an open set. */
+export type RiskFlag =
+  | "duplicate_order"
+  | "phone_daily_limit"
+  | "high_rejection_customer"
+  | (string & {});
+
+export interface FlaggedOrder {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  riskFlags: RiskFlag[];
+  customerName: string | null;
+  phone: string | null;
+  /** Integer minor units. */
+  totalAmount: number;
+  currency: string;
+  confirmationState: string;
+  cancelled: boolean;
+}
+
+export interface FlaggedOrderListParams {
+  limit?: number;
+  /** `createdAt` of the last row of the previous page. */
+  before?: string;
+  /** Also list orders already cancelled or past the pending stage. */
+  includeResolved?: boolean;
+}
+
+export interface FlaggedOrderListResponse {
+  orders: FlaggedOrder[];
+  nextCursor: string | null;
+}
+
+export interface BlocklistEntry {
+  customerId: string;
+  fullName: string | null;
+  phone: string | null;
+  reason: string | null;
+  totalOrders: number;
+  totalRejectedOrders: number;
+  blockedAt: string;
+}
+
+export interface AddToBlocklistPayload {
+  phone: string;
+  /** Required, 2–300 characters — the merchant has to say why. */
+  reason: string;
+  fullName?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Store analytics — /workspaces/:ws/analytics/summary
+// Everything is computed from real orders in the range; there is no events
+// pipeline behind it. Money is integer minor units, rates are percentages
+// (12.5 = 12.5%) and are `null` when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsSummaryParams {
+  /** ISO date. Defaults to 30 days back; a range over 366 days is clamped. */
+  from?: string;
+  /** ISO date, exclusive. Defaults to now. */
+  to?: string;
+}
+
+export interface AnalyticsOrderCounts {
+  placed: number;
+  pending: number;
+  confirmed: number;
+  rejected: number;
+  unreachable: number;
+  postponed: number;
+  cancelled: number;
+  /** Orders whose fulfilment state is `fulfilled`. */
+  delivered: number;
+  returned: number;
+}
+
+export interface AnalyticsRates {
+  /** Confirmed / decided (confirmed + rejected + unreachable). */
+  confirmation: number | null;
+  /** Delivered / confirmed. */
+  delivery: number | null;
+  /** Returned / (delivered + returned). */
+  return: number | null;
+}
+
+export interface AnalyticsRevenue {
+  /** Total of non-cancelled, non-rejected orders. */
+  gross: number;
+  /** Total of delivered orders. */
+  delivered: number;
+  collected: number;
+  refunded: number;
+  /** Shipping charged to customers on delivered orders (courier cost is unknown). */
+  shippingCharged: number;
+  /** Discounts given on delivered orders. */
+  discounts: number;
+  averageOrderValue: number;
+}
+
+export interface AnalyticsProfit {
+  deliveredItemsRevenue: number;
+  discounts: number;
+  /** From the cost snapshot on each order item. */
+  productCost: number;
+  refunded: number;
+  /** deliveredItemsRevenue - discounts - productCost - refunded. */
+  grossProfit: number;
+  /**
+   * Share of delivered quantity that had a cost recorded, as a percentage.
+   * Anything under 100 means `productCost` — and so `grossProfit` — is partial.
+   */
+  costCoverage: number | null;
+}
+
+/** One day of the range. Every day is present, zero-filled. */
+export interface AnalyticsSeriesPoint {
+  /** YYYY-MM-DD in the workspace's timezone. */
+  date: string;
+  orders: number;
+  revenue: number;
+  delivered: number;
+}
+
+export interface AnalyticsTopProduct {
+  productId: string | null;
+  name: string | null;
+  quantity: number;
+  revenue: number;
+}
+
+export interface AnalyticsSummary {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  orders: AnalyticsOrderCounts;
+  rates: AnalyticsRates;
+  revenue: AnalyticsRevenue;
+  profit: AnalyticsProfit;
+  series: AnalyticsSeriesPoint[];
+  /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
+  topProducts: AnalyticsTopProduct[];
+  newCustomers: number;
+}
+
+// ---------------------------------------------------------------------------
+// Media library — /workspaces/:ws/media
+// The list carries no `path` (unlike `ProductMedia`), so build a display src
+// from `url`. Deleting removes the library entry; the stored file stays, since
+// a product or a page may still reference it.
+// ---------------------------------------------------------------------------
+
+export interface MediaAsset {
+  id: string;
+  /** Absolute URL (APP_URL + path). */
+  url: string;
+  mimeType: string;
+  /** Bytes. */
+  size: number;
+  createdAt: string;
+}
+
+export interface MediaListParams {
+  /** 1–200, default 60. */
+  limit?: number;
+  /** `createdAt` of the last row of the previous page. */
+  before?: string;
+}
+
+export interface MediaListResponse {
+  media: MediaAsset[];
+  nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Call centre history — /workspaces/:ws/confirmation-tasks/attempts | /agents
+// The queue itself is `listConfirmationQueue` above; these two are the call log
+// and the per-agent scoreboard behind it.
+// ---------------------------------------------------------------------------
+
+export interface ConfirmationAttemptAgent {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+}
+
+export interface ConfirmationAttemptOrder {
+  id: string;
+  orderNumber: string;
+  customerName: string | null;
+  phone: string | null;
+  /** Integer minor units. */
+  totalAmount: number;
+  currency: string;
+}
+
+export interface ConfirmationAttempt {
+  id: string;
+  outcome: ConfirmationOutcome;
+  notes: string | null;
+  createdAt: string;
+  taskId: string;
+  /** Total attempts on the task, not this attempt's position in them. */
+  attemptNumber: number;
+  agent: ConfirmationAttemptAgent;
+  order: ConfirmationAttemptOrder | null;
+}
+
+export interface ConfirmationAttemptListParams {
+  limit?: number;
+  /** `createdAt` of the last row of the previous page. */
+  before?: string;
+  agentUserId?: string;
+  outcome?: ConfirmationOutcome;
+}
+
+export interface ConfirmationAttemptListResponse {
+  attempts: ConfirmationAttempt[];
+  nextCursor: string | null;
+}
+
+export interface ConfirmationAgent {
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  role: { key: string; name: string } | null;
+  attempts: number;
+  confirmed: number;
+  rejected: number;
+  unreachable: number;
+  postponed: number;
+  /** Confirmed / (confirmed + rejected), as a percentage. Null when neither. */
+  confirmationRate: number | null;
+  tasksInProgress: number;
+}
+
+export interface ConfirmationAgentListResponse {
+  range: { days: number; since: string };
+  agents: ConfirmationAgent[];
 }

@@ -42,6 +42,29 @@ const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const AbandonedCheckoutsPage = lazy(() =>
+  import("@/pages/checkouts/AbandonedCheckoutsPage").then((m) => ({
+    default: m.AbandonedCheckoutsPage,
+  }))
+);
+const MarketingPage = lazy(() =>
+  import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage }))
+);
+const FraudProtectionPage = lazy(() =>
+  import("@/pages/fraud/FraudProtectionPage").then((m) => ({ default: m.FraudProtectionPage }))
+);
+const AnalyticsPage = lazy(() =>
+  import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage }))
+);
+const ProfitPage = lazy(() =>
+  import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage }))
+);
+const MediaLibraryPage = lazy(() =>
+  import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
+);
+const CallCenterPage = lazy(() =>
+  import("@/pages/callcenter/CallCenterPage").then((m) => ({ default: m.CallCenterPage }))
+);
 
 export default function App() {
   return (
@@ -69,6 +92,22 @@ export default function App() {
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
+                      <Route
+                        path="/call-center"
+                        element={
+                          <LazyRoute>
+                            <CallCenterPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/abandoned-checkouts"
+                        element={
+                          <LazyRoute>
+                            <AbandonedCheckoutsPage />
+                          </LazyRoute>
+                        }
+                      />
                       <Route path="/returns" element={<ReturnsPage />} />
                       <Route
                         path="/settlements"
@@ -104,6 +143,46 @@ export default function App() {
                         element={
                           <LazyRoute>
                             <AutomationsPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/marketing"
+                        element={
+                          <LazyRoute>
+                            <MarketingPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/fraud"
+                        element={
+                          <LazyRoute>
+                            <FraudProtectionPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/analytics"
+                        element={
+                          <LazyRoute>
+                            <AnalyticsPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/profit"
+                        element={
+                          <LazyRoute>
+                            <ProfitPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/media"
+                        element={
+                          <LazyRoute>
+                            <MediaLibraryPage />
                           </LazyRoute>
                         }
                       />

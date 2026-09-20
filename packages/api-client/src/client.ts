@@ -122,6 +122,27 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from "./types";
+// Kept as its own block so the list above stays exactly as it was: these are
+// the shapes for the endpoints added at the bottom of the class.
+import type {
+  AddToBlocklistPayload,
+  AnalyticsSummary,
+  AnalyticsSummaryParams,
+  BlocklistEntry,
+  CheckoutRecoveryStatus,
+  CheckoutSession,
+  CheckoutSessionListParams,
+  CheckoutSessionListResponse,
+  ConfirmationAgentListResponse,
+  ConfirmationAttemptListParams,
+  ConfirmationAttemptListResponse,
+  FlaggedOrderListParams,
+  FlaggedOrderListResponse,
+  MediaListParams,
+  MediaListResponse,
+  RiskFlag,
+  UpdateWorkspaceSettingsPayload,
+} from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
   const query = new URLSearchParams();
@@ -1980,6 +2001,150 @@ export class ApiClient {
   async listAutomationRuns(workspaceId: string, params: AutomationRunListParams = {}) {
     return this.request<AutomationRunListResponse>(
       `/workspaces/${workspaceId}/automations/runs${buildQuery({ ...params })}`
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Abandoned checkouts — /workspaces/:ws/checkout-sessions
+  // Reads need orders:view, the recovery PATCH needs orders:manage. The
+  // default view is `abandoned`; pass `all` to see in-progress carts too.
+  // ---------------------------------------------------------------------
+
+  async listCheckoutSessions(workspaceId: string, params: CheckoutSessionListParams = {}) {
+    return this.request<CheckoutSessionListResponse>(
+      `/workspaces/${workspaceId}/checkout-sessions${buildQuery({ ...params })}`
+    );
+  }
+
+  /** Setting `contacted` also stamps `contactedAt` server-side. */
+  async setCheckoutSessionRecovery(
+    workspaceId: string,
+    sessionId: string,
+    recoveryStatus: CheckoutRecoveryStatus
+  ) {
+    const { session } = await this.request<{ session: CheckoutSession }>(
+      `/workspaces/${workspaceId}/checkout-sessions/${sessionId}`,
+      { method: "PATCH", body: { recoveryStatus } }
+    );
+    return session;
+  }
+
+  // ---------------------------------------------------------------------
+  // Marketing & fraud settings — the `tracking_pixels` / `fraud_rules` blobs
+  // inside the workspace's settings. Read them off `workspace.settings`;
+  // this writes them back through the same PATCH the shipping knobs use, so
+  // the response is the whole refreshed workspace.
+  // ---------------------------------------------------------------------
+
+  /** Partial merge: omitted keys keep their stored value, `null` clears one. */
+  async updateWorkspaceSettings(workspaceId: string, settings: UpdateWorkspaceSettingsPayload) {
+    const { workspace } = await this.request<{ workspace: Workspace }>(
+      `/workspaces/${workspaceId}`,
+      { method: "PATCH", body: { settings } }
+    );
+    return workspace;
+  }
+
+  // ---------------------------------------------------------------------
+  // Fraud protection — /workspaces/:ws/fraud
+  // Flagged orders need orders:view / orders:manage; the blocklist needs
+  // customers:view / customers:manage, so a 403 can hit one half only.
+  // ---------------------------------------------------------------------
+
+  /** Open flagged orders by default — `includeResolved` adds the rest. */
+  async listFlaggedOrders(workspaceId: string, params: FlaggedOrderListParams = {}) {
+    return this.request<FlaggedOrderListResponse>(
+      `/workspaces/${workspaceId}/fraud/flagged-orders${buildQuery({ ...params })}`
+    );
+  }
+
+  /** Clears every risk flag on the order. Audited, and not reversible. */
+  async approveFlaggedOrder(workspaceId: string, orderId: string) {
+    const { order } = await this.request<{ order: { id: string; riskFlags: RiskFlag[] } }>(
+      `/workspaces/${workspaceId}/fraud/flagged-orders/${orderId}/approve`,
+      { method: "POST" }
+    );
+    return order;
+  }
+
+  /** The blacklisted customers, newest change first. */
+  async listBlocklist(workspaceId: string) {
+    const { entries } = await this.request<{ entries: BlocklistEntry[] }>(
+      `/workspaces/${workspaceId}/fraud/blocklist`
+    );
+    return entries;
+  }
+
+  /**
+   * Blocks a phone even if it never ordered — the customer record is created
+   * on the spot. Unblocking goes through `setCustomerBlacklist` with
+   * `{ isBlacklisted: false }`, since that is a customer-level change.
+   */
+  async addToBlocklist(workspaceId: string, payload: AddToBlocklistPayload) {
+    const { entry } = await this.request<{
+      entry: { customerId: string; phone: string | null; reason: string | null };
+    }>(`/workspaces/${workspaceId}/fraud/blocklist`, { method: "POST", body: payload });
+    return entry;
+  }
+
+  // ---------------------------------------------------------------------
+  // Store analytics — /workspaces/:ws/analytics/summary
+  // Needs analytics:view. Computed from orders on every call, so a wide
+  // range is a slow request rather than a cached one.
+  // ---------------------------------------------------------------------
+
+  async getAnalyticsSummary(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<AnalyticsSummary>(
+      `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Media library — /workspaces/:ws/media
+  // `uploadMedia` above adds to the same library. Everything needs
+  // products:manage.
+  // ---------------------------------------------------------------------
+
+  /** Newest first. */
+  async listMedia(workspaceId: string, params: MediaListParams = {}) {
+    return this.request<MediaListResponse>(
+      `/workspaces/${workspaceId}/media${buildQuery({ ...params })}`
+    );
+  }
+
+  /**
+   * Removes the library entry only — the stored file is left in place because
+   * a product or a page may still be pointing at its URL.
+   */
+  async deleteMedia(workspaceId: string, mediaId: string) {
+    return this.request<{ deleted: boolean; id: string }>(
+      `/workspaces/${workspaceId}/media/${mediaId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Call centre history — /workspaces/:ws/confirmation-tasks/...
+  // Same permission as the queue itself (orders:confirm).
+  // ---------------------------------------------------------------------
+
+  /** Every confirmation attempt with its order and agent, newest first. */
+  async listConfirmationAttempts(
+    workspaceId: string,
+    params: ConfirmationAttemptListParams = {}
+  ) {
+    return this.request<ConfirmationAttemptListResponse>(
+      `${this.confirmationTasksBase(workspaceId)}/attempts${buildQuery({ ...params })}`
+    );
+  }
+
+  /**
+   * Team members who may confirm orders, with their activity over the last
+   * `days` days (1–366, default 30) and whatever they hold right now.
+   */
+  async listConfirmationAgents(workspaceId: string, params: { days?: number } = {}) {
+    return this.request<ConfirmationAgentListResponse>(
+      `${this.confirmationTasksBase(workspaceId)}/agents${buildQuery({ ...params })}`
     );
   }
 }
