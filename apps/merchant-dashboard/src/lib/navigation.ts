@@ -1,8 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Bot,
   ClipboardCheck,
   Globe,
   LayoutDashboard,
+  MessageCircle,
   Package,
   Settings,
   ShoppingBag,
@@ -11,6 +13,7 @@ import {
   Truck,
   Undo2,
   Users,
+  Wallet,
   Workflow,
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
@@ -20,6 +23,9 @@ export type NavKey =
   | "orders"
   | "confirmationQueue"
   | "returns"
+  | "settlements"
+  | "inbox"
+  | "automations"
   | "catalog"
   | "reviews"
   | "customers"
@@ -68,6 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "orders", to: "/orders", icon: ShoppingBag },
       { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
       { key: "returns", to: "/returns", icon: Undo2 },
+      { key: "settlements", to: "/settlements", icon: Wallet },
     ],
   },
   {
@@ -83,6 +90,8 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "grow",
     labelKey: "grow",
     items: [
+      { key: "inbox", to: "/inbox", icon: MessageCircle },
+      { key: "automations", to: "/automations", icon: Bot },
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "discounts", to: "/discounts", icon: Tag },
     ],
@@ -125,6 +134,9 @@ export const NAV_LABELS = {
     orders: "Orders",
     confirmationQueue: "Confirmation Queue",
     returns: "Returns",
+    settlements: "COD Settlements",
+    inbox: "WhatsApp Inbox",
+    automations: "Automations",
     catalog: "Catalog",
     reviews: "Reviews",
     customers: "Customers",
@@ -139,6 +151,9 @@ export const NAV_LABELS = {
     orders: "الطلبات",
     confirmationQueue: "قائمة التأكيد",
     returns: "المرتجعات",
+    settlements: "تحصيل الشحن",
+    inbox: "صندوق واتساب",
+    automations: "الأتمتة",
     catalog: "الكتالوج",
     reviews: "التقييمات",
     customers: "العملاء",

@@ -28,6 +28,7 @@ import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { WhatsappSection } from "./WhatsappSection";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
@@ -40,6 +41,7 @@ export function SettingsPage() {
       />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
+      <WhatsappSection key={`whatsapp-${workspaceId}`} />
     </div>
   );
 }

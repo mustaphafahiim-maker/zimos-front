@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/i18n/LocaleContext";
@@ -31,6 +32,16 @@ import { WebsiteEditorPage } from "@/pages/website/editor/WebsiteEditorPage";
 import { FunnelsPage } from "@/pages/funnels/FunnelsPage";
 import { FunnelEditorPage } from "@/pages/funnels/FunnelEditorPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { LazyRoute } from "@/routes/LazyRoute";
+
+// Code-split: each is a heavy screen a given merchant may never open.
+const SettlementsPage = lazy(() =>
+  import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
+);
+const AutomationsPage = lazy(() =>
+  import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
+);
+const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
 
 export default function App() {
   return (
@@ -59,6 +70,14 @@ export default function App() {
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
                       <Route path="/returns" element={<ReturnsPage />} />
+                      <Route
+                        path="/settlements"
+                        element={
+                          <LazyRoute>
+                            <SettlementsPage />
+                          </LazyRoute>
+                        }
+                      />
 
                       <Route path="/catalog" element={<CatalogProductsPage />} />
                       <Route path="/catalog/collections" element={<CollectionsPage />} />
@@ -72,6 +91,22 @@ export default function App() {
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/website" element={<WebsitePage />} />
                       <Route path="/website/:websiteId/edit" element={<WebsiteEditorPage />} />
+                      <Route
+                        path="/inbox"
+                        element={
+                          <LazyRoute>
+                            <InboxPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/automations"
+                        element={
+                          <LazyRoute>
+                            <AutomationsPage />
+                          </LazyRoute>
+                        }
+                      />
                       <Route path="/funnels" element={<FunnelsPage />} />
                       <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
                       <Route path="/settings" element={<SettingsPage />} />

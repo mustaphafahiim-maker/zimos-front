@@ -18,6 +18,11 @@ import type {
   ArchivedResponse,
   AuthTokens,
   AuthUser,
+  AutomationListResponse,
+  AutomationRule,
+  AutomationRulePayload,
+  AutomationRunListParams,
+  AutomationRunListResponse,
   BlacklistPayload,
   Cart,
   CheckoutPayload,
@@ -25,12 +30,14 @@ import type {
   CollectionSummary,
   ConfirmationTask,
   ConfirmationTaskStatus,
+  ConnectWhatsappPayload,
   CreateCollectionPayload,
   CreateDiscountPayload,
   CreateOfferPayload,
   CreateOrderPayload,
   CreateProductPayload,
   CreateReturnPayload,
+  CreateSettlementPayload,
   CreateShipmentPayload,
   CreateShippingRatePayload,
   CreateShippingZonePayload,
@@ -64,6 +71,12 @@ import type {
   ReturnRequest,
   Review,
   ReviewListParams,
+  SendWhatsappPayload,
+  SentWhatsappMessage,
+  SettlementDetail,
+  SettlementListResponse,
+  SettlementStatus,
+  SettlementSummary,
   Shipment,
   ShippingRate,
   ShippingZone,
@@ -76,6 +89,7 @@ import type {
   SuccessResponse,
   TaxRate,
   TrackResult,
+  UnsettledResponse,
   UpdateCollectionPayload,
   UpdateCustomerAddressPayload,
   UpdateCustomerPayload,
@@ -83,6 +97,7 @@ import type {
   UpdateOfferPayload,
   UpdateOrderPayload,
   UpdateProductPayload,
+  UpdateSettlementPayload,
   UpdateShipmentPayload,
   UpdateShippingRatePayload,
   UpdateShippingZonePayload,
@@ -97,6 +112,11 @@ import type {
   WebsitePage,
   WebsiteTemplateDetail,
   WebsiteTemplateSummary,
+  WhatsappConversationListParams,
+  WhatsappConversationListResponse,
+  WhatsappConversationStatus,
+  WhatsappIntegration,
+  WhatsappMessageListResponse,
   Workspace,
   WorkspaceInvite,
   WorkspaceMember,
@@ -1757,5 +1777,209 @@ export class ApiClient {
       { auth: false }
     );
     return template;
+  }
+
+  // ---------------------------------------------------------------------
+  // COD settlements — /workspaces/:ws/settlements
+  // Amounts are integer minor units both ways. Reads need
+  // financial_reports:view, writes need refunds:manage, so a 403 here is a
+  // role problem and not a bug.
+  // ---------------------------------------------------------------------
+
+  async getSettlementSummary(workspaceId: string) {
+    const { summary } = await this.request<{ summary: SettlementSummary }>(
+      `/workspaces/${workspaceId}/settlements/summary`
+    );
+    return summary;
+  }
+
+  /** Delivered COD orders with money still due, grouped by delivering carrier. */
+  async listUnsettledOrders(workspaceId: string, params: { carrierCode?: string } = {}) {
+    return this.request<UnsettledResponse>(
+      `/workspaces/${workspaceId}/settlements/unsettled${buildQuery({ ...params })}`
+    );
+  }
+
+  async listSettlements(
+    workspaceId: string,
+    params: { status?: SettlementStatus; limit?: number; before?: string } = {}
+  ) {
+    return this.request<SettlementListResponse>(
+      `/workspaces/${workspaceId}/settlements${buildQuery({ ...params })}`
+    );
+  }
+
+  async getSettlement(workspaceId: string, settlementId: string) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(
+      `/workspaces/${workspaceId}/settlements/${settlementId}`
+    );
+    return settlement;
+  }
+
+  /** 422 ORDER_NOT_SETTLEABLE / DUPLICATE_ORDER / COLLECTED_EXCEEDS_DUE. */
+  async createSettlement(workspaceId: string, payload: CreateSettlementPayload) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(
+      `/workspaces/${workspaceId}/settlements`,
+      { method: "POST", body: payload }
+    );
+    return settlement;
+  }
+
+  /** Drafts only — 409 SETTLEMENT_CONFIRMED once it has been confirmed. */
+  async updateSettlement(
+    workspaceId: string,
+    settlementId: string,
+    payload: UpdateSettlementPayload
+  ) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(
+      `/workspaces/${workspaceId}/settlements/${settlementId}`,
+      { method: "PATCH", body: payload }
+    );
+    return settlement;
+  }
+
+  /** Drafts only — 409 SETTLEMENT_CONFIRMED. */
+  async deleteSettlement(workspaceId: string, settlementId: string) {
+    return this.request<{ deleted: boolean; id: string }>(
+      `/workspaces/${workspaceId}/settlements/${settlementId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  /**
+   * Irreversible: records a captured COD payment on every order in the
+   * settlement, moves each to paid / partially_paid, and locks the row.
+   * 422 SETTLEMENT_EMPTY when it has no lines.
+   */
+  async confirmSettlement(workspaceId: string, settlementId: string) {
+    const { settlement } = await this.request<{ settlement: SettlementDetail }>(
+      `/workspaces/${workspaceId}/settlements/${settlementId}/confirm`,
+      { method: "POST" }
+    );
+    return settlement;
+  }
+
+  // ---------------------------------------------------------------------
+  // WhatsApp Cloud API — /workspaces/:ws/whatsapp
+  // ---------------------------------------------------------------------
+
+  /** Answers `{ connected: false }` when the workspace has no integration. */
+  async getWhatsappIntegration(workspaceId: string) {
+    const { integration } = await this.request<{ integration: WhatsappIntegration }>(
+      `/workspaces/${workspaceId}/whatsapp/integration`
+    );
+    return integration;
+  }
+
+  /**
+   * Verifies the credentials with Meta before storing them, so this is slow
+   * and can fail on Meta's side: 422 WHATSAPP_AUTH_FAILED / WHATSAPP_API_ERROR,
+   * 502 WHATSAPP_UNREACHABLE. Needs workspace:manage.
+   */
+  async connectWhatsapp(workspaceId: string, payload: ConnectWhatsappPayload) {
+    const { integration } = await this.request<{ integration: WhatsappIntegration }>(
+      `/workspaces/${workspaceId}/whatsapp/integration`,
+      { method: "PUT", body: payload }
+    );
+    return integration;
+  }
+
+  /** Drops the credentials. Stored conversations and messages are kept. */
+  async disconnectWhatsapp(workspaceId: string) {
+    return this.request<{ disconnected: boolean }>(
+      `/workspaces/${workspaceId}/whatsapp/integration`,
+      { method: "DELETE" }
+    );
+  }
+
+  async listWhatsappConversations(
+    workspaceId: string,
+    params: WhatsappConversationListParams = {}
+  ) {
+    return this.request<WhatsappConversationListResponse>(
+      `/workspaces/${workspaceId}/whatsapp/conversations${buildQuery({ ...params })}`
+    );
+  }
+
+  /** Oldest -> newest. Reading a conversation also marks it read server-side. */
+  async listWhatsappMessages(
+    workspaceId: string,
+    conversationId: string,
+    params: { limit?: number; before?: string } = {}
+  ) {
+    return this.request<WhatsappMessageListResponse>(
+      `/workspaces/${workspaceId}/whatsapp/conversations/${conversationId}/messages${buildQuery({ ...params })}`
+    );
+  }
+
+  async setWhatsappConversationStatus(
+    workspaceId: string,
+    conversationId: string,
+    status: WhatsappConversationStatus
+  ) {
+    const { conversation } = await this.request<{
+      conversation: { id: string; status: WhatsappConversationStatus };
+    }>(`/workspaces/${workspaceId}/whatsapp/conversations/${conversationId}`, {
+      method: "PATCH",
+      body: { status },
+    });
+    return conversation;
+  }
+
+  /**
+   * 422 WHATSAPP_WINDOW_CLOSED when free text is sent more than 24h after the
+   * customer's last message — send an approved template instead. Also 422
+   * WHATSAPP_NOT_CONNECTED and INVALID_PHONE.
+   */
+  async sendWhatsappMessage(workspaceId: string, payload: SendWhatsappPayload) {
+    const { message } = await this.request<{ message: SentWhatsappMessage }>(
+      `/workspaces/${workspaceId}/whatsapp/messages`,
+      { method: "POST", body: payload }
+    );
+    return message;
+  }
+
+  // ---------------------------------------------------------------------
+  // Order automations — /workspaces/:ws/automations
+  // Every endpoint here needs automations:manage.
+  // ---------------------------------------------------------------------
+
+  /** Rules plus the server's trigger and token vocabularies. */
+  async listAutomations(workspaceId: string) {
+    return this.request<AutomationListResponse>(`/workspaces/${workspaceId}/automations`);
+  }
+
+  async createAutomation(workspaceId: string, payload: AutomationRulePayload) {
+    const { rule } = await this.request<{ rule: AutomationRule }>(
+      `/workspaces/${workspaceId}/automations`,
+      { method: "POST", body: payload }
+    );
+    return rule;
+  }
+
+  async updateAutomation(
+    workspaceId: string,
+    ruleId: string,
+    payload: Partial<AutomationRulePayload>
+  ) {
+    const { rule } = await this.request<{ rule: AutomationRule }>(
+      `/workspaces/${workspaceId}/automations/${ruleId}`,
+      { method: "PATCH", body: payload }
+    );
+    return rule;
+  }
+
+  /** The rule's past runs stay in the log. */
+  async deleteAutomation(workspaceId: string, ruleId: string) {
+    return this.request<{ deleted: boolean; id: string }>(
+      `/workspaces/${workspaceId}/automations/${ruleId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async listAutomationRuns(workspaceId: string, params: AutomationRunListParams = {}) {
+    return this.request<AutomationRunListResponse>(
+      `/workspaces/${workspaceId}/automations/runs${buildQuery({ ...params })}`
+    );
   }
 }

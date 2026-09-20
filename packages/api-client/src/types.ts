@@ -1772,3 +1772,305 @@ export interface AdminOverview {
   ordersPerDay: AdminChartPoint[];
   attention: AdminAttentionItem[];
 }
+
+// ---------------------------------------------------------------------------
+// COD settlements — /workspaces/:ws/settlements
+//
+// Every amount here is an integer in MINOR units (piastres), like the rest of
+// the order money in this file. `netAmount` is `collectedAmount - feesAmount`,
+// computed by the server from the lines — never recompute it client-side.
+// ---------------------------------------------------------------------------
+
+export type SettlementStatus = "draft" | "confirmed";
+
+/** `GET /settlements/summary` -> `{ summary: {...} }`. */
+export interface SettlementSummary {
+  unsettledOrders: number;
+  /** Still owed by couriers across every delivered, unsettled COD order. */
+  dueFromCouriers: number;
+  /** Net of confirmed settlements only — drafts record nothing. */
+  received: number;
+  courierFees: number;
+  draftSettlements: number;
+}
+
+/** One delivered COD order that is not on any settlement yet. */
+export interface UnsettledOrder {
+  orderId: string;
+  orderNumber: string;
+  customerName: string | null;
+  /** Carrier of the delivering shipment, which is how rows are grouped. */
+  carrierCode: string;
+  shipmentId: string | null;
+  waybillNumber: string | null;
+  deliveredAt: string | null;
+  currency: string;
+  totalAmount: number;
+  amountPaid: number;
+  /** `totalAmount - amountPaid`, floored at 0. The default collected amount. */
+  dueAmount: number;
+}
+
+export interface UnsettledCarrier {
+  carrierCode: string;
+  orders: number;
+  dueAmount: number;
+}
+
+export interface UnsettledResponse {
+  orders: UnsettledOrder[];
+  carriers: UnsettledCarrier[];
+}
+
+export interface SettlementListItem {
+  id: string;
+  carrierCode: string;
+  reference: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  status: SettlementStatus;
+  /**
+   * Absent on rows the server stored before it recorded one. Fall back to the
+   * workspace currency rather than assuming EGP at the call site.
+   */
+  currency?: string;
+  collectedAmount: number;
+  feesAmount: number;
+  netAmount: number;
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface SettlementLine {
+  orderId: string;
+  /** Null when the order behind the line has since been removed. */
+  orderNumber: string | null;
+  customerName: string | null;
+  orderTotal: number | null;
+  financialState: string | null;
+  collectedAmount: number;
+  feeAmount: number;
+}
+
+export interface SettlementDetail extends SettlementListItem {
+  notes: string | null;
+  lines: SettlementLine[];
+}
+
+export interface SettlementListResponse {
+  settlements: SettlementListItem[];
+  nextCursor: string | null;
+}
+
+export interface SettlementLinePayload {
+  orderId: string;
+  /** Omit to settle the order's full `dueAmount`. Never more than it (422). */
+  collectedAmount?: number;
+  feeAmount: number;
+}
+
+export interface CreateSettlementPayload {
+  carrierCode: string;
+  reference?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  notes?: string | null;
+  lines: SettlementLinePayload[];
+}
+
+/** Drafts only. Sending `lines` replaces every line on the settlement. */
+export type UpdateSettlementPayload = Partial<CreateSettlementPayload>;
+
+// ---------------------------------------------------------------------------
+// WhatsApp Cloud API — /workspaces/:ws/whatsapp
+// ---------------------------------------------------------------------------
+
+export type WhatsappIntegrationStatus = "connected" | "error";
+
+export interface WhatsappIntegrationConnected {
+  connected: true;
+  status: WhatsappIntegrationStatus;
+  phoneNumberId: string;
+  businessAccountId: string | null;
+  displayPhoneNumber: string | null;
+  verifiedName: string | null;
+  /** Masked — the real token never leaves the server. */
+  accessTokenMask: string | null;
+  /** False means inbound webhook signatures cannot be verified. */
+  appSecretSet: boolean;
+  webhook: { url: string; verifyToken: string };
+  lastVerifiedAt: string | null;
+  lastError: string | null;
+}
+
+/**
+ * A workspace with no integration row answers the bare `{ connected: false }`,
+ * so narrow on `connected` before reading any other field.
+ */
+export type WhatsappIntegration = { connected: false } | WhatsappIntegrationConnected;
+
+export interface ConnectWhatsappPayload {
+  phoneNumberId: string;
+  accessToken: string;
+  businessAccountId?: string;
+  appSecret?: string;
+}
+
+export type WhatsappConversationStatus = "open" | "closed";
+
+export interface WhatsappConversation {
+  id: string;
+  /** Normalized, digits only, with country code. */
+  phone: string;
+  customerName: string | null;
+  customerId: string | null;
+  status: WhatsappConversationStatus;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  /**
+   * Whether the customer messaged within the last 24 hours. False means
+   * WhatsApp only allows an approved template, not free text.
+   */
+  canReply: boolean;
+}
+
+export interface WhatsappConversationListParams {
+  status?: WhatsappConversationStatus;
+  search?: string;
+  limit?: number;
+  before?: string;
+}
+
+export interface WhatsappConversationListResponse {
+  conversations: WhatsappConversation[];
+  nextCursor: string | null;
+}
+
+export type WhatsappMessageStatus = "received" | "sent" | "delivered" | "read" | "failed";
+
+export interface WhatsappMessage {
+  id: string;
+  direction: "in" | "out";
+  /** "text" for anything renderable; the raw Meta type otherwise. */
+  type: string;
+  body: string | null;
+  templateName: string | null;
+  status: WhatsappMessageStatus;
+  error: string | null;
+  createdAt: string;
+}
+
+/** Messages come back oldest -> newest; `nextCursor` pages further back. */
+export interface WhatsappMessageListResponse {
+  messages: WhatsappMessage[];
+  nextCursor: string | null;
+}
+
+export interface WhatsappTemplatePayload {
+  /** The approved template name in Meta: lowercase, digits, underscores. */
+  name: string;
+  language: string;
+  /** Fills the template's numbered placeholders, in order. */
+  params: string[];
+}
+
+/** Exactly one of `text` / `template` — the API rejects both or neither. */
+export type SendWhatsappPayload =
+  | { to: string; text: string }
+  | { to: string; template: WhatsappTemplatePayload };
+
+export interface SentWhatsappMessage {
+  id: string;
+  conversationId: string;
+  direction: "in" | "out";
+  type: string;
+  body: string | null;
+  status: WhatsappMessageStatus;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Order automations — /workspaces/:ws/automations
+// ---------------------------------------------------------------------------
+
+export type AutomationTrigger =
+  | "order.created"
+  | "order.confirmed"
+  | "order.rejected"
+  | "order.cancelled"
+  | "order.shipped"
+  | "order.out_for_delivery"
+  | "order.delivered";
+
+export type AutomationPaymentMethod = "cod" | "card" | "wallet" | "bank_transfer";
+
+/** An empty object means the rule fires on every order for its trigger. */
+export interface AutomationConditions {
+  paymentMethod?: AutomationPaymentMethod | null;
+  /** Minor units. */
+  minTotalAmount?: number | null;
+}
+
+export interface AutomationWhatsappAction {
+  type: "whatsapp_template";
+  template: string;
+  language: string;
+  /** Each entry may carry `{{token}}` placeholders the engine renders. */
+  params: string[];
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: AutomationTrigger;
+  isActive: boolean;
+  conditions: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+  createdAt: string;
+  updatedAt: string;
+  stats: { sent: number; skipped: number; failed: number; lastRunAt: string | null };
+}
+
+/**
+ * `triggers` and `tokens` are the server's own vocabularies, sent alongside
+ * the rules so a new trigger needs no release here. Treat both as open sets.
+ */
+export interface AutomationListResponse {
+  rules: AutomationRule[];
+  triggers: AutomationTrigger[];
+  tokens: string[];
+}
+
+export interface AutomationRulePayload {
+  name: string;
+  trigger: AutomationTrigger;
+  isActive?: boolean;
+  conditions?: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+}
+
+export type AutomationRunStatus = "sent" | "skipped" | "failed";
+
+export interface AutomationRun {
+  id: string;
+  ruleId: string;
+  trigger: AutomationTrigger;
+  status: AutomationRunStatus;
+  /** Why it skipped, or the send error. */
+  detail: string | null;
+  createdAt: string;
+  order: { id: string; orderNumber: string | null } | null;
+}
+
+export interface AutomationRunListParams {
+  ruleId?: string;
+  status?: AutomationRunStatus;
+  limit?: number;
+  before?: string;
+}
+
+export interface AutomationRunListResponse {
+  runs: AutomationRun[];
+  nextCursor: string | null;
+}
