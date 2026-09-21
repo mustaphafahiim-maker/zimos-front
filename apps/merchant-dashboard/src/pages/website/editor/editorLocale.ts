@@ -47,6 +47,8 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   product_3d: "منتج مجسّم",
   orbit_gallery: "عرض دوّار",
   scroll_story: "قصة بالسكرول",
+  marquee: "شريط جمل متحرك",
+  comparison: "جدول مقارنة",
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
@@ -90,6 +92,12 @@ const FIELD_LABEL_AR: Record<string, string> = {
   modelUrl: "ملف 3D (.glb)",
   collectionId: "المجموعة",
   steps: "الخطوات",
+  "marquee.items": "الجمل",
+  speed: "السرعة",
+  tone: "الشكل",
+  usLabel: "اسم عمودك",
+  themLabel: "اسم العمود التاني",
+  "comparison.rows": "الصفوف",
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
@@ -103,6 +111,9 @@ const FIELD_HINT_AR: Record<string, string> = {
     "سيبه فاضي علشان يستخدم ملف الـ GLB المرفوع مع صور المنتج. من غير ملف، البلوك ده بيتخفي.",
   "orbit_gallery.collectionId": "سيبه فاضي علشان يشتغل على الكتالوج كله.",
   "scroll_story.steps": "كل خطوة ليها صورتها وهي بتظهر مع سكرول العميل.",
+  "marquee.items":
+    "كل جملة كام كلمة بس. الشريط بيقف لما العميل يحط الماوس عليه أو يوصله بالكيبورد، وبيبقى ثابت لأي حد طالب حركة أقل.",
+  "comparison.rows": "كلام قصير في كل خانة — أو اكتب yes أو no علشان تظهر علامة صح أو غلط.",
 };
 
 /** Keyed "<propKey>.<optionValue>". */
@@ -115,6 +126,11 @@ const OPTION_LABEL_AR: Record<string, string> = {
   "source.newest": "الأحدث",
   "source.featured": "المميزة",
   "source.best_selling": "الأكثر مبيعًا",
+  "speed.slow": "بطيئة",
+  "speed.normal": "عادية",
+  "speed.fast": "سريعة",
+  "tone.line": "سطر عادي",
+  "tone.primary": "كبسولات بلون العلامة",
 };
 
 /** Keyed by BlockPreset.key. */
@@ -178,6 +194,14 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   "shipping-returns": {
     label: "الشحن والاستبدال",
     description: "بتشحن فين، وبتستبدل إزاي، وبتقبل إيه — بكلامك إنت.",
+  },
+  "claims-strip": {
+    label: "شريط جمل متحرك",
+    description: "سطر جمل قصيرة بيمشي على الصفحة وبيقف لما العميل يبصّ عليه.",
+  },
+  comparison: {
+    label: "جدول مقارنة",
+    description: "عمودك جنب البديل، صف بصف — بكلامك إنت ومن غير أسماء.",
   },
   testimonials: {
     label: "آراء العملاء",
@@ -292,6 +316,14 @@ const UI_EN = {
   stepBodyAria: (i: number) => `Step ${i} text`,
   stepImageAria: (i: number) => `Step ${i} picture`,
   removeStep: (i: number) => `Remove step ${i}`,
+  addRow: "Add row",
+  rowLabel: "What you're comparing",
+  rowUs: "Your column",
+  rowThem: "Other column",
+  rowLabelAria: (i: number) => `Row ${i}`,
+  rowUsAria: (i: number) => `Row ${i} — your column`,
+  rowThemAria: (i: number) => `Row ${i} — other column`,
+  removeRow: (i: number) => `Remove row ${i}`,
   addLink: "Add link",
   platformAria: (i: number) => `Platform ${i}`,
   linkAria: (i: number) => `Link ${i}`,
@@ -336,6 +368,14 @@ const UI_AR: EditorUi = {
   stepBodyAria: (i) => `كلام الخطوة ${i}`,
   stepImageAria: (i) => `صورة الخطوة ${i}`,
   removeStep: (i) => `حذف الخطوة ${i}`,
+  addRow: "إضافة صف",
+  rowLabel: "بتقارن في إيه",
+  rowUs: "عمودك",
+  rowThem: "العمود التاني",
+  rowLabelAria: (i) => `الصف ${i}`,
+  rowUsAria: (i) => `الصف ${i} — عمودك`,
+  rowThemAria: (i) => `الصف ${i} — العمود التاني`,
+  removeRow: (i) => `حذف الصف ${i}`,
   addLink: "إضافة رابط",
   platformAria: (i) => `المنصة ${i}`,
   linkAria: (i) => `الرابط ${i}`,

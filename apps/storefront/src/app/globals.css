@@ -250,3 +250,82 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* ------------------------------------------------------------------ *
+ * Marquee — the `marquee` page-tree section.
+ *
+ * A strip of short claims that slides on forever. The track holds the
+ * same row twice (the second copy is aria-hidden), so translating it by
+ * exactly half its width lands back on an identical frame and the loop
+ * has no seam. That is the whole trick: one keyframe pair, no library,
+ * no JavaScript, and nothing for the server and the client to disagree
+ * about.
+ *
+ * It pauses on hover and on focus-within, so a shopper can read a claim
+ * and a keyboard user can tab through the strip without chasing it.
+ *
+ * RTL runs the other way. With `dir="rtl"` the flex track is laid out
+ * from the container's right edge, so "forward" is a positive translate;
+ * the LTR keyframes would scroll it backwards into the empty side.
+ *
+ * Under reduced motion the whole thing collapses to a plain, wrapping
+ * row of the same claims: the duplicate is dropped (it would read as the
+ * list said twice) and nothing moves.
+ * ------------------------------------------------------------------ */
+@keyframes zimos-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes zimos-marquee-rtl {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+
+.zimos-marquee {
+  overflow: hidden;
+  /* Fade the two ends so claims arrive and leave instead of being cut. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 3rem,
+    #000 calc(100% - 3rem),
+    transparent 100%
+  );
+}
+
+.zimos-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: zimos-marquee var(--zimos-marquee-duration, 40s) linear infinite;
+}
+
+[dir="rtl"] .zimos-marquee-track {
+  animation-name: zimos-marquee-rtl;
+}
+
+.zimos-marquee:hover .zimos-marquee-track,
+.zimos-marquee:focus-within .zimos-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-marquee {
+    overflow: visible;
+    mask-image: none;
+  }
+  .zimos-marquee-track {
+    animation: none;
+    width: 100%;
+  }
+  .zimos-marquee-row {
+    /* Back to an ordinary row of text: no screen-wide minimum to loop over,
+       and no spreading — it wraps and reads left to right like a list. */
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .zimos-marquee-copy {
+    display: none;
+  }
+}

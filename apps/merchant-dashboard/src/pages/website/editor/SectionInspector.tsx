@@ -92,6 +92,20 @@ function asStepList(v: unknown): StoryStepItem[] {
   });
 }
 
+interface CompareRowItem {
+  label: string;
+  us: string;
+  them: string;
+}
+
+function asCompareRows(v: unknown): CompareRowItem[] {
+  if (!Array.isArray(v)) return [];
+  return v.map((item) => {
+    const o = (item ?? {}) as Record<string, unknown>;
+    return { label: asString(o.label), us: asString(o.us), them: asString(o.them) };
+  });
+}
+
 interface LinkItem {
   platform: string;
   url: string;
@@ -287,6 +301,79 @@ function StepListEditor({
               onChange={(e) => patch(i, "body", e.target.value)}
             />
             <ImageField label={ui.stepImageAria(i + 1)} value={item.image} onChange={(url) => patch(i, "image", url)} />
+          </div>
+        ))}
+      </div>
+    </ListShell>
+  );
+}
+
+/**
+ * `comparison` rows — what is being compared, then the two columns' cells. The
+ * two cells sit side by side because that is how they read on the storefront,
+ * and both are `dir="auto"`: a merchant may answer in Arabic, or type the bare
+ * "yes"/"no" that the storefront turns into a tick or a cross.
+ */
+function CompareRowsEditor({
+  label,
+  hint,
+  value,
+  ui,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: CompareRowItem[];
+  ui: EditorUi;
+  onChange: (next: CompareRowItem[]) => void;
+}) {
+  function patch(i: number, key: keyof CompareRowItem, v: string) {
+    onChange(value.map((item, j) => (j === i ? { ...item, [key]: v } : item)));
+  }
+  return (
+    <ListShell
+      label={label}
+      hint={hint}
+      addLabel={ui.addRow}
+      onAdd={() => onChange([...value, { label: "", us: "", them: "" }])}
+    >
+      <div className="space-y-3">
+        {value.map((item, i) => (
+          <div key={i} className="space-y-2 rounded-[0.5rem] border border-line p-3">
+            <div className="flex items-center gap-2">
+              <Input
+                value={item.label}
+                dir="auto"
+                placeholder={ui.rowLabel}
+                aria-label={ui.rowLabelAria(i + 1)}
+                onChange={(e) => patch(i, "label", e.target.value)}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={ui.removeRow(i + 1)}
+                onClick={() => onChange(value.filter((_, j) => j !== i))}
+              >
+                <X className="size-4" aria-hidden />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                value={item.us}
+                dir="auto"
+                placeholder={ui.rowUs}
+                aria-label={ui.rowUsAria(i + 1)}
+                onChange={(e) => patch(i, "us", e.target.value)}
+              />
+              <Input
+                value={item.them}
+                dir="auto"
+                placeholder={ui.rowThem}
+                aria-label={ui.rowThemAria(i + 1)}
+                onChange={(e) => patch(i, "them", e.target.value)}
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -508,6 +595,17 @@ function ElementField({
           label={label}
           hint={hint}
           value={asStepList(raw)}
+          ui={ui}
+          onChange={(next) => onChange(spec.key, next)}
+        />
+      );
+
+    case "compareRows":
+      return (
+        <CompareRowsEditor
+          label={label}
+          hint={hint}
+          value={asCompareRows(raw)}
           ui={ui}
           onChange={(next) => onChange(spec.key, next)}
         />

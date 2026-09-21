@@ -76,6 +76,24 @@ export function qaList(props: Props, key: string): QaItem[] {
     .filter((item) => item.q.trim() !== "" || item.a.trim() !== "");
 }
 
+export interface CompareRow {
+  label: string;
+  us: string;
+  them: string;
+}
+
+/** `comparison` rows — `[{ label, us, them }]`, matching the editor's compareRows. */
+export function compareRows(props: Props, key: string): CompareRow[] {
+  const v = props[key];
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((item) => {
+      const o = (item ?? {}) as Props;
+      return { label: str(o, "label"), us: str(o, "us"), them: str(o, "them") };
+    })
+    .filter((row) => row.label.trim() !== "");
+}
+
 export interface LinkItem {
   platform: string;
   url: string;

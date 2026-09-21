@@ -86,6 +86,17 @@ function elementSummary(element: PageElement): string {
       const n = Array.isArray(props.steps) ? props.steps.length : 0;
       return truncate([str("title"), `${n} ${n === 1 ? "step" : "steps"}`].filter(Boolean).join(" · "));
     }
+    case "marquee": {
+      const items = Array.isArray(props.items) ? props.items : [];
+      // The claims themselves are the gist here — there is no title to show.
+      return items.length === 0
+        ? "Nothing written yet"
+        : truncate(items.filter((item) => typeof item === "string").join(" · "));
+    }
+    case "comparison": {
+      const n = Array.isArray(props.rows) ? props.rows.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "row" : "rows"}`].filter(Boolean).join(" · "));
+    }
   }
 }
 

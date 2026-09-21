@@ -244,6 +244,9 @@ export const PAGE_ELEMENT_TYPES = [
   "product_3d",
   "orbit_gallery",
   "scroll_story",
+  // Storefront sections (backend pageTree.js accepts these too).
+  "marquee",
+  "comparison",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */

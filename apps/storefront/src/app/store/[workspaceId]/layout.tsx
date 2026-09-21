@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BackToTop } from "@/components/BackToTop";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreRouteProvider } from "@/components/StoreRoute";
@@ -96,6 +97,7 @@ export default async function StoreLayout({
           <StoreHeader store={store} locale={locale} />
           <div className="flex flex-1 flex-col">{children}</div>
           <StoreFooter store={store} locale={locale} />
+          <BackToTop label={getDictionary(locale).common.backToTop} />
         </div>
       </StoreContextProvider>
     </StoreRouteProvider>

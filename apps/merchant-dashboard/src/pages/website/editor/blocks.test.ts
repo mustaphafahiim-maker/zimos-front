@@ -48,6 +48,8 @@ const ALLOWED_ELEMENT_TYPES = new Set([
   "product_3d",
   "orbit_gallery",
   "scroll_story",
+  "marquee",
+  "comparison",
 ]);
 
 const SETTING_KEYS = new Set(SECTION_SETTING_SPECS.map((s) => s.key));
@@ -144,6 +146,37 @@ describe("createSection", () => {
   it("mints a fresh id every time, so two of the same preset can coexist", () => {
     const preset = BLOCK_PRESETS[0];
     expect(createSection(preset).id).not.toBe(createSection(preset).id);
+  });
+
+  it("starts the claims strip with instruction copy and a speed the storefront reads", () => {
+    const preset = BLOCK_PRESETS.find((p) => p.key === "claims-strip")!;
+    const [marquee] = sectionElements(createSection(preset));
+
+    expect(marquee.type).toBe("marquee");
+    const items = marquee.props?.items as string[];
+    expect(items.length).toBeGreaterThan(1);
+    // Starting copy tells the merchant what to write; it never claims anything.
+    for (const item of items) expect(item).toContain("اكتب");
+    expect(["slow", "normal", "fast"]).toContain(marquee.props?.speed);
+    expect(["line", "primary"]).toContain(marquee.props?.tone);
+  });
+
+  it("starts the comparison preset with rows shaped the way the storefront reads them", () => {
+    const preset = BLOCK_PRESETS.find((p) => p.key === "comparison")!;
+    const table = sectionElements(createSection(preset)).find((el) => el.type === "comparison")!;
+
+    expect(table.props?.usLabel).not.toBe("");
+    expect(table.props?.themLabel).not.toBe("");
+
+    const rows = table.props?.rows as Array<Record<string, unknown>>;
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(Object.keys(row).sort()).toEqual(["label", "them", "us"]);
+      // Every cell is a prompt to write, never a verdict about anyone else.
+      expect(row.label).toContain("اكتب");
+      expect(row.us).toContain("اكتب");
+      expect(row.them).toContain("اكتب");
+    }
   });
 
   it("starts the testimonials preset empty — a quote is a claim about a real person", () => {

@@ -38,6 +38,7 @@ import {
   ScrollStoryElement,
   ShaderHeroElement,
 } from "./immersive";
+import { ComparisonElement, MarqueeElement } from "./sections";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -130,6 +131,10 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       );
     case "scroll_story":
       return <ScrollStoryElement props={props} />;
+    case "marquee":
+      return <MarqueeElement props={props} />;
+    case "comparison":
+      return <ComparisonElement props={props} t={t} />;
     default:
       // Unreachable for the 23 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.

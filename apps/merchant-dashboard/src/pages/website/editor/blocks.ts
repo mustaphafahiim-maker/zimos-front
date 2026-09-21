@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   List,
   Map,
+  Megaphone,
   MessageSquareQuote,
   Minus,
   MousePointerClick,
@@ -31,6 +32,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Sparkles,
+  Table2,
   Timer,
   Truck,
   Type,
@@ -87,6 +89,7 @@ export type FieldSpec =
   | { key: string; label: string; kind: "imageList"; hint?: string }
   | { key: string; label: string; kind: "qaList"; hint?: string }
   | { key: string; label: string; kind: "stepList"; hint?: string }
+  | { key: string; label: string; kind: "compareRows"; hint?: string }
   | { key: string; label: string; kind: "linkList"; hint?: string };
 
 interface ElementSpec {
@@ -403,6 +406,58 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text" },
       { key: "steps", label: "Steps", kind: "stepList", hint: "Each step gets its own picture as the shopper scrolls." },
+    ],
+  },
+
+  // Storefront sections. Plain HTML and CSS on the shop side — no 3D, no
+  // canvas — so they cost a shopper nothing and work on any phone.
+  marquee: {
+    label: "Claims strip",
+    icon: Megaphone,
+    defaultProps: { items: [], speed: "normal", tone: "line" },
+    fields: [
+      {
+        key: "items",
+        label: "Claims",
+        kind: "stringList",
+        itemLabel: "Claim",
+        hint: "A few words each. The strip pauses when the shopper hovers or tabs into it, and stands still for anyone who asked for less motion.",
+      },
+      {
+        key: "speed",
+        label: "Speed",
+        kind: "select",
+        options: [
+          { value: "slow", label: "Slow" },
+          { value: "normal", label: "Normal" },
+          { value: "fast", label: "Fast" },
+        ],
+      },
+      {
+        key: "tone",
+        label: "Style",
+        kind: "select",
+        options: [
+          { value: "line", label: "Plain line" },
+          { value: "primary", label: "Brand pills" },
+        ],
+      },
+    ],
+  },
+  comparison: {
+    label: "Comparison table",
+    icon: Table2,
+    defaultProps: { title: "", usLabel: "", themLabel: "", rows: [] },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "usLabel", label: "Your column", kind: "text" },
+      { key: "themLabel", label: "Other column", kind: "text" },
+      {
+        key: "rows",
+        label: "Rows",
+        kind: "compareRows",
+        hint: "Short text in each cell — or write yes or no to get a tick or a cross instead.",
+      },
     ],
   },
 };
@@ -961,6 +1016,50 @@ export const BLOCK_PRESETS: BlockPreset[] = [
         ],
       },
       { text: "اكتب هنا أي ملاحظة أخيرة عن الطلبات." },
+    ],
+  },
+  {
+    key: "claims-strip",
+    label: "Claims strip",
+    description: "A line of short claims that slides across the page and stops when the shopper looks at it.",
+    icon: Megaphone,
+    group: "Content",
+    elements: ["marquee"],
+    settings: { background: "paper", padding: "compact" },
+    content: [
+      {
+        items: [
+          "اكتب هنا جملة قصيرة عن خدمتك",
+          "اكتب هنا جملة تانية",
+          "اكتب هنا جملة تالتة",
+        ],
+        speed: "normal",
+        tone: "line",
+      },
+    ],
+  },
+  {
+    key: "comparison",
+    label: "Comparison table",
+    description: "Your column next to the alternative, row by row — in your own words, no names.",
+    icon: Table2,
+    group: "Content",
+    elements: ["heading", "comparison"],
+    settings: { background: "paper" },
+    content: [
+      { text: "قارن بنفسك", level: 2 },
+      {
+        title: "",
+        usLabel: "عندنا",
+        themLabel: "غير كده",
+        // Column names, not verdicts. Every cell is starting copy the merchant
+        // replaces: nothing here claims anything about anybody else.
+        rows: [
+          { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+          { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+          { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+        ],
+      },
     ],
   },
   {
