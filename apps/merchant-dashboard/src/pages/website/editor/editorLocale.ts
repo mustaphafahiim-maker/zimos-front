@@ -3,8 +3,9 @@ import type { PageElementType } from "@store-builder/api-client";
 
 /**
  * Language for the shared page-editor pieces — the field inspector, the block
- * library, the image pickers. The website editor never provides a value, so it
- * stays English; the funnel builder provides the language its merchant picked.
+ * library, the image pickers. The website editor provides the dashboard's own
+ * language (LocaleContext); the funnel builder provides the language its
+ * merchant picked.
  *
  * English strings stay where they are (ELEMENT_SPECS, BLOCK_PRESETS, the
  * components); this module only holds the Arabic side and falls back to the
@@ -338,6 +339,105 @@ const UI_EN = {
   moveElementDown: (label: string) => `Move ${label} down`,
   sectionStyle: "Section style",
   sectionStyleHint: "How this whole section sits on the page.",
+
+  // --- the website editor's own frame (header, panes, dialogs) ---
+  editorTitle: "Website editor",
+  backToWebsite: "Back to website",
+  editingPage: (title: string) => `Editing "${title}". Click a section in the preview to change it.`,
+  unsavedChanges: "Unsaved changes",
+  allSaved: "All changes saved",
+  undo: "Undo",
+  redo: "Redo",
+  save: "Save",
+  saving: "Saving…",
+  publish: "Publish",
+  publishing: "Publishing…",
+  publishSaveFirst: "Save your changes first — publishing ships the last saved version.",
+  publishHint: "Publish the saved draft of every page",
+  cantPublish: "This site can't be published yet:",
+  pageSaved: "Page saved.",
+  lookSaved: "Store look saved.",
+  savedBoth: "Page and store look saved.",
+  saveFailed: "Couldn't save the page.",
+  lookSaveFailed: "Couldn't save the store look.",
+  published: (n: number) => `Site published — revision ${n} is live.`,
+  publishFailed: "Couldn't publish the site.",
+  noPagesToEdit: "This site has no pages to edit yet.",
+  noPages: "This site has no pages yet. Use “New page” above to add one.",
+  pageCreated: (title: string) => `"${title}" created.`,
+  pageDeleted: (title: string) => `"${title}" deleted.`,
+
+  layersTitle: "Page sections",
+  layersHint: "Drag to reorder, click to edit.",
+  showLayers: "Show page sections",
+  hideLayers: "Hide page sections",
+  emptyPage: "This page is empty. Pick a block below to start.",
+  addHere: "Add a section here",
+  addAbove: "Add a section above",
+  addBelow: "Add a section below",
+  insertingAt: (n: number) => `Adding as section ${n} of the page.`,
+  cancelInsert: "Cancel",
+  searchBlocks: "Search blocks",
+  noBlocksFound: "No blocks match that search.",
+  allGroups: "All",
+
+  previewTitle: "Live preview",
+  previewHint: "Your real storefront, unsaved changes included. Click a section to edit it.",
+  previewRefresh: "Refresh preview",
+  previewDesktop: "Desktop width",
+  previewTablet: "Tablet width",
+  previewMobile: "Mobile width",
+  previewClose: "Close preview",
+  previewFrame: "Storefront preview",
+
+  tabSection: "Section",
+  tabLook: "Store look",
+  pickSection: "Click a section in the preview or in the list to edit it here.",
+
+  deleteSectionTitle: "Delete this section?",
+  deleteSectionBody: (label: string) =>
+    `"${label}" and its content will be removed from the page. Nothing is deleted until you save.`,
+  deletePageTitle: "Delete this page?",
+  deletePageBody: (title: string, path: string) =>
+    `"${title}" (${path}) and everything on it will be permanently deleted. This can't be undone.`,
+  deletePage: "Delete page",
+  leaveTitle: "Leave without saving?",
+  switchBody: "This page has changes you haven't saved. Switching pages will discard them.",
+  switchConfirm: "Discard and switch",
+  leaveBody: "You have changes you haven't saved. Leaving the editor will discard them.",
+  leaveConfirm: "Discard and leave",
+
+  lookHint:
+    "Colours, font, corners and logo for your whole store. They go live on your store as soon as you save — no publishing needed.",
+  palettes: "Ready palettes",
+  paletteName: (key: string) =>
+    ((
+      {
+        nile: "Nile",
+        midnight: "Midnight",
+        rose: "Rose",
+        forest: "Forest",
+        violet: "Violet",
+        ocean: "Ocean",
+        charcoal: "Charcoal",
+      } as Record<string, string>
+    )[key] ?? key),
+  usePalette: (name: string) => `Use the ${name} palette`,
+  primaryColor: "Main colour",
+  primaryColorHint: "Buttons, links and highlights.",
+  accentColor: "Accent colour",
+  accentColorHint: "Badges and small touches.",
+  storeDefaultColor: "Not set yet — your store uses the default colour.",
+  font: "Font",
+  fontName: (key: string) =>
+    (({ classic: "Classic", modern: "Modern", tajawal: "Tajawal", system: "System" }) as Record<string, string>)[
+      key
+    ] ?? key,
+  corners: "Corners",
+  radiusName: (key: string) =>
+    (({ sharp: "Sharp", soft: "Soft", round: "Round" }) as Record<string, string>)[key] ?? key,
+  logo: "Logo",
+  logoHint: "Shown in your store's header.",
 };
 
 export type EditorUi = typeof UI_EN;
@@ -390,6 +490,99 @@ const UI_AR: EditorUi = {
   moveElementDown: (label) => `تحريك ${label} لتحت`,
   sectionStyle: "شكل القسم",
   sectionStyleHint: "القسم كله بيقعد إزاي في الصفحة.",
+
+  editorTitle: "محرر الموقع",
+  backToWebsite: "رجوع للموقع",
+  editingPage: (title) => `بتعدّل "${title}". دوس على أي قسم في المعاينة علشان تغيّره.`,
+  unsavedChanges: "في تعديلات مش محفوظة",
+  allSaved: "كل التعديلات محفوظة",
+  undo: "تراجع",
+  redo: "إعادة",
+  save: "حفظ",
+  saving: "بيحفظ…",
+  publish: "نشر",
+  publishing: "بينشر…",
+  publishSaveFirst: "احفظ تعديلاتك الأول — النشر بيطلّع آخر نسخة محفوظة.",
+  publishHint: "انشر آخر نسخة محفوظة من كل الصفحات",
+  cantPublish: "الموقع لسه مينفعش يتنشر:",
+  pageSaved: "الصفحة اتحفظت.",
+  lookSaved: "شكل المتجر اتحفظ.",
+  savedBoth: "الصفحة وشكل المتجر اتحفظوا.",
+  saveFailed: "مقدرناش نحفظ الصفحة.",
+  lookSaveFailed: "مقدرناش نحفظ شكل المتجر.",
+  published: (n) => `الموقع اتنشر — النسخة ${n} شغالة دلوقتي.`,
+  publishFailed: "مقدرناش ننشر الموقع.",
+  noPagesToEdit: "الموقع ده لسه مفيهوش صفحات تتعدّل.",
+  noPages: "الموقع ده لسه مفيهوش صفحات. استخدم “صفحة جديدة” فوق علشان تضيف واحدة.",
+  pageCreated: (title) => `"${title}" اتعملت.`,
+  pageDeleted: (title) => `"${title}" اتمسحت.`,
+
+  layersTitle: "أقسام الصفحة",
+  layersHint: "اسحب علشان ترتّب، ودوس علشان تعدّل.",
+  showLayers: "إظهار أقسام الصفحة",
+  hideLayers: "إخفاء أقسام الصفحة",
+  emptyPage: "الصفحة دي فاضية. اختار بلوك من تحت علشان تبدأ.",
+  addHere: "ضيف قسم هنا",
+  addAbove: "ضيف قسم فوق",
+  addBelow: "ضيف قسم تحت",
+  insertingAt: (n) => `هيتضاف كقسم رقم ${n} في الصفحة.`,
+  cancelInsert: "إلغاء",
+  searchBlocks: "دوّر على بلوك",
+  noBlocksFound: "مفيش بلوكات بالاسم ده.",
+  allGroups: "الكل",
+
+  previewTitle: "معاينة حيّة",
+  previewHint: "ده متجرك الحقيقي بالتعديلات اللي لسه محفظتهاش. دوس على أي قسم علشان تعدّله.",
+  previewRefresh: "تحديث المعاينة",
+  previewDesktop: "عرض الكمبيوتر",
+  previewTablet: "عرض التابلت",
+  previewMobile: "عرض الموبايل",
+  previewClose: "قفل المعاينة",
+  previewFrame: "معاينة المتجر",
+
+  tabSection: "القسم",
+  tabLook: "شكل المتجر",
+  pickSection: "دوس على أي قسم في المعاينة أو في القائمة علشان تعدّله هنا.",
+
+  deleteSectionTitle: "تحذف القسم ده؟",
+  deleteSectionBody: (label) => `"${label}" باللي فيه هيتشال من الصفحة. مفيش حاجة بتتمسح غير لما تحفظ.`,
+  deletePageTitle: "تحذف الصفحة دي؟",
+  deletePageBody: (title, path) => `"${title}" (${path}) وكل اللي فيها هيتمسحوا نهائي. مفيش رجوع في الخطوة دي.`,
+  deletePage: "احذف الصفحة",
+  leaveTitle: "تخرج من غير ما تحفظ؟",
+  switchBody: "الصفحة دي فيها تعديلات مش محفوظة. لو نقلت لصفحة تانية هتضيع.",
+  switchConfirm: "امسحها وانقل",
+  leaveBody: "عندك تعديلات مش محفوظة. لو خرجت من المحرر هتضيع.",
+  leaveConfirm: "امسحها واخرج",
+
+  lookHint: "الألوان والخط والحواف واللوجو لمتجرك كله. بتتطبق على متجرك أول ما تحفظ — من غير نشر.",
+  palettes: "ألوان جاهزة",
+  paletteName: (key) =>
+    ((
+      {
+        nile: "النيل",
+        midnight: "نص الليل",
+        rose: "ورد",
+        forest: "غابة",
+        violet: "بنفسجي",
+        ocean: "بحر",
+        charcoal: "فحم",
+      } as Record<string, string>
+    )[key] ?? key),
+  usePalette: (name) => `استخدم ألوان ${name}`,
+  primaryColor: "اللون الأساسي",
+  primaryColorHint: "الزراير واللينكات والحاجات المميزة.",
+  accentColor: "لون التمييز",
+  accentColorHint: "العلامات واللمسات الصغيرة.",
+  storeDefaultColor: "لسه متحددش — متجرك بيستخدم اللون الافتراضي.",
+  font: "الخط",
+  fontName: (key) =>
+    (({ classic: "كلاسيك", modern: "مودرن", tajawal: "تجوال", system: "خط الجهاز" }) as Record<string, string>)[key] ??
+    key,
+  corners: "الحواف",
+  radiusName: (key) => (({ sharp: "حادة", soft: "ناعمة", round: "مدوّرة" }) as Record<string, string>)[key] ?? key,
+  logo: "اللوجو",
+  logoHint: "بيظهر فوق في هيدر متجرك.",
 };
 
 export function editorUi(locale: EditorLocale): EditorUi {

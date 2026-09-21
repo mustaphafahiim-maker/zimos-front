@@ -1237,6 +1237,26 @@ export function moveSection(sections: PageSection[], from: number, to: number): 
 }
 
 /**
+ * Puts a new section at `index` — 0 is the top of the page, `sections.length`
+ * (or anything past it) the bottom, which is where the library appends when
+ * no position was picked. A negative or non-integer index is treated as the
+ * nearest valid slot rather than dropped: it comes from a click in the
+ * preview frame, and the merchant still asked for a section.
+ */
+export function insertSection(
+  sections: PageSection[],
+  section: PageSection,
+  index: number = sections.length
+): PageSection[] {
+  const at = Number.isFinite(index)
+    ? Math.min(sections.length, Math.max(0, Math.trunc(index)))
+    : sections.length;
+  const next = sections.slice();
+  next.splice(at, 0, section);
+  return next;
+}
+
+/**
  * Guards against a page whose `draftData` is null or predates the tree shape.
  * `version` and any `globalStyles` are carried through untouched — the editor
  * has no styling controls in this phase and must not drop what it can't edit.

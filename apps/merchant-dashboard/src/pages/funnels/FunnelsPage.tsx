@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
@@ -26,7 +26,18 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { createFunnelFromStarter, duplicateFunnel, funnelPublicUrl, useFunnelErrorMessage, type StarterTemplateId } from "./funnelAdapter";
+import {
+  STARTER_TEMPLATE_IDS,
+  createFunnelFromStarter,
+  duplicateFunnel,
+  funnelPublicUrl,
+  starterPlan,
+  useFunnelErrorMessage,
+  type StarterTemplateId,
+  type UiStepType,
+} from "./funnelAdapter";
+import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
+import { StepChain } from "./StepChain";
 
 const STRINGS = {
   en: {
@@ -158,22 +169,17 @@ interface StartTemplate {
   id: StarterTemplateId;
   name: string;
   description: string;
+  types: UiStepType[];
 }
 
-const START_TEMPLATES: Record<Locale, StartTemplate[]> = {
-  en: [
-    { id: "blank", name: "Blank", description: "Landing → checkout → thank you. Build the rest yourself." },
-    { id: "cod-single", name: "COD single product", description: "One product, cash on delivery, phone-first checkout." },
-    { id: "upsell-downsell", name: "Upsell + downsell", description: "Post-purchase offer with a fallback if declined." },
-    { id: "lead-magnet", name: "Lead magnet", description: "Collect a phone number first, sell on the thank-you page." },
-  ],
-  ar: [
-    { id: "blank", name: "فارغ", description: "صفحة الهبوط ← صفحة الدفع ← صفحة الشكر. وأكمل الباقي بنفسك." },
-    { id: "cod-single", name: "منتج واحد بالدفع عند الاستلام", description: "منتج واحد، دفع عند الاستلام، وصفحة دفع تبدأ برقم الهاتف." },
-    { id: "upsell-downsell", name: "عرض بعد الشراء + عرض بديل", description: "عرض بعد الشراء مع عرض بديل إذا رفضه العميل." },
-    { id: "lead-magnet", name: "جذب العملاء المحتملين", description: "اجمع رقم الهاتف أولًا، ثم اعرض البيع في صفحة الشكر." },
-  ],
-};
+/** Names/descriptions live in FunnelEditorPage.strings (the editor offers the same starters on an empty funnel). */
+function startTemplates(locale: Locale): StartTemplate[] {
+  return STARTER_TEMPLATE_IDS.map((id) => ({
+    id,
+    ...STARTER_TEMPLATE_TEXT[locale][id],
+    types: starterPlan(id, locale).steps.map((s) => s.type),
+  }));
+}
 
 function partialIdOf(err: unknown): string | null {
   const id = (err as { partialFunnelId?: unknown } | null)?.partialFunnelId;
@@ -437,6 +443,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
   const describeError = useFunnelErrorMessage();
   const [name, setName] = useState("");
   const [templateId, setTemplateId] = useState<StarterTemplateId>("blank");
+  const templates = useMemo(() => startTemplates(locale), [locale]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -475,7 +482,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
       <div className="space-y-2">
         <Label>{t.startFrom}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
-          {START_TEMPLATES[locale].map((tpl) => {
+          {templates.map((tpl) => {
             const active = tpl.id === templateId;
             return (
               <label
@@ -488,6 +495,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
                 <input type="radio" name="funnel-template" className="sr-only" checked={active} onChange={() => setTemplateId(tpl.id)} />
                 <p className={cn("text-sm font-semibold", active ? "text-primary-dark" : "text-ink")}>{tpl.name}</p>
                 <p className="mt-0.5 text-xs text-ink-soft">{tpl.description}</p>
+                <StepChain types={tpl.types} className="mt-2" />
               </label>
             );
           })}

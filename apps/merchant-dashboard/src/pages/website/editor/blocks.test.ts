@@ -4,6 +4,7 @@ import {
   BLOCK_PRESETS,
   SECTION_SETTING_SPECS,
   createSection,
+  insertSection,
   sectionElements,
   sectionSetting,
   setSectionSetting,
@@ -220,5 +221,38 @@ describe("setSectionSetting", () => {
   it("reads nothing out of a settings value of the wrong shape", () => {
     const odd = { ...plain, settings: "raised" as unknown as Record<string, unknown> };
     expect(sectionSetting(odd, "background")).toBe("");
+  });
+});
+
+describe("insertSection", () => {
+  const preset = BLOCK_PRESETS[0];
+  const page = [createSection(preset), createSection(preset), createSection(preset)];
+  const ids = (sections: typeof page) => sections.map((s) => s.id);
+
+  it("puts the new section at the chosen position", () => {
+    const added = createSection(preset);
+    expect(ids(insertSection(page, added, 0))).toEqual([added.id, ...ids(page)]);
+    expect(ids(insertSection(page, added, 1))).toEqual([page[0].id, added.id, page[1].id, page[2].id]);
+    expect(ids(insertSection(page, added, 3))).toEqual([...ids(page), added.id]);
+  });
+
+  it("appends when no position is given, as the library always did", () => {
+    const added = createSection(preset);
+    expect(ids(insertSection(page, added))).toEqual([...ids(page), added.id]);
+    expect(ids(insertSection([], added))).toEqual([added.id]);
+  });
+
+  it("clamps a position outside the page instead of dropping the section", () => {
+    const added = createSection(preset);
+    expect(ids(insertSection(page, added, 99))).toEqual([...ids(page), added.id]);
+    expect(ids(insertSection(page, added, -4))).toEqual([added.id, ...ids(page)]);
+    expect(ids(insertSection(page, added, 1.7))).toEqual([page[0].id, added.id, page[1].id, page[2].id]);
+    expect(ids(insertSection(page, added, Number.NaN))).toEqual([...ids(page), added.id]);
+  });
+
+  it("never mutates the page it was given", () => {
+    const before = ids(page);
+    insertSection(page, createSection(preset), 1);
+    expect(ids(page)).toEqual(before);
   });
 });

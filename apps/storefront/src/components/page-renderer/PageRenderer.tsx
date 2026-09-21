@@ -233,16 +233,54 @@ function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   );
 }
 
+/**
+ * A section as the website editor's canvas sees it: wrapped in a plain element
+ * that names it, so the preview bridge (components/preview/PreviewBridge) can
+ * outline it and report clicks to the editor. The wrapper has no styling of
+ * its own, so the section inside looks exactly as it does to shoppers. A
+ * section with no rows — which renders nothing at all on the store — gets a
+ * visible empty slot here, or the merchant could never click it.
+ */
+function EditableSectionNode({
+  section,
+  index,
+  ctx,
+}: {
+  section: PageSection;
+  index: number;
+  ctx: Ctx;
+}) {
+  const hasRows = Array.isArray(section.rows) && section.rows.length > 0;
+  return (
+    <div data-zimos-section={section.id} data-zimos-index={index}>
+      {hasRows ? (
+        <SectionNode section={section} ctx={ctx} />
+      ) : (
+        <div className="px-4 py-6 sm:px-6">
+          <div className="mx-auto h-24 max-w-6xl rounded-[var(--radius-card)] border-2 border-dashed border-line" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PageRenderer({
   tree,
   workspaceId,
   currency,
   locale,
+  editable = false,
 }: {
   tree: PageTree | null;
   workspaceId: string;
   currency: string;
   locale: Locale;
+  /**
+   * The website editor's preview only (app/store/[workspaceId]/preview): mark
+   * every section so it can be selected from the canvas. Never set on a page
+   * shoppers see, which renders exactly as it did before this existed.
+   */
+  editable?: boolean;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
@@ -250,9 +288,13 @@ export function PageRenderer({
 
   return (
     <div className="divide-y divide-line">
-      {sections.map((section) => (
-        <SectionNode key={section.id} section={section} ctx={ctx} />
-      ))}
+      {sections.map((section, index) =>
+        editable ? (
+          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} />
+        ) : (
+          <SectionNode key={section.id} section={section} ctx={ctx} />
+        )
+      )}
     </div>
   );
 }

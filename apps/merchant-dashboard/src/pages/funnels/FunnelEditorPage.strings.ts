@@ -1,4 +1,4 @@
-import type { FunnelStatus, UiEdgeCondition, UiStepType } from "./funnelAdapter";
+import type { FunnelStatus, StarterTemplateId, UiEdgeCondition, UiStepType } from "./funnelAdapter";
 import type { Locale, Messages } from "@/i18n/LocaleContext";
 
 export const EDITOR_STRINGS = {
@@ -16,7 +16,7 @@ export const EDITOR_STRINGS = {
     steps: "Steps",
     selectHint: "Select a step on the canvas or in the list to edit it.",
     deleteStepTitle: "Delete this step?",
-    deleteStepDescription: "\"{name}\" and every edge connected to it will be removed. Nothing is deleted until you save.",
+    deleteStepDescription: "\"{name}\" and every edge connected to it will be removed. If it sat in a straight line, the step before it is joined to the step after it. Nothing is deleted until you save.",
     deleteStep: "Delete step",
     toastSaved: "Funnel saved.",
     toastFixProblems: "Fix the problems below before publishing.",
@@ -38,6 +38,14 @@ export const EDITOR_STRINGS = {
     rollbackDescription: "Visitors will see revision #{n} immediately. Your draft steps and edges are not changed.",
     toastRolledBack: "Revision #{n} is live.",
     publishedRevision: "Live: revision #{n}",
+    viewFlow: "Flow",
+    viewPage: "Page",
+    views: "Editor view",
+    readyToPublish: "Ready to publish",
+    toFix: "{n} to fix before publishing",
+    oneToFix: "1 thing to fix before publishing",
+    showStep: "Show step",
+    serverSaid: "The server checked the saved draft:",
   },
   ar: {
     notFound: "مسار البيع هذا غير موجود.",
@@ -53,7 +61,7 @@ export const EDITOR_STRINGS = {
     steps: "الخطوات",
     selectHint: "اختر خطوة من اللوحة أو من القائمة لتعديلها.",
     deleteStepTitle: "حذف هذه الخطوة؟",
-    deleteStepDescription: "ستتم إزالة «{name}» وكل الروابط المتصلة بها. لن يُحذف شيء قبل الحفظ.",
+    deleteStepDescription: "ستتم إزالة «{name}» وكل الروابط المتصلة بها. لو كانت في خط مستقيم، الخطوة اللي قبلها هتتوصل باللي بعدها. لن يُحذف شيء قبل الحفظ.",
     deleteStep: "حذف الخطوة",
     toastSaved: "تم حفظ مسار البيع.",
     toastFixProblems: "أصلح المشكلات أدناه قبل النشر.",
@@ -75,6 +83,14 @@ export const EDITOR_STRINGS = {
     rollbackDescription: "سيرى الزوار النسخة رقم {n} فورًا. لن تتغير خطوات وروابط المسودة.",
     toastRolledBack: "النسخة رقم {n} منشورة الآن.",
     publishedRevision: "المنشور: النسخة رقم {n}",
+    viewFlow: "المسار",
+    viewPage: "الصفحة",
+    views: "طريقة العرض",
+    readyToPublish: "جاهز للنشر",
+    toFix: "{n} حاجات لازم تتصلّح قبل النشر",
+    oneToFix: "حاجة واحدة لازم تتصلّح قبل النشر",
+    showStep: "روح للخطوة",
+    serverSaid: "السيرفر راجع المسودة المحفوظة:",
   },
 } satisfies Messages;
 
@@ -96,11 +112,123 @@ export const CANVAS_STRINGS = {
     entry: "entry",
     abRunning: "A/B test running",
     statsUnavailable: "Stats appear once analytics is connected",
+    addAfter: "Add a step after {name}",
+    insertHere: "Add a step between {from} and {to}",
+    pickType: "Add which step?",
+    offer: "Offer: {offer}",
+    offerOf: "{offer} · {product}",
+    noOffer: "No offer picked",
+    offerUnknown: "Offer not found or inactive",
+    sections: "{n} sections",
+    oneSection: "1 section",
+    emptyPage: "Empty page",
+    toFix: "{n} to fix",
+    tidy: "Tidy layout",
+    tidyHint: "Line the cards up in flow order, yes paths above no paths.",
+    legendYes: "Yes / accepted",
+    legendNo: "No / declined",
+    legendNext: "Next",
+    emptyTitle: "Start from a template",
+    emptyBody: "Pick a starting flow. Every step, page and connection can be changed afterwards, and nothing is saved until you click Save.",
+    orBlank: "Or add steps one by one with “Add step”.",
+    openPageHint: "Drag to move. Double-click to edit this step's page.",
   },
   ar: {
     entry: "البداية",
     abRunning: "اختبار A/B قيد التشغيل",
     statsUnavailable: "ستظهر الإحصاءات بعد ربط التحليلات",
+    addAfter: "إضافة خطوة بعد {name}",
+    insertHere: "إضافة خطوة بين {from} و{to}",
+    pickType: "تضيف خطوة إيه؟",
+    offer: "العرض: {offer}",
+    offerOf: "{offer} · {product}",
+    noOffer: "لسه مختارتش عرض",
+    offerUnknown: "العرض مش موجود أو مش نشط",
+    sections: "{n} أقسام",
+    oneSection: "قسم واحد",
+    emptyPage: "الصفحة فاضية",
+    toFix: "{n} للتصليح",
+    tidy: "رتّب اللوحة",
+    tidyHint: "رصّ الكروت بترتيب المسار، و«وافق» فوق «رفض».",
+    legendYes: "وافق",
+    legendNo: "رفض",
+    legendNext: "بعد كده",
+    emptyTitle: "ابدأ من قالب",
+    emptyBody: "اختار مسار تبدأ بيه. تقدر تغيّر أي خطوة أو صفحة أو رابط بعدين، ومفيش حاجة بتتحفظ غير لما تدوس حفظ.",
+    orBlank: "أو ضيف الخطوات واحدة واحدة من «إضافة خطوة».",
+    openPageHint: "اسحب عشان تحرّك. دوس مرتين عشان تعدّل صفحة الخطوة.",
+  },
+} satisfies Messages;
+
+/** Unmistakable draft / live / paused explanation under the editor header. */
+export const STATUS_STRINGS = {
+  en: {
+    draftTitle: "Draft — not live",
+    draftBody: "Visitors can't open this funnel yet. Publish it when every step is ready.",
+    liveTitle: "Live",
+    liveTitleRevision: "Live — revision #{n}",
+    liveBody: "Visitors see the published revision. Changes you save stay in the draft until you click “Publish changes”.",
+    pausedTitle: "Paused",
+    pausedBody: "Visitors are told this funnel isn't available right now. Resume to bring the published revision back.",
+    unsaved: "You have unsaved changes.",
+  },
+  ar: {
+    draftTitle: "مسودة — مش منشور",
+    draftBody: "الزوار لسه مايقدروش يفتحوا المسار ده. انشره لما كل الخطوات تجهز.",
+    liveTitle: "منشور",
+    liveTitleRevision: "منشور — النسخة رقم {n}",
+    liveBody: "الزوار بيشوفوا النسخة المنشورة. أي تعديل بتحفظه بيفضل في المسودة لحد ما تدوس «نشر التغييرات».",
+    pausedTitle: "متوقف مؤقتًا",
+    pausedBody: "الزوار بيتقالهم إن المسار مش متاح دلوقتي. دوس استئناف عشان النسخة المنشورة ترجع.",
+    unsaved: "عندك تعديلات لسه متحفظتش.",
+  },
+} satisfies Messages;
+
+/** The step page view: section library, inspector and storefront preview for one step. */
+export const PAGE_STRINGS = {
+  en: {
+    step: "Step",
+    backToFlow: "Back to flow",
+    pageOf: "Page of “{name}”",
+    pageHint: "Drag sections to reorder, click one to edit it. Saved with the rest of the funnel.",
+    empty: "This page is empty. Add a section from the library — a step needs content before the funnel can be published.",
+    selectSection: "Select a section to edit its content.",
+    deleteSectionTitle: "Delete this section?",
+    deleteSectionDescription: "\"{name}\" and its content will be removed from this step's page. Nothing is deleted until you save.",
+    deleteSection: "Delete section",
+    preview: "Preview",
+    previewTitle: "Preview — {name}",
+    previewHint: "Rendered by your storefront, unsaved changes included, inside your store's header and footer. Customers can't see this.",
+    refresh: "Refresh preview",
+    desktop: "Desktop width",
+    mobile: "Mobile width",
+    close: "Close preview",
+    frameTitle: "Funnel step preview",
+    useProduct: "Show “{product}” in this page's product blocks",
+    useProductHint: "This step's offer is on {product}. Product blocks with no product picked show your newest product instead.",
+    noSteps: "Add a step first — each step has its own page.",
+  },
+  ar: {
+    step: "الخطوة",
+    backToFlow: "رجوع للمسار",
+    pageOf: "صفحة «{name}»",
+    pageHint: "اسحب الأقسام عشان ترتّبها، ودوس على قسم عشان تعدّله. بيتحفظ مع باقي المسار.",
+    empty: "الصفحة دي فاضية. ضيف قسم من المكتبة — الخطوة لازم يكون فيها محتوى قبل ما المسار يتنشر.",
+    selectSection: "اختار قسم عشان تعدّل محتواه.",
+    deleteSectionTitle: "تمسح القسم ده؟",
+    deleteSectionDescription: "«{name}» ومحتواه هيتشالوا من صفحة الخطوة دي. مفيش حاجة بتتمسح قبل الحفظ.",
+    deleteSection: "حذف القسم",
+    preview: "معاينة",
+    previewTitle: "معاينة — {name}",
+    previewHint: "المتجر بتاعك هو اللي بيرسمها، بالتعديلات اللي لسه متحفظتش، جوه هيدر وفوتر المتجر. العملاء مش شايفينها.",
+    refresh: "تحديث المعاينة",
+    desktop: "عرض الكمبيوتر",
+    mobile: "عرض الموبايل",
+    close: "إغلاق المعاينة",
+    frameTitle: "معاينة خطوة المسار",
+    useProduct: "اعرض «{product}» في بلوكات المنتج في الصفحة دي",
+    useProductHint: "عرض الخطوة دي على {product}. بلوكات المنتج اللي مفيهاش منتج متحدد بتعرض أحدث منتج عندك.",
+    noSteps: "ضيف خطوة الأول — كل خطوة ليها صفحتها.",
   },
 } satisfies Messages;
 
@@ -132,6 +260,11 @@ export const INSPECTOR_STRINGS = {
     removeEdge: "Remove edge",
     condition: "Condition",
     priority: "Priority (higher runs first)",
+    problems: "Fix before publishing",
+    page: "Page",
+    pageEmpty: "This step's page is empty.",
+    editPage: "Edit page",
+    addNext: "Add next step",
   },
   ar: {
     stepSettings: "إعدادات الخطوة",
@@ -160,6 +293,11 @@ export const INSPECTOR_STRINGS = {
     removeEdge: "إزالة الرابط",
     condition: "الشرط",
     priority: "الأولوية (الأعلى يُنفَّذ أولًا)",
+    problems: "صلّح قبل النشر",
+    page: "الصفحة",
+    pageEmpty: "صفحة الخطوة دي فاضية.",
+    editPage: "تعديل الصفحة",
+    addNext: "إضافة الخطوة اللي بعدها",
   },
 } satisfies Messages;
 
@@ -172,6 +310,7 @@ export const VALIDATION_STRINGS = {
     danglingEdge: "An edge points to a step that no longer exists ({from} → {to}).",
     unreachable: "\"{name}\" can't be reached from the entry step.",
     needsOffer: "\"{name}\" ({type}) needs an offer.",
+    emptyPage: "\"{name}\" has an empty page — add at least one section with content.",
   },
   ar: {
     noSteps: "يحتاج مسار البيع إلى خطوة واحدة على الأقل.",
@@ -180,8 +319,41 @@ export const VALIDATION_STRINGS = {
     danglingEdge: "يوجد رابط يشير إلى خطوة لم تعد موجودة ({from} ← {to}).",
     unreachable: "لا يمكن الوصول إلى «{name}» من خطوة البداية.",
     needsOffer: "«{name}» ({type}) تحتاج إلى عرض.",
+    emptyPage: "صفحة «{name}» فاضية — ضيف قسم واحد على الأقل فيه محتوى.",
   },
 } satisfies Messages;
+
+/** Starter flows offered when creating a funnel, and on an empty funnel in the editor. */
+export const STARTER_TEMPLATE_TEXT: Record<Locale, Record<StarterTemplateId, { name: string; description: string }>> = {
+  en: {
+    blank: { name: "Blank", description: "Landing → checkout → thank you. Build the rest yourself." },
+    "cod-single": { name: "COD single product", description: "One product, cash on delivery, phone-first checkout." },
+    "cod-upsell": {
+      name: "COD product + one-click upsell",
+      description: "Product page → cash on delivery checkout → one extra offer → thank you. Pick the upsell's offer in the editor.",
+    },
+    "cod-bundle": {
+      name: "COD bundle",
+      description: "A page that sells a bundle → cash on delivery checkout → thank you. Point the product grid at the bundle's products.",
+    },
+    "upsell-downsell": { name: "Upsell + downsell", description: "Post-purchase offer with a fallback if declined." },
+    "lead-magnet": { name: "Lead magnet", description: "Collect a phone number first, sell on the thank-you page." },
+  },
+  ar: {
+    blank: { name: "فارغ", description: "صفحة الهبوط ← صفحة الدفع ← صفحة الشكر. وأكمل الباقي بنفسك." },
+    "cod-single": { name: "منتج واحد بالدفع عند الاستلام", description: "منتج واحد، دفع عند الاستلام، وصفحة دفع تبدأ برقم الهاتف." },
+    "cod-upsell": {
+      name: "منتج بالدفع عند الاستلام + عرض إضافي بضغطة",
+      description: "صفحة المنتج ← الدفع عند الاستلام ← عرض إضافي ← صفحة الشكر. اختار عرض الخطوة الإضافية من المحرر.",
+    },
+    "cod-bundle": {
+      name: "باقة بالدفع عند الاستلام",
+      description: "صفحة بتبيع باقة ← الدفع عند الاستلام ← صفحة الشكر. وجّه شبكة المنتجات لمنتجات الباقة.",
+    },
+    "upsell-downsell": { name: "عرض بعد الشراء + عرض بديل", description: "عرض بعد الشراء مع عرض بديل إذا رفضه العميل." },
+    "lead-magnet": { name: "جذب العملاء المحتملين", description: "اجمع رقم الهاتف أولًا، ثم اعرض البيع في صفحة الشكر." },
+  },
+};
 
 export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
   en: {
@@ -242,6 +414,22 @@ export const CONDITION_LABELS: Record<Locale, Record<UiEdgeCondition, string>> =
     completed_checkout: "أكمل الدفع",
     accepted_offer: "قبِل العرض",
     declined_offer: "رفض العرض",
+  },
+};
+
+/** Short labels drawn on the flow map's connectors (the full condition is the tooltip). */
+export const CONNECTOR_LABELS: Record<Locale, Record<UiEdgeCondition, string>> = {
+  en: {
+    always: "Next",
+    completed_checkout: "Ordered",
+    accepted_offer: "Yes",
+    declined_offer: "No",
+  },
+  ar: {
+    always: "بعد كده",
+    completed_checkout: "طلب",
+    accepted_offer: "وافق",
+    declined_offer: "رفض",
   },
 };
 

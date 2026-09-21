@@ -32,8 +32,11 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
         aria-hidden
       />
       <div className={`${container} flex h-16 items-center justify-between gap-3`}>
+        {/* data-store-logo lets the editor preview swap in an unsaved logo; it
+            changes nothing about how the header renders. */}
         <StoreLink
           href="/"
+          data-store-logo=""
           className="flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85"
         >
           {store.logoUrl ? (

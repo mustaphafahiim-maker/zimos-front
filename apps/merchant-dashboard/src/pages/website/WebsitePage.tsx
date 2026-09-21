@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutTemplate, Pencil, Trash2 } from "lucide-react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { LayoutTemplate, Monitor, Pencil, Search, Smartphone, Trash2 } from "lucide-react";
+import { Alert, Button, Input, Spinner } from "@store-builder/ui";
 import type { CreateWebsitePayload, Website, WebsiteTemplateSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -9,31 +9,110 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { humanize } from "@/lib/format";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { FilterTabs } from "@/components/FilterTabs";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
+import { TemplateLivePreview } from "@/components/TemplateLivePreview";
 import { useToast } from "@/components/Toast";
+import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 
-/** Square-ish preview for a template card — the thumbnail, or a placeholder. */
-function TemplateThumb({ url, name }: { url: string | null; name: string }) {
-  const [broken, setBroken] = useState(false);
-  if (url && !broken) {
+const STRINGS = {
+  en: {
+    preview: "Preview →",
+    previewOf: "Preview {name}",
+    livePreview: "Live preview of {name}",
+    catalogueNote:
+      "Previews are your store as it would look with this template — with your own products. Sections that list products stay hidden until you add some.",
+    search: "Search templates",
+    filterLabel: "Filter templates by category",
+    all: "All",
+    noMatchTitle: "No templates match",
+    noMatchDescription: "Try another name, or show every category.",
+    clearFilters: "Show all templates",
+    device: "Preview size",
+    desktop: "Desktop",
+    mobile: "Mobile",
+  },
+  ar: {
+    preview: "معاينة ←",
+    previewOf: "معاينة {name}",
+    livePreview: "معاينة حيّة لـ {name}",
+    catalogueNote:
+      "المعاينة بتوريك متجرك بالقالب ده بمنتجاتك انت. الأقسام اللي بتعرض منتجات مش هتظهر غير لما تضيف منتجات.",
+    search: "دوّر على قالب",
+    filterLabel: "فلترة القوالب حسب النوع",
+    all: "الكل",
+    noMatchTitle: "مفيش قوالب مطابقة",
+    noMatchDescription: "جرّب اسم تاني، أو اعرض كل الأنواع.",
+    clearFilters: "اعرض كل القوالب",
+    device: "حجم المعاينة",
+    desktop: "كمبيوتر",
+    mobile: "موبايل",
+  },
+} satisfies Messages;
+
+/** The icon tile a template shows when there's no picture or render of it. */
+function TemplatePlaceholder() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-primary-soft text-primary-dark dark:text-primary">
+      <LayoutTemplate className="size-8" aria-hidden />
+    </div>
+  );
+}
+
+/**
+ * Square-ish preview for a template card — the thumbnail if one is set and it
+ * actually loads, otherwise a live render of the template's home page, with
+ * the placeholder while that loads or if it can't.
+ */
+function TemplateThumb({
+  url,
+  name,
+  templateId,
+}: {
+  url: string | null;
+  name: string;
+  templateId: string;
+}) {
+  const workspaceId = useWorkspaceId();
+  const [image, setImage] = useState<"checking" | "ok" | "broken">(url ? "checking" : "broken");
+
+  // Probe first so a dead link never flashes a broken image. A card keeps its
+  // template (keyed by id), so the url never changes under it.
+  useEffect(() => {
+    if (!url) return;
+    let cancelled = false;
+    const probe = new Image();
+    probe.onload = () => !cancelled && setImage("ok");
+    probe.onerror = () => !cancelled && setImage("broken");
+    probe.src = url;
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (url && image === "ok") {
+    return <img src={url} alt={name} className="aspect-[4/3] w-full object-cover" />;
+  }
+  if (image === "checking") {
     return (
-      <img
-        src={url}
-        alt={name}
-        loading="lazy"
-        onError={() => setBroken(true)}
-        className="aspect-[4/3] w-full object-cover"
-      />
+      <div className="aspect-[4/3] w-full">
+        <TemplatePlaceholder />
+      </div>
     );
   }
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center bg-primary-soft text-primary-dark dark:text-primary">
-      <LayoutTemplate className="size-8" aria-hidden />
-    </div>
+    <TemplateLivePreview
+      workspaceId={workspaceId}
+      templateId={templateId}
+      title={name}
+      fallback={<TemplatePlaceholder />}
+    />
   );
 }
 
@@ -44,21 +123,71 @@ function TemplateCard({
   template: WebsiteTemplateSummary;
   onSelect: () => void;
 }) {
+  const t = useT(STRINGS);
+  // A div rather than one big button: a button can't hold the preview frame.
+  // The button's ::after covers the card, so all of it stays clickable.
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="cursor-pointer flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-start transition-colors hover:border-primary"
-    >
-      <TemplateThumb url={template.thumbnailUrl} name={template.name} />
-      <div className="flex flex-1 flex-col gap-1 p-4">
+    <div className="relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-start transition-colors hover:border-primary">
+      <TemplateThumb url={template.thumbnailUrl} name={template.name} templateId={template.id} />
+      <div className="flex flex-1 flex-col gap-1 border-t border-line p-4">
         <span className="font-medium text-ink">{template.name}</span>
         {template.category && (
           <span className="text-xs text-ink-soft">{humanize(template.category)}</span>
         )}
-        <span className="mt-auto pt-2 text-sm font-medium text-primary">Preview →</span>
+        <button
+          type="button"
+          onClick={onSelect}
+          aria-label={fmt(t.previewOf, { name: template.name })}
+          className="mt-auto cursor-pointer pt-2 text-start text-sm font-medium text-primary after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary"
+        >
+          {t.preview}
+        </button>
       </div>
-    </button>
+    </div>
+  );
+}
+
+/** The modal's large live render, with the desktop / phone switch. */
+function TemplatePreviewPanel({ template }: { template: WebsiteTemplateSummary }) {
+  const t = useT(STRINGS);
+  const workspaceId = useWorkspaceId();
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div role="group" aria-label={t.device} className="flex items-center justify-end gap-1">
+        <Button
+          type="button"
+          size="icon"
+          variant={device === "desktop" ? "secondary" : "ghost"}
+          aria-label={t.desktop}
+          aria-pressed={device === "desktop"}
+          onClick={() => setDevice("desktop")}
+        >
+          <Monitor className="size-4" aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant={device === "mobile" ? "secondary" : "ghost"}
+          aria-label={t.mobile}
+          aria-pressed={device === "mobile"}
+          onClick={() => setDevice("mobile")}
+        >
+          <Smartphone className="size-4" aria-hidden />
+        </Button>
+      </div>
+      <div className="h-[min(70vh,44rem)] overflow-hidden rounded-[0.5rem] border border-line">
+        <TemplateLivePreview
+          variant="full"
+          device={device}
+          workspaceId={workspaceId}
+          templateId={template.id}
+          title={fmt(t.livePreview, { name: template.name })}
+          fallback={<TemplatePlaceholder />}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -264,11 +393,23 @@ function ExistingSites() {
 }
 
 export function WebsitePage() {
+  const t = useT(STRINGS);
   const templates = useAsync(() => apiClient.listWebsiteTemplates(), []);
 
   const [selected, setSelected] = useState<WebsiteTemplateSummary | null>(null);
+  const [category, setCategory] = useState<string>(ALL_CATEGORIES);
+  const [query, setQuery] = useState("");
 
-  const list = templates.data ?? [];
+  const list = useMemo(() => templates.data ?? [], [templates.data]);
+  const categories = useMemo(() => templateCategories(list), [list]);
+  const shown = useMemo(() => filterTemplates(list, { category, query }), [list, category, query]);
+  const tabs = useMemo(
+    () => [
+      { value: ALL_CATEGORIES, label: t.all },
+      ...categories.map((c) => ({ value: c, label: humanize(c) })),
+    ],
+    [categories, t.all]
+  );
 
   return (
     <div className="max-w-4xl">
@@ -286,15 +427,53 @@ export function WebsitePage() {
         emptyMessage="No website templates are available right now. Check back soon."
         onRetry={() => templates.refresh()}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onSelect={() => setSelected(template)}
+        <div className="mb-4 space-y-3">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.search}
+              aria-label={t.search}
+              className="ps-9"
             />
-          ))}
+          </div>
+          {categories.length > 1 && (
+            <FilterTabs tabs={tabs} value={category} onChange={setCategory} label={t.filterLabel} />
+          )}
+          <p className="text-xs text-ink-soft">{t.catalogueNote}</p>
         </div>
+
+        {shown.length === 0 ? (
+          <EmptyState
+            icon={<LayoutTemplate className="size-6" aria-hidden />}
+            title={t.noMatchTitle}
+            description={t.noMatchDescription}
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setQuery("");
+                  setCategory(ALL_CATEGORIES);
+                }}
+              >
+                {t.clearFilters}
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((template) => (
+              <TemplateCard
+                key={template.id}
+                template={template}
+                onSelect={() => setSelected(template)}
+              />
+            ))}
+          </div>
+        )}
       </DataState>
 
       <Modal
@@ -302,9 +481,13 @@ export function WebsitePage() {
         onClose={() => setSelected(null)}
         title={selected ? selected.name : ""}
         description="Preview what this template ships with, then name your site."
+        className="max-w-6xl"
       >
         {selected && (
-          <UseTemplateForm template={selected} onCancel={() => setSelected(null)} />
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <TemplatePreviewPanel template={selected} />
+            <UseTemplateForm template={selected} onCancel={() => setSelected(null)} />
+          </div>
         )}
       </Modal>
     </div>

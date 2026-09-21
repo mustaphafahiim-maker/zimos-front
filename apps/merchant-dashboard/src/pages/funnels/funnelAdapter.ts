@@ -9,10 +9,12 @@
  * (not localStorage). `builderData` is deep-validated as a page tree, so it is
  * never used for editor metadata.
  *
- * STEP CONTENT: the page builder for step content is out of scope. New steps are
- * created with the smallest tree the publish check accepts (one section with one
- * text element). Updates never send `builderData`, so an existing tree is never
- * overwritten.
+ * STEP CONTENT: each step's `builderData` is a page tree, edited in the funnel
+ * editor's page view with the website editor's block library and inspector.
+ * It is carried on `UiStep.tree` (normalised; the rest of the tree is kept
+ * verbatim) and sent on update only when it actually changed, so a save that
+ * only moves a card never rewrites a page. New steps start from their step
+ * type's starting page (funnelPages.ts), which always passes the publish check.
  */
 import {
   ApiError,
@@ -32,10 +34,14 @@ import {
   type FunnelStatus,
   type FunnelStepTypeDto,
   type FunnelStepUpdatePayload,
+  type PageTree,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
 import { useT, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { normalizeTree } from "../website/editor/blocks";
+import { layoutFlow } from "./funnelFlow";
+import { stepPageTree, type StepPageVariant } from "./funnelPages";
 
 // ---------------------------------------------------------------- UI types --
 
@@ -54,6 +60,8 @@ export interface UiStep {
   experimentId: string | null;
   /** Server seo object minus our canvas metadata. Round-tripped untouched. */
   seo: Record<string, unknown>;
+  /** The step's page (`builderData`), normalised to a tree with a sections array. */
+  tree: PageTree;
   x: number;
   y: number;
 }
@@ -81,7 +89,7 @@ export interface UiFunnel {
   updatedAt: string;
 }
 
-export const CARD_GAP_X = 280;
+export const CARD_GAP_X = 340;
 const CANVAS_KEY = "zimosCanvas";
 
 interface CanvasMeta {
@@ -148,6 +156,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
           offerId: s.offerId,
           experimentId: s.abTestExperimentId,
           seo: stripCanvas(s.seo),
+          tree: normalizeTree(s.builderData),
           x: canvas?.x ?? 40 + i * CARD_GAP_X,
           y: canvas?.y ?? 120,
         } satisfies UiStep,
@@ -245,7 +254,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           key: s.key,
           stepType: s.type,
           name: s.name.trim() || s.key,
-          builderData: starterTree(s.name.trim() || s.key),
+          builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
           seo: withCanvas(s, order),
         })
@@ -258,6 +267,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
+    if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
     if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
     if (Object.keys(patch).length > 0) {
       const id = s.id;
@@ -323,12 +333,16 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
 
 // ------------------------------------------------- create / duplicate flows --
 
-export type StarterTemplateId = "blank" | "cod-single" | "upsell-downsell" | "lead-magnet";
+export type StarterTemplateId = "blank" | "cod-single" | "cod-upsell" | "cod-bundle" | "upsell-downsell" | "lead-magnet";
+
+export const STARTER_TEMPLATE_IDS: StarterTemplateId[] = ["blank", "cod-single", "cod-upsell", "cod-bundle", "upsell-downsell", "lead-magnet"];
 
 interface StarterStep {
   key: string;
   type: UiStepType;
   name: Record<Locale, string>;
+  /** A different starting page than the step type's default (funnelPages.ts). */
+  page?: StepPageVariant;
 }
 
 interface StarterEdge {
@@ -363,6 +377,36 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
       { from: "checkout", to: "thank-you", condition: "completed_checkout" },
     ],
   },
+  // Egyptian COD: one product, a cash-on-delivery checkout, then a one-click
+  // extra offer. Accepting and declining both end on the thank-you page. The
+  // upsell's offer is picked in the editor — publish is blocked until it is.
+  "cod-upsell": {
+    steps: [
+      { key: "product", type: "landing", name: N("Product page", "صفحة المنتج") },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "upsell", type: "upsell", name: N("One-click extra offer", "عرض إضافي بضغطة") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+    ],
+    edges: [
+      { from: "product", to: "checkout", condition: "always" },
+      { from: "checkout", to: "upsell", condition: "completed_checkout" },
+      { from: "upsell", to: "thank-you", condition: "accepted_offer", priority: 1 },
+      { from: "upsell", to: "thank-you", condition: "declined_offer" },
+    ],
+  },
+  // Egyptian COD bundle: a landing page that sells a bundle (a product grid the
+  // merchant points at the bundle's products), then checkout and thank-you.
+  "cod-bundle": {
+    steps: [
+      { key: "bundle", type: "landing", name: N("Bundle page", "صفحة الباقة"), page: "bundle" },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+    ],
+    edges: [
+      { from: "bundle", to: "checkout", condition: "always" },
+      { from: "checkout", to: "thank-you", condition: "completed_checkout" },
+    ],
+  },
   "upsell-downsell": {
     steps: [
       { key: "landing", type: "landing", name: N("Landing page", "صفحة الهبوط") },
@@ -388,27 +432,56 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
   },
 };
 
-/** Create a funnel, then its starter steps and edges (sequential). Returns the funnel even if a later call fails? No: throws, but the funnel id is attached. */
+export interface StarterPlan {
+  steps: Array<{ key: string; type: UiStepType; name: string; tree: PageTree; x: number; y: number }>;
+  edges: Array<{ from: string; to: string; condition: UiEdgeCondition; priority: number }>;
+}
+
+/**
+ * A starter as plain data: the steps it creates (with their starting pages and
+ * a tidy canvas position) and its edges. Used by create-from-starter, by the
+ * editor's "start from a template" on an empty funnel, and by the tests that
+ * hold every starter to the backend's publish rules.
+ */
+export function starterPlan(templateId: StarterTemplateId, locale: Locale): StarterPlan {
+  const starter = STARTERS[templateId];
+  const edges = starter.edges.map((e) => ({ from: e.from, to: e.to, condition: e.condition, priority: e.priority ?? 0 }));
+  const positions = layoutFlow(
+    starter.steps.map((s) => s.key),
+    edges.map((e) => ({ fromStepKey: e.from, toStepKey: e.to, condition: e.condition, priority: e.priority }))
+  );
+  return {
+    steps: starter.steps.map((s, i) => ({
+      key: s.key,
+      type: s.type,
+      name: s.name[locale],
+      tree: stepPageTree(s.type, locale, s.page),
+      ...(positions.get(s.key) ?? { x: 40 + i * CARD_GAP_X, y: 120 }),
+    })),
+    edges,
+  };
+}
+
+/** Create a funnel, then its starter steps and edges (sequential). If a later call fails it throws with `partialFunnelId` attached. */
 export async function createFunnelFromStarter(workspaceId: string, name: string, templateId: StarterTemplateId, locale: Locale): Promise<FunnelDto> {
   const funnel = await funnelsCreate(apiClient, workspaceId, { name });
-  const starter = STARTERS[templateId];
+  const plan = starterPlan(templateId, locale);
   try {
-    for (const [i, s] of starter.steps.entries()) {
-      const label = s.name[locale];
+    for (const [i, s] of plan.steps.entries()) {
       await funnelsCreateStep(apiClient, workspaceId, funnel.id, {
         key: s.key,
         stepType: s.type,
-        name: label,
-        builderData: starterTree(label),
-        seo: { [CANVAS_KEY]: { x: 40 + i * CARD_GAP_X, y: 120, order: i } },
+        name: s.name,
+        builderData: s.tree,
+        seo: { [CANVAS_KEY]: { x: s.x, y: s.y, order: i } },
       });
     }
-    for (const e of starter.edges) {
+    for (const e of plan.edges) {
       await funnelsCreateEdge(apiClient, workspaceId, funnel.id, {
         fromStepKey: e.from,
         toStepKey: e.to,
         condition: { type: e.condition },
-        priority: e.priority ?? 0,
+        priority: e.priority,
       });
     }
   } catch (err) {

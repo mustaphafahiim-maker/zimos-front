@@ -4,11 +4,13 @@ import { GripVertical, Trash2, type LucideIcon } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
+import { useEditorLocale } from "./editorLocale";
 
 /**
- * A section as it appears on the canvas: a bordered card that summarises the
+ * A section as it appears in the outline: a bordered card that summarises the
  * elements inside it. This is deliberately NOT a storefront preview — it is a
- * structural view, because rendering the real thing is a later phase.
+ * structural view. In the website editor the real storefront is the canvas
+ * beside it, and these cards are its layer list (drag to reorder).
  */
 
 function truncate(value: string, max = 90): string {
@@ -114,12 +116,17 @@ export function SectionCard({
   selected,
   onSelect,
   onDelete,
+  showSummary = true,
 }: {
   section: PageSection;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  /** Off for a compact one-line row (the website editor's layer list). */
+  showSummary?: boolean;
 }) {
+  const locale = useEditorLocale();
+  const label = sectionLabel(section, locale);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: section.id });
 
@@ -136,13 +143,13 @@ export function SectionCard({
         isDragging && "z-10 opacity-80 shadow-lg"
       )}
     >
-      <div className="flex items-center gap-1 border-b border-line px-2 py-2">
+      <div className={cn("flex items-center gap-1 px-2 py-2", showSummary && "border-b border-line")}>
         <button
           type="button"
           ref={setActivatorNodeRef}
           {...attributes}
           {...listeners}
-          aria-label={`Reorder ${sectionLabel(section)}`}
+          aria-label={`Reorder ${label}`}
           className="cursor-pointer cursor-grab rounded-[0.375rem] p-1.5 text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
         >
           <GripVertical className="size-4" aria-hidden />
@@ -154,42 +161,44 @@ export function SectionCard({
           className="cursor-pointer flex min-w-0 flex-1 items-center gap-2 rounded-[0.375rem] px-1 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <NodeIcon icon={icon} className="size-4 shrink-0 text-primary" />
-          <span className="truncate text-sm font-medium text-ink">{sectionLabel(section)}</span>
+          <span className="truncate text-sm font-medium text-ink">{label}</span>
         </button>
 
         <button
           type="button"
           onClick={onDelete}
-          aria-label={`Delete ${sectionLabel(section)}`}
+          aria-label={`Delete ${label}`}
           className="cursor-pointer rounded-[0.375rem] p-1.5 text-ink-soft hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
         >
           <Trash2 className="size-4" aria-hidden />
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onSelect}
-        className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-      >
-        {elements.length === 0 ? (
-          <span className="text-sm text-ink-soft">Empty section</span>
-        ) : (
-          elements.map((element) => {
-            const spec = ELEMENT_SPECS[element.type];
-            const summary = elementSummary(element);
-            return (
-              <span key={element.id} className="flex items-start gap-2 text-sm">
-                <NodeIcon icon={spec.icon} className="mt-0.5 size-3.5 shrink-0 text-ink-soft" />
-                <span className="min-w-0 flex-1">
-                  <span className="text-ink-soft">{spec.label}</span>
-                  {summary && <span className="ms-2 text-ink">{summary}</span>}
+      {showSummary && (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          {elements.length === 0 ? (
+            <span className="text-sm text-ink-soft">Empty section</span>
+          ) : (
+            elements.map((element) => {
+              const spec = ELEMENT_SPECS[element.type];
+              const summary = elementSummary(element);
+              return (
+                <span key={element.id} className="flex items-start gap-2 text-sm">
+                  <NodeIcon icon={spec.icon} className="mt-0.5 size-3.5 shrink-0 text-ink-soft" />
+                  <span className="min-w-0 flex-1">
+                    <span className="text-ink-soft">{spec.label}</span>
+                    {summary && <span className="ms-2 text-ink">{summary}</span>}
+                  </span>
                 </span>
-              </span>
-            );
-          })
-        )}
-      </button>
+              );
+            })
+          )}
+        </button>
+      )}
     </div>
   );
 }

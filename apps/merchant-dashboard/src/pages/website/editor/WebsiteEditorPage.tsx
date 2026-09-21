@@ -1,22 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { Eye, Rocket, Save } from "lucide-react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Layers, Palette, Redo2, Rocket, Save, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import type {
   CreateWebsitePagePayload,
   PageSection,
@@ -28,6 +13,8 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { useLocale } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -35,21 +22,40 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { StorefrontPreview } from "@/components/StorefrontPreview";
 import { BlockLibrary } from "./BlockLibrary";
-import { SectionCard } from "./SectionCard";
+import { LayerList } from "./LayerList";
 import { SectionInspector } from "./SectionInspector";
+import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
-import { createSection, moveSection, normalizeTree, sectionLabel, type BlockPreset } from "./blocks";
+import {
+  createSection,
+  insertSection,
+  moveSection,
+  normalizeTree,
+  sectionLabel,
+  type BlockPreset,
+} from "./blocks";
+import { EditorLocaleContext, editorUi, useEditorLocale } from "./editorLocale";
+import { useEditHistory } from "./editHistory";
+import { lookToPreview, lookToWorkspacePatch, readStoreLook, sameLook, type StoreLook } from "./storeLook";
 
 /**
- * The website editor: pick a page, reorder its sections by drag, edit their
- * content, save. Pages can be added and removed from the tab strip above the
- * canvas.
+ * The website editor — a visual builder with the real storefront as its
+ * canvas. Three panes:
  *
- * `draftData` is the only field written back on save. The rest of the tree —
- * `version`, any `globalStyles` — is carried through verbatim: this editor has
- * no styling controls, and dropping keys it can't edit would silently destroy
- * template data.
+ *  - start: the page's sections as a sortable layer list (drag to reorder),
+ *    and the block library gallery below it;
+ *  - centre: the live preview (StorefrontPreview), re-rendered by the
+ *    storefront itself shortly after every edit. Clicking a section there
+ *    selects it here, and "+" between sections adds one at that spot;
+ *  - end: the inspector — the selected section's content, or the store's look
+ *    (colours, font, corners, logo).
+ *
+ * Edits are held locally, with undo/redo, until Save. `draftData` is the only
+ * page field written back. The rest of the tree — `version`, any
+ * `globalStyles` — is carried through verbatim: dropping keys this editor
+ * can't edit would silently destroy template data. The store look is saved to
+ * the workspace (see storeLook.ts) by the same Save.
  */
 
 /**
@@ -75,10 +81,37 @@ function pickEditablePage(pages: WebsitePage[]): WebsitePage | null {
   );
 }
 
+/** What undo/redo steps through: the open page's sections and the store look. */
+interface EditorDoc {
+  sections: PageSection[];
+  look: StoreLook;
+}
+
+/** Undo/redo shortcuts leave text fields alone — those have their own undo. */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || target.matches("input, textarea, select");
+}
+
 export function WebsiteEditorPage() {
+  // The shared editor pieces (inspector, library, image pickers) speak the
+  // dashboard's language here; the funnel builder sets its own.
+  const { locale } = useLocale();
+  return (
+    <EditorLocaleContext.Provider value={locale}>
+      <WebsiteEditor />
+    </EditorLocaleContext.Provider>
+  );
+}
+
+function WebsiteEditor() {
   const { websiteId = "" } = useParams();
+  const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
+  const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
   const toast = useToast();
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
 
   const site = useAsync(
     () => apiClient.getWebsite(workspaceId, websiteId),
@@ -95,10 +128,13 @@ export function WebsiteEditorPage() {
   }
   const page = pages.find((p) => p.id === selectedPageId) ?? null;
 
-  // Editing state. `baseline` is the tree as last loaded/saved — the dirty
-  // check compares against it rather than tracking every mutation.
-  const [sections, setSections] = useState<PageSection[]>([]);
+  // Editing state, with undo/redo. `baseline` / `lookBaseline` are what was
+  // last loaded or saved — the dirty checks compare against them rather than
+  // tracking every mutation.
+  const history = useEditHistory<EditorDoc>({ sections: [], look: readStoreLook(null) });
+  const { sections, look } = history.value;
   const [baseline, setBaseline] = useState<string>("[]");
+  const [lookBaseline, setLookBaseline] = useState<StoreLook>(() => readStoreLook(null));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
   const [saving, setSaving] = useState(false);
@@ -115,30 +151,57 @@ export function WebsiteEditorPage() {
   const [pendingPageDelete, setPendingPageDelete] = useState<WebsitePage | null>(null);
   /** Page the merchant asked to switch to while the canvas had unsaved edits. */
   const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  /** In-app address the merchant tried to leave for with unsaved edits. */
+  const [pendingLeave, setPendingLeave] = useState<string | null>(null);
+
+  // The builder's panes.
+  const [inspectorTab, setInspectorTab] = useState<"section" | "look">("section");
+  /** Where "add a section here" pointed; the next block from the library lands there. */
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  const [scrollRequest, setScrollRequest] = useState<{ sectionId: string; nonce: number } | null>(null);
+  /** Below lg / xl the start and end panes are drawers. */
+  const [startOpen, setStartOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
 
   // Everything in the tree the editor doesn't touch, preserved across a save.
   const [treeMeta, setTreeMeta] = useState<Omit<PageTree, "sections">>({ version: 1 });
 
-  // Seed the editing state from the loaded page, adjusting state during render
-  // (React's documented pattern for "reset state when a prop changes") rather
-  // than in an effect, which would render once with the previous page's tree.
+  // Seed the editing state from the loaded page and the workspace's look,
+  // adjusting state during render (React's documented pattern for "reset state
+  // when a prop changes") rather than in an effect, which would render once
+  // with the previous page's tree.
   //
-  // Keyed on the page id we last seeded from, NOT on the page object: a save
-  // swaps a fresh page object into `site.data`, and re-seeding on that would
-  // wipe the merchant's current selection every time they save.
+  // Keyed on the page / workspace id we last seeded from, NOT on the objects: a
+  // save swaps fresh ones in, and re-seeding on that would wipe the merchant's
+  // current selection (and undo history) every time they save.
   const [seededPageId, setSeededPageId] = useState<string | null>(null);
-  if (page && page.id !== seededPageId) {
-    const { sections: loaded, ...meta } = normalizeTree(page.draftData);
-    setSeededPageId(page.id);
-    setSections(loaded);
-    setTreeMeta(meta);
-    setBaseline(JSON.stringify(loaded));
-    setSelectedId(null);
-    setSaveError(null);
+  const [seededLookFor, setSeededLookFor] = useState<string | null>(null);
+  const needLook = currentWorkspace !== null && currentWorkspace.id !== seededLookFor;
+  const needPage = page !== null && page.id !== seededPageId;
+  if (needLook || needPage) {
+    let nextSections = sections;
+    let nextLook = look;
+    if (needLook) {
+      nextLook = readStoreLook(currentWorkspace);
+      setSeededLookFor(currentWorkspace.id);
+      setLookBaseline(nextLook);
+    }
+    if (needPage) {
+      const { sections: loaded, ...meta } = normalizeTree(page.draftData);
+      nextSections = loaded;
+      setSeededPageId(page.id);
+      setTreeMeta(meta);
+      setBaseline(JSON.stringify(loaded));
+      setSelectedId(null);
+      setInsertIndex(null);
+      setSaveError(null);
+    }
+    history.reset({ sections: nextSections, look: nextLook });
   }
 
-  const dirty = JSON.stringify(sections) !== baseline;
+  const pageDirty = JSON.stringify(sections) !== baseline;
+  const lookDirty = !sameLook(look, lookBaseline);
+  const dirty = pageDirty || lookDirty;
 
   // Browsers only honour this on a real user gesture, but it's the standard
   // guard against losing an unsaved tree to a refresh or a closed tab.
@@ -149,33 +212,55 @@ export function WebsiteEditorPage() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
+  // …and the in-app equivalent. The app uses a plain BrowserRouter (no route
+  // blockers), so a click on any link that would leave this screen is caught
+  // before React Router sees it and turned into a confirm.
+  useEffect(() => {
+    if (!dirty) return;
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!link || (link.target && link.target !== "_self") || link.hasAttribute("download")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      event.preventDefault();
+      setPendingLeave(`${url.pathname}${url.search}${url.hash}`);
+    }
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [dirty]);
+
   const selected = sections.find((s) => s.id === selectedId) ?? null;
 
-  const sensors = useSensors(
-    // A small distance threshold so a click on the handle still selects rather
-    // than starting a phantom drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  function setSections(update: (prev: PageSection[]) => PageSection[], key?: string) {
+    history.set((doc) => ({ ...doc, sections: update(doc.sections) }), key);
+  }
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setSections((prev) => {
-      const from = prev.findIndex((s) => s.id === active.id);
-      const to = prev.findIndex((s) => s.id === over.id);
-      return moveSection(prev, from, to);
-    });
-  }, [setSections]);
+  /** Selecting from the editor side also brings the section into view in the preview. */
+  function selectSection(sectionId: string, { scroll }: { scroll: boolean }) {
+    setSelectedId(sectionId);
+    setInspectorTab("section");
+    setEndOpen(true);
+    if (scroll) setScrollRequest((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }));
+  }
+
+  function requestInsert(index: number) {
+    setInsertIndex(index);
+    setStartOpen(true);
+  }
 
   function addBlock(preset: BlockPreset) {
     const section = createSection(preset);
-    setSections((prev) => [...prev, section]);
-    setSelectedId(section.id);
+    setSections((prev) => insertSection(prev, section, insertIndex ?? prev.length));
+    setInsertIndex(null);
+    setStartOpen(false);
+    selectSection(section.id, { scroll: true });
   }
 
   function updateSection(next: PageSection) {
-    setSections((prev) => prev.map((s) => (s.id === next.id ? next : s)));
+    // One undo step per burst of typing in a section, not per keystroke.
+    setSections((prev) => prev.map((s) => (s.id === next.id ? next : s)), `section:${next.id}`);
   }
 
   function deleteSection(section: PageSection) {
@@ -184,13 +269,18 @@ export function WebsiteEditorPage() {
     setPendingDelete(null);
   }
 
+  function updateLook(next: StoreLook, key?: string) {
+    history.set((doc) => ({ ...doc, look: next }), key);
+  }
+
   /**
    * Switching pages throws away whatever is in the canvas, so an unsaved tree
-   * has to be confirmed away first.
+   * has to be confirmed away first. (An unsaved store look is workspace-wide
+   * and survives the switch.)
    */
   function requestPageSwitch(pageId: string) {
     if (pageId === selectedPageId) return;
-    if (dirty) {
+    if (pageDirty) {
       setPendingSwitchId(pageId);
       return;
     }
@@ -204,7 +294,7 @@ export function WebsiteEditorPage() {
     // Open it straight away — the canvas re-seeds off the new id.
     setSelectedPageId(created.id);
     setShowNewPage(false);
-    toast.success(`"${created.title}" created.`);
+    toast.success(ui.pageCreated(created.title));
   }
 
   async function deletePage(target: WebsitePage) {
@@ -218,13 +308,11 @@ export function WebsiteEditorPage() {
     }
     // If that was the open page, the render-time check above reselects home.
     setPendingPageDelete(null);
-    toast.success(`"${target.title}" deleted.`);
+    toast.success(ui.pageDeleted(target.title));
   }
 
-  async function save() {
-    if (!page) return;
-    setSaving(true);
-    setSaveError(null);
+  async function savePage(): Promise<boolean> {
+    if (!page) return true;
     const tree: PageTree = { ...treeMeta, sections };
     try {
       const updated = await apiClient.updateWebsitePage(workspaceId, websiteId, page.id, {
@@ -240,7 +328,7 @@ export function WebsiteEditorPage() {
           pages: detail.pages.map((p) => (p.id === updated.id ? updated : p)),
         });
       }
-      toast.success("Page saved.");
+      return true;
     } catch (err) {
       // A malformed tree comes back as a 422 whose details name the node path
       // (e.g. "data.sections[1].rows"); surface that instead of a bare message.
@@ -249,11 +337,67 @@ export function WebsiteEditorPage() {
         .filter(([key]) => key.includes("["))
         .map(([key, message]) => `${key}: ${message}`)[0];
       setSaveError(detail ?? getErrorMessage(err));
-      toast.error("Couldn't save the page.");
+      toast.error(ui.saveFailed);
+      return false;
+    }
+  }
+
+  async function saveLook(): Promise<boolean> {
+    try {
+      await apiClient.updateWorkspace(
+        workspaceId,
+        lookToWorkspacePatch(currentWorkspace?.themeSettings, look)
+      );
+      setLookBaseline(look);
+      // The header's store switcher and the Settings page read the workspace list.
+      await refreshWorkspace();
+      return true;
+    } catch (err) {
+      setSaveError(getErrorMessage(err));
+      toast.error(ui.lookSaveFailed);
+      return false;
+    }
+  }
+
+  async function save() {
+    if (!dirty || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    const savingPage = pageDirty;
+    const savingLook = lookDirty;
+    try {
+      const pageOk = savingPage ? await savePage() : true;
+      const lookOk = savingLook ? await saveLook() : true;
+      if (pageOk && lookOk) {
+        toast.success(savingPage && savingLook ? ui.savedBoth : savingLook ? ui.lookSaved : ui.pageSaved);
+      }
     } finally {
       setSaving(false);
     }
   }
+
+  // Keyboard: undo / redo / save.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "s") {
+        event.preventDefault();
+        void save();
+        return;
+      }
+      if (isTextEntry(event.target)) return;
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        history.undo();
+      } else if ((key === "z" && event.shiftKey) || key === "y") {
+        event.preventDefault();
+        history.redo();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const website = site.data?.website;
 
@@ -274,7 +418,7 @@ export function WebsiteEditorPage() {
       );
       const detail = site.data;
       if (detail) site.setData({ ...detail, website: published, publishedRevision: revision });
-      toast.success(`Site published — revision ${revision.revisionNumber} is live.`);
+      toast.success(ui.published(revision.revisionNumber));
     } catch (err) {
       // A 422 is the pre-publish check: it reports every problem at once, keyed
       // by page rather than by form field, so getFieldErrors can't flatten it.
@@ -284,24 +428,98 @@ export function WebsiteEditorPage() {
       } else {
         setPublishError(getErrorMessage(err));
       }
-      toast.error("Couldn't publish the site.");
+      toast.error(ui.publishFailed);
     } finally {
       setPublishing(false);
     }
   }
 
+  const labels = Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)]));
+
+  const startPane = (
+    <div className="flex h-full min-h-0 flex-col">
+      <LayerList
+        sections={sections}
+        selectedId={selectedId}
+        insertIndex={insertIndex}
+        onSelect={(id) => selectSection(id, { scroll: true })}
+        onDelete={setPendingDelete}
+        onMove={(from, to) => setSections((prev) => moveSection(prev, from, to))}
+        onInsertAt={requestInsert}
+      />
+      <div className="min-h-0 flex-1">
+        <BlockLibrary
+          onAdd={addBlock}
+          insertPosition={insertIndex === null ? null : insertIndex + 1}
+          onCancelInsert={() => setInsertIndex(null)}
+        />
+      </div>
+    </div>
+  );
+
+  const endPane = (onClose?: () => void) => (
+    <div className="flex h-full min-h-0 flex-col">
+      <div role="tablist" aria-label={ui.tabLook} className="flex items-center gap-1 border-b border-line px-2 py-1.5">
+        {(
+          [
+            ["section", ui.tabSection, SlidersHorizontal],
+            ["look", ui.tabLook, Palette],
+          ] as const
+        ).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={inspectorTab === value}
+            onClick={() => setInspectorTab(value)}
+            className={cn(
+              "cursor-pointer flex flex-1 items-center justify-center gap-1.5 rounded-[0.375rem] px-2 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              inspectorTab === value
+                ? "bg-primary-soft text-primary-dark dark:text-primary"
+                : "text-ink-soft hover:bg-paper hover:text-ink"
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+            {label}
+            {value === "look" && lookDirty && (
+              <span className="size-1.5 rounded-full bg-accent" aria-label={ui.unsavedChanges} />
+            )}
+          </button>
+        ))}
+        {onClose && (
+          <Button type="button" size="icon" variant="ghost" aria-label={ui.closePanel} onClick={onClose}>
+            <X className="size-4" aria-hidden />
+          </Button>
+        )}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {inspectorTab === "look" ? (
+          <StoreLookPanel look={look} onChange={updateLook} />
+        ) : selected ? (
+          <SectionInspector
+            section={selected}
+            onChange={updateSection}
+            onDelete={() => setPendingDelete(selected)}
+            onClose={() => {
+              setSelectedId(null);
+              setEndOpen(false);
+            }}
+          />
+        ) : (
+          <p className="px-4 py-6 text-sm text-ink-soft">{ui.pickSection}</p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="-m-6 flex h-[calc(100vh-4rem)] flex-col">
       <div className="border-b border-line bg-paper-raised px-6 py-4">
         <PageHeader
-          title={website ? website.name : "Website editor"}
+          title={website ? website.name : ui.editorTitle}
           titleMeta={page ? page.path : undefined}
-          back={{ to: "/website", label: "Back to website" }}
-          description={
-            page
-              ? `Editing "${page.title}". Drag sections to reorder, click one to edit its content.`
-              : undefined
-          }
+          back={{ to: "/website", label: ui.backToWebsite }}
+          description={page ? ui.editingPage(page.title) : undefined}
           titleBadge={
             website && (
               <StatusBadge
@@ -318,38 +536,57 @@ export function WebsiteEditorPage() {
           }
           actions={
             <>
-              {dirty && <span className="text-xs text-ink-soft">Unsaved changes</span>}
-              <Button
-                type="button"
-                variant={previewOpen ? "secondary" : "outline"}
-                aria-pressed={previewOpen}
-                disabled={!page}
-                onClick={() => setPreviewOpen((open) => !open)}
+              <span
+                role="status"
+                className={cn(
+                  "flex items-center gap-1.5 text-xs",
+                  dirty ? "font-medium text-accent-dark" : "text-ink-soft"
+                )}
               >
-                <Eye className="size-4" aria-hidden />
-                Preview
-              </Button>
-              <Button type="button" onClick={() => void save()} disabled={!page || !dirty || saving}>
+                <span className={cn("size-2 rounded-full", dirty ? "bg-accent" : "bg-success")} aria-hidden />
+                {dirty ? ui.unsavedChanges : ui.allSaved}
+              </span>
+              <span className="flex items-center">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={ui.undo}
+                  title={`${ui.undo} (Ctrl+Z)`}
+                  disabled={!history.canUndo}
+                  onClick={history.undo}
+                >
+                  <Undo2 className="size-4 rtl:-scale-x-100" aria-hidden />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={ui.redo}
+                  title={`${ui.redo} (Ctrl+Shift+Z)`}
+                  disabled={!history.canRedo}
+                  onClick={history.redo}
+                >
+                  <Redo2 className="size-4 rtl:-scale-x-100" aria-hidden />
+                </Button>
+              </span>
+              <Button type="button" onClick={() => void save()} disabled={!dirty || saving} title="Ctrl+S">
                 {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                {saving ? "Saving…" : "Save"}
+                {saving ? ui.saving : ui.save}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => void publish()}
                 disabled={!website || dirty || publishing}
-                title={
-                  dirty
-                    ? "Save your changes first — publishing ships the last saved version."
-                    : "Publish the saved draft of every page"
-                }
+                title={dirty ? ui.publishSaveFirst : ui.publishHint}
               >
                 {publishing ? (
                   <Spinner className="size-4" />
                 ) : (
                   <Rocket className="size-4" aria-hidden />
                 )}
-                {publishing ? "Publishing…" : "Publish"}
+                {publishing ? ui.publishing : ui.publish}
               </Button>
             </>
           }
@@ -358,7 +595,7 @@ export function WebsiteEditorPage() {
         {publishError && <Alert variant="danger">{publishError}</Alert>}
         {publishProblems.length > 0 && (
           <Alert variant="danger">
-            <p className="font-medium">This site can&rsquo;t be published yet:</p>
+            <p className="font-medium">{ui.cantPublish}</p>
             <ul className="mt-1 list-disc space-y-0.5 ps-5">
               {publishProblems.map((problem, i) => (
                 <li key={`${problem.pageId ?? problem.field}-${i}`}>
@@ -376,7 +613,7 @@ export function WebsiteEditorPage() {
           loading={site.loading}
           error={site.error}
           empty={!site.data}
-          emptyMessage="This site has no pages to edit yet."
+          emptyMessage={ui.noPagesToEdit}
           onRetry={() => site.refresh()}
         >
           <div className="flex h-full min-h-0 flex-col">
@@ -388,116 +625,101 @@ export function WebsiteEditorPage() {
               onAdd={() => setShowNewPage(true)}
             />
 
+            {/* Below lg / xl the side panes open as drawers from here. */}
+            <div className="flex items-center gap-2 border-b border-line bg-paper-raised px-4 py-2 xl:hidden">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="lg:hidden"
+                onClick={() => setStartOpen(true)}
+              >
+                <Layers className="size-4" aria-hidden />
+                {ui.layersTitle}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setInspectorTab("look");
+                  setEndOpen(true);
+                }}
+              >
+                <Palette className="size-4" aria-hidden />
+                {ui.tabLook}
+              </Button>
+            </div>
+
             <div className="flex min-h-0 flex-1">
-              <aside className="hidden w-56 shrink-0 border-r border-line bg-paper-raised lg:block">
-                <BlockLibrary onAdd={addBlock} />
+              <aside className="hidden w-72 shrink-0 border-e border-line bg-paper-raised lg:block">
+                {startPane}
               </aside>
 
-              <main className="min-w-0 flex-1 overflow-y-auto bg-paper p-6">
-                <div className="mx-auto max-w-2xl">
-                  {!page ? (
+              <main className="min-w-0 flex-1 bg-paper">
+                {!page ? (
+                  <div className="p-6">
                     <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-16 text-center text-sm text-ink-soft">
-                      This site has no pages yet. Use “New page” above to add one.
+                      {ui.noPages}
                     </div>
-                  ) : sections.length === 0 ? (
-                    <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-16 text-center text-sm text-ink-soft">
-                      This page is empty. Add a block from the left to get started.
-                    </div>
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={sections.map((s) => s.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-3">
-                          {sections.map((section) => (
-                            <SectionCard
-                              key={section.id}
-                              section={section}
-                              selected={section.id === selectedId}
-                              onSelect={() => setSelectedId(section.id)}
-                              onDelete={() => setPendingDelete(section)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  )}
-
-                  {/* The library lives in the sidebar on desktop; on small screens
-                      it moves below the canvas so the editor stays usable. */}
-                  <div className="mt-6 rounded-[var(--radius-card)] border border-line bg-paper-raised lg:hidden">
-                    <BlockLibrary onAdd={addBlock} />
                   </div>
-                </div>
+                ) : (
+                  <StorefrontPreview
+                    workspaceId={workspaceId}
+                    tree={{ ...treeMeta, sections }}
+                    labels={{
+                      title: ui.previewTitle,
+                      hint: ui.previewHint,
+                      refresh: ui.previewRefresh,
+                      desktop: ui.previewDesktop,
+                      tablet: ui.previewTablet,
+                      mobile: ui.previewMobile,
+                      close: ui.previewClose,
+                      frameTitle: ui.previewFrame,
+                    }}
+                    canvas={{
+                      selectedId,
+                      labels,
+                      strings: { addAbove: ui.addAbove, addBelow: ui.addBelow },
+                      theme: lookToPreview(look),
+                      scrollRequest,
+                      onSelect: (id) => selectSection(id, { scroll: false }),
+                      onInsert: requestInsert,
+                    }}
+                  />
+                )}
               </main>
 
-              <aside className="hidden w-80 shrink-0 border-l border-line bg-paper-raised xl:block">
-                {selected ? (
-                  <SectionInspector
-                    section={selected}
-                    onChange={updateSection}
-                    onDelete={() => setPendingDelete(selected)}
-                    onClose={() => setSelectedId(null)}
-                  />
-                ) : (
-                  <p className="px-4 py-6 text-sm text-ink-soft">
-                    Select a section on the canvas to edit its content.
-                  </p>
-                )}
+              <aside className="hidden w-80 shrink-0 border-s border-line bg-paper-raised xl:block">
+                {endPane()}
               </aside>
             </div>
           </div>
         </DataState>
       </div>
 
-      {/* The storefront's own rendering of the open page, unsaved edits included.
-          A drawer, because the canvas already shares its row with two sidebars. */}
-      {previewOpen && page && (
-        <div className="fixed inset-y-0 inset-e-0 z-40 w-full border-s border-line shadow-xl lg:w-1/2">
-          <StorefrontPreview
-            workspaceId={workspaceId}
-            tree={{ ...treeMeta, sections }}
-            labels={{
-              title: "Preview",
-              hint: "Rendered by the storefront itself, unsaved changes included. Shoppers can't see this.",
-              refresh: "Refresh preview",
-              desktop: "Desktop width",
-              mobile: "Mobile width",
-              close: "Close preview",
-              frameTitle: "Storefront preview",
-            }}
-            onClose={() => setPreviewOpen(false)}
-          />
+      {startOpen && (
+        <div className="fixed inset-y-0 start-0 z-30 w-80 max-w-full border-e border-line bg-paper-raised shadow-xl lg:hidden">
+          <div className="flex justify-end border-b border-line px-2 py-1.5">
+            <Button type="button" size="icon" variant="ghost" aria-label={ui.closePanel} onClick={() => setStartOpen(false)}>
+              <X className="size-4" aria-hidden />
+            </Button>
+          </div>
+          <div className="h-[calc(100%-2.75rem)]">{startPane}</div>
         </div>
       )}
 
-      {/* Below xl the panel can't sit beside the canvas, so it becomes an overlay. */}
-      {selected && (
-        <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-l border-line bg-paper-raised shadow-xl xl:hidden">
-          <SectionInspector
-            section={selected}
-            onChange={updateSection}
-            onDelete={() => setPendingDelete(selected)}
-            onClose={() => setSelectedId(null)}
-          />
+      {endOpen && (selected || inspectorTab === "look") && (
+        <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-s border-line bg-paper-raised shadow-xl xl:hidden">
+          {endPane(() => setEndOpen(false))}
         </div>
       )}
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete this section?"
-        description={
-          pendingDelete
-            ? `"${sectionLabel(pendingDelete)}" and its content will be removed from the page. Nothing is deleted until you save.`
-            : undefined
-        }
-        confirmLabel="Delete section"
+        title={ui.deleteSectionTitle}
+        description={pendingDelete ? ui.deleteSectionBody(sectionLabel(pendingDelete, locale)) : undefined}
+        confirmLabel={ui.deleteSection}
         destructive
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteSection(pendingDelete)}
@@ -511,13 +733,11 @@ export function WebsiteEditorPage() {
 
       <ConfirmDialog
         open={pendingPageDelete !== null}
-        title="Delete this page?"
+        title={ui.deletePageTitle}
         description={
-          pendingPageDelete
-            ? `"${pendingPageDelete.title}" (${pendingPageDelete.path}) and everything on it will be permanently deleted. This can't be undone.`
-            : undefined
+          pendingPageDelete ? ui.deletePageBody(pendingPageDelete.title, pendingPageDelete.path) : undefined
         }
-        confirmLabel="Delete page"
+        confirmLabel={ui.deletePage}
         destructive
         onCancel={() => setPendingPageDelete(null)}
         onConfirm={() => pendingPageDelete && deletePage(pendingPageDelete)}
@@ -525,14 +745,28 @@ export function WebsiteEditorPage() {
 
       <ConfirmDialog
         open={pendingSwitchId !== null}
-        title="Leave without saving?"
-        description="This page has changes you haven't saved. Switching pages will discard them."
-        confirmLabel="Discard and switch"
+        title={ui.leaveTitle}
+        description={ui.switchBody}
+        confirmLabel={ui.switchConfirm}
         destructive
         onCancel={() => setPendingSwitchId(null)}
         onConfirm={() => {
           setSelectedPageId(pendingSwitchId);
           setPendingSwitchId(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={pendingLeave !== null}
+        title={ui.leaveTitle}
+        description={ui.leaveBody}
+        confirmLabel={ui.leaveConfirm}
+        destructive
+        onCancel={() => setPendingLeave(null)}
+        onConfirm={() => {
+          const to = pendingLeave;
+          setPendingLeave(null);
+          if (to) navigate(to);
         }}
       />
     </div>
