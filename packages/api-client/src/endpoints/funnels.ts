@@ -310,3 +310,144 @@ export function funnelsProblemsOf(err: unknown): FunnelProblem[] {
     (d): d is FunnelProblem => !!d && typeof (d as FunnelProblem).message === "string"
   );
 }
+
+// ------------------------------------------------------- public runtime --
+// Mounted at /store/:workspaceId/funnels (backend: funnelsPublicRoutes.js). No
+// staff auth — every call passes `auth: false`, like the storefront methods on
+// ApiClient. `workspaceId` may be the store's UUID or its slug.
+//
+// Codes: 404 NOT_FOUND "Funnel not found" (unknown, draft or unpublished),
+// 404 NOT_FOUND "FunnelSession not found", 410 FUNNEL_PAUSED, and 422
+// VALIDATION_ERROR when an upsell is accepted before any checkout order exists.
+
+/** What the visitor did on the current step; the backend routes the matching edge. */
+export type FunnelOutcomeType = "completed_checkout" | "accepted_offer" | "declined_offer" | "clicked_through";
+
+export interface FunnelOutcome {
+  type: FunnelOutcomeType;
+  /** Only with `completed_checkout`: the order just placed on this step. */
+  orderId?: string;
+}
+
+export interface FunnelSessionDto {
+  id: string;
+  currentStepKey: string;
+  /** Step keys already finished, oldest first. */
+  path: string[];
+  status: "active" | "completed";
+  /** The order placed on the checkout step, once there is one. */
+  orderId: string | null;
+}
+
+/** One step, from the funnel's published snapshot — never the draft. */
+export interface FunnelPublicStepDto {
+  key: string;
+  name: string;
+  stepType: FunnelStepTypeDto;
+  /** Page tree (section -> row -> column -> element), same shape the page engine renders. */
+  tree: unknown;
+  seo: Record<string, unknown>;
+}
+
+/** Only upsell/downsell steps carry one. Amounts are integer minor units (BIGINT may arrive as a string). */
+export interface FunnelPublicOfferDto {
+  id: string;
+  name: string;
+  priceAmount: number | string | null;
+  currency: string;
+  badge: string | null;
+  lines: { variantId: string; quantity: number }[];
+}
+
+/** The order an accepted upsell/downsell created, linked to the checkout order. */
+export interface FunnelFollowOnOrderDto {
+  id: string;
+  orderNumber: string;
+  totalAmount: number | string;
+  linkedFromOrderId: string;
+}
+
+/** Either a step to render, or `done: true` when no outbound edge matched and the funnel ended. */
+export interface FunnelStepResponse {
+  session: FunnelSessionDto;
+  done?: boolean;
+  step?: FunnelPublicStepDto;
+  offer?: FunnelPublicOfferDto;
+  followOnOrder?: FunnelFollowOnOrderDto;
+}
+
+export interface FunnelStartResponse extends FunnelStepResponse {
+  funnel: { id: string; name: string; subdomain: string | null };
+}
+
+const storeBase = (workspaceId: string) => `/store/${encodeURIComponent(workspaceId)}/funnels`;
+
+/**
+ * Enter a funnel by id or subdomain. Resumes the visitor's newest *active*
+ * session when there is one, so `visitorId` must be stable per browser.
+ */
+export async function funnelsStartSession(
+  client: ApiClient,
+  workspaceId: string,
+  funnelRef: string,
+  payload: { visitorId: string; attribution?: Record<string, unknown> }
+): Promise<FunnelStartResponse> {
+  return client.request<FunnelStartResponse>(`${storeBase(workspaceId)}/${encodeURIComponent(funnelRef)}/sessions`, {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
+}
+
+export async function funnelsGetSessionStep(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId: string,
+  sessionId: string
+): Promise<FunnelStepResponse> {
+  return client.request<FunnelStepResponse>(
+    `${storeBase(workspaceId)}/${encodeURIComponent(funnelId)}/sessions/${encodeURIComponent(sessionId)}/step`,
+    { auth: false }
+  );
+}
+
+/**
+ * Finish the current step. The server serialises advances per session (row
+ * lock), creates the follow-on order itself for an accepted offer, and answers
+ * with the next step — or `done` when the funnel ends.
+ */
+export async function funnelsAdvance(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId: string,
+  sessionId: string,
+  outcome: FunnelOutcome
+): Promise<FunnelStepResponse> {
+  return client.request<FunnelStepResponse>(
+    `${storeBase(workspaceId)}/${encodeURIComponent(funnelId)}/sessions/${encodeURIComponent(sessionId)}/advance`,
+    { method: "POST", body: { outcome }, auth: false }
+  );
+}
+
+export type FunnelRuntimeErrorKind = "paused" | "unavailable" | "sessionGone" | "offerNeedsOrder" | "other";
+
+/**
+ * Sorts a runtime failure. Both 404s share one code, so the message tells a
+ * lost session (start again) from a funnel that isn't live (show "not available").
+ */
+export function funnelsRuntimeErrorKind(err: unknown): FunnelRuntimeErrorKind {
+  if (!(err instanceof ApiError)) return "other";
+  if (err.status === 410 || err.code === "FUNNEL_PAUSED") return "paused";
+  if (err.status === 404) {
+    if (/FunnelSession/i.test(err.message)) return "sessionGone";
+    if (/^(Funnel|Step) not found/i.test(err.message)) return "unavailable";
+    return "other";
+  }
+  if (err.status === 422) {
+    // createFollowOnOrder's own refusal names the `session` field; any other
+    // 422 (stock, fraud rules) keeps the server's message.
+    const body = err.details as { error?: { details?: { field?: string }[] } } | undefined;
+    if (body?.error?.details?.some((d) => d?.field === "session")) return "offerNeedsOrder";
+  }
+  return "other";
+}

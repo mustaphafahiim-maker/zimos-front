@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { ShopChrome } from "@/components/ShopChrome";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreRouteProvider } from "@/components/StoreRoute";
@@ -60,6 +61,8 @@ export async function generateMetadata({
  *    is for;
  *  - the shared header/footer, so every page of the store — including one the
  *    merchant built in the website editor — sits under the same branding.
+ *    Funnel pages (`/f/…`) are the one exception: ShopChrome leaves the header
+ *    and footer out there, and the funnel layout draws a minimal masthead.
  */
 export default async function StoreLayout({
   children,
@@ -94,9 +97,13 @@ export default async function StoreLayout({
           style={brandStyle(store.themeSettings)}
         >
           <DocumentLocale locale={locale} />
-          <StoreHeader store={store} locale={locale} />
+          <ShopChrome>
+            <StoreHeader store={store} locale={locale} />
+          </ShopChrome>
           <div className="flex flex-1 flex-col">{children}</div>
-          <StoreFooter store={store} locale={locale} />
+          <ShopChrome>
+            <StoreFooter store={store} locale={locale} />
+          </ShopChrome>
           <BackToTop label={getDictionary(locale).common.backToTop} />
         </div>
       </StoreContextProvider>
