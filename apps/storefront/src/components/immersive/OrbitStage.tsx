@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useImmersiveAllowed } from "./useImmersive";
 
 /**
@@ -34,11 +34,10 @@ export function OrbitStage({
   // Far enough back that neighbours don't intersect the front item.
   const radius = Math.round(150 + count * 26);
 
+  // The index is never reset when the product count changes: every place that
+  // reads it (rotation, the "n / count" label, which item is in front) already
+  // takes it modulo `count`, so any value stays valid.
   const go = (delta: number) => setIndex((i) => i + delta);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [count]);
 
   if (count === 0) return null;
 
