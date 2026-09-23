@@ -2147,4 +2147,56 @@ export class ApiClient {
       `${this.confirmationTasksBase(workspaceId)}/agents${buildQuery({ ...params })}`
     );
   }
+
+  // ---------------------------------------------------------------------
+  // Public storefront — shipping quote and online payment (no auth). Shapes
+  // mirror src/modules/storefront and src/modules/payments/paymob* on the
+  // API; nothing here is wrapped, the bodies are returned as they arrive.
+  // ---------------------------------------------------------------------
+
+  /**
+   * What the shipping engine would charge for a destination, before an order
+   * exists: the same calculation checkout runs, so the checkout page can show
+   * the fee as soon as the governorate is chosen. `region` is the province
+   * string the checkout payload sends. `amount` and `subtotal` are integer
+   * minor units.
+   */
+  async quoteStorefrontShipping(
+    workspaceId: string,
+    params: { country?: string; region?: string; subtotal?: number; quantity?: number; weightGrams?: number } = {}
+  ) {
+    const { quote } = await this.request<{
+      quote: { amount: number; currency: string; freeShippingThreshold: number | null };
+    }>(`/store/${workspaceId}/shipping/quote${buildQuery({ ...params })}`, { auth: false });
+    return quote;
+  }
+
+  /**
+   * Whether this store takes online payment through Paymob, and which methods
+   * are wired up. `connected: false` (with both methods false) when the
+   * merchant has not connected Paymob — the storefront then shows nothing
+   * about paying online.
+   */
+  async getStorefrontPaymentOptions(workspaceId: string) {
+    return this.request<{ paymob: { connected: boolean; card: boolean; wallet: boolean } }>(
+      `/store/${workspaceId}/payment-options`,
+      { auth: false }
+    );
+  }
+
+  /**
+   * Opens a Paymob payment session for an order placed with an online
+   * `paymentMethod` (card / wallet) and returns the hosted checkout URL to
+   * send the shopper to. Each call opens a fresh session, so a shopper who
+   * abandoned the payment page can simply ask again. 422 for a COD order or
+   * when Paymob is not connected; 409 when the order is already paid.
+   */
+  async payStorefrontOrder(workspaceId: string, orderId: string) {
+    return this.request<{
+      payment: { id: string; status: string; amount: number; currency: string };
+      method: "card" | "wallet";
+      checkoutUrl: string;
+      expiresInSeconds: number | null;
+    }>(`/store/${workspaceId}/orders/${orderId}/pay`, { method: "POST", body: {}, auth: false });
+  }
 }

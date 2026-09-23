@@ -206,11 +206,34 @@ function UseTemplateForm({
   onCancel: () => void;
 }) {
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
   const toast = useToast();
   const navigate = useNavigate();
 
   const detail = useAsync(() => apiClient.getWebsiteTemplate(template.id), [template.id]);
+
+  /**
+   * A template's colour lives in its `globalStyles`, which createWebsite copies
+   * onto the website row — but the storefront paints from the workspace's
+   * `themeSettings`, so a "perfume" template would open in the platform blue.
+   * Carry the colour across here, only when the store has never chosen one, so
+   * a merchant's own look is never overwritten by picking a template. Best
+   * effort: the site exists either way, so a failure here is not surfaced.
+   */
+  async function applyTemplateColour() {
+    const styles = detail.data?.globalStyles;
+    const colour = styles && typeof styles.primaryColor === "string" ? styles.primaryColor.trim() : "";
+    const existing = currentWorkspace?.themeSettings?.primaryColor;
+    if (!/^#[0-9a-f]{6}$/i.test(colour) || (typeof existing === "string" && existing.trim() !== "")) return;
+    try {
+      await apiClient.updateWorkspace(workspaceId, {
+        themeSettings: { ...(currentWorkspace?.themeSettings ?? {}), primaryColor: colour },
+      });
+      await refreshWorkspace();
+    } catch {
+      /* the site was created; the merchant can still pick a colour in the editor */
+    }
+  }
 
   const [name, setName] = useState(currentWorkspace?.name ?? "");
   const [saving, setSaving] = useState(false);
@@ -228,6 +251,7 @@ function UseTemplateForm({
     };
     try {
       const result = await apiClient.createWebsite(workspaceId, payload);
+      await applyTemplateColour();
       toast.success(`Site "${result.website.name}" created.`);
       navigate(`/website/${result.website.id}/edit`);
     } catch (err) {

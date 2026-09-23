@@ -19,7 +19,7 @@ import { BoxIcon, CashIcon, CheckIcon } from "@/components/Icons";
 import { OrderTicket } from "@/components/immersive/OrderTicket";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
-import { btnMetalLg, btnSecondary, card, container, input, label as labelClass } from "@/components/ui";
+import { btnMetalLg, btnSecondary, card, container, input, label as labelClass, skeleton } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { getOrderSnapshot, saveOrderSnapshot, snapshotFromOrder } from "@/lib/commerce";
 import {
@@ -43,6 +43,7 @@ import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { track, trackPurchaseOnce } from "@/lib/track";
+import { useCatalog } from "@/lib/useCatalog";
 
 /**
  * The step chrome of a running funnel: what the shopper *does* on a step,
@@ -61,6 +62,16 @@ import { track, trackPurchaseOnce } from "@/lib/track";
  * After an advance the page is refreshed in place: the URL is the session's,
  * and the server reads its new current step.
  */
+
+/**
+ * The id of the step's action island. The step page hands the renderer
+ * `/f/<funnel>/<session>#<this>` as the funnel's next href, so "order now"
+ * on the merchant's page scrolls to the real Continue / order form / offer.
+ */
+export const FUNNEL_ACTIONS_ID = "funnel-actions";
+
+/** The action island's section: anchored for the page's own CTAs, with room under the sticky masthead. */
+const island = `${container} scroll-mt-24`;
 
 // --- advancing ---------------------------------------------------------------
 
@@ -189,7 +200,7 @@ export function FunnelStepActions({
     );
   }
   if (step.stepType === "upsell" || step.stepType === "downsell") {
-    return <FunnelOfferCard offer={offer} canAccept={!!sessionOrderId} flow={flow} />;
+    return <FunnelOfferCard workspaceId={workspaceId} offer={offer} canAccept={!!sessionOrderId} flow={flow} />;
   }
   if (step.stepType === "thank_you") {
     return <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={sessionOrderId} />;
@@ -198,7 +209,7 @@ export function FunnelStepActions({
   // landing / sales / opt_in / custom. There is no public opt-in capture
   // endpoint, so opt_in moves on the same way.
   return (
-    <section className={`${container} flex flex-col items-center gap-3 pb-16 pt-6`}>
+    <section id={FUNNEL_ACTIONS_ID} className={`${island} flex flex-col items-center gap-3 pb-16 pt-6`}>
       <div className="w-full max-w-md space-y-3">
         <ErrorBox message={flow.error} />
         <button
@@ -322,7 +333,7 @@ function FunnelCheckout({
 
   if (!product) {
     return (
-      <section className={`${container} pb-16 pt-6`}>
+      <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`}>
         <p className="mx-auto max-w-xl rounded-2xl border border-dashed border-line-strong bg-paper-raised px-6 py-10 text-center text-sm text-ink-soft">
           {t.funnel.noProduct}
         </p>
@@ -334,7 +345,7 @@ function FunnelCheckout({
   const busy = submitting || !!flow.pending;
 
   return (
-    <section className={`${container} pb-16 pt-6`} aria-labelledby="funnel-checkout-title">
+    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-checkout-title">
       <form id="order-form" onSubmit={handleSubmit} noValidate className={`${card} mx-auto max-w-2xl p-5 sm:p-8`}>
         <h2 id="funnel-checkout-title" className="font-display text-xl font-bold text-ink sm:text-2xl">
           {t.funnel.checkoutTitle}
@@ -344,7 +355,7 @@ function FunnelCheckout({
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-paper">
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt="" width={64} height={64} className="h-full w-full object-cover" />
+              <img src={image} alt="" width={64} height={64} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-primary/40">
                 <BoxIcon size={28} />
@@ -420,21 +431,40 @@ function FunnelCheckout({
  * second order linked to the checkout order (server-side pricing and stock);
  * either answer follows its own edge. Without a checkout order there is
  * nothing to link to, so only "No thanks" is offered.
+ *
+ * The offer names its cart lines, not a product, so the photo and the
+ * struck-through price come from the catalogue: the product the first line's
+ * variant belongs to, and that variant's own compare-at when it is higher
+ * than the offer price. No compare-at, no "you save".
  */
 function FunnelOfferCard({
+  workspaceId,
   offer,
   canAccept,
   flow,
 }: {
+  workspaceId: string;
   offer: FunnelPublicOfferDto | null;
   canAccept: boolean;
   flow: Flow;
 }) {
   const { t, money } = useStore();
+  const { byVariant, loaded } = useCatalog(workspaceId);
   const price = offer && offer.priceAmount !== null ? parseMoney(offer.priceAmount) : null;
 
+  const firstLine = offer?.lines[0];
+  const product = firstLine ? byVariant.get(firstLine.variantId) : undefined;
+  const variant = product?.variants.find((v) => v.id === firstLine?.variantId);
+  const image = product ? firstImage(product) : null;
+  const quantity = offer?.lines.reduce((sum, l) => sum + (l.quantity || 0), 0) ?? 0;
+  // Only a compare-at the merchant set on the variant counts, and only when the offer beats it.
+  const compareAt =
+    price !== null && variant?.compareAtAmount != null && parseMoney(variant.compareAtAmount) * Math.max(1, quantity) > price
+      ? parseMoney(variant.compareAtAmount) * Math.max(1, quantity)
+      : null;
+
   return (
-    <section className={`${container} pb-16 pt-6`} aria-labelledby="funnel-offer-title">
+    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-offer-title">
       <div className={`${card} mx-auto max-w-xl overflow-hidden`}>
         <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-on-primary">
           {offer?.badge || t.funnel.offerBadge}
@@ -442,10 +472,36 @@ function FunnelOfferCard({
         <div className="p-5 text-center sm:p-8">
           {offer ? (
             <>
+              {/* A fixed square, filled by the photo when the catalogue has it — no jump either way. */}
+              {(image || (firstLine && !loaded)) && (
+                <div className="mx-auto mb-5 aspect-square w-full max-w-56 overflow-hidden rounded-2xl border border-line bg-paper">
+                  {image ? (
+                    // Merchant media are arbitrary remote URLs (no next/image allowlist).
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={image} alt="" width={224} height={224} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className={`${skeleton} block h-full w-full rounded-none`} />
+                  )}
+                </div>
+              )}
               <h2 id="funnel-offer-title" className="font-display text-2xl font-bold text-ink">
                 {offer.name}
               </h2>
-              {price !== null && <p className="mt-3 text-3xl font-bold text-ink">{money(price, offer.currency)}</p>}
+              {product && product.name !== offer.name && <p className="mt-1 text-sm text-ink-soft">{product.name}</p>}
+              {price !== null && (
+                <p className="mt-3 flex flex-wrap items-baseline justify-center gap-x-3">
+                  <span className="text-3xl font-bold text-ink">{money(price, offer.currency)}</span>
+                  {compareAt !== null && (
+                    <span className="text-lg text-ink-soft line-through">
+                      <span className="sr-only">{t.product.compareAt} </span>
+                      {money(compareAt, offer.currency)}
+                    </span>
+                  )}
+                </p>
+              )}
+              {price !== null && compareAt !== null && (
+                <p className="mt-1 text-sm font-medium text-success">{t.upsell.save(money(compareAt - price, offer.currency))}</p>
+              )}
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{t.funnel.offerHint}</p>
             </>
           ) : (
@@ -533,7 +589,7 @@ export function FunnelOrders({
   }
 
   return (
-    <section className={`${container} pb-16 pt-6`} aria-labelledby="funnel-thanks-title">
+    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-thanks-title">
       <div className="mx-auto max-w-2xl">
         <div className="flex flex-col items-center text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">

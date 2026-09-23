@@ -64,6 +64,27 @@ export function afterOrder({
   return storeHref(basePath, `/offer/${order.id}?${q.toString()}`);
 }
 
+/**
+ * For an order placed with an online method (card / wallet): open its Paymob
+ * session and return the hosted payment page to send the shopper to. Called
+ * only after the order exists — the order is the shopper's either way, and
+ * if this fails the caller lands them on the thank-you page, where the
+ * merchant's confirmation call picks the payment up.
+ */
+export async function onlinePaymentUrl({
+  client,
+  workspaceId,
+  orderId,
+}: {
+  client: ApiClient;
+  workspaceId: string;
+  orderId: string;
+}): Promise<string> {
+  const { checkoutUrl } = await client.payStorefrontOrder(workspaceId, orderId);
+  if (!checkoutUrl) throw new Error("No checkout URL");
+  return checkoutUrl;
+}
+
 export function orderErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;

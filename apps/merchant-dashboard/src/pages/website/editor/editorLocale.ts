@@ -208,13 +208,151 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
     label: "آراء العملاء",
     description: "تلات كروت آراء فاضية — إملاها من عملاء حقيقيين عندك.",
   },
+
+  // مكتبة الأقسام — أقسام موزّعة على أعمدة، جاهزة تتحط في الصفحة زي ما هي.
+  "announcement-bar": {
+    label: "شريط إعلان",
+    description: "سطر واحد بلون علامتك فوق الصفحة — عرض، أو ملحوظة عن الشحن، أو تاريخ.",
+  },
+  "hero-split": {
+    label: "واجهة بصورة",
+    description: "عنوان وسطر كلام وزرار على ناحية، وصورتك على الناحية التانية.",
+  },
+  "hero-gallery": {
+    label: "واجهة بصف صور",
+    description: "جملة افتتاحية وزرار في النص، وتحتهم تلات صور من عندك.",
+  },
+  "cta-band": {
+    label: "شريط دعوة للشراء",
+    description: "شريط بلون علامتك: جملة واحدة، وسبب واحد، وزرار واحد.",
+  },
+  bento: {
+    label: "شبكة بينتو",
+    description: "أربع كروت بمقاسين — صورة وسطر في كل واحد، زي ما مواقع التطبيقات بتعرض مميزاتها.",
+  },
+  "footer-links": {
+    label: "روابط الفوتر",
+    description: "قايمتين روابط وحساباتك على السوشيال جنب بعض، لآخر الصفحة.",
+  },
+  "feature-grid-3": {
+    label: "تلات كروت مميزات",
+    description: "تلات كروت، في كل واحد أيقونة وعنوان قصير وسطر — صف المميزات الكلاسيكي.",
+  },
+  "feature-grid-4": {
+    label: "أربع مميزات",
+    description: "أربع نقط قصيرة على عرض الصفحة، كل واحدة بأيقونة وفي النص.",
+  },
+  "image-text": {
+    label: "صورة وكلام",
+    description: "صورتك على ناحية، وعنوان وكلام وزرار على الناحية التانية.",
+  },
+  "text-image": {
+    label: "كلام وصورة",
+    description: "نفس الاتنين بالعكس: الكلام الأول والصورة بعده — بدّل بينهم على طول الصفحة.",
+  },
+  "rich-text-band": {
+    label: "شريط نص طويل",
+    description: "عنوان فوق كلام طويل — قصتك، أو طريقتك، أو وعدك للعميل.",
+  },
+  "faq-split": {
+    label: "أسئلة شائعة في عمودين",
+    description: "عنوان وسطر على ناحية، والأسئلة وإجاباتها على الناحية التانية.",
+  },
+  newsletter: {
+    label: "نشرة بريدية",
+    description: "دعوة في النص إن العميل يفضل متابعك، وتحتها نموذج الاشتراك.",
+  },
+  "contact-map": {
+    label: "تواصل + خريطة",
+    description: "نموذج التواصل جنب عنوانك ورابط ليه على الخريطة.",
+  },
+  "trust-badges": {
+    label: "علامات ثقة",
+    description: "أربع تطمينات صغيرة في صف ضيق — الشحن، والاستبدال، والدفع، والدعم.",
+  },
+  "comparison-pitch": {
+    label: "مقارنة بكلمة",
+    description: "عنوان وزرار جنب جدول عندنا وغير كده.",
+  },
+  "pricing-tiers": {
+    label: "باقات",
+    description: "تلات كروت — اسم، وسطر، واللي جواها، وزرار. الأسعار إنت اللي بتكتبها.",
+  },
+  "video-hero": {
+    label: "افتتاحية بفيديو",
+    description: "الفيديو بتاعك الأول، وبعده عنوان وسطر وزرار في النص.",
+  },
+  "logo-strip": {
+    label: "شريط لوجوهات",
+    description: "صف هادي من ست صور صغيرة — شركاء، أو نقاط بيع، أو صحافة — على شريط بلون الصفحة.",
+  },
+  collage: {
+    label: "كولاج صور",
+    description: "أربع صور في صفين بعروض مختلفة — واحدة عريضة جنب واحدة ضيقة، وبعدين بالعكس.",
+  },
+  "stats-row": {
+    label: "صف أرقام",
+    description: "أربع أرقام كبيرة وتحت كل واحد كلمة — طلبات، سنين، مدن. الأرقام إنت اللي بتكتبها.",
+  },
+  steps: {
+    label: "بيشتغل إزاي",
+    description: "عنوان، وبعده تلات خطوات مرقّمة على عرض الصفحة.",
+  },
+  timeline: {
+    label: "خط زمني",
+    description: "عنوان، وبعده محطاتك في قايمتين جنب بعض — الأقدم الأول.",
+  },
+  team: {
+    label: "الفريق",
+    description: "تلات أشخاص — صورة واسم وسطر لكل واحد. إملاهم من فريقك إنت.",
+  },
+  "testimonial-wall": {
+    label: "حيطة آراء",
+    description: "عنوان وتلات كروت آراء فاضية جنب بعض — إملاها من عملاء حقيقيين.",
+  },
+  "testimonial-spotlight": {
+    label: "رأي واحد بارز",
+    description: "كلام عميل واحد، كبير وفي النص على لون العلامة الفاتح. فاضي لحد ما تضيفه.",
+  },
+  "claims-band": {
+    label: "شريط جمل بعنوان",
+    description: "عنوان في النص فوق شريط الجمل القصيرة اللي بيمشي.",
+  },
+  "process-story": {
+    label: "بيتعمل إزاي",
+    description: "عنوان وسطر، وبعدهم تلات خطوات بالسكرول — حط صورة لكل واحدة.",
+  },
+  "collection-tiles": {
+    label: "بلاطات المجموعات",
+    description: "عنوان وسطر فوق مجموعاتك، بعرض واسع.",
+  },
+  "featured-product": {
+    label: "منتج مميز",
+    description: "منتج واحد جنب أسباب شراءه وزرار.",
+  },
+  "product-grid-intro": {
+    label: "شبكة منتجات بمقدمة",
+    description: "عنوان وسطر، وبعدهم شبكة منتجاتك.",
+  },
+  "bundle-tiers": {
+    label: "تلات عروض",
+    description: "تلات منتجات جنب بعض، كل واحد بزرار شراءه — اختار منتج لكل عمود.",
+  },
+  "countdown-band": {
+    label: "شريط عدّاد",
+    description: "شريط غامق فيه اسم العرض والعدّاد وزرار الشراء.",
+  },
 };
 
-/** Keyed by SectionSettingSpec.key. */
+/** Keyed by SectionSettingSpec.key — section, column and row settings alike. */
 const SECTION_SETTING_LABEL_AR: Record<string, string> = {
   background: "الخلفية",
   padding: "المسافة فوق وتحت",
   width: "عرض المحتوى",
+  surface: "الشكل",
+  align: "محاذاة النص",
+  verticalAlign: "المكان الرأسي",
+  gap: "المسافة بين الأعمدة",
 };
 
 /** Keyed "<settingKey>.<optionValue>". */
@@ -223,12 +361,25 @@ const SECTION_SETTING_OPTION_AR: Record<string, string> = {
   "background.paper": "لون الصفحة",
   "background.raised": "لون بارز",
   "background.primary-soft": "لون العلامة الفاتح",
+  "background.primary": "لون العلامة",
+  "background.ink": "غامق",
+  "padding.tight": "ضيقة جدًا",
   "padding.compact": "ضيقة",
   "padding.normal": "عادية",
   "padding.roomy": "واسعة",
   "width.normal": "عادي",
   "width.wide": "عريض",
   "width.full": "عرض الشاشة",
+  "surface.none": "بدون",
+  "surface.card": "كارت",
+  "align.start": "من البداية",
+  "align.center": "في النص",
+  "verticalAlign.start": "فوق",
+  "verticalAlign.center": "في النص",
+  "verticalAlign.end": "تحت",
+  "gap.tight": "ضيقة",
+  "gap.normal": "عادية",
+  "gap.loose": "واسعة",
 };
 
 const GROUP_AR: Record<string, string> = {
@@ -236,6 +387,7 @@ const GROUP_AR: Record<string, string> = {
   Content: "المحتوى",
   Media: "الوسائط",
   Commerce: "البيع",
+  Story: "قصة",
 };
 
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
@@ -339,6 +491,9 @@ const UI_EN = {
   moveElementDown: (label: string) => `Move ${label} down`,
   sectionStyle: "Section style",
   sectionStyleHint: "How this whole section sits on the page.",
+  column: (n: number) => `Column ${n}`,
+  columnHint: "This column's own look. Columns stack on phones.",
+  rowGap: (n: number) => `Row ${n}`,
 
   // --- the website editor's own frame (header, panes, dialogs) ---
   editorTitle: "Website editor",
@@ -490,6 +645,9 @@ const UI_AR: EditorUi = {
   moveElementDown: (label) => `تحريك ${label} لتحت`,
   sectionStyle: "شكل القسم",
   sectionStyleHint: "القسم كله بيقعد إزاي في الصفحة.",
+  column: (n) => `العمود ${n}`,
+  columnHint: "شكل العمود ده لوحده. الأعمدة بتنزل تحت بعض على الموبايل.",
+  rowGap: (n) => `الصف ${n}`,
 
   editorTitle: "محرر الموقع",
   backToWebsite: "رجوع للموقع",

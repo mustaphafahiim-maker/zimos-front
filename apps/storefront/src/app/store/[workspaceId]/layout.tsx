@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { CartDrawer } from "@/components/CartDrawer";
 import { ShopChrome } from "@/components/ShopChrome";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
@@ -103,6 +104,9 @@ export default async function StoreLayout({
           <div className="flex flex-1 flex-col">{children}</div>
           <ShopChrome>
             <StoreFooter store={store} locale={locale} />
+            {/* The slide-over cart: opened by "add to cart" and the header's cart icon.
+                Funnel pages have no cart, so it steps aside with the rest of the chrome. */}
+            <CartDrawer />
           </ShopChrome>
           <BackToTop label={getDictionary(locale).common.backToTop} />
         </div>

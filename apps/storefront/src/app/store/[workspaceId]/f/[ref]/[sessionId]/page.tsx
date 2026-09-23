@@ -10,8 +10,10 @@ import {
   type PageTree,
   type StorefrontProduct,
 } from "@store-builder/api-client";
-import { FunnelDone, FunnelStepActions } from "@/components/funnel/FunnelStep";
+import { FunnelProgress } from "@/components/funnel/FunnelProgress";
+import { FUNNEL_ACTIONS_ID, FunnelDone, FunnelStepActions } from "@/components/funnel/FunnelStep";
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
+import { StepTransition } from "@/components/funnel/StepTransition";
 import { PageRenderer } from "@/components/page-renderer";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
@@ -106,7 +108,9 @@ async function checkoutProduct(workspaceId: string, tree: PageTree | null): Prom
  * The step's page is the merchant's page tree, rendered with the store's own
  * PageRenderer (its commerce blocks are async server components); what the
  * shopper does on the step — continue, order, accept/decline — is the client
- * island underneath (components/funnel/FunnelStep).
+ * island underneath (components/funnel/FunnelStep). In funnel mode the
+ * renderer's commerce links point at that island rather than the product
+ * page, so "order now" on the merchant's page scrolls to the real action.
  */
 export default async function FunnelStepPage({ params }: { params: Params }) {
   const { workspaceId, ref, sessionId } = await params;
@@ -133,21 +137,33 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
   const locale = await getStoreLocale(store);
   const tree = (step.tree ?? null) as PageTree | null;
   const product = step.stepType === "checkout" ? await checkoutProduct(workspaceId, tree) : null;
+  // A new step (or the same step reached again) starts with fresh state and its own entrance.
+  const stepKey = `${step.key}:${session.path.length}`;
+  // Store-relative, like a merchant link: the renderer resolves it onto this store's prefix.
+  const nextHref = `/f/${ref}/${sessionId}#${FUNNEL_ACTIONS_ID}`;
 
   return (
     <main className="flex-1">
-      <PageRenderer tree={tree} workspaceId={workspaceId} currency={store.currency} locale={locale} />
-      <FunnelStepActions
-        // A new step (or the same step reached again) starts with fresh state.
-        key={`${step.key}:${session.path.length}`}
-        workspaceId={workspaceId}
-        funnelId={ref}
-        sessionId={sessionId}
-        step={{ key: step.key, name: step.name, stepType: step.stepType }}
-        offer={data.offer ?? null}
-        product={product}
-        sessionOrderId={session.orderId}
-      />
+      <FunnelProgress completed={session.path.length} />
+      <StepTransition key={stepKey}>
+        <PageRenderer
+          tree={tree}
+          workspaceId={workspaceId}
+          currency={store.currency}
+          locale={locale}
+          funnel={{ nextHref }}
+        />
+        <FunnelStepActions
+          key={stepKey}
+          workspaceId={workspaceId}
+          funnelId={ref}
+          sessionId={sessionId}
+          step={{ key: step.key, name: step.name, stepType: step.stepType }}
+          offer={data.offer ?? null}
+          product={product}
+          sessionOrderId={session.orderId}
+        />
+      </StepTransition>
     </main>
   );
 }

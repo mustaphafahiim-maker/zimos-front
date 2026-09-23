@@ -1,9 +1,10 @@
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, discountPercent, firstImage, priceOf } from "@/lib/product";
+import { compareAtOf, defaultOfferOf, discountPercent, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
 import { BoxIcon } from "./Icons";
 import { TiltCard } from "./immersive/TiltCard";
+import { QuickAddButton } from "./QuickAddButton";
 
 export function ProductCard({
   product,
@@ -20,6 +21,12 @@ export function ProductCard({
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
   const anyInStock = product.variants.some((v) => v.inStock);
   const image = firstImage(product);
+
+  // One variant and it is in stock: nothing to choose, so the card adds it in
+  // one tap. Anything with options sends the shopper to the product page.
+  const only = product.variants.length === 1 ? product.variants[0] : undefined;
+  const quickAdd = only && only.inStock ? only : undefined;
+  const offer = quickAdd ? defaultOfferOf(product) : undefined;
 
   return (
     // The tilt is a wrapper, not a rewrite: it leans the card towards the
@@ -77,12 +84,22 @@ export function ProductCard({
             </span>
           )}
         </p>
-        <span
-          aria-hidden
-          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
-        >
-          {anyInStock ? t.product.orderNow : t.product.viewDetails}
-        </span>
+        {quickAdd ? (
+          <QuickAddButton
+            variantId={quickAdd.id}
+            offerId={offer && offerAppliesTo(offer, quickAdd.id) ? offer.id : undefined}
+            label={t.product.addToCart}
+          />
+        ) : (
+          // Part of the stretched link: the whole card opens the product page,
+          // where the options are chosen.
+          <span
+            aria-hidden
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
+          >
+            {anyInStock ? t.shop.chooseOptions : t.product.viewDetails}
+          </span>
+        )}
       </div>
     </article>
     </TiltCard>

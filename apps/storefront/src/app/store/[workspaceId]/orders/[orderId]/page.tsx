@@ -1,43 +1,44 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
+import { BoxIcon, CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
 import { OrderTicket } from "@/components/immersive/OrderTicket";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
-import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
+import { btnPrimary, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
-import {
-  getAcceptedUpsell,
-  getOrderSnapshot,
-  type AcceptedUpsell,
-  type OrderSnapshot,
-} from "@/lib/commerce";
+import { getAcceptedUpsell, getOrderSnapshot } from "@/lib/commerce";
+import { useHydrated } from "@/lib/funnelSession";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 
+/**
+ * The thank-you page: the order ticket, what happens next, and the two things
+ * a shopper does from here — track the order and tell someone about the store
+ * — given their own cards rather than a row of buttons at the bottom.
+ *
+ * Everything about the order is read on this device (localStorage) after
+ * hydration, so the server render and the first client render agree; the
+ * order number in the URL covers a device that has nothing saved.
+ */
 function Confirmation() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
   const search = useSearchParams();
   const basePath = useStoreBasePath();
   const { t, money, store } = useStore();
+  const hydrated = useHydrated();
 
-  // Read on this device after mount (localStorage), so SSR and hydration agree.
-  const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
-  const [upsell, setUpsell] = useState<AcceptedUpsell | null>(null);
-  const [storeUrl, setStoreUrl] = useState("");
+  const snapshot = hydrated ? getOrderSnapshot(workspaceId, orderId) : null;
+  const upsell = hydrated ? getAcceptedUpsell(workspaceId, orderId) : null;
+  // The store's shareable address: its own origin on a subdomain, the
+  // /store/<workspaceId> path on the shared host.
+  const storeUrl = hydrated ? `${window.location.origin}${storeHref(basePath, "/")}` : "";
+  const canShare = hydrated && typeof navigator.share === "function";
+  // Set by the checkout page when an online payment page could not be opened.
+  const paymentFailed = search.get("pay") === "failed";
+
   const [copied, setCopied] = useState(false);
-  const [canShare, setCanShare] = useState(false);
-
-  useEffect(() => {
-    setSnapshot(getOrderSnapshot(workspaceId, orderId));
-    setUpsell(getAcceptedUpsell(workspaceId, orderId));
-    // The store’s shareable address: its own origin on a subdomain, the
-    // /store/<workspaceId> path on the shared host.
-    setStoreUrl(`${window.location.origin}${storeHref(basePath, "/")}`);
-    setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
-  }, [workspaceId, orderId, basePath]);
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
   const currency = snapshot?.currency ?? store?.currency;
@@ -92,6 +93,12 @@ function Confirmation() {
           </p>
         </div>
 
+        {paymentFailed && (
+          <p role="status" className="mt-6 rounded-2xl border border-accent/40 bg-accent-soft px-5 py-4 text-sm text-ink">
+            {t.shop.paymentPageFailed}
+          </p>
+        )}
+
         {upsell && (
           <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
             <p className="font-semibold text-primary">
@@ -101,7 +108,7 @@ function Confirmation() {
           </div>
         )}
 
-        {orderNumber && (
+        {orderNumber ? (
           <div className="mt-8">
             <OrderTicket
               orderNumber={orderNumber}
@@ -111,6 +118,70 @@ function Confirmation() {
               note={t.thankYou.payOnDelivery}
             />
           </div>
+        ) : !hydrated ? (
+          <div className={`${skeleton} mt-8 h-28 w-full rounded-2xl`} aria-hidden />
+        ) : null}
+
+        {/* The two things to do from here, side by side and hard to miss. */}
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <section className={`${card} flex flex-col p-5`} aria-labelledby="track-title">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <BoxIcon />
+            </span>
+            <h2 id="track-title" className="mt-3 text-base font-semibold text-ink">
+              {t.thankYou.track}
+            </h2>
+            <p className="mt-1 flex-1 text-sm text-ink-soft">{t.track.subtitle}</p>
+            <StoreLink href="/track" className={`${btnPrimary} mt-4 w-full`}>
+              {t.thankYou.track}
+            </StoreLink>
+          </section>
+
+          <section className={`${card} flex flex-col p-5`} aria-labelledby="share-title">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+              <ShareIcon />
+            </span>
+            <h2 id="share-title" className="mt-3 text-base font-semibold text-ink">
+              {t.thankYou.share}
+            </h2>
+            <p className="mt-1 flex-1 text-sm text-ink-soft">{t.shop.shareHint}</p>
+            <div className="mt-4 grid gap-2">
+              <a
+                href={storeUrl ? `https://wa.me/?text=${encodeURIComponent(`${t.thankYou.shareText(storeName)} ${storeUrl}`)}` : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!storeUrl}
+                className={`${btnSecondary} w-full ${storeUrl ? "" : "pointer-events-none opacity-60"}`}
+              >
+                <WhatsAppIcon size={18} />
+                {t.thankYou.shareWhatsapp}
+              </a>
+              <div className={`grid gap-2 ${canShare ? "grid-cols-2" : ""}`}>
+                <button type="button" onClick={copyLink} disabled={!storeUrl} className={btnSecondary}>
+                  {copied ? <CheckIcon size={18} /> : <CopyIcon size={18} />}
+                  <span aria-live="polite">{copied ? t.thankYou.copied : t.thankYou.copyLink}</span>
+                </button>
+                {canShare && (
+                  <button type="button" onClick={nativeShare} className={btnSecondary}>
+                    <ShareIcon size={18} />
+                    {t.thankYou.shareNative}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {wa && (
+          <a
+            href={`https://wa.me/${wa}?text=${encodeURIComponent(t.thankYou.whatsappMessage(storeName, orderNumber ?? ""))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${btnSecondary} mt-4 w-full`}
+          >
+            <WhatsAppIcon />
+            {t.thankYou.whatsapp}
+          </a>
         )}
 
         <section className={`${card} mt-6 p-5 sm:p-6`} aria-labelledby="next-title">
@@ -166,56 +237,11 @@ function Confirmation() {
           </section>
         )}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {wa && (
-            <a
-              href={`https://wa.me/${wa}?text=${encodeURIComponent(
-                t.thankYou.whatsappMessage(storeName, orderNumber ?? "")
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${btnPrimary} sm:col-span-2`}
-            >
-              <WhatsAppIcon />
-              {t.thankYou.whatsapp}
-            </a>
-          )}
-          <StoreLink href="/track" className={btnSecondary}>
-            {t.thankYou.track}
-          </StoreLink>
+        <div className="mt-8 text-center">
           <StoreLink href="/" className={btnSecondary}>
             {t.thankYou.backToStore}
           </StoreLink>
         </div>
-
-        {storeUrl && (
-          <section className="mt-8 text-center" aria-labelledby="share-title">
-            <h2 id="share-title" className="text-sm font-semibold text-ink">
-              {t.thankYou.share}
-            </h2>
-            <div className="mt-3 flex flex-wrap justify-center gap-2">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`${t.thankYou.shareText(storeName)} ${storeUrl}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={btnSecondary}
-              >
-                <WhatsAppIcon size={18} />
-                {t.thankYou.shareWhatsapp}
-              </a>
-              <button type="button" onClick={copyLink} className={btnSecondary}>
-                {copied ? <CheckIcon size={18} /> : <CopyIcon size={18} />}
-                <span aria-live="polite">{copied ? t.thankYou.copied : t.thankYou.copyLink}</span>
-              </button>
-              {canShare && (
-                <button type="button" onClick={nativeShare} className={btnSecondary}>
-                  <ShareIcon size={18} />
-                  {t.thankYou.shareNative}
-                </button>
-              )}
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

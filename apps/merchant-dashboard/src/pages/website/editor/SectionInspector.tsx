@@ -1,21 +1,29 @@
 import type { ReactNode } from "react";
-import { Palette, Plus, Trash2, X } from "lucide-react";
+import { Columns3, Palette, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label } from "@store-builder/ui";
-import type { PageElement, PageElementType, PageSection } from "@store-builder/api-client";
+import type { PageColumn, PageElement, PageElementType, PageRow, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import {
+  COLUMN_SETTING_SPECS,
   ELEMENT_SPECS,
+  ROW_SETTING_SPECS,
   SECTION_SETTING_SPECS,
+  columnSetting,
   elementPosition,
   moveElement,
+  rowSetting,
+  sectionColumnCount,
   sectionElements,
   sectionLabel,
   sectionSetting,
+  setColumnSetting,
   setElementProp,
+  setRowSetting,
   setSectionSetting,
   type FieldSpec,
+  type SectionSettingSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
 import {
@@ -33,11 +41,15 @@ import { ImageField, ImageListField } from "./ImageField";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
- * sections none — so this walks the section's elements and renders a fieldset
- * per element from that element type's `FieldSpec[]`. Above them sits the one
- * thing a section does carry, its optional `settings`: background, vertical
- * space and content width, every one of them defaulting to the look the
- * storefront already had.
+ * sections none — so this walks the section's rows, columns and elements in
+ * document order and renders a fieldset per element from that element type's
+ * `FieldSpec[]`. Above them sits the one thing a section does carry, its
+ * optional `settings`: background, vertical space and content width, every
+ * one of them defaulting to the look the storefront already had. A section
+ * with more than one column gets a small header per column (its surface and
+ * alignment) and per multi-column row (the gap), so a laid-out section from
+ * the library can still be reshaped here; a single-column section shows none
+ * of that and reads exactly as it did.
  *
  * Content inputs are `dir="auto"`: merchants write Arabic and English copy,
  * and each field should follow the text typed into it, whatever direction the
@@ -694,6 +706,34 @@ export function ElementFieldset({
   );
 }
 
+/** One setting as a select, bilingual through the same maps whichever node it belongs to. */
+function SettingSelect({
+  spec,
+  value,
+  hint,
+  onChange,
+}: {
+  spec: SectionSettingSpec;
+  value: string;
+  hint?: string;
+  onChange: (value: string) => void;
+}) {
+  const locale = useEditorLocale();
+  return (
+    <Field label={sectionSettingLabel(spec.key, spec.label, locale)} hint={hint}>
+      {({ id }) => (
+        <Select id={id} value={value || spec.defaultValue} onChange={(e) => onChange(e.target.value)}>
+          {spec.options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {sectionSettingOption(spec.key, o.value, o.label, locale)}
+            </option>
+          ))}
+        </Select>
+      )}
+    </Field>
+  );
+}
+
 /**
  * The section's own look — the one thing on a section that isn't an element.
  * Rendered with the same `Field`/`Select` pair as an element's select field so
@@ -718,25 +758,83 @@ function SectionStyleFieldset({
         <span className="min-w-0 flex-1 truncate">{ui.sectionStyle}</span>
       </div>
       {SECTION_SETTING_SPECS.map((spec, i) => (
-        <Field
+        <SettingSelect
           key={spec.key}
-          label={sectionSettingLabel(spec.key, spec.label, locale)}
+          spec={spec}
+          value={sectionSetting(section, spec.key)}
           hint={i === 0 ? ui.sectionStyleHint : undefined}
-        >
-          {({ id }) => (
-            <Select
-              id={id}
-              value={sectionSetting(section, spec.key) || spec.defaultValue}
-              onChange={(e) => onChange(setSectionSetting(section, spec.key, e.target.value))}
-            >
-              {spec.options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {sectionSettingOption(spec.key, o.value, o.label, locale)}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+          onChange={(value) => onChange(setSectionSetting(section, spec.key, value))}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A column's header inside a multi-column section: its number and the little
+ * bit of look a column carries (card surface, text alignment, where it sits
+ * when its neighbour is taller). Only rendered when the section has more than
+ * one column — the templates' single-column sections keep the plain list of
+ * elements they always had.
+ */
+function ColumnStyleFieldset({
+  section,
+  column,
+  index,
+  onChange,
+}: {
+  section: PageSection;
+  column: PageColumn;
+  index: number;
+  onChange: (next: PageSection) => void;
+}) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+
+  return (
+    <div className="space-y-3 border-b border-line bg-paper px-4 py-3">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
+        <Columns3 className="size-3.5" aria-hidden />
+        <span className="min-w-0 flex-1 truncate">{ui.column(index + 1)}</span>
+      </div>
+      {COLUMN_SETTING_SPECS.map((spec, i) => (
+        <SettingSelect
+          key={spec.key}
+          spec={spec}
+          value={columnSetting(column, spec.key)}
+          hint={i === 0 ? ui.columnHint : undefined}
+          onChange={(value) => onChange(setColumnSetting(section, column.id, spec.key, value))}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** A multi-column row's one setting — how far apart its columns sit. */
+function RowStyleFieldset({
+  section,
+  row,
+  index,
+  onChange,
+}: {
+  section: PageSection;
+  row: PageRow;
+  index: number;
+  onChange: (next: PageSection) => void;
+}) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+
+  return (
+    <div className="space-y-3 border-b border-line px-4 py-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-ink-soft">{ui.rowGap(index + 1)}</div>
+      {ROW_SETTING_SPECS.map((spec) => (
+        <SettingSelect
+          key={spec.key}
+          spec={spec}
+          value={rowSetting(row, spec.key)}
+          onChange={(value) => onChange(setRowSetting(section, row.id, spec.key, value))}
+        />
       ))}
     </div>
   );
@@ -756,6 +854,28 @@ export function SectionInspector({
   const locale = useEditorLocale();
   const ui = editorUi(locale);
   const elements = sectionElements(section);
+  const multiColumn = sectionColumnCount(section) > 1;
+
+  const fieldset = (element: PageElement) => (
+    <ElementFieldset
+      key={element.id}
+      element={element}
+      onPropChange={(el, key, value) => onChange(setElementProp(section, el, key, value))}
+      actions={
+        <ElementMoveButtons
+          section={section}
+          elementId={element.id}
+          label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
+          ui={ui}
+          onChange={onChange}
+        />
+      }
+    />
+  );
+
+  // Column numbers count across the whole section, so "Column 3" in the
+  // second row still names one column unambiguously.
+  let columnIndex = 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -775,23 +895,30 @@ export function SectionInspector({
         <SectionStyleFieldset section={section} onChange={onChange} />
         {elements.length === 0 ? (
           <p className="px-4 py-6 text-sm text-ink-soft">{ui.noElements}</p>
+        ) : !multiColumn ? (
+          elements.map(fieldset)
         ) : (
-          elements.map((element) => (
-            <ElementFieldset
-              key={element.id}
-              element={element}
-              onPropChange={(el, key, value) => onChange(setElementProp(section, el, key, value))}
-              actions={
-                <ElementMoveButtons
-                  section={section}
-                  elementId={element.id}
-                  label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
-                  ui={ui}
-                  onChange={onChange}
-                />
-              }
-            />
-          ))
+          (section.rows ?? []).map((row, r) => {
+            const columns = row.columns ?? [];
+            return (
+              <div key={row.id}>
+                {columns.length > 1 && (
+                  <RowStyleFieldset section={section} row={row} index={r} onChange={onChange} />
+                )}
+                {columns.map((column) => (
+                  <div key={column.id}>
+                    <ColumnStyleFieldset
+                      section={section}
+                      column={column}
+                      index={columnIndex++}
+                      onChange={onChange}
+                    />
+                    {(column.elements ?? []).map(fieldset)}
+                  </div>
+                ))}
+              </div>
+            );
+          })
         )}
       </div>
 

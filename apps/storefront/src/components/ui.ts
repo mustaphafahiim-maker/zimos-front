@@ -39,3 +39,41 @@ export const label = "mb-1.5 block text-sm font-medium text-ink";
 export const sectionTitle = "text-lg font-semibold text-ink";
 
 export const container = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+
+/** The same focus ring the buttons carry, for controls built outside these recipes. */
+export const focusRing = focus;
+
+/** A placeholder block while a list or a price is on its way; still for reduced motion. */
+export const skeleton = "animate-pulse rounded-xl bg-line/70 motion-reduce:animate-none";
+
+/**
+ * A choice among a few options — variant values, payment methods, tabs — as a
+ * pill that reads selected without relying on colour alone (border weight).
+ */
+export const pill = (selected: boolean) =>
+  `inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 px-4 text-sm font-medium transition-colors ${
+    selected ? "border-primary bg-primary-soft text-primary" : "border-line bg-paper-raised text-ink hover:border-primary"
+  } ${focus}`;
+
+/**
+ * A modal layer (the cart drawer, the mobile menu): the backdrop and a sheet
+ * that slides in from the inline-end edge, both inside one full-viewport box
+ * that clips them. The clipping matters: a sheet parked off the edge by a
+ * transform would otherwise extend the document sideways, and a phone
+ * browser answers that by zooming the whole page out.
+ *
+ * `open` drives the sheet's transform; the RTL variant flips it so the sheet
+ * still parks off the edge it lives on. Motion collapses to a cut under
+ * reduced motion.
+ */
+export const modalLayer = "fixed inset-0 z-50 overflow-hidden";
+
+export const sheet = (open: boolean) =>
+  `absolute inset-y-0 end-0 flex w-full max-w-md flex-col bg-paper-raised shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none ${
+    open ? "translate-x-0" : "translate-x-full rtl:-translate-x-full"
+  }`;
+
+export const backdrop = (open: boolean) =>
+  `absolute inset-0 bg-ink/40 backdrop-blur-[2px] transition-opacity duration-300 motion-reduce:transition-none ${
+    open ? "opacity-100" : "pointer-events-none opacity-0"
+  }`;

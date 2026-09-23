@@ -24,7 +24,7 @@ export function AddToCartButton({
   variant?: "primary" | "secondary";
   className?: string;
 }) {
-  const { addItem } = useCart();
+  const { addItem, openDrawer } = useCart();
   const { t } = useStore();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,10 @@ export function AddToCartButton({
     try {
       await addItem(variantId, offerId, defaultQuantity);
       setStatus("added");
+      // The drawer is the confirmation: the line, the subtotal and the way to
+      // checkout, without leaving the page. The button still says "added"
+      // underneath for when the drawer is closed again.
+      openDrawer();
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
     } catch (err) {
       setStatus("error");

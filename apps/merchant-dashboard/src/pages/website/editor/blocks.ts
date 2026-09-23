@@ -1,30 +1,48 @@
 import {
+  AlarmClock,
   AlignLeft,
   BadgeCheck,
+  BarChart3,
   Box,
+  Building2,
   Camera,
   ChevronDown,
   CircleDot,
+  Clapperboard,
   Code2,
   Columns3,
   Contrast,
+  FileText,
   FormInput,
+  Frame,
+  GalleryHorizontal,
   Gift,
+  Grid2x2,
   Grid3x3,
   Heading1,
   HelpCircle,
   Image,
   Images,
   Layers,
+  LayoutDashboard,
   LayoutGrid,
+  LayoutPanelLeft,
   List,
+  ListOrdered,
+  Mail,
   Map,
+  MapPin,
   Megaphone,
   MessageSquareQuote,
+  Milestone,
   Minus,
   MousePointerClick,
   MoveVertical,
   Orbit,
+  Package,
+  PanelBottom,
+  PanelLeft,
+  PanelRight,
   Quote,
   Scale,
   Share2,
@@ -33,9 +51,11 @@ import {
   ShoppingCart,
   Sparkles,
   Table2,
+  Tag,
   Timer,
   Truck,
   Type,
+  Users,
   Video,
   Waves,
   Zap,
@@ -63,9 +83,12 @@ import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorL
  *     full-width column, and one or more elements.
  *  2. The seeded templates build every section through the same `oneCol`
  *     helper (one row → one span-12 column), so the trees we read back are
- *     always single-column. We write the same shape, and the canvas renders a
- *     section by flattening it — that way a hand-authored multi-column tree
- *     still displays and still round-trips unharmed.
+ *     always single-column. Single-element presets write the same shape; the
+ *     ready-made sections further down may lay their elements out over
+ *     several rows and columns (`BlockPreset.rows`), which is the same tree
+ *     with more than one column per row — nothing the backend hasn't always
+ *     accepted. The inspector walks rows and columns in order, so a
+ *     hand-authored multi-column tree displays and round-trips unharmed too.
  */
 
 // ---------------------------------------------------------------------------
@@ -466,15 +489,44 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
 // Block presets — what the left sidebar offers
 // ---------------------------------------------------------------------------
 
+/**
+ * One column of a multi-column preset: how much of the 12-column row it takes,
+ * what goes in it, and optionally the starting props of each element and the
+ * column's own `settings` (COLUMN_SETTING_SPECS).
+ */
+export interface PresetColumn {
+  span: number;
+  elements: PageElementType[];
+  content?: Array<Record<string, unknown> | undefined>;
+  settings?: Record<string, unknown>;
+}
+
+export interface PresetRow {
+  columns: PresetColumn[];
+  /** Optional starting `row.settings` (ROW_SETTING_SPECS). */
+  settings?: Record<string, unknown>;
+}
+
 export interface BlockPreset {
   /** Stable key, also the id prefix of the section it creates. */
   key: string;
   label: string;
   description: string;
   icon: LucideIcon;
-  group: "Layout" | "Content" | "Media" | "Commerce";
-  /** The element types this preset drops into one full-width column. */
+  group: "Layout" | "Content" | "Media" | "Commerce" | "Story";
+  /**
+   * The element types this preset drops into one full-width column — or, for
+   * a preset with `rows`, every element type in document order (row by row,
+   * column by column). Either way it is the section's flattened shape, which
+   * is what the library's search, its thumbnail and `sectionLabel` read.
+   */
   elements: PageElementType[];
+  /**
+   * The layout of a multi-column preset. Spans in each row add up to 12, like
+   * the storefront's grid. `elements`/`content` below are ignored when this is
+   * set — write such a preset through `multiColumn()`, which derives them.
+   */
+  rows?: PresetRow[];
   /**
    * Optional starting props per element, aligned index-for-index with
    * `elements` and merged over that type's `defaultProps`. Without it two
@@ -520,6 +572,11 @@ export const SECTION_SETTING_SPECS: SectionSettingSpec[] = [
       { value: "paper", label: "Paper" },
       { value: "raised", label: "Raised" },
       { value: "primary-soft", label: "Brand tint" },
+      // The two strong grounds. The storefront re-points the colour tokens
+      // inside them, so headings, text, cards and buttons stay legible without
+      // any element knowing what it sits on.
+      { value: "primary", label: "Brand colour" },
+      { value: "ink", label: "Dark" },
     ],
   },
   {
@@ -527,6 +584,7 @@ export const SECTION_SETTING_SPECS: SectionSettingSpec[] = [
     label: "Vertical space",
     defaultValue: "normal",
     options: [
+      { value: "tight", label: "Tight" },
       { value: "compact", label: "Compact" },
       { value: "normal", label: "Normal" },
       { value: "roomy", label: "Roomy" },
@@ -544,12 +602,96 @@ export const SECTION_SETTING_SPECS: SectionSettingSpec[] = [
   },
 ];
 
-/** The stored value of one section setting, or "" when the section leaves it at the default. */
-export function sectionSetting(section: PageSection, key: string): string {
-  const settings: unknown = section.settings;
+/**
+ * Columns and rows carry the same kind of free-form `settings` object as a
+ * section — pageTree.js checks their structure and passes the rest through —
+ * and the storefront reads these with the same fallbacks. A column's settings
+ * are how a multi-column preset gets its cards and its centred text; a row's,
+ * how far apart its columns sit. The first option is, again, today's look.
+ *
+ * The api-client's `PageColumn`/`PageRow` don't declare `settings` (only
+ * elements and sections do), so the editor reads and writes it through the
+ * two narrow types below rather than widening the shared ones.
+ */
+export type ColumnWithSettings = PageColumn & { settings?: Record<string, unknown> };
+export type RowWithSettings = PageRow & { settings?: Record<string, unknown> };
+
+export const COLUMN_SETTING_SPECS: SectionSettingSpec[] = [
+  {
+    key: "surface",
+    label: "Surface",
+    defaultValue: "none",
+    options: [
+      { value: "none", label: "None" },
+      { value: "card", label: "Card" },
+    ],
+  },
+  {
+    key: "align",
+    label: "Text alignment",
+    defaultValue: "start",
+    options: [
+      { value: "start", label: "Start" },
+      { value: "center", label: "Centre" },
+    ],
+  },
+  {
+    key: "verticalAlign",
+    label: "Vertical position",
+    defaultValue: "start",
+    options: [
+      { value: "start", label: "Top" },
+      { value: "center", label: "Middle" },
+      { value: "end", label: "Bottom" },
+    ],
+  },
+];
+
+export const ROW_SETTING_SPECS: SectionSettingSpec[] = [
+  {
+    key: "gap",
+    label: "Space between columns",
+    defaultValue: "normal",
+    options: [
+      { value: "tight", label: "Tight" },
+      { value: "normal", label: "Normal" },
+      { value: "loose", label: "Loose" },
+    ],
+  },
+];
+
+/** The stored value of one setting on any node, or "" when it is left at the default. */
+function readSetting(settings: unknown, key: string): string {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return "";
   const value = (settings as Record<string, unknown>)[key];
   return typeof value === "string" ? value : "";
+}
+
+/**
+ * One setting written into a node's `settings`. Choosing the default (or
+ * clearing the field) drops the key instead of writing it, and dropping the
+ * last key drops the object — so a node the merchant never styled keeps the
+ * `settings`-free shape the templates seed.
+ */
+function writeSetting(
+  current: unknown,
+  specs: SectionSettingSpec[],
+  key: string,
+  value: string
+): Record<string, unknown> | undefined {
+  const base: Record<string, unknown> =
+    current && typeof current === "object" && !Array.isArray(current)
+      ? { ...(current as Record<string, unknown>) }
+      : {};
+  const spec = specs.find((s) => s.key === key);
+  if (value === "" || value === spec?.defaultValue) delete base[key];
+  else base[key] = value;
+  return Object.keys(base).length === 0 ? undefined : base;
+}
+
+/** The stored value of one section setting, or "" when the section leaves it at the default. */
+export function sectionSetting(section: PageSection, key: string): string {
+  return readSetting(section.settings, key);
 }
 
 /**
@@ -558,18 +700,71 @@ export function sectionSetting(section: PageSection, key: string): string {
  * the `settings`-free shape the templates seed.
  */
 export function setSectionSetting(section: PageSection, key: string, value: string): PageSection {
-  const current: unknown = section.settings;
-  const base: Record<string, unknown> =
-    current && typeof current === "object" && !Array.isArray(current)
-      ? { ...(current as Record<string, unknown>) }
-      : {};
-  const spec = SECTION_SETTING_SPECS.find((s) => s.key === key);
-  if (value === "" || value === spec?.defaultValue) delete base[key];
-  else base[key] = value;
+  const settings = writeSetting(section.settings, SECTION_SETTING_SPECS, key, value);
   const next: PageSection = { ...section };
-  if (Object.keys(base).length === 0) delete next.settings;
-  else next.settings = base;
+  if (settings === undefined) delete next.settings;
+  else next.settings = settings;
   return next;
+}
+
+export function columnSetting(column: PageColumn, key: string): string {
+  return readSetting((column as ColumnWithSettings).settings, key);
+}
+
+export function rowSetting(row: PageRow, key: string): string {
+  return readSetting((row as RowWithSettings).settings, key);
+}
+
+/** Sets one setting on the column with this id, wherever it sits in the section. */
+export function setColumnSetting(
+  section: PageSection,
+  columnId: string,
+  key: string,
+  value: string
+): PageSection {
+  return {
+    ...section,
+    rows: (section.rows ?? []).map((row) => ({
+      ...row,
+      columns: (row.columns ?? []).map((col) => {
+        if (col.id !== columnId) return col;
+        const settings = writeSetting((col as ColumnWithSettings).settings, COLUMN_SETTING_SPECS, key, value);
+        const next: ColumnWithSettings = { ...col };
+        if (settings === undefined) delete next.settings;
+        else next.settings = settings;
+        return next;
+      }),
+    })),
+  };
+}
+
+/** Sets one setting on the row with this id. */
+export function setRowSetting(section: PageSection, rowId: string, key: string, value: string): PageSection {
+  return {
+    ...section,
+    rows: (section.rows ?? []).map((row) => {
+      if (row.id !== rowId) return row;
+      const settings = writeSetting((row as RowWithSettings).settings, ROW_SETTING_SPECS, key, value);
+      const next: RowWithSettings = { ...row };
+      if (settings === undefined) delete next.settings;
+      else next.settings = settings;
+      return next;
+    }),
+  };
+}
+
+/**
+ * Writes a multi-column preset. `elements` is derived from the rows, so the
+ * flattened shape the library and `sectionLabel` read can never drift from
+ * the layout the preset actually creates.
+ */
+function multiColumn(
+  preset: Omit<BlockPreset, "elements" | "content" | "rows"> & { rows: PresetRow[] }
+): BlockPreset {
+  return {
+    ...preset,
+    elements: preset.rows.flatMap((row) => row.columns.flatMap((col) => col.elements)),
+  };
 }
 
 export const BLOCK_PRESETS: BlockPreset[] = [
@@ -1079,9 +1274,863 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       { quote: "", author: "", rating: 0 },
     ],
   },
+
+  // -------------------------------------------------------------------------
+  // The section library. Everything from here on is laid out over columns —
+  // a hero beside its picture, three feature cards in a row, a form next to a
+  // map — and lands as one section whose rows hold more than one column. The
+  // storefront has always rendered that shape (a row is a 12-column grid); the
+  // presets only start using it.
+  //
+  // Same copy rules as above: Egyptian Arabic written AT the merchant, no
+  // numbers, names, logos or quotes invented on the store's behalf. Anything
+  // that would have to be real to be honest — a statistic, a team member, a
+  // customer's words — is a prompt to write it, or left empty.
+  // -------------------------------------------------------------------------
+
+  // --- Layout: openers and bands ------------------------------------------
+  multiColumn({
+    key: "announcement-bar",
+    label: "Announcement bar",
+    description: "One line in your brand colour across the top — an offer, a shipping note, a date.",
+    icon: Megaphone,
+    group: "Layout",
+    settings: { background: "primary", padding: "tight" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["text"],
+            content: [{ text: "اكتب هنا الجملة اللي عايز كل زائر يشوفها الأول" }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "hero-split",
+    label: "Hero with picture",
+    description: "Title, a line of text and a button on one side, your picture on the other.",
+    icon: LayoutPanelLeft,
+    group: "Layout",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا الجملة اللي بتوصف متجرك في سطر", level: 1 },
+              { text: "اشرح في سطرين بتبيع إيه ولمين، وسيب الباقي للصورة." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          { span: 6, elements: ["image"], settings: { verticalAlign: "center" } },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "hero-gallery",
+    label: "Hero with photo row",
+    description: "A centred opening line and button, with three of your photos underneath.",
+    icon: GalleryHorizontal,
+    group: "Layout",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الواجهة", level: 1 },
+              { text: "اكتب سطر واحد يوضّح إيه اللي يميّز متجرك." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [{ span: 12, elements: ["gallery"], content: [{ title: "", images: [], columns: 3 }] }],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "cta-band",
+    label: "Call-to-action band",
+    description: "A band in your brand colour: one line, one reason, one button.",
+    icon: MousePointerClick,
+    group: "Layout",
+    settings: { background: "primary", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا الجملة اللي بتطلب من العميل يتحرك", level: 2 },
+              { text: "اكتب سطر يقول ليه دلوقتي." },
+              { label: "ابدأ دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "bento",
+    label: "Bento grid",
+    description: "Four cards of two sizes — a picture and a line in each, the way app sites show features.",
+    icon: LayoutDashboard,
+    group: "Layout",
+    // The picture goes in the narrow card and the words in the wide one: a
+    // picture sets the row's height, and a wide card of text fills that
+    // height far better than a narrow one would.
+    rows: [
+      {
+        columns: [
+          {
+            span: 8,
+            elements: ["heading", "text"],
+            content: [
+              { text: "اكتب هنا أهم ميزة عندك", level: 3 },
+              { text: "اشرحها في سطرين أو تلاتة — الكارت ده عريض علشان الكلام الأهم." },
+            ],
+            settings: { surface: "card", verticalAlign: "center" },
+          },
+          {
+            span: 4,
+            elements: ["image", "heading", "text"],
+            content: [undefined, { text: "اكتب هنا ميزة تانية", level: 4 }, { text: "اشرحها في سطر." }],
+            settings: { surface: "card" },
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["image", "heading", "text"],
+            content: [undefined, { text: "اكتب هنا ميزة تالتة", level: 4 }, { text: "اشرحها في سطر." }],
+            settings: { surface: "card" },
+          },
+          {
+            span: 8,
+            elements: ["heading", "text"],
+            content: [
+              { text: "اكتب هنا ميزة رابعة", level: 3 },
+              { text: "اشرحها في سطرين أو تلاتة." },
+            ],
+            settings: { surface: "card", verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "footer-links",
+    label: "Footer links",
+    description: "Two lists of links and your social profiles, side by side, for the bottom of a page.",
+    icon: PanelBottom,
+    group: "Layout",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["list"],
+            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
+          },
+          {
+            span: 4,
+            elements: ["list"],
+            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
+          },
+          { span: 4, elements: ["social_icons"], content: [{ links: [] }] },
+        ],
+      },
+    ],
+  }),
+
+  // --- Content: features, text and answers ---------------------------------
+  multiColumn({
+    key: "feature-grid-3",
+    label: "Three feature cards",
+    description: "Three cards, each with an icon, a short title and a line — the classic features row.",
+    icon: Columns3,
+    group: "Content",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: ["star", "heart", "check"].map((name, i) => ({
+          span: 4,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [
+            { name, size: 32 },
+            { text: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"][i], level: 3 },
+            { text: "اشرح الميزة دي في سطر أو اتنين." },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "feature-grid-4",
+    label: "Four features",
+    description: "Four short points across the page, each with an icon, centred.",
+    icon: Grid2x2,
+    group: "Content",
+    rows: [
+      {
+        columns: ["star", "heart", "check", "gift"].map((name, i) => ({
+          span: 3,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [
+            { name, size: 28 },
+            { text: `اكتب الميزة ${["الأولى", "التانية", "التالتة", "الرابعة"][i]}`, level: 4 },
+            { text: "اشرحها في سطر." },
+          ],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "image-text",
+    label: "Picture with text",
+    description: "Your picture on one side, a title, text and a button on the other.",
+    icon: PanelLeft,
+    group: "Content",
+    rows: [
+      {
+        columns: [
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+          {
+            span: 7,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
+              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
+              { label: "اعرف أكتر", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "text-image",
+    label: "Text with picture",
+    description: "The same pair mirrored: text first, picture after — alternate the two down a page.",
+    icon: PanelRight,
+    group: "Content",
+    rows: [
+      {
+        columns: [
+          {
+            span: 7,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
+              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
+              { label: "اعرف أكتر", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "rich-text-band",
+    label: "Rich text band",
+    description: "A title over a longer piece of writing — your story, your method, your promise.",
+    icon: FileText,
+    group: "Content",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "rich_text"],
+            content: [
+              { text: "اكتب هنا عنوان القصة", level: 2 },
+              { text: "اكتب هنا الفقرة الطويلة — بدأت إزاي، بتعمل إيه، وليه بتعمله." },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "faq-split",
+    label: "FAQ in two columns",
+    description: "A title and a line on one side, the questions and answers on the other.",
+    icon: HelpCircle,
+    group: "Content",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 5,
+            elements: ["heading", "text"],
+            content: [
+              { text: "الأسئلة الشائعة", level: 2 },
+              { text: "اكتب سطر يقول للعميل يلاقي هنا إيه، وإزاي يوصلك لو سؤاله مش موجود." },
+            ],
+          },
+          {
+            span: 7,
+            elements: ["faq"],
+            content: [
+              {
+                title: "",
+                items: [
+                  { q: "اكتب هنا سؤال بيتكرر من العملاء", a: "اكتب هنا إجابتك." },
+                  { q: "اكتب هنا سؤال تاني", a: "اكتب هنا إجابتك." },
+                  { q: "اكتب هنا سؤال تالت", a: "اكتب هنا إجابتك." },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "newsletter",
+    label: "Newsletter",
+    description: "A centred invitation to stay in touch, with the sign-up form under it.",
+    icon: Mail,
+    group: "Content",
+    settings: { background: "primary-soft" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "form"],
+            content: [
+              { text: "اكتب هنا دعوة العميل إنه يفضل متابعك", level: 2 },
+              { text: "اكتب سطر يقول هيوصله إيه ولو عايز قد إيه." },
+              { title: "", submitLabel: "اشترك" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "contact-map",
+    label: "Contact with map",
+    description: "Your contact form beside your address and a link to it on the map.",
+    icon: MapPin,
+    group: "Content",
+    rows: [
+      {
+        columns: [
+          { span: 6, elements: ["form"], content: [{ title: "اكتب هنا عنوان النموذج", submitLabel: "إرسال" }] },
+          {
+            span: 6,
+            elements: ["heading", "text", "map"],
+            content: [
+              { text: "تواصل معانا", level: 2 },
+              { text: "اكتب هنا مواعيد الرد وطرق التواصل التانية." },
+              { address: "", zoom: 14 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "trust-badges",
+    label: "Trust badges",
+    description: "Four small reassurances in a compact row — delivery, returns, payment, support.",
+    icon: ShieldCheck,
+    group: "Content",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: ["truck", "shield", "check", "gift"].map((name) => ({
+          span: 3,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [{ name, size: 24 }, { text: "اكتب هنا نقطة الثقة", level: 5 }, { text: "اكتب تفصيلها في سطر." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "comparison-pitch",
+    label: "Comparison with a pitch",
+    description: "A title and a button beside the us-versus-them table.",
+    icon: Table2,
+    group: "Content",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "قارن بنفسك", level: 2 },
+              { text: "اكتب سطر يقول العميل يبص على إيه في الجدول." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          {
+            span: 8,
+            elements: ["comparison"],
+            content: [
+              {
+                title: "",
+                usLabel: "عندنا",
+                themLabel: "غير كده",
+                rows: [
+                  { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                  { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                  { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "pricing-tiers",
+    label: "Plans",
+    description: "Three cards — a name, a line, what's included and a button. You fill in the prices.",
+    icon: Tag,
+    group: "Content",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [0, 1, 2].map((i) => ({
+          span: 4,
+          elements: ["heading", "text", "list", "button"] as PageElementType[],
+          content: [
+            { text: `اكتب اسم الباقة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
+            { text: "اكتب هنا السعر ولمين الباقة دي." },
+            { title: "", items: ["اكتب هنا أول حاجة فيها", "اكتب هنا تاني حاجة", "اكتب هنا تالت حاجة"] },
+            { label: "اختار الباقة دي", href: "/products", variant: i === 1 ? "primary" : "outline" },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+
+  // --- Media ---------------------------------------------------------------
+  multiColumn({
+    key: "video-hero",
+    label: "Video opener",
+    description: "Your video first, then a centred title, a line and a button.",
+    icon: Clapperboard,
+    group: "Media",
+    settings: { padding: "roomy" },
+    rows: [
+      { columns: [{ span: 12, elements: ["video"], content: [{ url: "", title: "" }] }] },
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الفيديو", level: 1 },
+              { text: "اكتب سطر يقول العميل هيشوف إيه في الفيديو." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "logo-strip",
+    label: "Logo strip",
+    description: "A quiet row of six small images — partners, stockists, press — on a paper band.",
+    icon: Building2,
+    group: "Media",
+    settings: { background: "paper", padding: "compact" },
+    rows: [{ columns: [{ span: 12, elements: ["gallery"], content: [{ title: "", images: [], columns: 6 }] }] }],
+  }),
+  multiColumn({
+    key: "collage",
+    label: "Photo collage",
+    description: "Four pictures in two rows of unequal widths — a wide one beside a narrow one, then swapped.",
+    icon: Frame,
+    group: "Media",
+    settings: { width: "wide" },
+    rows: [
+      { columns: [{ span: 8, elements: ["image"] }, { span: 4, elements: ["image"] }] },
+      { columns: [{ span: 4, elements: ["image"] }, { span: 8, elements: ["image"] }] },
+    ],
+  }),
+
+  // --- Story: numbers, steps, people and proof ------------------------------
+  multiColumn({
+    key: "stats-row",
+    label: "Numbers row",
+    description: "Four big numbers with a word under each — orders, years, cities. You write the numbers.",
+    icon: BarChart3,
+    group: "Story",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [0, 1, 2, 3].map(() => ({
+          span: 3,
+          elements: ["heading", "text"] as PageElementType[],
+          // The number itself is a claim, so it ships as an instruction and
+          // the merchant types the real one.
+          content: [{ text: "اكتب الرقم", level: 2 }, { text: "اكتب هنا الرقم ده بتاع إيه." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "steps",
+    label: "How it works",
+    description: "A title, then three numbered steps across the page.",
+    icon: ListOrdered,
+    group: "Story",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "بيشتغل إزاي؟", level: 2 }, { text: "اكتب سطر يمهّد للخطوات." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: ["١", "٢", "٣"].map((n, i) => ({
+          span: 4,
+          elements: ["heading", "text"] as PageElementType[],
+          content: [
+            { text: `${n}. اكتب عنوان الخطوة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
+            { text: "اشرح الخطوة دي في سطر أو اتنين." },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "timeline",
+    label: "Timeline",
+    description: "A title, then your milestones as two lists side by side — earlier ones first.",
+    icon: Milestone,
+    group: "Story",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "قصتنا", level: 2 }, { text: "اكتب سطر عن رحلتك من الأول لدلوقتي." }],
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["list"],
+            content: [{ title: "البداية", items: ["اكتب هنا أول محطة وتاريخها", "اكتب هنا المحطة التانية"] }],
+          },
+          {
+            span: 6,
+            elements: ["list"],
+            content: [{ title: "دلوقتي", items: ["اكتب هنا محطة قريبة", "اكتب هنا اللي جاي"] }],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "team",
+    label: "Team",
+    description: "Three people — a photo, a name and a line each. Fill them in from your own team.",
+    icon: Users,
+    group: "Story",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "الفريق", level: 2 }, { text: "اكتب سطر عن مين وراء المتجر." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["image", "heading", "text"] as PageElementType[],
+          content: [undefined, { text: "اكتب هنا اسم الشخص", level: 3 }, { text: "اكتب هنا دوره في سطر." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "testimonial-wall",
+    label: "Testimonial wall",
+    description: "A title and three empty quote cards side by side — fill them from real customers.",
+    icon: MessageSquareQuote,
+    group: "Story",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "آراء العملاء", level: 2 }, { text: "اكتب سطر عن الآراء دي جاية منين." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        // Empty on purpose, like the single-column testimonials above: a quote
+        // is a claim about a real person.
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["testimonial"] as PageElementType[],
+          content: [{ quote: "", author: "", rating: 0 }],
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "testimonial-spotlight",
+    label: "Testimonial spotlight",
+    description: "One customer's words, large and centred on a brand tint. Empty until you add them.",
+    icon: Quote,
+    group: "Story",
+    settings: { background: "primary-soft", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "testimonial"],
+            content: [{ text: "بيقولوا عننا إيه", level: 2 }, { quote: "", author: "", rating: 0 }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "claims-band",
+    label: "Claims band",
+    description: "A centred title over the sliding strip of short claims.",
+    icon: Megaphone,
+    group: "Story",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "marquee"],
+            content: [
+              { text: "اكتب هنا عنوان قصير", level: 3 },
+              {
+                items: ["اكتب هنا جملة قصيرة عن خدمتك", "اكتب هنا جملة تانية", "اكتب هنا جملة تالتة"],
+                speed: "normal",
+                tone: "primary",
+              },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "process-story",
+    label: "How it's made",
+    description: "A title and a line, then three scroll steps — add a picture to each.",
+    icon: Layers,
+    group: "Story",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "scroll_story"],
+            content: [
+              { text: "بيتعمل إزاي؟", level: 2 },
+              { text: "اكتب سطر يمهّد للخطوات اللي جاية." },
+              {
+                title: "",
+                steps: [
+                  { title: "اكتب عنوان الخطوة الأولى", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                  { title: "اكتب عنوان الخطوة التانية", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                  { title: "اكتب عنوان الخطوة التالتة", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+
+  // --- Commerce ------------------------------------------------------------
+  multiColumn({
+    key: "collection-tiles",
+    label: "Collection tiles",
+    description: "A title and a line over your collections, wide.",
+    icon: Grid3x3,
+    group: "Commerce",
+    settings: { width: "wide" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "collection_list"],
+            content: [
+              { text: "تسوّق حسب المجموعة", level: 2 },
+              { text: "اكتب سطر يساعد العميل يختار من فين يبدأ." },
+              { title: "", limit: 6, columns: 3 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "featured-product",
+    label: "Featured product",
+    description: "One product beside the reasons to buy it and a button.",
+    icon: ShoppingBag,
+    group: "Commerce",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          { span: 6, elements: ["product_card"], content: [{ title: "", showPrice: true, showBuyButton: true }] },
+          {
+            span: 6,
+            elements: ["heading", "list", "button"],
+            content: [
+              { text: "ليه المنتج ده؟", level: 2 },
+              { title: "", items: ["اكتب هنا أول سبب", "اكتب هنا تاني سبب", "اكتب هنا تالت سبب"] },
+              { label: "شوف كل المنتجات", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "product-grid-intro",
+    label: "Product grid with intro",
+    description: "A title and a line, then a grid of your products.",
+    icon: LayoutGrid,
+    group: "Commerce",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "product_list"],
+            content: [
+              { text: "اكتب هنا عنوان المجموعة", level: 2 },
+              { text: "اكتب سطر عن المنتجات دي." },
+              { title: "", source: "newest", limit: 8, columns: 4 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "bundle-tiers",
+    label: "Three offers",
+    description: "Three products side by side, each with its own buy button — pick one per column.",
+    icon: Package,
+    group: "Commerce",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "اختار العرض اللي يناسبك", level: 2 }, { text: "اكتب سطر يفرّق بين التلاتة." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["product_card"] as PageElementType[],
+          content: [{ title: "", showPrice: true, showBuyButton: true }],
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "countdown-band",
+    label: "Countdown band",
+    description: "A dark band with the offer's title, the timer and a buy button.",
+    icon: AlarmClock,
+    group: "Commerce",
+    settings: { background: "ink", padding: "compact" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "countdown", "button"],
+            content: [
+              { text: "اكتب هنا اسم العرض", level: 2 },
+              { label: "ينتهي العرض خلال", endsInHours: 48 },
+              { label: "اشتري دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
 ];
 
-export const BLOCK_GROUPS: BlockPreset["group"][] = ["Layout", "Content", "Media", "Commerce"];
+export const BLOCK_GROUPS: BlockPreset["group"][] = ["Layout", "Content", "Media", "Commerce", "Story"];
 
 // ---------------------------------------------------------------------------
 // Tree construction + immutable edits
@@ -1109,17 +2158,44 @@ function createElement(type: PageElementType, content?: Record<string, unknown>)
   return { id: uid(type), type, props: { ...ELEMENT_SPECS[type].defaultProps, ...content } };
 }
 
-/** One section → one row → one span-12 column, matching the seeder's `oneCol`. */
+/**
+ * A preset as a section. A single-column preset is one section → one row →
+ * one span-12 column, matching the seeder's `oneCol` (ids `-r` / `-c`); a
+ * preset with `rows` is the same tree with its rows and columns numbered the
+ * way the seeder numbers them (`-r1`, `-r1-c2`, …).
+ */
 export function createSection(preset: BlockPreset): PageSection {
   const base = uid(preset.key);
-  const column: PageColumn = {
-    id: `${base}-c`,
-    type: "column",
-    span: 12,
-    elements: preset.elements.map((type, i) => createElement(type, preset.content?.[i])),
-  };
-  const row: PageRow = { id: `${base}-r`, type: "row", columns: [column] };
-  const section: PageSection = { id: base, type: "section", rows: [row] };
+  let rows: PageRow[];
+  if (preset.rows) {
+    rows = preset.rows.map((row, r) => {
+      const next: RowWithSettings = {
+        id: `${base}-r${r + 1}`,
+        type: "row",
+        columns: row.columns.map((col, c) => {
+          const column: ColumnWithSettings = {
+            id: `${base}-r${r + 1}-c${c + 1}`,
+            type: "column",
+            span: col.span,
+            elements: col.elements.map((type, i) => createElement(type, col.content?.[i])),
+          };
+          if (col.settings) column.settings = { ...col.settings };
+          return column;
+        }),
+      };
+      if (row.settings) next.settings = { ...row.settings };
+      return next;
+    });
+  } else {
+    const column: PageColumn = {
+      id: `${base}-c`,
+      type: "column",
+      span: 12,
+      elements: preset.elements.map((type, i) => createElement(type, preset.content?.[i])),
+    };
+    rows = [{ id: `${base}-r`, type: "row", columns: [column] }];
+  }
+  const section: PageSection = { id: base, type: "section", rows };
   // Only presets that actually want a look carry `settings`; the rest keep the
   // exact shape the seeded templates write.
   if (preset.settings) section.settings = { ...preset.settings };
@@ -1134,29 +2210,79 @@ export function sectionElements(section: PageSection): PageElement[] {
 }
 
 /**
+ * The layout of a section as a string — each row's column spans and element
+ * types — so two sections (or a section and a preset) with the same shape
+ * compare equal. "12:heading,text|4:image/8:text" reads: row of one span-12
+ * column, then a row of a span-4 and a span-8 column.
+ */
+function layoutSignature(rows: Array<{ columns: Array<{ span?: number; elements: Array<{ type: PageElementType }> }> }>): string {
+  return rows
+    .map((row) =>
+      row.columns.map((col) => `${col.span ?? 12}:${col.elements.map((el) => el.type).join(",")}`).join("/")
+    )
+    .join("|");
+}
+
+function presetSignature(preset: BlockPreset): string {
+  if (preset.rows) {
+    return layoutSignature(
+      preset.rows.map((row) => ({
+        columns: row.columns.map((col) => ({ span: col.span, elements: col.elements.map((type) => ({ type })) })),
+      }))
+    );
+  }
+  return `12:${preset.elements.join(",")}`;
+}
+
+/**
+ * The preset a section came from, as far as its shape can tell. A section
+ * whose rows and columns match a preset exactly is that preset; failing that,
+ * the first preset with the same elements in the same order — which is how a
+ * template's single-column hero still gets called "Hero", and how a section
+ * the merchant re-laid-out keeps its name.
+ */
+function matchPreset(section: PageSection): BlockPreset | undefined {
+  const rows = (section.rows ?? []).map((row) => ({
+    columns: (row.columns ?? []).map((col) => ({ span: col.span, elements: col.elements ?? [] })),
+  }));
+  const signature = layoutSignature(rows);
+  const exact = BLOCK_PRESETS.find((p) => presetSignature(p) === signature);
+  if (exact) return exact;
+  const types = sectionElements(section).map((el) => el.type);
+  return BLOCK_PRESETS.find(
+    (p) => p.elements.length === types.length && p.elements.every((t, i) => t === types[i])
+  );
+}
+
+/**
  * A display name for a section. The tree has no section type, so this reads
- * the elements: an exact preset match wins (that's how a template's hero gets
- * called "Hero"), otherwise fall back to the first element's own label.
+ * the elements: a preset match wins (that's how a template's hero gets called
+ * "Hero"), otherwise fall back to the first element's own label.
  */
 export function sectionLabel(section: PageSection, locale: EditorLocale = "en"): string {
   const types = sectionElements(section).map((el) => el.type);
   const ui = editorUi(locale);
   if (types.length === 0) return ui.emptySection;
-  const match = BLOCK_PRESETS.find(
-    (p) => p.elements.length === types.length && p.elements.every((t, i) => t === types[i])
-  );
+  const match = matchPreset(section);
   if (match) return presetText(match.key, match, locale).label;
   const first = elementLabel(types[0], ELEMENT_SPECS[types[0]].label, locale);
   return types.length === 1 ? first : ui.andMore(first, types.length - 1);
 }
 
 export function sectionIcon(section: PageSection): LucideIcon {
-  const types = sectionElements(section).map((el) => el.type);
-  const match = BLOCK_PRESETS.find(
-    (p) => p.elements.length === types.length && p.elements.every((t, i) => t === types[i])
-  );
+  const match = matchPreset(section);
   if (match) return match.icon;
+  const types = sectionElements(section).map((el) => el.type);
   return types.length > 0 ? ELEMENT_SPECS[types[0]].icon : Columns3;
+}
+
+/**
+ * How many columns a section has across all its rows — one for everything the
+ * templates seed, more for the library's laid-out sections. The inspector uses
+ * it to decide whether naming each column is worth the space.
+ */
+export function sectionColumnCount(section: PageSection): number {
+  return (section.rows ?? []).reduce((n, row) => n + (row.columns ?? []).length, 0);
 }
 
 /** Replaces one element (matched by id) anywhere in the section. */

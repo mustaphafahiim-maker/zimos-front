@@ -5,6 +5,7 @@ import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
+import { ProductTabs, type ProductTab } from "@/components/product/ProductTabs";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
@@ -89,6 +90,46 @@ export default async function ProductPage({ params }: { params: Params }) {
   const t = getDictionary(locale);
   const bump = getOrderBump(catalogue, [product.id]);
 
+  // Details / shipping & returns / FAQ as tabs under the buy box. The
+  // shipping tab is the delivery and returns answers from the FAQ, read as
+  // plain paragraphs (the trust strip beside the tabs already carries the
+  // four one-line promises); the FAQ tab is the whole list, as before.
+  const shippingItems = t.product.faqItems.filter((_, i) => i === 1 || i === 2).map((item) => ({ title: item.q, hint: item.a }));
+  const tabs: ProductTab[] = [
+    ...(product.description
+      ? [
+          {
+            id: "details",
+            label: t.shop.details,
+            content: (
+              <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+                {product.description}
+              </div>
+            ),
+          },
+        ]
+      : []),
+    {
+      id: "shipping",
+      label: t.shop.shippingReturns,
+      content: (
+        <ul className="divide-y divide-line rounded-2xl border border-line bg-paper-raised">
+          {shippingItems.map((item) => (
+            <li key={item.title} className="px-5 py-4">
+              <p className="text-sm font-semibold text-ink">{item.title}</p>
+              <p className="mt-0.5 text-sm text-ink-soft">{item.hint}</p>
+            </li>
+          ))}
+        </ul>
+      ),
+    },
+    {
+      id: "faq",
+      label: t.product.faq,
+      content: <Faq title={t.product.faq} items={t.product.faqItems} titleHidden />,
+    },
+  ];
+
   return (
     <main className="flex-1 pb-24 md:pb-0">
       <div className={`${container} py-6 sm:py-8`}>
@@ -113,20 +154,8 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
-          <div className="space-y-10">
-            {product.description && (
-              <section aria-labelledby="desc-title">
-                <h2 id="desc-title" className="font-display text-xl font-semibold text-ink">
-                  {t.product.description}
-                </h2>
-                <div className="mt-4 whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
-                  {product.description}
-                </div>
-              </section>
-            )}
-            <Faq title={t.product.faq} items={t.product.faqItems} />
-          </div>
-          <aside className="lg:pt-11">
+          <ProductTabs tabs={tabs} />
+          <aside className="lg:pt-1">
             <TrustStrip t={t} inAside />
           </aside>
         </div>

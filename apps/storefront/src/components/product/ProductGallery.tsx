@@ -114,6 +114,18 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
     return false;
   }
 
+  // --- thumbnails follow the photo ------------------------------------------
+  // A swipe or an arrow key can move to a thumbnail that sits off the end of
+  // the strip; scroll it into view so the strip always shows which photo is
+  // up. Instant under reduced motion, a short glide otherwise.
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  useEffect(() => {
+    const el = thumbRefs.current[active];
+    if (!el || !many) return;
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "nearest", inline: "nearest" });
+  }, [active, many]);
+
   // --- lightbox -------------------------------------------------------------
   const dialogRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
@@ -236,6 +248,9 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
           {images.map((src, i) => (
             <li key={`${src}-${i}`} className="shrink-0">
               <button
+                ref={(el) => {
+                  thumbRefs.current[i] = el;
+                }}
                 type="button"
                 onClick={() => setActive(i)}
                 aria-label={`${name} — ${i + 1}/${images.length}`}

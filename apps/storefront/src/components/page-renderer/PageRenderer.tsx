@@ -39,6 +39,7 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
+import { columnClasses, rowClasses, sectionClasses } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -59,11 +60,24 @@ import { SPAN_CLASS, propsOf } from "./props";
  * validated server-side — never the props inside an element.
  */
 
+/**
+ * Funnel mode. A funnel keeps the shopper on one path, so the commerce
+ * blocks' outbound links — "order now" and "view details" on a product card,
+ * every card in a product grid — go to the funnel's next step instead of the
+ * product page. `nextHref` is resolved like any merchant link (props.ts
+ * resolveHref), so a store-relative path and a full `/store/<id>/…` path both
+ * work. Unset, nothing changes.
+ */
+export interface PageRendererFunnel {
+  nextHref: string;
+}
+
 interface Ctx {
   workspaceId: string;
   currency: string;
   locale: Locale;
   t: Dictionary;
+  funnel?: PageRendererFunnel;
 }
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
@@ -111,11 +125,23 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <SocialIconsElement props={props} t={t} />;
     case "product_card":
       return (
-        <ProductCardElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
+        <ProductCardElement
+          props={props}
+          workspaceId={ctx.workspaceId}
+          currency={ctx.currency}
+          locale={ctx.locale}
+          funnel={ctx.funnel}
+        />
       );
     case "product_list":
       return (
-        <ProductListElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
+        <ProductListElement
+          props={props}
+          workspaceId={ctx.workspaceId}
+          currency={ctx.currency}
+          locale={ctx.locale}
+          funnel={ctx.funnel}
+        />
       );
     case "collection_list":
       return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
@@ -142,12 +168,22 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   }
 }
 
+/**
+ * Rows and columns carry the same kind of free-form `settings` as a section
+ * (a column's card surface and alignment, a row's gap — see layout.ts), but
+ * the api-client's types only declare it on sections and elements. Read it
+ * off the node as the unknown it is; layout.ts checks the shape.
+ */
+function settingsOf(node: PageRow | PageColumn): unknown {
+  return (node as { settings?: unknown }).settings;
+}
+
 function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const span = Number.isInteger(column.span) ? Math.min(12, Math.max(1, column.span!)) : 12;
   const elements = Array.isArray(column.elements) ? column.elements : [];
 
   return (
-    <div className={`flex min-w-0 flex-col gap-4 ${SPAN_CLASS[span]}`}>
+    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])}>
       {elements.map((element) => (
         <ElementNode key={element.id} element={element} ctx={ctx} />
       ))}
@@ -160,7 +196,7 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   if (columns.length === 0) return null;
 
   return (
-    <div className="grid gap-6 md:grid-cols-12">
+    <div className={rowClasses(settingsOf(row))}>
       {columns.map((column) => (
         <ColumnNode key={column.id} column={column} ctx={ctx} />
       ))}
@@ -170,61 +206,19 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
 
 /**
  * A section's optional `settings` — the small amount of look a section carries
- * itself, written by the editor's block presets and its section panel
- * (merchant-dashboard .../editor/blocks.ts, SECTION_SETTING_SPECS).
- *
- * The backend never validates what is inside `settings` (pageTree.js checks
- * node structure only), so this is read exactly as defensively as element
- * props in props.ts: anything missing, misspelt or of the wrong type falls
- * through to the first entry of each table, which IS the look every section
- * had before these existed. A page saved without settings renders identically.
- *
- * Tailwind cannot build a class from a runtime value, so each choice is a
- * whole class string, like COLUMN_CLASS / SPAN_CLASS.
+ * itself, written by the editor's block presets and its section panel. The
+ * class tables and their fallbacks live in layout.ts; a section without
+ * settings gets exactly the classes it always had.
  */
-const SECTION_BACKGROUND: Record<string, string> = {
-  none: "",
-  paper: "bg-paper",
-  raised: "bg-paper-raised",
-  "primary-soft": "bg-primary-soft",
-};
-
-const SECTION_PADDING: Record<string, string> = {
-  normal: "py-10 sm:py-14",
-  compact: "py-6 sm:py-8",
-  roomy: "py-16 sm:py-24",
-};
-
-const SECTION_WIDTH: Record<string, string> = {
-  normal: "max-w-6xl",
-  wide: "max-w-7xl",
-  full: "max-w-none",
-};
-
-/** One setting as a class string; the `fallback` key whenever the stored value is unusable. */
-function sectionClass(
-  settings: unknown,
-  key: string,
-  table: Record<string, string>,
-  fallback: string
-): string {
-  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return table[fallback];
-  const value = (settings as Record<string, unknown>)[key];
-  return typeof value === "string" && value in table ? table[value] : table[fallback];
-}
-
 function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
-  const settings = section.settings;
-  const background = sectionClass(settings, "background", SECTION_BACKGROUND, "none");
-  const padding = sectionClass(settings, "padding", SECTION_PADDING, "normal");
-  const width = sectionClass(settings, "width", SECTION_WIDTH, "normal");
+  const { outer, inner } = sectionClasses(section.settings);
 
   return (
-    <section className={`px-4 sm:px-6 ${padding} ${background}`.trimEnd()}>
-      <div className={`mx-auto flex flex-col gap-6 ${width}`}>
+    <section className={outer}>
+      <div className={inner}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
         ))}
@@ -270,6 +264,7 @@ export function PageRenderer({
   currency,
   locale,
   editable = false,
+  funnel,
 }: {
   tree: PageTree | null;
   workspaceId: string;
@@ -281,10 +276,12 @@ export function PageRenderer({
    * shoppers see, which renders exactly as it did before this existed.
    */
   editable?: boolean;
+  /** A running funnel's step page: commerce links go to the next step. See PageRendererFunnel. */
+  funnel?: PageRendererFunnel;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale) };
+  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel };
 
   return (
     <div className="divide-y divide-line">

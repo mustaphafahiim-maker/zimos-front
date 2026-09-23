@@ -62,6 +62,15 @@ export interface CartContextValue {
   refreshCart: () => Promise<void>;
   /** Drop the local cart + token, e.g. right after a successful checkout. */
   clearCart: () => void;
+  /**
+   * The slide-over cart drawer (components/CartDrawer). Its open/closed state
+   * lives here — next to the one cart it shows — so "add to cart" anywhere in
+   * the store can open it without a second context. Nothing about the cart's
+   * contents is duplicated: the drawer reads `cart` like every other consumer.
+   */
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -82,6 +91,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => createStorefrontApiClient());
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Resolve the cart once per workspace: reuse a saved token when it still
   // points at a live cart, otherwise create a fresh one and remember its token.
@@ -201,8 +213,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       refreshCart,
       clearCart,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
     }),
-    [cart, isLoading, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart]
+    [cart, isLoading, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart, isDrawerOpen, openDrawer, closeDrawer]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

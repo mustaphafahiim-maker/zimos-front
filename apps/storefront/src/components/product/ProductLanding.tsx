@@ -14,7 +14,9 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, orderErrorMessage, placeCodOrder, type OrderLine } from "@/lib/placeOrder";
+import { afterOrder, onlinePaymentUrl, orderErrorMessage, placeCodOrder, type OrderLine } from "@/lib/placeOrder";
+import { storeHref } from "@/lib/storeHref";
+import { usePaymentOptions } from "@/lib/usePaymentOptions";
 import {
   defaultOfferOf,
   discountPercent,
@@ -28,8 +30,10 @@ import { useStoreBasePath } from "../StoreRoute";
 import { AddToCartButton } from "../AddToCartButton";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
+import { PaymentMethodPicker, type PaymentChoice } from "../checkout/PaymentMethodPicker";
 import { CashIcon, CheckIcon } from "../Icons";
 import { Countdown } from "../page-renderer/Countdown";
+import { QuantityStepper } from "../QuantityStepper";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
 const FORM_PREFIX = "quick";
@@ -101,8 +105,11 @@ export function ProductLanding({
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<"idle" | "placing" | "paying">("idle");
   const [bumpOn, setBumpOn] = useState(false);
+  // Card / wallet are offered only when the store has Paymob connected.
+  const online = usePaymentOptions(workspaceId);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentChoice>("cod");
 
   const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0);
 
@@ -113,7 +120,7 @@ export function ProductLanding({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting !== "idle") return;
 
     const found = validateOrderForm(values, t);
     setErrors(found);
@@ -130,11 +137,14 @@ export function ProductLanding({
 
     const bumpLine: OrderLine | null =
       bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
+    // The picker never offers a method the store cannot take; this only guards a stale choice.
+    const method: PaymentChoice = paymentMethod !== "cod" && !online?.[paymentMethod] ? "cod" : paymentMethod;
     const payload = toCheckoutPayload(values, {
       item: bumpLine ? undefined : mainLine,
+      paymentMethod: method,
     });
 
-    setSubmitting(true);
+    setSubmitting("placing");
     setFormError(null);
     try {
       const order = await placeCodOrder({
@@ -143,10 +153,24 @@ export function ProductLanding({
         payload,
         lines: bumpLine ? [mainLine, bumpLine] : undefined,
       });
-      router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
+      const next = afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone });
+      if (method === "cod") {
+        router.push(next);
+        return;
+      }
+      // Online: the order exists; now open Paymob's page. If that fails the
+      // shopper still has their order and lands on its confirmation, which
+      // says the payment page could not be opened.
+      setSubmitting("paying");
+      try {
+        window.location.assign(await onlinePaymentUrl({ client, workspaceId, orderId: order.id }));
+      } catch {
+        const q = new URLSearchParams({ number: order.orderNumber, pay: "failed" });
+        router.push(storeHref(basePath, `/orders/${order.id}?${q.toString()}`));
+      }
     } catch (err) {
       setFormError(orderErrorMessage(err, t.form.errors.generic));
-      setSubmitting(false);
+      setSubmitting("idle");
     }
   }
 
@@ -284,28 +308,8 @@ export function ProductLanding({
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
           </span>
-          <div role="group" aria-labelledby="qty-label" className="inline-flex items-center rounded-xl border border-line bg-paper-raised">
-            <button
-              type="button"
-              aria-label={t.product.decrease}
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              disabled={quantity <= 1}
-              className="h-11 w-11 cursor-pointer text-lg text-ink disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              −
-            </button>
-            <output aria-live="polite" className="min-w-10 text-center text-base font-semibold tabular-nums text-ink">
-              {quantity}
-            </output>
-            <button
-              type="button"
-              aria-label={t.product.increase}
-              onClick={() => setQuantity((q) => Math.min(99, q + 1))}
-              className="h-11 w-11 cursor-pointer text-lg text-ink"
-            >
-              +
-            </button>
-          </div>
+          {/* The same stepper the cart drawer and the cart page use. */}
+          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
         </div>
       )}
 
@@ -370,18 +374,35 @@ export function ProductLanding({
 
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
 
+          {/* Only with Paymob connected; otherwise the form stays cash on delivery and says nothing else. */}
+          {online && (
+            <PaymentMethodPicker
+              online={online}
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              idPrefix={FORM_PREFIX}
+              disabled={submitting !== "idle"}
+            />
+          )}
+
           <div role="alert" aria-live="assertive" className="empty:hidden">
             {formError && (
               <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>
             )}
           </div>
 
-          <button type="submit" disabled={submitting || !available} className={btnPrimaryLg}>
-            {submitting ? t.form.submitting : `${t.form.submit} — ${money(total)}`}
+          <button type="submit" disabled={submitting !== "idle" || !available} aria-busy={submitting !== "idle"} className={btnPrimaryLg}>
+            {submitting === "paying"
+              ? t.shop.redirectingToPayment
+              : submitting === "placing"
+                ? t.form.submitting
+                : paymentMethod === "cod"
+                  ? `${t.form.submit} — ${money(total)}`
+                  : t.shop.payOnlineTotal(money(total))}
           </button>
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
             <CashIcon size={16} />
-            {t.checkout.codHint}
+            {paymentMethod === "cod" ? t.checkout.codHint : paymentMethod === "wallet" ? t.shop.payWalletHint : t.shop.payCardHint}
           </p>
         </form>
       </section>

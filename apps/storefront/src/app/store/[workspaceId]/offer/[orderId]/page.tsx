@@ -1,16 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { BoxIcon, CheckIcon } from "@/components/Icons";
 import { useStoreBasePath } from "@/components/StoreRoute";
-import { btnPrimaryLg, card, container } from "@/components/ui";
-import {
-  acceptUpsell,
-  getOrderSnapshot,
-  getUpsellOffer,
-  type OrderSnapshot,
-} from "@/lib/commerce";
+import { btnPrimaryLg, card, container, skeleton } from "@/components/ui";
+import { acceptUpsell, getOrderSnapshot, getUpsellOffer } from "@/lib/commerce";
+import { useHydrated } from "@/lib/funnelSession";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { useCatalog } from "@/lib/useCatalog";
@@ -27,17 +23,15 @@ function UpsellOfferView() {
   const { t, money } = useStore();
   const { products, loaded } = useCatalog(workspaceId);
   const basePath = useStoreBasePath();
-
-  const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
-  useEffect(() => {
-    setSnapshot(getOrderSnapshot(workspaceId, orderId));
-  }, [workspaceId, orderId]);
+  // Read on this device after hydration (localStorage), so SSR and the first client render agree.
+  const hydrated = useHydrated();
+  const snapshot = hydrated ? getOrderSnapshot(workspaceId, orderId) : null;
+  // Either answer moves on once; a second tap must not record the offer twice.
+  const answered = useRef(false);
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
-  const offer = useMemo(
-    () => (loaded ? getUpsellOffer(products ?? [], snapshot?.productIds ?? []) : null),
-    [loaded, products, snapshot]
-  );
+  // A find over a short list; the snapshot is re-read each render, so nothing to memoise on.
+  const offer = loaded ? getUpsellOffer(products ?? [], snapshot?.productIds ?? []) : null;
 
   const thankYouHref = storeHref(
     basePath,
@@ -45,7 +39,15 @@ function UpsellOfferView() {
   );
 
   function accept() {
+    if (answered.current) return;
+    answered.current = true;
     if (offer) acceptUpsell(workspaceId, orderId, offer);
+    router.push(thankYouHref);
+  }
+
+  function decline() {
+    if (answered.current) return;
+    answered.current = true;
     router.push(thankYouHref);
   }
 
@@ -74,9 +76,21 @@ function UpsellOfferView() {
           <div className="bg-primary px-5 py-3 text-center text-sm font-semibold text-on-primary">{t.upsell.eyebrow}</div>
 
           {!offer ? (
-            <p className="px-6 py-16 text-center text-sm text-ink-soft" role="status">
-              {t.common.loading}
-            </p>
+            // The catalogue is on its way: the card's shape, so nothing jumps when it lands.
+            <div className="p-5 sm:p-8" role="status" aria-busy="true" aria-label={t.common.loading}>
+              <div className={`${skeleton} mx-auto h-7 w-3/4`} />
+              <div className={`${skeleton} mx-auto mt-3 h-4 w-1/2`} />
+              <div className="mt-6 grid items-center gap-6 sm:grid-cols-[14rem_1fr]">
+                <div className={`${skeleton} mx-auto aspect-square w-full max-w-56 rounded-2xl`} />
+                <div className="space-y-3">
+                  <div className={`${skeleton} h-6 w-2/3`} />
+                  <div className={`${skeleton} h-4 w-full`} />
+                  <div className={`${skeleton} h-4 w-5/6`} />
+                  <div className={`${skeleton} mt-2 h-9 w-40`} />
+                </div>
+              </div>
+              <div className={`${skeleton} mt-8 h-12 w-full`} />
+            </div>
           ) : (
             <div className="p-5 sm:p-8">
               <h1 className="text-center text-2xl font-bold text-ink sm:text-3xl">{t.upsell.title}</h1>
@@ -86,7 +100,7 @@ function UpsellOfferView() {
                 <div className="mx-auto aspect-square w-full max-w-56 overflow-hidden rounded-2xl border border-line bg-paper">
                   {offer.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={offer.imageUrl} alt="" width={224} height={224} className="h-full w-full object-cover" />
+                    <img src={offer.imageUrl} alt="" width={224} height={224} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-primary/40">
                       <BoxIcon size={64} />
@@ -112,7 +126,7 @@ function UpsellOfferView() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push(thankYouHref)}
+                  onClick={decline}
                   className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-xl text-sm font-medium text-ink-soft underline-offset-4 hover:text-ink hover:underline"
                 >
                   {t.upsell.no}

@@ -8,7 +8,8 @@ import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
 import { compareAtOf, defaultOfferOf, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { CartSummary } from "./CartSummary";
-import { COLUMN_CLASS, type Props, bool, num, str } from "./props";
+import type { PageRendererFunnel } from "./PageRenderer";
+import { COLUMN_CLASS, type Props, bool, num, resolveHref, str } from "./props";
 
 /**
  * The four commerce element types. Each is an async server component that
@@ -17,7 +18,16 @@ import { COLUMN_CLASS, type Props, bool, num, str } from "./props";
  *
  * A failed catalogue call renders nothing rather than taking the whole page
  * down: one misconfigured block should not 500 a live storefront.
+ *
+ * In funnel mode (PageRenderer's `funnel` prop) the product blocks send the
+ * shopper to the funnel's next step instead of the product page — a funnel is
+ * one path, and a link out of it is a shopper lost.
  */
+
+/** The funnel's next step as a store link, or null when this isn't a funnel. */
+function funnelHref(funnel: PageRendererFunnel | undefined): string | null {
+  return funnel ? resolveHref(funnel.nextHref) : null;
+}
 
 async function listProducts(workspaceId: string, limit: number): Promise<StorefrontProduct[]> {
   try {
@@ -49,26 +59,93 @@ export async function ProductListElement({
   workspaceId,
   currency,
   locale,
+  funnel,
 }: {
   props: Props;
   workspaceId: string;
   currency: string;
   locale: Locale;
+  funnel?: PageRendererFunnel;
 }) {
   const limit = num(props, "limit", 8, 1, 48);
   const columns = num(props, "columns", 4, 1, 6);
   const products = await listProducts(workspaceId, limit);
   if (products.length === 0) return null;
+  const next = funnelHref(funnel);
 
   return (
     <div>
       <BlockTitle>{str(props, "title")}</BlockTitle>
       <div className={`grid gap-3 sm:gap-5 ${COLUMN_CLASS[columns]}`}>
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} currency={currency} locale={locale} />
-        ))}
+        {products.map((product) =>
+          next ? (
+            <FunnelProductTile key={product.id} product={product} href={next} currency={currency} locale={locale} />
+          ) : (
+            <ProductCard key={product.id} product={product} currency={currency} locale={locale} />
+          )
+        )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A product in a funnel's grid: the same card shape as ProductCard, but the
+ * whole tile is one link to the funnel's next step — no product page, no
+ * add-to-cart, nothing that leaves the path. Kept here rather than as a mode
+ * on ProductCard so the catalogue card shoppers see everywhere else is not
+ * touched by funnel work.
+ */
+function FunnelProductTile({
+  product,
+  href,
+  currency,
+  locale,
+}: {
+  product: StorefrontProduct;
+  href: string;
+  currency: string;
+  locale: Locale;
+}) {
+  const price = priceOf(product);
+  const compareAt = compareAtOf(product);
+  const image = firstImage(product);
+
+  return (
+    <StoreLink
+      href={href}
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      <span className="relative block aspect-square overflow-hidden bg-paper">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt=""
+            width={600}
+            height={600}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-primary/40">
+            <BoxIcon size={48} />
+          </span>
+        )}
+      </span>
+      <span className="flex flex-1 flex-col p-4">
+        <span className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">{product.name}</span>
+        <span className="mt-2 flex flex-wrap items-baseline gap-x-2">
+          <span className="text-base font-bold text-ink">
+            {price !== undefined ? formatPrice(price, currency, locale) : "—"}
+          </span>
+          {compareAt && (
+            <span className="text-sm text-ink-soft line-through">{formatPrice(compareAt, currency, locale)}</span>
+          )}
+        </span>
+      </span>
+    </StoreLink>
   );
 }
 
@@ -82,11 +159,13 @@ export async function ProductCardElement({
   workspaceId,
   currency,
   locale,
+  funnel,
 }: {
   props: Props;
   workspaceId: string;
   currency: string;
   locale: Locale;
+  funnel?: PageRendererFunnel;
 }) {
   const t = getDictionary(locale);
   const productId = str(props, "productId").trim();
@@ -108,7 +187,11 @@ export async function ProductCardElement({
   const variant = product.variants.find((v) => v.inStock) ?? product.variants[0];
   const offer = defaultOfferOf(product);
   const image = firstImage(product);
-  const href = `/products/${product.slug}`;
+  const next = funnelHref(funnel);
+  const href = next ?? `/products/${product.slug}`;
+  // "Order now" jumps straight to the product page's order form; in a funnel
+  // the next step is the order form, so it is the same link twice.
+  const orderHref = next ?? `${href}#order-form`;
 
   return (
     <div>
@@ -138,10 +221,11 @@ export async function ProductCardElement({
             <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink-soft">{product.description}</p>
           )}
           <div className="mt-auto space-y-3 pt-5">
-            <StoreLink href={`${href}#order-form`} className={`${btnPrimary} w-full`}>
+            <StoreLink href={orderHref} className={`${btnPrimary} w-full`}>
               {t.product.orderNow}
             </StoreLink>
-            {bool(props, "showBuyButton", true) ? (
+            {/* The cart is a way out of a funnel, so the buy button stays off the path. */}
+            {bool(props, "showBuyButton", true) && !next ? (
               <AddToCartButton
                 variant="secondary"
                 variantId={variant?.id}
