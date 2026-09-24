@@ -513,7 +513,7 @@ export interface BlockPreset {
   label: string;
   description: string;
   icon: LucideIcon;
-  group: "Layout" | "Content" | "Media" | "Commerce" | "Story";
+  group: "hero" | "trust" | "commerce" | "story" | "convert" | "basics";
   /**
    * The element types this preset drops into one full-width column — or, for
    * a preset with `rows`, every element type in document order (row by row,
@@ -768,247 +768,57 @@ function multiColumn(
 }
 
 export const BLOCK_PRESETS: BlockPreset[] = [
+  // --------------------------------------------------------------------
+  // Six groups, ordered the way a merchant actually builds a page —
+  // opening, then trust, then the catalogue, then the story, then the push
+  // to act, and finally the raw utility blocks reached for last. Grounded
+  // in how real storefronts (Allbirds, Gymshark) lay out a home page, a
+  // product page and a footer, rather than by implementation category.
+  //
+  // Presets range from a single bare element (a heading, a button) to a
+  // fully laid-out, multi-column section with starting copy. That copy is
+  // Egyptian Arabic written AT the merchant ("اكتب هنا…"), never a claim on
+  // the store's behalf: no names, no ratings, no delivery times, no
+  // guarantees. Anything that would have to be real to be honest — a
+  // statistic, a team member, a customer's words — is a prompt to write
+  // it, or left empty.
+  // --------------------------------------------------------------------
+
+  // --- Hero & announcement: what a shopper sees first -----------------------
+  multiColumn({
+    key: "announcement-bar",
+    label: "Announcement bar",
+    description: "One line in your brand colour across the top — an offer, a shipping note, a date.",
+    icon: Megaphone,
+    group: "hero",
+    settings: { background: "primary", padding: "tight" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["text"],
+            content: [{ text: "اكتب هنا الجملة اللي عايز كل زائر يشوفها الأول" }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
   {
     key: "hero",
     label: "Hero",
     description: "Big heading, a line of text and a call-to-action button.",
     icon: Sparkles,
-    group: "Layout",
+    group: "hero",
     elements: ["heading", "text", "button"],
   },
-  {
-    key: "heading",
-    label: "Heading",
-    description: "A standalone section title.",
-    icon: Heading1,
-    group: "Content",
-    elements: ["heading"],
-  },
-  {
-    key: "text",
-    label: "Text",
-    description: "A paragraph of copy.",
-    icon: AlignLeft,
-    group: "Content",
-    elements: ["text"],
-  },
-  {
-    key: "rich-text",
-    label: "Long text",
-    description: "A longer block of copy.",
-    icon: Type,
-    group: "Content",
-    elements: ["rich_text"],
-  },
-  {
-    key: "list",
-    label: "List",
-    description: "A bulleted list of points.",
-    icon: List,
-    group: "Content",
-    elements: ["list"],
-  },
-  {
-    key: "button",
-    label: "Button",
-    description: "A single call-to-action button.",
-    icon: MousePointerClick,
-    group: "Content",
-    elements: ["button"],
-  },
-  {
-    key: "testimonial",
-    label: "Testimonial",
-    description: "A customer quote with a rating.",
-    icon: Quote,
-    group: "Content",
-    elements: ["testimonial"],
-  },
-  {
-    key: "faq",
-    label: "FAQ",
-    description: "Question-and-answer pairs.",
-    icon: HelpCircle,
-    group: "Content",
-    elements: ["faq"],
-  },
-  {
-    key: "accordion",
-    label: "Accordion",
-    description: "Collapsible rows of content.",
-    icon: ChevronDown,
-    group: "Content",
-    elements: ["accordion"],
-  },
-  {
-    key: "form",
-    label: "Form",
-    description: "A contact or sign-up form.",
-    icon: FormInput,
-    group: "Content",
-    elements: ["form"],
-  },
-  {
-    key: "image",
-    label: "Image",
-    description: "One image, optionally linked.",
-    icon: Image,
-    group: "Media",
-    elements: ["image"],
-  },
-  {
-    key: "gallery",
-    label: "Gallery",
-    description: "A grid of images.",
-    icon: Images,
-    group: "Media",
-    elements: ["gallery"],
-  },
-  {
-    key: "video",
-    label: "Video",
-    description: "An embedded video.",
-    icon: Video,
-    group: "Media",
-    elements: ["video"],
-  },
-  {
-    key: "embed",
-    label: "Embed",
-    description: "Embed an external page by URL.",
-    icon: Code2,
-    group: "Media",
-    elements: ["embed"],
-  },
-  {
-    key: "map",
-    label: "Map",
-    description: "Show your address on a map.",
-    icon: Map,
-    group: "Media",
-    elements: ["map"],
-  },
-  {
-    key: "icon",
-    label: "Icon",
-    description: "A single decorative icon.",
-    icon: CircleDot,
-    group: "Media",
-    elements: ["icon"],
-  },
-  {
-    key: "social",
-    label: "Social links",
-    description: "Links to your social profiles.",
-    icon: Share2,
-    group: "Media",
-    elements: ["social_icons"],
-  },
-  {
-    key: "products",
-    label: "Product grid",
-    description: "A grid of products from your catalog.",
-    icon: LayoutGrid,
-    group: "Commerce",
-    elements: ["product_list"],
-  },
-  {
-    key: "offer",
-    label: "Single product",
-    description: "Spotlight one product with a buy button.",
-    icon: ShoppingBag,
-    group: "Commerce",
-    elements: ["product_card"],
-  },
-  {
-    key: "collections",
-    label: "Collections",
-    description: "Let shoppers browse by collection.",
-    icon: Grid3x3,
-    group: "Commerce",
-    elements: ["collection_list"],
-  },
-  {
-    key: "countdown",
-    label: "Countdown",
-    description: "An urgency timer for a limited offer.",
-    icon: Timer,
-    group: "Commerce",
-    elements: ["countdown"],
-  },
-  {
-    key: "cart",
-    label: "Cart",
-    description: "The shopper's cart contents.",
-    icon: ShoppingCart,
-    group: "Commerce",
-    elements: ["cart"],
-  },
-  {
-    key: "divider",
-    label: "Divider",
-    description: "A horizontal rule between sections.",
-    icon: Minus,
-    group: "Layout",
-    elements: ["divider"],
-  },
-  {
-    key: "spacer",
-    label: "Spacer",
-    description: "Vertical breathing room.",
-    icon: MoveVertical,
-    group: "Layout",
-    elements: ["spacer"],
-  },
-  {
-    key: "living-hero",
-    label: "Living hero",
-    description: "An opening screen that moves slowly in your store's colours.",
-    icon: Waves,
-    group: "Layout",
-    elements: ["shader_hero"],
-  },
-  {
-    key: "product-3d",
-    label: "3D product",
-    description: "The shopper turns the product with a finger. Needs a .glb file.",
-    icon: Box,
-    group: "Commerce",
-    elements: ["product_3d"],
-  },
-  {
-    key: "orbit-gallery",
-    label: "Turning carousel",
-    description: "Products on a drum that turns, instead of a flat grid.",
-    icon: Orbit,
-    group: "Commerce",
-    elements: ["orbit_gallery"],
-  },
-  {
-    key: "scroll-story",
-    label: "Scroll story",
-    description: "Before and after, or how it's made — step by step as the page scrolls.",
-    icon: Layers,
-    group: "Content",
-    elements: ["scroll_story"],
-  },
-
-  // -------------------------------------------------------------------------
-  // Ready-made sections. Everything above drops a bare element with its own
-  // defaults; everything below drops a section that already looks like a
-  // section — starting copy per element, and the section settings that keep it
-  // from reading as one more stack of text on white.
-  //
-  // The copy is Egyptian Arabic written AT the merchant ("اكتب هنا…"), never a
-  // claim on the store's behalf: no names, no ratings, no delivery times, no
-  // guarantees. Anything that would be a promise is left empty on purpose.
-  // -------------------------------------------------------------------------
   {
     key: "hero-trust",
     label: "Hero with trust line",
     description: "An opening screen plus the few reasons a first-time shopper should trust you.",
     icon: ShieldCheck,
-    group: "Layout",
+    group: "hero",
     elements: ["heading", "text", "button", "list"],
     settings: { padding: "roomy" },
     content: [
@@ -1025,296 +835,12 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   },
-  {
-    key: "living-hero-intro",
-    label: "Living hero with copy",
-    description: "The moving opening screen, with a title, a line of text and a button already in it.",
-    icon: Waves,
-    group: "Layout",
-    elements: ["shader_hero"],
-    content: [
-      {
-        title: "اكتب هنا عنوان الواجهة",
-        subtitle: "اكتب سطر واحد يوضّح إيه اللي يميّز متجرك.",
-        ctaLabel: "تسوّق دلوقتي",
-        ctaHref: "/products",
-        height: 520,
-      },
-    ],
-  },
-  {
-    key: "features",
-    label: "Features row",
-    description: "A short title and the benefits you want the shopper to remember.",
-    icon: BadgeCheck,
-    group: "Content",
-    elements: ["heading", "text", "list"],
-    settings: { background: "paper" },
-    content: [
-      { text: "ليه تختارنا", level: 2 },
-      { text: "اكتب سطر تمهيدي قصير عن اللي بتقدّمه." },
-      {
-        title: "",
-        items: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"],
-      },
-    ],
-  },
-  {
-    key: "why-us",
-    label: "Why buy from us",
-    description: "Answers to what stops a shopper buying — one row per worry.",
-    icon: Scale,
-    group: "Content",
-    elements: ["heading", "accordion"],
-    settings: { background: "primary-soft", padding: "roomy" },
-    content: [
-      { text: "ليه تشتري من عندنا؟", level: 2 },
-      {
-        title: "",
-        items: [
-          {
-            q: "اكتب هنا اللي بيقلق العميل قبل ما يشتري",
-            a: "اكتب هنا إجابتك إنت — من غير ما تقارن بحد بالاسم.",
-          },
-          { q: "اكتب هنا نقطة تانية بتفرّقك", a: "اكتب هنا تفاصيلها." },
-          { q: "اكتب هنا نقطة تالتة", a: "اكتب هنا تفاصيلها." },
-        ],
-      },
-    ],
-  },
-  {
-    key: "bundle-offer",
-    label: "Bundles & offers",
-    description: "A line about the bundle, the products in it and a button to the rest.",
-    icon: Gift,
-    group: "Commerce",
-    elements: ["heading", "text", "product_list", "button"],
-    settings: { background: "paper" },
-    content: [
-      { text: "عروض وباقات", level: 2 },
-      { text: "اشرح في سطر إيه اللي جوه الباقة وإيه شروطها." },
-      { title: "", source: "featured", limit: 3, columns: 3 },
-      { label: "شوف كل العروض", href: "/products", variant: "primary" },
-    ],
-  },
-  {
-    key: "before-after",
-    label: "Before & after",
-    description: "Two scroll steps — the state before, then after. Add a picture to each.",
-    icon: Contrast,
-    group: "Content",
-    elements: ["scroll_story"],
-    settings: { padding: "roomy" },
-    content: [
-      {
-        title: "قبل وبعد",
-        steps: [
-          { title: "قبل", body: "اكتب هنا وصف الحالة قبل المنتج، وارفع صورتها.", image: "" },
-          { title: "بعد", body: "اكتب هنا وصف الحالة بعد المنتج، وارفع صورتها.", image: "" },
-        ],
-      },
-    ],
-  },
-  {
-    key: "product-showcase-3d",
-    label: "3D product showcase",
-    description: "A title, a line of copy and the product the shopper turns with a finger.",
-    icon: Box,
-    group: "Commerce",
-    elements: ["heading", "text", "product_3d"],
-    settings: { background: "paper", padding: "roomy" },
-    content: [
-      { text: "لفّه بصباعك", level: 2 },
-      { text: "اكتب سطر يشجّع العميل يقلّب المنتج بنفسه." },
-      { title: "", productId: "", modelUrl: "" },
-    ],
-  },
-  {
-    key: "orbit-showcase",
-    label: "Turning showcase",
-    description: "A titled carousel of products on a drum that turns.",
-    icon: Orbit,
-    group: "Commerce",
-    elements: ["heading", "orbit_gallery"],
-    settings: { width: "wide" },
-    content: [
-      { text: "اختار من مجموعتنا", level: 2 },
-      { title: "", limit: 8, collectionId: "" },
-    ],
-  },
-  {
-    key: "lookbook",
-    label: "Lookbook",
-    description: "A titled grid of photos for a collection or a season.",
-    icon: Camera,
-    group: "Media",
-    elements: ["heading", "text", "gallery"],
-    settings: { width: "wide" },
-    content: [
-      { text: "لوك بوك", level: 2 },
-      { text: "اكتب سطر عن المجموعة دي، وارفع صورها تحت." },
-      { title: "", images: [], columns: 3 },
-    ],
-  },
-  {
-    key: "faq-cta",
-    label: "FAQ with a next step",
-    description: "Questions and answers, then a way to reach you for the rest.",
-    icon: HelpCircle,
-    group: "Content",
-    elements: ["faq", "text", "button"],
-    settings: { background: "paper" },
-    content: [
-      {
-        title: "الأسئلة الشائعة",
-        items: [
-          { q: "اكتب هنا سؤال بيتكرر من العملاء", a: "اكتب هنا إجابتك." },
-          { q: "اكتب هنا سؤال تاني", a: "اكتب هنا إجابتك." },
-          { q: "اكتب هنا سؤال تالت", a: "اكتب هنا إجابتك." },
-        ],
-      },
-      { text: "لسه عندك سؤال؟ إحنا موجودين." },
-      { label: "تواصل معانا", href: "/contact", variant: "outline" },
-    ],
-  },
-  {
-    key: "flash-offer",
-    label: "Limited-time offer",
-    description: "A countdown over the offer's own terms and a buy button.",
-    icon: Zap,
-    group: "Commerce",
-    elements: ["heading", "countdown", "text", "button"],
-    settings: { background: "primary-soft", padding: "compact" },
-    content: [
-      { text: "عرض لفترة محدودة", level: 2 },
-      { label: "ينتهي العرض خلال", endsInHours: 48 },
-      { text: "اكتب هنا تفاصيل العرض ومدته وشروطه." },
-      { label: "اشتري دلوقتي", href: "/products", variant: "primary" },
-    ],
-  },
-  {
-    key: "shipping-returns",
-    label: "Delivery & returns",
-    description: "Where you ship, how you swap and what you accept — in your own words.",
-    icon: Truck,
-    group: "Content",
-    elements: ["heading", "accordion", "text"],
-    settings: { background: "paper" },
-    content: [
-      { text: "الشحن والاستبدال", level: 2 },
-      {
-        title: "",
-        items: [
-          { q: "الشحن", a: "اكتب هنا مناطق الشحن ومواعيده وتكلفته." },
-          { q: "الاستبدال والاسترجاع", a: "اكتب هنا سياسة الاستبدال والاسترجاع بتاعتك." },
-          { q: "الدفع", a: "اكتب هنا طرق الدفع اللي بتقبلها." },
-        ],
-      },
-      { text: "اكتب هنا أي ملاحظة أخيرة عن الطلبات." },
-    ],
-  },
-  {
-    key: "claims-strip",
-    label: "Claims strip",
-    description: "A line of short claims that slides across the page and stops when the shopper looks at it.",
-    icon: Megaphone,
-    group: "Content",
-    elements: ["marquee"],
-    settings: { background: "paper", padding: "compact" },
-    content: [
-      {
-        items: [
-          "اكتب هنا جملة قصيرة عن خدمتك",
-          "اكتب هنا جملة تانية",
-          "اكتب هنا جملة تالتة",
-        ],
-        speed: "normal",
-        tone: "line",
-      },
-    ],
-  },
-  {
-    key: "comparison",
-    label: "Comparison table",
-    description: "Your column next to the alternative, row by row — in your own words, no names.",
-    icon: Table2,
-    group: "Content",
-    elements: ["heading", "comparison"],
-    settings: { background: "paper" },
-    content: [
-      { text: "قارن بنفسك", level: 2 },
-      {
-        title: "",
-        usLabel: "عندنا",
-        themLabel: "غير كده",
-        // Column names, not verdicts. Every cell is starting copy the merchant
-        // replaces: nothing here claims anything about anybody else.
-        rows: [
-          { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-          { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-          { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-        ],
-      },
-    ],
-  },
-  {
-    key: "testimonials",
-    label: "Testimonials",
-    description: "Three empty quote cards — fill them in from real customers of yours.",
-    icon: MessageSquareQuote,
-    group: "Content",
-    elements: ["heading", "testimonial", "testimonial", "testimonial"],
-    settings: { background: "paper", padding: "roomy" },
-    content: [
-      { text: "آراء العملاء", level: 2 },
-      // Left empty on purpose: a quote, a name and a rating are claims about
-      // real people, so nothing here may ship with words already in it.
-      { quote: "", author: "", rating: 0 },
-      { quote: "", author: "", rating: 0 },
-      { quote: "", author: "", rating: 0 },
-    ],
-  },
-
-  // -------------------------------------------------------------------------
-  // The section library. Everything from here on is laid out over columns —
-  // a hero beside its picture, three feature cards in a row, a form next to a
-  // map — and lands as one section whose rows hold more than one column. The
-  // storefront has always rendered that shape (a row is a 12-column grid); the
-  // presets only start using it.
-  //
-  // Same copy rules as above: Egyptian Arabic written AT the merchant, no
-  // numbers, names, logos or quotes invented on the store's behalf. Anything
-  // that would have to be real to be honest — a statistic, a team member, a
-  // customer's words — is a prompt to write it, or left empty.
-  // -------------------------------------------------------------------------
-
-  // --- Layout: openers and bands ------------------------------------------
-  multiColumn({
-    key: "announcement-bar",
-    label: "Announcement bar",
-    description: "One line in your brand colour across the top — an offer, a shipping note, a date.",
-    icon: Megaphone,
-    group: "Layout",
-    settings: { background: "primary", padding: "tight" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["text"],
-            content: [{ text: "اكتب هنا الجملة اللي عايز كل زائر يشوفها الأول" }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-    ],
-  }),
   multiColumn({
     key: "hero-split",
     label: "Hero with picture",
     description: "Title, a line of text and a button on one side, your picture on the other.",
     icon: LayoutPanelLeft,
-    group: "Layout",
+    group: "hero",
     settings: { padding: "roomy" },
     rows: [
       {
@@ -1339,7 +865,7 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     label: "Hero with photo row",
     description: "A centred opening line and button, with three of your photos underneath.",
     icon: GalleryHorizontal,
-    group: "Layout",
+    group: "hero",
     settings: { padding: "roomy" },
     rows: [
       {
@@ -1361,23 +887,107 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+  {
+    key: "living-hero",
+    label: "Living hero",
+    description: "An opening screen that moves slowly in your store's colours.",
+    icon: Waves,
+    group: "hero",
+    elements: ["shader_hero"],
+  },
+  {
+    key: "living-hero-intro",
+    label: "Living hero with copy",
+    description: "The moving opening screen, with a title, a line of text and a button already in it.",
+    icon: Waves,
+    group: "hero",
+    elements: ["shader_hero"],
+    content: [
+      {
+        title: "اكتب هنا عنوان الواجهة",
+        subtitle: "اكتب سطر واحد يوضّح إيه اللي يميّز متجرك.",
+        ctaLabel: "تسوّق دلوقتي",
+        ctaHref: "/products",
+        height: 520,
+      },
+    ],
+  },
   multiColumn({
-    key: "cta-band",
-    label: "Call-to-action band",
-    description: "A band in your brand colour: one line, one reason, one button.",
-    icon: MousePointerClick,
-    group: "Layout",
-    settings: { background: "primary", padding: "roomy" },
+    key: "video-hero",
+    label: "Video opener",
+    description: "Your video first, then a centred title, a line and a button.",
+    icon: Clapperboard,
+    group: "hero",
+    settings: { padding: "roomy" },
     rows: [
+      { columns: [{ span: 12, elements: ["video"], content: [{ url: "", title: "" }] }] },
       {
         columns: [
           {
             span: 12,
             elements: ["heading", "text", "button"],
             content: [
-              { text: "اكتب هنا الجملة اللي بتطلب من العميل يتحرك", level: 2 },
-              { text: "اكتب سطر يقول ليه دلوقتي." },
-              { label: "ابدأ دلوقتي", href: "/products", variant: "primary" },
+              { text: "اكتب هنا عنوان الفيديو", level: 1 },
+              { text: "اكتب سطر يقول العميل هيشوف إيه في الفيديو." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+
+  // --- Trust & social proof: why they should believe you --------------------
+  multiColumn({
+    key: "logo-strip",
+    label: "Logo strip",
+    description: "A quiet row of six small images — partners, stockists, press — on a paper band.",
+    icon: Building2,
+    group: "trust",
+    settings: { background: "paper", padding: "compact" },
+    rows: [{ columns: [{ span: 12, elements: ["gallery"], content: [{ title: "", images: [], columns: 6 }] }] }],
+  }),
+  {
+    key: "claims-strip",
+    label: "Claims strip",
+    description: "A line of short claims that slides across the page and stops when the shopper looks at it.",
+    icon: Megaphone,
+    group: "trust",
+    elements: ["marquee"],
+    settings: { background: "paper", padding: "compact" },
+    content: [
+      {
+        items: [
+          "اكتب هنا جملة قصيرة عن خدمتك",
+          "اكتب هنا جملة تانية",
+          "اكتب هنا جملة تالتة",
+        ],
+        speed: "normal",
+        tone: "line",
+      },
+    ],
+  },
+  multiColumn({
+    key: "claims-band",
+    label: "Claims band",
+    description: "A centred title over the sliding strip of short claims.",
+    icon: Megaphone,
+    group: "trust",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "marquee"],
+            content: [
+              { text: "اكتب هنا عنوان قصير", level: 3 },
+              {
+                items: ["اكتب هنا جملة قصيرة عن خدمتك", "اكتب هنا جملة تانية", "اكتب هنا جملة تالتة"],
+                speed: "normal",
+                tone: "primary",
+              },
             ],
             settings: { align: "center" },
           },
@@ -1386,11 +996,681 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     ],
   }),
   multiColumn({
+    key: "trust-badges",
+    label: "Trust badges",
+    description: "Four small reassurances in a compact row — delivery, returns, payment, support.",
+    icon: ShieldCheck,
+    group: "trust",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: ["truck", "shield", "check", "gift"].map((name) => ({
+          span: 3,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [{ name, size: 24 }, { text: "اكتب هنا نقطة الثقة", level: 5 }, { text: "اكتب تفصيلها في سطر." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  {
+    key: "testimonial",
+    label: "Testimonial",
+    description: "A customer quote with a rating.",
+    icon: Quote,
+    group: "trust",
+    elements: ["testimonial"],
+  },
+  {
+    key: "testimonials",
+    label: "Testimonials",
+    description: "Three empty quote cards — fill them in from real customers of yours.",
+    icon: MessageSquareQuote,
+    group: "trust",
+    elements: ["heading", "testimonial", "testimonial", "testimonial"],
+    settings: { background: "paper", padding: "roomy" },
+    content: [
+      { text: "آراء العملاء", level: 2 },
+      // Left empty on purpose: a quote, a name and a rating are claims about
+      // real people, so nothing here may ship with words already in it.
+      { quote: "", author: "", rating: 0 },
+      { quote: "", author: "", rating: 0 },
+      { quote: "", author: "", rating: 0 },
+    ],
+  },
+  multiColumn({
+    key: "testimonial-wall",
+    label: "Testimonial wall",
+    description: "A title and three empty quote cards side by side — fill them from real customers.",
+    icon: MessageSquareQuote,
+    group: "trust",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "آراء العملاء", level: 2 }, { text: "اكتب سطر عن الآراء دي جاية منين." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        // Empty on purpose, like the single-column testimonials above: a quote
+        // is a claim about a real person.
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["testimonial"] as PageElementType[],
+          content: [{ quote: "", author: "", rating: 0 }],
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "testimonial-spotlight",
+    label: "Testimonial spotlight",
+    description: "One customer's words, large and centred on a brand tint. Empty until you add them.",
+    icon: Quote,
+    group: "trust",
+    settings: { background: "primary-soft", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "testimonial"],
+            content: [{ text: "بيقولوا عننا إيه", level: 2 }, { quote: "", author: "", rating: 0 }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  {
+    key: "comparison",
+    label: "Comparison table",
+    description: "Your column next to the alternative, row by row — in your own words, no names.",
+    icon: Table2,
+    group: "trust",
+    elements: ["heading", "comparison"],
+    settings: { background: "paper" },
+    content: [
+      { text: "قارن بنفسك", level: 2 },
+      {
+        title: "",
+        usLabel: "عندنا",
+        themLabel: "غير كده",
+        // Column names, not verdicts. Every cell is starting copy the merchant
+        // replaces: nothing here claims anything about anybody else.
+        rows: [
+          { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+          { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+          { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+        ],
+      },
+    ],
+  },
+  multiColumn({
+    key: "comparison-pitch",
+    label: "Comparison with a pitch",
+    description: "A title and a button beside the us-versus-them table.",
+    icon: Table2,
+    group: "trust",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "قارن بنفسك", level: 2 },
+              { text: "اكتب سطر يقول العميل يبص على إيه في الجدول." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          {
+            span: 8,
+            elements: ["comparison"],
+            content: [
+              {
+                title: "",
+                usLabel: "عندنا",
+                themLabel: "غير كده",
+                rows: [
+                  { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                  { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                  { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+
+  // --- Products & collections: the catalogue itself --------------------------
+  {
+    key: "products",
+    label: "Product grid",
+    description: "A grid of products from your catalog.",
+    icon: LayoutGrid,
+    group: "commerce",
+    elements: ["product_list"],
+  },
+  {
+    key: "collections",
+    label: "Collections",
+    description: "Let shoppers browse by collection.",
+    icon: Grid3x3,
+    group: "commerce",
+    elements: ["collection_list"],
+  },
+  multiColumn({
+    key: "collection-tiles",
+    label: "Collection tiles",
+    description: "A title and a line over your collections, wide.",
+    icon: Grid3x3,
+    group: "commerce",
+    settings: { width: "wide" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "collection_list"],
+            content: [
+              { text: "تسوّق حسب المجموعة", level: 2 },
+              { text: "اكتب سطر يساعد العميل يختار من فين يبدأ." },
+              { title: "", limit: 6, columns: 3 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "featured-product",
+    label: "Featured product",
+    description: "One product beside the reasons to buy it and a button.",
+    icon: ShoppingBag,
+    group: "commerce",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          { span: 6, elements: ["product_card"], content: [{ title: "", showPrice: true, showBuyButton: true }] },
+          {
+            span: 6,
+            elements: ["heading", "list", "button"],
+            content: [
+              { text: "ليه المنتج ده؟", level: 2 },
+              { title: "", items: ["اكتب هنا أول سبب", "اكتب هنا تاني سبب", "اكتب هنا تالت سبب"] },
+              { label: "شوف كل المنتجات", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "product-grid-intro",
+    label: "Product grid with intro",
+    description: "A title and a line, then a grid of your products.",
+    icon: LayoutGrid,
+    group: "commerce",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "product_list"],
+            content: [
+              { text: "اكتب هنا عنوان المجموعة", level: 2 },
+              { text: "اكتب سطر عن المنتجات دي." },
+              { title: "", source: "newest", limit: 8, columns: 4 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  {
+    key: "offer",
+    label: "Single product",
+    description: "Spotlight one product with a buy button.",
+    icon: ShoppingBag,
+    group: "commerce",
+    elements: ["product_card"],
+  },
+  {
+    key: "bundle-offer",
+    label: "Bundles & offers",
+    description: "A line about the bundle, the products in it and a button to the rest.",
+    icon: Gift,
+    group: "commerce",
+    elements: ["heading", "text", "product_list", "button"],
+    settings: { background: "paper" },
+    content: [
+      { text: "عروض وباقات", level: 2 },
+      { text: "اشرح في سطر إيه اللي جوه الباقة وإيه شروطها." },
+      { title: "", source: "featured", limit: 3, columns: 3 },
+      { label: "شوف كل العروض", href: "/products", variant: "primary" },
+    ],
+  },
+  multiColumn({
+    key: "bundle-tiers",
+    label: "Three offers",
+    description: "Three products side by side, each with its own buy button — pick one per column.",
+    icon: Package,
+    group: "commerce",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "اختار العرض اللي يناسبك", level: 2 }, { text: "اكتب سطر يفرّق بين التلاتة." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["product_card"] as PageElementType[],
+          content: [{ title: "", showPrice: true, showBuyButton: true }],
+        })),
+      },
+    ],
+  }),
+  {
+    key: "product-3d",
+    label: "3D product",
+    description: "The shopper turns the product with a finger. Needs a .glb file.",
+    icon: Box,
+    group: "commerce",
+    elements: ["product_3d"],
+  },
+  {
+    key: "product-showcase-3d",
+    label: "3D product showcase",
+    description: "A title, a line of copy and the product the shopper turns with a finger.",
+    icon: Box,
+    group: "commerce",
+    elements: ["heading", "text", "product_3d"],
+    settings: { background: "paper", padding: "roomy" },
+    content: [
+      { text: "لفّه بصباعك", level: 2 },
+      { text: "اكتب سطر يشجّع العميل يقلّب المنتج بنفسه." },
+      { title: "", productId: "", modelUrl: "" },
+    ],
+  },
+  {
+    key: "orbit-gallery",
+    label: "Turning carousel",
+    description: "Products on a drum that turns, instead of a flat grid.",
+    icon: Orbit,
+    group: "commerce",
+    elements: ["orbit_gallery"],
+  },
+  {
+    key: "orbit-showcase",
+    label: "Turning showcase",
+    description: "A titled carousel of products on a drum that turns.",
+    icon: Orbit,
+    group: "commerce",
+    elements: ["heading", "orbit_gallery"],
+    settings: { width: "wide" },
+    content: [
+      { text: "اختار من مجموعتنا", level: 2 },
+      { title: "", limit: 8, collectionId: "" },
+    ],
+  },
+  {
+    key: "cart",
+    label: "Cart",
+    description: "The shopper's cart contents.",
+    icon: ShoppingCart,
+    group: "commerce",
+    elements: ["cart"],
+  },
+
+  // --- Features & story: why it matters, how it's made -------------------------
+  {
+    key: "features",
+    label: "Features row",
+    description: "A short title and the benefits you want the shopper to remember.",
+    icon: BadgeCheck,
+    group: "story",
+    elements: ["heading", "text", "list"],
+    settings: { background: "paper" },
+    content: [
+      { text: "ليه تختارنا", level: 2 },
+      { text: "اكتب سطر تمهيدي قصير عن اللي بتقدّمه." },
+      {
+        title: "",
+        items: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"],
+      },
+    ],
+  },
+  {
+    key: "why-us",
+    label: "Why buy from us",
+    description: "Answers to what stops a shopper buying — one row per worry.",
+    icon: Scale,
+    group: "story",
+    elements: ["heading", "accordion"],
+    settings: { background: "primary-soft", padding: "roomy" },
+    content: [
+      { text: "ليه تشتري من عندنا؟", level: 2 },
+      {
+        title: "",
+        items: [
+          {
+            q: "اكتب هنا اللي بيقلق العميل قبل ما يشتري",
+            a: "اكتب هنا إجابتك إنت — من غير ما تقارن بحد بالاسم.",
+          },
+          { q: "اكتب هنا نقطة تانية بتفرّقك", a: "اكتب هنا تفاصيلها." },
+          { q: "اكتب هنا نقطة تالتة", a: "اكتب هنا تفاصيلها." },
+        ],
+      },
+    ],
+  },
+  multiColumn({
+    key: "feature-grid-3",
+    label: "Three feature cards",
+    description: "Three cards, each with an icon, a short title and a line — the classic features row.",
+    icon: Columns3,
+    group: "story",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: ["star", "heart", "check"].map((name, i) => ({
+          span: 4,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [
+            { name, size: 32 },
+            { text: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"][i], level: 3 },
+            { text: "اشرح الميزة دي في سطر أو اتنين." },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "feature-grid-4",
+    label: "Four features",
+    description: "Four short points across the page, each with an icon, centred.",
+    icon: Grid2x2,
+    group: "story",
+    rows: [
+      {
+        columns: ["star", "heart", "check", "gift"].map((name, i) => ({
+          span: 3,
+          elements: ["icon", "heading", "text"] as PageElementType[],
+          content: [
+            { name, size: 28 },
+            { text: `اكتب الميزة ${["الأولى", "التانية", "التالتة", "الرابعة"][i]}`, level: 4 },
+            { text: "اشرحها في سطر." },
+          ],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "image-text",
+    label: "Picture with text",
+    description: "Your picture on one side, a title, text and a button on the other.",
+    icon: PanelLeft,
+    group: "story",
+    rows: [
+      {
+        columns: [
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+          {
+            span: 7,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
+              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
+              { label: "اعرف أكتر", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "text-image",
+    label: "Text with picture",
+    description: "The same pair mirrored: text first, picture after — alternate the two down a page.",
+    icon: PanelRight,
+    group: "story",
+    rows: [
+      {
+        columns: [
+          {
+            span: 7,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
+              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
+              { label: "اعرف أكتر", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+        ],
+      },
+    ],
+  }),
+  {
+    key: "before-after",
+    label: "Before & after",
+    description: "Two scroll steps — the state before, then after. Add a picture to each.",
+    icon: Contrast,
+    group: "story",
+    elements: ["scroll_story"],
+    settings: { padding: "roomy" },
+    content: [
+      {
+        title: "قبل وبعد",
+        steps: [
+          { title: "قبل", body: "اكتب هنا وصف الحالة قبل المنتج، وارفع صورتها.", image: "" },
+          { title: "بعد", body: "اكتب هنا وصف الحالة بعد المنتج، وارفع صورتها.", image: "" },
+        ],
+      },
+    ],
+  },
+  {
+    key: "scroll-story",
+    label: "Scroll story",
+    description: "Before and after, or how it's made — step by step as the page scrolls.",
+    icon: Layers,
+    group: "story",
+    elements: ["scroll_story"],
+  },
+  multiColumn({
+    key: "process-story",
+    label: "How it's made",
+    description: "A title and a line, then three scroll steps — add a picture to each.",
+    icon: Layers,
+    group: "story",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "scroll_story"],
+            content: [
+              { text: "بيتعمل إزاي؟", level: 2 },
+              { text: "اكتب سطر يمهّد للخطوات اللي جاية." },
+              {
+                title: "",
+                steps: [
+                  { title: "اكتب عنوان الخطوة الأولى", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                  { title: "اكتب عنوان الخطوة التانية", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                  { title: "اكتب عنوان الخطوة التالتة", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "stats-row",
+    label: "Numbers row",
+    description: "Four big numbers with a word under each — orders, years, cities. You write the numbers.",
+    icon: BarChart3,
+    group: "story",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [0, 1, 2, 3].map(() => ({
+          span: 3,
+          elements: ["heading", "text"] as PageElementType[],
+          // The number itself is a claim, so it ships as an instruction and
+          // the merchant types the real one.
+          content: [{ text: "اكتب الرقم", level: 2 }, { text: "اكتب هنا الرقم ده بتاع إيه." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "steps",
+    label: "How it works",
+    description: "A title, then three numbered steps across the page.",
+    icon: ListOrdered,
+    group: "story",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "بيشتغل إزاي؟", level: 2 }, { text: "اكتب سطر يمهّد للخطوات." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: ["١", "٢", "٣"].map((n, i) => ({
+          span: 4,
+          elements: ["heading", "text"] as PageElementType[],
+          content: [
+            { text: `${n}. اكتب عنوان الخطوة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
+            { text: "اشرح الخطوة دي في سطر أو اتنين." },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+  multiColumn({
+    key: "timeline",
+    label: "Timeline",
+    description: "A title, then your milestones as two lists side by side — earlier ones first.",
+    icon: Milestone,
+    group: "story",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "قصتنا", level: 2 }, { text: "اكتب سطر عن رحلتك من الأول لدلوقتي." }],
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["list"],
+            content: [{ title: "البداية", items: ["اكتب هنا أول محطة وتاريخها", "اكتب هنا المحطة التانية"] }],
+          },
+          {
+            span: 6,
+            elements: ["list"],
+            content: [{ title: "دلوقتي", items: ["اكتب هنا محطة قريبة", "اكتب هنا اللي جاي"] }],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "team",
+    label: "Team",
+    description: "Three people — a photo, a name and a line each. Fill them in from your own team.",
+    icon: Users,
+    group: "story",
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [{ text: "الفريق", level: 2 }, { text: "اكتب سطر عن مين وراء المتجر." }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [0, 1, 2].map(() => ({
+          span: 4,
+          elements: ["image", "heading", "text"] as PageElementType[],
+          content: [undefined, { text: "اكتب هنا اسم الشخص", level: 3 }, { text: "اكتب هنا دوره في سطر." }],
+          settings: { align: "center" },
+        })),
+      },
+    ],
+  }),
+  {
+    key: "lookbook",
+    label: "Lookbook",
+    description: "A titled grid of photos for a collection or a season.",
+    icon: Camera,
+    group: "story",
+    elements: ["heading", "text", "gallery"],
+    settings: { width: "wide" },
+    content: [
+      { text: "لوك بوك", level: 2 },
+      { text: "اكتب سطر عن المجموعة دي، وارفع صورها تحت." },
+      { title: "", images: [], columns: 3 },
+    ],
+  },
+  multiColumn({
+    key: "collage",
+    label: "Photo collage",
+    description: "Four pictures in two rows of unequal widths — a wide one beside a narrow one, then swapped.",
+    icon: Frame,
+    group: "story",
+    settings: { width: "wide" },
+    rows: [
+      { columns: [{ span: 8, elements: ["image"] }, { span: 4, elements: ["image"] }] },
+      { columns: [{ span: 4, elements: ["image"] }, { span: 8, elements: ["image"] }] },
+    ],
+  }),
+  multiColumn({
     key: "bento",
     label: "Bento grid",
     description: "Four cards of two sizes — a picture and a line in each, the way app sites show features.",
     icon: LayoutDashboard,
-    group: "Layout",
+    group: "story",
     // The picture goes in the narrow card and the words in the wide one: a
     // picture sets the row's height, and a wide card of text fills that
     // height far better than a narrow one would.
@@ -1436,129 +1716,11 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     ],
   }),
   multiColumn({
-    key: "footer-links",
-    label: "Footer links",
-    description: "Two lists of links and your social profiles, side by side, for the bottom of a page.",
-    icon: PanelBottom,
-    group: "Layout",
-    settings: { background: "paper", padding: "compact" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 4,
-            elements: ["list"],
-            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
-          },
-          {
-            span: 4,
-            elements: ["list"],
-            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
-          },
-          { span: 4, elements: ["social_icons"], content: [{ links: [] }] },
-        ],
-      },
-    ],
-  }),
-
-  // --- Content: features, text and answers ---------------------------------
-  multiColumn({
-    key: "feature-grid-3",
-    label: "Three feature cards",
-    description: "Three cards, each with an icon, a short title and a line — the classic features row.",
-    icon: Columns3,
-    group: "Content",
-    settings: { background: "paper" },
-    rows: [
-      {
-        columns: ["star", "heart", "check"].map((name, i) => ({
-          span: 4,
-          elements: ["icon", "heading", "text"] as PageElementType[],
-          content: [
-            { name, size: 32 },
-            { text: ["اكتب الميزة الأولى", "اكتب الميزة التانية", "اكتب الميزة التالتة"][i], level: 3 },
-            { text: "اشرح الميزة دي في سطر أو اتنين." },
-          ],
-          settings: { surface: "card" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "feature-grid-4",
-    label: "Four features",
-    description: "Four short points across the page, each with an icon, centred.",
-    icon: Grid2x2,
-    group: "Content",
-    rows: [
-      {
-        columns: ["star", "heart", "check", "gift"].map((name, i) => ({
-          span: 3,
-          elements: ["icon", "heading", "text"] as PageElementType[],
-          content: [
-            { name, size: 28 },
-            { text: `اكتب الميزة ${["الأولى", "التانية", "التالتة", "الرابعة"][i]}`, level: 4 },
-            { text: "اشرحها في سطر." },
-          ],
-          settings: { align: "center" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "image-text",
-    label: "Picture with text",
-    description: "Your picture on one side, a title, text and a button on the other.",
-    icon: PanelLeft,
-    group: "Content",
-    rows: [
-      {
-        columns: [
-          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
-          {
-            span: 7,
-            elements: ["heading", "text", "button"],
-            content: [
-              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
-              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
-              { label: "اعرف أكتر", href: "/products", variant: "outline" },
-            ],
-            settings: { verticalAlign: "center" },
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "text-image",
-    label: "Text with picture",
-    description: "The same pair mirrored: text first, picture after — alternate the two down a page.",
-    icon: PanelRight,
-    group: "Content",
-    rows: [
-      {
-        columns: [
-          {
-            span: 7,
-            elements: ["heading", "text", "button"],
-            content: [
-              { text: "اكتب هنا عنوان الجزء ده", level: 2 },
-              { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
-              { label: "اعرف أكتر", href: "/products", variant: "outline" },
-            ],
-            settings: { verticalAlign: "center" },
-          },
-          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
     key: "rich-text-band",
     label: "Rich text band",
     description: "A title over a longer piece of writing — your story, your method, your promise.",
     icon: FileText,
-    group: "Content",
+    group: "story",
     settings: { background: "paper", padding: "roomy" },
     rows: [
       {
@@ -1575,12 +1737,22 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+
+  // --- FAQ, contact & conversion: answer, reach, close --------------------------
+  {
+    key: "faq",
+    label: "FAQ",
+    description: "Question-and-answer pairs.",
+    icon: HelpCircle,
+    group: "convert",
+    elements: ["faq"],
+  },
   multiColumn({
     key: "faq-split",
     label: "FAQ in two columns",
     description: "A title and a line on one side, the questions and answers on the other.",
     icon: HelpCircle,
-    group: "Content",
+    group: "convert",
     settings: { background: "paper" },
     rows: [
       {
@@ -1611,12 +1783,93 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+  {
+    key: "faq-cta",
+    label: "FAQ with a next step",
+    description: "Questions and answers, then a way to reach you for the rest.",
+    icon: HelpCircle,
+    group: "convert",
+    elements: ["faq", "text", "button"],
+    settings: { background: "paper" },
+    content: [
+      {
+        title: "الأسئلة الشائعة",
+        items: [
+          { q: "اكتب هنا سؤال بيتكرر من العملاء", a: "اكتب هنا إجابتك." },
+          { q: "اكتب هنا سؤال تاني", a: "اكتب هنا إجابتك." },
+          { q: "اكتب هنا سؤال تالت", a: "اكتب هنا إجابتك." },
+        ],
+      },
+      { text: "لسه عندك سؤال؟ إحنا موجودين." },
+      { label: "تواصل معانا", href: "/contact", variant: "outline" },
+    ],
+  },
+  {
+    key: "accordion",
+    label: "Accordion",
+    description: "Collapsible rows of content.",
+    icon: ChevronDown,
+    group: "convert",
+    elements: ["accordion"],
+  },
+  {
+    key: "shipping-returns",
+    label: "Delivery & returns",
+    description: "Where you ship, how you swap and what you accept — in your own words.",
+    icon: Truck,
+    group: "convert",
+    elements: ["heading", "accordion", "text"],
+    settings: { background: "paper" },
+    content: [
+      { text: "الشحن والاستبدال", level: 2 },
+      {
+        title: "",
+        items: [
+          { q: "الشحن", a: "اكتب هنا مناطق الشحن ومواعيده وتكلفته." },
+          { q: "الاستبدال والاسترجاع", a: "اكتب هنا سياسة الاستبدال والاسترجاع بتاعتك." },
+          { q: "الدفع", a: "اكتب هنا طرق الدفع اللي بتقبلها." },
+        ],
+      },
+      { text: "اكتب هنا أي ملاحظة أخيرة عن الطلبات." },
+    ],
+  },
+  multiColumn({
+    key: "contact-map",
+    label: "Contact with map",
+    description: "Your contact form beside your address and a link to it on the map.",
+    icon: MapPin,
+    group: "convert",
+    rows: [
+      {
+        columns: [
+          { span: 6, elements: ["form"], content: [{ title: "اكتب هنا عنوان النموذج", submitLabel: "إرسال" }] },
+          {
+            span: 6,
+            elements: ["heading", "text", "map"],
+            content: [
+              { text: "تواصل معانا", level: 2 },
+              { text: "اكتب هنا مواعيد الرد وطرق التواصل التانية." },
+              { address: "", zoom: 14 },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  {
+    key: "form",
+    label: "Form",
+    description: "A contact or sign-up form.",
+    icon: FormInput,
+    group: "convert",
+    elements: ["form"],
+  },
   multiColumn({
     key: "newsletter",
     label: "Newsletter",
     description: "A centred invitation to stay in touch, with the sign-up form under it.",
     icon: Mail,
-    group: "Content",
+    group: "convert",
     settings: { background: "primary-soft" },
     rows: [
       {
@@ -1636,129 +1889,22 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     ],
   }),
   multiColumn({
-    key: "contact-map",
-    label: "Contact with map",
-    description: "Your contact form beside your address and a link to it on the map.",
-    icon: MapPin,
-    group: "Content",
+    key: "cta-band",
+    label: "Call-to-action band",
+    description: "A band in your brand colour: one line, one reason, one button.",
+    icon: MousePointerClick,
+    group: "convert",
+    settings: { background: "primary", padding: "roomy" },
     rows: [
-      {
-        columns: [
-          { span: 6, elements: ["form"], content: [{ title: "اكتب هنا عنوان النموذج", submitLabel: "إرسال" }] },
-          {
-            span: 6,
-            elements: ["heading", "text", "map"],
-            content: [
-              { text: "تواصل معانا", level: 2 },
-              { text: "اكتب هنا مواعيد الرد وطرق التواصل التانية." },
-              { address: "", zoom: 14 },
-            ],
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "trust-badges",
-    label: "Trust badges",
-    description: "Four small reassurances in a compact row — delivery, returns, payment, support.",
-    icon: ShieldCheck,
-    group: "Content",
-    settings: { background: "paper", padding: "compact" },
-    rows: [
-      {
-        columns: ["truck", "shield", "check", "gift"].map((name) => ({
-          span: 3,
-          elements: ["icon", "heading", "text"] as PageElementType[],
-          content: [{ name, size: 24 }, { text: "اكتب هنا نقطة الثقة", level: 5 }, { text: "اكتب تفصيلها في سطر." }],
-          settings: { align: "center" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "comparison-pitch",
-    label: "Comparison with a pitch",
-    description: "A title and a button beside the us-versus-them table.",
-    icon: Table2,
-    group: "Content",
-    settings: { background: "paper" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 4,
-            elements: ["heading", "text", "button"],
-            content: [
-              { text: "قارن بنفسك", level: 2 },
-              { text: "اكتب سطر يقول العميل يبص على إيه في الجدول." },
-              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
-            ],
-            settings: { verticalAlign: "center" },
-          },
-          {
-            span: 8,
-            elements: ["comparison"],
-            content: [
-              {
-                title: "",
-                usLabel: "عندنا",
-                themLabel: "غير كده",
-                rows: [
-                  { label: "اكتب هنا النقطة اللي بتقارن فيها", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-                  { label: "اكتب هنا نقطة تانية", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-                  { label: "اكتب هنا نقطة تالتة", us: "اكتب هنا وضعك", them: "اكتب هنا البديل" },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "pricing-tiers",
-    label: "Plans",
-    description: "Three cards — a name, a line, what's included and a button. You fill in the prices.",
-    icon: Tag,
-    group: "Content",
-    settings: { background: "paper", padding: "roomy" },
-    rows: [
-      {
-        columns: [0, 1, 2].map((i) => ({
-          span: 4,
-          elements: ["heading", "text", "list", "button"] as PageElementType[],
-          content: [
-            { text: `اكتب اسم الباقة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
-            { text: "اكتب هنا السعر ولمين الباقة دي." },
-            { title: "", items: ["اكتب هنا أول حاجة فيها", "اكتب هنا تاني حاجة", "اكتب هنا تالت حاجة"] },
-            { label: "اختار الباقة دي", href: "/products", variant: i === 1 ? "primary" : "outline" },
-          ],
-          settings: { surface: "card" },
-        })),
-      },
-    ],
-  }),
-
-  // --- Media ---------------------------------------------------------------
-  multiColumn({
-    key: "video-hero",
-    label: "Video opener",
-    description: "Your video first, then a centred title, a line and a button.",
-    icon: Clapperboard,
-    group: "Media",
-    settings: { padding: "roomy" },
-    rows: [
-      { columns: [{ span: 12, elements: ["video"], content: [{ url: "", title: "" }] }] },
       {
         columns: [
           {
             span: 12,
             elements: ["heading", "text", "button"],
             content: [
-              { text: "اكتب هنا عنوان الفيديو", level: 1 },
-              { text: "اكتب سطر يقول العميل هيشوف إيه في الفيديو." },
-              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+              { text: "اكتب هنا الجملة اللي بتطلب من العميل يتحرك", level: 2 },
+              { text: "اكتب سطر يقول ليه دلوقتي." },
+              { label: "ابدأ دلوقتي", href: "/products", variant: "primary" },
             ],
             settings: { align: "center" },
           },
@@ -1766,350 +1912,27 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
-  multiColumn({
-    key: "logo-strip",
-    label: "Logo strip",
-    description: "A quiet row of six small images — partners, stockists, press — on a paper band.",
-    icon: Building2,
-    group: "Media",
-    settings: { background: "paper", padding: "compact" },
-    rows: [{ columns: [{ span: 12, elements: ["gallery"], content: [{ title: "", images: [], columns: 6 }] }] }],
-  }),
-  multiColumn({
-    key: "collage",
-    label: "Photo collage",
-    description: "Four pictures in two rows of unequal widths — a wide one beside a narrow one, then swapped.",
-    icon: Frame,
-    group: "Media",
-    settings: { width: "wide" },
-    rows: [
-      { columns: [{ span: 8, elements: ["image"] }, { span: 4, elements: ["image"] }] },
-      { columns: [{ span: 4, elements: ["image"] }, { span: 8, elements: ["image"] }] },
+  {
+    key: "flash-offer",
+    label: "Limited-time offer",
+    description: "A countdown over the offer's own terms and a buy button.",
+    icon: Zap,
+    group: "convert",
+    elements: ["heading", "countdown", "text", "button"],
+    settings: { background: "primary-soft", padding: "compact" },
+    content: [
+      { text: "عرض لفترة محدودة", level: 2 },
+      { label: "ينتهي العرض خلال", endsInHours: 48 },
+      { text: "اكتب هنا تفاصيل العرض ومدته وشروطه." },
+      { label: "اشتري دلوقتي", href: "/products", variant: "primary" },
     ],
-  }),
-
-  // --- Story: numbers, steps, people and proof ------------------------------
-  multiColumn({
-    key: "stats-row",
-    label: "Numbers row",
-    description: "Four big numbers with a word under each — orders, years, cities. You write the numbers.",
-    icon: BarChart3,
-    group: "Story",
-    settings: { background: "paper" },
-    rows: [
-      {
-        columns: [0, 1, 2, 3].map(() => ({
-          span: 3,
-          elements: ["heading", "text"] as PageElementType[],
-          // The number itself is a claim, so it ships as an instruction and
-          // the merchant types the real one.
-          content: [{ text: "اكتب الرقم", level: 2 }, { text: "اكتب هنا الرقم ده بتاع إيه." }],
-          settings: { align: "center" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "steps",
-    label: "How it works",
-    description: "A title, then three numbered steps across the page.",
-    icon: ListOrdered,
-    group: "Story",
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text"],
-            content: [{ text: "بيشتغل إزاي؟", level: 2 }, { text: "اكتب سطر يمهّد للخطوات." }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-      {
-        columns: ["١", "٢", "٣"].map((n, i) => ({
-          span: 4,
-          elements: ["heading", "text"] as PageElementType[],
-          content: [
-            { text: `${n}. اكتب عنوان الخطوة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
-            { text: "اشرح الخطوة دي في سطر أو اتنين." },
-          ],
-          settings: { surface: "card" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "timeline",
-    label: "Timeline",
-    description: "A title, then your milestones as two lists side by side — earlier ones first.",
-    icon: Milestone,
-    group: "Story",
-    settings: { background: "paper" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text"],
-            content: [{ text: "قصتنا", level: 2 }, { text: "اكتب سطر عن رحلتك من الأول لدلوقتي." }],
-          },
-        ],
-      },
-      {
-        columns: [
-          {
-            span: 6,
-            elements: ["list"],
-            content: [{ title: "البداية", items: ["اكتب هنا أول محطة وتاريخها", "اكتب هنا المحطة التانية"] }],
-          },
-          {
-            span: 6,
-            elements: ["list"],
-            content: [{ title: "دلوقتي", items: ["اكتب هنا محطة قريبة", "اكتب هنا اللي جاي"] }],
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "team",
-    label: "Team",
-    description: "Three people — a photo, a name and a line each. Fill them in from your own team.",
-    icon: Users,
-    group: "Story",
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text"],
-            content: [{ text: "الفريق", level: 2 }, { text: "اكتب سطر عن مين وراء المتجر." }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-      {
-        columns: [0, 1, 2].map(() => ({
-          span: 4,
-          elements: ["image", "heading", "text"] as PageElementType[],
-          content: [undefined, { text: "اكتب هنا اسم الشخص", level: 3 }, { text: "اكتب هنا دوره في سطر." }],
-          settings: { align: "center" },
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "testimonial-wall",
-    label: "Testimonial wall",
-    description: "A title and three empty quote cards side by side — fill them from real customers.",
-    icon: MessageSquareQuote,
-    group: "Story",
-    settings: { background: "paper", padding: "roomy" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text"],
-            content: [{ text: "آراء العملاء", level: 2 }, { text: "اكتب سطر عن الآراء دي جاية منين." }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-      {
-        // Empty on purpose, like the single-column testimonials above: a quote
-        // is a claim about a real person.
-        columns: [0, 1, 2].map(() => ({
-          span: 4,
-          elements: ["testimonial"] as PageElementType[],
-          content: [{ quote: "", author: "", rating: 0 }],
-        })),
-      },
-    ],
-  }),
-  multiColumn({
-    key: "testimonial-spotlight",
-    label: "Testimonial spotlight",
-    description: "One customer's words, large and centred on a brand tint. Empty until you add them.",
-    icon: Quote,
-    group: "Story",
-    settings: { background: "primary-soft", padding: "roomy" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "testimonial"],
-            content: [{ text: "بيقولوا عننا إيه", level: 2 }, { quote: "", author: "", rating: 0 }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "claims-band",
-    label: "Claims band",
-    description: "A centred title over the sliding strip of short claims.",
-    icon: Megaphone,
-    group: "Story",
-    settings: { background: "paper", padding: "compact" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "marquee"],
-            content: [
-              { text: "اكتب هنا عنوان قصير", level: 3 },
-              {
-                items: ["اكتب هنا جملة قصيرة عن خدمتك", "اكتب هنا جملة تانية", "اكتب هنا جملة تالتة"],
-                speed: "normal",
-                tone: "primary",
-              },
-            ],
-            settings: { align: "center" },
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "process-story",
-    label: "How it's made",
-    description: "A title and a line, then three scroll steps — add a picture to each.",
-    icon: Layers,
-    group: "Story",
-    settings: { padding: "roomy" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text", "scroll_story"],
-            content: [
-              { text: "بيتعمل إزاي؟", level: 2 },
-              { text: "اكتب سطر يمهّد للخطوات اللي جاية." },
-              {
-                title: "",
-                steps: [
-                  { title: "اكتب عنوان الخطوة الأولى", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
-                  { title: "اكتب عنوان الخطوة التانية", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
-                  { title: "اكتب عنوان الخطوة التالتة", body: "اكتب هنا وصفها، وارفع صورتها.", image: "" },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  }),
-
-  // --- Commerce ------------------------------------------------------------
-  multiColumn({
-    key: "collection-tiles",
-    label: "Collection tiles",
-    description: "A title and a line over your collections, wide.",
-    icon: Grid3x3,
-    group: "Commerce",
-    settings: { width: "wide" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text", "collection_list"],
-            content: [
-              { text: "تسوّق حسب المجموعة", level: 2 },
-              { text: "اكتب سطر يساعد العميل يختار من فين يبدأ." },
-              { title: "", limit: 6, columns: 3 },
-            ],
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "featured-product",
-    label: "Featured product",
-    description: "One product beside the reasons to buy it and a button.",
-    icon: ShoppingBag,
-    group: "Commerce",
-    settings: { background: "paper" },
-    rows: [
-      {
-        columns: [
-          { span: 6, elements: ["product_card"], content: [{ title: "", showPrice: true, showBuyButton: true }] },
-          {
-            span: 6,
-            elements: ["heading", "list", "button"],
-            content: [
-              { text: "ليه المنتج ده؟", level: 2 },
-              { title: "", items: ["اكتب هنا أول سبب", "اكتب هنا تاني سبب", "اكتب هنا تالت سبب"] },
-              { label: "شوف كل المنتجات", href: "/products", variant: "outline" },
-            ],
-            settings: { verticalAlign: "center" },
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "product-grid-intro",
-    label: "Product grid with intro",
-    description: "A title and a line, then a grid of your products.",
-    icon: LayoutGrid,
-    group: "Commerce",
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text", "product_list"],
-            content: [
-              { text: "اكتب هنا عنوان المجموعة", level: 2 },
-              { text: "اكتب سطر عن المنتجات دي." },
-              { title: "", source: "newest", limit: 8, columns: 4 },
-            ],
-          },
-        ],
-      },
-    ],
-  }),
-  multiColumn({
-    key: "bundle-tiers",
-    label: "Three offers",
-    description: "Three products side by side, each with its own buy button — pick one per column.",
-    icon: Package,
-    group: "Commerce",
-    settings: { background: "paper", padding: "roomy" },
-    rows: [
-      {
-        columns: [
-          {
-            span: 12,
-            elements: ["heading", "text"],
-            content: [{ text: "اختار العرض اللي يناسبك", level: 2 }, { text: "اكتب سطر يفرّق بين التلاتة." }],
-            settings: { align: "center" },
-          },
-        ],
-      },
-      {
-        columns: [0, 1, 2].map(() => ({
-          span: 4,
-          elements: ["product_card"] as PageElementType[],
-          content: [{ title: "", showPrice: true, showBuyButton: true }],
-        })),
-      },
-    ],
-  }),
+  },
   multiColumn({
     key: "countdown-band",
     label: "Countdown band",
     description: "A dark band with the offer's title, the timer and a buy button.",
     icon: AlarmClock,
-    group: "Commerce",
+    group: "convert",
     settings: { background: "ink", padding: "compact" },
     rows: [
       {
@@ -2128,9 +1951,179 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+  multiColumn({
+    key: "pricing-tiers",
+    label: "Plans",
+    description: "Three cards — a name, a line, what's included and a button. You fill in the prices.",
+    icon: Tag,
+    group: "convert",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [0, 1, 2].map((i) => ({
+          span: 4,
+          elements: ["heading", "text", "list", "button"] as PageElementType[],
+          content: [
+            { text: `اكتب اسم الباقة ${["الأولى", "التانية", "التالتة"][i]}`, level: 3 },
+            { text: "اكتب هنا السعر ولمين الباقة دي." },
+            { title: "", items: ["اكتب هنا أول حاجة فيها", "اكتب هنا تاني حاجة", "اكتب هنا تالت حاجة"] },
+            { label: "اختار الباقة دي", href: "/products", variant: i === 1 ? "primary" : "outline" },
+          ],
+          settings: { surface: "card" },
+        })),
+      },
+    ],
+  }),
+
+  // --- Building blocks: raw utility elements -------------------------------------
+  {
+    key: "heading",
+    label: "Heading",
+    description: "A standalone section title.",
+    icon: Heading1,
+    group: "basics",
+    elements: ["heading"],
+  },
+  {
+    key: "text",
+    label: "Text",
+    description: "A paragraph of copy.",
+    icon: AlignLeft,
+    group: "basics",
+    elements: ["text"],
+  },
+  {
+    key: "rich-text",
+    label: "Long text",
+    description: "A longer block of copy.",
+    icon: Type,
+    group: "basics",
+    elements: ["rich_text"],
+  },
+  {
+    key: "list",
+    label: "List",
+    description: "A bulleted list of points.",
+    icon: List,
+    group: "basics",
+    elements: ["list"],
+  },
+  {
+    key: "button",
+    label: "Button",
+    description: "A single call-to-action button.",
+    icon: MousePointerClick,
+    group: "basics",
+    elements: ["button"],
+  },
+  {
+    key: "image",
+    label: "Image",
+    description: "One image, optionally linked.",
+    icon: Image,
+    group: "basics",
+    elements: ["image"],
+  },
+  {
+    key: "gallery",
+    label: "Gallery",
+    description: "A grid of images.",
+    icon: Images,
+    group: "basics",
+    elements: ["gallery"],
+  },
+  {
+    key: "video",
+    label: "Video",
+    description: "An embedded video.",
+    icon: Video,
+    group: "basics",
+    elements: ["video"],
+  },
+  {
+    key: "embed",
+    label: "Embed",
+    description: "Embed an external page by URL.",
+    icon: Code2,
+    group: "basics",
+    elements: ["embed"],
+  },
+  {
+    key: "map",
+    label: "Map",
+    description: "Show your address on a map.",
+    icon: Map,
+    group: "basics",
+    elements: ["map"],
+  },
+  {
+    key: "icon",
+    label: "Icon",
+    description: "A single decorative icon.",
+    icon: CircleDot,
+    group: "basics",
+    elements: ["icon"],
+  },
+  {
+    key: "social",
+    label: "Social links",
+    description: "Links to your social profiles.",
+    icon: Share2,
+    group: "basics",
+    elements: ["social_icons"],
+  },
+  {
+    key: "divider",
+    label: "Divider",
+    description: "A horizontal rule between sections.",
+    icon: Minus,
+    group: "basics",
+    elements: ["divider"],
+  },
+  {
+    key: "spacer",
+    label: "Spacer",
+    description: "Vertical breathing room.",
+    icon: MoveVertical,
+    group: "basics",
+    elements: ["spacer"],
+  },
+  multiColumn({
+    key: "footer-links",
+    label: "Footer links",
+    description: "Two lists of links and your social profiles, side by side, for the bottom of a page.",
+    icon: PanelBottom,
+    group: "basics",
+    settings: { background: "paper", padding: "compact" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["list"],
+            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
+          },
+          {
+            span: 4,
+            elements: ["list"],
+            content: [{ title: "اكتب عنوان القائمة", items: ["اكتب هنا اسم صفحة", "اكتب هنا اسم صفحة تانية"] }],
+          },
+          { span: 4, elements: ["social_icons"], content: [{ links: [] }] },
+        ],
+      },
+    ],
+  }),
+  {
+    key: "countdown",
+    label: "Countdown",
+    description: "An urgency timer for a limited offer.",
+    icon: Timer,
+    group: "basics",
+    elements: ["countdown"],
+  },
 ];
 
-export const BLOCK_GROUPS: BlockPreset["group"][] = ["Layout", "Content", "Media", "Commerce", "Story"];
+export const BLOCK_GROUPS: BlockPreset["group"][] = ["hero", "trust", "commerce", "story", "convert", "basics"];
 
 // ---------------------------------------------------------------------------
 // Tree construction + immutable edits

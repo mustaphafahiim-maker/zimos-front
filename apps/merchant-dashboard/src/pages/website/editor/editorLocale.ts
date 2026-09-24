@@ -382,12 +382,27 @@ const SECTION_SETTING_OPTION_AR: Record<string, string> = {
   "gap.loose": "واسعة",
 };
 
+/**
+ * Keyed by BlockPreset.group. The six groups follow the order a merchant
+ * actually builds a page in — opening, trust, catalogue, story, conversion,
+ * then the raw utility blocks — rather than by implementation category.
+ */
+const GROUP_EN: Record<string, string> = {
+  hero: "Hero & Announcement",
+  trust: "Trust & Social Proof",
+  commerce: "Products & Collections",
+  story: "Features & Story",
+  convert: "FAQ, Contact & Conversion",
+  basics: "Building Blocks",
+};
+
 const GROUP_AR: Record<string, string> = {
-  Layout: "التخطيط",
-  Content: "المحتوى",
-  Media: "الوسائط",
-  Commerce: "البيع",
-  Story: "قصة",
+  hero: "الافتتاحية والإعلانات",
+  trust: "الثقة والتقييمات",
+  commerce: "المنتجات والمجموعات",
+  story: "المميزات والقصة",
+  convert: "الأسئلة والتواصل والإقناع",
+  basics: "عناصر أساسية",
 };
 
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
@@ -440,7 +455,7 @@ export function sectionSettingOption(
 }
 
 export function groupLabel(group: string, locale: EditorLocale): string {
-  return locale === "ar" ? (GROUP_AR[group] ?? group) : group;
+  return (locale === "ar" ? GROUP_AR[group] : GROUP_EN[group]) ?? group;
 }
 
 const UI_EN = {
