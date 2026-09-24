@@ -129,7 +129,6 @@ export default function App() {
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/website" element={<WebsitePage />} />
-                      <Route path="/website/:websiteId/edit" element={<WebsiteEditorPage />} />
                       <Route
                         path="/inbox"
                         element={
@@ -187,9 +186,16 @@ export default function App() {
                         }
                       />
                       <Route path="/funnels" element={<FunnelsPage />} />
-                      <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                     </Route>
+
+                    {/* The website and funnel editors are full-viewport canvases — no
+                        sidebar, no dashboard chrome eating the width a builder needs.
+                        Each page draws its own minimal header (back link, name,
+                        save/publish) in place of it. Still inside RequireWorkspace, so
+                        auth and the current workspace are unchanged. */}
+                    <Route path="/website/:websiteId/edit" element={<WebsiteEditorPage />} />
+                    <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
                   </Route>
                 </Route>
               </Routes>

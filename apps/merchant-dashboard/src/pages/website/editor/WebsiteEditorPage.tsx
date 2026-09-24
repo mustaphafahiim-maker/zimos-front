@@ -537,7 +537,9 @@ function WebsiteEditor() {
   );
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-4rem)] flex-col">
+    // A full-viewport page now (mounted outside DashboardLayout, see App.tsx),
+    // so this is the page's only chrome — no ancestor padding to cancel out.
+    <div className="flex h-dvh flex-col">
       <div className="border-b border-line bg-paper-raised px-6 py-4">
         <PageHeader
           title={website ? website.name : ui.editorTitle}

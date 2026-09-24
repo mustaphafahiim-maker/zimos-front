@@ -490,7 +490,9 @@ export function FunnelEditorPage() {
   const pageOffer = pageStep?.offerId ? offerIndex.get(pageStep.offerId) : undefined;
 
   return (
-    <div className="-m-4 flex h-[calc(100dvh-4rem)] flex-col md:-m-6 lg:-m-8">
+    // A full-viewport page now (mounted outside DashboardLayout, see App.tsx),
+    // so this is the page's only chrome — no ancestor padding to cancel out.
+    <div className="flex h-dvh flex-col">
       <div className="border-b border-line bg-paper-raised px-4 py-3 md:px-6">
         <DataState loading={loaded.loading} error={loaded.error} empty={!loaded.loading && !loaded.data} emptyMessage={t.notFound} onRetry={() => loaded.refresh()}>
           {funnel && (
