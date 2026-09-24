@@ -21,6 +21,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { StorefrontPreview } from "@/components/StorefrontPreview";
+import { CollapsiblePane } from "@/components/CollapsiblePane";
+import { useSessionBool } from "@/lib/useSessionState";
 import { BlockLibrary } from "./BlockLibrary";
 import { LayerList } from "./LayerList";
 import { SectionInspector } from "./SectionInspector";
@@ -164,6 +166,14 @@ function WebsiteEditor() {
   /** Below lg / xl the start and end panes are drawers. */
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  /**
+   * At lg / xl and up the panes sit beside the canvas instead — collapsible to
+   * a slim rail so the live preview can use their width back. Per-session
+   * (not per-user forever): worth remembering while a merchant works, not
+   * worth a permanent setting they'd have to go find again.
+   */
+  const [startCollapsed, setStartCollapsed] = useSessionBool("zimos:website-editor:start-collapsed", false);
+  const [endCollapsed, setEndCollapsed] = useSessionBool("zimos:website-editor:end-collapsed", false);
 
   // Everything in the tree the editor doesn't touch, preserved across a save.
   const [treeMeta, setTreeMeta] = useState<Omit<PageTree, "sections">>({ version: 1 });
@@ -244,12 +254,14 @@ function WebsiteEditor() {
     setSelectedId(sectionId);
     setInspectorTab("section");
     setEndOpen(true);
+    setEndCollapsed(false); // a picked section is the point of opening the inspector
     if (scroll) setScrollRequest((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }));
   }
 
   function requestInsert(index: number) {
     setInsertIndex(index);
     setStartOpen(true);
+    setStartCollapsed(false); // "add a section here" is pointless if the library stays hidden
   }
 
   /** Creates a section from `preset` and drops it at `index`, then selects and scrolls to it. */
@@ -540,7 +552,7 @@ function WebsiteEditor() {
     // A full-viewport page now (mounted outside DashboardLayout, see App.tsx),
     // so this is the page's only chrome — no ancestor padding to cancel out.
     <div className="flex h-dvh flex-col">
-      <div className="border-b border-line bg-paper-raised px-6 py-4">
+      <div className="border-b border-line bg-paper-raised px-6 py-3">
         <PageHeader
           title={website ? website.name : ui.editorTitle}
           titleMeta={page ? page.path : undefined}
@@ -678,9 +690,17 @@ function WebsiteEditor() {
             </div>
 
             <div className="flex min-h-0 flex-1">
-              <aside className="hidden w-72 shrink-0 border-e border-line bg-paper-raised lg:block">
+              <CollapsiblePane
+                side="start"
+                collapsed={startCollapsed}
+                onCollapsedChange={setStartCollapsed}
+                visibleClassName="lg:flex lg:w-72"
+                railClassName="lg:flex"
+                collapseLabel={ui.collapsePanel}
+                expandLabel={ui.expandPanel}
+              >
                 {startPane}
-              </aside>
+              </CollapsiblePane>
 
               <main className="min-w-0 flex-1 bg-paper">
                 {!page ? (
@@ -724,9 +744,17 @@ function WebsiteEditor() {
                 )}
               </main>
 
-              <aside className="hidden w-80 shrink-0 border-s border-line bg-paper-raised xl:block">
+              <CollapsiblePane
+                side="end"
+                collapsed={endCollapsed}
+                onCollapsedChange={setEndCollapsed}
+                visibleClassName="xl:flex xl:w-80"
+                railClassName="xl:flex"
+                collapseLabel={ui.collapsePanel}
+                expandLabel={ui.expandPanel}
+              >
                 {endPane()}
-              </aside>
+              </CollapsiblePane>
             </div>
           </div>
         </DataState>

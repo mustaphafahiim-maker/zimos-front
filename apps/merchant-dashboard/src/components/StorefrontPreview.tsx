@@ -327,12 +327,18 @@ export function StorefrontPreview({
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col bg-paper-raised", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-sm font-medium text-ink">{labels.title}</h2>
-          <p className="text-xs text-ink-soft">{labels.hint}</p>
-        </div>
-        <div className="flex items-center gap-1">
+      {/* One compact row: title and hint share a line (the hint is a plain
+          sentence, so it reads fine run-on) rather than stacking two lines of
+          text above the device switcher — chrome the canvas doesn't need. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-1.5">
+        <p className="min-w-0 truncate text-xs text-ink-soft">
+          <span className="font-display font-medium text-ink">{labels.title}</span>
+          <span className="mx-1.5 text-line" aria-hidden>
+            ·
+          </span>
+          {labels.hint}
+        </p>
+        <div className="flex items-center gap-0.5">
           {deviceButton("desktop", labels.desktop, Monitor)}
           {labels.tablet && deviceButton("tablet", labels.tablet, Tablet)}
           {deviceButton("mobile", labels.mobile, Smartphone)}
@@ -354,9 +360,9 @@ export function StorefrontPreview({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-auto bg-paper p-3">
+      <div className="relative min-h-0 flex-1 overflow-auto bg-paper p-1.5">
         {loading && (
-          <div className="pointer-events-none absolute inset-x-0 top-6 z-10 flex justify-center">
+          <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
             <Spinner className="size-5 text-ink-soft" />
           </div>
         )}
@@ -371,7 +377,7 @@ export function StorefrontPreview({
               tabIndex={visible === index ? undefined : -1}
               onLoad={() => onFrameLoad(index)}
               className={cn(
-                "absolute inset-0 block size-full rounded-[0.5rem] border border-line bg-paper-raised",
+                "absolute inset-0 block size-full rounded-[0.375rem] border border-line bg-paper-raised",
                 visible !== index && "pointer-events-none invisible"
               )}
             />

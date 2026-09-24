@@ -34,6 +34,21 @@ export const BLOCK_DRAG_TYPE = "application/x-zimos-block";
 
 type GroupFilter = "all" | BlockPreset["group"];
 
+/**
+ * A small curated set shown above the full gallery on first encounter, so a
+ * new merchant isn't immediately staring at 72 undifferentiated cards. One
+ * per common page need — an opener, a reason to trust the store, where to
+ * browse, social proof, a place for questions, a push to act — rather than
+ * "the first six alphabetically" or similar. Picked from the plainest preset
+ * of each kind (e.g. "products", not one of the multi-column commerce
+ * sections), since this row is the merchant's first read of what a block is.
+ */
+const POPULAR_KEYS = ["hero", "features", "products", "testimonials", "faq", "cta-band"];
+const POPULAR_PRESETS = POPULAR_KEYS.map((key) => BLOCK_PRESETS.find((p) => p.key === key)).filter(
+  (p): p is BlockPreset => p !== undefined
+);
+const POPULAR_KEY_SET = new Set(POPULAR_KEYS);
+
 /** Everything a search can match for one preset, both languages, lower-cased. */
 function searchText(preset: BlockPreset): string {
   const ar = presetText(preset.key, preset, "ar");
@@ -74,14 +89,22 @@ export function BlockLibrary({
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<GroupFilter>("all");
 
+  const searching = query.trim() !== "";
+  // The popular row only makes sense as a first read of the full, unfiltered
+  // gallery — once the merchant has narrowed by group or search, showing it
+  // again (now possibly missing entries the filter excludes) would just be
+  // confusing, so it drops out and the grid below is the complete answer.
+  const showPopular = group === "all" && !searching;
+
   const presets = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return BLOCK_PRESETS.filter((preset) => {
       if (group !== "all" && preset.group !== group) return false;
+      if (showPopular && POPULAR_KEY_SET.has(preset.key)) return false;
       const text = SEARCH_INDEX.get(preset.key) ?? "";
       return words.every((word) => text.includes(word));
     });
-  }, [query, group]);
+  }, [query, group, showPopular]);
 
   const tabs: Array<{ value: GroupFilter; label: string }> = [
     { value: "all", label: ui.allGroups },
@@ -148,44 +171,74 @@ export function BlockLibrary({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
+        {showPopular && POPULAR_PRESETS.length > 0 && (
+          <div className="mb-3">
+            <p className="mb-1.5 px-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+              {ui.popularBlocks}
+            </p>
+            <ul className="grid grid-cols-2 gap-1.5">
+              {POPULAR_PRESETS.map((preset) => (
+                <BlockCard key={preset.key} preset={preset} locale={locale} onAdd={onAdd} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+              ))}
+            </ul>
+          </div>
+        )}
+
         {presets.length === 0 ? (
           <p className="px-1 py-6 text-center text-sm text-ink-soft">{ui.noBlocksFound}</p>
         ) : (
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-2">
-            {presets.map((preset) => {
-              const text = presetText(preset.key, preset, locale);
-              return (
-                <li key={preset.key}>
-                  <button
-                    type="button"
-                    draggable
-                    onClick={() => onAdd(preset)}
-                    onDragStart={(e) => {
-                      // The default drag image (a snapshot of this button) is
-                      // already the thumbnail plus its label, so nothing extra
-                      // is set here. `effectAllowed`/`setData` are what make
-                      // Firefox and Safari start the drag at all; the preset
-                      // itself travels as component state (see the file doc).
-                      e.dataTransfer.effectAllowed = "copy";
-                      e.dataTransfer.setData(BLOCK_DRAG_TYPE, preset.key);
-                      onDragStart?.(preset);
-                    }}
-                    onDragEnd={() => onDragEnd?.()}
-                    title={text.description}
-                    className="cursor-grab group flex h-full w-full flex-col gap-1.5 rounded-[0.5rem] border border-line bg-paper p-1.5 text-start transition-colors hover:border-primary hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
-                  >
-                    <BlockThumbnail elements={preset.elements} />
-                    <span className="px-0.5 text-xs font-medium leading-snug text-ink group-hover:text-primary-dark dark:group-hover:text-primary">
-                      {text.label}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+          <ul className="grid grid-cols-2 gap-1.5">
+            {presets.map((preset) => (
+              <BlockCard key={preset.key} preset={preset} locale={locale} onAdd={onAdd} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+            ))}
           </ul>
         )}
       </div>
     </div>
+  );
+}
+
+/** One card, shared by the popular row and the full grid. */
+function BlockCard({
+  preset,
+  locale,
+  onAdd,
+  onDragStart,
+  onDragEnd,
+}: {
+  preset: BlockPreset;
+  locale: ReturnType<typeof useEditorLocale>;
+  onAdd: (preset: BlockPreset) => void;
+  onDragStart?: (preset: BlockPreset) => void;
+  onDragEnd?: () => void;
+}) {
+  const text = presetText(preset.key, preset, locale);
+  return (
+    <li>
+      <button
+        type="button"
+        draggable
+        onClick={() => onAdd(preset)}
+        onDragStart={(e) => {
+          // The default drag image (a snapshot of this button) is already the
+          // thumbnail plus its label, so nothing extra is set here.
+          // `effectAllowed`/`setData` are what make Firefox and Safari start
+          // the drag at all; the preset itself travels as component state
+          // (see the file doc).
+          e.dataTransfer.effectAllowed = "copy";
+          e.dataTransfer.setData(BLOCK_DRAG_TYPE, preset.key);
+          onDragStart?.(preset);
+        }}
+        onDragEnd={() => onDragEnd?.()}
+        title={text.description}
+        className="cursor-grab group flex h-full w-full flex-col gap-1 rounded-[0.5rem] border border-line bg-paper p-1.5 text-start transition-colors hover:border-primary hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
+      >
+        <BlockThumbnail elements={preset.elements} />
+        <span className="px-0.5 text-[11px] font-medium leading-snug text-ink group-hover:text-primary-dark dark:group-hover:text-primary">
+          {text.label}
+        </span>
+      </button>
+    </li>
   );
 }

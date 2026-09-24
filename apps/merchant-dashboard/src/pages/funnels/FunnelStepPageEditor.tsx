@@ -16,6 +16,8 @@ import type { PageSection, PageTree } from "@store-builder/api-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Select } from "@/components/Select";
 import { StorefrontPreview } from "@/components/StorefrontPreview";
+import { CollapsiblePane } from "@/components/CollapsiblePane";
+import { useSessionBool } from "@/lib/useSessionState";
 import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { BlockLibrary } from "../website/editor/BlockLibrary";
 import { SectionCard } from "../website/editor/SectionCard";
@@ -90,6 +92,8 @@ export function FunnelStepPageEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [libraryCollapsed, setLibraryCollapsed] = useSessionBool("zimos:funnel-page-editor:library-collapsed", false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useSessionBool("zimos:funnel-page-editor:inspector-collapsed", false);
 
   // A different step is a different page: drop the section selection with it.
   const [seededKey, setSeededKey] = useState(step.key);
@@ -119,10 +123,15 @@ export function FunnelStepPageEditor({
     setSections(moveSection(sections, from, to));
   }
 
+  function selectSection(id: string | null) {
+    setSelectedId(id);
+    setInspectorCollapsed(false);
+  }
+
   function addBlock(preset: BlockPreset) {
     const section = createSection(preset);
     setSections([...sections, section]);
-    setSelectedId(section.id);
+    selectSection(section.id);
   }
 
   function updateSection(next: PageSection) {
@@ -142,9 +151,17 @@ export function FunnelStepPageEditor({
   return (
     <EditorLocaleContext.Provider value={locale}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-        <aside className="hidden w-56 shrink-0 border-e border-line bg-paper-raised lg:block">
+        <CollapsiblePane
+          side="start"
+          collapsed={libraryCollapsed}
+          onCollapsedChange={setLibraryCollapsed}
+          visibleClassName="lg:flex lg:w-56"
+          railClassName="lg:flex"
+          collapseLabel={t.collapsePanel}
+          expandLabel={t.expandPanel}
+        >
           <BlockLibrary onAdd={addBlock} />
-        </aside>
+        </CollapsiblePane>
 
         <main className="min-w-0 flex-1 bg-paper p-4 md:p-6 lg:overflow-y-auto">
           <div className="mx-auto max-w-2xl">
@@ -201,7 +218,7 @@ export function FunnelStepPageEditor({
                         key={section.id}
                         section={section}
                         selected={section.id === selectedId}
-                        onSelect={() => setSelectedId(section.id)}
+                        onSelect={() => selectSection(section.id)}
                         onDelete={() => setPendingDelete(section)}
                       />
                     ))}
@@ -217,9 +234,17 @@ export function FunnelStepPageEditor({
           </div>
         </main>
 
-        <aside className="hidden w-80 shrink-0 border-s border-line bg-paper-raised xl:block xl:overflow-y-auto">
+        <CollapsiblePane
+          side="end"
+          collapsed={inspectorCollapsed}
+          onCollapsedChange={setInspectorCollapsed}
+          visibleClassName="xl:flex xl:w-80"
+          railClassName="xl:flex"
+          collapseLabel={t.collapsePanel}
+          expandLabel={t.expandPanel}
+        >
           {inspector || <p className="px-4 py-6 text-sm text-ink-soft">{t.selectSection}</p>}
-        </aside>
+        </CollapsiblePane>
       </div>
 
       {/* Below xl the inspector can't sit beside the page, so it overlays. */}

@@ -46,6 +46,8 @@ export const EDITOR_STRINGS = {
     oneToFix: "1 thing to fix before publishing",
     showStep: "Show step",
     serverSaid: "The server checked the saved draft:",
+    collapsePanel: "Collapse panel",
+    expandPanel: "Expand panel",
   },
   ar: {
     notFound: "مسار البيع هذا غير موجود.",
@@ -91,6 +93,8 @@ export const EDITOR_STRINGS = {
     oneToFix: "حاجة واحدة لازم تتصلّح قبل النشر",
     showStep: "روح للخطوة",
     serverSaid: "السيرفر راجع المسودة المحفوظة:",
+    collapsePanel: "طي اللوحة",
+    expandPanel: "فتح اللوحة",
   },
 } satisfies Messages;
 
@@ -207,6 +211,8 @@ export const PAGE_STRINGS = {
     useProduct: "Show “{product}” in this page's product blocks",
     useProductHint: "This step's offer is on {product}. Product blocks with no product picked show your newest product instead.",
     noSteps: "Add a step first — each step has its own page.",
+    collapsePanel: "Collapse panel",
+    expandPanel: "Expand panel",
   },
   ar: {
     step: "الخطوة",
@@ -229,6 +235,8 @@ export const PAGE_STRINGS = {
     useProduct: "اعرض «{product}» في بلوكات المنتج في الصفحة دي",
     useProductHint: "عرض الخطوة دي على {product}. بلوكات المنتج اللي مفيهاش منتج متحدد بتعرض أحدث منتج عندك.",
     noSteps: "ضيف خطوة الأول — كل خطوة ليها صفحتها.",
+    collapsePanel: "طي اللوحة",
+    expandPanel: "فتح اللوحة",
   },
 } satisfies Messages;
 

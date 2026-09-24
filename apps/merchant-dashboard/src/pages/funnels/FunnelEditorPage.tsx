@@ -45,6 +45,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Alert, Button, Input, Label, Spinner, cn } from "@store-builder/ui";
+import { PaneCollapseToggle, PaneRail } from "@/components/CollapsiblePane";
+import { useSessionBool } from "@/lib/useSessionState";
 import {
   FUNNEL_OFFER_STEP_TYPES,
   funnelsListRevisions,
@@ -277,6 +279,9 @@ export function FunnelEditorPage() {
   const [editingName, setEditingName] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
+  /** Desktop only — collapses the step list / inspector to a slim rail so the flow canvas can use their width. */
+  const [stepsCollapsed, setStepsCollapsed] = useSessionBool("zimos:funnel-editor:steps-collapsed", false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useSessionBool("zimos:funnel-editor:inspector-collapsed", false);
 
   const baselineJson = useMemo(() => (baseline ? JSON.stringify(baseline) : ""), [baseline]);
   const dirty = funnel !== null && JSON.stringify(funnel) !== baselineJson;
@@ -306,6 +311,12 @@ export function FunnelEditorPage() {
 
   /** Keys a new step must not reuse: keys are immutable server-side and deletes run last on save. */
   const takenKeys = useCallback((f: UiFunnel) => [...f.steps.map((s) => s.key), ...(baseline?.steps.map((s) => s.key) ?? [])], [baseline]);
+
+  /** Picking a step (list or canvas) is the point of opening the inspector — bring it back if it was collapsed. */
+  function selectStep(key: string) {
+    setSelectedKey(key);
+    setInspectorCollapsed(false);
+  }
 
   const updateStep = useCallback(
     (key: string, changes: Partial<UiStep>) => {
@@ -687,7 +698,18 @@ export function FunnelEditorPage() {
 
       {funnel && view === "flow" && (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-          <aside className="flex max-h-60 w-full shrink-0 flex-col border-b border-line bg-paper-raised lg:max-h-none lg:w-64 lg:border-b-0 lg:border-e">
+          {/* The rail is a desktop-only stand-in for a collapsed pane — below
+              `lg` the pane below always shows in full, same as before. */}
+          <PaneRail side="start" expandLabel={t.expandPanel} onExpand={() => setStepsCollapsed(false)} className={stepsCollapsed ? "hidden lg:flex" : "hidden"} />
+          <aside
+            className={cn(
+              "flex max-h-60 w-full shrink-0 flex-col border-b border-line bg-paper-raised",
+              stepsCollapsed ? "lg:hidden" : "lg:max-h-none lg:w-64 lg:border-b-0 lg:border-e lg:flex"
+            )}
+          >
+            <div className="hidden lg:block">
+              <PaneCollapseToggle side="start" collapseLabel={t.collapsePanel} onCollapse={() => setStepsCollapsed(true)} />
+            </div>
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.steps}</span>
               <AddStepMenu onAdd={addStep} />
@@ -702,7 +724,7 @@ export function FunnelEditorPage() {
                         step={s}
                         selected={s.key === selectedKey}
                         problemCount={grouped.byStep.get(s.key)?.length ?? 0}
-                        onSelect={() => setSelectedKey(s.key)}
+                        onSelect={() => selectStep(s.key)}
                         onDelete={() => setPendingDelete(s)}
                       />
                     ))}
@@ -719,7 +741,7 @@ export function FunnelEditorPage() {
             problemsByStep={grouped.byStep}
             offerIndex={offerIndex}
             catalogLoaded={catalog.data !== null}
-            onSelect={setSelectedKey}
+            onSelect={selectStep}
             onMove={(key, x, y) => updateStep(key, { x, y })}
             onAddAfter={addAfter}
             onInsert={insertOnEdge}
@@ -728,7 +750,15 @@ export function FunnelEditorPage() {
             onApplyTemplate={applyTemplate}
           />
 
-          <aside className="w-full shrink-0 border-t border-line bg-paper-raised lg:w-80 lg:overflow-y-auto lg:border-t-0 lg:border-s">
+          <aside
+            className={cn(
+              "w-full shrink-0 border-t border-line bg-paper-raised",
+              inspectorCollapsed ? "lg:hidden" : "lg:block lg:w-80 lg:overflow-y-auto lg:border-t-0 lg:border-s"
+            )}
+          >
+            <div className="hidden lg:block">
+              <PaneCollapseToggle side="end" collapseLabel={t.collapsePanel} onCollapse={() => setInspectorCollapsed(true)} />
+            </div>
             {selected ? (
               <StepInspector
                 key={selected.key}
@@ -749,6 +779,7 @@ export function FunnelEditorPage() {
               <p className="px-4 py-6 text-sm text-ink-soft">{t.selectHint}</p>
             )}
           </aside>
+          <PaneRail side="end" expandLabel={t.expandPanel} onExpand={() => setInspectorCollapsed(false)} className={inspectorCollapsed ? "hidden lg:flex" : "hidden"} />
         </div>
       )}
 
