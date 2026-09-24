@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
 
 /**
@@ -14,16 +14,28 @@ import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from 
  * share no code, so the message shapes are spelled out in both.
  *
  * Frame → editor
- *   { type: "zimos:preview-ready", sectionIds }   after every (re)load
- *   { type: "zimos:select-section", sectionId }   a section was clicked
- *   { type: "zimos:insert-section", index }       "add a section here"
+ *   { type: "zimos:preview-ready", sectionIds }        after every (re)load
+ *   { type: "zimos:select-section", sectionId }        a section was clicked
+ *   { type: "zimos:insert-section", index }             "add a section here"
+ *   { type: "zimos:move-section", sectionId, direction } the outline's own up/down buttons
+ *   { type: "zimos:section-rects", sections }            every section's box, while a drag is on
  *
  * Editor → frame
  *   { type: "zimos:editor-state", selectedId, labels, strings, theme }
  *   { type: "zimos:scroll-to-section", sectionId }
+ *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over us
  *
  * Everything it draws (outlines, name labels, the + buttons) is a fixed layer
  * above the page, so the page's own markup and layout are left untouched.
+ *
+ * Dragging a block from the library onto the canvas is native HTML5 DnD that
+ * starts in the (same-origin) dashboard window and is dropped on this
+ * (cross-origin) frame from the outside — the dashboard can fire dragover/drop
+ * on an overlay it draws over the iframe, but it can never read this
+ * document's DOM. So this side's job during a drag is just to publish its own
+ * geometry (`zimos:section-rects`) and to draw whatever gap the dashboard says
+ * is nearest (`zimos:drag-state`) — the actual index math lives on the
+ * dashboard side (previewBridge.ts's `nearestGapIndex`).
  */
 
 const SECTION_ATTR = "data-zimos-section";
@@ -36,9 +48,16 @@ const EDITOR_BLUE = "#2563eb";
 interface Strings {
   addAbove: string;
   addBelow: string;
+  moveUp: string;
+  moveDown: string;
 }
 
-const DEFAULT_STRINGS: Strings = { addAbove: "Add a section here", addBelow: "Add a section here" };
+const DEFAULT_STRINGS: Strings = {
+  addAbove: "Add a section here",
+  addBelow: "Add a section here",
+  moveUp: "Move up",
+  moveDown: "Move down",
+};
 
 function sectionEl(id: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${SECTION_ATTR}="${CSS.escape(id)}"]`);
@@ -137,6 +156,21 @@ function measure(id: string | null): Box | null {
   };
 }
 
+/** Every section's box, in document order — what a drag in progress needs to place a drop. */
+function measureAll(): Box[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(`[${SECTION_ATTR}]`)).map((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      id: el.getAttribute(SECTION_ATTR) ?? "",
+      index: Number(el.getAttribute(INDEX_ATTR) ?? 0),
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+}
+
 export function PreviewBridge({
   parentOrigin,
   editable,
@@ -152,8 +186,15 @@ export function PreviewBridge({
   const [selected, setSelected] = useState<string | null>(null);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [strings, setStrings] = useState<Strings>(DEFAULT_STRINGS);
-  // Bumped on scroll/resize so the fixed outlines follow their sections.
-  const [, setTick] = useState(0);
+  // A block from the library is being dragged over the canvas, and — once the
+  // dashboard has measured our sections and done the math — which gap it's
+  // nearest to right now. Both come from the editor (zimos:drag-state); this
+  // frame never computes either one itself.
+  const [dragActive, setDragActive] = useState(false);
+  const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
+  // Bumped on scroll/resize so the fixed outlines (and, mid-drag, the section
+  // rects the dashboard needs) follow the page.
+  const [tick, setTick] = useState(0);
   const frame = useRef(0);
 
   const post = useCallback(
@@ -229,6 +270,8 @@ export function PreviewBridge({
           setStrings({
             addAbove: typeof s.addAbove === "string" ? s.addAbove : DEFAULT_STRINGS.addAbove,
             addBelow: typeof s.addBelow === "string" ? s.addBelow : DEFAULT_STRINGS.addBelow,
+            moveUp: typeof s.moveUp === "string" ? s.moveUp : DEFAULT_STRINGS.moveUp,
+            moveDown: typeof s.moveDown === "string" ? s.moveDown : DEFAULT_STRINGS.moveDown,
           });
         }
         if ("theme" in data) applyTheme(readPreviewTheme(data.theme));
@@ -241,11 +284,28 @@ export function PreviewBridge({
           top: el.getBoundingClientRect().top + window.scrollY - header - 8,
           behavior: reduce ? "auto" : "smooth",
         });
+      } else if (data.type === "zimos:drag-state") {
+        setDragActive(data.active === true);
+        setDragHoverIndex(typeof data.hoverIndex === "number" ? data.hoverIndex : null);
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [parentOrigin]);
+
+  // While a drag is on, hand the dashboard our geometry so it can work out
+  // which gap the pointer (which it, not this frame, receives dragover/drop
+  // events for — see the header comment) is nearest to. Re-sent on every
+  // remeasure so a drag started before images/hydration settle still tracks.
+  useEffect(() => {
+    if (!dragActive) return;
+    post({
+      type: "zimos:section-rects",
+      sections: measureAll().map(({ id, index, top, height }) => ({ sectionId: id, index, top, height })),
+    });
+    // `tick` is a real dependency here, not just satisfying the linter: it's
+    // what makes this resend on every remeasure while the drag is on.
+  }, [dragActive, tick, post]);
 
   // Clicks select; links and forms stay put so the frame never leaves the preview.
   useEffect(() => {
@@ -299,6 +359,7 @@ export function PreviewBridge({
   const hoveredBox = hovered !== selected ? measure(hovered) : null;
   if (hoveredBox) boxes.push({ box: hoveredBox, active: false });
   if (selectedBox) boxes.push({ box: selectedBox, active: true });
+  const total = sectionIds().length;
 
   return (
     <div data-zimos-overlay="">
@@ -307,11 +368,17 @@ export function PreviewBridge({
           key={`${box.id}-${active ? "selected" : "hover"}`}
           box={box}
           active={active}
+          total={total}
           label={labels[box.id] ?? ""}
           strings={strings}
           onInsert={(index) => post({ type: "zimos:insert-section", index })}
+          onMove={(direction) => post({ type: "zimos:move-section", sectionId: box.id, direction })}
         />
       ))}
+      {/* While a block is being dragged in from the library, every gap is a
+          live drop target — not just the one near the mouse — with the
+          nearest one (as the dashboard has worked out) picked out. */}
+      {dragActive && <DragGaps hoverIndex={dragHoverIndex} />}
     </div>
   );
 }
@@ -319,17 +386,22 @@ export function PreviewBridge({
 function SectionOutline({
   box,
   active,
+  total,
   label,
   strings,
   onInsert,
+  onMove,
 }: {
   box: Box;
   active: boolean;
+  /** How many sections the page has, so the up/down buttons disable at either end. */
+  total: number;
   label: string;
   strings: Strings;
   onInsert: (index: number) => void;
+  onMove: (direction: "up" | "down") => void;
 }) {
-  // The chip rides the top edge, but never scrolls out of view with a tall section.
+  // The top bar rides the top edge, but never scrolls out of view with a tall section.
   const chipTop = Math.min(Math.max(box.top, 0), box.top + box.height - 24);
 
   return (
@@ -348,19 +420,22 @@ function SectionOutline({
           zIndex: 2147483000,
         }}
       />
-      {label && (
-        <div
-          style={{
-            position: "fixed",
-            top: chipTop,
-            left: box.left,
-            width: box.width,
-            pointerEvents: "none",
-            zIndex: 2147483001,
-            display: "flex",
-            paddingInline: 4,
-          }}
-        >
+      <div
+        style={{
+          position: "fixed",
+          top: chipTop,
+          left: box.left,
+          width: box.width,
+          pointerEvents: "none",
+          zIndex: 2147483001,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 4,
+          paddingInline: 4,
+        }}
+      >
+        {label ? (
           <span
             style={{
               background: EDITOR_BLUE,
@@ -376,8 +451,18 @@ function SectionOutline({
           >
             {label}
           </span>
-        </div>
-      )}
+        ) : (
+          <span />
+        )}
+        <MoveButtons
+          canMoveUp={box.index > 0}
+          canMoveDown={box.index < total - 1}
+          upLabel={strings.moveUp}
+          downLabel={strings.moveDown}
+          onMoveUp={() => onMove("up")}
+          onMoveDown={() => onMove("down")}
+        />
+      </div>
       <InsertButton top={box.top} box={box} label={strings.addAbove} onClick={() => onInsert(box.index)} />
       <InsertButton
         top={box.top + box.height}
@@ -385,6 +470,120 @@ function SectionOutline({
         label={strings.addBelow}
         onClick={() => onInsert(box.index + 1)}
       />
+    </>
+  );
+}
+
+/**
+ * The lighter-weight way to reorder a section without leaving the canvas —
+ * beside the outline's "+" buttons rather than replacing the layer list's own
+ * drag handle (LayerList.tsx, unaffected by any of this). Up/down glyphs
+ * don't mirror in RTL — a section moves toward the top or bottom of the page
+ * either way, never left or right.
+ */
+function MoveButtons({
+  canMoveUp,
+  canMoveDown,
+  upLabel,
+  downLabel,
+  onMoveUp,
+  onMoveDown,
+}: {
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  upLabel: string;
+  downLabel: string;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const buttonStyle = (enabled: boolean): CSSProperties => ({
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    border: "1.5px solid #fff",
+    background: EDITOR_BLUE,
+    color: "#fff",
+    font: "600 11px/1 ui-sans-serif, system-ui, sans-serif",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: enabled ? "pointer" : "default",
+    opacity: enabled ? 1 : 0.35,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+  });
+
+  return (
+    <span style={{ display: "flex", gap: 3, pointerEvents: "auto", flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={onMoveUp}
+        disabled={!canMoveUp}
+        aria-label={upLabel}
+        title={upLabel}
+        style={buttonStyle(canMoveUp)}
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        onClick={onMoveDown}
+        disabled={!canMoveDown}
+        aria-label={downLabel}
+        title={downLabel}
+        style={buttonStyle(canMoveDown)}
+      >
+        ↓
+      </button>
+    </span>
+  );
+}
+
+/**
+ * One fixed line per gap between sections (and one above the first, one below
+ * the last — `sections.length + 1` of them), shown for as long as a block is
+ * being dragged over the canvas. The one nearest the pointer — `hoverIndex`,
+ * as the dashboard computed it from the `zimos:section-rects` this frame just
+ * sent it — is drawn solid; the rest stay faint, so the merchant can see every
+ * place the block could land, not just the one closest right now.
+ */
+function DragGaps({ hoverIndex }: { hoverIndex: number | null }) {
+  const boxes = measureAll().sort((a, b) => a.index - b.index);
+  if (boxes.length === 0) return null;
+
+  const gaps: Array<{ index: number; top: number; left: number; width: number }> = [];
+  for (let i = 0; i <= boxes.length; i++) {
+    const top =
+      i === 0
+        ? boxes[0].top
+        : i === boxes.length
+          ? boxes[boxes.length - 1].top + boxes[boxes.length - 1].height
+          : (boxes[i - 1].top + boxes[i - 1].height + boxes[i].top) / 2;
+    const around = boxes[Math.min(i, boxes.length - 1)];
+    gaps.push({ index: i, top, left: around.left, width: around.width });
+  }
+
+  return (
+    <>
+      {gaps.map((gap) => {
+        const active = gap.index === hoverIndex;
+        return (
+          <div
+            key={gap.index}
+            style={{
+              position: "fixed",
+              top: gap.top - (active ? 2 : 1),
+              left: gap.left,
+              width: gap.width,
+              height: active ? 4 : 2,
+              borderRadius: 999,
+              background: active ? EDITOR_BLUE : "rgba(37, 99, 235, 0.35)",
+              pointerEvents: "none",
+              zIndex: 2147483003,
+              transition: "height 100ms, background 100ms",
+            }}
+          />
+        );
+      })}
     </>
   );
 }

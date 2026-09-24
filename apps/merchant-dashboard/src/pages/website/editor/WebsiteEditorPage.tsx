@@ -158,6 +158,8 @@ function WebsiteEditor() {
   const [inspectorTab, setInspectorTab] = useState<"section" | "look">("section");
   /** Where "add a section here" pointed; the next block from the library lands there. */
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  /** The block library card currently being dragged, or null between drags. Drives the canvas's drop overlay. */
+  const [draggingPreset, setDraggingPreset] = useState<BlockPreset | null>(null);
   const [scrollRequest, setScrollRequest] = useState<{ sectionId: string; nonce: number } | null>(null);
   /** Below lg / xl the start and end panes are drawers. */
   const [startOpen, setStartOpen] = useState(false);
@@ -250,12 +252,32 @@ function WebsiteEditor() {
     setStartOpen(true);
   }
 
-  function addBlock(preset: BlockPreset) {
+  /** Creates a section from `preset` and drops it at `index`, then selects and scrolls to it. */
+  function addBlockAt(preset: BlockPreset, index: number) {
     const section = createSection(preset);
-    setSections((prev) => insertSection(prev, section, insertIndex ?? prev.length));
+    setSections((prev) => insertSection(prev, section, index));
+    selectSection(section.id, { scroll: true });
+  }
+
+  function addBlock(preset: BlockPreset) {
+    addBlockAt(preset, insertIndex ?? sections.length);
     setInsertIndex(null);
     setStartOpen(false);
-    selectSection(section.id, { scroll: true });
+  }
+
+  /** A block dragged from the library and dropped at an exact gap on the canvas. */
+  function dropBlockAt(index: number) {
+    if (draggingPreset) addBlockAt(draggingPreset, index);
+    setDraggingPreset(null);
+  }
+
+  /** The canvas's own up/down buttons (PreviewBridge.tsx) — reorder without opening the layer list. */
+  function moveSectionBy(sectionId: string, direction: "up" | "down") {
+    setSections((prev) => {
+      const from = prev.findIndex((s) => s.id === sectionId);
+      if (from === -1) return prev;
+      return moveSection(prev, from, direction === "up" ? from - 1 : from + 1);
+    });
   }
 
   function updateSection(next: PageSection) {
@@ -452,6 +474,8 @@ function WebsiteEditor() {
           onAdd={addBlock}
           insertPosition={insertIndex === null ? null : insertIndex + 1}
           onCancelInsert={() => setInsertIndex(null)}
+          onDragStart={setDraggingPreset}
+          onDragEnd={() => setDraggingPreset(null)}
         />
       </div>
     </div>
@@ -680,11 +704,19 @@ function WebsiteEditor() {
                     canvas={{
                       selectedId,
                       labels,
-                      strings: { addAbove: ui.addAbove, addBelow: ui.addBelow },
+                      strings: {
+                        addAbove: ui.addAbove,
+                        addBelow: ui.addBelow,
+                        moveUp: ui.moveSectionUp,
+                        moveDown: ui.moveSectionDown,
+                      },
                       theme: lookToPreview(look),
                       scrollRequest,
                       onSelect: (id) => selectSection(id, { scroll: false }),
                       onInsert: requestInsert,
+                      onMoveSection: moveSectionBy,
+                      dragActive: draggingPreset !== null,
+                      onDrop: dropBlockAt,
                     }}
                   />
                 )}

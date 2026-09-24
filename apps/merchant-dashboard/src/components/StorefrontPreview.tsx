@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from "react";
 import { Monitor, RefreshCw, Smartphone, Tablet, X } from "lucide-react";
 import { Button, Spinner, cn } from "@store-builder/ui";
 import type { PageTree } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import {
+  nearestGapIndex,
   originOf,
   readFrameMessage,
+  type DragStateMessage,
   type EditorStateMessage,
   type PreviewTheme,
   type ScrollToSectionMessage,
+  type SectionRect,
 } from "@/lib/previewBridge";
 
 export interface PreviewLabels {
@@ -36,12 +39,24 @@ export interface PreviewCanvas {
   selectedId: string | null;
   /** Section id → the name shown on its outline. */
   labels: Record<string, string>;
-  strings: { addAbove: string; addBelow: string };
+  strings: { addAbove: string; addBelow: string; moveUp: string; moveDown: string };
   theme?: PreviewTheme | null;
   /** Scrolls the frame to a section; a new `nonce` asks again for the same one. */
   scrollRequest?: { sectionId: string; nonce: number } | null;
   onSelect: (sectionId: string) => void;
   onInsert: (index: number) => void;
+  /** The outline's own up/down buttons (PreviewBridge.tsx), reordering without the layer list. */
+  onMoveSection?: (sectionId: string, direction: "up" | "down") => void;
+  /**
+   * A block from the library is being dragged over the editor — true from
+   * `dragstart` on a BlockLibrary card to whichever of `dragend`/`onDrop`
+   * fires first. While it is, a transparent overlay goes up over the iframe
+   * (see below) so this drag — native HTML5 DnD, started same-origin in the
+   * dashboard — can be tracked over a frame the dashboard can't see into.
+   */
+  dragActive?: boolean;
+  /** Called with the computed insert index once a drag ends in a drop on the canvas. */
+  onDrop?: (index: number) => void;
 }
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -193,6 +208,53 @@ export function StorefrontPreview({
   // render that reports it (see preview-ready below).
   const frameSections = useRef<[string[], string[]]>([[], []]);
   const pendingScroll = useRef<string | null>(null);
+
+  // Frame → editor, while a drag is on: each frame's own section boxes, so a
+  // pointer position over the drop overlay below can be turned into an insert
+  // index. Keyed the same way frameSections is — by frame index, not by
+  // "visible" — since a render that just swapped in may report its rects
+  // before onFrameLoad flips `visible`.
+  const sectionRectsRef = useRef<[SectionRect[], SectionRect[]]>([[], []]);
+
+  // A block from the library is being dragged over the canvas, and which gap
+  // between sections the pointer is nearest to right now — computed here from
+  // the rects above, then handed back to the frame (zimos:drag-state) so its
+  // own "+" indicators and drop-line agree with what a drop would actually do.
+  const dragActive = canvas?.dragActive ?? false;
+  const [hoverGapIndex, setHoverGapIndex] = useState<number | null>(null);
+  useEffect(() => {
+    if (!dragActive) setHoverGapIndex(null);
+  }, [dragActive]);
+  useEffect(() => {
+    if (!STOREFRONT_ORIGIN) return;
+    const message: DragStateMessage = { type: "zimos:drag-state", active: dragActive, hoverIndex: hoverGapIndex };
+    for (const win of frames()) win?.postMessage(message, STOREFRONT_ORIGIN);
+  }, [dragActive, hoverGapIndex, frames]);
+
+  /**
+   * Cross-origin drag tracking: the drag starts same-origin in the dashboard
+   * (a BlockLibrary card), so the browser fires dragover/drop on this overlay
+   * — a transparent div positioned exactly over the iframe, rendered only
+   * while `dragActive` — rather than inside the frame's own (cross-origin,
+   * unreadable) document. `clientY` minus the overlay's own top, in the same
+   * units as the rects the frame measured with `getBoundingClientRect()`,
+   * lands in the iframe's own viewport space with no further scaling needed:
+   * this iframe is never CSS-scaled the way a template thumbnail is.
+   */
+  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    const y = event.clientY - event.currentTarget.getBoundingClientRect().top;
+    setHoverGapIndex(nearestGapIndex(sectionRectsRef.current[visibleRef.current], y));
+  }, []);
+
+  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const y = event.clientY - event.currentTarget.getBoundingClientRect().top;
+    const index = nearestGapIndex(sectionRectsRef.current[visibleRef.current], y);
+    canvasRef.current?.onDrop?.(index);
+    setHoverGapIndex(null);
+  }, []);
   const scrollNonce = canvas?.scrollRequest?.nonce;
   useEffect(() => {
     const request = canvasRef.current?.scrollRequest;
@@ -234,6 +296,15 @@ export function StorefrontPreview({
         case "zimos:insert-section":
           current?.onInsert(message.index);
           break;
+        case "zimos:move-section":
+          current?.onMoveSection?.(message.sectionId, message.direction);
+          break;
+        case "zimos:section-rects": {
+          const source = event.source as Window | null;
+          if (!source) break;
+          sectionRectsRef.current[source === frameA.current?.contentWindow ? 0 : 1] = message.sections;
+          break;
+        }
       }
     }
     window.addEventListener("message", onMessage);
@@ -305,6 +376,18 @@ export function StorefrontPreview({
               )}
             />
           ))}
+          {/* Sits exactly over the iframe, only while a block is being dragged
+              in: native drag events reach it (and never the cross-origin
+              frame underneath), so it's what turns a pointer position into a
+              drop. See the handlers above for why no scaling is needed. */}
+          {editing && dragActive && (
+            <div
+              className="absolute inset-0 z-20 cursor-copy rounded-[0.5rem]"
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragLeave={() => setHoverGapIndex(null)}
+            />
+          )}
         </div>
       </div>
 

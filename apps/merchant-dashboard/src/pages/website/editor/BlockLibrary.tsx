@@ -14,7 +14,23 @@ import { editorUi, elementLabel, groupLabel, presetText, useEditorLocale } from 
  * (pageTree.ALLOWED_ELEMENT_TYPES) — adding one that isn't on that allowlist
  * would make the page unsaveable, so the list is derived from BLOCK_PRESETS
  * rather than hand-written here.
+ *
+ * Every card is also a native HTML5 drag source (`draggable`), so a block can
+ * be picked up and dropped at an exact spot on the live preview canvas — see
+ * WebsiteEditorPage's `draggingPreset` state and StorefrontPreview's drop
+ * overlay. `onClick` (append, or insert at a clicked "+") keeps working
+ * exactly as before; dragging is an addition, not a replacement, so a
+ * merchant who can't or doesn't want to drag is never stuck. `dataTransfer`
+ * carries a plain type marker so a drop target that isn't this editor's own
+ * (there is none today, but nothing stops a browser drag from landing
+ * anywhere) can tell what's being dragged — the actual preset is tracked as
+ * plain component state instead of read out of `dataTransfer`, since
+ * `getData` during `dragover` is unreliable in most browsers and the drop
+ * target here needs the preset well before the `drop` event fires.
  */
+
+/** The `dataTransfer` type marker for a block dragged out of this library. */
+export const BLOCK_DRAG_TYPE = "application/x-zimos-block";
 
 type GroupFilter = "all" | BlockPreset["group"];
 
@@ -37,6 +53,8 @@ export function BlockLibrary({
   showHeader = true,
   insertPosition = null,
   onCancelInsert,
+  onDragStart,
+  onDragEnd,
 }: {
   onAdd: (preset: BlockPreset) => void;
   /** Off when a surrounding dialog already titles the list. */
@@ -47,6 +65,9 @@ export function BlockLibrary({
    */
   insertPosition?: number | null;
   onCancelInsert?: () => void;
+  /** A card's drag just started, or just ended (dropped, or cancelled). */
+  onDragStart?: (preset: BlockPreset) => void;
+  onDragEnd?: () => void;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -138,9 +159,21 @@ export function BlockLibrary({
                 <li key={preset.key}>
                   <button
                     type="button"
+                    draggable
                     onClick={() => onAdd(preset)}
+                    onDragStart={(e) => {
+                      // The default drag image (a snapshot of this button) is
+                      // already the thumbnail plus its label, so nothing extra
+                      // is set here. `effectAllowed`/`setData` are what make
+                      // Firefox and Safari start the drag at all; the preset
+                      // itself travels as component state (see the file doc).
+                      e.dataTransfer.effectAllowed = "copy";
+                      e.dataTransfer.setData(BLOCK_DRAG_TYPE, preset.key);
+                      onDragStart?.(preset);
+                    }}
+                    onDragEnd={() => onDragEnd?.()}
                     title={text.description}
-                    className="cursor-pointer group flex h-full w-full flex-col gap-1.5 rounded-[0.5rem] border border-line bg-paper p-1.5 text-start transition-colors hover:border-primary hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="cursor-grab group flex h-full w-full flex-col gap-1.5 rounded-[0.5rem] border border-line bg-paper p-1.5 text-start transition-colors hover:border-primary hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
                   >
                     <BlockThumbnail elements={preset.elements} />
                     <span className="px-0.5 text-xs font-medium leading-snug text-ink group-hover:text-primary-dark dark:group-hover:text-primary">

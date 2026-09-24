@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { originOf, readFrameMessage } from "./previewBridge";
+import { nearestGapIndex, originOf, readFrameMessage } from "./previewBridge";
 
 /**
  * The editor's window accepts messages from anything that can reach it, so the
@@ -65,11 +65,43 @@ describe("readFrameMessage — origin check", () => {
 describe("readFrameMessage — payloads", () => {
   const read = (data: unknown) => readFrameMessage({ origin: STOREFRONT, data, source: frameA }, STOREFRONT, frames);
 
-  it("reads the three frame messages", () => {
+  it("reads the frame messages", () => {
     expect(read({ type: "zimos:insert-section", index: 2 })).toEqual({ type: "zimos:insert-section", index: 2 });
     expect(read({ type: "zimos:preview-ready", sectionIds: ["a", "b"] })).toEqual({
       type: "zimos:preview-ready",
       sectionIds: ["a", "b"],
+    });
+    expect(read({ type: "zimos:move-section", sectionId: "hero-1a2b", direction: "up" })).toEqual({
+      type: "zimos:move-section",
+      sectionId: "hero-1a2b",
+      direction: "up",
+    });
+    expect(
+      read({
+        type: "zimos:section-rects",
+        sections: [{ sectionId: "hero-1a2b", index: 0, top: 12, height: 340 }],
+      })
+    ).toEqual({
+      type: "zimos:section-rects",
+      sections: [{ sectionId: "hero-1a2b", index: 0, top: 12, height: 340 }],
+    });
+  });
+
+  it("drops junk entries from a section-rects message rather than the whole message", () => {
+    expect(
+      read({
+        type: "zimos:section-rects",
+        sections: [
+          { sectionId: "a", index: 0, top: 0, height: 100 },
+          { sectionId: "b", index: -1, top: 0, height: 100 },
+          { sectionId: "", index: 1, top: 0, height: 100 },
+          { sectionId: "c", index: 2, top: "nope", height: 100 },
+          null,
+        ],
+      })
+    ).toEqual({
+      type: "zimos:section-rects",
+      sections: [{ sectionId: "a", index: 0, top: 0, height: 100 }],
     });
   });
 
@@ -90,8 +122,47 @@ describe("readFrameMessage — payloads", () => {
     expect(read({ type: "zimos:insert-section", index: -1 })).toBeNull();
     expect(read({ type: "zimos:insert-section", index: 1.5 })).toBeNull();
     expect(read({ type: "zimos:insert-section", index: "1" })).toBeNull();
-    // The editor's own outgoing message is not something a frame may send.
+    expect(read({ type: "zimos:move-section", sectionId: "a" })).toBeNull();
+    expect(read({ type: "zimos:move-section", sectionId: "a", direction: "sideways" })).toBeNull();
+    expect(read({ type: "zimos:move-section", sectionId: "", direction: "up" })).toBeNull();
+    expect(read({ type: "zimos:section-rects" })).toBeNull();
+    expect(read({ type: "zimos:section-rects", sections: "nope" })).toBeNull();
+    // The editor's own outgoing messages are not something a frame may send.
     expect(read({ type: "zimos:editor-state", selectedId: "a" })).toBeNull();
+    expect(read({ type: "zimos:drag-state", active: true, hoverIndex: 1 })).toBeNull();
     expect(read({ type: "something-else" })).toBeNull();
+  });
+});
+
+describe("nearestGapIndex", () => {
+  // Three 100px-tall sections stacked with no gap: [0,100), [100,200), [200,300).
+  const rects = [
+    { sectionId: "a", index: 0, top: 0, height: 100 },
+    { sectionId: "b", index: 1, top: 100, height: 100 },
+    { sectionId: "c", index: 2, top: 200, height: 100 },
+  ];
+
+  it("picks the gap before the section whose midpoint the pointer hasn't passed yet", () => {
+    expect(nearestGapIndex(rects, -50)).toBe(0);
+    expect(nearestGapIndex(rects, 0)).toBe(0);
+    expect(nearestGapIndex(rects, 49)).toBe(0);
+    expect(nearestGapIndex(rects, 51)).toBe(1);
+    expect(nearestGapIndex(rects, 149)).toBe(1);
+    expect(nearestGapIndex(rects, 151)).toBe(2);
+    expect(nearestGapIndex(rects, 249)).toBe(2);
+  });
+
+  it("returns one past the last section once the pointer is below every midpoint", () => {
+    expect(nearestGapIndex(rects, 251)).toBe(3);
+    expect(nearestGapIndex(rects, 10_000)).toBe(3);
+  });
+
+  it("doesn't require the rects to arrive in index order", () => {
+    const shuffled = [rects[2], rects[0], rects[1]];
+    expect(nearestGapIndex(shuffled, 51)).toBe(1);
+  });
+
+  it("returns 0 for an empty page", () => {
+    expect(nearestGapIndex([], 500)).toBe(0);
   });
 });
