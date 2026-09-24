@@ -20,6 +20,7 @@ import {
   Grid2x2,
   Grid3x3,
   Heading1,
+  Heart,
   HelpCircle,
   Image,
   Images,
@@ -44,6 +45,7 @@ import {
   PanelLeft,
   PanelRight,
   Quote,
+  Rows3,
   Scale,
   Share2,
   ShieldCheck,
@@ -1162,6 +1164,15 @@ export const BLOCK_PRESETS: BlockPreset[] = [
     elements: ["product_list"],
   },
   {
+    key: "related-products",
+    label: "Related products",
+    description: "A short row under the main content — 'you may also like'.",
+    icon: Heart,
+    group: "commerce",
+    elements: ["product_list"],
+    content: [{ title: "منتجات تانية تعجبك", source: "featured", limit: 4, columns: 4 }],
+  },
+  {
     key: "collections",
     label: "Collections",
     description: "Let shoppers browse by collection.",
@@ -1465,6 +1476,43 @@ export const BLOCK_PRESETS: BlockPreset[] = [
               { text: "اكتب هنا عنوان الجزء ده", level: 2 },
               { text: "اكتب فقرة قصيرة عن الصورة دي — منتج، قصة، أو طريقة شغل." },
               { label: "اعرف أكتر", href: "/products", variant: "outline" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "multirow",
+    label: "Alternating story",
+    description: "Two or three picture-and-text rows in one section, mirrored one to the next — how it's made, how it works, step by step.",
+    icon: Rows3,
+    group: "story",
+    rows: [
+      {
+        columns: [
+          { span: 5, elements: ["image"], settings: { verticalAlign: "center" } },
+          {
+            span: 7,
+            elements: ["heading", "text"],
+            content: [
+              { text: "اكتب هنا اسم الخطوة الأولى", level: 3 },
+              { text: "اكتب سطرين يشرحوا الخطوة دي وليه هي مهمة." },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 7,
+            elements: ["heading", "text"],
+            content: [
+              { text: "اكتب هنا اسم الخطوة التانية", level: 3 },
+              { text: "اكتب سطرين يشرحوا الخطوة دي وليه هي مهمة." },
             ],
             settings: { verticalAlign: "center" },
           },
@@ -1883,6 +1931,31 @@ export const BLOCK_PRESETS: BlockPreset[] = [
               { title: "", submitLabel: "اشترك" },
             ],
             settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "newsletter-banner",
+    label: "Newsletter with a picture",
+    description: "The same invitation, beside a picture instead of centred on its own.",
+    icon: Mail,
+    group: "convert",
+    settings: { background: "paper" },
+    rows: [
+      {
+        columns: [
+          { span: 6, elements: ["image"], settings: { verticalAlign: "center" } },
+          {
+            span: 6,
+            elements: ["heading", "text", "form"],
+            content: [
+              { text: "اكتب هنا دعوة العميل إنه يفضل متابعك", level: 2 },
+              { text: "اكتب سطر يقول هيوصله إيه ولو عايز قد إيه." },
+              { title: "", submitLabel: "اشترك" },
+            ],
+            settings: { verticalAlign: "center" },
           },
         ],
       },
