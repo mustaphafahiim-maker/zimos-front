@@ -45,7 +45,18 @@ const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed";
 function readCollapsedGroups(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
-    if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    if (raw) {
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      // A group that used to be collapsible (e.g. "storefront", before Website
+      // and Funnels moved into the non-collapsible "store" group) may still be
+      // sitting collapsed in someone's browser. Drop anything that isn't a
+      // real, still-collapsible group id so a stale entry can't hide a group
+      // that no longer allows collapsing.
+      const known = new Set(NAV_GROUPS.filter((g) => g.collapsible !== false).map((g) => g.id));
+      const cleaned: Record<string, boolean> = {};
+      for (const [id, value] of Object.entries(saved)) if (known.has(id)) cleaned[id] = value;
+      return cleaned;
+    }
   } catch {
     /* private mode or malformed — fall through to every group open */
   }
@@ -99,12 +110,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const isClosed = Boolean(collapsed[group.id]);
+          const canCollapse = group.collapsible !== false;
+          const isClosed = canCollapse && Boolean(collapsed[group.id]);
           const items = isClosed ? group.items.filter((i) => i.to === activeTo) : group.items;
 
           return (
             <div key={group.id} className={cn(index > 0 && "mt-4")}>
-              {heading && (
+              {heading && canCollapse && (
                 <button
                   type="button"
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
@@ -118,6 +130,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     aria-hidden
                   />
                 </button>
+              )}
+              {/* A non-collapsible group still gets its heading — just as plain
+                  text, with no button and nothing that can ever hide it. */}
+              {heading && !canCollapse && (
+                <p className="mb-1 px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase rtl:tracking-normal">
+                  {heading}
+                </p>
               )}
               <div className="space-y-0.5">
                 {items.map((item) => (

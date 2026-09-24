@@ -50,7 +50,7 @@ export type NavKey =
   | "settings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "sell" | "catalog" | "grow" | "insights" | "storefront";
+export type NavGroupKey = "sell" | "store" | "catalog" | "grow" | "insights";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
@@ -65,12 +65,29 @@ export interface NavGroup {
   /** Key into NAV_GROUP_LABELS, or null for an unheaded group. */
   labelKey: NavGroupKey | null;
   items: NavItem[];
+  /**
+   * false hides the collapse toggle entirely — this section is always fully
+   * shown. Reserved for a small number of groups a merchant must never lose
+   * track of (building the store is the whole point of the product), so a
+   * stray click can't hide "Website" or "Funnels" the way a collapsed group
+   * normally would. Every other group defaults to collapsible.
+   */
+  collapsible?: boolean;
 }
 
 /**
  * Sidebar structure. Order mirrors a merchant's day: what came in, what to
- * confirm, then the catalog behind it, then growth tooling, then the storefront
- * and its settings.
+ * confirm, then building the store itself, then the catalog behind it, then
+ * growth tooling.
+ *
+ * "Store" is deliberately early, right after Sell, and never collapses:
+ * building the website and the sales funnels are the two tools a merchant
+ * reaches for constantly, and burying either of them one click away from
+ * "gone" — as a collapsed accordion section can — is exactly the confusion
+ * this group exists to prevent. Compare Shopify's "Online Store" and
+ * EasyOrders' "إدارة المتجر" / "التسويق": both keep store-building and its
+ * companion landing-page/funnel tool in one place a merchant can't collapse
+ * away by accident.
  *
  * Every entry here must map to a route in App.tsx — the sidebar is not a
  * roadmap. Features the backend does not serve yet stay out until they do.
@@ -95,6 +112,16 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "store",
+    labelKey: "store",
+    collapsible: false,
+    items: [
+      { key: "website", to: "/website", icon: Globe },
+      { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "shipping", to: "/shipping", icon: Truck },
+    ],
+  },
+  {
     id: "catalog",
     labelKey: "catalog",
     items: [
@@ -111,7 +138,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "inbox", to: "/inbox", icon: MessageCircle },
       { key: "automations", to: "/automations", icon: Bot },
       { key: "marketing", to: "/marketing", icon: Megaphone },
-      { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "discounts", to: "/discounts", icon: Tag },
     ],
   },
@@ -121,14 +147,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "analytics", to: "/analytics", icon: BarChart3 },
       { key: "profit", to: "/profit", icon: PiggyBank },
-    ],
-  },
-  {
-    id: "storefront",
-    labelKey: "storefront",
-    items: [
-      { key: "website", to: "/website", icon: Globe },
-      { key: "shipping", to: "/shipping", icon: Truck },
     ],
   },
   {
@@ -210,16 +228,16 @@ export const NAV_LABELS = {
 export const NAV_GROUP_LABELS = {
   en: {
     sell: "Sell",
+    store: "Store",
     catalog: "Catalog",
     grow: "Grow",
     insights: "Insights",
-    storefront: "Storefront",
   },
   ar: {
     sell: "البيع",
+    store: "المتجر",
     catalog: "الكتالوج",
     grow: "النمو",
     insights: "التقارير",
-    storefront: "واجهة المتجر",
   },
 } satisfies Messages<NavGroupKey>;
