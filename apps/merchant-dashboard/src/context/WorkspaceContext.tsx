@@ -58,10 +58,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       const list = await apiClient.listWorkspaces();
       setWorkspaces(list);
-      if (!currentWorkspaceId && list.length > 0) {
-        setCurrentWorkspaceId(list[0].id);
+      // Functional update: `refresh` is often called from a closure captured
+      // before a selection changed (createWorkspace selects, then refreshes),
+      // and must not overwrite that newer selection with list[0].
+      setCurrentWorkspaceId((prev) => {
+        if (prev || list.length === 0) return prev;
         localStorage.setItem(CURRENT_WORKSPACE_KEY, list[0].id);
-      }
+        return list[0].id;
+      });
     } finally {
       setLoading(false);
     }
@@ -91,6 +95,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
        * looking at an error beside a store that had in fact been created. A
        * clash here means someone took the address between the last check and
        * the write, which is rare but not impossible.
+       *
+       * The list is then re-read rather than extended with the POST response:
+       * that response carries no `role`, and every role-gated screen (Shipping,
+       * Payments, the confirmation queue, ...) would treat the creator as a
+       * non-owner until the next reload. The re-read is silent and awaited, so
+       * the picker still shows its "creating" state and the new store is in the
+       * list, with its role, before anything navigates into it.
        */
       async createWorkspace(name, slug) {
         const created = await apiClient.createWorkspace(name);
@@ -105,9 +116,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        setWorkspaces((prev) => [...prev, workspace]);
         setCurrentWorkspaceId(workspace.id);
         localStorage.setItem(CURRENT_WORKSPACE_KEY, workspace.id);
+        try {
+          await refresh({ silent: true });
+        } catch {
+          // The store exists; don't fail creation over the re-read. Fall back to
+          // the POST response so it is at least listed and selectable.
+          setWorkspaces((prev) =>
+            prev.some((w) => w.id === workspace.id) ? prev : [...prev, workspace]
+          );
+        }
         return { workspace, addressError };
       },
       refresh,

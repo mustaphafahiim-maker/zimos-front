@@ -41,6 +41,7 @@ import {
   sandboxRemembered,
   shippingLogosAndSandbox,
 } from "./providers.scenarios.mjs";
+import { newStoreRoleGatedScreens } from "./workspace.scenarios.mjs";
 
 // Toasts and alerts wrap tracking numbers in bidi isolates (U+2066 … U+2069).
 const LRI = String.fromCharCode(0x2066);
@@ -561,6 +562,7 @@ const SCENARIOS = {
   K: orderCourierLogosAndErrors,
   L: paymentsPageLogos,
   M: orderPaymentLogos,
+  N: newStoreRoleGatedScreens,
 };
 
 const only = process.argv[2]?.split(",").filter(Boolean);
