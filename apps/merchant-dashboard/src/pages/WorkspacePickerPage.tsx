@@ -122,7 +122,7 @@ export function WorkspacePickerPage() {
                       required
                       value={name}
                       onChange={(e) => onNameChange(e.target.value)}
-                      placeholder="Ahmed's Store"
+                      placeholder="Store name"
                     />
                   </div>
 

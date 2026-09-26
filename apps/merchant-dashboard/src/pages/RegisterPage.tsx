@@ -124,7 +124,7 @@ export function RegisterPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ahmed Hassan"
+                placeholder="Your name"
               />
             </div>
 
@@ -148,7 +148,7 @@ export function RegisterPage() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="01000000000"
+                placeholder="01XXXXXXXXX"
               />
             </div>
 

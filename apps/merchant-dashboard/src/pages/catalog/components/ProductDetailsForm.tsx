@@ -31,9 +31,9 @@ const STRINGS = {
   en: {
     basics: "Basics",
     name: "Name",
-    namePlaceholder: "T-Shirt",
+    namePlaceholder: "Product name",
     description: "Description",
-    descriptionPlaceholder: "Soft cotton tee…",
+    descriptionPlaceholder: "Describe your product: material, size, what's included",
     status: "Status",
     type: "Type",
     tags: "Tags",
@@ -71,9 +71,9 @@ const STRINGS = {
   ar: {
     basics: "البيانات الأساسية",
     name: "الاسم",
-    namePlaceholder: "تيشيرت",
+    namePlaceholder: "اسم المنتج",
     description: "الوصف",
-    descriptionPlaceholder: "تيشيرت قطن ناعم…",
+    descriptionPlaceholder: "صف منتجك: الخامة، المقاس، محتويات العلبة",
     status: "الحالة",
     type: "النوع",
     tags: "الوسوم",
