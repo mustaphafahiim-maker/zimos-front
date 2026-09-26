@@ -1,11 +1,20 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
-import { Label, cn } from "@store-builder/ui";
+import { Check, Plus, X } from "lucide-react";
+import { Button, Input, Label, cn } from "@store-builder/ui";
 import { ColorField } from "@/components/ColorField";
+import { TextField } from "@/components/Field";
 import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, normalizeHex } from "@/lib/brandColors";
 import { ImageField } from "./ImageField";
-import { editorUi, useEditorLocale } from "./editorLocale";
-import { FONT_OPTIONS, PALETTES, RADIUS_OPTIONS, type StoreLook } from "./storeLook";
+import { editorUi, useEditorLocale, type EditorUi } from "./editorLocale";
+import { MoveButtons } from "./MoveButtons";
+import {
+  FONT_OPTIONS,
+  MAX_ANNOUNCEMENT_MESSAGES,
+  PALETTES,
+  RADIUS_OPTIONS,
+  type StoreAnnouncementLook,
+  type StoreLook,
+} from "./storeLook";
 
 /**
  * The inspector's "Store look" tab: colours, font, corners and logo for the
@@ -15,6 +24,14 @@ import { FONT_OPTIONS, PALETTES, RADIUS_OPTIONS, type StoreLook } from "./storeL
  *
  * `onChange` takes a history key so a burst of typing in a hex box, or a drag
  * across the native colour picker, is one undo step.
+ *
+ * The announcement bar section at the bottom previews live on the real
+ * storefront once saved — `announcementOf` (storeAnnouncement.ts) reads it
+ * straight off the workspace on every request. It does NOT preview inside
+ * this editor's own live iframe before that save: the preview bridge's
+ * `PreviewTheme` only ever carries colours/font/corners/logo (see
+ * storeLook.ts's `lookToPreview`), so an unsaved toggle here has nothing to
+ * show in the canvas until Save reloads it for real.
  */
 export function StoreLookPanel({
   look,
@@ -140,6 +157,163 @@ export function StoreLookPanel({
         value={look.logoUrl ?? ""}
         onChange={(url) => onChange({ ...look, logoUrl: url || null })}
       />
+
+      <AnnouncementSection
+        announcement={look.announcement}
+        onChange={(next) => onChange({ ...look, announcement: next })}
+      />
+    </div>
+  );
+}
+
+/** All-blank (or empty) messages, the one state a save can't keep "on" — see storeLook.ts's `announcementPatch`. */
+function announcementIsBlank(messages: string[]): boolean {
+  return messages.every((m) => m.trim() === "");
+}
+
+function AnnouncementSection({
+  announcement,
+  onChange,
+}: {
+  announcement: StoreAnnouncementLook;
+  onChange: (next: StoreAnnouncementLook) => void;
+}) {
+  const ui = editorUi(useEditorLocale());
+
+  return (
+    <section className="space-y-3 border-t border-line pt-4">
+      <label className="flex items-center gap-2 text-sm font-medium text-ink">
+        <input
+          type="checkbox"
+          checked={announcement.enabled}
+          onChange={(e) => onChange({ ...announcement, enabled: e.target.checked })}
+          className="size-4 rounded border-line text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+        />
+        {ui.announcementBar}
+      </label>
+      <p className="text-xs text-ink-soft">{ui.announcementBarHint}</p>
+
+      {announcement.enabled && (
+        <div className="space-y-3 ps-1">
+          <AnnouncementMessages
+            messages={announcement.messages}
+            ui={ui}
+            onChange={(messages) => onChange({ ...announcement, messages })}
+          />
+          {announcementIsBlank(announcement.messages) && (
+            <p className="text-xs font-medium text-danger">{ui.announcementNeedsMessage}</p>
+          )}
+
+          <TextField
+            label={ui.announcementLink}
+            hint={ui.announcementLinkHint}
+            dir="ltr"
+            value={announcement.href ?? ""}
+            onChange={(e) => onChange({ ...announcement, href: e.target.value.trim() ? e.target.value : null })}
+          />
+
+          <LookColor
+            label={ui.announcementBackground}
+            hint={announcement.background ? ui.announcementColorSetHint : ui.storeDefaultColor}
+            value={announcement.background}
+            fallback={DEFAULT_PRIMARY}
+            onChange={(hex) => onChange({ ...announcement, background: hex })}
+          />
+          <LookColor
+            label={ui.announcementTextColor}
+            hint={announcement.color ? ui.announcementColorSetHint : ui.storeDefaultColor}
+            value={announcement.color}
+            fallback="#FFFFFF"
+            onChange={(hex) => onChange({ ...announcement, color: hex })}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The repeatable message list: add/remove/reorder, at least one row shown
+ * always (removing the last one is a no-op — clearing text is how a merchant
+ * empties it), capped at `MAX_ANNOUNCEMENT_MESSAGES`. Modelled on
+ * SectionInspector.tsx's `StringListEditor` (same shape, not shared code —
+ * that one isn't exported, and this list also reorders), with `MoveButtons`
+ * reused as-is for the up/down controls.
+ */
+function AnnouncementMessages({
+  messages,
+  ui,
+  onChange,
+}: {
+  messages: string[];
+  ui: EditorUi;
+  onChange: (next: string[]) => void;
+}) {
+  const list = messages.length > 0 ? messages : [""];
+
+  function set(i: number, value: string) {
+    onChange(list.map((m, j) => (j === i ? value : m)));
+  }
+  function add() {
+    if (list.length >= MAX_ANNOUNCEMENT_MESSAGES) return;
+    onChange([...list, ""]);
+  }
+  function remove(i: number) {
+    if (list.length <= 1) return;
+    onChange(list.filter((_, j) => j !== i));
+  }
+  function move(i: number, direction: "up" | "down") {
+    const to = direction === "up" ? i - 1 : i + 1;
+    if (to < 0 || to >= list.length) return;
+    const next = list.slice();
+    [next[i], next[to]] = [next[to], next[i]];
+    onChange(next);
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>{ui.announcementMessages}</Label>
+      <div className="space-y-2">
+        {list.map((message, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <Input
+              value={message}
+              dir="auto"
+              placeholder={ui.announcementMessagePlaceholder}
+              aria-label={ui.announcementMessageAria(i + 1)}
+              onChange={(e) => set(i, e.target.value)}
+            />
+            <MoveButtons
+              canMoveUp={i > 0}
+              canMoveDown={i < list.length - 1}
+              upLabel={ui.announcementMoveUp(i + 1)}
+              downLabel={ui.announcementMoveDown(i + 1)}
+              onMoveUp={() => move(i, "up")}
+              onMoveDown={() => move(i, "down")}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={ui.announcementRemoveMessage(i + 1)}
+              disabled={list.length <= 1}
+              onClick={() => remove(i)}
+            >
+              <X className="size-4" aria-hidden />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={add}
+        disabled={list.length >= MAX_ANNOUNCEMENT_MESSAGES}
+      >
+        <Plus className="size-4" aria-hidden />
+        {ui.announcementAddMessage}
+      </Button>
     </div>
   );
 }

@@ -633,6 +633,22 @@ const UI_EN = {
     (({ sharp: "Sharp", soft: "Soft", round: "Round" }) as Record<string, string>)[key] ?? key,
   logo: "Logo",
   logoHint: "Shown in your store's header.",
+
+  announcementBar: "Announcement bar",
+  announcementBarHint: "One line above your header — a promo, a shipping note, a closure date.",
+  announcementMessages: "Messages",
+  announcementMessagePlaceholder: "e.g. Free shipping over $50",
+  announcementMessageAria: (i: number) => `Message ${i}`,
+  announcementAddMessage: "Add message",
+  announcementRemoveMessage: (i: number) => `Remove message ${i}`,
+  announcementMoveUp: (i: number) => `Move message ${i} up`,
+  announcementMoveDown: (i: number) => `Move message ${i} down`,
+  announcementNeedsMessage: "Add at least one message — otherwise this saves as turned off.",
+  announcementLink: "Link (optional)",
+  announcementLinkHint: "Where the bar sends shoppers who click it.",
+  announcementBackground: "Bar background",
+  announcementTextColor: "Bar text colour",
+  announcementColorSetHint: "Applies to the announcement bar only.",
 };
 
 export type EditorUi = typeof UI_EN;
@@ -786,6 +802,22 @@ const UI_AR: EditorUi = {
   radiusName: (key) => (({ sharp: "حادة", soft: "ناعمة", round: "مدوّرة" }) as Record<string, string>)[key] ?? key,
   logo: "اللوجو",
   logoHint: "بيظهر فوق في هيدر متجرك.",
+
+  announcementBar: "شريط الإعلان",
+  announcementBarHint: "سطر واحد فوق الهيدر — عرض، أو ملحوظة عن الشحن، أو تاريخ قفل.",
+  announcementMessages: "الرسايل",
+  announcementMessagePlaceholder: "مثلاً: شحن مجاني فوق 500 جنيه",
+  announcementMessageAria: (i) => `الرسالة ${i}`,
+  announcementAddMessage: "إضافة رسالة",
+  announcementRemoveMessage: (i) => `حذف الرسالة ${i}`,
+  announcementMoveUp: (i) => `تحريك الرسالة ${i} لفوق`,
+  announcementMoveDown: (i) => `تحريك الرسالة ${i} لتحت`,
+  announcementNeedsMessage: "ضيف رسالة واحدة على الأقل — وإلا هيتحفظ الشريط مقفول.",
+  announcementLink: "الرابط (اختياري)",
+  announcementLinkHint: "فين هيوصل العميل لو دوس على الشريط.",
+  announcementBackground: "خلفية الشريط",
+  announcementTextColor: "لون كلام الشريط",
+  announcementColorSetHint: "بيتطبق على شريط الإعلان بس.",
 };
 
 export function editorUi(locale: EditorLocale): EditorUi {
