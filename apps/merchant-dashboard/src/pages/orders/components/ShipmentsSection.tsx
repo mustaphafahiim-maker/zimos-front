@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Alert, Button, Card, CardContent } from "@store-builder/ui";
-import type { Shipment, ShipmentStatus } from "@store-builder/api-client";
+import type { BostaCity, BostaDistrict, Shipment, ShipmentStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
@@ -9,6 +9,29 @@ import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+
+// Bosta district picker — resolves the district a Bosta shipment needs (see
+// backend src/modules/shipping/carriers/bostaCarrier.js#buildDropOffAddress)
+// for one shipment at booking time. Only shown once GET .../bosta/cities
+// actually returns cities (i.e. Bosta is connected for this store); stays
+// hidden, no error, otherwise.
+const STRINGS = {
+  en: {
+    bostaCity: "Bosta city",
+    bostaDistrict: "Bosta district",
+    bostaCityPlaceholder: "Select a city…",
+    bostaDistrictPlaceholder: "Select a district…",
+    bostaHint: "Optional — helps Bosta place this delivery precisely.",
+  },
+  ar: {
+    bostaCity: "مدينة بوسطة",
+    bostaDistrict: "منطقة بوسطة",
+    bostaCityPlaceholder: "اختر مدينة…",
+    bostaDistrictPlaceholder: "اختر منطقة…",
+    bostaHint: "اختياري — يساعد بوسطة على تحديد عنوان التوصيل بدقة.",
+  },
+} satisfies Messages;
 
 const STATUSES: ShipmentStatus[] = [
   "created",
@@ -31,6 +54,8 @@ interface Props {
 export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged }: Props) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [carrierCode, setCarrierCode] = useState("manual");
@@ -39,6 +64,49 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Bosta district picker state. `citiesRequested` guards against re-fetching
+  // every time the carrier field is toggled; an empty `cities` list (Bosta
+  // not connected, or the lookup failed) just keeps the picker hidden.
+  const isBosta = carrierCode.trim() === "bosta";
+  const [citiesRequested, setCitiesRequested] = useState(false);
+  const [cities, setCities] = useState<BostaCity[]>([]);
+  const [districts, setDistricts] = useState<BostaDistrict[]>([]);
+  const [districtsLoading, setDistrictsLoading] = useState(false);
+  const [bostaCityId, setBostaCityId] = useState("");
+  const [bostaDistrictId, setBostaDistrictId] = useState("");
+
+  useEffect(() => {
+    if (!isBosta || citiesRequested) return;
+    setCitiesRequested(true);
+    apiClient
+      .listBostaCities(workspaceId)
+      .then((list) => setCities(list))
+      .catch(() => setCities([])); // quietly no picker — never a scary error here
+  }, [isBosta, citiesRequested, workspaceId]);
+
+  useEffect(() => {
+    if (!isBosta) {
+      setBostaCityId("");
+      setBostaDistrictId("");
+      setDistricts([]);
+    }
+  }, [isBosta]);
+
+  async function onBostaCityChange(cityId: string) {
+    setBostaCityId(cityId);
+    setBostaDistrictId("");
+    setDistricts([]);
+    if (!cityId) return;
+    setDistrictsLoading(true);
+    try {
+      setDistricts(await apiClient.listBostaDistricts(workspaceId, cityId));
+    } catch {
+      setDistricts([]);
+    } finally {
+      setDistrictsLoading(false);
+    }
+  }
 
   async function updateStatus(shipment: Shipment, status: ShipmentStatus) {
     setBusyId(shipment.id);
@@ -63,10 +131,14 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
         carrierCode: carrierCode.trim() || "manual",
         waybillNumber: waybillNumber.trim() || undefined,
         trackingUrl: trackingUrl.trim() || undefined,
+        ...(isBosta && bostaDistrictId ? { bostaDistrictId } : {}),
       });
       toast.success("Shipment created.");
       setWaybillNumber("");
       setTrackingUrl("");
+      setBostaCityId("");
+      setBostaDistrictId("");
+      setDistricts([]);
       onChanged();
     } catch (err) {
       const fields = getFieldErrors(err);
@@ -158,6 +230,46 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
                 error={fieldErrors.trackingUrl}
               />
             </div>
+
+            {isBosta && cities.length > 0 && (
+              <div className="rounded-[0.5rem] border border-line bg-paper px-3 py-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block text-ink-soft">{t.bostaCity}</span>
+                    <Select
+                      value={bostaCityId}
+                      onChange={(e) => onBostaCityChange(e.target.value)}
+                      className="h-9 w-full text-[13px]"
+                    >
+                      <option value="">{t.bostaCityPlaceholder}</option>
+                      {cities.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {locale === "ar" && c.nameAr ? c.nameAr : c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block text-ink-soft">{t.bostaDistrict}</span>
+                    <Select
+                      value={bostaDistrictId}
+                      onChange={(e) => setBostaDistrictId(e.target.value)}
+                      disabled={!bostaCityId || districtsLoading}
+                      className="h-9 w-full text-[13px]"
+                    >
+                      <option value="">{t.bostaDistrictPlaceholder}</option>
+                      {districts.map((d) => (
+                        <option key={d.districtId} value={d.districtId}>
+                          {locale === "ar" && d.districtOtherName ? d.districtOtherName : d.districtName}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-ink-soft">{t.bostaHint}</p>
+              </div>
+            )}
+
             <div className="flex justify-end">
               <Button type="submit" size="sm" disabled={creating}>
                 {creating ? "Creating…" : "Create shipment"}

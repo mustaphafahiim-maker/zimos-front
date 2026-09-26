@@ -24,6 +24,8 @@ import type {
   AutomationRunListParams,
   AutomationRunListResponse,
   BlacklistPayload,
+  BostaCity,
+  BostaDistrict,
   Cart,
   CheckoutPayload,
   CollectionDetail,
@@ -1224,6 +1226,29 @@ export class ApiClient {
       { method: "PATCH", body: payload }
     );
     return shipment;
+  }
+
+  private bostaBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/bosta`;
+  }
+
+  /**
+   * Bosta's own cities, for the staff-side district picker on one shipment
+   * (see createShipment's `bostaDistrictId`). Resolves to `[]` rather than
+   * throwing when Bosta isn't connected for this store — callers should treat
+   * an empty list as "don't show the picker", not as an error.
+   */
+  async listBostaCities(workspaceId: string) {
+    const { cities } = await this.request<{ cities: BostaCity[] }>(`${this.bostaBase(workspaceId)}/cities`);
+    return cities;
+  }
+
+  /** Same "quietly empty" contract as listBostaCities above. */
+  async listBostaDistricts(workspaceId: string, cityId: string) {
+    const { districts } = await this.request<{ districts: BostaDistrict[] }>(
+      `${this.bostaBase(workspaceId)}/cities/${cityId}/districts`
+    );
+    return districts;
   }
 
   async listOrderReturns(workspaceId: string, orderId: string) {

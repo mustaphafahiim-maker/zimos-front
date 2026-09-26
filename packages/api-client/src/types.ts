@@ -1006,12 +1006,41 @@ export interface CreateShipmentPayload {
   carrierCode: string;
   waybillNumber?: string;
   trackingUrl?: string;
+  /**
+   * Bosta district staff picked for this one shipment (via listBostaCities +
+   * listBostaDistricts) — only read by the API when carrierCode is "bosta";
+   * ignored otherwise. Optional: omitting it books exactly as before.
+   */
+  bostaDistrictId?: string;
 }
 
 export interface UpdateShipmentPayload {
   status?: ShipmentStatus;
   waybillNumber?: string;
   trackingUrl?: string;
+}
+
+/**
+ * One entry from GET /workspaces/:workspaceId/bosta/cities. Shape confirmed
+ * against Bosta's own OpenAPI spec (data.list[] on GET /cities) — only the
+ * fields the district picker uses are declared here.
+ */
+export interface BostaCity {
+  _id: string;
+  name: string;
+  nameAr?: string;
+}
+
+/**
+ * One entry from GET /workspaces/:workspaceId/bosta/cities/:cityId/districts.
+ * Shape confirmed against Bosta's own OpenAPI spec (plain data[] array on
+ * GET /cities/{cityId}/districts, unlike /cities' `{ list: [...] }`).
+ */
+export interface BostaDistrict {
+  districtId: string;
+  districtName: string;
+  districtOtherName?: string;
+  zoneName?: string;
 }
 
 export interface CreateReturnPayload {
