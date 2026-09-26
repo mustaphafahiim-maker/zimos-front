@@ -1270,8 +1270,9 @@ export class ApiClient {
   /**
    * Manual shipment, or a booking with a connected courier. Courier-specific
    * failures: 422 CARRIER_ADDRESS_UNMATCHED (pick the address, resend with
-   * `carrierAddress`), 502 CARRIER_BOOKING_NOT_SAVED (the courier has the
-   * booking but it wasn't recorded — cancel it in the courier's dashboard).
+   * `carrierAddress`), CARRIER_BOOKING_NOT_SAVED (424, 502 on older servers:
+   * the courier has the booking but it wasn't recorded — cancel it in the
+   * courier's dashboard). Match these by code, never by status.
    */
   async createShipment(workspaceId: string, orderId: string, payload: CreateShipmentPayload) {
     const { shipment } = await this.request<{ shipment: Shipment }>(

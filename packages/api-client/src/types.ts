@@ -2581,8 +2581,16 @@ export interface ConnectCarrierResult {
   carrier: CarrierInfo;
   /** `manualSetupRequired`: paste `url` into the courier's dashboard (setup "account"). */
   webhook: { url: string; setup: CarrierWebhookSetup; manualSetupRequired: boolean };
-  /** Bosta: the account's pickup locations — only obtainable from this call. */
-  verification: { pickupLocations?: CarrierPickupLocation[] } & Record<string, unknown>;
+  /**
+   * Bosta: the account's pickup locations — only obtainable from this call.
+   * J&T: `customerCredentials: "unverified"` when the account can't call the
+   * credential check; the connection is saved and the customer code and
+   * password are first checked on a booking. Absent means checked (or n/a).
+   */
+  verification: {
+    pickupLocations?: CarrierPickupLocation[];
+    customerCredentials?: "unverified";
+  } & Record<string, unknown>;
 }
 
 export interface CarrierDistrict {
@@ -2718,8 +2726,9 @@ export interface ManualCancelRequiredDetails {
 }
 
 /**
- * `details` of 502 CARRIER_BOOKING_NOT_SAVED: the courier created the
- * booking but we could not record it, and the courier has no cancel API —
+ * `details` of CARRIER_BOOKING_NOT_SAVED (424; 502 on older servers): the
+ * courier created the booking but we could not record it, and the courier
+ * has no cancel API —
  * the merchant must cancel `trackingNumber` in the courier's dashboard.
  */
 export interface CarrierBookingNotSavedDetails {

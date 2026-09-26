@@ -70,7 +70,7 @@ export type ApiErrorCode =
   | "CARRIER_ADDRESS_UNMATCHED"
   | "CARRIER_CURRENCY_UNSUPPORTED"
   | "CARRIER_COD_LIMIT"
-  | "CARRIER_ERROR"
+  | "CARRIER_ERROR" // 424 (502 on older servers) — the courier failed; show the server's message
   | "CARRIER_NOT_CONNECTED"
   | "CARRIER_CANCEL_FAILED"
   | "CARRIER_CREDENTIALS_UNREADABLE"
@@ -79,7 +79,7 @@ export type ApiErrorCode =
   | "CARRIER_TIER_UNMAPPED" // 422, details = { tierId } — the booked tier has no package mapping
   | "CARRIER_MANUAL_CANCEL_REQUIRED" // 409, details = ManualCancelRequiredDetails — repeat with acknowledgeManualCancel
   | "CARRIER_CONNECT_CONFLICT" // 409 — two first-time connects raced; the other one was stored
-  | "CARRIER_BOOKING_NOT_SAVED" // 502, details = CarrierBookingNotSavedDetails — cancel it in the courier's dashboard
+  | "CARRIER_BOOKING_NOT_SAVED" // 424 (502 on older servers), details = CarrierBookingNotSavedDetails — cancel it in the courier's dashboard
   // online payments
   | "PAYMENTS_ONLINE_DISABLED" // 404 — shopper payment endpoints while online payments are off
   | "GATEWAYS_NOT_CONFIGURED" // 503 — no GATEWAY_CREDENTIALS_KEY on the server
@@ -87,7 +87,7 @@ export type ApiErrorCode =
   | "GATEWAY_KEYS_MODE_MISMATCH" // 422 — a test key with a live key
   | "GATEWAY_KEYS_UNRECOGNISED" // 422
   | "GATEWAY_REJECTED" // 422
-  | "GATEWAY_ERROR" // 502
+  | "GATEWAY_ERROR" // 424 (502 on older servers) — the gateway failed; show the server's message
   | "GATEWAY_NOT_CONNECTED" // 409
   | "GATEWAY_HAS_PENDING_PAYMENTS" // 409 — disconnect while an order waits on its payment
   | "GATEWAY_CREDENTIALS_UNREADABLE" // 409

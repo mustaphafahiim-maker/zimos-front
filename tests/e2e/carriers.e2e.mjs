@@ -1,7 +1,8 @@
 // Merchant dashboard: the generic carrier layer (courier connect cards,
 // courier picker, multi-level address picker, manual-cancel acknowledgement,
 // carrier error codes), plus provider logos and the carrier sandbox errors
-// (providers.scenarios.mjs), driven in Chromium against a fully stubbed API.
+// (providers.scenarios.mjs), upstream 424/502 errors and unverified J&T
+// credentials (upstream.scenarios.mjs), driven in Chromium against a fully stubbed API.
 //
 //   npm run test:e2e                 all scenarios
 //   npm run test:e2e -- B,C          only these scenarios
@@ -42,6 +43,7 @@ import {
   shippingLogosAndSandbox,
 } from "./providers.scenarios.mjs";
 import { newStoreRoleGatedScreens } from "./workspace.scenarios.mjs";
+import { connectUpstreamAndUnverified, upstreamBookingErrors } from "./upstream.scenarios.mjs";
 
 // Toasts and alerts wrap tracking numbers in bidi isolates (U+2066 … U+2069).
 const LRI = String.fromCharCode(0x2066);
@@ -563,6 +565,10 @@ const SCENARIOS = {
   L: paymentsPageLogos,
   M: orderPaymentLogos,
   N: newStoreRoleGatedScreens,
+  O: (browser, base) => upstreamBookingErrors(browser, base, 424),
+  O2: (browser, base) => upstreamBookingErrors(browser, base, 502),
+  P: (browser, base) => connectUpstreamAndUnverified(browser, base, "en"),
+  P2: (browser, base) => connectUpstreamAndUnverified(browser, base, "ar"),
 };
 
 const only = process.argv[2]?.split(",").filter(Boolean);

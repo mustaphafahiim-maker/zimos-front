@@ -916,7 +916,8 @@ function CreateShipmentForm({
         setNotSaved({ carrier: courierName, number: details?.trackingNumber ?? "—" });
         return;
       }
-      if (isApiErrorCode(err, "CARRIER_ERROR") && err.status === 502) {
+      if (isApiErrorCode(err, "CARRIER_ERROR")) {
+        // By code, not status: the upstream failure is moving from 502 to 424.
         // Shown exactly as the server says it ("check your Bosta dashboard").
         setUncertain(true);
       }

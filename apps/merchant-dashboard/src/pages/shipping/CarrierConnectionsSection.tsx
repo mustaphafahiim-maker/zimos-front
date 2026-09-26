@@ -123,6 +123,9 @@ const STRINGS = {
     environmentHint: "The sandbox only creates test shipments and never delivers them. Use Production for real orders.",
     sandboxNotAllowed:
       "The {name} sandbox only creates test shipments, so it's available to test stores only. A production {name} account is required: choose Production and enter your production {name} details.",
+    unverifiedTitle: "Customer code and password not checked yet",
+    unverifiedNote:
+      "The {name} connection is saved, but {name} didn't let us check the customer code and password yet. They'll be checked on your first booking; if that booking is refused, replace them here.",
   },
   ar: {
     title: "شركات الشحن",
@@ -208,6 +211,9 @@ const STRINGS = {
     environmentHint: "بيئة التجربة تنشئ شحنات تجريبية فقط ولا توصّلها أبدًا. استخدم الإنتاج للأوردرات الحقيقية.",
     sandboxNotAllowed:
       "بيئة التجربة (Sandbox) لدى {name} تنشئ شحنات تجريبية فقط، لذلك هي متاحة لمتاجر الاختبار فقط. يلزم حساب إنتاج (Production) لدى {name}: اختر الإنتاج وأدخل بيانات حسابك الفعلي لدى {name}.",
+    unverifiedTitle: "لم يتم التحقق من كود العميل وكلمة المرور بعد",
+    unverifiedNote:
+      "تم حفظ ربط {name}، لكن {name} لم تسمح لنا بالتحقق من كود العميل وكلمة المرور بعد. سيتم التحقق منهما عند حجز أول شحنة؛ وإذا رُفض الحجز، غيّرهما من هنا.",
   },
 } satisfies Messages;
 
@@ -371,6 +377,9 @@ function CarrierCard({
   const [credentialErrors, setCredentialErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  // Only a connect response says so (GET /carriers doesn't), so it lasts
+  // until the page reloads or a later key check comes back clean.
+  const [credentialsUnverified, setCredentialsUnverified] = useState(false);
 
   const current: Settings = connection?.settings ?? {};
   const tiers = useWeightTiers();
@@ -416,7 +425,12 @@ function CarrierCard({
   }
 
   async function put(payload: ConnectCarrierPayload) {
-    return apiClient.connectCarrier(workspaceId, carrier.code, payload);
+    const result = await apiClient.connectCarrier(workspaceId, carrier.code, payload);
+    const unverified = result.verification?.customerCredentials === "unverified";
+    // A settings-only save may not re-check the credentials, so its silence
+    // clears nothing; a credentials PUT's answer is the new reading.
+    if (unverified || payload.credentials) setCredentialsUnverified(unverified);
+    return result;
   }
 
   /** `result` is a verifying PUT's answer; null opens the stored settings as they are. */
@@ -532,6 +546,7 @@ function CarrierCard({
       throw new Error(errorMessage(err));
     }
     rememberCarrierEnvironment(workspaceId, carrier.code, null);
+    setCredentialsUnverified(false);
     setDisconnecting(false);
     setMode("view");
     toast.success(fmt(t.disconnectedToast, { name }));
@@ -597,6 +612,16 @@ function CarrierCard({
       {environment === "sandbox" && mode === "view" && (
         <div className="mt-3 rounded-[0.5rem] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-dark">
           {fmt(t.sandboxNote, { name })}
+        </div>
+      )}
+
+      {connection && credentialsUnverified && mode !== "key" && (
+        <div
+          role="status"
+          className="mt-3 rounded-[0.5rem] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-dark"
+        >
+          <p className="font-medium">{t.unverifiedTitle}</p>
+          <p className="mt-0.5">{fmt(t.unverifiedNote, { name })}</p>
         </div>
       )}
 
