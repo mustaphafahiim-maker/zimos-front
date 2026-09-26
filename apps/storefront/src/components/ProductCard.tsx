@@ -1,10 +1,15 @@
+"use client";
+
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
-import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, defaultOfferOf, discountPercent, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
-import { BoxIcon } from "./Icons";
+import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
+import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
+import { swipeStep } from "@/lib/swipe";
+import { ArrowIcon, BoxIcon } from "./Icons";
 import { TiltCard } from "./immersive/TiltCard";
 import { QuickAddButton } from "./QuickAddButton";
+import { skeleton } from "./ui";
 
 export function ProductCard({
   product,
@@ -20,7 +25,8 @@ export function ProductCard({
   const compareAt = compareAtOf(product);
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
   const anyInStock = product.variants.some((v) => v.inStock);
-  const image = firstImage(product);
+  const images = productImages(product);
+  const many = images.length > 1;
 
   // One variant and it is in stock: nothing to choose, so the card adds it in
   // one tap. Anything with options sends the shopper to the product page.
@@ -28,30 +34,129 @@ export function ProductCard({
   const quickAdd = only && only.inStock ? only : undefined;
   const offer = quickAdd ? defaultOfferOf(product) : undefined;
 
+  // --- image carousel: every real photo, not just the first ----------------
+  // In an RTL store "next" travels the other way, matching ProductGallery.
+  const forward = dirFor(locale) === "rtl" ? -1 : 1;
+  const [active, setActive] = useState(0);
+  const current = images[active] ?? images[0];
+
+  const step = (delta: number) => setActive((i) => (i + delta + images.length) % images.length);
+
+  // Photos load lazily and can lag; a themed pulse fills the frame until
+  // each one's `onLoad` fires, keyed by URL so a photo already seen never
+  // re-shows the skeleton.
+  const [loaded, setLoaded] = useState<Set<string>>(() => new Set());
+  const markLoaded = (src: string) => setLoaded((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
+
+  // Swipe-to-advance, the same pointer math as ProductGallery's main photo —
+  // a drag past the card counts as a swipe and skips the tap-to-navigate it
+  // would otherwise fire.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
+
+  function onPointerDown(e: ReactPointerEvent) {
+    if (!many) return;
+    swipe.current = { x: e.clientX, y: e.clientY };
+  }
+  function onPointerUp(e: ReactPointerEvent) {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start) return;
+    const delta = swipeStep(start, { x: e.clientX, y: e.clientY }, forward);
+    if (delta !== null) {
+      movedRef.current = true;
+      step(delta);
+    }
+  }
+  /** True when the pointer-up that preceded this click was a swipe. */
+  function swallowClickAfterSwipe(e: ReactMouseEvent) {
+    if (movedRef.current) {
+      movedRef.current = false;
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
   return (
     // The tilt is a wrapper, not a rewrite: it leans the card towards the
     // pointer (or the phone's tilt) and switches itself off entirely for
     // reduced motion, metered connections and weak devices.
     <TiltCard className="h-full rounded-2xl" max={7}>
     <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
-      <div className="relative aspect-square overflow-hidden bg-paper">
-        {image ? (
-          // Merchant media are arbitrary remote URLs (no next/image allowlist).
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image}
-            alt=""
-            width={600}
-            height={600}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-          />
+      {/* `z-10` lifts this above the title's stretched link (below) so the
+          swipe and the nav arrows receive their own pointer events; a plain
+          tap still reaches the same product through the link inside it. */}
+      <div className="relative z-10 aspect-square overflow-hidden bg-paper">
+        {current ? (
+          <StoreLink
+            href={`/products/${product.slug}`}
+            aria-label={product.name}
+            onPointerDown={onPointerDown}
+            onPointerUp={(e) => {
+              onPointerUp(e);
+            }}
+            onPointerLeave={() => {
+              swipe.current = null;
+            }}
+            onClick={(e) => {
+              swallowClickAfterSwipe(e);
+            }}
+            className="absolute inset-0 block touch-pan-y select-none"
+          >
+            {!loaded.has(current) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
+            {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={current}
+              alt=""
+              width={600}
+              height={600}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => markLoaded(current)}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+          </StoreLink>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-primary/40">
             <BoxIcon size={48} />
           </div>
         )}
+
+        {many && (
+          <>
+            <button
+              type="button"
+              aria-label={t.product.previousImage}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                step(-forward);
+              }}
+              className="absolute inset-y-0 start-1 z-10 flex w-8 items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-paper-raised/90 text-ink shadow-sm backdrop-blur">
+                <ArrowIcon size={14} className="rotate-180 rtl:rotate-0" />
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-label={t.product.nextImage}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                step(forward);
+              }}
+              className="absolute inset-y-0 end-1 z-10 flex w-8 items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-paper-raised/90 text-ink shadow-sm backdrop-blur">
+                <ArrowIcon size={14} className="rtl:rotate-180" />
+              </span>
+            </button>
+          </>
+        )}
+
         {pct && (
           <span className="absolute start-3 top-3 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-on-primary">
             {t.common.save(pct)}

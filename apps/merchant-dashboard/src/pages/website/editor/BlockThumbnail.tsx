@@ -15,7 +15,29 @@ const bar = "rounded-full bg-ink-soft/25";
 const line = (width: string) => <span className={`block h-1 ${bar}`} style={{ width }} />;
 const box = "rounded-[0.25rem] bg-line";
 
-function Sketch({ type }: { type: PageElementType }): ReactNode {
+/** The `gallery` element's own sketch, which needs its props to pick a layout. */
+function GallerySketch({ content }: { content?: Record<string, unknown> }) {
+  if (content?.layout === "slideshow") {
+    return (
+      <span className={`relative mx-auto block h-7 w-full ${box}`}>
+        <span className="absolute inset-x-1.5 bottom-1 flex justify-center gap-0.5">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className={`block size-1 rounded-full ${i === 0 ? "bg-paper-raised/90" : "bg-paper-raised/50"}`} />
+          ))}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="mx-auto grid w-4/5 grid-cols-3 gap-0.5">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <span key={i} className={`block h-3 ${box}`} />
+      ))}
+    </span>
+  );
+}
+
+function Sketch({ type, content }: { type: PageElementType; content?: Record<string, unknown> }): ReactNode {
   switch (type) {
     case "heading":
       return <span className="mx-auto block h-2 w-3/5 rounded-full bg-ink-soft/55" />;
@@ -39,13 +61,7 @@ function Sketch({ type }: { type: PageElementType }): ReactNode {
         </span>
       );
     case "gallery":
-      return (
-        <span className="mx-auto grid w-4/5 grid-cols-3 gap-0.5">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <span key={i} className={`block h-3 ${box}`} />
-          ))}
-        </span>
-      );
+      return <GallerySketch content={content} />;
     case "video":
     case "embed":
       return (
@@ -314,6 +330,7 @@ export const BlockThumbnail = memo(function BlockThumbnail({
   elements,
   rows,
   settings,
+  content,
 }: {
   elements: PageElementType[];
   /**
@@ -324,10 +341,18 @@ export const BlockThumbnail = memo(function BlockThumbnail({
    */
   rows?: PresetRow[];
   settings?: Record<string, unknown>;
+  /**
+   * Starting props, aligned index-for-index with `elements` — only read for
+   * the one element whose sketch actually branches on its props (`gallery`'s
+   * grid vs. slideshow layout). Looked up from the matching preset the same
+   * way `rows`/`settings` are when not passed directly.
+   */
+  content?: Array<Record<string, unknown> | undefined>;
 }) {
   const preset = rows === undefined ? BLOCK_PRESETS.find((p) => p.elements === elements) : undefined;
   const layout = rows ?? preset?.rows;
   const look = ground(settings ?? preset?.settings);
+  const startingProps = content ?? preset?.content;
 
   return (
     <span
@@ -342,7 +367,7 @@ export const BlockThumbnail = memo(function BlockThumbnail({
               ))}
             </span>
           ))
-        : elements.map((type, i) => <Sketch key={`${type}-${i}`} type={type} />)}
+        : elements.map((type, i) => <Sketch key={`${type}-${i}`} type={type} content={startingProps?.[i]} />)}
     </span>
   );
 });

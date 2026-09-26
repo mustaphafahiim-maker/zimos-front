@@ -94,7 +94,9 @@ describe("FunnelEditorPage", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("Sales page");
   });
 
-  it("edits a step's page with the section library and saves it with the funnel", async () => {
+  it(
+    "edits a step's page with the section library and saves it with the funnel",
+    async () => {
     serve(liveFunnel);
     const { user } = renderEditor();
     await screen.findByText("Live — revision #3");
@@ -112,7 +114,13 @@ describe("FunnelEditorPage", () => {
         expect.objectContaining({ method: "PATCH", body: expect.objectContaining({ builderData: expect.anything() }) })
       )
     );
-  });
+    },
+    // The block library has grown past this suite's original 5s default —
+    // rendering all of it (plus the "commonly used" row) now regularly takes
+    // 6-9s even in isolation. Not a flake: give this one test real headroom
+    // rather than the whole suite's default.
+    10_000
+  );
 
   it("offers templates on an empty funnel, in Arabic too", async () => {
     serve(emptyFunnel);

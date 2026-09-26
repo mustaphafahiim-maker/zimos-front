@@ -3,6 +3,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { btnPrimary, input } from "@/components/ui";
 import type { Dictionary } from "@/lib/i18n";
 import { Countdown } from "./Countdown";
+import { GallerySlideshow } from "./GallerySlideshow";
 import {
   COLUMN_CLASS,
   type LinkItem,
@@ -89,8 +90,15 @@ export function ImageElement({ props }: { props: Props }) {
 export function GalleryElement({ props }: { props: Props }) {
   const images = strList(props, "images").map(safeUrl).filter((u): u is string => u !== null);
   if (images.length === 0) return null;
-  const columns = num(props, "columns", 3, 1, 6);
   const title = str(props, "title");
+
+  // "slideshow" is the one other layout; anything else (including the
+  // default-less props an old page-tree carries) is the grid this always was.
+  if (str(props, "layout", "grid") === "slideshow") {
+    return <GallerySlideshow images={images} title={title} />;
+  }
+
+  const columns = num(props, "columns", 3, 1, 6);
 
   return (
     <div>

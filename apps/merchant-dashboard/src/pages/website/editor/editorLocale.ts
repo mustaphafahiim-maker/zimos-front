@@ -99,6 +99,7 @@ const FIELD_LABEL_AR: Record<string, string> = {
   usLabel: "اسم عمودك",
   themLabel: "اسم العمود التاني",
   "comparison.rows": "الصفوف",
+  "gallery.layout": "شكل العرض",
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
@@ -115,6 +116,7 @@ const FIELD_HINT_AR: Record<string, string> = {
   "marquee.items":
     "كل جملة كام كلمة بس. الشريط بيقف لما العميل يحط الماوس عليه أو يوصله بالكيبورد، وبيبقى ثابت لأي حد طالب حركة أقل.",
   "comparison.rows": "كلام قصير في كل خانة — أو اكتب yes أو no علشان تظهر علامة صح أو غلط.",
+  "gallery.layout": "العرض التلقائي بيتجاهل عدد الأعمدة، وبيعرض الصور بعرض الصفحة صورة ورا صورة.",
 };
 
 /** Keyed "<propKey>.<optionValue>". */
@@ -132,6 +134,8 @@ const OPTION_LABEL_AR: Record<string, string> = {
   "speed.fast": "سريعة",
   "tone.line": "سطر عادي",
   "tone.primary": "كبسولات بلون العلامة",
+  "layout.grid": "شبكة",
+  "layout.slideshow": "عرض تلقائي",
 };
 
 /** Keyed by BlockPreset.key. */
@@ -173,6 +177,10 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   "living-hero-intro": {
     label: "واجهة متحركة بكلام",
     description: "الشاشة الافتتاحية المتحركة، وفيها عنوان وسطر كلام وزرار جاهزين.",
+  },
+  "hero-slideshow": {
+    label: "عرض تلقائي للصور",
+    description: "صورك بعرض الصفحة وبتتغير لوحدها — وفيها زرار وقف وتشغيل ونقط تتنقل بيها.",
   },
   features: { label: "مميزاتك", description: "عنوان قصير والمميزات اللي عايز العميل يفتكرها." },
   "why-us": {

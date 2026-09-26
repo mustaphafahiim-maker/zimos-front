@@ -44,6 +44,7 @@ import {
   PanelBottom,
   PanelLeft,
   PanelRight,
+  PlaySquare,
   Quote,
   Rows3,
   Scale,
@@ -178,6 +179,16 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
       { key: "images", label: "Images", kind: "imageList" },
       { key: "columns", label: "Columns", kind: "number", min: 1, max: 6 },
+      {
+        key: "layout",
+        label: "Layout",
+        kind: "select",
+        options: [
+          { value: "grid", label: "Grid" },
+          { value: "slideshow", label: "Autoplay slideshow" },
+        ],
+        hint: "Slideshow ignores Columns and plays full-bleed, one photo at a time.",
+      },
     ],
   },
   button: {
@@ -889,6 +900,15 @@ export const BLOCK_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+  {
+    key: "hero-slideshow",
+    label: "Autoplay slideshow",
+    description: "Your photos, full-bleed, playing on their own — a pause button and dots to skip ahead.",
+    icon: PlaySquare,
+    group: "hero",
+    elements: ["gallery"],
+    content: [{ title: "", images: [], layout: "slideshow" }],
+  },
   {
     key: "living-hero",
     label: "Living hero",

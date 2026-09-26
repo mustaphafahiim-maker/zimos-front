@@ -234,7 +234,7 @@ function BlockCard({
         title={text.description}
         className="cursor-grab group flex h-full w-full flex-col gap-1 rounded-[0.5rem] border border-line bg-paper p-1.5 text-start transition-colors hover:border-primary hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
       >
-        <BlockThumbnail elements={preset.elements} />
+        <BlockThumbnail elements={preset.elements} content={preset.content} />
         <span className="px-0.5 text-[11px] font-medium leading-snug text-ink group-hover:text-primary-dark dark:group-hover:text-primary">
           {text.label}
         </span>

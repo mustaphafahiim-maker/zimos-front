@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
+import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { ShopChrome } from "@/components/ShopChrome";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
@@ -10,7 +11,7 @@ import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
-import { brandStyle, getStoreMeta } from "@/lib/storeMeta";
+import { brandStyle, getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
 
 /**
@@ -73,13 +74,15 @@ export default async function StoreLayout({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const [store, basePath] = await Promise.all([
+  const [store, basePath, collections] = await Promise.all([
     getStoreMeta(workspaceId),
     getStoreBasePath(workspaceId),
+    getStoreCollections(workspaceId),
   ]);
   if (!store) notFound();
 
   const locale = await getStoreLocale(store);
+  const t = getDictionary(locale);
   const info: StoreInfo = {
     workspaceId,
     name: store.name,
@@ -100,6 +103,7 @@ export default async function StoreLayout({
           <DocumentLocale locale={locale} />
           <ShopChrome>
             <StoreHeader store={store} locale={locale} />
+            <MobileCategoryStrip collections={collections} t={t} />
           </ShopChrome>
           <div className="flex flex-1 flex-col">{children}</div>
           <ShopChrome>
@@ -108,7 +112,7 @@ export default async function StoreLayout({
                 Funnel pages have no cart, so it steps aside with the rest of the chrome. */}
             <CartDrawer />
           </ShopChrome>
-          <BackToTop label={getDictionary(locale).common.backToTop} />
+          <BackToTop label={t.common.backToTop} />
         </div>
       </StoreContextProvider>
     </StoreRouteProvider>

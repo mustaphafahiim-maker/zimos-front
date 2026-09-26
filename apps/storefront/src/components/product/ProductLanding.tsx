@@ -424,7 +424,10 @@ export function ProductLanding({
             onClick={scrollToForm}
             disabled={!available}
             tabIndex={formVisible ? -1 : 0}
-            className={`${btnPrimary} flex-1`}
+            // A small, occasional nudge towards the one action this bar
+            // exists for — off entirely once the form itself is disabled or
+            // reduced motion is on (the animation utility below no-ops there).
+            className={`${btnPrimary} flex-1 ${available ? "zimos-wiggle" : ""}`}
           >
             {t.product.stickyOrder}
           </button>

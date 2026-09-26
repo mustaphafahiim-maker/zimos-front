@@ -1,6 +1,11 @@
 import { cache } from "react";
 import type { CSSProperties } from "react";
-import { ApiError, type StorefrontMeta, type StorefrontProductDetail } from "@store-builder/api-client";
+import {
+  ApiError,
+  type StorefrontCollection,
+  type StorefrontMeta,
+  type StorefrontProductDetail,
+} from "@store-builder/api-client";
 import { brandVars } from "./brandTheme";
 import { createServerStorefrontApiClient } from "./serverApiClient";
 
@@ -33,6 +38,25 @@ export const getStorefrontProduct = cache(
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return null;
       throw err;
+    }
+  }
+);
+
+/**
+ * The store's public collections, deduped per request the same way as
+ * `getStoreMeta` — the store layout reads this once for the mobile category
+ * strip, and it costs nothing extra when the home page's fallback catalogue
+ * (`page.tsx`) also asks for the collection list in the same render, since
+ * both would otherwise fire the same request. Empty, not thrown, on any
+ * failure: a strip with nothing to show just doesn't render.
+ */
+export const getStoreCollections = cache(
+  async (workspaceId: string): Promise<StorefrontCollection[]> => {
+    const client = await createServerStorefrontApiClient();
+    try {
+      return await client.listStorefrontCollections(workspaceId);
+    } catch {
+      return [];
     }
   }
 );

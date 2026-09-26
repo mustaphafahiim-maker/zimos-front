@@ -10,8 +10,9 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useStore } from "@/lib/StoreContext";
+import { swipeStep, SWIPE_PX } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon, CrossIcon, ZoomIcon } from "../Icons";
-import { iconBtn } from "../ui";
+import { iconBtn, skeleton } from "../ui";
 
 /**
  * The product's photos.
@@ -27,9 +28,6 @@ import { iconBtn } from "../ui";
  * it would otherwise fire) and the lightbox's focus trap, both small enough to
  * read here.
  */
-
-/** A drag shorter than this is a tap, not a swipe. */
-const SWIPE_PX = 45;
 
 /** Everything inside the lightbox a Tab can reach. */
 function focusablesIn(root: HTMLElement): HTMLElement[] {
@@ -76,6 +74,15 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   const movedRef = useRef(false);
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
 
+  // Photos are merchant-hosted and can be slow to arrive; a themed pulse
+  // fills the frame until each one's `onLoad` fires, so the gallery never
+  // shows blank space. Keyed by URL rather than index so a photo already
+  // seen (the same one further down the strip) never re-shows the skeleton.
+  const [loaded, setLoaded] = useState<Set<string>>(() => new Set());
+  const markLoaded = useCallback((src: string) => {
+    setLoaded((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
+  }, []);
+
   function onPointerDown(e: ReactPointerEvent) {
     swipe.current = { x: e.clientX, y: e.clientY, moved: false };
   }
@@ -98,10 +105,8 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
     const start = swipe.current;
     swipe.current = null;
     if (!start || !many) return;
-    const dx = e.clientX - start.x;
-    // A mostly-vertical drag is the page being scrolled, not a swipe.
-    if (Math.abs(dx) <= SWIPE_PX || Math.abs(dx) < Math.abs(e.clientY - start.y)) return;
-    step(dx < 0 ? forward : -forward);
+    const delta = swipeStep(start, { x: e.clientX, y: e.clientY }, forward);
+    if (delta !== null) step(delta);
   }
 
   /** True when the pointer-up that preceded this click was a swipe. */
@@ -213,6 +218,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
             }}
             className="block h-full w-full cursor-zoom-in touch-pan-y select-none"
           >
+            {!loaded.has(current) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
             {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -222,6 +228,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               height={900}
               fetchPriority="high"
               draggable={false}
+              onLoad={() => markLoaded(current)}
               style={
                 zoom
                   ? { transform: "scale(1.9)", transformOrigin: `${zoom.x}% ${zoom.y}%` }
@@ -255,12 +262,21 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
                 onClick={() => setActive(i)}
                 aria-label={`${name} — ${i + 1}/${images.length}`}
                 aria-pressed={i === active}
-                className={`block h-16 w-16 cursor-pointer overflow-hidden rounded-xl border-2 transition-colors sm:h-20 sm:w-20 ${
+                className={`relative block h-16 w-16 cursor-pointer overflow-hidden rounded-xl border-2 transition-colors sm:h-20 sm:w-20 ${
                   i === active ? "border-primary" : "border-line hover:border-primary"
                 }`}
               >
+                {!loaded.has(src) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" width={80} height={80} loading="lazy" className="h-full w-full object-cover" />
+                <img
+                  src={src}
+                  alt=""
+                  width={80}
+                  height={80}
+                  loading="lazy"
+                  onLoad={() => markLoaded(src)}
+                  className="h-full w-full object-cover"
+                />
               </button>
             </li>
           ))}

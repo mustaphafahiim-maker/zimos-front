@@ -61,14 +61,22 @@ export function track(event: TrackEvent, data: TrackData = {}) {
           content_name: data.contentName,
           content_type: "product",
           num_items: data.numItems,
-        }, data.orderId ? { eventID: `${event}-${data.orderId}` } : undefined);
+          // Same id as the server-side Conversions API event for this order
+          // (src/modules/marketing/pixelEvents.js sends order.id verbatim as
+          // event_id) — a bare order id, not "<event>-<id>", so browser and
+          // server events for the same order dedup into one conversion.
+        }, data.orderId ? { eventID: data.orderId } : undefined);
     }
     if (w.ttq) {
       if (event === "PageView") w.ttq.page();
-      else w.ttq.track(TIKTOK[event], { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems });
+      // Third argument matches TikTok's own dedup contract: the same
+      // event_id the server-side Events API call carries for this order.
+      else w.ttq.track(TIKTOK[event], { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems }, data.orderId ? { event_id: data.orderId } : undefined);
     }
     if (w.snaptr) {
-      w.snaptr("track", SNAP[event], { price: value, currency: data.currency, item_ids: data.contentIds, number_items: data.numItems, transaction_id: data.orderId });
+      // event_id is Snap Conversions API v3's own dedup field (its v2
+      // predecessor used client_dedup_id) — same order id sent server-side.
+      w.snaptr("track", SNAP[event], { price: value, currency: data.currency, item_ids: data.contentIds, number_items: data.numItems, transaction_id: data.orderId, event_id: data.orderId });
     }
     if (w.gtag && event !== "PageView") {
       w.gtag("event", GOOGLE[event], { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) });

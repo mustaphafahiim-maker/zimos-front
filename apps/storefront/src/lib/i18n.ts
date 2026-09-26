@@ -408,6 +408,11 @@ const en = {
     funnelStep: (n: number) => `Step ${n}`,
     funnelProgress: "Your progress",
     shareHint: "Know someone who'd like this store? Send them the link.",
+    previousSlide: "Previous slide",
+    nextSlide: "Next slide",
+    pauseSlideshow: "Pause slideshow",
+    playSlideshow: "Play slideshow",
+    goToSlide: (n: number) => `Go to slide ${n}`,
   },
 };
 
@@ -769,6 +774,11 @@ const ar: Dictionary = {
     funnelStep: (n) => `الخطوة ${arNum(n)}`,
     funnelProgress: "تقدمك",
     shareHint: "تعرف حد ممكن يحب المتجر؟ ابعتله الرابط.",
+    previousSlide: "الشريحة السابقة",
+    nextSlide: "الشريحة التالية",
+    pauseSlideshow: "وقّف العرض التلقائي",
+    playSlideshow: "شغّل العرض التلقائي",
+    goToSlide: (n) => `روح لشريحة ${arNum(n)}`,
   },
 };
 
