@@ -112,6 +112,7 @@ export function track(event: TrackEvent, data: TrackData = {}) {
         name: own,
         orderId: data.orderId,
         revenueAmount: data.valueMinor !== undefined ? Math.round(data.valueMinor) : undefined,
+        currency: data.currency,
         dedupeId: own === "purchase" && data.orderId ? `purchase:${data.orderId}` : undefined,
         metadata: {
           ...(data.currency ? { currency: data.currency } : {}),
