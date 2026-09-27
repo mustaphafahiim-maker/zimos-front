@@ -324,7 +324,7 @@ function InboxView() {
         </Button>
       </div>
 
-      <div className="grid h-[calc(100dvh-14rem)] min-h-[480px] overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised md:grid-cols-[320px_1fr]">
+      <div className="grid h-[calc(100dvh-14rem)] min-h-[480px] overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 md:grid-cols-[320px_1fr]">
         {/* Conversation list */}
         <aside
           className={cn("flex min-h-0 flex-col border-line md:border-e", threadConversation && "hidden md:flex")}
@@ -343,7 +343,7 @@ function InboxView() {
             <div
               role="radiogroup"
               aria-label={t.title}
-              className="inline-flex rounded-[0.5rem] border border-line bg-paper p-1"
+              className="inline-flex rounded-lg bg-paper p-1 ring-1 ring-foreground/10"
             >
               {(["open", "closed"] as const).map((s) => (
                 <button
@@ -353,7 +353,7 @@ function InboxView() {
                   aria-checked={status === s}
                   onClick={() => setStatus(s)}
                   className={cn(
-                    "cursor-pointer rounded-[0.375rem] px-3 py-1 text-xs font-medium transition-colors",
+                    "cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors",
                     status === s ? "bg-primary text-primary-foreground" : "text-ink-soft hover:text-ink"
                   )}
                 >
@@ -684,9 +684,9 @@ function Bubble({ message: m }: { message: WhatsappMessage }) {
     <div className={cn("flex", out ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-[var(--radius-card)] px-3 py-2 text-sm shadow-sm",
-          out ? "rounded-ee-sm bg-primary-soft text-ink" : "rounded-es-sm border border-line bg-paper-raised text-ink",
-          m.status === "failed" && "border border-danger/40"
+          "max-w-[80%] rounded-xl px-3 py-2 text-sm shadow-xs",
+          out ? "rounded-ee-sm bg-primary-soft text-ink" : "rounded-es-sm bg-paper-raised text-ink ring-1 ring-foreground/10",
+          m.status === "failed" && "ring-1 ring-danger/40"
         )}
       >
         {m.templateName && (
@@ -776,7 +776,7 @@ function Composer({
         >
           {t.windowClosed}
         </Alert>
-        <details className="rounded-[0.5rem] border border-line bg-paper p-3">
+        <details className="rounded-lg bg-paper p-3 ring-1 ring-foreground/10">
           <summary className="cursor-pointer text-sm font-medium text-ink">{t.sendTemplate}</summary>
           <div className="mt-3">
             <TemplateForm to={conversation.phone} onSent={() => void onSent()} />

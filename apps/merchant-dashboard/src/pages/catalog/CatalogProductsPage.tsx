@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
+import { Button, Card, Input, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -12,12 +12,14 @@ import { primaryImage } from "@/lib/media";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { DataTable, type Column } from "@/components/DataTable";
+import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { ProductImage } from "@/components/ProductImage";
 import { LoadMore } from "@/components/LoadMore";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 
-const STATUS_TABS: Array<{ value: "" | ProductStatus; label: string }> = [
+const STATUS_TABS: ReadonlyArray<FilterTab<"" | ProductStatus>> = [
   { value: "", label: "All" },
   { value: "active", label: "Active" },
   { value: "draft", label: "Draft" },
@@ -107,22 +109,12 @@ export function CatalogProductsPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.value || "all"}
-              onClick={() => setStatus(tab.value)}
-              className={cn(
-                "cursor-pointer rounded-[0.375rem] px-3 py-1.5 text-sm font-medium transition-colors",
-                status === tab.value
-                  ? "bg-primary-soft text-primary-dark dark:text-primary"
-                  : "text-ink-soft hover:text-ink"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <FilterTabs
+          tabs={STATUS_TABS}
+          value={status}
+          onChange={setStatus}
+          label="Filter products by status"
+        />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -131,7 +123,7 @@ export function CatalogProductsPage() {
         />
 
         <div className="ms-auto flex items-center gap-3">
-          <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
+          <div className="inline-flex gap-1 rounded-lg bg-paper-raised p-1 shadow-xs ring-1 ring-foreground/10">
             <button
               onClick={() => setView("list")}
               aria-label="List view"
@@ -204,63 +196,70 @@ function ProductTable({
   products: Product[];
   onDelete: (p: Product) => void;
 }) {
+  const columns: ReadonlyArray<Column<Product>> = [
+    {
+      key: "image",
+      header: "",
+      headerClassName: "w-14",
+      cell: (product) => (
+        <ProductImage media={primaryImage(product)} alt={product.name} className="size-10" />
+      ),
+    },
+    {
+      key: "product",
+      header: "Product",
+      cell: (product) => (
+        <>
+          <Link to={`/catalog/${product.id}`} className="font-medium text-ink hover:text-primary">
+            {product.name}
+          </Link>
+          {formatProductCode(product.productCode) && (
+            <span className="ms-1.5 text-xs text-ink-soft">
+              · {formatProductCode(product.productCode)}
+            </span>
+          )}
+          <div className="text-xs text-ink-soft">{product.slug}</div>
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (product) => <StatusBadge value={product.status} />,
+    },
+    {
+      key: "price",
+      header: "Price range",
+      className: "text-ink-soft",
+      cell: (product) => priceRange(product),
+    },
+    {
+      key: "stock",
+      header: "Stock",
+      className: "text-ink-soft",
+      cell: (product) => stockSummary(product),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "end",
+      cell: (product) => (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-danger hover:bg-danger-soft"
+          onClick={() => onDelete(product)}
+        >
+          Delete
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-      <table className="w-full min-w-[720px] text-sm">
-        <thead>
-          <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-            <th className="w-14 px-4 py-3 font-medium" />
-            <th className="px-4 py-3 font-medium">Product</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Price range</th>
-            <th className="px-4 py-3 font-medium">Stock</th>
-            <th className="px-4 py-3 font-medium" />
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
-              <td className="py-2 ps-4">
-                <ProductImage
-                  media={primaryImage(product)}
-                  alt={product.name}
-                  className="size-10"
-                />
-              </td>
-              <td className="px-4 py-3">
-                <Link
-                  to={`/catalog/${product.id}`}
-                  className="font-medium text-ink hover:text-primary"
-                >
-                  {product.name}
-                </Link>
-                {formatProductCode(product.productCode) && (
-                  <span className="ms-1.5 text-xs text-ink-soft">
-                    · {formatProductCode(product.productCode)}
-                  </span>
-                )}
-                <div className="text-xs text-ink-soft">{product.slug}</div>
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge value={product.status} />
-              </td>
-              <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
-              <td className="px-4 py-3 text-ink-soft">{stockSummary(product)}</td>
-              <td className="px-4 py-3 text-end">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-danger hover:bg-danger-soft"
-                  onClick={() => onDelete(product)}
-                >
-                  Delete
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card className="gap-0 p-0">
+      <DataTable columns={columns} rows={products} rowKey={(product) => product.id} minWidth="45rem" />
+    </Card>
   );
 }
 
@@ -276,7 +275,7 @@ function ProductGrid({
       {products.map((product) => (
         <div
           key={product.id}
-          className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised transition-colors hover:border-primary"
+          className="flex flex-col overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md"
         >
           <Link to={`/catalog/${product.id}`} className="block">
             <ProductImage

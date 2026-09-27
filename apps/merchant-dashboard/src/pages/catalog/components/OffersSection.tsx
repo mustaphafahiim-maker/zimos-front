@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Card, CardContent } from "@store-builder/ui";
+import { Button } from "@store-builder/ui";
 import type { Offer, Variant } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Section } from "@/components/Section";
 import { OfferForm } from "./OfferForm";
 
 interface Props {
@@ -38,20 +39,18 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-lg font-medium text-ink">Offers</h2>
-            <p className="text-sm text-ink-soft">Priced bundles of one or more variants.</p>
-          </div>
+    <>
+      <Section
+        title="Offers"
+        description="Priced bundles of one or more variants."
+        actions={
           <Button size="sm" onClick={() => setAdding(true)}>
             Create offer
           </Button>
-        </div>
-
+        }
+      >
         {offers.length === 0 ? (
-          <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
+          <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
             No offers yet.
           </p>
         ) : (
@@ -59,7 +58,7 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
             {offers.map((offer) => (
               <li
                 key={offer.id}
-                className="flex flex-wrap items-start justify-between gap-3 rounded-[0.5rem] border border-line px-4 py-3"
+                className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-line px-4 py-3"
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -92,7 +91,7 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
             ))}
           </ul>
         )}
-      </CardContent>
+      </Section>
 
       <Modal open={adding} onClose={() => setAdding(false)} title="Create offer">
         <OfferForm
@@ -132,6 +131,6 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
-    </Card>
+    </>
   );
 }

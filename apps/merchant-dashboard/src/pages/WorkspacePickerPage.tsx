@@ -74,7 +74,7 @@ export function WorkspacePickerPage() {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display text-3xl font-medium text-ink">
+            <h1 className="text-3xl font-semibold text-ink">
               {workspaces.length > 0 ? "Choose a store" : "Let's set up your store"}
             </h1>
             <p className="mt-2 text-sm text-ink-soft">
@@ -98,7 +98,7 @@ export function WorkspacePickerPage() {
                   <button
                     key={workspace.id}
                     onClick={() => goToDashboard(workspace.id)}
-                    className="cursor-pointer flex w-full items-center justify-between rounded-[var(--radius-card)] border border-line bg-paper-raised px-5 py-4 text-start transition-colors hover:border-primary"
+                    className="cursor-pointer flex w-full items-center justify-between rounded-xl bg-paper-raised px-5 py-4 text-start shadow-xs ring-1 ring-foreground/10 transition-colors hover:ring-primary"
                   >
                     <div>
                       <p className="font-medium text-ink">{workspace.name}</p>
@@ -112,7 +112,7 @@ export function WorkspacePickerPage() {
 
             <Card className="mt-8">
               <CardContent className="pt-6">
-                <h2 className="font-display text-lg font-medium text-ink">Create a new store</h2>
+                <h2 className="text-base font-semibold text-ink">Create a new store</h2>
                 <form onSubmit={handleCreate} className="mt-4 space-y-4">
                   {error && <Alert variant="danger">{error}</Alert>}
                   <div className="space-y-1.5">
@@ -172,7 +172,7 @@ function StoreCreated({
         <div className="flex size-12 items-center justify-center rounded-full bg-success-soft">
           <PartyPopper className="size-6 text-success" aria-hidden />
         </div>
-        <h1 className="mt-4 font-display text-3xl font-medium text-ink">
+        <h1 className="mt-4 text-3xl font-semibold text-ink">
           {workspace.name} is live
         </h1>
         <p className="mt-2 text-sm text-ink-soft">
@@ -186,14 +186,14 @@ function StoreCreated({
           </Alert>
         )}
 
-        <div className="mt-6 rounded-[var(--radius-card)] border border-line bg-paper-raised p-5">
+        <div className="mt-6 rounded-xl bg-paper-raised p-5 shadow-xs ring-1 ring-foreground/10">
           <Label>Your store link</Label>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <a
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="font-display text-lg font-medium break-all text-primary hover:underline"
+              className="text-lg font-medium break-all text-primary hover:underline"
             >
               {storeHost(workspace.slug)}
             </a>

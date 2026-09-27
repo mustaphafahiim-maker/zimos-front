@@ -127,7 +127,7 @@ function TemplateCard({
   // A div rather than one big button: a button can't hold the preview frame.
   // The button's ::after covers the card, so all of it stays clickable.
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-start transition-colors hover:border-primary">
+    <div className="relative flex flex-col overflow-hidden rounded-xl bg-paper-raised text-start shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md">
       <TemplateThumb url={template.thumbnailUrl} name={template.name} templateId={template.id} />
       <div className="flex flex-1 flex-col gap-1 border-t border-line p-4">
         <span className="font-medium text-ink">{template.name}</span>
@@ -138,7 +138,7 @@ function TemplateCard({
           type="button"
           onClick={onSelect}
           aria-label={fmt(t.previewOf, { name: template.name })}
-          className="mt-auto cursor-pointer pt-2 text-start text-sm font-medium text-primary after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary"
+          className="mt-auto cursor-pointer pt-2 text-start text-sm font-medium text-primary after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary"
         >
           {t.preview}
         </button>
@@ -358,8 +358,8 @@ function ExistingSites() {
 
   return (
     <div className="mb-8">
-      <h2 className="mb-2 font-display text-base font-medium text-ink">Your sites</h2>
-      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised">
+      <h2 className="mb-2 text-sm font-semibold text-ink">Your sites</h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10">
         {list.map((site) => (
           <li key={site.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">

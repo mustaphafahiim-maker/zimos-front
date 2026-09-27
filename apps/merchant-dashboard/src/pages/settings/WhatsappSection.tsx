@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Copy, MessageCircle, RefreshCw } from "lucide-react";
-import { Alert, Button, Spinner, cn } from "@store-builder/ui";
+import { Alert, Button, Card, Spinner, cn } from "@store-builder/ui";
 import type { WhatsappIntegrationConnected } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
@@ -153,21 +153,21 @@ export function WhatsappSection() {
   }
 
   return (
-    <section id="whatsapp" className="rounded-[var(--radius-card)] border border-line p-5">
+    <Card id="whatsapp" className="gap-0 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-[0.5rem] bg-primary-soft text-primary">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <MessageCircle className="size-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-display text-lg font-medium text-ink">{t.waTitle}</h2>
-            <p className="mt-0.5 text-sm text-ink-soft">{t.waHint}</p>
+            <h2 className="text-sm font-semibold text-ink">{t.waTitle}</h2>
+            <p className="mt-0.5 text-xs text-ink-soft">{t.waHint}</p>
           </div>
         </div>
         {data && <StatusPill integration={data.connected ? data : null} />}
       </div>
 
-      <div className="mt-5">
+      <div className="mt-3">
         <DataState
           loading={integration.loading}
           error={integration.error}
@@ -203,17 +203,17 @@ export function WhatsappSection() {
         onCancel={() => setConfirmDisconnect(false)}
         onConfirm={disconnect}
       />
-    </section>
+    </Card>
   );
 }
 
 function StatusPill({ integration }: { integration: WhatsappIntegrationConnected | null }) {
   const t = useT(STRINGS);
   const tone = !integration
-    ? "bg-paper text-ink-soft border-line"
+    ? "bg-paper text-ink-soft"
     : integration.status === "error"
-      ? "bg-danger-soft text-danger border-danger/25"
-      : "bg-success-soft text-success border-success/25";
+      ? "bg-danger-soft text-danger"
+      : "bg-success-soft text-success";
   const label = !integration
     ? t.notConnected
     : integration.status === "error"
@@ -222,7 +222,7 @@ function StatusPill({ integration }: { integration: WhatsappIntegrationConnected
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
         tone
       )}
     >
@@ -235,7 +235,7 @@ function SetupGuide() {
   const t = useT(STRINGS);
   const steps = [t.step1, t.step2, t.step3, t.step4, t.step5, t.step6];
   return (
-    <div className="rounded-[0.5rem] border border-line bg-paper p-4">
+    <div className="rounded-lg bg-paper p-4 ring-1 ring-foreground/10">
       <h3 className="text-sm font-medium text-ink">{t.guideTitle}</h3>
       <ol className="mt-3 space-y-2">
         {steps.map((s, i) => (
@@ -416,7 +416,7 @@ function ConnectedView({
         <Info label={t.lastVerified} value={formatRelativeTime(integration.lastVerifiedAt)} />
       </dl>
 
-      <div className="space-y-3 rounded-[0.5rem] border border-line bg-paper p-4">
+      <div className="space-y-3 rounded-lg bg-paper p-4 ring-1 ring-foreground/10">
         <div>
           <h3 className="text-sm font-medium text-ink">{t.webhookTitle}</h3>
           <p className="mt-1 text-xs text-ink-soft">{t.webhookHint}</p>
@@ -442,7 +442,7 @@ function ConnectedView({
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs uppercase tracking-wide text-ink-soft">{label}</dt>
+      <dt className="text-xs font-medium text-ink-soft">{label}</dt>
       <dd className="mt-0.5 truncate text-sm font-medium text-ink">{value}</dd>
     </div>
   );
@@ -461,10 +461,10 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   }
   return (
     <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-      <span className="w-28 shrink-0 text-xs uppercase tracking-wide text-ink-soft">{label}</span>
+      <span className="w-28 shrink-0 text-xs font-medium text-ink-soft">{label}</span>
       <code
         dir="ltr"
-        className="min-w-0 flex-1 truncate rounded-[0.375rem] bg-paper-raised px-2 py-1 text-start text-xs text-ink"
+        className="min-w-0 flex-1 truncate rounded-md bg-paper-raised px-2 py-1 text-start text-xs text-ink"
       >
         {value}
       </code>

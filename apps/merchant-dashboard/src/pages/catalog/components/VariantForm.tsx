@@ -171,7 +171,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
 
       {isEdit && (
         <>
-          <div className="rounded-[0.5rem] border border-line bg-paper px-3 py-2 text-sm text-ink-soft">
+          <div className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink-soft">
             Stock: <strong className="text-ink">{variant?.stockOnHand}</strong> on hand
             {variant?.reservedStock ? `, ${variant.reservedStock} reserved` : ""} — managed in
             Inventory.

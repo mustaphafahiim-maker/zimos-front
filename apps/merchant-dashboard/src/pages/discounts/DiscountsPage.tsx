@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Alert, Button, Input, Label, Spinner } from "@store-builder/ui";
+import { Alert, Button, Card, Input, Label, Spinner } from "@store-builder/ui";
 import type {
   CreateDiscountPayload,
   Discount,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
+import { DataTable } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -128,47 +129,60 @@ export function DiscountsPage() {
         emptyMessage="No discounts yet. Create your first one."
         onRetry={() => list.refresh()}
       >
-        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Value</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Usage</th>
-                <th className="px-4 py-3 font-medium">Dates</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {discounts.map((d) => (
-                <tr
-                  key={d.id}
-                  onClick={() => setFormTarget(d)}
-                  className="cursor-pointer border-b border-line last:border-0 hover:bg-paper-raised"
-                >
-                  <td className="px-4 py-3">
-                    {d.code ? (
-                      <span className="font-medium text-ink">{d.code}</span>
-                    ) : (
-                      <span className="text-ink-soft">Automatic</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-ink-soft">{TYPE_LABEL[d.type]}</td>
-                  <td className="px-4 py-3 text-ink-soft">{discountValueLabel(d)}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge value={displayStatus(d)} />
-                  </td>
-                  <td className="px-4 py-3 text-ink-soft">
+        <Card className="gap-0 p-0">
+          <DataTable
+            rows={discounts}
+            rowKey={(d) => d.id}
+            onRowClick={(d) => setFormTarget(d)}
+            minWidth="45rem"
+            columns={[
+              {
+                key: "code",
+                header: "Code",
+                cell: (d) =>
+                  d.code ? (
+                    <span className="font-medium text-ink">{d.code}</span>
+                  ) : (
+                    <span className="text-ink-soft">Automatic</span>
+                  ),
+              },
+              {
+                key: "type",
+                header: "Type",
+                cell: (d) => <span className="text-ink-soft">{TYPE_LABEL[d.type]}</span>,
+              },
+              {
+                key: "value",
+                header: "Value",
+                cell: (d) => <span className="text-ink-soft">{discountValueLabel(d)}</span>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                cell: (d) => <StatusBadge value={displayStatus(d)} />,
+              },
+              {
+                key: "usage",
+                header: "Usage",
+                cell: (d) => (
+                  <span className="text-ink-soft">
                     {d.usageCount}
                     {d.usageLimit != null ? ` / ${d.usageLimit}` : ""}
-                  </td>
-                  <td className="px-4 py-3 text-ink-soft">{dateRangeLabel(d)}</td>
-                  <td
-                    className="whitespace-nowrap px-4 py-3 text-end"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  </span>
+                ),
+              },
+              {
+                key: "dates",
+                header: "Dates",
+                cell: (d) => <span className="text-ink-soft">{dateRangeLabel(d)}</span>,
+              },
+              {
+                key: "actions",
+                header: "",
+                align: "end",
+                className: "whitespace-nowrap",
+                cell: (d) => (
+                  <span onClick={(e) => e.stopPropagation()}>
                     {d.status !== "archived" && (
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(d)}>
                         {d.status === "active" ? "Disable" : "Enable"}
@@ -182,12 +196,12 @@ export function DiscountsPage() {
                     >
                       Delete
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </Card>
       </DataState>
 
       <Modal
@@ -579,7 +593,7 @@ function ProductScopePicker({
   if (products.error) return <p className="text-sm text-danger">{getErrorMessage(products.error)}</p>;
 
   return (
-    <div className="space-y-2 rounded-[var(--radius-card)] border border-line p-3">
+    <div className="space-y-2 rounded-lg p-3 ring-1 ring-foreground/10">
       <div className="flex items-center justify-between gap-2">
         <Input
           value={search}

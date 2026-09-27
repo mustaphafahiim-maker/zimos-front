@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ClipboardCheck, Headset, Phone, PhoneCall, Trophy } from "lucide-react";
-import { Button, Label } from "@store-builder/ui";
-import type { ConfirmationOutcome, ConfirmationTask } from "@store-builder/api-client";
+import { Button, Card, Label } from "@store-builder/ui";
+import type {
+  ConfirmationAgent,
+  ConfirmationAttempt,
+  ConfirmationOutcome,
+  ConfirmationTask,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { useCursorList } from "@/lib/useCursorList";
@@ -18,6 +23,7 @@ import { FilterTabs } from "@/components/FilterTabs";
 import { LoadMore } from "@/components/LoadMore";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Select } from "@/components/Select";
+import { DataTable, type Column } from "@/components/DataTable";
 
 /**
  * The call centre's management view: how the confirmation queue is doing, how
@@ -307,65 +313,74 @@ function QueueTab() {
 }
 
 function QueueTable({ tasks, t, now }: { tasks: ConfirmationTask[]; t: Strings; now: number }) {
+  const columns: ReadonlyArray<Column<ConfirmationTask>> = [
+    {
+      key: "order",
+      header: t.colOrder,
+      className: "font-medium",
+      cell: (task) =>
+        task.order ? (
+          <Link to={`/orders/${task.order.id}`} className="text-primary hover:underline">
+            <bdi dir="ltr">{task.order.orderNumber}</bdi>
+          </Link>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: "customer",
+      header: t.colCustomer,
+      className: "text-ink",
+      cell: (task) => (
+        <span className="block" dir="auto">
+          {task.order?.contactSnapshot?.fullName ?? "—"}
+          {task.order?.contactSnapshot?.phone && (
+            <span className="block text-xs text-ink-soft">
+              <bdi dir="ltr">{task.order.contactSnapshot.phone}</bdi>
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "attempts",
+      header: t.colAttempts,
+      align: "end",
+      className: "tabular-nums text-ink",
+      cell: (task) => task.attemptCount,
+    },
+    {
+      key: "nextRetry",
+      header: t.colNextRetry,
+      className: "whitespace-nowrap text-xs text-ink-soft",
+      cell: (task) =>
+        task.nextRetryAt === null || new Date(task.nextRetryAt).getTime() <= now
+          ? t.now
+          : formatDateTime(task.nextRetryAt),
+    },
+    {
+      key: "total",
+      header: t.colTotal,
+      align: "end",
+      className: "tabular-nums whitespace-nowrap text-ink",
+      cell: (task) =>
+        task.order ? (
+          <bdi dir="ltr">{formatMoney(task.order.totalAmount, task.order.currency)}</bdi>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "state",
+      header: t.colState,
+      cell: (task) => <StatusBadge value={task.status} />,
+    },
+  ];
+
   return (
-    <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-      <table className="w-full min-w-[820px] text-sm">
-        <thead>
-          <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-            <th className="px-4 py-3 text-start font-medium">{t.colOrder}</th>
-            <th className="px-4 py-3 text-start font-medium">{t.colCustomer}</th>
-            <th className="px-4 py-3 text-end font-medium">{t.colAttempts}</th>
-            <th className="px-4 py-3 text-start font-medium">{t.colNextRetry}</th>
-            <th className="px-4 py-3 text-end font-medium">{t.colTotal}</th>
-            <th className="px-4 py-3 text-start font-medium">{t.colState}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => {
-            const order = task.order;
-            const due =
-              task.nextRetryAt === null || new Date(task.nextRetryAt).getTime() <= now
-                ? t.now
-                : formatDateTime(task.nextRetryAt);
-            return (
-              <tr key={task.id} className="border-b border-line last:border-0 hover:bg-paper">
-                <td className="px-4 py-3 text-start font-medium">
-                  {order ? (
-                    <Link to={`/orders/${order.id}`} className="text-primary hover:underline">
-                      <bdi dir="ltr">{order.orderNumber}</bdi>
-                    </Link>
-                  ) : (
-                    <span className="text-ink-soft">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-start text-ink" dir="auto">
-                  {order?.contactSnapshot?.fullName ?? "—"}
-                  {order?.contactSnapshot?.phone && (
-                    <span className="block text-xs text-ink-soft">
-                      <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
-                    </span>
-                  )}
-                </td>
-                <td className="tabular-nums px-4 py-3 text-end text-ink">{task.attemptCount}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">
-                  {due}
-                </td>
-                <td className="tabular-nums whitespace-nowrap px-4 py-3 text-end text-ink">
-                  {order ? (
-                    <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3 text-start">
-                  <StatusBadge value={task.status} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Card className="gap-0 p-0">
+      <DataTable columns={columns} rows={tasks} rowKey={(task) => task.id} minWidth="52rem" />
+    </Card>
   );
 }
 
@@ -440,78 +455,86 @@ function AgentsTab() {
         {agents.length === 0 ? (
           <EmptyState icon={<Headset />} title={t.emptyAgents} description={t.emptyAgentsDesc} />
         ) : (
-          <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <table className="w-full min-w-[880px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 text-start font-medium">{t.colAgent}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colRole}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.attempts}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.confirmed}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.rejected}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.unreachable}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.postponed}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.confRate}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.inProgress}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agents.map((agent) => {
-                  const name = agent.fullName || agent.email || t.noName;
-                  return (
-                    <tr key={agent.userId} className="border-b border-line last:border-0 hover:bg-paper">
-                      <td className="px-4 py-3 text-start">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            aria-hidden
-                            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-xs font-semibold text-primary-dark dark:text-primary"
-                          >
-                            {initials(name)}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-ink" dir="auto">
-                              {name}
-                            </p>
-                            {agent.fullName && agent.email && (
-                              <p className="truncate text-xs text-ink-soft">
-                                <bdi dir="ltr">{agent.email}</bdi>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft" dir="auto">
-                        {agent.role?.name ?? "—"}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">{agent.attempts}</td>
-                      <td className="tabular-nums px-4 py-3 text-end text-success">
-                        {agent.confirmed}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-danger">
-                        {agent.rejected}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-accent-dark dark:text-accent">
-                        {agent.unreachable}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        {agent.postponed}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        <bdi dir="ltr">{ratePercent(agent.confirmationRate)}</bdi>
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        {agent.tasksInProgress}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Card className="gap-0 p-0">
+            <DataTable
+              columns={agentColumns(t)}
+              rows={agents}
+              rowKey={(agent) => agent.userId}
+              minWidth="55rem"
+            />
+          </Card>
         )}
       </DataState>
     </div>
   );
+}
+
+function agentColumns(t: Strings): ReadonlyArray<Column<ConfirmationAgent>> {
+  const num = (
+    key: string,
+    header: string,
+    value: (agent: ConfirmationAgent) => number,
+    tone = "text-ink"
+  ): Column<ConfirmationAgent> => ({
+    key,
+    header,
+    align: "end",
+    className: `tabular-nums ${tone}`,
+    cell: value,
+  });
+
+  return [
+    {
+      key: "agent",
+      header: t.colAgent,
+      cell: (agent) => {
+        const name = agent.fullName || agent.email || t.noName;
+        return (
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary-dark dark:text-primary"
+            >
+              {initials(name)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-ink" dir="auto">
+                {name}
+              </p>
+              {agent.fullName && agent.email && (
+                <p className="truncate text-xs text-ink-soft">
+                  <bdi dir="ltr">{agent.email}</bdi>
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "role",
+      header: t.colRole,
+      className: "text-ink-soft",
+      cell: (agent) => (
+        <span className="block" dir="auto">
+          {agent.role?.name ?? "—"}
+        </span>
+      ),
+    },
+    num("attempts", t.attempts, (a) => a.attempts),
+    num("confirmed", t.confirmed, (a) => a.confirmed, "text-success"),
+    num("rejected", t.rejected, (a) => a.rejected, "text-danger"),
+    num("unreachable", t.unreachable, (a) => a.unreachable, "text-accent-dark dark:text-accent"),
+    num("postponed", t.postponed, (a) => a.postponed),
+    {
+      key: "rate",
+      header: t.confRate,
+      align: "end",
+      className: "tabular-nums text-ink",
+      cell: (agent) => <bdi dir="ltr">{ratePercent(agent.confirmationRate)}</bdi>,
+    },
+    num("inProgress", t.inProgress, (a) => a.tasksInProgress),
+  ];
 }
 
 // ------------------------------------------------------------------- Logs --
@@ -583,83 +606,106 @@ function LogsTab() {
         {list.items.length === 0 ? (
           <EmptyState icon={<Phone />} title={t.emptyLogs} description={t.emptyLogsDesc} />
         ) : (
-          <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <table className="w-full min-w-[960px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 text-start font-medium">{t.colTime}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colOrder}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colCustomer}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colAgent}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colAttempt}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colOutcome}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colNote}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colTotal}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((attempt) => (
-                  <tr key={attempt.id} className="border-b border-line last:border-0 hover:bg-paper">
-                    <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">
-                      {formatDateTime(attempt.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 text-start font-medium">
-                      {attempt.order ? (
-                        <Link
-                          to={`/orders/${attempt.order.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          <bdi dir="ltr">{attempt.order.orderNumber}</bdi>
-                        </Link>
-                      ) : (
-                        <span className="text-ink-soft">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-start text-ink" dir="auto">
-                      {attempt.order?.customerName ?? "—"}
-                      {attempt.order?.phone && (
-                        <span className="block text-xs text-ink-soft">
-                          <bdi dir="ltr">{attempt.order.phone}</bdi>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-start text-ink" dir="auto">
-                      {attempt.agent.fullName || attempt.agent.email || t.noName}
-                    </td>
-                    <td className="tabular-nums px-4 py-3 text-end text-ink">
-                      {attempt.attemptNumber}
-                    </td>
-                    <td className="px-4 py-3 text-start">
-                      <StatusBadge
-                        value={attempt.outcome}
-                        tone={OUTCOME_TONE[attempt.outcome]}
-                        text={t[OUTCOME_LABEL[attempt.outcome]]}
-                      />
-                    </td>
-                    <td
-                      className="max-w-[240px] truncate px-4 py-3 text-start text-ink-soft"
-                      dir="auto"
-                      title={attempt.notes ?? undefined}
-                    >
-                      {attempt.notes || "—"}
-                    </td>
-                    <td className="tabular-nums whitespace-nowrap px-4 py-3 text-end text-ink">
-                      {attempt.order ? (
-                        <bdi dir="ltr">
-                          {formatMoney(attempt.order.totalAmount, attempt.order.currency)}
-                        </bdi>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card className="gap-0 p-0">
+            <DataTable
+              columns={logColumns(t)}
+              rows={list.items}
+              rowKey={(attempt) => attempt.id}
+              minWidth="60rem"
+            />
+          </Card>
         )}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
     </div>
   );
+}
+
+function logColumns(t: Strings): ReadonlyArray<Column<ConfirmationAttempt>> {
+  return [
+    {
+      key: "time",
+      header: t.colTime,
+      className: "whitespace-nowrap text-xs text-ink-soft",
+      cell: (attempt) => formatDateTime(attempt.createdAt),
+    },
+    {
+      key: "order",
+      header: t.colOrder,
+      className: "font-medium",
+      cell: (attempt) =>
+        attempt.order ? (
+          <Link to={`/orders/${attempt.order.id}`} className="text-primary hover:underline">
+            <bdi dir="ltr">{attempt.order.orderNumber}</bdi>
+          </Link>
+        ) : (
+          <span className="text-ink-soft">—</span>
+        ),
+    },
+    {
+      key: "customer",
+      header: t.colCustomer,
+      className: "text-ink",
+      cell: (attempt) => (
+        <span className="block" dir="auto">
+          {attempt.order?.customerName ?? "—"}
+          {attempt.order?.phone && (
+            <span className="block text-xs text-ink-soft">
+              <bdi dir="ltr">{attempt.order.phone}</bdi>
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "agent",
+      header: t.colAgent,
+      className: "text-ink",
+      cell: (attempt) => (
+        <span className="block" dir="auto">
+          {attempt.agent.fullName || attempt.agent.email || t.noName}
+        </span>
+      ),
+    },
+    {
+      key: "attempt",
+      header: t.colAttempt,
+      align: "end",
+      className: "tabular-nums text-ink",
+      cell: (attempt) => attempt.attemptNumber,
+    },
+    {
+      key: "outcome",
+      header: t.colOutcome,
+      cell: (attempt) => (
+        <StatusBadge
+          value={attempt.outcome}
+          tone={OUTCOME_TONE[attempt.outcome]}
+          text={t[OUTCOME_LABEL[attempt.outcome]]}
+        />
+      ),
+    },
+    {
+      key: "note",
+      header: t.colNote,
+      className: "max-w-[240px] truncate text-ink-soft",
+      cell: (attempt) => (
+        <span className="block truncate" dir="auto" title={attempt.notes ?? undefined}>
+          {attempt.notes || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "total",
+      header: t.colTotal,
+      align: "end",
+      className: "tabular-nums whitespace-nowrap text-ink",
+      cell: (attempt) =>
+        attempt.order ? (
+          <bdi dir="ltr">{formatMoney(attempt.order.totalAmount, attempt.order.currency)}</bdi>
+        ) : (
+          "—"
+        ),
+    },
+  ];
 }

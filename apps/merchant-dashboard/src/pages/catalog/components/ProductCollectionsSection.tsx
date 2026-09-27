@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Card, CardContent, Spinner } from "@store-builder/ui";
+import { Button, Spinner } from "@store-builder/ui";
 import type { CollectionSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -7,6 +7,7 @@ import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { useToast } from "@/components/Toast";
 import { Select } from "@/components/Select";
+import { Section } from "@/components/Section";
 
 interface Props {
   productId: string;
@@ -54,12 +55,12 @@ export function ProductCollectionsSection({ productId, memberships, onChanged }:
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <h2 className="font-display text-lg font-medium text-ink">Collections</h2>
-        <p className="text-sm text-ink-soft">Storefront groupings this product appears in.</p>
-
-        <div className="mt-4 flex flex-wrap gap-2">
+    <Section
+      title="Collections"
+      description="Storefront groupings this product appears in."
+    >
+      <div>
+        <div className="flex flex-wrap gap-2">
           {memberships.length === 0 && (
             <span className="text-sm text-ink-soft">Not in any collection yet.</span>
           )}
@@ -108,7 +109,7 @@ export function ProductCollectionsSection({ productId, memberships, onChanged }:
             </>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }

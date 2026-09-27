@@ -22,6 +22,8 @@ import {
 } from "@/lib/brandColors";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
+import { DataTable } from "@/components/DataTable";
+import { Section } from "@/components/Section";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
@@ -34,7 +36,7 @@ export function SettingsPage() {
   const workspaceId = useWorkspaceId();
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="max-w-3xl space-y-6">
       <PageHeader
         title="Settings"
         description="Your store profile and the people who can manage it."
@@ -127,13 +129,11 @@ function WorkspaceProfileSection() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Store profile</h2>
-      <p className="mt-1 text-sm text-ink-soft">
-        The name, logo, and tagline shown across your dashboard and storefront.
-      </p>
-
-      <form onSubmit={submit} className="mt-4 space-y-4">
+    <Section
+      title="Store profile"
+      description="The name, logo, and tagline shown across your dashboard and storefront."
+    >
+      <form onSubmit={submit} className="space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
         <TextField
@@ -151,16 +151,16 @@ function WorkspaceProfileSection() {
               <img
                 src={logoUrl}
                 alt="Store logo"
-                className="size-16 rounded-[0.5rem] border border-line bg-paper object-contain"
+                className="size-16 rounded-lg bg-paper object-contain ring-1 ring-foreground/10"
               />
             ) : (
-              <div className="flex size-16 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-xs text-ink-soft">
+              <div className="flex size-16 items-center justify-center rounded-lg border border-dashed border-line text-xs text-ink-soft">
                 None
               </div>
             )}
             <label
               className={cn(
-                "inline-flex cursor-pointer items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-paper",
+                "inline-flex cursor-pointer items-center rounded-lg bg-paper-raised px-3 py-2 text-sm font-medium text-ink ring-1 ring-foreground/10 transition-colors hover:bg-paper",
                 uploading && "pointer-events-none opacity-50"
               )}
             >
@@ -190,7 +190,7 @@ function WorkspaceProfileSection() {
           hint="Optional — a short line shown under your store name."
         />
 
-        <div className="space-y-4 rounded-[0.5rem] border border-line p-4">
+        <div className="space-y-4 rounded-lg p-4 ring-1 ring-foreground/10">
           <div>
             <h3 className="text-sm font-medium text-ink">Store colours</h3>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -216,11 +216,11 @@ function WorkspaceProfileSection() {
           <div className="space-y-1.5">
             <Label>Preview</Label>
             <div
-              className="flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-line p-3"
+              className="flex flex-wrap items-center gap-3 rounded-lg p-3 ring-1 ring-foreground/10"
               style={{ backgroundColor: `${normalizeHex(primaryColor) ?? DEFAULT_PRIMARY}14` }}
             >
               <span
-                className="rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-white"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white"
                 style={{ backgroundColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
               >
                 Add to cart
@@ -247,7 +247,7 @@ function WorkspaceProfileSection() {
           </Button>
         </div>
       </form>
-    </section>
+    </Section>
   );
 }
 
@@ -306,122 +306,121 @@ function TeamSection() {
   }
 
   return (
-    <section>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">Team members</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            People who can sign in to this store, and the role that sets what they can do.
-          </p>
-        </div>
+    <Section
+      title="Team members"
+      description="People who can sign in to this store, and the role that sets what they can do."
+      actions={
         <Button onClick={() => setInviting(true)} disabled={roles.length === 0}>
           Invite member
         </Button>
-      </div>
-
+      }
+    >
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
-        <div className="mt-4 space-y-8">
-          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 font-medium">Member</th>
-                  <th className="px-4 py-3 font-medium">Role</th>
-                  <th className="px-4 py-3 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
+        <div className="space-y-8">
+          <DataTable
+            rows={members}
+            rowKey={(member) => member.id}
+            minWidth="35rem"
+            columns={[
+              {
+                key: "member",
+                header: "Member",
+                cell: (member) => {
                   const isSelf = Boolean(member.user && user && member.user.id === user.id);
                   return (
-                    <tr key={member.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-ink">
-                          {member.user?.fullName || member.user?.email || "—"}
-                          {isSelf && (
-                            <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
-                          )}
-                        </div>
-                        {member.user?.email && (
-                          <div className="text-xs text-ink-soft">{member.user.email}</div>
+                    <>
+                      <div className="font-medium text-ink">
+                        {member.user?.fullName || member.user?.email || "—"}
+                        {isSelf && (
+                          <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isSelf ? (
-                          <span className="text-ink-soft">{member.role.name}</span>
-                        ) : (
-                          <Select
-                            aria-label={`Role for ${member.user?.email ?? "member"}`}
-                            value={member.role.id}
-                            onChange={(e) => changeRole(member, e.target.value)}
-                            className="max-w-[220px]"
-                          >
-                            {roles.map((role) => (
-                              <option key={role.id} value={role.id}>
-                                {role.name}
-                              </option>
-                            ))}
-                          </Select>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        {isSelf ? (
-                          <span
-                            className="text-xs text-ink-soft"
-                            title="You can't remove yourself"
-                          >
-                            —
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:bg-danger-soft"
-                            onClick={() => setRemoving(member)}
-                          >
-                            Remove
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
+                      </div>
+                      {member.user?.email && (
+                        <div className="text-xs text-ink-soft">{member.user.email}</div>
+                      )}
+                    </>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                },
+              },
+              {
+                key: "role",
+                header: "Role",
+                cell: (member) =>
+                  member.user && user && member.user.id === user.id ? (
+                    <span className="text-ink-soft">{member.role.name}</span>
+                  ) : (
+                    <Select
+                      aria-label={`Role for ${member.user?.email ?? "member"}`}
+                      value={member.role.id}
+                      onChange={(e) => changeRole(member, e.target.value)}
+                      className="max-w-[220px]"
+                    >
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </Select>
+                  ),
+              },
+              {
+                key: "actions",
+                header: "",
+                align: "end",
+                cell: (member) =>
+                  member.user && user && member.user.id === user.id ? (
+                    <span className="text-xs text-ink-soft" title="You can't remove yourself">
+                      —
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger hover:bg-danger-soft"
+                      onClick={() => setRemoving(member)}
+                    >
+                      Remove
+                    </Button>
+                  ),
+              },
+            ]}
+          />
 
           {invites.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-medium text-ink">Pending invites</h3>
-              <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-                <table className="w-full min-w-[560px] text-sm">
-                  <thead>
-                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
-                      <th className="px-4 py-3 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invites.map((invite) => (
-                      <tr key={invite.id} className="border-b border-line last:border-0">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-ink">{invite.invitedEmail}</span>
-                            <StatusBadge value="invited" tone="warning" />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-ink-soft">{invite.role.name}</td>
-                        <td className="px-4 py-3 text-end">
-                          <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
-                            Resend
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={invites}
+                rowKey={(invite) => invite.id}
+                minWidth="35rem"
+                columns={[
+                  {
+                    key: "email",
+                    header: "Email",
+                    cell: (invite) => (
+                      <div className="flex items-center gap-2">
+                        <span className="text-ink">{invite.invitedEmail}</span>
+                        <StatusBadge value="invited" tone="warning" />
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "role",
+                    header: "Role",
+                    cell: (invite) => <span className="text-ink-soft">{invite.role.name}</span>,
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    align: "end",
+                    cell: (invite) => (
+                      <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
+                        Resend
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
         </div>
@@ -456,7 +455,7 @@ function TeamSection() {
         onCancel={() => setRemoving(null)}
         onConfirm={confirmRemove}
       />
-    </section>
+    </Section>
   );
 }
 

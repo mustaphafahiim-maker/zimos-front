@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
+import { Alert, Button, Spinner } from "@store-builder/ui";
 import type { Order, ReturnReasonCode, ReturnRequest } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -8,6 +8,7 @@ import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { formatDateTime, humanize } from "@/lib/format";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
@@ -75,22 +76,20 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
   const list = returns.data ?? [];
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">Returns</h2>
-
+    <Section title="Returns">
+      <>
         {returns.loading ? (
           <Spinner className="size-5" />
         ) : returns.error ? (
           <Alert variant="danger">{getErrorMessage(returns.error)}</Alert>
         ) : list.length === 0 ? (
-          <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
+          <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
             No returns on this order.
           </p>
         ) : (
           <ul className="space-y-3">
             {list.map((ret) => (
-              <li key={ret.id} className="rounded-[0.5rem] border border-line px-4 py-3">
+              <li key={ret.id} className="rounded-lg border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-ink">{humanize(ret.reason)}</span>
                   <StatusBadge value={ret.status} />
@@ -145,8 +144,8 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
             A return can only be opened once the order has been delivered.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </>
+    </Section>
   );
 }
 

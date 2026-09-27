@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Banknote, FileText, Receipt, Truck, Wallet } from "lucide-react";
-import { Button, Input } from "@store-builder/ui";
+import { Button, Card, Input } from "@store-builder/ui";
 import type { SettlementLinePayload, UnsettledOrder } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
@@ -13,6 +13,8 @@ import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Section } from "@/components/Section";
+import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
@@ -280,8 +282,8 @@ export function SettlementsPage() {
       )}
 
       <section className="mb-8">
-        <h2 className="font-display text-lg font-medium text-ink">{t.unsettledTitle}</h2>
-        <p className="mb-3 text-sm text-ink-soft">{t.unsettledDesc}</p>
+        <h2 className="text-sm font-semibold text-ink">{t.unsettledTitle}</h2>
+        <p className="mb-3 mt-0.5 text-xs text-ink-soft">{t.unsettledDesc}</p>
         <DataState
           loading={unsettled.loading && !unsettled.data}
           error={unsettled.error}
@@ -296,10 +298,7 @@ export function SettlementsPage() {
                 const selected = group.filter((o) => rowOf(o).checked);
                 const allChecked = group.length > 0 && selected.length === group.length;
                 return (
-                  <div
-                    key={c.carrierCode}
-                    className="rounded-[var(--radius-card)] border border-line bg-paper-raised"
-                  >
+                  <Card key={c.carrierCode} className="gap-0 p-0">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
                       <div>
                         <p className="font-medium text-ink" dir="auto">
@@ -343,90 +342,107 @@ export function SettlementsPage() {
                         </Button>
                       </div>
                     </div>
-                    <div className="min-w-0 overflow-x-auto">
-                      <table className="w-full min-w-[820px] text-sm">
-                        <thead>
-                          <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                            <th className="px-4 py-2 text-start font-medium">
-                              <input
-                                type="checkbox"
-                                className="size-4 accent-primary"
-                                checked={allChecked}
-                                aria-label={`${t.selectAll} (${c.carrierCode})`}
-                                onChange={(e) =>
-                                  setRows((prev) => {
-                                    const next = { ...prev };
-                                    for (const o of group)
-                                      next[o.orderId] = { ...rowOf(o), checked: e.target.checked };
-                                    return next;
-                                  })
-                                }
-                              />
-                            </th>
-                            <th className="px-4 py-2 text-start font-medium">{t.colOrder}</th>
-                            <th className="px-4 py-2 text-start font-medium">{t.colCustomer}</th>
-                            <th className="px-4 py-2 text-start font-medium">{t.colWaybill}</th>
-                            <th className="px-4 py-2 text-start font-medium">{t.colDelivered}</th>
-                            <th className="px-4 py-2 text-end font-medium">{t.colDue}</th>
-                            <th className="px-4 py-2 text-end font-medium">{t.colCollected}</th>
-                            <th className="px-4 py-2 text-end font-medium">{t.colFee}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.map((o) => {
-                            const r = rowOf(o);
-                            return (
-                              <tr key={o.orderId} className="border-b border-line last:border-0">
-                                <td className="px-4 py-2 text-start">
-                                  <input
-                                    type="checkbox"
-                                    className="size-4 accent-primary"
-                                    checked={r.checked}
-                                    aria-label={fmt(t.selectOrder, { number: o.orderNumber })}
-                                    onChange={(e) => patchRow(o, { checked: e.target.checked })}
-                                  />
-                                </td>
-                                <td className="px-4 py-2 text-start font-medium text-ink">
-                                  <bdi dir="ltr">{o.orderNumber}</bdi>
-                                </td>
-                                <td className="px-4 py-2 text-start text-ink" dir="auto">
-                                  {o.customerName ?? "—"}
-                                </td>
-                                <td className="px-4 py-2 text-start text-ink-soft">
-                                  <bdi dir="ltr">{o.waybillNumber ?? "—"}</bdi>
-                                </td>
-                                <td className="px-4 py-2 text-start text-ink-soft">
-                                  {formatDate(o.deliveredAt)}
-                                </td>
-                                <td className="tabular-nums px-4 py-2 text-end text-ink">
-                                  {money(o.dueAmount, o.currency)}
-                                </td>
-                                <td className="px-4 py-2 text-end">
-                                  <Input
-                                    inputMode="decimal"
-                                    value={r.collected}
-                                    onChange={(e) => patchRow(o, { collected: e.target.value })}
-                                    aria-label={`${t.colCollected} ${o.orderNumber}`}
-                                    className="tabular-nums ms-auto h-8 w-28"
-                                  />
-                                </td>
-                                <td className="px-4 py-2 text-end">
-                                  <Input
-                                    inputMode="decimal"
-                                    placeholder="0.00"
-                                    value={r.fee}
-                                    onChange={(e) => patchRow(o, { fee: e.target.value })}
-                                    aria-label={`${t.colFee} ${o.orderNumber}`}
-                                    className="tabular-nums ms-auto h-8 w-24"
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                    <DataTable
+                      rows={group}
+                      rowKey={(o) => o.orderId}
+                      minWidth="52rem"
+                      columns={[
+                        {
+                          key: "select",
+                          headerClassName: "w-10",
+                          header: (
+                            <input
+                              type="checkbox"
+                              className="size-4 accent-primary"
+                              checked={allChecked}
+                              aria-label={`${t.selectAll} (${c.carrierCode})`}
+                              onChange={(e) =>
+                                setRows((prev) => {
+                                  const next = { ...prev };
+                                  for (const o of group)
+                                    next[o.orderId] = { ...rowOf(o), checked: e.target.checked };
+                                  return next;
+                                })
+                              }
+                            />
+                          ),
+                          cell: (o) => (
+                            <input
+                              type="checkbox"
+                              className="size-4 accent-primary"
+                              checked={rowOf(o).checked}
+                              aria-label={fmt(t.selectOrder, { number: o.orderNumber })}
+                              onChange={(e) => patchRow(o, { checked: e.target.checked })}
+                            />
+                          ),
+                        },
+                        {
+                          key: "order",
+                          header: t.colOrder,
+                          className: "font-medium text-ink",
+                          cell: (o) => <bdi dir="ltr">{o.orderNumber}</bdi>,
+                        },
+                        {
+                          key: "customer",
+                          header: t.colCustomer,
+                          className: "text-ink",
+                          cell: (o) => (
+                            <span className="block" dir="auto">
+                              {o.customerName ?? "—"}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "waybill",
+                          header: t.colWaybill,
+                          className: "text-ink-soft",
+                          cell: (o) => <bdi dir="ltr">{o.waybillNumber ?? "—"}</bdi>,
+                        },
+                        {
+                          key: "delivered",
+                          header: t.colDelivered,
+                          className: "text-ink-soft",
+                          cell: (o) => formatDate(o.deliveredAt),
+                        },
+                        {
+                          key: "due",
+                          header: t.colDue,
+                          align: "end",
+                          className: "tabular-nums text-ink",
+                          cell: (o) => money(o.dueAmount, o.currency),
+                        },
+                        {
+                          key: "collected",
+                          header: t.colCollected,
+                          align: "end",
+                          cell: (o) => (
+                            <Input
+                              inputMode="decimal"
+                              value={rowOf(o).collected}
+                              onChange={(e) => patchRow(o, { collected: e.target.value })}
+                              aria-label={`${t.colCollected} ${o.orderNumber}`}
+                              className="tabular-nums ms-auto h-8 w-28"
+                            />
+                          ),
+                        },
+                        {
+                          key: "fee",
+                          header: t.colFee,
+                          align: "end",
+                          cell: (o) => (
+                            <Input
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              value={rowOf(o).fee}
+                              onChange={(e) => patchRow(o, { fee: e.target.value })}
+                              aria-label={`${t.colFee} ${o.orderNumber}`}
+                              className="tabular-nums ms-auto h-8 w-24"
+                            />
+                          ),
+                        },
+                      ]}
+                    />
+                  </Card>
                 );
               })}
             </div>
@@ -434,70 +450,98 @@ export function SettlementsPage() {
         </DataState>
       </section>
 
-      <section>
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.settlementsTitle}</h2>
+      <Section title={t.settlementsTitle} flush>
         <DataState
           loading={settlements.loading && !settlements.data}
           error={settlements.error}
           onRetry={() => settlements.refresh()}
         >
           {list.length === 0 ? (
-            <EmptyState icon={<FileText />} title={t.noSettlements} description={t.noSettlementsDesc} />
-          ) : (
-            <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-              <table className="w-full min-w-[760px] text-sm">
-                <thead>
-                  <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                    <th className="px-4 py-3 text-start font-medium">{t.colDate}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colCarrier}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colReference}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
-                    <th className="px-4 py-3 text-end font-medium">{t.colCollected}</th>
-                    <th className="px-4 py-3 text-end font-medium">{t.colFees}</th>
-                    <th className="px-4 py-3 text-end font-medium">{t.colNet}</th>
-                    <th className="px-4 py-3 text-end font-medium" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((row) => (
-                    <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper">
-                      <td className="px-4 py-3 text-start text-ink-soft">{formatDate(row.createdAt)}</td>
-                      <td className="px-4 py-3 text-start text-ink" dir="auto">
-                        {row.carrierCode}
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft" dir="auto">
-                        {row.reference || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <StatusBadge value={row.status} />
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        {money(row.collectedAmount, row.currency ?? currency)}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        {money(row.feesAmount, row.currency ?? currency)}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end font-medium text-ink">
-                        {money(row.netAmount, row.currency ?? currency)}
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setOpenId(row.id)}
-                          aria-label={`${t.view} ${row.carrierCode} ${formatDate(row.createdAt)}`}
-                        >
-                          {t.view}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-4 pb-4">
+              <EmptyState
+                icon={<FileText />}
+                title={t.noSettlements}
+                description={t.noSettlementsDesc}
+              />
             </div>
+          ) : (
+            <DataTable
+              rows={list}
+              rowKey={(row) => row.id}
+              minWidth="48rem"
+              columns={[
+                {
+                  key: "date",
+                  header: t.colDate,
+                  className: "text-ink-soft",
+                  cell: (row) => formatDate(row.createdAt),
+                },
+                {
+                  key: "carrier",
+                  header: t.colCarrier,
+                  className: "text-ink",
+                  cell: (row) => (
+                    <span className="block" dir="auto">
+                      {row.carrierCode}
+                    </span>
+                  ),
+                },
+                {
+                  key: "reference",
+                  header: t.colReference,
+                  className: "text-ink-soft",
+                  cell: (row) => (
+                    <span className="block" dir="auto">
+                      {row.reference || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "status",
+                  header: t.colStatus,
+                  cell: (row) => <StatusBadge value={row.status} />,
+                },
+                {
+                  key: "collected",
+                  header: t.colCollected,
+                  align: "end",
+                  className: "tabular-nums text-ink",
+                  cell: (row) => money(row.collectedAmount, row.currency ?? currency),
+                },
+                {
+                  key: "fees",
+                  header: t.colFees,
+                  align: "end",
+                  className: "tabular-nums text-ink",
+                  cell: (row) => money(row.feesAmount, row.currency ?? currency),
+                },
+                {
+                  key: "net",
+                  header: t.colNet,
+                  align: "end",
+                  className: "tabular-nums font-medium text-ink",
+                  cell: (row) => money(row.netAmount, row.currency ?? currency),
+                },
+                {
+                  key: "view",
+                  header: "",
+                  align: "end",
+                  cell: (row) => (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOpenId(row.id)}
+                      aria-label={`${t.view} ${row.carrierCode} ${formatDate(row.createdAt)}`}
+                    >
+                      {t.view}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
           )}
         </DataState>
-      </section>
+      </Section>
 
       <Modal
         open={!!openId && pending === null}
@@ -545,63 +589,75 @@ export function SettlementsPage() {
                 )}
               </div>
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="rounded-[0.5rem] border border-line p-3">
+                <div className="rounded-lg bg-paper p-3">
                   <p className="text-ink-soft">{t.colCollected}</p>
                   <p className="tabular-nums font-medium text-ink">
                     {money(d.collectedAmount, d.currency ?? currency)}
                   </p>
                 </div>
-                <div className="rounded-[0.5rem] border border-line p-3">
+                <div className="rounded-lg bg-paper p-3">
                   <p className="text-ink-soft">{t.colFees}</p>
                   <p className="tabular-nums font-medium text-ink">
                     {money(d.feesAmount, d.currency ?? currency)}
                   </p>
                 </div>
-                <div className="rounded-[0.5rem] border border-line p-3">
+                <div className="rounded-lg bg-paper p-3">
                   <p className="text-ink-soft">{t.colNet}</p>
                   <p className="tabular-nums font-medium text-ink">
                     {money(d.netAmount, d.currency ?? currency)}
                   </p>
                 </div>
               </div>
-              <div className="min-w-0 overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
-                  <thead>
-                    <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                      <th className="px-3 py-2 text-start font-medium">{t.colOrder}</th>
-                      <th className="px-3 py-2 text-start font-medium">{t.colCustomer}</th>
-                      <th className="px-3 py-2 text-start font-medium">{t.colStatus}</th>
-                      <th className="px-3 py-2 text-end font-medium">{t.colDue}</th>
-                      <th className="px-3 py-2 text-end font-medium">{t.colCollected}</th>
-                      <th className="px-3 py-2 text-end font-medium">{t.colFee}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.lines.map((l) => (
-                      <tr key={l.orderId} className="border-b border-line last:border-0">
-                        <td className="px-3 py-2 text-start font-medium text-ink">
-                          <bdi dir="ltr">{l.orderNumber ?? "—"}</bdi>
-                        </td>
-                        <td className="px-3 py-2 text-start text-ink" dir="auto">
-                          {l.customerName ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 text-start">
-                          {l.financialState ? <StatusBadge value={l.financialState} /> : "—"}
-                        </td>
-                        <td className="tabular-nums px-3 py-2 text-end text-ink">
-                          {l.orderTotal === null ? "—" : money(l.orderTotal, d.currency ?? currency)}
-                        </td>
-                        <td className="tabular-nums px-3 py-2 text-end text-ink">
-                          {money(l.collectedAmount, d.currency ?? currency)}
-                        </td>
-                        <td className="tabular-nums px-3 py-2 text-end text-ink">
-                          {money(l.feeAmount, d.currency ?? currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                rows={d.lines}
+                rowKey={(l) => l.orderId}
+                minWidth="35rem"
+                columns={[
+                  {
+                    key: "order",
+                    header: t.colOrder,
+                    className: "font-medium text-ink",
+                    cell: (l) => <bdi dir="ltr">{l.orderNumber ?? "—"}</bdi>,
+                  },
+                  {
+                    key: "customer",
+                    header: t.colCustomer,
+                    className: "text-ink",
+                    cell: (l) => (
+                      <span className="block" dir="auto">
+                        {l.customerName ?? "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    header: t.colStatus,
+                    cell: (l) => (l.financialState ? <StatusBadge value={l.financialState} /> : "—"),
+                  },
+                  {
+                    key: "due",
+                    header: t.colDue,
+                    align: "end",
+                    className: "tabular-nums text-ink",
+                    cell: (l) =>
+                      l.orderTotal === null ? "—" : money(l.orderTotal, d.currency ?? currency),
+                  },
+                  {
+                    key: "collected",
+                    header: t.colCollected,
+                    align: "end",
+                    className: "tabular-nums text-ink",
+                    cell: (l) => money(l.collectedAmount, d.currency ?? currency),
+                  },
+                  {
+                    key: "fee",
+                    header: t.colFee,
+                    align: "end",
+                    className: "tabular-nums text-ink",
+                    cell: (l) => money(l.feeAmount, d.currency ?? currency),
+                  },
+                ]}
+              />
               {d.notes && (
                 <p className="text-sm text-ink-soft" dir="auto">
                   <span className="font-medium text-ink">{t.notes}: </span>

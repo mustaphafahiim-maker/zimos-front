@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, Pencil, Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
+import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import type {
   AutomationPaymentMethod,
   AutomationRule,
@@ -16,6 +16,8 @@ import { getErrorMessage } from "@/lib/errors";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
+import { DataTable } from "@/components/DataTable";
+import { Section } from "@/components/Section";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
@@ -365,10 +367,7 @@ export function AutomationsPage() {
               {list.map((rule) => {
                 const action = rule.actions[0];
                 return (
-                  <div
-                    key={rule.id}
-                    className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4"
-                  >
+                  <Card key={rule.id} className="gap-0 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="truncate font-medium text-ink" dir="auto">
@@ -449,7 +448,7 @@ export function AutomationsPage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -457,66 +456,76 @@ export function AutomationsPage() {
         </DataState>
       </section>
 
-      <section>
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.runsTitle}</h2>
+      <Section title={t.runsTitle} flush>
         <DataState loading={runs.loading && !runs.data} error={runs.error} onRetry={() => runs.refresh()}>
           {runList.length === 0 ? (
-            <EmptyState title={t.noRuns} description={t.noRunsDesc} />
-          ) : (
-            <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-              <table className="w-full min-w-[760px] text-sm">
-                <thead>
-                  <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                    <th className="px-4 py-3 text-start font-medium">{t.colTime}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colRule}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colTrigger}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colOrder}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
-                    <th className="px-4 py-3 text-start font-medium">{t.colDetail}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runList.map((run) => (
-                    <tr key={run.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-3 text-start text-ink-soft">
-                        {formatDateTime(run.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink" dir="auto">
-                        {ruleNames.get(run.ruleId) ?? t.deletedRule}
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft">{label(run.trigger)}</td>
-                      <td className="px-4 py-3 text-start">
-                        {run.order ? (
-                          <Link
-                            to={`/orders/${run.order.id}`}
-                            className="font-medium text-primary underline-offset-2 hover:underline"
-                          >
-                            <bdi dir="ltr">{run.order.orderNumber ?? "—"}</bdi>
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <StatusBadge value={run.status} tone={RUN_TONE[run.status]} />
-                      </td>
-                      <td
-                        className={cn(
-                          "px-4 py-3 text-start",
-                          run.status === "failed" ? "text-danger" : "text-ink-soft"
-                        )}
-                        dir="auto"
-                      >
-                        {run.detail ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="px-4 pb-4">
+              <EmptyState title={t.noRuns} description={t.noRunsDesc} />
             </div>
+          ) : (
+            <DataTable
+              rows={runList}
+              rowKey={(run) => run.id}
+              minWidth="47.5rem"
+              columns={[
+                {
+                  key: "time",
+                  header: t.colTime,
+                  cell: (run) => (
+                    <span className="text-ink-soft">{formatDateTime(run.createdAt)}</span>
+                  ),
+                },
+                {
+                  key: "rule",
+                  header: t.colRule,
+                  cell: (run) => (
+                    <span className="text-ink" dir="auto">
+                      {ruleNames.get(run.ruleId) ?? t.deletedRule}
+                    </span>
+                  ),
+                },
+                {
+                  key: "trigger",
+                  header: t.colTrigger,
+                  cell: (run) => <span className="text-ink-soft">{label(run.trigger)}</span>,
+                },
+                {
+                  key: "order",
+                  header: t.colOrder,
+                  cell: (run) =>
+                    run.order ? (
+                      <Link
+                        to={`/orders/${run.order.id}`}
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        <bdi dir="ltr">{run.order.orderNumber ?? "—"}</bdi>
+                      </Link>
+                    ) : (
+                      "—"
+                    ),
+                },
+                {
+                  key: "status",
+                  header: t.colStatus,
+                  cell: (run) => <StatusBadge value={run.status} tone={RUN_TONE[run.status]} />,
+                },
+                {
+                  key: "detail",
+                  header: t.colDetail,
+                  cell: (run) => (
+                    <span
+                      className={cn(run.status === "failed" ? "text-danger" : "text-ink-soft")}
+                      dir="auto"
+                    >
+                      {run.detail ?? "—"}
+                    </span>
+                  ),
+                },
+              ]}
+            />
           )}
         </DataState>
-      </section>
+      </Section>
 
       <Modal
         open={editing !== null}
@@ -591,7 +600,7 @@ export function AutomationsPage() {
                   // Keeps the caret in the variable box so the token lands there.
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertToken(token)}
-                  className="cursor-pointer rounded-full border border-line bg-paper px-2 py-0.5 text-xs text-ink hover:border-primary hover:text-primary"
+                  className="cursor-pointer rounded-md bg-paper px-2 py-0.5 text-xs text-ink ring-1 ring-foreground/10 hover:text-primary hover:ring-primary"
                   dir="ltr"
                 >
                   {token}

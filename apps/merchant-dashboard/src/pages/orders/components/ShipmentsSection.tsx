@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Alert, Button, Card, CardContent } from "@store-builder/ui";
+import { Alert, Button } from "@store-builder/ui";
 import type { BostaCity, BostaDistrict, Shipment, ShipmentStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -7,6 +7,7 @@ import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { formatDateTime, humanize } from "@/lib/format";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Section } from "@/components/Section";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
@@ -150,18 +151,16 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">Shipments</h2>
-
+    <Section title="Shipments">
+      <>
         {shipments.length === 0 ? (
-          <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
+          <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
             No shipments yet.
           </p>
         ) : (
           <ul className="space-y-3">
             {shipments.map((s) => (
-              <li key={s.id} className="rounded-[0.5rem] border border-line px-4 py-3">
+              <li key={s.id} className="rounded-lg border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-medium text-ink">{s.trackingCode}</span>
@@ -277,7 +276,7 @@ export function ShipmentsSection({ orderId, shipments, orderCancelled, onChanged
             </div>
           </form>
         )}
-      </CardContent>
-    </Card>
+      </>
+    </Section>
   );
 }

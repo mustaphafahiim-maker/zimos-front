@@ -33,7 +33,7 @@ export function FilterTabs<T extends string>({
       role="group"
       aria-label={label}
       className={cn(
-        "inline-flex flex-wrap gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1",
+        "inline-flex flex-wrap gap-1 rounded-lg bg-paper-raised p-1 shadow-xs ring-1 ring-foreground/10",
         className
       )}
     >

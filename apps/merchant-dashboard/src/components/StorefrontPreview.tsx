@@ -332,7 +332,7 @@ export function StorefrontPreview({
           text above the device switcher — chrome the canvas doesn't need. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-1.5">
         <p className="min-w-0 truncate text-xs text-ink-soft">
-          <span className="font-display font-medium text-ink">{labels.title}</span>
+          <span className="font-semibold text-ink">{labels.title}</span>
           <span className="mx-1.5 text-line" aria-hidden>
             ·
           </span>

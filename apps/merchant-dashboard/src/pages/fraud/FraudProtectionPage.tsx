@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Check, Flag, Info, ShieldAlert, ShieldCheck, Trash2, X } from "lucide-react";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
+import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import type { BlocklistEntry, FlaggedOrder, FraudRules } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
@@ -18,6 +18,7 @@ import { FilterTabs } from "@/components/FilterTabs";
 import { LoadMore } from "@/components/LoadMore";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable, type Column } from "@/components/DataTable";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
@@ -418,7 +419,7 @@ function RulesTab() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="min-w-0 rounded-[var(--radius-card)] border border-line bg-paper-raised">
+      <Card className="min-w-0 gap-0 p-0">
         <div className="border-b border-line px-4 py-3">
           <CheckRow
             label={t.blockBlacklisted}
@@ -467,10 +468,10 @@ function RulesTab() {
             </div>
           );
         })}
-      </div>
+      </Card>
 
       <div className="space-y-4">
-        <fieldset className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+        <fieldset className="rounded-xl bg-paper-raised p-4 shadow-xs ring-1 ring-foreground/10">
           <legend className="px-1 text-sm font-medium text-ink">{t.whenMatches}</legend>
           <div className="mt-2 space-y-2">
             <ActionChoice
@@ -518,7 +519,7 @@ function ActionChoice({
   return (
     <label
       className={cn(
-        "flex cursor-pointer gap-3 rounded-[0.5rem] border p-3 transition-colors",
+        "flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors",
         checked
           ? tone === "danger"
             ? "border-danger bg-danger-soft/40"
@@ -610,6 +611,99 @@ function FlaggedTab() {
     setReason("");
   }
 
+  const flaggedColumns: ReadonlyArray<Column<FlaggedOrder>> = [
+    {
+      key: "order",
+      header: t.colOrder,
+      className: "font-medium",
+      cell: (order) => (
+        <Link to={`/orders/${order.id}`} className="text-primary hover:underline">
+          <bdi dir="ltr">{order.orderNumber}</bdi>
+        </Link>
+      ),
+    },
+    {
+      key: "customer",
+      header: t.colCustomer,
+      className: "text-ink",
+      cell: (order) => (
+        <span className="block" dir="auto">
+          {order.customerName || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "phone",
+      header: t.colPhone,
+      className: "text-ink-soft",
+      cell: (order) => <bdi dir="ltr">{order.phone || "—"}</bdi>,
+    },
+    {
+      key: "total",
+      header: t.colTotal,
+      align: "end",
+      className: "tabular-nums whitespace-nowrap text-ink",
+      cell: (order) => <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>,
+    },
+    {
+      key: "flags",
+      header: t.colFlags,
+      cell: (order) => (
+        <div className="flex max-w-[260px] flex-wrap gap-1">
+          {order.riskFlags.length === 0
+            ? "—"
+            : order.riskFlags.map((flag) => (
+                <StatusBadge key={flag} value={flag} tone="warning" text={flagLabel(t, flag)} />
+              ))}
+        </div>
+      ),
+    },
+    {
+      key: "date",
+      header: t.colDate,
+      className: "whitespace-nowrap text-xs text-ink-soft",
+      cell: (order) => formatDateTime(order.createdAt),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "end",
+      className: "whitespace-nowrap",
+      cell: (order) =>
+        order.cancelled || order.riskFlags.length === 0 ? (
+          <span className="text-xs text-ink-soft">
+            {order.cancelled ? t.cancelledState : t.reviewedState}
+          </span>
+        ) : (
+          <div className="flex justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-success"
+              disabled={busyId === order.id}
+              onClick={() => approve(order)}
+            >
+              <Check aria-hidden />
+              {t.approve}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-danger hover:bg-danger-soft"
+              disabled={busyId === order.id}
+              onClick={() => {
+                setReason("");
+                setCancelling(order);
+              }}
+            >
+              <X aria-hidden />
+              {t.cancelOrder}
+            </Button>
+          </div>
+        ),
+    },
+  ];
+
   return (
     <div className="space-y-3">
       <CheckRow label={t.showResolved} checked={includeResolved} onChange={setIncludeResolved} />
@@ -618,94 +712,14 @@ function FlaggedTab() {
         {list.items.length === 0 ? (
           <EmptyState icon={<ShieldCheck />} title={t.emptyFlagged} description={t.emptyFlaggedDesc} />
         ) : (
-          <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 text-start font-medium">{t.colOrder}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colCustomer}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colPhone}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colTotal}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colFlags}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colDate}</th>
-                  <th className="px-4 py-3 text-end font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((order) => {
-                  const settled = order.cancelled || order.riskFlags.length === 0;
-                  return (
-                    <tr key={order.id} className="border-b border-line last:border-0 hover:bg-paper">
-                      <td className="px-4 py-3 text-start font-medium">
-                        <Link to={`/orders/${order.id}`} className="text-primary hover:underline">
-                          <bdi dir="ltr">{order.orderNumber}</bdi>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink" dir="auto">
-                        {order.customerName || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft">
-                        <bdi dir="ltr">{order.phone || "—"}</bdi>
-                      </td>
-                      <td className="tabular-nums whitespace-nowrap px-4 py-3 text-end text-ink">
-                        <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <div className="flex max-w-[260px] flex-wrap gap-1">
-                          {order.riskFlags.length === 0
-                            ? "—"
-                            : order.riskFlags.map((flag) => (
-                                <StatusBadge
-                                  key={flag}
-                                  value={flag}
-                                  tone="warning"
-                                  text={flagLabel(t, flag)}
-                                />
-                              ))}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">
-                        {formatDateTime(order.createdAt)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-end">
-                        {settled ? (
-                          <span className="text-xs text-ink-soft">
-                            {order.cancelled ? t.cancelledState : t.reviewedState}
-                          </span>
-                        ) : (
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-success"
-                              disabled={busyId === order.id}
-                              onClick={() => approve(order)}
-                            >
-                              <Check aria-hidden />
-                              {t.approve}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-danger hover:bg-danger-soft"
-                              disabled={busyId === order.id}
-                              onClick={() => {
-                                setReason("");
-                                setCancelling(order);
-                              }}
-                            >
-                              <X aria-hidden />
-                              {t.cancelOrder}
-                            </Button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Card className="gap-0 p-0">
+            <DataTable
+              rows={list.items}
+              rowKey={(order) => order.id}
+              minWidth="56rem"
+              columns={flaggedColumns}
+            />
+          </Card>
         )}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
@@ -778,65 +792,81 @@ function BlocklistTab() {
             description={t.emptyBlocklistDesc}
           />
         ) : (
-          <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 text-start font-medium">{t.colPhone}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colCustomer}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colReason}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colOrders}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colRejected}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colBlocked}</th>
-                  <th className="px-4 py-3 text-end font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr
-                    key={entry.customerId}
-                    className="border-b border-line last:border-0 hover:bg-paper"
-                  >
-                    <td className="px-4 py-3 text-start text-ink">
-                      <bdi dir="ltr">{entry.phone || "—"}</bdi>
-                    </td>
-                    <td className="px-4 py-3 text-start text-ink" dir="auto">
+          <Card className="gap-0 p-0">
+            <DataTable
+              rows={entries}
+              rowKey={(entry) => entry.customerId}
+              minWidth="52rem"
+              columns={[
+                {
+                  key: "phone",
+                  header: t.colPhone,
+                  className: "text-ink",
+                  cell: (entry) => <bdi dir="ltr">{entry.phone || "—"}</bdi>,
+                },
+                {
+                  key: "customer",
+                  header: t.colCustomer,
+                  className: "text-ink",
+                  cell: (entry) => (
+                    <span className="block" dir="auto">
                       {entry.fullName || "—"}
-                    </td>
-                    <td
-                      className="max-w-[260px] truncate px-4 py-3 text-start text-ink-soft"
-                      dir="auto"
-                    >
+                    </span>
+                  ),
+                },
+                {
+                  key: "reason",
+                  header: t.colReason,
+                  className: "max-w-[260px] truncate text-ink-soft",
+                  cell: (entry) => (
+                    <span className="block truncate" dir="auto">
                       {entry.reason || "—"}
-                    </td>
-                    <td className="tabular-nums px-4 py-3 text-end text-ink-soft">
-                      {entry.totalOrders}
-                    </td>
-                    <td className="tabular-nums px-4 py-3 text-end text-ink-soft">
-                      {entry.totalRejectedOrders}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">
-                      {formatDate(entry.blockedAt)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger hover:bg-danger-soft"
-                        onClick={() => setRemoving(entry)}
-                        aria-label={fmt(t.unblockTitle, {
-                          value: entry.phone || entry.fullName || "",
-                        })}
-                      >
-                        <Trash2 aria-hidden />
-                        {t.unblock}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  ),
+                },
+                {
+                  key: "orders",
+                  header: t.colOrders,
+                  align: "end",
+                  className: "tabular-nums text-ink-soft",
+                  cell: (entry) => entry.totalOrders,
+                },
+                {
+                  key: "rejected",
+                  header: t.colRejected,
+                  align: "end",
+                  className: "tabular-nums text-ink-soft",
+                  cell: (entry) => entry.totalRejectedOrders,
+                },
+                {
+                  key: "blocked",
+                  header: t.colBlocked,
+                  className: "whitespace-nowrap text-xs text-ink-soft",
+                  cell: (entry) => formatDate(entry.blockedAt),
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  align: "end",
+                  className: "whitespace-nowrap",
+                  cell: (entry) => (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger hover:bg-danger-soft"
+                      onClick={() => setRemoving(entry)}
+                      aria-label={fmt(t.unblockTitle, {
+                        value: entry.phone || entry.fullName || "",
+                      })}
+                    >
+                      <Trash2 aria-hidden />
+                      {t.unblock}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          </Card>
         )}
       </DataState>
 
@@ -895,7 +925,7 @@ function BlockForm({ onBlocked }: { onBlocked: () => void }) {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4"
+      className="space-y-3 rounded-xl bg-paper-raised p-4 shadow-xs ring-1 ring-foreground/10"
     >
       <div>
         <p className="text-sm font-medium text-ink">{t.addTitle}</p>

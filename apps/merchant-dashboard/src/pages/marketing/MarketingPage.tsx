@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link2, Radio } from "lucide-react";
-import { Alert, Button } from "@store-builder/ui";
+import { Alert, Button, Card } from "@store-builder/ui";
 import type { TrackingPixels } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -198,17 +198,13 @@ export function MarketingPage() {
     <div className="min-w-0 max-w-4xl">
       <PageHeader title={t.title} description={t.description} />
 
-      <section className="mb-8">
-        <h2 className="flex items-center gap-2 font-display text-lg font-medium text-ink">
+      <Card className="mb-6 gap-0 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
           <Radio className="size-4 text-primary" aria-hidden />
           {t.pixelsTitle}
         </h2>
-        <p className="mb-3 text-sm text-ink-soft">{t.pixelsDesc}</p>
-        <form
-          onSubmit={savePixels}
-          noValidate
-          className="space-y-4 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4"
-        >
+        <p className="mt-0.5 text-xs text-ink-soft">{t.pixelsDesc}</p>
+        <form onSubmit={savePixels} noValidate className="mt-3 space-y-4">
           {formError && <Alert variant="danger">{formError}</Alert>}
           <div className="grid gap-4 sm:grid-cols-2">
             {PLATFORMS.map((platform) => {
@@ -216,14 +212,14 @@ export function MarketingPage() {
               const bad = value.trim() !== "" && !platform.pattern.test(value.trim());
               const live = Boolean(stored[platform.key]);
               return (
-                <div key={platform.key} className="rounded-[0.5rem] border border-line p-3">
+                <div key={platform.key} className="rounded-lg p-3 ring-1 ring-foreground/10">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm font-semibold text-ink">{platform.name}</span>
                     <span
                       className={
                         live
-                          ? "rounded-full border border-success/30 bg-success-soft px-2 py-0.5 text-xs font-medium text-success"
-                          : "rounded-full border border-line bg-paper px-2 py-0.5 text-xs font-medium text-ink-soft"
+                          ? "rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success"
+                          : "rounded-full bg-paper px-2 py-0.5 text-xs font-medium text-ink-soft"
                       }
                     >
                       {live ? t.connected : t.notConnected}
@@ -254,15 +250,15 @@ export function MarketingPage() {
             </Button>
           </div>
         </form>
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="flex items-center gap-2 font-display text-lg font-medium text-ink">
+      <Card className="gap-0 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
           <Link2 className="size-4 text-primary" aria-hidden />
           {t.utmTitle}
         </h2>
-        <p className="mb-3 text-sm text-ink-soft">{t.utmDesc}</p>
-        <div className="space-y-4 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+        <p className="mt-0.5 text-xs text-ink-soft">{t.utmDesc}</p>
+        <div className="mt-3 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               label={t.path}
@@ -301,19 +297,19 @@ export function MarketingPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
               <code
                 dir="ltr"
-                className="min-w-0 flex-1 break-all rounded-[0.5rem] border border-line bg-paper px-3 py-2 text-xs text-ink"
+                className="min-w-0 flex-1 break-all rounded-lg bg-paper px-3 py-2 text-xs text-ink ring-1 ring-foreground/10"
               >
                 {link}
               </code>
               <CopyButton
                 value={link}
                 label={t.copy}
-                className="border border-line bg-paper-raised px-3 py-2 text-sm"
+                className="rounded-lg bg-paper-raised px-3 py-2 text-sm ring-1 ring-foreground/10"
               />
             </div>
           </div>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, CardContent } from "@store-builder/ui";
+import { Alert, Button } from "@store-builder/ui";
 import type {
   CreateProductPayload,
   Product,
@@ -10,6 +10,7 @@ import type {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { Section } from "@/components/Section";
 import { useToast } from "@/components/Toast";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
@@ -101,11 +102,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <h2 className="font-display text-lg font-medium text-ink">Basics</h2>
-            {formError && <Alert variant="danger">{formError}</Alert>}
+      <Section title="Basics">
+        <div className="space-y-4">
+          {formError && <Alert variant="danger">{formError}</Alert>}
 
             <TextField
               label="Name"
@@ -173,9 +172,8 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
               error={fieldErrors.tags}
               placeholder="apparel, summer"
             />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
       {isCreate && (
         <ProductImagesSection

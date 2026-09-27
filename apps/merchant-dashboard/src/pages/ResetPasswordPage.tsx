@@ -65,7 +65,7 @@ export function ResetPasswordPage() {
       <BrandPanel />
       <div className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Set a new password</h2>
+          <h2 className="text-3xl font-semibold text-ink">Set a new password</h2>
 
           {!token ? (
             <>

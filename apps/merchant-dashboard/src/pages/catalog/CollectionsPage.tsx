@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
+import { Alert, Button, Card, Spinner } from "@store-builder/ui";
 import type {
   CollectionSummary,
   CreateCollectionPayload,
@@ -163,42 +163,40 @@ export function CollectionsPage() {
       >
         <div className="space-y-2">
           {collections.map((c) => (
-            <Card key={c.id}>
-              <CardContent className="py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-ink">{c.name}</p>
-                    <p className="text-xs text-ink-soft">{c.slug}</p>
-                    {c.description && (
-                      <p className="mt-1 text-sm text-ink-soft">{c.description}</p>
-                    )}
-                    <button
-                      onClick={() => setExpanded((cur) => (cur === c.id ? null : c.id))}
-                      className="cursor-pointer mt-2 text-xs text-primary hover:underline"
-                    >
-                      {expanded === c.id ? "Hide products" : "Show products"}
-                    </button>
-                    {expanded === c.id && (
-                      <div className="mt-2 border-s-2 border-line ps-3">
-                        <CollectionProducts collectionId={c.id} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(c)}>
-                      Rename
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger hover:bg-danger-soft"
-                      onClick={() => setDeleting(c)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+            <Card key={c.id} className="gap-0 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink">{c.name}</p>
+                  <p className="text-xs text-ink-soft">{c.slug}</p>
+                  {c.description && (
+                    <p className="mt-1 text-sm text-ink-soft">{c.description}</p>
+                  )}
+                  <button
+                    onClick={() => setExpanded((cur) => (cur === c.id ? null : c.id))}
+                    className="cursor-pointer mt-2 text-xs text-primary hover:underline"
+                  >
+                    {expanded === c.id ? "Hide products" : "Show products"}
+                  </button>
+                  {expanded === c.id && (
+                    <div className="mt-2 border-s-2 border-line ps-3">
+                      <CollectionProducts collectionId={c.id} />
+                    </div>
+                  )}
                 </div>
-              </CardContent>
+                <div className="whitespace-nowrap">
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(c)}>
+                    Rename
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-danger hover:bg-danger-soft"
+                    onClick={() => setDeleting(c)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
             </Card>
           ))}
         </div>

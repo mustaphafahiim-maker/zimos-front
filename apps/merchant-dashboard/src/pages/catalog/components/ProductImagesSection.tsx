@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ChevronDown, ChevronUp, Star, Trash2, Upload } from "lucide-react";
-import { Alert, Button, Card, CardContent, Spinner, cn } from "@store-builder/ui";
+import { Alert, Button, Card, Spinner, cn } from "@store-builder/ui";
 import type { ProductMedia } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -151,28 +151,29 @@ export function ProductImagesSection(props: Props) {
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="font-display text-lg font-medium text-ink">
+    <Card className="min-w-0 gap-0 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-ink">
             Images{props.mode === "create" && <span className="text-danger"> *</span>}
           </h2>
-          {dirty && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setEditItems(savedMedia)} disabled={saving}>
-                Discard
-              </Button>
-              <Button size="sm" onClick={save} disabled={saving || uploading > 0 || preparing > 0}>
-                {saving ? "Saving…" : "Save images"}
-              </Button>
-            </div>
-          )}
+          <p className="mt-0.5 text-xs text-ink-soft">
+            PNG, JPEG, GIF or WEBP. Anything over 5&nbsp;MB is resized automatically before upload.
+            The first image is the primary one shown in the catalog and storefront.
+          </p>
         </div>
-        <p className="mb-4 text-sm text-ink-soft">
-          PNG, JPEG, GIF or WEBP. Anything over 5&nbsp;MB is resized automatically before upload.
-          The first image is the primary one shown in the catalog and storefront.
-        </p>
-
+        {dirty && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setEditItems(savedMedia)} disabled={saving}>
+              Discard
+            </Button>
+            <Button size="sm" onClick={save} disabled={saving || uploading > 0 || preparing > 0}>
+              {saving ? "Saving…" : "Save images"}
+            </Button>
+          </div>
+        )}
+      </div>
+      <div className="mt-3">
         {props.mode === "create" && props.error && (
           <Alert variant="danger" className="mb-4">
             {props.error}
@@ -197,7 +198,7 @@ export function ProductImagesSection(props: Props) {
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-[0.5rem] border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
+            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
             dragOver ? "border-primary bg-primary-soft" : "border-line hover:border-primary/60"
           )}
         >
@@ -233,7 +234,7 @@ export function ProductImagesSection(props: Props) {
             {items.map((m, i) => (
               <li
                 key={m.path || m.url}
-                className="group relative overflow-hidden rounded-[0.5rem] border border-line"
+                className="group relative overflow-hidden rounded-lg border border-line"
               >
                 <ProductImage media={m} alt={`Image ${i + 1}`} className="aspect-square w-full" />
                 {i === 0 && (
@@ -248,7 +249,7 @@ export function ProductImagesSection(props: Props) {
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
                       aria-label="Move image earlier"
-                      className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
+                      className="cursor-pointer rounded-md p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronUp className="size-4" aria-hidden />
                     </button>
@@ -257,7 +258,7 @@ export function ProductImagesSection(props: Props) {
                       onClick={() => move(i, 1)}
                       disabled={i === items.length - 1}
                       aria-label="Move image later"
-                      className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
+                      className="cursor-pointer rounded-md p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronDown className="size-4" aria-hidden />
                     </button>
@@ -266,7 +267,7 @@ export function ProductImagesSection(props: Props) {
                     type="button"
                     onClick={() => remove(i)}
                     aria-label="Remove image"
-                    className="cursor-pointer rounded p-1 text-white hover:bg-danger"
+                    className="cursor-pointer rounded-md p-1 text-white hover:bg-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -278,7 +279,7 @@ export function ProductImagesSection(props: Props) {
           uploading === 0 &&
           preparing === 0 && <p className="mt-4 text-sm text-ink-soft">No images yet.</p>
         )}
-      </CardContent>
+      </div>
     </Card>
   );
 }

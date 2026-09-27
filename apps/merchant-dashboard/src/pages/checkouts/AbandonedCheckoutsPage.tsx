@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MessageCircle, ShoppingCart, Wallet } from "lucide-react";
-import { Button } from "@store-builder/ui";
+import { Button, Card } from "@store-builder/ui";
 import type {
   CheckoutRecoveryStatus,
   CheckoutSession,
@@ -25,6 +25,7 @@ import { LoadMore } from "@/components/LoadMore";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
+import { DataTable, type Column } from "@/components/DataTable";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 
@@ -288,6 +289,130 @@ export function AbandonedCheckoutsPage() {
     if (session.recoveryStatus === "not_contacted") void setStatus(session, "contacted");
   }
 
+  const columns: ReadonlyArray<Column<CheckoutSession>> = [
+    {
+      key: "customer",
+      header: t.colCustomer,
+      cell: (row) => {
+        const contact = row.phone ?? row.email;
+        return (
+          <>
+            <p className="font-medium text-ink" dir="auto">
+              {row.customerName ?? t.anonymous}
+            </p>
+            <p className="text-xs text-ink-soft">
+              {contact ? <bdi dir="ltr">{contact}</bdi> : t.noContact}
+            </p>
+          </>
+        );
+      },
+    },
+    {
+      key: "items",
+      header: t.colItems,
+      className: "max-w-[240px] truncate text-ink-soft",
+      cell: (row) => (
+        <span className="block truncate" dir="auto">
+          {cartSummary(row.items, t)}
+        </span>
+      ),
+    },
+    {
+      key: "total",
+      header: t.colTotal,
+      align: "end",
+      className: "tabular-nums text-ink",
+      cell: (row) => <bdi dir="ltr">{formatMoney(row.subtotalAmount, row.currency)}</bdi>,
+    },
+    {
+      key: "state",
+      header: t.colState,
+      cell: (row) => (
+        <>
+          <span className="block text-ink">{t[STATE_LABEL[row.status]]}</span>
+          {row.convertedOrder && (
+            <Link
+              to={`/orders/${row.convertedOrder.id}`}
+              className="text-xs text-primary hover:underline"
+            >
+              {fmt(t.orderLink, { number: row.convertedOrder.orderNumber })}
+            </Link>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "source",
+      header: t.colSource,
+      className: "text-ink-soft",
+      cell: (row) => (row.source === "funnel" ? t.sourceFunnel : t.sourceStore),
+    },
+    {
+      key: "recovery",
+      header: t.colRecovery,
+      cell: (row) => (
+        <StatusBadge
+          value={row.recoveryStatus}
+          tone={RECOVERY_TONE[row.recoveryStatus]}
+          text={t[RECOVERY_LABEL[row.recoveryStatus]]}
+        />
+      ),
+    },
+    {
+      key: "lastActivity",
+      header: t.colLastActivity,
+      className: "text-ink-soft",
+      cell: (row) => formatDateTime(row.lastActivityAt),
+    },
+    {
+      key: "actions",
+      header: common.actions,
+      align: "end",
+      cell: (row) => {
+        const busy = busyId === row.id;
+        const closed =
+          row.status === "converted" ||
+          row.recoveryStatus === "recovered" ||
+          row.recoveryStatus === "lost";
+        const name = row.customerName ?? t.anonymous;
+        return (
+          <div className="flex justify-end gap-1">
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={busy || closed || !row.phone}
+              title={row.phone ? undefined : t.noPhone}
+              aria-label={fmt(t.whatsappTitle, { name })}
+              onClick={() => {
+                setTarget(row);
+                setMessage(draftMessage(row, storeUrl));
+              }}
+            >
+              <MessageCircle aria-hidden />
+              {t.whatsapp}
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              disabled={busy || row.recoveryStatus === "recovered"}
+              onClick={() => setStatus(row, "recovered", t.markedRecovered)}
+            >
+              {t.markRecovered}
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              disabled={busy || row.recoveryStatus === "lost"}
+              onClick={() => setStatus(row, "lost", t.markedLost)}
+            >
+              {t.markLost}
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="min-w-0 max-w-6xl">
       <PageHeader title={t.title} description={t.description} />
@@ -346,112 +471,14 @@ export function AbandonedCheckoutsPage() {
             description={view === "converted" ? t.emptyConvertedDesc : t.emptyDesc}
           />
         ) : (
-          <div className="min-w-0 overflow-x-auto rounded-[var(--radius-card)] border border-line bg-paper-raised">
-            <table className="w-full min-w-[980px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 text-start font-medium">{t.colCustomer}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colItems}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t.colTotal}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colState}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colSource}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colRecovery}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colLastActivity}</th>
-                  <th className="px-4 py-3 text-end font-medium">{common.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const busy = busyId === row.id;
-                  const contact = row.phone ?? row.email;
-                  const closed =
-                    row.status === "converted" ||
-                    row.recoveryStatus === "recovered" ||
-                    row.recoveryStatus === "lost";
-                  const name = row.customerName ?? t.anonymous;
-                  return (
-                    <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper">
-                      <td className="px-4 py-3 text-start">
-                        <p className="font-medium text-ink" dir="auto">
-                          {name}
-                        </p>
-                        <p className="text-xs text-ink-soft">
-                          {contact ? <bdi dir="ltr">{contact}</bdi> : t.noContact}
-                        </p>
-                      </td>
-                      <td
-                        className="max-w-[240px] truncate px-4 py-3 text-start text-ink-soft"
-                        dir="auto"
-                      >
-                        {cartSummary(row.items, t)}
-                      </td>
-                      <td className="tabular-nums px-4 py-3 text-end text-ink">
-                        <bdi dir="ltr">{formatMoney(row.subtotalAmount, row.currency)}</bdi>
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <span className="block text-ink">{t[STATE_LABEL[row.status]]}</span>
-                        {row.convertedOrder && (
-                          <Link
-                            to={`/orders/${row.convertedOrder.id}`}
-                            className="text-xs text-primary hover:underline"
-                          >
-                            {fmt(t.orderLink, { number: row.convertedOrder.orderNumber })}
-                          </Link>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft">
-                        {row.source === "funnel" ? t.sourceFunnel : t.sourceStore}
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <StatusBadge
-                          value={row.recoveryStatus}
-                          tone={RECOVERY_TONE[row.recoveryStatus]}
-                          text={t[RECOVERY_LABEL[row.recoveryStatus]]}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-start text-ink-soft">
-                        {formatDateTime(row.lastActivityAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            disabled={busy || closed || !row.phone}
-                            title={row.phone ? undefined : t.noPhone}
-                            aria-label={fmt(t.whatsappTitle, { name })}
-                            onClick={() => {
-                              setTarget(row);
-                              setMessage(draftMessage(row, storeUrl));
-                            }}
-                          >
-                            <MessageCircle aria-hidden />
-                            {t.whatsapp}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            disabled={busy || row.recoveryStatus === "recovered"}
-                            onClick={() => setStatus(row, "recovered", t.markedRecovered)}
-                          >
-                            {t.markRecovered}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            disabled={busy || row.recoveryStatus === "lost"}
-                            onClick={() => setStatus(row, "lost", t.markedLost)}
-                          >
-                            {t.markLost}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Card className="gap-0 p-0">
+            <DataTable
+              columns={columns}
+              rows={rows}
+              rowKey={(row) => row.id}
+              minWidth="61rem"
+            />
+          </Card>
         )}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>

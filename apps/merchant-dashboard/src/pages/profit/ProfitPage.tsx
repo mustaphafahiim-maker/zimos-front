@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Coins, Receipt, TrendingUp } from "lucide-react";
 import { Alert } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
+import { Section } from "@/components/Section";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
@@ -178,11 +179,7 @@ export function ProfitPage() {
 
             {hasDelivered ? (
               <div className="grid gap-4 lg:grid-cols-2">
-                <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
-                  <h2 className="font-display text-base font-medium text-ink">
-                    {t.breakdownTitle}
-                  </h2>
-                  <p className="mb-2 text-xs text-ink-soft">{t.breakdownDesc}</p>
+                <Section title={t.breakdownTitle} description={t.breakdownDesc}>
                   <dl className="divide-y divide-line text-sm">
                     {[
                       { label: t.itemsRevenue, value: profit.deliveredItemsRevenue, sign: "" },
@@ -213,11 +210,9 @@ export function ProfitPage() {
                       </dd>
                     </div>
                   </dl>
-                </section>
+                </Section>
 
-                <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
-                  <h2 className="font-display text-base font-medium text-ink">{t.dailyTitle}</h2>
-                  <p className="mb-3 text-xs text-ink-soft">{t.dailyDesc}</p>
+                <Section title={t.dailyTitle} description={t.dailyDesc}>
                   <div dir="ltr">
                     <BarChart
                       summary={t.dailyDesc}
@@ -229,7 +224,7 @@ export function ProfitPage() {
                       format={(value) => fmt(t.ordersCount, { n: formatCount(value) })}
                     />
                   </div>
-                </section>
+                </Section>
               </div>
             ) : (
               <EmptyState

@@ -54,7 +54,7 @@ export function DataState({
 
   if (empty) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-12 text-center text-sm text-ink-soft">
+      <div className="rounded-xl border border-dashed border-line px-6 py-12 text-center text-sm text-ink-soft">
         {emptyMessage}
       </div>
     );

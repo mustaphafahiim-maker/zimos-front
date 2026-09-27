@@ -96,7 +96,7 @@ function Thumb({
 }) {
   const [broken, setBroken] = useState(false);
   return (
-    <li className="group overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised">
+    <li className="group overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10">
       <div className="flex aspect-square items-center justify-center bg-paper">
         {broken ? (
           <span className="flex flex-col items-center gap-1 px-2 text-center text-xs text-ink-soft">

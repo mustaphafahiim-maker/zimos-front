@@ -192,12 +192,12 @@ function ConfirmationCard({
   const attempts = task.attemptCount;
 
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="gap-4 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <Link
             to={`/orders/${order.id}`}
-            className="font-display text-lg font-medium text-ink hover:text-primary"
+            className="text-base font-semibold text-ink hover:text-primary"
           >
             {order.orderNumber}
           </Link>
@@ -209,15 +209,15 @@ function ConfirmationCard({
           </p>
         </div>
         {attempts > 0 && (
-          <span className="rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
+          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
             {attempts === 1 ? t.attemptsOne : fmt(t.attemptsOther, { n: attempts })}
           </span>
         )}
       </div>
 
-      <div className="rounded-[0.5rem] bg-paper px-4 py-3">
+      <div className="rounded-lg bg-paper px-4 py-3">
         <p className="text-sm font-medium text-ink">{contact.fullName || t.unnamedCustomer}</p>
-        <p className="mt-0.5 font-display text-xl font-medium text-ink">
+        <p className="mt-0.5 text-xl font-semibold text-ink">
           {contact.phone ? (
             <a href={`tel:${contact.phone}`} className="hover:text-primary" dir="ltr">
               {contact.phone}
