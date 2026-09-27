@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_ITEMS, NAV_LABELS, findNavItem } from "@/lib/navigation";
+import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_ITEMS, NAV_LABELS, isInSection, type NavItem } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { PageErrorBoundary } from "@/components/PageErrorBoundary";
 
 const STRINGS = {
   en: {
@@ -23,8 +24,6 @@ const STRINGS = {
     dashboardAria: "Zimos dashboard",
     dashboardAriaNamed: "{name} — Zimos dashboard",
     switchStore: "Switch store",
-    collapseGroup: "Collapse {group}",
-    expandGroup: "Expand {group}",
     search: "Search",
     searchPlaceholder: "Search pages",
     searchResults: "Pages",
@@ -41,8 +40,6 @@ const STRINGS = {
     dashboardAria: "لوحة تحكم زيموس",
     dashboardAriaNamed: "{name} — لوحة تحكم زيموس",
     switchStore: "تبديل المتجر",
-    collapseGroup: "طي {group}",
-    expandGroup: "توسيع {group}",
     search: "بحث",
     searchPlaceholder: "دوّر على صفحة",
     searchResults: "الصفحات",
@@ -50,29 +47,6 @@ const STRINGS = {
     signedInAs: "داخل باسم",
   },
 } satisfies Messages;
-
-const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed";
-
-function readCollapsedGroups(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw) as Record<string, boolean>;
-      // A group that used to be collapsible (e.g. "storefront", before Website
-      // and Funnels moved into the non-collapsible "store" group) may still be
-      // sitting collapsed in someone's browser. Drop anything that isn't a
-      // real, still-collapsible group id so a stale entry can't hide a group
-      // that no longer allows collapsing.
-      const known = new Set(NAV_GROUPS.filter((g) => g.collapsible !== false).map((g) => g.id));
-      const cleaned: Record<string, boolean> = {};
-      for (const [id, value] of Object.entries(saved)) if (known.has(id)) cleaned[id] = value;
-      return cleaned;
-    }
-  } catch {
-    /* private mode or malformed — fall through to every group open */
-  }
-  return {};
-}
 
 /**
  * Sidebar body — rendered twice: once in the desktop rail and once inside the
@@ -87,24 +61,61 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navLabels = useT(NAV_LABELS);
   const groupLabels = useT(NAV_GROUP_LABELS);
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(readCollapsedGroups);
-  useEffect(() => {
-    try {
-      localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(collapsed));
-    } catch {
-      /* private mode — non-fatal */
-    }
-  }, [collapsed]);
-
-  // Collapsing a group hides everything in it except the page you are on, so
-  // the sidebar never loses track of where you are.
-  const activeTo = findNavItem(location.pathname)?.to;
-
   // Analytics fetches two windows of data on mount; starting that request on
   // hover/focus lets it run alongside the lazy-loaded page chunk instead of
   // after it, so the numbers are often already there by the time it renders.
   const workspaceId = currentWorkspace?.id;
   const prefetchAnalytics = workspaceId ? () => prefetchAnalyticsSummary(workspaceId, "30d") : undefined;
+
+  const renderItem = (item: NavItem) => {
+    // A section stays "on" while any of its sub-pages is open, so the parent
+    // reads as the place you are in and its children stay listed under it.
+    const inSection = isInSection(item, location.pathname);
+    const children = item.children ?? [];
+    return (
+      <div key={item.to}>
+        <NavLink
+          to={item.to}
+          end={item.to === "/"}
+          onClick={onNavigate}
+          onMouseEnter={item.key === "analytics" ? prefetchAnalytics : undefined}
+          onFocus={item.key === "analytics" ? prefetchAnalytics : undefined}
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-paper-raised/70 hover:text-ink",
+              (isActive || inSection) && "text-ink",
+              isActive && "bg-paper-raised font-semibold shadow-xs ring-1 ring-foreground/5"
+            )
+          }
+        >
+          <item.icon className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />
+          <span className="min-w-0 truncate">{navLabels[item.key]}</span>
+        </NavLink>
+        {inSection && children.length > 0 && (
+          <div className="mt-px mb-1 space-y-px">
+            {children.map((child) => (
+              <NavLink
+                key={child.to}
+                to={child.to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 rounded-lg py-1.5 ps-9 pe-2 text-[13px] text-ink-soft transition-colors hover:bg-paper-raised/70 hover:text-ink",
+                    isActive && "bg-paper-raised font-semibold text-ink shadow-xs ring-1 ring-foreground/5"
+                  )
+                }
+              >
+                <span className="min-w-0 truncate">{navLabels[child.key]}</span>
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const groups = NAV_GROUPS.filter((g) => !g.pinned);
+  const pinned = NAV_GROUPS.filter((g) => g.pinned);
 
   return (
     <>
@@ -117,59 +128,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           />
         </div>
       )}
-      <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 py-3">
-        {NAV_GROUPS.map((group, index) => {
-          const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const canCollapse = group.collapsible !== false;
-          const isClosed = canCollapse && Boolean(collapsed[group.id]);
-          const items = isClosed ? group.items.filter((i) => i.to === activeTo) : group.items;
-
-          return (
-            <div key={group.id} className={cn(index > 0 && "mt-3")}>
-              {heading && canCollapse && (
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
-                  aria-expanded={!isClosed}
-                  aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-0.5 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
-                >
-                  <span className="flex-1 text-start">{heading}</span>
-                  <ChevronDown
-                    className={cn("size-3.5 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
-                    aria-hidden
-                  />
-                </button>
-              )}
-              {/* A non-collapsible group still gets its heading — just as plain
-                  text, with no button and nothing that can ever hide it. */}
-              {heading && !canCollapse && (
-                <p className="mb-0.5 px-2 py-1 text-xs font-medium text-ink-soft">{heading}</p>
-              )}
-              <div className="space-y-px">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === "/"}
-                    onClick={onNavigate}
-                    onMouseEnter={item.key === "analytics" ? prefetchAnalytics : undefined}
-                    onFocus={item.key === "analytics" ? prefetchAnalytics : undefined}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-paper-raised/70 hover:text-ink",
-                        isActive && "bg-paper-raised font-semibold text-ink shadow-xs ring-1 ring-foreground/5"
-                      )
-                    }
-                  >
-                    <item.icon className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />
-                    <span className="min-w-0 truncate">{navLabels[item.key]}</span>
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <nav aria-label={t.navLabel} className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
+        {groups.map((group, index) => (
+          <div key={group.id} className={cn(index > 0 && "mt-4")}>
+            {group.labelKey && (
+              <p className="mb-0.5 px-2 py-1 text-xs font-medium text-ink-soft">{groupLabels[group.labelKey]}</p>
+            )}
+            <div className="space-y-px">{group.items.map(renderItem)}</div>
+          </div>
+        ))}
+        {pinned.map((group) => (
+          <div key={group.id} className="mt-auto space-y-px pt-4">
+            {group.items.map(renderItem)}
+          </div>
+        ))}
       </nav>
       <div className="flex items-center gap-2 border-t border-line px-3 py-3">
         <button
@@ -408,7 +380,9 @@ export function DashboardLayout() {
 
         <main className="min-w-0 flex-1 p-4 sm:p-6">
           <div className="mx-auto w-full max-w-[1280px]">
-            <Outlet />
+            <PageErrorBoundary path={location.pathname}>
+              <Outlet />
+            </PageErrorBoundary>
           </div>
         </main>
       </div>

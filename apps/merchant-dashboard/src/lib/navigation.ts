@@ -5,8 +5,9 @@ import {
   ClipboardCheck,
   Globe,
   Headset,
+  Home,
   Images,
-  LayoutDashboard,
+  Layers,
   Megaphone,
   MessageCircle,
   Package,
@@ -41,6 +42,7 @@ export type NavKey =
   | "profit"
   | "media"
   | "catalog"
+  | "collections"
   | "reviews"
   | "customers"
   | "discounts"
@@ -50,44 +52,35 @@ export type NavKey =
   | "settings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "sell" | "store" | "catalog" | "grow" | "insights";
+export type NavGroupKey = "channels";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
   key: NavKey;
   to: string;
   icon: LucideIcon;
+  /**
+   * Sub-pages, shown under the item only while it (or one of them) is the
+   * current section — the way Shopify's admin keeps the rail short.
+   */
+  children?: NavItem[];
 }
 
 export interface NavGroup {
-  /** Stable id, used to persist the collapsed state. */
+  /** Stable id. */
   id: string;
   /** Key into NAV_GROUP_LABELS, or null for an unheaded group. */
   labelKey: NavGroupKey | null;
   items: NavItem[];
-  /**
-   * false hides the collapse toggle entirely — this section is always fully
-   * shown. Reserved for a small number of groups a merchant must never lose
-   * track of (building the store is the whole point of the product), so a
-   * stray click can't hide "Website" or "Funnels" the way a collapsed group
-   * normally would. Every other group defaults to collapsible.
-   */
-  collapsible?: boolean;
+  /** Pinned to the bottom of the rail, below everything else. */
+  pinned?: boolean;
 }
 
 /**
- * Sidebar structure. Order mirrors a merchant's day: what came in, what to
- * confirm, then building the store itself, then the catalog behind it, then
- * growth tooling.
- *
- * "Store" is deliberately early, right after Sell, and never collapses:
- * building the website and the sales funnels are the two tools a merchant
- * reaches for constantly, and burying either of them one click away from
- * "gone" — as a collapsed accordion section can — is exactly the confusion
- * this group exists to prevent. Compare Shopify's "Online Store" and
- * EasyOrders' "إدارة المتجر" / "التسويق": both keep store-building and its
- * companion landing-page/funnel tool in one place a merchant can't collapse
- * away by accident.
+ * Sidebar structure, in the shape merchants know from Shopify's admin: a
+ * short list of top-level sections, each opening its sub-pages only while
+ * you are in it; the sales channels under their own heading; shipping and
+ * settings pinned at the bottom.
  *
  * Every entry here must map to a route in App.tsx — the sidebar is not a
  * roadmap. Features the backend does not serve yet stay out until they do.
@@ -96,110 +89,127 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "main",
     labelKey: null,
-    items: [{ key: "overview", to: "/", icon: LayoutDashboard }],
-  },
-  {
-    id: "sell",
-    labelKey: "sell",
     items: [
-      { key: "orders", to: "/orders", icon: ShoppingBag },
-      { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
-      { key: "callCenter", to: "/call-center", icon: Headset },
-      { key: "abandonedCheckouts", to: "/abandoned-checkouts", icon: ShoppingCart },
-      { key: "returns", to: "/returns", icon: Undo2 },
-      { key: "settlements", to: "/settlements", icon: Wallet },
-      { key: "fraud", to: "/fraud", icon: ShieldAlert },
-    ],
-  },
-  {
-    id: "store",
-    labelKey: "store",
-    collapsible: false,
-    items: [
-      { key: "website", to: "/website", icon: Globe },
-      { key: "funnels", to: "/funnels", icon: Workflow },
-      { key: "shipping", to: "/shipping", icon: Truck },
-    ],
-  },
-  {
-    id: "catalog",
-    labelKey: "catalog",
-    items: [
-      { key: "catalog", to: "/catalog", icon: Package },
-      { key: "reviews", to: "/reviews", icon: Star },
+      { key: "overview", to: "/", icon: Home },
+      {
+        key: "orders",
+        to: "/orders",
+        icon: ShoppingBag,
+        children: [
+          { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
+          { key: "callCenter", to: "/call-center", icon: Headset },
+          { key: "abandonedCheckouts", to: "/abandoned-checkouts", icon: ShoppingCart },
+          { key: "returns", to: "/returns", icon: Undo2 },
+          { key: "settlements", to: "/settlements", icon: Wallet },
+          { key: "fraud", to: "/fraud", icon: ShieldAlert },
+        ],
+      },
+      {
+        key: "catalog",
+        to: "/catalog",
+        icon: Package,
+        children: [
+          { key: "collections", to: "/catalog/collections", icon: Layers },
+          { key: "reviews", to: "/reviews", icon: Star },
+          { key: "media", to: "/media", icon: Images },
+        ],
+      },
       { key: "customers", to: "/customers", icon: Users },
-      { key: "media", to: "/media", icon: Images },
-    ],
-  },
-  {
-    id: "grow",
-    labelKey: "grow",
-    items: [
-      { key: "inbox", to: "/inbox", icon: MessageCircle },
-      { key: "automations", to: "/automations", icon: Bot },
-      { key: "marketing", to: "/marketing", icon: Megaphone },
+      {
+        key: "marketing",
+        to: "/marketing",
+        icon: Megaphone,
+        children: [
+          { key: "automations", to: "/automations", icon: Bot },
+          { key: "inbox", to: "/inbox", icon: MessageCircle },
+        ],
+      },
       { key: "discounts", to: "/discounts", icon: Tag },
+      {
+        key: "analytics",
+        to: "/analytics",
+        icon: BarChart3,
+        children: [{ key: "profit", to: "/profit", icon: PiggyBank }],
+      },
     ],
   },
   {
-    id: "insights",
-    labelKey: "insights",
+    id: "channels",
+    labelKey: "channels",
     items: [
-      { key: "analytics", to: "/analytics", icon: BarChart3 },
-      { key: "profit", to: "/profit", icon: PiggyBank },
+      {
+        key: "website",
+        to: "/website",
+        icon: Globe,
+        children: [{ key: "funnels", to: "/funnels", icon: Workflow }],
+      },
     ],
   },
   {
     id: "config",
     labelKey: null,
-    items: [{ key: "settings", to: "/settings", icon: Settings }],
+    pinned: true,
+    items: [
+      { key: "shipping", to: "/shipping", icon: Truck },
+      { key: "settings", to: "/settings", icon: Settings },
+    ],
   },
 ];
 
-/** Flat list, for anything that iterates items without caring about grouping. */
-export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+/** Flat list, for anything that iterates items without caring about nesting. */
+export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) =>
+  g.items.flatMap((item) => [item, ...(item.children ?? [])])
+);
+
+function matches(item: NavItem, pathname: string): boolean {
+  return item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
 
 /** The nav item a pathname belongs to (longest matching prefix), if any. */
 export function findNavItem(pathname: string): NavItem | undefined {
   let best: NavItem | undefined;
   for (const item of NAV_ITEMS) {
-    const match =
-      item.to === "/"
-        ? pathname === "/"
-        : pathname === item.to || pathname.startsWith(`${item.to}/`);
-    if (match && (!best || item.to.length > best.to.length)) best = item;
+    if (matches(item, pathname) && (!best || item.to.length > best.to.length)) best = item;
   }
   return best;
+}
+
+/** True while `pathname` is inside `item` or any of its sub-pages. */
+export function isInSection(item: NavItem, pathname: string): boolean {
+  const current = findNavItem(pathname);
+  if (!current) return false;
+  return current.to === item.to || (item.children ?? []).some((c) => c.to === current.to);
 }
 
 /** Sidebar / drawer labels. Read with `useT(NAV_LABELS)`. */
 export const NAV_LABELS = {
   en: {
-    overview: "Overview",
+    overview: "Home",
     orders: "Orders",
-    confirmationQueue: "Confirmation Queue",
-    callCenter: "Call Centre",
-    abandonedCheckouts: "Abandoned Checkouts",
+    confirmationQueue: "Confirmation queue",
+    callCenter: "Call centre",
+    abandonedCheckouts: "Abandoned checkouts",
     returns: "Returns",
-    settlements: "COD Settlements",
-    fraud: "Fraud Protection",
-    inbox: "WhatsApp Inbox",
+    settlements: "COD settlements",
+    fraud: "Fraud protection",
+    inbox: "WhatsApp inbox",
     automations: "Automations",
-    marketing: "Marketing Pixels",
-    catalog: "Catalog",
+    marketing: "Marketing",
+    catalog: "Products",
+    collections: "Collections",
     reviews: "Reviews",
     customers: "Customers",
-    media: "Media Library",
+    media: "Media library",
     discounts: "Discounts",
     analytics: "Analytics",
     profit: "Profit",
-    shipping: "Shipping & Tax",
-    website: "Website",
+    shipping: "Shipping & tax",
+    website: "Online store",
     funnels: "Funnels",
     settings: "Settings",
   },
   ar: {
-    overview: "نظرة عامة",
+    overview: "الرئيسية",
     orders: "الطلبات",
     confirmationQueue: "قائمة التأكيد",
     callCenter: "الكول سنتر",
@@ -209,8 +219,9 @@ export const NAV_LABELS = {
     fraud: "الحماية من النصب",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
-    marketing: "بيكسلات الإعلانات",
-    catalog: "الكتالوج",
+    marketing: "التسويق",
+    catalog: "المنتجات",
+    collections: "التصنيفات",
     reviews: "التقييمات",
     customers: "العملاء",
     media: "مكتبة الصور",
@@ -218,7 +229,7 @@ export const NAV_LABELS = {
     analytics: "التحليلات",
     profit: "الأرباح",
     shipping: "الشحن والضرائب",
-    website: "الموقع",
+    website: "المتجر الإلكتروني",
     funnels: "مسارات البيع",
     settings: "الإعدادات",
   },
@@ -226,18 +237,6 @@ export const NAV_LABELS = {
 
 /** Group headings. Read with `useT(NAV_GROUP_LABELS)`. */
 export const NAV_GROUP_LABELS = {
-  en: {
-    sell: "Sell",
-    store: "Store",
-    catalog: "Catalog",
-    grow: "Grow",
-    insights: "Insights",
-  },
-  ar: {
-    sell: "البيع",
-    store: "المتجر",
-    catalog: "الكتالوج",
-    grow: "النمو",
-    insights: "التقارير",
-  },
+  en: { channels: "Sales channels" },
+  ar: { channels: "قنوات البيع" },
 } satisfies Messages<NavGroupKey>;
