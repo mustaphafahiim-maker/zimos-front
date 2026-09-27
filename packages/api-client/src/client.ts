@@ -130,6 +130,10 @@ import type {
   AddToBlocklistPayload,
   AnalyticsSummary,
   AnalyticsSummaryParams,
+  FunnelAnalyticsDetail,
+  FunnelAnalyticsOverview,
+  OrderCounts,
+  OrderListFilters,
   BlocklistEntry,
   CheckoutRecoveryStatus,
   CheckoutSession,
@@ -1168,6 +1172,13 @@ export class ApiClient {
     );
   }
 
+  async getOrderCounts(workspaceId: string, params: OrderListFilters = {}) {
+    const { counts } = await this.request<{ counts: OrderCounts }>(
+      `${this.ordersBase(workspaceId)}/counts${buildQuery({ ...params })}`
+    );
+    return counts;
+  }
+
   async getOrder(workspaceId: string, orderId: string) {
     const { order } = await this.request<{ order: Order }>(
       `${this.ordersBase(workspaceId)}/${orderId}`
@@ -2123,6 +2134,20 @@ export class ApiClient {
       `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
     );
     return summary;
+  }
+
+  // Funnel analytics — every funnel's sessions, orders and revenue for a
+  // range, and one funnel's step-by-step drop-off, sources and daily series.
+  async getFunnelAnalytics(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsOverview>(
+      `/workspaces/${workspaceId}/analytics/funnels${buildQuery({ ...params })}`
+    );
+  }
+
+  async getFunnelAnalyticsDetail(workspaceId: string, funnelId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsDetail>(
+      `/workspaces/${workspaceId}/analytics/funnels/${funnelId}${buildQuery({ ...params })}`
+    );
   }
 
   // ---------------------------------------------------------------------

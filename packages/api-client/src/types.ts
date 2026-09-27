@@ -955,6 +955,8 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+  /** The funnel the order was placed in, when it was; absent on older responses. */
+  funnel?: { id: string; name: string; subdomain: string } | null;
   /** Present on detail (GET one) only. */
   payments?: Payment[];
   shipments?: Shipment[];
@@ -965,12 +967,44 @@ export interface OrderListResponse {
   nextCursor: string | null;
 }
 
-export interface OrderListParams {
-  limit?: number;
-  cursor?: string;
+export type OrderListSort = "newest" | "oldest" | "total_desc" | "total_asc";
+
+export interface OrderListFilters {
   confirmationState?: ConfirmationState;
   financialState?: FinancialState;
   fulfillmentState?: FulfillmentState;
+  /** Matches the order number, the customer's name or their phone. */
+  q?: string;
+  /** ISO dates on createdAt; `to` is exclusive. */
+  from?: string;
+  to?: string;
+  /** Orders placed on the online store vs. inside any funnel. */
+  source?: "store" | "funnel";
+  funnelId?: string;
+  paymentMethod?: PaymentMethod;
+  cancelled?: boolean;
+}
+
+export interface OrderListParams extends OrderListFilters {
+  limit?: number;
+  /** Opaque; returned as `nextCursor` by the previous page. */
+  cursor?: string;
+  sort?: OrderListSort;
+}
+
+/** Per-status totals for the list's tabs, under the same filters minus the status itself. */
+export interface OrderCounts {
+  all: number;
+  pending: number;
+  confirmed: number;
+  unreachable: number;
+  postponed: number;
+  rejected: number;
+  cancelled: number;
+  unfulfilled: number;
+  fulfilled: number;
+  returned: number;
+  unpaid: number;
 }
 
 export interface OrderAddressInput {
@@ -2379,6 +2413,80 @@ export interface AnalyticsSummary {
   /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
   topProducts: AnalyticsTopProduct[];
   newCustomers: number;
+}
+
+// ---------------------------------------------------------------------------
+// Funnel analytics — /workspaces/:ws/analytics/funnels[/:funnelId]
+// Sessions come from the funnel session log the storefront writes as a
+// visitor moves through a funnel; orders are the real orders placed inside
+// it. Rates are percentages, null when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface FunnelAnalyticsTotals {
+  /** Funnel sessions started in the range. */
+  sessions: number;
+  /** Sessions in which a checkout was completed. */
+  completed: number;
+  /** Non-cancelled, non-rejected orders placed inside the funnel. */
+  orders: number;
+  revenue: number;
+  /** Follow-on orders from accepted upsells/downsells, and their revenue. */
+  upsellOrders: number;
+  upsellRevenue: number;
+  /** completed ÷ sessions. */
+  conversionRate: number | null;
+}
+
+export interface FunnelAnalyticsRow extends FunnelAnalyticsTotals {
+  id: string;
+  name: string;
+  subdomain: string;
+  status: string;
+}
+
+export interface FunnelAnalyticsOverview {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  totals: FunnelAnalyticsTotals;
+  funnels: FunnelAnalyticsRow[];
+}
+
+export interface FunnelAnalyticsStep {
+  key: string;
+  name: string;
+  stepType: string;
+  /** Sessions that got to this step. */
+  reached: number;
+  /** Sessions still sitting on this step that never moved on. */
+  dropped: number;
+  /** reached ÷ sessions. */
+  reachRate: number | null;
+}
+
+export interface FunnelAnalyticsSource {
+  source: string;
+  medium: string | null;
+  campaign: string | null;
+  sessions: number;
+  completed: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsSeriesPoint {
+  date: string;
+  sessions: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsDetail extends FunnelAnalyticsTotals {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  funnel: { id: string; name: string; subdomain: string; status: string };
+  steps: FunnelAnalyticsStep[];
+  sources: FunnelAnalyticsSource[];
+  series: FunnelAnalyticsSeriesPoint[];
 }
 
 // ---------------------------------------------------------------------------

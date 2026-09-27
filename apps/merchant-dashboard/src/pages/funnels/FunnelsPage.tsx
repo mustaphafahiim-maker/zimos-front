@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { BarChart3, Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   funnelsDelete,
@@ -16,7 +16,9 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney, formatPercentValue } from "@/lib/format";
+import { percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { RangeSwitch } from "@/components/RangeSwitch";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -44,15 +46,16 @@ const STRINGS = {
     title: "Funnels",
     description: "Single-product sales flows with order bumps, upsells and downsells.",
     createFunnel: "Create funnel",
-    kpiVisits: "Total visits",
-    kpiVisitsHint: "All funnels, all time",
+    kpiVisits: "Sessions",
+    kpiVisitsHint: "All funnels, in the period",
     kpiOrders: "Orders",
-    kpiOrdersHint: "Completed checkouts",
+    kpiOrdersHint: "Placed inside funnels",
     kpiRevenue: "Revenue",
-    kpiRevenueHint: "Including offers",
-    kpiConversion: "Avg. conversion",
-    kpiConversionHint: "Visits → orders, funnels with traffic",
-    statsUnavailable: "Stats appear once analytics is connected",
+    kpiRevenueHint: "Including upsells",
+    kpiConversion: "Conversion",
+    kpiConversionHint: "Checkouts ÷ sessions",
+    statsUnavailable: "Stats couldn't be loaded",
+    viewAnalytics: "Analytics",
     emptyTitle: "No funnels yet",
     emptyDescription: "Create a funnel to sell a single product with a focused landing page and one-click offers.",
     colFunnel: "Funnel",
@@ -91,15 +94,16 @@ const STRINGS = {
     title: "مسارات البيع",
     description: "مسارات بيع لمنتج واحد مع عروض إضافية عند الدفع وعروض بعد الشراء وعروض بديلة.",
     createFunnel: "إنشاء مسار بيع",
-    kpiVisits: "إجمالي الزيارات",
-    kpiVisitsHint: "كل المسارات، منذ البداية",
+    kpiVisits: "الجلسات",
+    kpiVisitsHint: "كل المسارات، في الفترة دي",
     kpiOrders: "الطلبات",
-    kpiOrdersHint: "عمليات دفع مكتملة",
+    kpiOrdersHint: "اتعملت جوه المسارات",
     kpiRevenue: "الإيرادات",
-    kpiRevenueHint: "شاملة العروض",
-    kpiConversion: "متوسط معدل التحويل",
-    kpiConversionHint: "من الزيارات إلى الطلبات، للمسارات التي بها زيارات",
-    statsUnavailable: "ستظهر الإحصاءات بعد ربط التحليلات",
+    kpiRevenueHint: "شاملة العروض الإضافية",
+    kpiConversion: "نسبة التحويل",
+    kpiConversionHint: "الطلبات ÷ الجلسات",
+    statsUnavailable: "الإحصاءات معرفناش نحمّلها",
+    viewAnalytics: "التحليلات",
     emptyTitle: "لا توجد مسارات بيع بعد",
     emptyDescription: "أنشئ مسار بيع لبيع منتج واحد بصفحة هبوط مركّزة وعروض بنقرة واحدة.",
     colFunnel: "مسار البيع",
@@ -212,6 +216,14 @@ export function FunnelsPage() {
     return new Map(entries);
   }, [workspaceId, idsKey]);
 
+  const [range, setRange] = useState<AnalyticsRange>("30d");
+  const stats = useAsync(
+    () => apiClient.getFunnelAnalytics(workspaceId, rangeWindows(range).current),
+    [workspaceId, range]
+  );
+  const statsById = new Map((stats.data?.funnels ?? []).map((row) => [row.id, row]));
+  const currency = stats.data?.currency ?? "EGP";
+
   const numberFmt = new Intl.NumberFormat(intlLocale);
 
   const statusLabel: Record<FunnelStatus, string> = {
@@ -220,12 +232,15 @@ export function FunnelsPage() {
     paused: t.statusPaused,
   };
 
-  /** No analytics endpoint exists for funnels yet: never fabricate numbers. */
+  /** Shown while the stats load or when they failed: never a made-up number. */
   const noStat = (
-    <span title={t.statsUnavailable} aria-label={t.statsUnavailable}>
+    <span title={stats.error ? t.statsUnavailable : undefined} aria-label={stats.error ? t.statsUnavailable : undefined}>
       —
     </span>
   );
+  const stat = (value: number | null | undefined, render: (v: number) => string) =>
+    value === null || value === undefined ? noStat : <bdi dir="ltr">{render(value)}</bdi>;
+  const totals = stats.data?.totals;
 
   async function changeStatus(f: FunnelDto) {
     setBusyId(f.id);
@@ -296,18 +311,26 @@ export function FunnelsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="size-4" aria-hidden /> {t.createFunnel}
-          </Button>
+          <>
+            <RangeSwitch value={range} onChange={setRange} />
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="size-4" aria-hidden /> {t.createFunnel}
+            </Button>
+          </>
         }
       />
 
       <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard label={t.kpiVisits} value={noStat} icon={<Eye />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiOrders} value={noStat} icon={<ShoppingBag />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiRevenue} value={noStat} icon={<Wallet />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiConversion} value={noStat} icon={<MousePointerClick />} hint={t.statsUnavailable} />
+          <KpiCard label={t.kpiVisits} value={stat(totals?.sessions, numberFmt.format)} icon={<Eye />} hint={t.kpiVisitsHint} />
+          <KpiCard label={t.kpiOrders} value={stat(totals?.orders, numberFmt.format)} icon={<ShoppingBag />} hint={t.kpiOrdersHint} />
+          <KpiCard label={t.kpiRevenue} value={stat(totals?.revenue, (v) => formatMoney(v, currency))} icon={<Wallet />} hint={t.kpiRevenueHint} />
+          <KpiCard
+            label={t.kpiConversion}
+            value={stat(totals?.conversionRate, (v) => formatPercentValue(percentToRatio(v)))}
+            icon={<MousePointerClick />}
+            hint={t.kpiConversionHint}
+          />
         </div>
 
         {funnels.length === 0 ? (
@@ -340,6 +363,7 @@ export function FunnelsPage() {
                   const busy = busyId === f.id;
                   const url = funnelPublicUrl(f.subdomain);
                   const count = stepCounts.data?.get(f.id);
+                  const row = statsById.get(f.id);
                   return (
                     <tr
                       key={f.id}
@@ -362,13 +386,24 @@ export function FunnelsPage() {
                       <td className="px-4 py-3 tabular-nums text-ink-soft">
                         <bdi dir="ltr">{count === undefined ? "—" : numberFmt.format(count)}</bdi>
                       </td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.sessions, numberFmt.format)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.orders, numberFmt.format)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">
+                        {stat(row ? row.conversionRate : undefined, (v) => formatPercentValue(percentToRatio(v)))}
+                      </td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.revenue, (v) => formatMoney(v, currency))}</td>
                       <td className="px-4 py-3 text-ink-soft">{formatDate(f.updatedAt)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            title={t.viewAnalytics}
+                            aria-label={t.viewAnalytics}
+                            onClick={() => navigate(`/analytics/funnels/${f.id}`)}
+                          >
+                            <BarChart3 className="size-4" aria-hidden />
+                          </Button>
                           <Button size="icon-sm" variant="ghost" title={c.edit} aria-label={c.edit} onClick={() => navigate(`/funnels/${f.id}`)}>
                             <Pencil className="size-4" aria-hidden />
                           </Button>

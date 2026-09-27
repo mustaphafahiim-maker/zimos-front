@@ -56,6 +56,9 @@ const FraudProtectionPage = lazy(() =>
 const AnalyticsPage = lazy(() =>
   import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage }))
 );
+const FunnelAnalyticsPage = lazy(() =>
+  import("@/pages/analytics/FunnelAnalyticsPage").then((m) => ({ default: m.FunnelAnalyticsPage }))
+);
 const ProfitPage = lazy(() =>
   import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage }))
 );
@@ -166,6 +169,14 @@ export default function App() {
                         element={
                           <LazyRoute>
                             <AnalyticsPage />
+                          </LazyRoute>
+                        }
+                      />
+                      <Route
+                        path="/analytics/funnels/:funnelId"
+                        element={
+                          <LazyRoute>
+                            <FunnelAnalyticsPage />
                           </LazyRoute>
                         }
                       />
