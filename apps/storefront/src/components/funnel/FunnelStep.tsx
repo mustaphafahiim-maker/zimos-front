@@ -42,7 +42,7 @@ import { orderErrorMessage, placeCodOrder } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
-import { track, trackPurchaseOnce } from "@/lib/track";
+import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 
 /**
@@ -179,6 +179,16 @@ export function FunnelStepActions({
 }) {
   const flow = useAdvance(workspaceId, funnelId, sessionId, step.key);
   const { t, store } = useStore();
+
+  // Tag the store's own analytics with this funnel while its steps are on
+  // screen. Set during render so the view_content / begin_checkout effects
+  // below already carry it; cleared when the shopper leaves the funnel. Both
+  // merge into the context StoreAnalytics (store layout) owns.
+  if (typeof window !== "undefined") setTrackingContext({ workspaceId, funnelId });
+  useEffect(() => {
+    setTrackingContext({ workspaceId, funnelId });
+    return () => setTrackingContext({ funnelId: undefined });
+  }, [workspaceId, funnelId]);
 
   useTrackOnce(() => {
     if (step.stepType === "checkout" || step.stepType === "thank_you") return;

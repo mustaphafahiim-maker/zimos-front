@@ -10,8 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, type Cart } from "@store-builder/api-client";
+import { ApiError, parseMoney, type Cart } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { track } from "@/lib/track";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -149,7 +150,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     async (variantId: string, offerId?: string, quantity = 1) => {
       if (!workspaceId) return;
       const token = await ensureToken();
-      setCart(await client.addCartItem(workspaceId, token, { variantId, offerId, quantity }));
+      const next = await client.addCartItem(workspaceId, token, { variantId, offerId, quantity });
+      setCart(next);
+      // AddToCart for the pixels and the store's own analytics: the line just
+      // added, valued at its unit price × the quantity added (not the whole
+      // line, which may have held the variant already).
+      try {
+        const line = next.items.find((l) => l.variantId === variantId && (l.offerId ?? undefined) === offerId);
+        const unit = line ? parseMoney(line.unitPriceSnapshot) : 0;
+        track("AddToCart", {
+          contentIds: [variantId],
+          valueMinor: Math.round(unit * quantity),
+          currency: next.currency,
+          numItems: quantity,
+        });
+      } catch {
+        /* tracking never breaks the cart */
+      }
     },
     [workspaceId, client, ensureToken]
   );

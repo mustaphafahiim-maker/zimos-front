@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { BoxIcon, CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
 import { OrderTicket } from "@/components/immersive/OrderTicket";
@@ -12,6 +12,7 @@ import { getAcceptedUpsell, getOrderSnapshot } from "@/lib/commerce";
 import { useHydrated } from "@/lib/funnelSession";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { trackPurchaseOnce } from "@/lib/track";
 
 /**
  * The thank-you page: the order ticket, what happens next, and the two things
@@ -39,6 +40,23 @@ function Confirmation() {
   const paymentFailed = search.get("pay") === "failed";
 
   const [copied, setCopied] = useState(false);
+
+  // Purchase, once per order on this device (trackPurchaseOnce remembers it),
+  // as soon as the saved order is readable. A device with no snapshot has
+  // nothing to value the order with, so it sends nothing rather than a zero.
+  // `snapshot` is re-read every render, so a ref keeps this to one call even
+  // when storage is blocked and trackPurchaseOnce cannot remember by itself.
+  const purchaseTracked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!snapshot || purchaseTracked.current === snapshot.id) return;
+    purchaseTracked.current = snapshot.id;
+    trackPurchaseOnce(snapshot.id, {
+      valueMinor: snapshot.totalAmount,
+      currency: snapshot.currency,
+      contentIds: snapshot.productIds,
+      numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
+    });
+  }, [snapshot]);
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
   const currency = snapshot?.currency ?? store?.currency;

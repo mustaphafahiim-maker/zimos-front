@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/CheckoutProgress";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
@@ -28,6 +28,7 @@ import { afterOrder, onlinePaymentUrl, orderErrorMessage, placeCodOrder } from "
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { usePaymentOptions } from "@/lib/usePaymentOptions";
 import { useShippingQuote } from "@/lib/useShippingQuote";
@@ -69,6 +70,20 @@ export default function CheckoutPage() {
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
   const quantity = items.reduce((sum, line) => sum + line.quantity, 0);
+
+  // InitiateCheckout once per visit to this page, the first time the cart is
+  // known to hold something (the cart loads after mount, so not on render 1).
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || !cart || items.length === 0) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", {
+      contentIds: items.map((line) => line.variantId),
+      valueMinor: cart.subtotal,
+      currency: cart.currency,
+      numItems: quantity,
+    });
+  }, [cart, items, quantity]);
 
   const bump = useMemo(() => {
     if (!loaded) return null;

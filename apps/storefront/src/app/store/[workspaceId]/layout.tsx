@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { ShopChrome } from "@/components/ShopChrome";
+import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreRouteProvider } from "@/components/StoreRoute";
@@ -90,10 +92,20 @@ export default async function StoreLayout({
     logoUrl: store.logoUrl,
     phone: storePhone(store),
   };
+  // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
+  // (like pixelIdsOf) so events carry it as soon as the API sends one.
+  const websiteId = (store as { websiteId?: unknown }).websiteId;
 
   return (
     <StoreRouteProvider basePath={basePath}>
       <StoreContextProvider locale={locale} store={info}>
+        {/* The store's own analytics — one page_view per navigation for every
+            page of the store, funnel pages included (their layout nests here,
+            so it deliberately does not mount this again). Reads the search
+            params, hence the Suspense boundary. */}
+        <Suspense fallback={null}>
+          <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+        </Suspense>
         <div
           lang={intlLocaleFor(locale)}
           dir={dirFor(locale)}

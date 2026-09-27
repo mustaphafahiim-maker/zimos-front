@@ -1,8 +1,16 @@
+import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from "./analyticsEvents";
+
 /**
  * Sends a standard commerce event to every ad pixel the merchant configured
  * (loaded by components/TrackingPixels.tsx). Each platform is only called if
  * its script is on the page, so a store with no pixels sends nothing.
+ *
+ * The same call also feeds the store's own analytics (lib/analyticsEvents.ts)
+ * once components/StoreAnalytics has set the tracking context — see
+ * setTrackingContext, re-exported here for the funnel side.
  */
+export { setTrackingContext };
+
 export type TrackEvent = "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase";
 
 export interface TrackData {
@@ -37,6 +45,17 @@ const SNAP: Record<TrackEvent, string> = {
   InitiateCheckout: "START_CHECKOUT",
   Purchase: "PURCHASE",
 };
+/**
+ * First-party names. PageView is absent on purpose: StoreAnalytics sends
+ * `page_view` per navigation itself, so nothing here double counts it.
+ */
+const FIRST_PARTY: Partial<Record<TrackEvent, AnalyticsEventName>> = {
+  ViewContent: "view_content",
+  AddToCart: "add_to_cart",
+  InitiateCheckout: "begin_checkout",
+  Purchase: "purchase",
+};
+
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
   ViewContent: "view_item",
@@ -83,6 +102,26 @@ export function track(event: TrackEvent, data: TrackData = {}) {
     }
   } catch {
     /* a broken third-party script must never break the store */
+  }
+
+  const own = FIRST_PARTY[event];
+  if (own) {
+    try {
+      // Ids and amounts only — no name, phone or email ever leaves here.
+      sendContextEvent({
+        name: own,
+        orderId: data.orderId,
+        revenueAmount: data.valueMinor !== undefined ? Math.round(data.valueMinor) : undefined,
+        dedupeId: own === "purchase" && data.orderId ? `purchase:${data.orderId}` : undefined,
+        metadata: {
+          ...(data.currency ? { currency: data.currency } : {}),
+          ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
+          ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
+        },
+      });
+    } catch {
+      /* same rule: our own analytics never break the store */
+    }
   }
 }
 

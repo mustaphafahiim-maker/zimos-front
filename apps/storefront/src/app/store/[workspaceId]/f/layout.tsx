@@ -24,6 +24,12 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * nothing that leads off the path.
  *
  * It also loads the merchant's ad pixels, and only when at least one is set.
+ *
+ * The store's own analytics (components/StoreAnalytics) are NOT mounted here:
+ * this layout sits inside the store layout, which already mounts them once
+ * for every page, so doing it again would count each funnel page twice. The
+ * funnel only adds its funnelId to the tracking context — see
+ * components/funnel/FunnelStep.tsx, the first place the funnel's id is known.
  */
 export default async function FunnelLayout({
   children,
