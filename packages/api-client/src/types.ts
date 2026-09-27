@@ -2393,6 +2393,30 @@ export interface AnalyticsSeriesPoint {
   orders: number;
   revenue: number;
   delivered: number;
+  /** Distinct storefront sessions that started that day; absent on older backends. */
+  sessions?: number;
+}
+
+/**
+ * Storefront visits, from the events the store's own tracker sends
+ * (page views, product views, add to cart, checkout, purchase).
+ */
+export interface AnalyticsTraffic {
+  sessions: number;
+  visitors: number;
+  pageViews: number;
+  productViews: number;
+  /** Distinct sessions that added to cart / reached checkout. */
+  addToCart: number;
+  checkouts: number;
+  purchases: number;
+  /** Sessions that placed an order ÷ sessions, as a percentage; null when there were no sessions. */
+  conversionRate: number | null;
+  addToCartRate: number | null;
+  checkoutRate: number | null;
+  byDevice: Array<{ device: "mobile" | "desktop" | "tablet" | "unknown"; sessions: number }>;
+  bySource: Array<{ source: string; medium: string | null; sessions: number; orders: number }>;
+  topPages: Array<{ path: string; views: number }>;
 }
 
 export interface AnalyticsTopProduct {
@@ -2413,6 +2437,8 @@ export interface AnalyticsSummary {
   /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
   topProducts: AnalyticsTopProduct[];
   newCustomers: number;
+  /** Absent on a backend without the storefront events endpoint. */
+  traffic?: AnalyticsTraffic;
 }
 
 // ---------------------------------------------------------------------------

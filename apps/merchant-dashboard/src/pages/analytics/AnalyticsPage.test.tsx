@@ -48,6 +48,22 @@ function summary(overrides: Record<string, unknown> = {}): AnalyticsSummary {
   });
 }
 
+const emptyTraffic = {
+  sessions: 0,
+  visitors: 0,
+  pageViews: 0,
+  productViews: 0,
+  addToCart: 0,
+  checkouts: 0,
+  purchases: 0,
+  conversionRate: null,
+  addToCartRate: null,
+  checkoutRate: null,
+  byDevice: [],
+  bySource: [],
+  topPages: [],
+};
+
 const previousSummary = () =>
   summary({
     range: { from: "2026-07-23T00:00:00.000Z", to: "2026-08-22T00:00:00.000Z", timeZone: "UTC" },
@@ -115,6 +131,50 @@ describe("AnalyticsPage", () => {
     expect(await screen.findByText("No orders in this period")).toBeInTheDocument();
     expect(screen.getByText("Gross sales")).toBeInTheDocument();
     expect(screen.queryByText("Sales breakdown")).not.toBeInTheDocument();
+  });
+
+  it("shows sessions, the conversion funnel, devices, sources and pages when the store reports visits", async () => {
+    const traffic = {
+      sessions: 200,
+      visitors: 150,
+      pageViews: 600,
+      productViews: 300,
+      addToCart: 40,
+      checkouts: 20,
+      purchases: 10,
+      conversionRate: 5,
+      addToCartRate: 20,
+      checkoutRate: 10,
+      byDevice: [
+        { device: "mobile", sessions: 160 },
+        { device: "desktop", sessions: 40 },
+      ],
+      bySource: [
+        { source: "facebook", medium: "cpc", sessions: 120, orders: 8 },
+        { source: "direct", medium: null, sessions: 80, orders: 2 },
+      ],
+      topPages: [{ path: "/products/linen-shirt", views: 250 }],
+    };
+    api.getAnalyticsSummary.mockResolvedValue(summary({ traffic }));
+
+    renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
+
+    expect((await screen.findAllByText("Sessions")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Conversion funnel")).toBeInTheDocument();
+    // 40 of 200 sessions added to cart.
+    expect(screen.getByText("20.0% of sessions")).toBeInTheDocument();
+    expect(screen.getByText("Mobile")).toBeInTheDocument();
+    expect(screen.getByText("facebook")).toBeInTheDocument();
+    expect(screen.getByText("/products/linen-shirt")).toBeInTheDocument();
+  });
+
+  it("explains that visits appear once the store sends them, on an older summary with none", async () => {
+    api.getAnalyticsSummary.mockResolvedValue(summary({ traffic: { ...emptyTraffic } }));
+
+    renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
+
+    expect(await screen.findByText("No visits recorded yet")).toBeInTheDocument();
+    expect(screen.queryByText("Conversion funnel")).not.toBeInTheDocument();
   });
 
   it("re-queries when the merchant picks another range from the date menu", async () => {

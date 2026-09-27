@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownRight, ArrowUpRight, BarChart3, Info } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Info, Users } from "lucide-react";
 import {
   Card,
   Table,
@@ -110,6 +110,40 @@ const STRINGS = {
     statusReturned: "Returned",
     noActivity: "No orders in this period",
     noActivityDesc: "The charts fill in as soon as orders start coming in.",
+    sessions: "Sessions",
+    sessionsHint: "Visits to your store and funnels, counted by the store itself.",
+    visitors: "Visitors",
+    visitorsHint: "Distinct devices that visited.",
+    conversionRate: "Conversion rate",
+    conversionRateHint: "Sessions that placed an order ÷ sessions.",
+    sessionsOverTime: "Sessions over time",
+    sessionsOverTimeDesc: "Visits per day, against the previous period.",
+    sessionsCount: "{n} sessions",
+    funnelTitle: "Conversion funnel",
+    funnelDesc: "How far this period's visits got.",
+    stepSessions: "Sessions",
+    stepAddToCart: "Added to cart",
+    stepCheckout: "Reached checkout",
+    stepOrders: "Placed an order",
+    ofSessions: "{pct} of sessions",
+    devicesTitle: "Sessions by device",
+    devicesDesc: "By the device of each visit.",
+    deviceMobile: "Mobile",
+    deviceDesktop: "Desktop",
+    deviceTablet: "Tablet",
+    deviceUnknown: "Unknown",
+    sourcesTitle: "Sessions by source",
+    sourcesDesc: "From the UTM tags and referrers visits arrived with.",
+    colSource: "Source",
+    colSessions: "Sessions",
+    colOrders: "Orders",
+    direct: "Direct / untagged",
+    pagesTitle: "Top pages",
+    pagesDesc: "Most viewed pages in this period.",
+    colPage: "Page",
+    colViews: "Views",
+    noTraffic: "No visits recorded yet",
+    noTrafficDesc: "The store sends a visit the moment someone opens it — sessions, devices and sources appear here then.",
   },
   ar: {
     title: "التحليلات",
@@ -187,6 +221,40 @@ const STRINGS = {
     statusReturned: "مرتجعة",
     noActivity: "مفيش طلبات في الفترة دي",
     noActivityDesc: "الرسومات هتتملى أول ما الطلبات تبدأ تيجي.",
+    sessions: "الزيارات",
+    sessionsHint: "زيارات متجرك ومساراتك، متحسوبة من المتجر نفسه.",
+    visitors: "الزوار",
+    visitorsHint: "أجهزة مختلفة زارت المتجر.",
+    conversionRate: "نسبة التحويل",
+    conversionRateHint: "الزيارات اللي عملت طلب ÷ كل الزيارات.",
+    sessionsOverTime: "الزيارات بمرور الوقت",
+    sessionsOverTimeDesc: "الزيارات كل يوم، مقارنة بالفترة اللي قبلها.",
+    sessionsCount: "{n} زيارة",
+    funnelTitle: "قمع التحويل",
+    funnelDesc: "زيارات الفترة دي وصلت لفين.",
+    stepSessions: "زيارات",
+    stepAddToCart: "ضافوا للسلة",
+    stepCheckout: "وصلوا للشيك أوت",
+    stepOrders: "عملوا طلب",
+    ofSessions: "{pct} من الزيارات",
+    devicesTitle: "الزيارات حسب الجهاز",
+    devicesDesc: "حسب جهاز كل زيارة.",
+    deviceMobile: "موبايل",
+    deviceDesktop: "كمبيوتر",
+    deviceTablet: "تابلت",
+    deviceUnknown: "غير معروف",
+    sourcesTitle: "الزيارات حسب المصدر",
+    sourcesDesc: "من وسوم UTM والمواقع اللي الزيارات جت منها.",
+    colSource: "المصدر",
+    colSessions: "الزيارات",
+    colOrders: "الطلبات",
+    direct: "مباشر / من غير وسم",
+    pagesTitle: "أكتر الصفحات مشاهدة",
+    pagesDesc: "الصفحات الأكتر مشاهدة في الفترة دي.",
+    colPage: "الصفحة",
+    colViews: "المشاهدات",
+    noTraffic: "مفيش زيارات متسجلة لسه",
+    noTrafficDesc: "المتجر بيبعت الزيارة أول ما حد يفتحه — الزيارات والأجهزة والمصادر هتظهر هنا ساعتها.",
   },
 } satisfies Messages;
 
@@ -329,6 +397,15 @@ export function AnalyticsPage() {
     now === null || before === null || before === undefined ? null : deltaBasisPoints(now, before);
 
   const hasOrders = Boolean(current && current.orders.placed > 0);
+  const traffic = current?.traffic ?? null;
+  const previousTraffic = previous?.traffic ?? null;
+  const hasTraffic = Boolean(traffic && traffic.sessions > 0);
+  const deviceLabel: Record<string, string> = {
+    mobile: t.deviceMobile,
+    desktop: t.deviceDesktop,
+    tablet: t.deviceTablet,
+    unknown: t.deviceUnknown,
+  };
   const currentWindow = current ? formatWindow(current.range.from, current.range.to) : "";
   const previousWindow = previous ? formatWindow(previous.range.from, previous.range.to) : "";
 
@@ -363,6 +440,26 @@ export function AnalyticsPage() {
             </p>
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+              {traffic && (
+                <>
+                  <MetricTile
+                    label={t.sessions}
+                    hint={t.sessionsHint}
+                    value={count(traffic.sessions)}
+                    delta={deltaBasisPoints(traffic.sessions, previousTraffic?.sessions)}
+                    vsLabel={t.vsPrevious}
+                    spark={seriesOf(current, (d) => d.sessions ?? 0)}
+                    sparkPrevious={seriesOf(previous, (d) => d.sessions ?? 0)}
+                  />
+                  <MetricTile
+                    label={t.conversionRate}
+                    hint={t.conversionRateHint}
+                    value={percent(traffic.conversionRate)}
+                    delta={rateDelta(traffic.conversionRate, previousTraffic?.conversionRate)}
+                    vsLabel={t.vsPrevious}
+                  />
+                </>
+              )}
               <MetricTile
                 label={t.grossSales}
                 hint={t.grossSalesHint}
@@ -451,7 +548,129 @@ export function AnalyticsPage() {
                 vsLabel={t.vsPrevious}
                 to="/customers"
               />
+              {traffic && (
+                <MetricTile
+                  label={t.visitors}
+                  hint={t.visitorsHint}
+                  value={count(traffic.visitors)}
+                  delta={deltaBasisPoints(traffic.visitors, previousTraffic?.visitors)}
+                  vsLabel={t.vsPrevious}
+                />
+              )}
             </div>
+
+            {traffic &&
+              (hasTraffic ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Panel title={t.sessionsOverTime} description={t.sessionsOverTimeDesc}>
+                    <div dir="ltr">
+                      <ComparisonLineChart
+                        summary={t.sessionsOverTimeDesc}
+                        points={comparePoints((d) => d.sessions ?? 0)}
+                        format={(value) => fmt(t.sessionsCount, { n: formatCount(value) })}
+                        formatAxis={(value) => formatCount(Math.round(value))}
+                        currentLabel={t.thisPeriod}
+                        previousLabel={t.previousPeriod}
+                      />
+                    </div>
+                    <Legend current={currentWindow || t.thisPeriod} previous={previousWindow || t.previousPeriod} />
+                  </Panel>
+
+                  <Panel title={t.funnelTitle} description={t.funnelDesc}>
+                    <ol className="space-y-3">
+                      {[
+                        { label: t.stepSessions, value: traffic.sessions },
+                        { label: t.stepAddToCart, value: traffic.addToCart },
+                        { label: t.stepCheckout, value: traffic.checkouts },
+                        { label: t.stepOrders, value: traffic.purchases },
+                      ].map((step, i) => {
+                        const share = traffic.sessions > 0 ? step.value / traffic.sessions : 0;
+                        return (
+                          <li key={step.label}>
+                            <div className="flex items-baseline justify-between gap-3 text-sm">
+                              <span className="text-ink">{step.label}</span>
+                              <span className="tabular-nums text-ink">
+                                <bdi dir="ltr">{formatCount(step.value)}</bdi>
+                                {i > 0 && (
+                                  <span className="ms-2 text-xs text-ink-soft">
+                                    {fmt(t.ofSessions, { pct: formatPercentValue(Math.min(share, 1), 1) })}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-paper">
+                              <div
+                                className={cn("h-full rounded-full", i === 0 ? "bg-primary" : "bg-primary/70")}
+                                style={{ width: `${Math.round(Math.min(share, 1) * 100)}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </Panel>
+
+                  <Panel title={t.devicesTitle} description={t.devicesDesc}>
+                    <HBarList
+                      format={(value) => formatCount(value)}
+                      rows={traffic.byDevice.map((d) => ({ label: deviceLabel[d.device] ?? d.device, value: d.sessions }))}
+                    />
+                  </Panel>
+
+                  <Panel title={t.sourcesTitle} description={t.sourcesDesc}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.colSource}</TableHead>
+                          <TableHead className="text-end">{t.colSessions}</TableHead>
+                          <TableHead className="text-end">{t.colOrders}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {traffic.bySource.map((s, i) => (
+                          <TableRow key={`${s.source}-${s.medium}-${i}`}>
+                            <TableCell>
+                              <span className="block text-ink" dir="ltr">
+                                {s.source === "direct" ? t.direct : s.source}
+                              </span>
+                              {s.medium && (
+                                <span className="block text-xs text-ink-soft" dir="ltr">
+                                  {s.medium}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="tabular-nums text-end">{count(s.sessions)}</TableCell>
+                            <TableCell className="tabular-nums text-end">{count(s.orders)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Panel>
+
+                  <Panel title={t.pagesTitle} description={t.pagesDesc} className="lg:col-span-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.colPage}</TableHead>
+                          <TableHead className="text-end">{t.colViews}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {traffic.topPages.map((p) => (
+                          <TableRow key={p.path}>
+                            <TableCell className="max-w-md truncate" dir="ltr">
+                              {p.path}
+                            </TableCell>
+                            <TableCell className="tabular-nums text-end">{count(p.views)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Panel>
+                </div>
+              ) : (
+                <EmptyState icon={<Users />} title={t.noTraffic} description={t.noTrafficDesc} />
+              ))}
 
             {hasOrders ? (
               <div className="grid gap-4 lg:grid-cols-2">
