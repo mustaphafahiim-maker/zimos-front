@@ -28,17 +28,23 @@
 :root {
   color-scheme: light;
 
-  --color-ink: #16211f;
-  --color-ink-soft: #3c4a46;
-  --color-paper: #f5f4ef;
+  /* Admin chrome in the neutral, Polaris-like register merchants already
+     know: a light grey canvas, white cards, near-black ink. The brand blue
+     stays as the single accent. */
+  --color-ink: #303030;
+  --color-ink-soft: #616161;
+  --color-paper: #f1f1f1;
   --color-paper-raised: #ffffff;
-  --color-line: #dcdace;
+  --color-line: #e3e3e3;
   /* Border for interactive controls (inputs, selects, textareas, checkboxes).
      WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
-     --color-line is a decorative hairline (~1.3:1) and fails that, so controls
-     use this darker step while cards/dividers keep the softer line. Same hue
-     ramp, so the palette identity is unchanged. */
-  --color-line-strong: #8d8c84;
+     --color-line is a decorative hairline and fails that, so controls use
+     this darker step while cards/dividers keep the softer line. */
+  --color-line-strong: #8a8a8a;
+  /* The sidebar rail sits a step darker than the canvas; the top bar is dark. */
+  --color-rail: #ebebeb;
+  --color-topbar: #1a1a1a;
+  --color-topbar-ink: #e3e3e3;
 
   --color-primary: #2563EB;
   --color-primary-dark: #1E3A8A;
@@ -58,10 +64,11 @@
   /* Tajawal follows each Latin family so Arabic copy (the funnel builder's
      Arabic mode) draws in it; Latin text is unaffected. Same approach as the
      storefront — see packages/ui/DESIGN_SYSTEM.md §2. */
-  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  /* One family for headings and body, like the admin UIs merchants use daily. */
+  --font-display: "Inter Variable", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 0.625rem;
+  --radius-card: 0.75rem;
 
   /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
      `@store-builder/ui` are built against these. They point at the brand
@@ -77,11 +84,11 @@
   --primary-foreground: #ffffff;
   --secondary: var(--color-primary-soft);
   --secondary-foreground: var(--color-primary-dark);
-  --muted: #ecebe3;
+  --muted: #f1f1f1;
   --muted-foreground: var(--color-ink-soft);
   /* `bg-accent` resolves to the brand amber, so its foreground is dark ink. */
   --accent: var(--color-accent);
-  --accent-foreground: #16211f;
+  --accent-foreground: #303030;
   --destructive: var(--color-danger);
   --border: var(--color-line);
   --input: var(--color-line-strong);
@@ -91,7 +98,7 @@
   --chart-3: var(--color-primary-dark);
   --chart-4: var(--color-accent-dark);
   --chart-5: var(--color-success);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: var(--color-paper-raised);
   --sidebar-foreground: var(--color-ink);
   --sidebar-primary: var(--color-primary);
@@ -107,16 +114,19 @@
 
   /* ink / paper / line / primary / accent — same identity as the
      marketing site's dark palette so the platform reads as one system. */
-  --color-ink: #e7ecf5;
-  --color-ink-soft: #a9b4c9;
-  --color-paper: #0b1220;
-  --color-paper-raised: #121b2e;
-  --color-line: #22304a;
-  --color-line-strong: #4f6a9d;
+  --color-ink: #e3e3e3;
+  --color-ink-soft: #b5b5b5;
+  --color-paper: #1a1a1a;
+  --color-paper-raised: #262626;
+  --color-line: #3a3a3a;
+  --color-line-strong: #8a8a8a;
+  --color-rail: #202020;
+  --color-topbar: #0f0f0f;
+  --color-topbar-ink: #e3e3e3;
 
   --color-primary: #5b8df6;
   --color-primary-dark: #2563eb;
-  --color-primary-soft: #16233f;
+  --color-primary-soft: #1f2a44;
 
   --color-accent: #e8b96a;
   --color-accent-dark: #d9a441;
@@ -140,10 +150,10 @@
   --primary-foreground: #0b1220;
   --secondary: var(--color-primary-soft);
   --secondary-foreground: var(--color-primary);
-  --muted: #1a2540;
+  --muted: #303030;
   --muted-foreground: var(--color-ink-soft);
   --accent: var(--color-accent);
-  --accent-foreground: #0b1220;
+  --accent-foreground: #1a1a1a;
   --destructive: var(--color-danger);
   --border: var(--color-line);
   --input: var(--color-line-strong);
@@ -175,6 +185,9 @@
   --color-paper-raised: var(--color-paper-raised);
   --color-line: var(--color-line);
   --color-line-strong: var(--color-line-strong);
+  --color-rail: var(--color-rail);
+  --color-topbar: var(--color-topbar);
+  --color-topbar-ink: var(--color-topbar-ink);
 
   --color-primary: var(--color-primary);
   --color-primary-dark: var(--color-primary-dark);
@@ -190,7 +203,7 @@
   --color-success-soft: var(--color-success-soft);
 
   --font-display: var(--font-display);
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: var(--font-sans);
 
   --radius-card: var(--radius-card);
 
@@ -282,7 +295,7 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
   }
   :focus-visible {
     outline: 2px solid var(--color-primary);

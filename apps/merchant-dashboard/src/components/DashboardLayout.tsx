@@ -1,8 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Menu, Search, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem } from "@/lib/navigation";
+import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_ITEMS, NAV_LABELS, findNavItem } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -25,6 +25,11 @@ const STRINGS = {
     switchStore: "Switch store",
     collapseGroup: "Collapse {group}",
     expandGroup: "Expand {group}",
+    search: "Search",
+    searchPlaceholder: "Search pages",
+    searchResults: "Pages",
+    noResults: "No page called “{query}”",
+    signedInAs: "Signed in as",
   },
   ar: {
     signOut: "تسجيل الخروج",
@@ -38,6 +43,11 @@ const STRINGS = {
     switchStore: "تبديل المتجر",
     collapseGroup: "طي {group}",
     expandGroup: "توسيع {group}",
+    search: "بحث",
+    searchPlaceholder: "دوّر على صفحة",
+    searchResults: "الصفحات",
+    noResults: "مفيش صفحة اسمها «{query}»",
+    signedInAs: "داخل باسم",
   },
 } satisfies Messages;
 
@@ -76,7 +86,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT(STRINGS);
   const navLabels = useT(NAV_LABELS);
   const groupLabels = useT(NAV_GROUP_LABELS);
-  const storeName = currentWorkspace?.name;
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(readCollapsedGroups);
   useEffect(() => {
@@ -99,22 +108,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <div className="px-5 py-5">
-        <Link
-          to="/"
-          onClick={onNavigate}
-          className="block transition-opacity hover:opacity-80"
-          aria-label={storeName ? fmt(t.dashboardAriaNamed, { name: storeName }) : t.dashboardAria}
-        >
-          <ZimosLogo height={26} />
-          {storeName && (
-            <span className="mt-2 block truncate text-sm font-medium text-ink-soft">
-              {storeName}
-            </span>
-          )}
-        </Link>
-      </div>
-      <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
+      {/* The store's public link, where a merchant looks for it first. */}
+      {currentWorkspace?.slug && (
+        <div className="px-3 pt-3">
+          <StoreLinkBar
+            slug={currentWorkspace.slug}
+            className="rounded-lg bg-paper-raised px-1 py-0.5 shadow-xs ring-1 ring-foreground/5"
+          />
+        </div>
+      )}
+      <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 py-3">
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
           const canCollapse = group.collapsible !== false;
@@ -122,14 +125,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           const items = isClosed ? group.items.filter((i) => i.to === activeTo) : group.items;
 
           return (
-            <div key={group.id} className={cn(index > 0 && "mt-4")}>
+            <div key={group.id} className={cn(index > 0 && "mt-3")}>
               {heading && canCollapse && (
                 <button
                   type="button"
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase transition-colors hover:text-ink rtl:tracking-normal"
+                  className="mb-0.5 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
@@ -141,11 +144,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {/* A non-collapsible group still gets its heading — just as plain
                   text, with no button and nothing that can ever hide it. */}
               {heading && !canCollapse && (
-                <p className="mb-1 px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase rtl:tracking-normal">
-                  {heading}
-                </p>
+                <p className="mb-0.5 px-2 py-1 text-xs font-medium text-ink-soft">{heading}</p>
               )}
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {items.map((item) => (
                   <NavLink
                     key={item.to}
@@ -155,26 +156,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     onMouseEnter={item.key === "analytics" ? prefetchAnalytics : undefined}
                     onFocus={item.key === "analytics" ? prefetchAnalytics : undefined}
                     className={({ isActive }) =>
-                      // Dark primary-dark stays deep (white text sits on it elsewhere),
-                      // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
                       cn(
-                        "relative flex items-center gap-2.5 rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
-                        isActive && "bg-primary-soft text-primary-dark dark:text-primary"
+                        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-paper-raised/70 hover:text-ink",
+                        isActive && "bg-paper-raised font-semibold text-ink shadow-xs ring-1 ring-foreground/5"
                       )
                     }
                   >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary"
-                          />
-                        )}
-                        <item.icon className="size-[18px] shrink-0" aria-hidden />
-                        <span className="min-w-0 truncate">{navLabels[item.key]}</span>
-                      </>
-                    )}
+                    <item.icon className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />
+                    <span className="min-w-0 truncate">{navLabels[item.key]}</span>
                   </NavLink>
                 ))}
               </div>
@@ -182,16 +171,93 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="flex items-center gap-2 border-t border-line px-3 py-4">
+      <div className="flex items-center gap-2 border-t border-line px-3 py-3">
         <button
           onClick={() => logout()}
-          className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
+          className="flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-start text-[13px] font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
         >
           {t.signOut}
         </button>
         <ThemeToggle />
       </div>
     </>
+  );
+}
+
+/** Top-bar search: finds a dashboard page by name and jumps to it. */
+function NavSearch({ className }: { className?: string }) {
+  const t = useT(STRINGS);
+  const navLabels = useT(NAV_LABELS);
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase();
+    if (!q) return [];
+    return NAV_ITEMS.filter((item) => navLabels[item.key].toLocaleLowerCase().includes(q)).slice(0, 8);
+  }, [query, navLabels]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (!boxRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  const go = (to: string) => {
+    setQuery("");
+    setOpen(false);
+    navigate(to);
+  };
+
+  return (
+    <div ref={boxRef} className={cn("relative", className)}>
+      <label className="relative block">
+        <span className="sr-only">{t.search}</span>
+        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-topbar-ink/60" aria-hidden />
+        <input
+          type="search"
+          value={query}
+          placeholder={t.searchPlaceholder}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && matches[0]) go(matches[0].to);
+            if (event.key === "Escape") setOpen(false);
+          }}
+          className="h-8 w-full rounded-lg border border-white/10 bg-white/10 ps-9 pe-3 text-sm text-topbar-ink placeholder:text-topbar-ink/50 focus:border-white/30 focus:bg-white/15 focus:outline-none"
+        />
+      </label>
+      {open && query.trim() && (
+        <div className="absolute inset-x-0 top-full z-30 mt-1 rounded-lg bg-paper-raised py-1 text-ink shadow-lg ring-1 ring-foreground/10">
+          {matches.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-ink-soft">{fmt(t.noResults, { query: query.trim() })}</p>
+          ) : (
+            <>
+              <p className="px-3 pt-1.5 pb-1 text-xs font-medium text-ink-soft">{t.searchResults}</p>
+              {matches.map((item) => (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => go(item.to)}
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-start text-sm hover:bg-muted"
+                >
+                  <item.icon className="size-4 text-ink-soft" aria-hidden />
+                  {navLabels[item.key]}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -226,116 +292,124 @@ export function DashboardLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
+  const initial = (storeName ?? user?.fullName ?? user?.email ?? "?").charAt(0).toUpperCase();
+
   return (
-    <div className="flex min-h-screen bg-paper">
-      <aside className="hidden w-60 shrink-0 border-e border-line bg-paper-raised md:flex md:flex-col">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile drawer — below `md` the rail above is hidden, so without this
-          the dashboard has no navigation at all on a phone. */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-primary-dark/40 md:hidden dark:bg-black/60"
-          onMouseDown={() => setMobileOpen(false)}
+    <div className="flex min-h-screen flex-col bg-paper">
+      <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 bg-topbar px-3 text-topbar-ink sm:px-4">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label={t.openNav}
+          aria-expanded={mobileOpen}
+          className="-ms-1 shrink-0 cursor-pointer rounded-md p-2 text-topbar-ink/80 hover:bg-white/10 hover:text-white md:hidden"
         >
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label={t.navLabel}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-e border-line bg-paper-raised shadow-lg"
-          >
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              aria-label={t.closeNav}
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
-      )}
+          <Menu className="size-5" aria-hidden />
+        </button>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-2 border-b border-line bg-paper-raised px-4 sm:gap-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              aria-label={t.openNav}
-              aria-expanded={mobileOpen}
-              className="-ms-1 shrink-0 cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink md:hidden"
-            >
-              <Menu className="size-5" aria-hidden />
-            </button>
+        <Link
+          to="/"
+          className="shrink-0 transition-opacity hover:opacity-80"
+          aria-label={storeName ? fmt(t.dashboardAriaNamed, { name: storeName }) : t.dashboardAria}
+        >
+          <ZimosLogo height={22} surface="dark" />
+        </Link>
 
-            <div className="relative max-w-[40vw] shrink-0 sm:max-w-none">
-              <button
-                onClick={() => setSwitcherOpen((v) => !v)}
-                aria-label={t.switchStore}
-                aria-expanded={switcherOpen}
-                className="cursor-pointer flex items-center gap-2 rounded-[0.5rem] px-2 py-1.5 text-sm font-medium text-ink hover:bg-paper"
-              >
-                <span className="truncate">{currentWorkspace?.name ?? t.selectStore}</span>
-                <span className="text-ink-soft" aria-hidden>
-                  ▾
-                </span>
-              </button>
-              {switcherOpen && (
-                <div className="absolute start-0 top-full z-20 mt-1 w-64 rounded-[0.5rem] border border-line bg-paper-raised py-1 shadow-lg">
-                  {workspaces.map((workspace) => (
-                    <button
-                      key={workspace.id}
-                      onClick={() => {
-                        selectWorkspace(workspace.id);
-                        setSwitcherOpen(false);
-                      }}
-                      className={cn(
-                        "block w-full cursor-pointer px-3 py-2 text-start text-sm hover:bg-primary-soft",
-                        workspace.id === currentWorkspace?.id &&
-                          "font-medium text-primary-dark dark:text-primary"
-                      )}
-                    >
-                      {workspace.name}
-                    </button>
-                  ))}
-                  <div className="my-1 border-t border-line" />
+        <NavSearch className="mx-auto hidden w-full max-w-xl sm:block" />
+
+        <div className="ms-auto flex shrink-0 items-center gap-2">
+          <LanguageSwitch className="hidden h-8 border-transparent bg-white/10 text-topbar-ink hover:border-white/20 hover:text-white sm:inline-flex" />
+          <LanguageSwitch compact className="h-8 w-8 border-transparent bg-white/10 text-topbar-ink hover:border-white/20 hover:text-white sm:hidden" />
+
+          <div className="relative">
+            <button
+              onClick={() => setSwitcherOpen((v) => !v)}
+              aria-label={t.switchStore}
+              aria-expanded={switcherOpen}
+              className="flex h-8 max-w-[40vw] cursor-pointer items-center gap-2 rounded-lg bg-white/10 ps-1 pe-2 text-sm font-medium text-topbar-ink transition-colors hover:bg-white/15 hover:text-white sm:max-w-none"
+            >
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-white">
+                {initial}
+              </span>
+              <span className="truncate">{storeName ?? t.selectStore}</span>
+              <ChevronDown className="size-4 shrink-0 opacity-70" aria-hidden />
+            </button>
+            {switcherOpen && (
+              <div className="absolute end-0 top-full z-30 mt-1 w-64 rounded-lg bg-paper-raised py-1 text-ink shadow-lg ring-1 ring-foreground/10">
+                <p className="px-3 pt-1.5 pb-1 text-xs text-ink-soft">
+                  {t.signedInAs} <span className="font-medium text-ink">{user?.fullName ?? user?.email}</span>
+                </p>
+                <div className="my-1 border-t border-line" />
+                {workspaces.map((workspace) => (
                   <button
+                    key={workspace.id}
                     onClick={() => {
+                      selectWorkspace(workspace.id);
                       setSwitcherOpen(false);
-                      navigate("/workspaces");
                     }}
-                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-primary hover:bg-primary-soft"
+                    className={cn(
+                      "block w-full cursor-pointer px-3 py-2 text-start text-sm hover:bg-muted",
+                      workspace.id === currentWorkspace?.id && "font-semibold"
+                    )}
                   >
-                    {t.newStore}
+                    {workspace.name}
                   </button>
-                </div>
-              )}
-            </div>
-
-            {/* The store's public link, beside the store it belongs to: on every
-                page, and it changes with the switcher above. */}
-            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
+                ))}
+                <div className="my-1 border-t border-line" />
+                <button
+                  onClick={() => {
+                    setSwitcherOpen(false);
+                    navigate("/workspaces");
+                  }}
+                  className="block w-full cursor-pointer px-3 py-2 text-start text-sm text-primary hover:bg-muted"
+                >
+                  {t.newStore}
+                </button>
+              </div>
+            )}
           </div>
+        </div>
+      </header>
 
-          <div className="flex shrink-0 items-center gap-2 text-sm text-ink-soft sm:gap-3">
-            {/* Dashboard-wide locale switch. Lives in the header (not the
-                sidebar footer beside ThemeToggle) so it stays reachable on
-                mobile, where the sidebar collapses into the drawer. */}
-            <LanguageSwitch className="hidden sm:inline-flex" />
-            <LanguageSwitch compact className="sm:hidden" />
-            <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-dark dark:text-primary">
-              {(user?.fullName ?? user?.email ?? "?").charAt(0).toUpperCase()}
-            </div>
+      <div className="flex flex-1">
+        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 bg-rail md:flex md:flex-col">
+          <SidebarContent />
+        </aside>
+
+        {/* Mobile drawer — below `md` the rail above is hidden, so without this
+            the dashboard has no navigation at all on a phone. */}
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40 md:hidden dark:bg-black/60"
+            onMouseDown={() => setMobileOpen(false)}
+          >
+            <aside
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.navLabel}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-rail shadow-lg"
+            >
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label={t.closeNav}
+                className="absolute end-3 top-3 z-10 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-paper-raised hover:text-ink"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+              <div className="px-3 pt-3 sm:hidden">
+                <NavSearch className="[&_input]:border-line [&_input]:bg-paper-raised [&_input]:text-ink [&_input]:placeholder:text-ink-soft [&_svg]:text-ink-soft" />
+              </div>
+              <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            </aside>
           </div>
-        </header>
+        )}
 
-        <main className="flex-1 p-4 sm:p-6">
-          <Outlet />
+        <main className="min-w-0 flex-1 p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-[1280px]">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
