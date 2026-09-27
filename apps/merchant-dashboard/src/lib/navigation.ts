@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   Bot,
   ClipboardCheck,
@@ -39,6 +40,8 @@ export type NavKey =
   | "marketing"
   | "fraud"
   | "analytics"
+  | "webAnalytics"
+  | "realtime"
   | "profit"
   | "media"
   | "catalog"
@@ -129,7 +132,11 @@ export const NAV_GROUPS: NavGroup[] = [
         key: "analytics",
         to: "/analytics",
         icon: BarChart3,
-        children: [{ key: "profit", to: "/profit", icon: PiggyBank }],
+        children: [
+          { key: "webAnalytics", to: "/analytics/web", icon: Globe },
+          { key: "realtime", to: "/analytics/realtime", icon: Activity },
+          { key: "profit", to: "/profit", icon: PiggyBank },
+        ],
       },
     ],
   },
@@ -202,6 +209,8 @@ export const NAV_LABELS = {
     media: "Media library",
     discounts: "Discounts",
     analytics: "Analytics",
+    webAnalytics: "Web analytics",
+    realtime: "Realtime",
     profit: "Profit",
     shipping: "Shipping & tax",
     website: "Online store",
@@ -227,6 +236,8 @@ export const NAV_LABELS = {
     media: "مكتبة الصور",
     discounts: "الخصومات",
     analytics: "التحليلات",
+    webAnalytics: "زيارات الموقع",
+    realtime: "الآن مباشر",
     profit: "الأرباح",
     shipping: "الشحن والضرائب",
     website: "المتجر الإلكتروني",

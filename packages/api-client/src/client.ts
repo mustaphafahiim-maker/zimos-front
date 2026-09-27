@@ -134,6 +134,13 @@ import type {
   FunnelAnalyticsOverview,
   OrderCounts,
   OrderListFilters,
+  WebAnalyticsMetricType,
+  WebAnalyticsMetrics,
+  WebAnalyticsRangeParams,
+  WebAnalyticsRealtime,
+  WebAnalyticsSeries,
+  WebAnalyticsStats,
+  WebAnalyticsWeekly,
   BlocklistEntry,
   CheckoutRecoveryStatus,
   CheckoutSession,
@@ -2142,6 +2149,37 @@ export class ApiClient {
     return this.request<FunnelAnalyticsOverview>(
       `/workspaces/${workspaceId}/analytics/funnels${buildQuery({ ...params })}`
     );
+  }
+
+  // Web analytics — Umami-style stats over the store's own page views.
+  private webAnalyticsBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/analytics/web`;
+  }
+
+  async getWebAnalyticsStats(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsStats>(`${this.webAnalyticsBase(workspaceId)}/stats${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsSeries(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsSeries>(`${this.webAnalyticsBase(workspaceId)}/series${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsMetrics(
+    workspaceId: string,
+    type: WebAnalyticsMetricType,
+    params: WebAnalyticsRangeParams & { limit?: number } = {}
+  ) {
+    return this.request<WebAnalyticsMetrics>(
+      `${this.webAnalyticsBase(workspaceId)}/metrics${buildQuery({ ...params, type })}`
+    );
+  }
+
+  async getWebAnalyticsWeekly(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsWeekly>(`${this.webAnalyticsBase(workspaceId)}/weekly${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsRealtime(workspaceId: string, params: { tz?: string } = {}) {
+    return this.request<WebAnalyticsRealtime>(`${this.webAnalyticsBase(workspaceId)}/realtime${buildQuery({ ...params })}`);
   }
 
   async getFunnelAnalyticsDetail(workspaceId: string, funnelId: string, params: AnalyticsSummaryParams = {}) {

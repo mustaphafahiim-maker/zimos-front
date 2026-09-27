@@ -446,6 +446,144 @@ export function BarChart({
   );
 }
 
+export interface StackedPoint {
+  label: string;
+  /** The larger series (drawn as the back bar). */
+  primary: number;
+  /** The subset series (drawn in front). */
+  secondary: number;
+  comparisonPrimary?: number | null;
+  comparisonSecondary?: number | null;
+}
+
+/**
+ * Umami's traffic chart: views as the back bar, visitors in front, and the
+ * comparison period as dashed lines. Hover shows every value for that bucket.
+ */
+export function StackedBarsChart({
+  points,
+  height = 260,
+  className,
+  summary,
+  primaryLabel,
+  secondaryLabel,
+  comparisonLabel,
+  format = (v) => String(v),
+}: {
+  points: StackedPoint[];
+  height?: number;
+  className?: string;
+  summary: string;
+  primaryLabel: string;
+  secondaryLabel: string;
+  comparisonLabel?: string;
+  format?: (value: number) => string;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const width = 720;
+  const padStart = 44;
+  const padEnd = 12;
+  const padTop = 12;
+  const padBottom = 24;
+  const plotW = width - padStart - padEnd;
+  const plotH = height - padTop - padBottom;
+
+  const values = points.flatMap((p) => [p.primary, p.comparisonPrimary ?? 0]);
+  if (points.length === 0 || values.every((v) => v === 0)) {
+    return <EmptyPlot height={height} className={className} label={summary} />;
+  }
+  const max = Math.max(...values, 1);
+  const slot = plotW / points.length;
+  const barW = Math.max(2, slot * 0.6);
+  const x = (i: number) => padStart + i * slot + (slot - barW) / 2;
+  const cx = (i: number) => padStart + i * slot + slot / 2;
+  const y = (v: number) => padTop + plotH - (v / max) * plotH;
+  const hasComparison = points.some((p) => p.comparisonPrimary !== null && p.comparisonPrimary !== undefined);
+  const linePath = (pick: (p: StackedPoint) => number | null | undefined) =>
+    points
+      .map((p, i) => {
+        const v = pick(p);
+        return v === null || v === undefined ? null : `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${y(v).toFixed(1)}`;
+      })
+      .filter(Boolean)
+      .join(" ");
+  const last = points.length - 1;
+  const ticks = [0, Math.floor(last / 4), Math.floor(last / 2), Math.floor((3 * last) / 4), last].filter((v, i, a) => a.indexOf(v) === i);
+  const point = hover === null ? null : points[hover];
+  const tipStart = hover !== null && hover > last / 2;
+
+  return (
+    <div className={cn("relative", className)}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-auto w-full"
+        role="img"
+        aria-label={summary}
+        preserveAspectRatio="none"
+        onMouseMove={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          const px = ((event.clientX - box.left) / box.width) * width - padStart;
+          setHover(Math.min(last, Math.max(0, Math.floor(px / slot))));
+        }}
+        onMouseLeave={() => setHover(null)}
+      >
+        {[0, 0.5, 1].map((g) => (
+          <g key={g}>
+            <line x1={padStart} x2={width - padEnd} y1={y(max * g)} y2={y(max * g)} stroke="var(--color-line)" strokeWidth="1" strokeDasharray={g === 0 ? undefined : "2 4"} />
+            <text x={padStart - 6} y={y(max * g) + 3} textAnchor="end" className={AXIS_CLASS}>
+              {format(Math.round(max * g))}
+            </text>
+          </g>
+        ))}
+        {points.map((p, i) => (
+          <g key={p.label}>
+            <rect x={x(i)} y={y(p.primary)} width={barW} height={Math.max(0, padTop + plotH - y(p.primary))} rx="2" fill="var(--color-primary)" fillOpacity={hover === i ? 0.35 : 0.25} />
+            <rect x={x(i)} y={y(p.secondary)} width={barW} height={Math.max(0, padTop + plotH - y(p.secondary))} rx="2" fill="var(--color-primary)" fillOpacity={hover === i ? 1 : 0.85} />
+          </g>
+        ))}
+        {hasComparison && (
+          <>
+            <path d={linePath((p) => p.comparisonPrimary)} fill="none" stroke="var(--color-line-strong)" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+            <path d={linePath((p) => p.comparisonSecondary)} fill="none" stroke="var(--color-ink-soft)" strokeWidth="1.5" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+          </>
+        )}
+        {ticks.map((i) => (
+          <text key={i} x={cx(i)} y={height - 6} textAnchor="middle" className={AXIS_CLASS}>
+            {points[i].label}
+          </text>
+        ))}
+      </svg>
+      {point && (
+        <div
+          className={cn(
+            "pointer-events-none absolute top-2 z-10 min-w-44 rounded-[0.5rem] border border-line bg-paper-raised p-2.5 text-xs shadow-md",
+            tipStart ? "start-12" : "end-3"
+          )}
+          dir="auto"
+        >
+          <p className="mb-1.5 font-medium text-ink">{point.label}</p>
+          <p className="flex items-center justify-between gap-4">
+            <span className="text-ink-soft">{primaryLabel}</span>
+            <span className="tabular-nums font-medium text-ink">{format(point.primary)}</span>
+          </p>
+          <p className="mt-0.5 flex items-center justify-between gap-4">
+            <span className="text-ink-soft">{secondaryLabel}</span>
+            <span className="tabular-nums font-medium text-ink">{format(point.secondary)}</span>
+          </p>
+          {hasComparison && comparisonLabel && (
+            <p className="mt-1 flex items-center justify-between gap-4 border-t border-line pt-1">
+              <span className="text-ink-soft">{comparisonLabel}</span>
+              <span className="tabular-nums text-ink-soft">
+                {format(point.comparisonPrimary ?? 0)} / {format(point.comparisonSecondary ?? 0)}
+              </span>
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface HBarRow {
   label: string;
   value: number;

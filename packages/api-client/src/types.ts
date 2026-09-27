@@ -2442,6 +2442,140 @@ export interface AnalyticsSummary {
 }
 
 // ---------------------------------------------------------------------------
+// Web analytics — /workspaces/:ws/analytics/web/*
+// Umami-style page analytics over the storefront's own events: views are
+// page_view events, visitors are distinct sessions, visits are 30-minute
+// slices of a session, a bounce is a visit with one view and no event.
+// ---------------------------------------------------------------------------
+
+export type WebAnalyticsUnit = "minute" | "hour" | "day" | "month";
+export type WebAnalyticsCompare = "prev" | "yoy";
+
+export type WebAnalyticsFilterKey =
+  | "url"
+  | "referrer"
+  | "title"
+  | "browser"
+  | "os"
+  | "device"
+  | "country"
+  | "region"
+  | "city"
+  | "language"
+  | "screen"
+  | "event"
+  | "hostname"
+  | "tag"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term";
+
+export type WebAnalyticsFilters = Partial<Record<WebAnalyticsFilterKey, string>>;
+
+export interface WebAnalyticsRangeParams extends WebAnalyticsFilters {
+  from?: string;
+  to?: string;
+  compare?: WebAnalyticsCompare;
+  unit?: WebAnalyticsUnit;
+  tz?: string;
+}
+
+export interface WebAnalyticsStatsValues {
+  pageviews: number;
+  visitors: number;
+  visits: number;
+  bounces: number;
+  /** Seconds, summed across visits. */
+  totaltime: number;
+  bounceRate: number | null;
+  /** Seconds. */
+  avgVisitTime: number | null;
+}
+
+export interface WebAnalyticsStats extends WebAnalyticsStatsValues {
+  comparison?: WebAnalyticsStatsValues;
+}
+
+export interface WebAnalyticsSeriesPoint {
+  /** Bucket start, ISO. */
+  t: string;
+  pageviews: number;
+  visitors: number;
+}
+
+export interface WebAnalyticsSeries {
+  unit: WebAnalyticsUnit;
+  series: WebAnalyticsSeriesPoint[];
+  comparison?: WebAnalyticsSeriesPoint[];
+}
+
+export type WebAnalyticsMetricType =
+  | "path"
+  | "fullPath"
+  | "entry"
+  | "exit"
+  | "title"
+  | "query"
+  | "referrer"
+  | "channel"
+  | "hostname"
+  | "tag"
+  | "browser"
+  | "os"
+  | "device"
+  | "screen"
+  | "language"
+  | "country"
+  | "region"
+  | "city"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term"
+  | "event";
+
+export interface WebAnalyticsMetricRow {
+  x: string;
+  y: number;
+}
+
+export interface WebAnalyticsMetrics {
+  type: WebAnalyticsMetricType;
+  rows: WebAnalyticsMetricRow[];
+}
+
+export interface WebAnalyticsWeekly {
+  rows: Array<{ dow: number; hour: number; visitors: number }>;
+}
+
+export interface WebAnalyticsRealtimeActivity {
+  sessionId: string;
+  visitId: string | null;
+  type: "pageview" | "event";
+  eventName: string | null;
+  urlPath: string | null;
+  referrerDomain: string | null;
+  browser: string | null;
+  os: string | null;
+  device: string | null;
+  country: string | null;
+  createdAt: string;
+}
+
+export interface WebAnalyticsRealtime {
+  totals: { views: number; visitors: number; events: number; countries: number };
+  series: WebAnalyticsSeriesPoint[];
+  activity: WebAnalyticsRealtimeActivity[];
+  urls: WebAnalyticsMetricRow[];
+  referrers: WebAnalyticsMetricRow[];
+  countries: WebAnalyticsMetricRow[];
+  activeVisitors: number;
+}
+
+// ---------------------------------------------------------------------------
 // Funnel analytics — /workspaces/:ws/analytics/funnels[/:funnelId]
 // Sessions come from the funnel session log the storefront writes as a
 // visitor moves through a funnel; orders are the real orders placed inside
