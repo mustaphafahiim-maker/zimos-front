@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { ImageIcon } from "lucide-react";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
@@ -12,7 +13,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
+import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, imageSrc, validateImageFile } from "@/lib/media";
 import { ColorField } from "@/components/ColorField";
 import {
   DEFAULT_PRIMARY,
@@ -61,6 +62,7 @@ function WorkspaceProfileSection() {
   const [tagline, setTagline] = useState(currentWorkspace?.tagline ?? "");
   const [logoUrl, setLogoUrl] = useState<string | null>(currentWorkspace?.logoUrl ?? null);
   const [logoStage, setLogoStage] = useState<"preparing" | "uploading" | null>(null);
+  const [logoBroken, setLogoBroken] = useState(false);
   const uploading = logoStage !== null;
   const [primaryColor, setPrimaryColor] = useState(() =>
     readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY)
@@ -90,6 +92,7 @@ function WorkspaceProfileSection() {
       }
       setLogoStage("uploading");
       const media = await apiClient.uploadMedia(workspaceId, prepared);
+      setLogoBroken(false);
       setLogoUrl(media.url);
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -147,15 +150,18 @@ function WorkspaceProfileSection() {
         <div className="space-y-1.5">
           <Label>Logo</Label>
           <div className="flex flex-wrap items-center gap-4">
-            {logoUrl ? (
+            {logoUrl && !logoBroken ? (
               <img
-                src={logoUrl}
+                src={imageSrc(logoUrl) ?? logoUrl}
                 alt="Store logo"
+                onError={() => setLogoBroken(true)}
                 className="size-16 rounded-lg bg-paper object-contain ring-1 ring-foreground/10"
               />
             ) : (
+              // Never a broken-image glyph: a plain box says "no logo" just as
+              // well, and a file that fails to load looks the same as none.
               <div className="flex size-16 items-center justify-center rounded-lg border border-dashed border-line text-xs text-ink-soft">
-                None
+                {logoBroken ? <ImageIcon className="size-5 text-ink-soft/40" aria-hidden /> : "None"}
               </div>
             )}
             <label

@@ -7,7 +7,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/Field";
 import { CopyButton } from "@/components/CopyButton";
@@ -59,8 +59,7 @@ const STRINGS = {
     eventsNote:
       "Your store sends the standard events on its own: page view, product view, add to cart, checkout started, and purchase with the real order total.",
     serverSide:
-      "Browser pixels only for now — server-side conversions (Conversions API) aren't wired up yet.",
-    idHint: "Example: {example}",
+      "These fire from the visitor's browser. Server-side conversions can't be set up from this screen yet.",
     invalid: "That doesn't look like a valid ID for this platform.",
     connected: "Connected",
     notConnected: "Not connected",
@@ -86,8 +85,7 @@ const STRINGS = {
     pixelsDesc: "حط رقم البيكسل من كل منصة إعلانات. هيشتغل في كل صفحات متجرك ومع كل زائر.",
     eventsNote:
       "متجرك بيبعت الأحداث المعروفة لوحده: فتح صفحة، مشاهدة منتج، إضافة للسلة، بدء الطلب، والشراء بقيمة الطلب الحقيقية.",
-    serverSide: "دلوقتي بيكسل المتصفح بس — التتبع من السيرفر (Conversions API) لسه متظبطش.",
-    idHint: "مثال: {example}",
+    serverSide: "دي بتشتغل من متصفح الزاير. التتبع من السيرفر لسه مش متظبط من الشاشة دي.",
     invalid: "الرقم ده مش شكله صح للمنصة دي.",
     connected: "متوصل",
     notConnected: "مش متوصل",
@@ -212,9 +210,9 @@ export function MarketingPage() {
               const bad = value.trim() !== "" && !platform.pattern.test(value.trim());
               const live = Boolean(stored[platform.key]);
               return (
-                <div key={platform.key} className="rounded-lg p-3 ring-1 ring-foreground/10">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-ink">{platform.name}</span>
+                <div key={platform.key}>
+                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">{platform.name}</span>
                     <span
                       className={
                         live
@@ -225,8 +223,12 @@ export function MarketingPage() {
                       {live ? t.connected : t.notConnected}
                     </span>
                   </div>
+                  {/* The row above already names the platform, and the
+                      placeholder already shows the example — so no visible
+                      label and no hint line repeating it. */}
                   <TextField
                     label={platform.name}
+                    labelHidden
                     dir="ltr"
                     inputMode="text"
                     autoComplete="off"
@@ -236,7 +238,6 @@ export function MarketingPage() {
                       setIds((prev) => ({ ...prev, [platform.key]: e.target.value }))
                     }
                     error={bad ? t.invalid : undefined}
-                    hint={bad ? undefined : fmt(t.idHint, { example: platform.example })}
                   />
                 </div>
               );
