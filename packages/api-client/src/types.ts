@@ -2238,6 +2238,426 @@ export interface AdminOverview {
   attention: AdminAttentionItem[];
 }
 
+// ---------------------------------------------------------------------------
+// Platform admin — risk (/admin/risk/*)
+// ---------------------------------------------------------------------------
+
+/** An identifier kind the platform blocklist and the risk signals know. */
+export type AdminRiskIdentifierType = "phone" | "email" | "address";
+
+/** The address an address block is fingerprinted from. */
+export interface AdminRiskAddress {
+  country: string;
+  province?: string | null;
+  city: string;
+  addressLine: string;
+}
+
+/**
+ * One platform blocklist entry. `value` is the normalized identifier order
+ * creation compares against (digits for a phone, lowercase for an email, a
+ * 32-hex fingerprint for an address); `label` is the human-readable form.
+ */
+export interface AdminBlocklistEntry {
+  id: string;
+  type: AdminRiskIdentifierType;
+  value: string;
+  label: string;
+  reason: string;
+  /** Null = never expires. */
+  expiresAt: string | null;
+  /** Derived from `expiresAt` on the server. An expired entry no longer matches. */
+  status: "active" | "expired";
+  createdById: string | null;
+  /** The author's name (or email), null when the user has since been deleted. */
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminBlocklistParams {
+  type?: AdminRiskIdentifierType;
+  status?: "active" | "expired" | "all";
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminBlocklistPage {
+  entries: AdminBlocklistEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * `POST /admin/risk/blocklist`. A phone or an email goes in `value`, an
+ * address in `address`. Blocking an identifier that is already listed
+ * updates its reason and expiry (the response then has `created: false`).
+ */
+export interface AdminBlockPayload {
+  type: AdminRiskIdentifierType;
+  value?: string;
+  address?: AdminRiskAddress;
+  reason: string;
+  expiresAt?: string | null;
+  source?: "manual" | "signal";
+}
+
+export interface AdminBlockResult {
+  entry: AdminBlocklistEntry;
+  created: boolean;
+}
+
+export interface AdminBlocklistUpdate {
+  reason?: string;
+  expiresAt?: string | null;
+}
+
+export type AdminRiskSignalReason = "multi_store" | "high_refusal";
+
+export interface AdminRiskSignal {
+  type: AdminRiskIdentifierType;
+  /** The normalized identifier (same form as a blocklist entry's `value`). */
+  value: string;
+  /** A phone as last typed, an email, or an address in words. */
+  label: string;
+  /** Exactly what to POST (plus a reason) to block this identifier. */
+  block: { type: AdminRiskIdentifierType; value?: string; address?: AdminRiskAddress };
+  workspaceCount: number;
+  orderCount: number;
+  cancelledCount: number;
+  returnedCount: number;
+  refusedCount: number;
+  /** refusedCount / orderCount, 0..1. */
+  refusalRate: number | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  reasons: AdminRiskSignalReason[];
+  /** Up to ten of the workspaces it ordered in. `name` is null for a deleted workspace. */
+  workspaces: Array<{ id: string; name: string | null }>;
+  blocked: boolean;
+  blocklistEntryId: string | null;
+}
+
+export interface AdminRiskSignalParams {
+  type?: AdminRiskIdentifierType;
+  windowDays?: number;
+  minWorkspaces?: number;
+  minRefused?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminRiskSignalPage {
+  signals: AdminRiskSignal[];
+  total: number;
+  limit: number;
+  offset: number;
+  thresholds: {
+    type: AdminRiskIdentifierType;
+    windowDays: number;
+    minWorkspaces: number;
+    minRefused: number;
+    /** A fraction, 0..1. */
+    minRefusalRate: number;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — carrier and payment gateway registry (read-only)
+// ---------------------------------------------------------------------------
+
+/** 'present' | 'missing' | 'invalid' (set, but not 32 bytes of base64). Never the key. */
+export type AdminCredentialsKeyState = "present" | "missing" | "invalid";
+
+export interface AdminProviderConnections {
+  /** Distinct workspaces with an account for this provider. */
+  workspaces: number;
+  active: number;
+  invalid: number;
+}
+
+export interface AdminProviderHealthTarget {
+  /** False when no API host is known — the check would answer `not_checkable`. */
+  checkable: boolean;
+  /** The host a check would reach, e.g. "app.bosta.co". */
+  target: string | null;
+}
+
+export interface AdminCarrier {
+  code: string;
+  name: string;
+  /** False for accounts whose adapter is no longer in the code. */
+  registered: boolean;
+  /** As CARRIERS_ENABLED / CARRIERS_BETA decide it on this server. */
+  rollout: "enabled" | "beta" | "off";
+  rolloutDetail: string;
+  /** The adapter contract's capabilities; null for an unregistered code. */
+  capabilities: {
+    cancel: "api" | "manual";
+    label: boolean;
+    webhook: "per_shipment" | "account" | "none";
+    webhookRefetch: boolean;
+    polling: boolean;
+    bulkStatus: boolean;
+    addressLevels: string[];
+    reserveNameWhenUnconnected: boolean;
+    typedAddressNames: boolean;
+    sandbox: boolean;
+  } | null;
+  connections: AdminProviderConnections;
+  healthCheck: AdminProviderHealthTarget;
+}
+
+export interface AdminCarrierRegistry {
+  carriers: AdminCarrier[];
+  environment: {
+    enabled: string[];
+    beta: string[];
+    betaWorkspaces: string[];
+    /** Problems in the rollout variables, as the boot log reports them. */
+    warnings: string[];
+    credentialsKey: AdminCredentialsKeyState;
+  };
+}
+
+export interface AdminPaymentGateway {
+  code: string;
+  name: string;
+  registered: boolean;
+  /**
+   * Server-wide — there is no per-gateway switch:
+   *   enabled       PAYMENTS_ONLINE_ENABLED on and the credentials key present
+   *   connect_only  key present, online payments off (merchants may connect)
+   *   off           no usable GATEWAY_CREDENTIALS_KEY
+   */
+  availability: "enabled" | "connect_only" | "off";
+  availabilityDetail: string;
+  capabilities: {
+    methods: string[];
+    currencies: string[];
+    refunds: boolean;
+    statusInquiry: boolean;
+    webhook: { automatic: boolean } | null;
+    methodsFromAccount: boolean;
+  } | null;
+  connections: AdminProviderConnections & { live: number; test: number };
+  healthCheck: AdminProviderHealthTarget;
+}
+
+export interface AdminPaymentGatewayRegistry {
+  gateways: AdminPaymentGateway[];
+  environment: {
+    onlineEnabled: boolean;
+    credentialsKey: AdminCredentialsKeyState;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — admin users (/admin/admins)
+// ---------------------------------------------------------------------------
+
+/** An account with the users.platform_admin flag. */
+export interface AdminPlatformAdmin {
+  id: string;
+  email: string;
+  fullName: string;
+  status: "active" | "suspended" | "pending_verification";
+  lastLoginAt: string | null;
+  createdAt: string;
+  /** The signed-in viewer — who cannot revoke themselves. */
+  isYou: boolean;
+}
+
+export interface AdminGrantResult {
+  admin: AdminPlatformAdmin;
+  /** False when the account was already an admin (nothing changed). */
+  granted: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — templates (/admin/templates)
+// ---------------------------------------------------------------------------
+
+export type AdminTemplateKind = "store" | "funnel" | "landing";
+
+/** One row of the admin template library — drafts and version-less ones included. */
+export interface AdminTemplate {
+  id: string;
+  /** Exactly what the public gallery shows: published AND an active version. */
+  inGallery: boolean;
+  name: string;
+  category: string | null;
+  thumbnailUrl: string | null;
+  isPublished: boolean;
+  kind: AdminTemplateKind;
+  /** Minor units. */
+  priceAmount: number;
+  isFree: boolean;
+  /** The raw column — no fallback to the version's styles. */
+  primaryColor: string | null;
+  tags: string[];
+  rtl: boolean;
+  versionCount: number;
+  /** The version number the gallery offers, or null when none is active. */
+  activeVersion: number | null;
+  templateVersionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Create (no `id`) or partial update (with `id`). */
+export type AdminTemplateInput = Partial<
+  Pick<
+    AdminTemplate,
+    "name" | "category" | "thumbnailUrl" | "isPublished" | "kind" | "priceAmount" | "isFree" | "primaryColor" | "tags" | "rtl"
+  >
+> & { id?: string };
+
+export interface AdminTemplateVersionSummary {
+  id: string;
+  version: number;
+  isActive: boolean;
+  pageCount: number;
+  pagePaths: string[];
+  sectionCount: number;
+  primaryColor: string | null;
+  /** Merchant websites created from this version. */
+  websiteCount: number;
+  createdAt: string;
+}
+
+export interface AdminTemplateVersionPage {
+  path: string;
+  title?: string;
+  pageType?: string;
+  builderData?: Record<string, unknown>;
+  seo?: Record<string, unknown>;
+}
+
+export interface AdminTemplateVersion extends AdminTemplateVersionSummary {
+  globalStyles: Record<string, unknown>;
+  pages: AdminTemplateVersionPage[];
+  sections: Array<Record<string, unknown>>;
+}
+
+export interface AdminTemplateDetail {
+  template: AdminTemplate;
+  /** Newest first. */
+  versions: AdminTemplateVersionSummary[];
+}
+
+export interface AdminTemplateVersionInput {
+  globalStyles?: Record<string, unknown>;
+  pages: AdminTemplateVersionPage[];
+  sections?: Array<Record<string, unknown>>;
+  /** Default true: becomes the version the gallery offers. */
+  activate?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Support tickets — merchant (/workspaces/:id/support) and admin (/admin/support)
+// ---------------------------------------------------------------------------
+
+/**
+ *   open      waiting on the platform team
+ *   pending   waiting on the merchant (the platform replied)
+ *   resolved  answered; a merchant reply re-opens it
+ *   closed    finished; nobody can reply
+ */
+export type SupportTicketStatus = "open" | "pending" | "resolved" | "closed";
+export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
+export type SupportTicketCategory =
+  | "general"
+  | "billing"
+  | "orders"
+  | "shipping"
+  | "payments"
+  | "technical"
+  | "account";
+
+export interface SupportTicket {
+  id: string;
+  workspaceId: string;
+  subject: string;
+  category: SupportTicketCategory;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  /** Who opened it (name or email); null if that account is gone. */
+  createdBy: string | null;
+  lastMessageAt: string;
+  lastMessageBy: "merchant" | "admin";
+  messageCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  authorType: "merchant" | "admin";
+  /** For the merchant, platform replies are always signed "Zimos support". */
+  authorName: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface SupportTicketThread {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+}
+
+export interface OpenSupportTicketPayload {
+  subject: string;
+  body: string;
+  category?: SupportTicketCategory;
+}
+
+/** The admin view adds the workspace and the real author behind each reply. */
+export interface AdminSupportTicket extends SupportTicket {
+  workspaceName: string | null;
+  workspaceSlug: string | null;
+  createdByEmail?: string;
+}
+
+export interface AdminSupportTicketMessage extends SupportTicketMessage {
+  authorEmail?: string;
+}
+
+export interface AdminSupportTicketThread {
+  ticket: AdminSupportTicket;
+  messages: AdminSupportTicketMessage[];
+}
+
+export interface AdminSupportTicketParams {
+  status?: SupportTicketStatus;
+  priority?: SupportTicketPriority;
+  workspaceId?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminSupportTicketPage {
+  tickets: AdminSupportTicket[];
+  total: number;
+  limit: number;
+  offset: number;
+  /** Per status, under the same non-status filters — for the tab badges. */
+  counts: Record<SupportTicketStatus, number>;
+}
+
+/** A reachability probe: one unauthenticated GET, no merchant credentials. */
+export interface AdminProviderCheck {
+  code: string;
+  status: "operational" | "degraded" | "down" | "not_checkable";
+  httpStatus: number | null;
+  latencyMs: number | null;
+  target: string | null;
+  detail: string;
+  checkedAt: string;
+}
+
 // ---------------------------------------------------------------------
 // Storefront checkout settings (workspace.settings.checkout_settings, read
 // back publicly as StorefrontMeta.checkout). Backend:

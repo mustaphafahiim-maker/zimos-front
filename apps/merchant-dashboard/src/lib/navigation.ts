@@ -4,6 +4,7 @@ import {
   CreditCard,
   Globe,
   LayoutDashboard,
+  LifeBuoy,
   Package,
   Settings,
   ShieldAlert,
@@ -33,7 +34,8 @@ export type NavKey =
   | "payments"
   | "website"
   | "funnels"
-  | "settings";
+  | "settings"
+  | "support";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "storefront";
@@ -106,7 +108,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "config",
     labelKey: null,
-    items: [{ key: "settings", to: "/settings", icon: Settings }],
+    items: [
+      { key: "settings", to: "/settings", icon: Settings },
+      { key: "support", to: "/support", icon: LifeBuoy },
+    ],
   },
 ];
 
@@ -144,6 +149,7 @@ export const NAV_LABELS = {
     website: "Website",
     funnels: "Funnels",
     settings: "Settings",
+    support: "Contact support",
   },
   ar: {
     overview: "نظرة عامة",
@@ -161,6 +167,7 @@ export const NAV_LABELS = {
     website: "الموقع",
     funnels: "مسارات البيع",
     settings: "الإعدادات",
+    support: "تواصل مع الدعم",
   },
 } satisfies Messages<NavKey>;
 

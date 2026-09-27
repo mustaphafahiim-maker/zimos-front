@@ -5,7 +5,7 @@
  * is no local persistence and no fallback data: when a call fails the error
  * propagates so the page can show it. Anything the backend does not implement
  * is absent from this module rather than simulated; those console areas render
- * `<NotConnected />` naming the endpoints they are waiting on.
+ * `<ComingLater />` and show no data at all.
  */
 import type {
   AdminAnnouncement,
@@ -13,13 +13,40 @@ import type {
   AdminAttentionItem,
   AdminAuditLogPage,
   AdminAuditLogParams,
+  AdminBlocklistEntry,
+  AdminBlocklistPage,
+  AdminBlocklistParams,
+  AdminBlocklistUpdate,
+  AdminBlockPayload,
+  AdminBlockResult,
+  AdminCarrierRegistry,
   AdminChartPoint,
   AdminFeatureFlag,
   AdminFeatureFlagInput,
+  AdminGrantResult,
   AdminOverview,
   AdminPlan,
+  AdminPaymentGatewayRegistry,
   AdminPlanInput,
+  AdminPlatformAdmin,
+  AdminProviderCheck,
+  AdminRiskSignalPage,
+  AdminRiskSignalParams,
   AdminServiceReport,
+  AdminSupportTicket,
+  AdminSupportTicketMessage,
+  AdminSupportTicketPage,
+  AdminSupportTicketParams,
+  AdminSupportTicketThread,
+  SupportTicketPriority,
+  SupportTicketStatus,
+  AdminTemplate,
+  AdminTemplateDetail,
+  AdminTemplateInput,
+  AdminTemplateKind,
+  AdminTemplateVersion,
+  AdminTemplateVersionInput,
+  AdminTemplateVersionSummary,
   AdminServiceStatus,
   AdminServiceTile,
   AdminSubscription,
@@ -197,6 +224,132 @@ export function listAuditLog(params: AdminAuditLogParams = {}): Promise<AdminAud
   return apiClient.adminListAuditLog({ limit: AUDIT_PAGE_SIZE, ...params });
 }
 
+// ------------------------------------------------------------------ templates
+
+export function listTemplates(params: { kind?: AdminTemplateKind } = {}): Promise<AdminTemplate[]> {
+  return apiClient.adminListTemplates(params);
+}
+
+export function getTemplate(templateId: string): Promise<AdminTemplateDetail> {
+  return apiClient.adminGetTemplate(templateId);
+}
+
+export function saveTemplate(input: AdminTemplateInput): Promise<AdminTemplate> {
+  return apiClient.adminSaveTemplate(input);
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  await apiClient.adminDeleteTemplate(templateId);
+}
+
+export function setTemplatePublished(templateId: string, published: boolean): Promise<AdminTemplate> {
+  return apiClient.adminSetTemplatePublished(templateId, published);
+}
+
+export function getTemplateVersion(templateId: string, versionId: string): Promise<AdminTemplateVersion> {
+  return apiClient.adminGetTemplateVersion(templateId, versionId);
+}
+
+export function createTemplateVersion(
+  templateId: string,
+  input: AdminTemplateVersionInput
+): Promise<AdminTemplateVersionSummary> {
+  return apiClient.adminCreateTemplateVersion(templateId, input);
+}
+
+export function setTemplateVersionActive(
+  templateId: string,
+  versionId: string,
+  isActive: boolean
+): Promise<AdminTemplateVersionSummary> {
+  return apiClient.adminSetTemplateVersionActive(templateId, versionId, isActive);
+}
+
+// ----------------------------------------------------------------------- risk
+
+/** How many rows one blocklist or signals view asks for. */
+export const RISK_PAGE_SIZE = 50;
+
+export function listBlocklist(params: AdminBlocklistParams = {}): Promise<AdminBlocklistPage> {
+  return apiClient.adminListBlocklist({ limit: RISK_PAGE_SIZE, ...params });
+}
+
+export function blockIdentifier(payload: AdminBlockPayload): Promise<AdminBlockResult> {
+  return apiClient.adminBlockIdentifier(payload);
+}
+
+export function updateBlocklistEntry(
+  entryId: string,
+  payload: AdminBlocklistUpdate
+): Promise<AdminBlocklistEntry> {
+  return apiClient.adminUpdateBlocklistEntry(entryId, payload);
+}
+
+export async function deleteBlocklistEntry(entryId: string): Promise<void> {
+  await apiClient.adminDeleteBlocklistEntry(entryId);
+}
+
+export function listRiskSignals(params: AdminRiskSignalParams = {}): Promise<AdminRiskSignalPage> {
+  return apiClient.adminListRiskSignals({ limit: RISK_PAGE_SIZE, ...params });
+}
+
+// ------------------------------------------------- carriers and gateways (read-only)
+
+export function listCarriers(): Promise<AdminCarrierRegistry> {
+  return apiClient.adminListCarriers();
+}
+
+/** A reachability probe from the server — costs one real request, so click-only. */
+export function checkCarrier(code: string): Promise<AdminProviderCheck> {
+  return apiClient.adminCheckCarrier(code);
+}
+
+export function listPaymentGateways(): Promise<AdminPaymentGatewayRegistry> {
+  return apiClient.adminListPaymentGateways();
+}
+
+export function checkPaymentGateway(code: string): Promise<AdminProviderCheck> {
+  return apiClient.adminCheckPaymentGateway(code);
+}
+
+// ------------------------------------------------------------ support tickets
+
+export function listTickets(params: AdminSupportTicketParams = {}): Promise<AdminSupportTicketPage> {
+  return apiClient.adminListSupportTickets({ limit: RISK_PAGE_SIZE, ...params });
+}
+
+export function getTicket(ticketId: string): Promise<AdminSupportTicketThread> {
+  return apiClient.adminGetSupportTicket(ticketId);
+}
+
+export function replyTicket(
+  ticketId: string,
+  payload: { body: string; status?: Exclude<SupportTicketStatus, "closed"> }
+): Promise<{ ticket: AdminSupportTicket; message: AdminSupportTicketMessage }> {
+  return apiClient.adminReplySupportTicket(ticketId, payload);
+}
+
+export function updateTicket(
+  ticketId: string,
+  payload: { status?: SupportTicketStatus; priority?: SupportTicketPriority }
+): Promise<AdminSupportTicket> {
+  return apiClient.adminUpdateSupportTicket(ticketId, payload);
+}
+
+// ---------------------------------------------------------------- admin users
+
+export function listAdmins(): Promise<AdminPlatformAdmin[]> {
+  return apiClient.adminListAdmins();
+}
+
+export function grantAdmin(email: string): Promise<AdminGrantResult> {
+  return apiClient.adminGrantAdmin(email);
+}
+
+export async function revokeAdmin(userId: string): Promise<void> {
+  await apiClient.adminRevokeAdmin(userId);
+}
+
 // -------------------------------------------------------------- system health
 
 /**
@@ -255,17 +408,16 @@ export interface SystemHealthReport {
  * ever rendered with a status — the console has no way to observe any of them,
  * and a tile implying otherwise would be an invention.
  *
- * Payments is deliberately NOT on this list. It is not a dependency we merely
- * can't reach from here: there is no external gateway in this platform at all
- * (the `mock` and `cod` providers run inside the API and talk to nothing), so
- * naming it as unobserved would imply a live gateway sitting somewhere
- * unchecked. The server's own report says the same thing in its own terms —
- * it renders a payments tile as `not_configured`, never as reachable.
+ * The payment gateways (Paymob, Kashier) are on it: merchants connect their
+ * own accounts, and whether online payments are on, whether the credentials
+ * key is set, and whether each gateway's API answers are all things only the
+ * server can see. Its own report carries them on the payments tile.
  */
 export const UNPROBED_DEPENDENCIES = [
   "Object storage (R2/S3)",
   "Email delivery (Brevo/SMTP)",
   "SMS and WhatsApp (Twilio)",
+  "Payment gateways (Paymob/Kashier)",
 ] as const;
 
 /** Reads `{ status: "ok" }`-style fields off an unknown JSON body. */

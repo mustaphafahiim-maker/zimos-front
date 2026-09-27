@@ -6,6 +6,26 @@ import type {
   AdminAuditEntry,
   AdminAuditLogPage,
   AdminAuditLogParams,
+  AdminBlocklistEntry,
+  AdminBlocklistPage,
+  AdminBlocklistParams,
+  AdminBlocklistUpdate,
+  AdminBlockPayload,
+  AdminBlockResult,
+  AdminCarrierRegistry,
+  AdminGrantResult,
+  AdminPaymentGatewayRegistry,
+  AdminPlatformAdmin,
+  AdminProviderCheck,
+  AdminRiskSignalPage,
+  AdminRiskSignalParams,
+  AdminTemplate,
+  AdminTemplateDetail,
+  AdminTemplateInput,
+  AdminTemplateKind,
+  AdminTemplateVersion,
+  AdminTemplateVersionInput,
+  AdminTemplateVersionSummary,
   AdminFeatureFlag,
   AdminFeatureFlagInput,
   AdminOverview,
@@ -13,6 +33,17 @@ import type {
   AdminPlanInput,
   AdminServiceReport,
   AdminServiceTile,
+  AdminSupportTicket,
+  AdminSupportTicketMessage,
+  AdminSupportTicketPage,
+  AdminSupportTicketParams,
+  AdminSupportTicketThread,
+  OpenSupportTicketPayload,
+  SupportTicket,
+  SupportTicketMessage,
+  SupportTicketPriority,
+  SupportTicketStatus,
+  SupportTicketThread,
   AdminSubscription,
   AdminWorkspaceOverview,
   ArchivedResponse,
@@ -767,6 +798,50 @@ export class ApiClient {
   }
 
   // ---------------------------------------------------------------------
+  // Support tickets (/workspaces/:workspaceId/support) — needs workspace.manage
+  // ---------------------------------------------------------------------
+
+  async listSupportTickets(workspaceId: string): Promise<SupportTicket[]> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets`);
+    return unwrapList<SupportTicket>(body, "tickets");
+  }
+
+  async openSupportTicket(workspaceId: string, payload: OpenSupportTicketPayload): Promise<SupportTicketThread> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      messages: unwrapList<SupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  async getSupportTicket(workspaceId: string, ticketId: string): Promise<SupportTicketThread> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets/${ticketId}`);
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      messages: unwrapList<SupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  /** 409 TICKET_CLOSED once the platform has closed the ticket. */
+  async replySupportTicket(
+    workspaceId: string,
+    ticketId: string,
+    text: string
+  ): Promise<{ ticket: SupportTicket; message: SupportTicketMessage }> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets/${ticketId}/messages`, {
+      method: "POST",
+      body: { body: text },
+    });
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      message: unwrapObject<SupportTicketMessage>(body, "message"),
+    };
+  }
+
+  // ---------------------------------------------------------------------
   // Platform admin
   // ---------------------------------------------------------------------
 
@@ -994,6 +1069,207 @@ export class ApiClient {
   async adminGetOverview() {
     const body = await this.request<unknown>("/admin/metrics/overview");
     return unwrapObject<AdminOverview>(body, "overview");
+  }
+
+  // --- Platform risk ---
+
+  /**
+   * `GET /admin/risk/blocklist` → `{ entries, total, limit, offset }`, newest
+   * first, filtered and paged server-side.
+   */
+  async adminListBlocklist(params: AdminBlocklistParams = {}): Promise<AdminBlocklistPage> {
+    const body = await this.request<unknown>(`/admin/risk/blocklist${buildQuery({ ...params })}`);
+    return {
+      entries: unwrapList<AdminBlocklistEntry>(body, "entries"),
+      total: numberField(body, "total") ?? 0,
+      limit: numberField(body, "limit") ?? params.limit ?? 50,
+      offset: numberField(body, "offset") ?? params.offset ?? 0,
+    };
+  }
+
+  /**
+   * `POST /admin/risk/blocklist` — 201 for a new entry, 200 when the
+   * identifier was already listed and only its reason/expiry changed.
+   */
+  async adminBlockIdentifier(payload: AdminBlockPayload): Promise<AdminBlockResult> {
+    const body = await this.request<unknown>("/admin/risk/blocklist", { method: "POST", body: payload });
+    return {
+      entry: unwrapObject<AdminBlocklistEntry>(body, "entry"),
+      created: readFlag(body, "created"),
+    };
+  }
+
+  async adminUpdateBlocklistEntry(entryId: string, payload: AdminBlocklistUpdate) {
+    const body = await this.request<unknown>(`/admin/risk/blocklist/${entryId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminBlocklistEntry>(body, "entry");
+  }
+
+  async adminDeleteBlocklistEntry(entryId: string) {
+    return this.request<SuccessResponse>(`/admin/risk/blocklist/${entryId}`, { method: "DELETE" });
+  }
+
+  // --- Carriers and payment gateways (read-only) ---
+
+  /** `GET /admin/carriers` → `{ carriers, environment }`. */
+  async adminListCarriers(): Promise<AdminCarrierRegistry> {
+    const body = await this.request<AdminCarrierRegistry>("/admin/carriers");
+    return { ...body, carriers: unwrapList(body, "carriers") };
+  }
+
+  /** `POST /admin/carriers/:code/health-check` — reachability only, no merchant account. */
+  async adminCheckCarrier(code: string): Promise<AdminProviderCheck> {
+    const body = await this.request<unknown>(`/admin/carriers/${encodeURIComponent(code)}/health-check`, {
+      method: "POST",
+    });
+    return unwrapObject<AdminProviderCheck>(body, "check");
+  }
+
+  /** `GET /admin/payment-gateways` → `{ gateways, environment }`. */
+  async adminListPaymentGateways(): Promise<AdminPaymentGatewayRegistry> {
+    const body = await this.request<AdminPaymentGatewayRegistry>("/admin/payment-gateways");
+    return { ...body, gateways: unwrapList(body, "gateways") };
+  }
+
+  async adminCheckPaymentGateway(code: string): Promise<AdminProviderCheck> {
+    const body = await this.request<unknown>(
+      `/admin/payment-gateways/${encodeURIComponent(code)}/health-check`,
+      { method: "POST" }
+    );
+    return unwrapObject<AdminProviderCheck>(body, "check");
+  }
+
+  // --- Templates ---
+
+  /** `GET /admin/templates` → `{ templates }`, newest first, drafts included. */
+  async adminListTemplates(params: { kind?: AdminTemplateKind } = {}): Promise<AdminTemplate[]> {
+    const body = await this.request<unknown>(`/admin/templates${buildQuery({ ...params })}`);
+    return unwrapList<AdminTemplate>(body, "templates");
+  }
+
+  /** `GET /admin/templates/:id` → `{ template, versions }`. */
+  async adminGetTemplate(templateId: string): Promise<AdminTemplateDetail> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}`);
+    return {
+      template: unwrapObject<AdminTemplate>(body, "template"),
+      versions: unwrapList<AdminTemplateVersionSummary>(body, "versions"),
+    };
+  }
+
+  /** Create (no `id`, POST) or partial update (`id`, PATCH). */
+  async adminSaveTemplate(payload: AdminTemplateInput): Promise<AdminTemplate> {
+    const { id, ...body } = payload;
+    const res = await this.request<unknown>(id ? `/admin/templates/${id}` : "/admin/templates", {
+      method: id ? "PATCH" : "POST",
+      body,
+    });
+    return unwrapObject<AdminTemplate>(res, "template");
+  }
+
+  async adminDeleteTemplate(templateId: string) {
+    return this.request<SuccessResponse>(`/admin/templates/${templateId}`, { method: "DELETE" });
+  }
+
+  /** `POST /admin/templates/:id/publish` | `/unpublish` — 409 TEMPLATE_HAS_NO_ACTIVE_VERSION. */
+  async adminSetTemplatePublished(templateId: string, published: boolean): Promise<AdminTemplate> {
+    const body = await this.request<unknown>(
+      `/admin/templates/${templateId}/${published ? "publish" : "unpublish"}`,
+      { method: "POST" }
+    );
+    return unwrapObject<AdminTemplate>(body, "template");
+  }
+
+  async adminGetTemplateVersion(templateId: string, versionId: string): Promise<AdminTemplateVersion> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions/${versionId}`);
+    return unwrapObject<AdminTemplateVersion>(body, "version");
+  }
+
+  /** `POST /admin/templates/:id/versions` — the next version number, validated like a website copy. */
+  async adminCreateTemplateVersion(
+    templateId: string,
+    payload: AdminTemplateVersionInput
+  ): Promise<AdminTemplateVersionSummary> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions`, {
+      method: "POST",
+      body: payload,
+    });
+    return unwrapObject<AdminTemplateVersionSummary>(body, "version");
+  }
+
+  /** 409 TEMPLATE_NEEDS_ACTIVE_VERSION for the last active version of a published template. */
+  async adminSetTemplateVersionActive(
+    templateId: string,
+    versionId: string,
+    isActive: boolean
+  ): Promise<AdminTemplateVersionSummary> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions/${versionId}`, {
+      method: "PATCH",
+      body: { isActive },
+    });
+    return unwrapObject<AdminTemplateVersionSummary>(body, "version");
+  }
+
+  // --- Support tickets (platform side) ---
+
+  /** `GET /admin/support/tickets` → `{ tickets, total, limit, offset, counts }`. */
+  async adminListSupportTickets(params: AdminSupportTicketParams = {}): Promise<AdminSupportTicketPage> {
+    const body = await this.request<AdminSupportTicketPage>(`/admin/support/tickets${buildQuery({ ...params })}`);
+    return { ...body, tickets: unwrapList<AdminSupportTicket>(body, "tickets") };
+  }
+
+  async adminGetSupportTicket(ticketId: string): Promise<AdminSupportTicketThread> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}`);
+    return {
+      ticket: unwrapObject<AdminSupportTicket>(body, "ticket"),
+      messages: unwrapList<AdminSupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  /** Default next status is `pending` (waiting on the merchant). 409 TICKET_CLOSED. */
+  async adminReplySupportTicket(
+    ticketId: string,
+    payload: { body: string; status?: Exclude<SupportTicketStatus, "closed"> }
+  ): Promise<{ ticket: AdminSupportTicket; message: AdminSupportTicketMessage }> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}/messages`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      ticket: unwrapObject<AdminSupportTicket>(body, "ticket"),
+      message: unwrapObject<AdminSupportTicketMessage>(body, "message"),
+    };
+  }
+
+  async adminUpdateSupportTicket(
+    ticketId: string,
+    payload: { status?: SupportTicketStatus; priority?: SupportTicketPriority }
+  ): Promise<AdminSupportTicket> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminSupportTicket>(body, "ticket");
+  }
+
+  // --- Platform admins ---
+
+  /** `GET /admin/admins` → `{ admins }`, oldest first. */
+  async adminListAdmins(): Promise<AdminPlatformAdmin[]> {
+    const body = await this.request<unknown>("/admin/admins");
+    return unwrapList<AdminPlatformAdmin>(body, "admins");
+  }
+
+  /** `POST /admin/admins` — grants the flag to an existing account (201; 200 if it already had it). */
+  async adminGrantAdmin(email: string): Promise<AdminGrantResult> {
+    const body = await this.request<unknown>("/admin/admins", { method: "POST", body: { email } });
+    return { admin: unwrapObject<AdminPlatformAdmin>(body, "admin"), granted: readFlag(body, "granted") };
+  }
+
+  /** `DELETE /admin/admins/:userId` — 409 CANNOT_REVOKE_SELF / LAST_ADMIN. */
+  async adminRevokeAdmin(userId: string) {
+    return this.request<SuccessResponse>(`/admin/admins/${userId}`, { method: "DELETE" });
+  }
+
+  /** `GET /admin/risk/signals` — one identifier type per call, paged server-side. */
+  async adminListRiskSignals(params: AdminRiskSignalParams = {}): Promise<AdminRiskSignalPage> {
+    const body = await this.request<AdminRiskSignalPage>(`/admin/risk/signals${buildQuery({ ...params })}`);
+    return { ...body, signals: unwrapList(body, "signals") };
   }
 
   // ---------------------------------------------------------------------

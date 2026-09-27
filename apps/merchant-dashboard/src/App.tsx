@@ -34,6 +34,7 @@ import { WebsiteEditorPage } from "@/pages/website/editor/WebsiteEditorPage";
 import { FunnelsPage } from "@/pages/funnels/FunnelsPage";
 import { FunnelEditorPage } from "@/pages/funnels/FunnelEditorPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 
 export default function App() {
   return (
@@ -81,6 +82,8 @@ export default function App() {
                       <Route path="/funnels" element={<FunnelsPage />} />
                       <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/support" element={<SupportPage />} />
+                      <Route path="/support/:ticketId" element={<SupportTicketPage />} />
                     </Route>
                   </Route>
                 </Route>
