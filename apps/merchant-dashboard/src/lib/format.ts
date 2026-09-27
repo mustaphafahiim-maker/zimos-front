@@ -1,7 +1,30 @@
-import { formatMoney, formatMoneyRange, parseMoney } from "@store-builder/api-client";
+import {
+  formatMoney as formatMoneyIn,
+  formatMoneyRange as formatMoneyRangeIn,
+  parseMoney,
+} from "@store-builder/api-client";
 import type { OrderAddressSnapshot, Variant } from "@store-builder/api-client";
+import { getIntlLocale } from "@/i18n/LocaleContext";
 
-export { formatMoney, formatMoneyRange, parseMoney };
+export { parseMoney };
+
+/** Money in the dashboard's active language: "EGP 1,250.00" in English, Arabic digits in Arabic. */
+export function formatMoney(
+  amountMinorUnits: number | string | null | undefined,
+  currency = "EGP",
+  locale = getIntlLocale()
+): string {
+  return formatMoneyIn(amountMinorUnits, currency, locale);
+}
+
+export function formatMoneyRange(
+  lowMinorUnits: number | string | null | undefined,
+  highMinorUnits: number | string | null | undefined,
+  currency = "EGP",
+  locale = getIntlLocale()
+): string {
+  return formatMoneyRangeIn(lowMinorUnits, highMinorUnits, currency, locale);
+}
 
 /**
  * Display form of a product's `productCode`, e.g. "#482910573". Returns null
@@ -133,7 +156,7 @@ export function formatPercent(bp: string | number | null | undefined): string {
  */
 export function formatPercentValue(ratio: number | null | undefined, digits = 1): string {
   if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "—";
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat(getIntlLocale(), {
     style: "percent",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
