@@ -1,11 +1,24 @@
-import { useState } from "react";
-import { BarChart3, PackageCheck, ShoppingBag, Users, Wallet } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Info } from "lucide-react";
+import {
+  Card,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  cn,
+} from "@store-builder/ui";
+import type { AnalyticsSummary } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
-import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { BarChart, HBarList, LineAreaChart } from "@/components/charts";
+import { ComparisonLineChart, HBarList, Sparkline } from "@/components/charts";
 import { RangeSwitch } from "@/components/RangeSwitch";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatMoney, formatPercentValue } from "@/lib/format";
@@ -13,6 +26,7 @@ import {
   deltaBasisPoints,
   formatAxisDate,
   formatCount,
+  formatWindow,
   percentToRatio,
   useAnalyticsSummary,
   type AnalyticsRange,
@@ -22,33 +36,70 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 const STRINGS = {
   en: {
     title: "Analytics",
-    description:
-      "Revenue, orders, confirmation and delivery, all counted from your real orders. Nothing here is estimated.",
-    revenue: "Revenue",
-    revenueHint: "Orders placed, minus cancelled and rejected ones",
+    description: "Everything here is counted from your real orders. Nothing is estimated.",
+    comparedTo: "{current} compared to {previous}",
+    thisPeriod: "This period",
+    previousPeriod: "Previous period",
+    vsPrevious: "vs previous period",
+    noComparison: "No previous period to compare",
+    grossSales: "Gross sales",
+    grossSalesHint: "Value of the orders placed, minus cancelled and rejected ones.",
     orders: "Orders",
+    ordersHint: "Orders placed in this period.",
     avgOrderValue: "Average order value",
-    avgOrderHint: "Revenue ÷ orders",
-    deliveredRevenue: "Delivered revenue",
-    deliveredRevenueHint: "Value of the orders that reached the customer",
+    avgOrderHint: "Gross sales ÷ orders.",
+    ordersDelivered: "Orders delivered",
+    ordersDeliveredHint: "Orders that reached the customer.",
+    deliveredRevenue: "Delivered sales",
+    deliveredRevenueHint: "Value of the orders that reached the customer.",
     collected: "Cash collected",
-    collectedHint: "Payments actually recorded against orders",
+    collectedHint: "Payments actually recorded against orders.",
+    grossProfit: "Gross profit",
+    grossProfitHint: "Delivered item revenue minus discounts, product cost and refunds.",
     confirmationRate: "Confirmation rate",
-    confirmationHint: "Confirmed ÷ orders you got an answer on",
+    confirmationHint: "Confirmed ÷ orders you got an answer on.",
     deliveryRate: "Delivery rate",
-    deliveryHint: "Delivered ÷ confirmed",
+    deliveryHint: "Delivered ÷ confirmed.",
     returnRate: "Return rate",
-    returnHint: "Returned ÷ (delivered + returned)",
+    returnHint: "Returned ÷ (delivered + returned).",
     newCustomers: "New customers",
-    revenueChartTitle: "Revenue per day",
-    revenueChartDesc: "Daily revenue in {currency}, across the range.",
-    ordersChartTitle: "Orders per day",
-    ordersChartDesc: "How many orders came in each day.",
+    newCustomersHint: "Customers whose first order was in this period.",
+    salesOverTime: "Total sales over time",
+    salesOverTimeDesc: "Daily gross sales in {currency}, against the previous period.",
+    ordersOverTime: "Orders over time",
+    ordersOverTimeDesc: "Orders per day, against the previous period.",
     ordersCount: "{n} orders",
-    noActivity: "No orders in this range",
-    noActivityDesc: "The charts fill in as soon as orders start coming in.",
-    statusTitle: "Where the orders stand",
-    statusDesc: "The orders placed in this range, by the state they are in now.",
+    breakdownTitle: "Sales breakdown",
+    breakdownDesc: "Where the money in this period stands.",
+    rowGross: "Gross sales",
+    rowGrossSub: "All placed orders, minus cancelled and rejected",
+    rowDelivered: "Delivered sales",
+    rowDeliveredSub: "Orders that reached the customer",
+    rowCollected: "Cash collected",
+    rowCollectedSub: "Payments recorded",
+    rowRefunded: "Refunds",
+    rowRefundedSub: "Money given back",
+    rowDiscounts: "Discounts",
+    rowDiscountsSub: "On delivered orders",
+    rowShipping: "Shipping charged",
+    rowShippingSub: "On delivered orders",
+    journeyTitle: "Order journey",
+    journeyDesc: "How far this period's orders got.",
+    stepPlaced: "Placed",
+    stepConfirmed: "Confirmed",
+    stepDelivered: "Delivered",
+    stepReturned: "Returned",
+    ofPlaced: "{pct} of placed",
+    productsTitle: "Top selling products",
+    productsDesc: "By units sold in this period.",
+    colProduct: "Product",
+    colUnits: "Units",
+    colSales: "Sales",
+    noProducts: "Nothing sold yet in this period",
+    noProductsDesc: "Once orders come in, your best sellers are listed here.",
+    unnamedProduct: "Unnamed product",
+    statusTitle: "Orders by status",
+    statusDesc: "This period's orders, by where they are now.",
     statusPending: "Waiting for confirmation",
     statusConfirmed: "Confirmed",
     statusPostponed: "Postponed",
@@ -57,42 +108,75 @@ const STRINGS = {
     statusCancelled: "Cancelled",
     statusDelivered: "Delivered",
     statusReturned: "Returned",
-    productsTitle: "Top products",
-    productsDesc: "The five best sellers in this range, by units sold.",
-    units: "{n} units",
-    noProducts: "Nothing sold yet in this range",
-    noProductsDesc: "Once orders come in, your best sellers are listed here.",
-    unnamedProduct: "Unnamed product",
+    noActivity: "No orders in this period",
+    noActivityDesc: "The charts fill in as soon as orders start coming in.",
   },
   ar: {
     title: "التحليلات",
-    description:
-      "المبيعات والطلبات ونسب التأكيد والتوصيل، كلها متحسوبة من طلباتك الحقيقية. مفيش رقم هنا تقديري.",
-    revenue: "المبيعات",
-    revenueHint: "الطلبات اللي اتعملت، ناقص الملغي والمرفوض",
+    description: "كل رقم هنا متحسوب من طلباتك الحقيقية. مفيش حاجة تقديرية.",
+    comparedTo: "{current} مقارنة بـ {previous}",
+    thisPeriod: "الفترة دي",
+    previousPeriod: "الفترة اللي قبلها",
+    vsPrevious: "مقارنة بالفترة اللي قبلها",
+    noComparison: "مفيش فترة قبلها نقارن بيها",
+    grossSales: "إجمالي المبيعات",
+    grossSalesHint: "قيمة الطلبات اللي اتعملت، ناقص الملغي والمرفوض.",
     orders: "الطلبات",
+    ordersHint: "الطلبات اللي اتعملت في الفترة دي.",
     avgOrderValue: "متوسط قيمة الطلب",
-    avgOrderHint: "المبيعات ÷ الطلبات",
+    avgOrderHint: "إجمالي المبيعات ÷ الطلبات.",
+    ordersDelivered: "طلبات اتسلّمت",
+    ordersDeliveredHint: "الطلبات اللي وصلت للعميل.",
     deliveredRevenue: "مبيعات اتسلّمت",
-    deliveredRevenueHint: "قيمة الطلبات اللي وصلت للعميل",
+    deliveredRevenueHint: "قيمة الطلبات اللي وصلت للعميل.",
     collected: "الفلوس اللي اتحصّلت",
-    collectedHint: "الدفعات اللي اتسجّلت فعلاً على الطلبات",
+    collectedHint: "الدفعات اللي اتسجّلت فعلاً على الطلبات.",
+    grossProfit: "إجمالي الربح",
+    grossProfitHint: "تمن المنتجات اللي اتسلّمت ناقص الخصومات وتكلفة المنتجات والمرتجع.",
     confirmationRate: "نسبة التأكيد",
-    confirmationHint: "المتأكد ÷ الطلبات اللي جالك فيها رد",
+    confirmationHint: "المتأكد ÷ الطلبات اللي جالك فيها رد.",
     deliveryRate: "نسبة التوصيل",
-    deliveryHint: "اللي اتسلّم ÷ المتأكد",
+    deliveryHint: "اللي اتسلّم ÷ المتأكد.",
     returnRate: "نسبة المرتجع",
-    returnHint: "المرتجع ÷ (اللي اتسلّم + المرتجع)",
+    returnHint: "المرتجع ÷ (اللي اتسلّم + المرتجع).",
     newCustomers: "عملاء جداد",
-    revenueChartTitle: "المبيعات كل يوم",
-    revenueChartDesc: "مبيعات كل يوم بـ {currency} على طول الفترة.",
-    ordersChartTitle: "الطلبات كل يوم",
-    ordersChartDesc: "كام طلب جه كل يوم.",
+    newCustomersHint: "عملاء أول طلب ليهم كان في الفترة دي.",
+    salesOverTime: "إجمالي المبيعات بمرور الوقت",
+    salesOverTimeDesc: "المبيعات كل يوم بـ {currency}، مقارنة بالفترة اللي قبلها.",
+    ordersOverTime: "الطلبات بمرور الوقت",
+    ordersOverTimeDesc: "الطلبات كل يوم، مقارنة بالفترة اللي قبلها.",
     ordersCount: "{n} طلب",
-    noActivity: "مفيش طلبات في الفترة دي",
-    noActivityDesc: "الرسومات هتتملى أول ما الطلبات تبدأ تيجي.",
-    statusTitle: "الطلبات واقفة فين",
-    statusDesc: "الطلبات اللي اتعملت في الفترة دي، حسب حالتها دلوقتي.",
+    breakdownTitle: "تفصيل المبيعات",
+    breakdownDesc: "الفلوس في الفترة دي واقفة فين.",
+    rowGross: "إجمالي المبيعات",
+    rowGrossSub: "كل الطلبات اللي اتعملت، ناقص الملغي والمرفوض",
+    rowDelivered: "مبيعات اتسلّمت",
+    rowDeliveredSub: "الطلبات اللي وصلت للعميل",
+    rowCollected: "الفلوس اللي اتحصّلت",
+    rowCollectedSub: "الدفعات اللي اتسجّلت",
+    rowRefunded: "المرتجع فلوس",
+    rowRefundedSub: "اللي رجع للعميل",
+    rowDiscounts: "الخصومات",
+    rowDiscountsSub: "على الطلبات اللي اتسلّمت",
+    rowShipping: "الشحن المحصّل",
+    rowShippingSub: "على الطلبات اللي اتسلّمت",
+    journeyTitle: "رحلة الطلب",
+    journeyDesc: "طلبات الفترة دي وصلت لفين.",
+    stepPlaced: "اتعملت",
+    stepConfirmed: "متأكدة",
+    stepDelivered: "اتسلّمت",
+    stepReturned: "مرتجعة",
+    ofPlaced: "{pct} من اللي اتعملت",
+    productsTitle: "أكتر المنتجات مبيعاً",
+    productsDesc: "حسب عدد القطع في الفترة دي.",
+    colProduct: "المنتج",
+    colUnits: "القطع",
+    colSales: "المبيعات",
+    noProducts: "مفيش حاجة اتباعت في الفترة دي",
+    noProductsDesc: "أول ما الطلبات تيجي، أكتر منتجاتك مبيعاً هتتعرض هنا.",
+    unnamedProduct: "منتج من غير اسم",
+    statusTitle: "الطلبات حسب الحالة",
+    statusDesc: "طلبات الفترة دي، حسب حالتها دلوقتي.",
     statusPending: "مستنية التأكيد",
     statusConfirmed: "متأكدة",
     statusPostponed: "متأجلة",
@@ -101,32 +185,132 @@ const STRINGS = {
     statusCancelled: "ملغية",
     statusDelivered: "اتسلّمت",
     statusReturned: "مرتجعة",
-    productsTitle: "أكتر المنتجات مبيعاً",
-    productsDesc: "أحسن خمس منتجات في الفترة دي، حسب عدد القطع.",
-    units: "{n} قطعة",
-    noProducts: "مفيش حاجة اتباعت في الفترة دي",
-    noProductsDesc: "أول ما الطلبات تيجي، أكتر منتجاتك مبيعاً هتتعرض هنا.",
-    unnamedProduct: "منتج من غير اسم",
+    noActivity: "مفيش طلبات في الفترة دي",
+    noActivityDesc: "الرسومات هتتملى أول ما الطلبات تبدأ تيجي.",
   },
 } satisfies Messages;
 
-/** A titled block, matching the section style the other screens use. */
+/** Change vs the previous period: green up, red down, muted dash when no baseline. */
+function Delta({ basisPoints, vsLabel }: { basisPoints: number | null; vsLabel: string }) {
+  if (basisPoints === null) return <span className="text-xs text-ink-soft">—</span>;
+  const up = basisPoints > 0;
+  const down = basisPoints < 0;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs" title={vsLabel}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-0.5 font-medium",
+          up && "text-success",
+          down && "text-danger",
+          !up && !down && "text-ink-soft"
+        )}
+      >
+        {up && <ArrowUpRight className="size-3.5" aria-hidden />}
+        {down && <ArrowDownRight className="size-3.5" aria-hidden />}
+        <bdi dir="ltr">{formatPercentValue(Math.abs(basisPoints) / 10000)}</bdi>
+      </span>
+    </span>
+  );
+}
+
+/** One metric tile: name with its definition on hover, value, delta, trend. */
+function MetricTile({
+  label,
+  hint,
+  value,
+  delta,
+  vsLabel,
+  spark,
+  sparkPrevious,
+  to,
+}: {
+  label: string;
+  hint: string;
+  value: ReactNode;
+  delta: number | null;
+  vsLabel: string;
+  spark?: number[];
+  sparkPrevious?: number[] | null;
+  to?: string;
+}) {
+  const body = (
+    <Card className={cn("h-full gap-0 p-4", to && "transition-colors hover:ring-primary/40")}>
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs font-medium text-ink-soft">{label}</p>
+        <Tooltip>
+          <TooltipTrigger
+            aria-label={hint}
+            className="inline-flex cursor-help text-ink-soft/70 hover:text-ink"
+            onClick={(event) => event.preventDefault()}
+          >
+            <Info className="size-3.5" aria-hidden />
+          </TooltipTrigger>
+          <TooltipContent>{hint}</TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="tabular-nums truncate text-xl font-semibold tracking-tight text-ink">{value}</p>
+          <div className="mt-0.5">
+            <Delta basisPoints={delta} vsLabel={vsLabel} />
+          </div>
+        </div>
+        {spark && spark.length > 1 && (
+          <div className="w-24 shrink-0" dir="ltr">
+            <Sparkline current={spark} previous={sparkPrevious} />
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+  return to ? (
+    <Link to={to} className="block rounded-xl">
+      {body}
+    </Link>
+  ) : (
+    body
+  );
+}
+
+/** A titled card in the chart grid. */
 function Panel({
   title,
   description,
+  className,
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
-      <h2 className="font-display text-base font-medium text-ink">{title}</h2>
-      <p className="mb-3 text-xs text-ink-soft">{description}</p>
+    <Card className={cn("min-w-0 gap-0 p-4", className)}>
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
+      {description && <p className="mb-3 text-xs text-ink-soft">{description}</p>}
       {children}
-    </section>
+    </Card>
   );
+}
+
+/** Legend under a comparison chart: solid = this period, dashed = the one before. */
+function Legend({ current, previous }: { current: string; previous: string }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-4 text-xs text-ink-soft">
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="inline-block h-0.5 w-4 rounded bg-primary" />
+        {current}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="inline-block h-0 w-4 border-t-2 border-dashed border-line-strong" />
+        {previous}
+      </span>
+    </div>
+  );
+}
+
+function seriesOf(summary: AnalyticsSummary | null, pick: (d: AnalyticsSummary["series"][number]) => number) {
+  return summary ? summary.series.map(pick) : [];
 }
 
 export function AnalyticsPage() {
@@ -139,156 +323,276 @@ export function AnalyticsPage() {
   const previous = summary.data?.previous ?? null;
   const currency = current?.currency ?? "EGP";
   const money = (value: number) => <bdi dir="ltr">{formatMoney(value, currency)}</bdi>;
-  const percent = (value: number | null) => (
-    <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>
-  );
+  const percent = (value: number | null) => <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>;
   const count = (value: number) => <bdi dir="ltr">{formatCount(value)}</bdi>;
+  const rateDelta = (now: number | null, before: number | null | undefined) =>
+    now === null || before === null || before === undefined ? null : deltaBasisPoints(now, before);
 
   const hasOrders = Boolean(current && current.orders.placed > 0);
+  const currentWindow = current ? formatWindow(current.range.from, current.range.to) : "";
+  const previousWindow = previous ? formatWindow(previous.range.from, previous.range.to) : "";
+
+  const comparePoints = (pick: (d: AnalyticsSummary["series"][number]) => number) =>
+    current
+      ? current.series.map((day, i) => {
+          const before = previous?.series[i];
+          return {
+            label: formatAxisDate(day.date),
+            value: pick(day),
+            previous: before ? pick(before) : null,
+            previousLabel: before ? formatAxisDate(before.date) : undefined,
+          };
+        })
+      : [];
 
   return (
-    <div className="min-w-0 max-w-6xl">
+    <div className="min-w-0 max-w-7xl">
       <PageHeader
         title={t.title}
         description={t.description}
         actions={<RangeSwitch value={range} onChange={setRange} />}
       />
 
-      <DataState
-        loading={summary.loading && !current}
-        error={summary.error}
-        onRetry={() => summary.refresh()}
-      >
+      <DataState loading={summary.loading && !current} error={summary.error} onRetry={() => summary.refresh()}>
         {current && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
-              <KpiCard
-                label={t.revenue}
+          <div className="space-y-4">
+            <p className="text-xs text-ink-soft">
+              {previous
+                ? fmt(t.comparedTo, { current: currentWindow, previous: previousWindow })
+                : `${currentWindow} · ${t.noComparison}`}
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+              <MetricTile
+                label={t.grossSales}
+                hint={t.grossSalesHint}
                 value={money(current.revenue.gross)}
-                deltaBasisPoints={deltaBasisPoints(current.revenue.gross, previous?.revenue.gross)}
-                hint={t.revenueHint}
-                icon={<Wallet />}
+                delta={deltaBasisPoints(current.revenue.gross, previous?.revenue.gross)}
+                vsLabel={t.vsPrevious}
+                spark={seriesOf(current, (d) => d.revenue)}
+                sparkPrevious={seriesOf(previous, (d) => d.revenue)}
               />
-              <KpiCard
+              <MetricTile
                 label={t.orders}
+                hint={t.ordersHint}
                 value={count(current.orders.placed)}
-                deltaBasisPoints={deltaBasisPoints(current.orders.placed, previous?.orders.placed)}
+                delta={deltaBasisPoints(current.orders.placed, previous?.orders.placed)}
+                vsLabel={t.vsPrevious}
+                spark={seriesOf(current, (d) => d.orders)}
+                sparkPrevious={seriesOf(previous, (d) => d.orders)}
                 to="/orders"
-                icon={<ShoppingBag />}
               />
-              <KpiCard
+              <MetricTile
                 label={t.avgOrderValue}
-                value={money(current.revenue.averageOrderValue)}
                 hint={t.avgOrderHint}
+                value={money(current.revenue.averageOrderValue)}
+                delta={deltaBasisPoints(current.revenue.averageOrderValue, previous?.revenue.averageOrderValue)}
+                vsLabel={t.vsPrevious}
               />
-              <KpiCard
+              <MetricTile
+                label={t.ordersDelivered}
+                hint={t.ordersDeliveredHint}
+                value={count(current.orders.delivered)}
+                delta={deltaBasisPoints(current.orders.delivered, previous?.orders.delivered)}
+                vsLabel={t.vsPrevious}
+                spark={seriesOf(current, (d) => d.delivered)}
+                sparkPrevious={seriesOf(previous, (d) => d.delivered)}
+              />
+              <MetricTile
                 label={t.deliveredRevenue}
-                value={money(current.revenue.delivered)}
                 hint={t.deliveredRevenueHint}
-                icon={<PackageCheck />}
+                value={money(current.revenue.delivered)}
+                delta={deltaBasisPoints(current.revenue.delivered, previous?.revenue.delivered)}
+                vsLabel={t.vsPrevious}
               />
-              <KpiCard
+              <MetricTile
                 label={t.collected}
-                value={money(current.revenue.collected)}
                 hint={t.collectedHint}
+                value={money(current.revenue.collected)}
+                delta={deltaBasisPoints(current.revenue.collected, previous?.revenue.collected)}
+                vsLabel={t.vsPrevious}
               />
-              <KpiCard
+              <MetricTile
+                label={t.grossProfit}
+                hint={t.grossProfitHint}
+                value={money(current.profit.grossProfit)}
+                delta={deltaBasisPoints(current.profit.grossProfit, previous?.profit.grossProfit)}
+                vsLabel={t.vsPrevious}
+                to="/profit"
+              />
+              <MetricTile
                 label={t.confirmationRate}
-                value={percent(current.rates.confirmation)}
                 hint={t.confirmationHint}
+                value={percent(current.rates.confirmation)}
+                delta={rateDelta(current.rates.confirmation, previous?.rates.confirmation)}
+                vsLabel={t.vsPrevious}
                 to="/confirmation-queue"
               />
-              <KpiCard
+              <MetricTile
                 label={t.deliveryRate}
-                value={percent(current.rates.delivery)}
                 hint={t.deliveryHint}
+                value={percent(current.rates.delivery)}
+                delta={rateDelta(current.rates.delivery, previous?.rates.delivery)}
+                vsLabel={t.vsPrevious}
               />
-              <KpiCard
+              <MetricTile
                 label={t.returnRate}
-                value={percent(current.rates.return)}
                 hint={t.returnHint}
+                value={percent(current.rates.return)}
+                delta={rateDelta(current.rates.return, previous?.rates.return)}
+                vsLabel={t.vsPrevious}
                 to="/returns"
               />
-              <KpiCard
+              <MetricTile
                 label={t.newCustomers}
+                hint={t.newCustomersHint}
                 value={count(current.newCustomers)}
-                deltaBasisPoints={deltaBasisPoints(current.newCustomers, previous?.newCustomers)}
+                delta={deltaBasisPoints(current.newCustomers, previous?.newCustomers)}
+                vsLabel={t.vsPrevious}
                 to="/customers"
-                icon={<Users />}
               />
             </div>
 
             {hasOrders ? (
               <div className="grid gap-4 lg:grid-cols-2">
-                <Panel
-                  title={t.revenueChartTitle}
-                  description={fmt(t.revenueChartDesc, { currency })}
-                >
-                  {/* A time axis reads left-to-right in Arabic too. */}
+                <Panel title={t.salesOverTime} description={fmt(t.salesOverTimeDesc, { currency })}>
                   <div dir="ltr">
-                    <LineAreaChart
-                      summary={fmt(t.revenueChartDesc, { currency })}
-                      points={current.series.map((day) => ({
-                        label: formatAxisDate(day.date),
-                        value: day.revenue,
-                      }))}
+                    <ComparisonLineChart
+                      summary={fmt(t.salesOverTimeDesc, { currency })}
+                      points={comparePoints((d) => d.revenue)}
                       format={(value) => formatMoney(value, currency)}
+                      formatAxis={(value) => formatCount(Math.round(value / 100))}
+                      currentLabel={t.thisPeriod}
+                      previousLabel={t.previousPeriod}
                     />
                   </div>
+                  <Legend current={currentWindow || t.thisPeriod} previous={previousWindow || t.previousPeriod} />
                 </Panel>
-                <Panel title={t.ordersChartTitle} description={t.ordersChartDesc}>
+
+                <Panel title={t.breakdownTitle} description={t.breakdownDesc}>
+                  <dl className="divide-y divide-line text-sm">
+                    {[
+                      { label: t.rowGross, sub: t.rowGrossSub, value: current.revenue.gross, strong: true },
+                      { label: t.rowDelivered, sub: t.rowDeliveredSub, value: current.revenue.delivered },
+                      { label: t.rowCollected, sub: t.rowCollectedSub, value: current.revenue.collected },
+                      { label: t.rowRefunded, sub: t.rowRefundedSub, value: current.revenue.refunded, negative: true },
+                      { label: t.rowDiscounts, sub: t.rowDiscountsSub, value: current.revenue.discounts, negative: true },
+                      { label: t.rowShipping, sub: t.rowShippingSub, value: current.revenue.shippingCharged },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center justify-between gap-3 py-2.5">
+                        <dt>
+                          <span className={cn("block text-ink", row.strong && "font-semibold")}>{row.label}</span>
+                          <span className="block text-xs text-ink-soft">{row.sub}</span>
+                        </dt>
+                        <dd className={cn("tabular-nums text-ink", row.strong && "font-semibold")}>
+                          <bdi dir="ltr">
+                            {row.negative && row.value > 0 ? "−" : ""}
+                            {formatMoney(row.value, currency)}
+                          </bdi>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Panel>
+
+                <Panel title={t.ordersOverTime} description={t.ordersOverTimeDesc}>
                   <div dir="ltr">
-                    <BarChart
-                      summary={t.ordersChartDesc}
-                      points={current.series.map((day) => ({
-                        label: formatAxisDate(day.date),
-                        value: day.orders,
-                      }))}
+                    <ComparisonLineChart
+                      summary={t.ordersOverTimeDesc}
+                      points={comparePoints((d) => d.orders)}
                       format={(value) => fmt(t.ordersCount, { n: formatCount(value) })}
+                      formatAxis={(value) => formatCount(Math.round(value))}
+                      currentLabel={t.thisPeriod}
+                      previousLabel={t.previousPeriod}
                     />
                   </div>
+                  <Legend current={currentWindow || t.thisPeriod} previous={previousWindow || t.previousPeriod} />
+                </Panel>
+
+                <Panel title={t.journeyTitle} description={t.journeyDesc}>
+                  <ol className="space-y-3">
+                    {[
+                      { label: t.stepPlaced, value: current.orders.placed },
+                      { label: t.stepConfirmed, value: current.orders.confirmed },
+                      { label: t.stepDelivered, value: current.orders.delivered },
+                      { label: t.stepReturned, value: current.orders.returned },
+                    ].map((step, i) => {
+                      const share = current.orders.placed > 0 ? step.value / current.orders.placed : 0;
+                      return (
+                        <li key={step.label}>
+                          <div className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="text-ink">{step.label}</span>
+                            <span className="tabular-nums text-ink">
+                              <bdi dir="ltr">{formatCount(step.value)}</bdi>
+                              {i > 0 && (
+                                <span className="ms-2 text-xs text-ink-soft">
+                                  {fmt(t.ofPlaced, { pct: formatPercentValue(share, 0) })}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-paper">
+                            <div
+                              className={cn("h-full rounded-full", i === 0 ? "bg-primary" : "bg-primary/70")}
+                              style={{ width: `${Math.round(share * 100)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  <p className="mt-3 text-xs text-ink-soft">
+                    {t.confirmationRate} {percent(current.rates.confirmation)} · {t.deliveryRate}{" "}
+                    {percent(current.rates.delivery)} · {t.returnRate} {percent(current.rates.return)}
+                  </p>
+                </Panel>
+
+                <Panel title={t.productsTitle} description={t.productsDesc}>
+                  {current.topProducts.length === 0 ? (
+                    <EmptyState icon={<BarChart3 />} title={t.noProducts} description={t.noProductsDesc} />
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.colProduct}</TableHead>
+                          <TableHead className="text-end">{t.colUnits}</TableHead>
+                          <TableHead className="text-end">{t.colSales}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {current.topProducts.map((product, i) => (
+                          <TableRow key={product.productId ?? `${product.name}-${i}`}>
+                            <TableCell className="max-w-56 truncate" dir="auto">
+                              {product.name ?? t.unnamedProduct}
+                            </TableCell>
+                            <TableCell className="tabular-nums text-end">{count(product.quantity)}</TableCell>
+                            <TableCell className="tabular-nums text-end">{money(product.revenue)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </Panel>
+
+                <Panel title={t.statusTitle} description={t.statusDesc}>
+                  <HBarList
+                    format={(value) => formatCount(value)}
+                    rows={[
+                      { label: t.statusPending, value: current.orders.pending },
+                      { label: t.statusConfirmed, value: current.orders.confirmed },
+                      { label: t.statusPostponed, value: current.orders.postponed },
+                      { label: t.statusUnreachable, value: current.orders.unreachable },
+                      { label: t.statusRejected, value: current.orders.rejected },
+                      { label: t.statusCancelled, value: current.orders.cancelled },
+                      { label: t.statusDelivered, value: current.orders.delivered },
+                      { label: t.statusReturned, value: current.orders.returned },
+                    ]}
+                  />
                 </Panel>
               </div>
             ) : (
               <EmptyState icon={<BarChart3 />} title={t.noActivity} description={t.noActivityDesc} />
             )}
-
-            {hasOrders && (
-              <Panel title={t.statusTitle} description={t.statusDesc}>
-                <HBarList
-                  format={(value) => formatCount(value)}
-                  rows={[
-                    { label: t.statusPending, value: current.orders.pending },
-                    { label: t.statusConfirmed, value: current.orders.confirmed },
-                    { label: t.statusPostponed, value: current.orders.postponed },
-                    { label: t.statusUnreachable, value: current.orders.unreachable },
-                    { label: t.statusRejected, value: current.orders.rejected },
-                    { label: t.statusCancelled, value: current.orders.cancelled },
-                    { label: t.statusDelivered, value: current.orders.delivered },
-                    { label: t.statusReturned, value: current.orders.returned },
-                  ]}
-                />
-              </Panel>
-            )}
-
-            <Panel title={t.productsTitle} description={t.productsDesc}>
-              {current.topProducts.length === 0 ? (
-                <EmptyState
-                  icon={<BarChart3 />}
-                  title={t.noProducts}
-                  description={t.noProductsDesc}
-                />
-              ) : (
-                <HBarList
-                  format={(value) => formatMoney(value, currency)}
-                  rows={current.topProducts.map((product) => ({
-                    label: product.name ?? t.unnamedProduct,
-                    value: product.revenue,
-                    caption: fmt(t.units, { n: formatCount(product.quantity) }),
-                  }))}
-                />
-              )}
-            </Panel>
           </div>
         )}
       </DataState>

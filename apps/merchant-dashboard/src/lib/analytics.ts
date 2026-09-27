@@ -4,27 +4,48 @@ import { getIntlLocale } from "@/i18n/LocaleContext";
 import { fetchAnalyticsPair, takePrefetchedAnalyticsSummary } from "@/lib/analyticsPrefetch";
 
 /** The ranges the analytics and profit screens offer. */
-export type AnalyticsRange = "7d" | "30d" | "90d";
+export type AnalyticsRange = "today" | "yesterday" | "7d" | "30d" | "90d" | "365d";
 
-export const ANALYTICS_RANGES: AnalyticsRange[] = ["7d", "30d", "90d"];
+export const ANALYTICS_RANGES: AnalyticsRange[] = ["today", "yesterday", "7d", "30d", "90d", "365d"];
 
-const DAYS: Record<AnalyticsRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
+const DAYS: Record<Exclude<AnalyticsRange, "today" | "yesterday">, number> = {
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+  "365d": 365,
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
 /**
  * `from`/`to` for a range, and the same-length window immediately before it.
- * `to` is exclusive server-side, so "now" is a valid end.
+ * `to` is exclusive server-side, so "now" is a valid end. "Today" runs from
+ * local midnight to now and compares against the same hours of yesterday;
+ * "yesterday" is a whole day against the day before it.
  */
 export function rangeWindows(range: AnalyticsRange, now = Date.now()) {
-  const days = DAYS[range];
-  const span = days * DAY_MS;
+  let from: number;
+  let to: number;
+  if (range === "today") {
+    from = startOfDay(now);
+    to = now;
+  } else if (range === "yesterday") {
+    to = startOfDay(now);
+    from = to - DAY_MS;
+  } else {
+    to = now;
+    from = now - DAYS[range] * DAY_MS;
+  }
+  const span = to - from;
   return {
-    current: { from: new Date(now - span).toISOString(), to: new Date(now).toISOString() },
-    previous: {
-      from: new Date(now - span * 2).toISOString(),
-      to: new Date(now - span).toISOString(),
-    },
+    current: { from: new Date(from).toISOString(), to: new Date(to).toISOString() },
+    previous: { from: new Date(from - span).toISOString(), to: new Date(from).toISOString() },
   };
 }
 
@@ -77,6 +98,20 @@ export function percentToRatio(percent: number | null | undefined): number | nul
 export function formatCount(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat(getIntlLocale()).format(value);
+}
+
+/**
+ * "Aug 28 – Sep 26" for a window. `to` is exclusive, so the last shown day is
+ * the one just before it; a window inside one day shows that day once.
+ */
+export function formatWindow(from: string, to: string): string {
+  const start = new Date(from);
+  const end = new Date(new Date(to).getTime() - 1);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "—";
+  const f = new Intl.DateTimeFormat(getIntlLocale(), { day: "numeric", month: "short" });
+  const a = f.format(start);
+  const b = f.format(end);
+  return a === b ? a : `${a} – ${b}`;
 }
 
 /** "2026-09-14" -> "14 Sep". Day and month only: the axis is already dated. */

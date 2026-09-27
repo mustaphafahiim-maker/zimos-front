@@ -14,7 +14,7 @@
  * - The figure is wrapped in `dir="ltr"` by its caller: a time axis runs
  *   left-to-right in Arabic too.
  */
-import { useId, type ReactNode } from "react";
+import { useId, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@store-builder/ui";
 
 export interface ChartPoint {
@@ -23,6 +23,259 @@ export interface ChartPoint {
 }
 
 const AXIS_CLASS = "fill-[var(--color-ink-soft)] text-[10px]";
+
+/**
+ * The tiny trend inside a metric tile: this period as a solid line, the one
+ * before it dashed. Decorative — the tile's value and delta carry the numbers.
+ */
+export function Sparkline({
+  current,
+  previous,
+  height = 32,
+  className,
+}: {
+  current: number[];
+  previous?: number[] | null;
+  height?: number;
+  className?: string;
+}) {
+  const width = 120;
+  const pad = 2;
+  const series = previous && previous.length ? [current, previous] : [current];
+  const max = Math.max(0, ...series.flat());
+  const path = (values: number[]) => {
+    if (values.length === 0) return "";
+    const step = values.length > 1 ? (width - pad * 2) / (values.length - 1) : 0;
+    return values
+      .map((v, i) => {
+        const x = values.length > 1 ? pad + i * step : width / 2;
+        const y = max > 0 ? pad + (height - pad * 2) * (1 - v / max) : height - pad;
+        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  };
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={cn("h-8 w-full", className)}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {previous && previous.length > 0 && (
+        <path
+          d={path(previous)}
+          fill="none"
+          stroke="var(--color-line-strong)"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      <path
+        d={path(current)}
+        fill="none"
+        stroke="var(--color-primary)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+export interface ComparePoint {
+  label: string;
+  value: number;
+  /** Same position in the period before; null when that window wasn't loaded. */
+  previous: number | null;
+  previousLabel?: string;
+}
+
+/**
+ * This period against the one before it: a solid line over a faint fill, and
+ * the comparison dashed. Hovering shows both values for that day.
+ */
+export function ComparisonLineChart({
+  points,
+  format,
+  formatAxis = format,
+  height = 240,
+  className,
+  summary,
+  currentLabel,
+  previousLabel,
+}: {
+  points: ComparePoint[];
+  format: (value: number) => string;
+  formatAxis?: (value: number) => string;
+  height?: number;
+  className?: string;
+  summary: string;
+  currentLabel: string;
+  previousLabel: string;
+}) {
+  const gradientId = useId();
+  const [hover, setHover] = useState<number | null>(null);
+  const width = 640;
+  const padStart = 52;
+  const padEnd = 12;
+  const padTop = 12;
+  const padBottom = 24;
+  const plotW = width - padStart - padEnd;
+  const plotH = height - padTop - padBottom;
+
+  const values = points.flatMap((p) => [p.value, p.previous ?? 0]);
+  if (points.length === 0 || values.every((v) => v === 0)) {
+    return <EmptyPlot height={height} className={className} label={summary} />;
+  }
+
+  const max = Math.max(...values);
+  const step = points.length > 1 ? plotW / (points.length - 1) : 0;
+  const x = (i: number) => (points.length > 1 ? padStart + i * step : padStart + plotW / 2);
+  const y = (v: number) => padTop + plotH - (v / max) * plotH;
+  const linePath = (pick: (p: ComparePoint) => number | null) =>
+    points
+      .map((p, i) => {
+        const v = pick(p);
+        return v === null ? null : `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      })
+      .filter(Boolean)
+      .join(" ");
+  const current = linePath((p) => p.value);
+  const area = `${current} L${x(points.length - 1).toFixed(1)},${padTop + plotH} L${x(0).toFixed(1)},${padTop + plotH} Z`;
+  const hasPrevious = points.some((p) => p.previous !== null);
+  const previous = hasPrevious ? linePath((p) => p.previous) : "";
+  const gridSteps = [0, 0.25, 0.5, 0.75, 1];
+  const last = points.length - 1;
+  const mid = Math.floor(last / 2);
+
+  const onMove = (event: MouseEvent<SVGSVGElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const ratio = (event.clientX - box.left) / box.width;
+    const px = ratio * width - padStart;
+    const index = step > 0 ? Math.round(px / step) : 0;
+    setHover(Math.min(last, Math.max(0, index)));
+  };
+
+  const point = hover === null ? null : points[hover];
+  const tipStart = hover !== null && hover > last / 2;
+
+  return (
+    <div className={cn("relative", className)}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-auto w-full"
+        role="img"
+        aria-label={summary}
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {gridSteps.map((g) => (
+          <g key={g}>
+            <line
+              x1={padStart}
+              x2={width - padEnd}
+              y1={y(max * g)}
+              y2={y(max * g)}
+              stroke="var(--color-line)"
+              strokeWidth="1"
+              strokeDasharray={g === 0 ? undefined : "2 4"}
+            />
+            <text x={padStart - 6} y={y(max * g) + 3} textAnchor="end" className={AXIS_CLASS}>
+              {formatAxis(max * g)}
+            </text>
+          </g>
+        ))}
+        <path d={area} fill={`url(#${gradientId})`} />
+        {previous && (
+          <path
+            d={previous}
+            fill="none"
+            stroke="var(--color-line-strong)"
+            strokeWidth="1.5"
+            strokeDasharray="4 4"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+        <path
+          d={current}
+          fill="none"
+          stroke="var(--color-primary)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {point && hover !== null && (
+          <g>
+            <line
+              x1={x(hover)}
+              x2={x(hover)}
+              y1={padTop}
+              y2={padTop + plotH}
+              stroke="var(--color-line-strong)"
+              strokeWidth="1"
+            />
+            {point.previous !== null && (
+              <circle cx={x(hover)} cy={y(point.previous)} r="3.5" fill="var(--color-paper-raised)" stroke="var(--color-line-strong)" strokeWidth="1.5" />
+            )}
+            <circle cx={x(hover)} cy={y(point.value)} r="4" fill="var(--color-primary)" />
+          </g>
+        )}
+        {[0, mid, last].filter((i, k, arr) => arr.indexOf(i) === k).map((i) => (
+          <text
+            key={i}
+            x={x(i)}
+            y={height - 6}
+            textAnchor={i === 0 ? "start" : i === last ? "end" : "middle"}
+            className={AXIS_CLASS}
+          >
+            {points[i].label}
+          </text>
+        ))}
+      </svg>
+      {point && (
+        <div
+          className={cn(
+            "pointer-events-none absolute top-2 z-10 min-w-40 rounded-[0.5rem] border border-line bg-paper-raised p-2.5 text-xs shadow-md",
+            tipStart ? "start-14" : "end-3"
+          )}
+          dir="auto"
+        >
+          <p className="mb-1.5 font-medium text-ink">{point.label}</p>
+          <p className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-1.5 text-ink-soft">
+              <span aria-hidden className="inline-block h-0.5 w-3 rounded bg-primary" />
+              {currentLabel}
+            </span>
+            <span className="tabular-nums font-medium text-ink">
+              <bdi dir="ltr">{format(point.value)}</bdi>
+            </span>
+          </p>
+          {point.previous !== null && (
+            <p className="mt-1 flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-ink-soft">
+                <span aria-hidden className="inline-block h-0 w-3 border-t border-dashed border-line-strong" />
+                {point.previousLabel ?? previousLabel}
+              </span>
+              <span className="tabular-nums text-ink-soft">
+                <bdi dir="ltr">{format(point.previous)}</bdi>
+              </span>
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Nothing to draw — every value is zero, or there are no points at all. */
 function isFlat(points: ChartPoint[]): boolean {

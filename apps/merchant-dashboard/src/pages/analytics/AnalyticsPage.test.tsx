@@ -48,15 +48,20 @@ function summary(overrides: Record<string, unknown> = {}): AnalyticsSummary {
   });
 }
 
+const previousSummary = () =>
+  summary({
+    range: { from: "2026-07-23T00:00:00.000Z", to: "2026-08-22T00:00:00.000Z", timeZone: "UTC" },
+    revenue: { ...summary().revenue, gross: 200000 },
+  });
+
 describe("AnalyticsPage", () => {
   it("asks for the range and the period before it, and shows the deltas", async () => {
-    api.getAnalyticsSummary
-      .mockResolvedValueOnce(summary())
-      .mockResolvedValueOnce(summary({ revenue: { ...summary().revenue, gross: 200000 } }));
+    api.getAnalyticsSummary.mockResolvedValueOnce(summary()).mockResolvedValueOnce(previousSummary());
 
     renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
 
-    expect(await screen.findByText("Revenue")).toBeInTheDocument();
+    // "Gross sales" is both a tile and a breakdown row.
+    expect((await screen.findAllByText("Gross sales")).length).toBeGreaterThan(0);
     // Two windows: the selected range and the one immediately before it.
     expect(api.getAnalyticsSummary).toHaveBeenCalledTimes(2);
     const [first, second] = api.getAnalyticsSummary.mock.calls;
@@ -64,21 +69,28 @@ describe("AnalyticsPage", () => {
     expect(new Date(second[1]!.to!).getTime()).toBe(new Date(first[1]!.from!).getTime());
     // 250000 vs 200000 => +25%.
     expect(screen.getByText(/25\.0%/)).toBeInTheDocument();
+    // The compared windows are named from the real ranges, not made up.
+    // Day numbers shift with the machine's timezone; the months don't.
+    expect(screen.getByText(/compared to/)).toHaveTextContent(/Aug \d+ – Sep \d+ compared to Jul \d+ – Aug \d+/);
   });
 
-  it("renders the real figures, status rows and top products", async () => {
+  it("renders the real figures, breakdown, journey, status rows and top products", async () => {
     api.getAnalyticsSummary.mockResolvedValue(summary());
 
     renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
 
-    expect(await screen.findByText("Where the orders stand")).toBeInTheDocument();
-    expect(screen.getByText("Confirmed")).toBeInTheDocument();
-    expect(screen.getByText("Linen shirt")).toBeInTheDocument();
-    expect(screen.getByText("7 units")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Daily revenue in EGP/ })).toBeInTheDocument();
+    expect(await screen.findByText("Sales breakdown")).toBeInTheDocument();
+    expect(screen.getByText("Order journey")).toBeInTheDocument();
+    expect(screen.getByText("Orders by status")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't reach them")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Linen shirt" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Daily gross sales in EGP/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Orders per day/ })).toBeInTheDocument();
+    // Delivered = 4 of 10 placed.
+    expect(screen.getByText("40% of placed")).toBeInTheDocument();
   });
 
-  it("shows an empty state instead of empty charts when nothing was ordered", async () => {
+  it("keeps the tiles at zero and drops the charts when nothing was ordered", async () => {
     api.getAnalyticsSummary.mockResolvedValue(
       summary({
         orders: {
@@ -100,19 +112,20 @@ describe("AnalyticsPage", () => {
 
     renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
 
-    expect(await screen.findByText("No orders in this range")).toBeInTheDocument();
-    expect(screen.getByText("Nothing sold yet in this range")).toBeInTheDocument();
-    expect(screen.queryByText("Where the orders stand")).not.toBeInTheDocument();
+    expect(await screen.findByText("No orders in this period")).toBeInTheDocument();
+    expect(screen.getByText("Gross sales")).toBeInTheDocument();
+    expect(screen.queryByText("Sales breakdown")).not.toBeInTheDocument();
   });
 
-  it("re-queries when the merchant changes the range", async () => {
+  it("re-queries when the merchant picks another range from the date menu", async () => {
     api.getAnalyticsSummary.mockResolvedValue(summary());
 
     const { user } = renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
 
-    await screen.findByText("Revenue");
+    await screen.findAllByText("Gross sales");
     api.getAnalyticsSummary.mockClear();
-    await user.click(screen.getByRole("button", { name: "Last 7 days" }));
+    await user.click(screen.getByRole("button", { name: "Date range" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Last 7 days" }));
 
     expect(api.getAnalyticsSummary).toHaveBeenCalledTimes(2);
     const [call] = api.getAnalyticsSummary.mock.calls;
