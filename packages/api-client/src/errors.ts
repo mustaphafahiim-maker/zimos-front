@@ -1,5 +1,10 @@
 import { ApiError } from "./client";
-import type { ManualCancelRequiredDetails, ManualCancelShipment } from "./types";
+import type {
+  CarrierAddressNamesRequiredDetail,
+  CarrierAddressRejectedDetail,
+  ManualCancelRequiredDetails,
+  ManualCancelShipment,
+} from "./types";
 
 /**
  * The backend's stable error codes that the apps give their own copy to.
@@ -68,9 +73,11 @@ export type ApiErrorCode =
   | "CARRIER_PERMISSION_DENIED" // 422 — the carrier accepted the login but refused the call (API access not enabled / key scope)
   | "CARRIER_SANDBOX_NOT_ALLOWED" // 409, details = { carrierCode } — booking with a stored sandbox connection outside the test stores
   | "CARRIER_ADDRESS_UNMATCHED"
+  | "CARRIER_ADDRESS_NAMES_REQUIRED" // 422, details[0] = CarrierAddressNamesRequiredDetail — resend with carrierAddress.names
+  | "CARRIER_ADDRESS_REJECTED" // 422, details[0] = CarrierAddressRejectedDetail — the courier refused one level (or all) of the address
   | "CARRIER_CURRENCY_UNSUPPORTED"
   | "CARRIER_COD_LIMIT"
-  | "CARRIER_ERROR" // 424 (502 on older servers) — the courier failed; show the server's message
+  | "CARRIER_ERROR" // 424 (502 on older servers), details = CarrierErrorDetails — the courier failed; show the server's message
   | "CARRIER_NOT_CONNECTED"
   | "CARRIER_CANCEL_FAILED"
   | "CARRIER_CREDENTIALS_UNREADABLE"
@@ -191,4 +198,36 @@ export function manualCancelShipments(err: unknown): ManualCancelShipment[] {
   if (!isApiErrorCode(err, "CARRIER_MANUAL_CANCEL_REQUIRED")) return [];
   const shipments = apiErrorDetails<ManualCancelRequiredDetails>(err)?.shipments;
   return Array.isArray(shipments) ? shipments : [];
+}
+
+/**
+ * The address levels a 422 CARRIER_ADDRESS_NAMES_REQUIRED asks names for,
+ * top first (J&T: governorate, city, area). null for any other error.
+ */
+export function carrierAddressNamesLevels(err: unknown): string[] | null {
+  if (!isApiErrorCode(err, "CARRIER_ADDRESS_NAMES_REQUIRED")) return null;
+  const details = apiErrorDetails<unknown>(err);
+  const first = Array.isArray(details) ? (details[0] as Partial<CarrierAddressNamesRequiredDetail> | undefined) : undefined;
+  const levels = first?.levels;
+  return Array.isArray(levels) ? levels.filter((l): l is string => typeof l === "string") : [];
+}
+
+/**
+ * Which part of the drop-off address a 422 CARRIER_ADDRESS_REJECTED names:
+ * `index` is the level's position (from `field`'s ".N" suffix), null when
+ * the courier refused the address as a whole. `message` is the server's
+ * sentence ("J&T does not recognise the city …"). null for any other error.
+ */
+export function carrierAddressRejection(
+  err: unknown
+): { index: number | null; level: string | null; message: string } | null {
+  if (!isApiErrorCode(err, "CARRIER_ADDRESS_REJECTED")) return null;
+  const details = apiErrorDetails<unknown>(err);
+  const first = Array.isArray(details) ? (details[0] as Partial<CarrierAddressRejectedDetail> | undefined) : undefined;
+  const match = typeof first?.field === "string" ? /\.(\d+)$/.exec(first.field) : null;
+  return {
+    index: match ? Number(match[1]) : null,
+    level: typeof first?.level === "string" ? first.level : null,
+    message: err.message,
+  };
 }

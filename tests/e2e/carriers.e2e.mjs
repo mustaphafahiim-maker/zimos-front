@@ -2,7 +2,8 @@
 // courier picker, multi-level address picker, manual-cancel acknowledgement,
 // carrier error codes), plus provider logos and the carrier sandbox errors
 // (providers.scenarios.mjs), upstream 424/502 errors and unverified J&T
-// credentials (upstream.scenarios.mjs), driven in Chromium against a fully stubbed API.
+// credentials (upstream.scenarios.mjs), J&T typed address names
+// (typednames.scenarios.mjs), driven in Chromium against a fully stubbed API.
 //
 //   npm run test:e2e                 all scenarios
 //   npm run test:e2e -- B,C          only these scenarios
@@ -44,6 +45,7 @@ import {
 } from "./providers.scenarios.mjs";
 import { newStoreRoleGatedScreens } from "./workspace.scenarios.mjs";
 import { connectUpstreamAndUnverified, upstreamBookingErrors } from "./upstream.scenarios.mjs";
+import { cardShowsBothNotes, markedTypesEachLevel, namesRequiredThenResend } from "./typednames.scenarios.mjs";
 
 // Toasts and alerts wrap tracking numbers in bidi isolates (U+2066 … U+2069).
 const LRI = String.fromCharCode(0x2066);
@@ -569,6 +571,11 @@ const SCENARIOS = {
   O2: (browser, base) => upstreamBookingErrors(browser, base, 502),
   P: (browser, base) => connectUpstreamAndUnverified(browser, base, "en"),
   P2: (browser, base) => connectUpstreamAndUnverified(browser, base, "ar"),
+  Q: (browser, base) => cardShowsBothNotes(browser, base, "en"),
+  Q2: (browser, base) => cardShowsBothNotes(browser, base, "ar"),
+  R: (browser, base) => namesRequiredThenResend(browser, base, "en"),
+  R2: (browser, base) => namesRequiredThenResend(browser, base, "ar"),
+  S: markedTypesEachLevel,
 };
 
 const only = process.argv[2]?.split(",").filter(Boolean);

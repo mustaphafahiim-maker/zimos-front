@@ -5,6 +5,8 @@ import {
   ApiError,
   apiErrorDetails,
   apiFieldProblems,
+  carrierAddressNamesLevels,
+  carrierAddressRejection,
   isApiErrorCode,
   isAreaUnmatchedDetails,
   type AnyCarrierAddressUnmatchedDetails,
@@ -40,6 +42,7 @@ import {
   codAmountFor,
   isCarrierBooked,
   isPathComplete,
+  prefillTypedNames,
   reservedCourierFor,
   usesCityDistrict,
 } from "@/pages/shipping/carriers";
@@ -47,6 +50,8 @@ import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { useOrderLabels } from "../orderLabels";
 import { BookingWeightField } from "./BookingWeightField";
 import { CityDistrictPicker, LevelAddressPicker, type PickerSource } from "./CarrierAddressPicker";
+import { TypedAddressNames, type TypedNamesProblem } from "./TypedAddressNames";
+import { useLevelLabel } from "./useLevelLabel";
 
 const STATUSES: ShipmentStatus[] = [
   "created",
@@ -74,6 +79,7 @@ const STRINGS = {
     delivered: "Delivered {date}",
     courierState: "{carrier} status: {state}",
     lastChecked: "Last checked with {carrier} {date}",
+    typedAddress: "Address typed for {carrier}:",
     setStatus: "Status",
     statusUpdated: "Shipment marked “{status}”.",
     sync: "Sync status",
@@ -170,6 +176,7 @@ const STRINGS = {
     delivered: "تم التسليم {date}",
     courierState: "حالة {carrier}: {state}",
     lastChecked: "آخر مراجعة مع {carrier} {date}",
+    typedAddress: "العنوان المكتوب لـ {carrier}:",
     setStatus: "الحالة",
     statusUpdated: "تم تغيير حالة الشحنة إلى «{status}».",
     sync: "مزامنة الحالة",
@@ -430,6 +437,12 @@ function ShipmentRow({
   const booked = isCarrierBooked(shipment);
   const carrierName = shipment.carrierCode === "manual" ? t.manual : (carrier?.name ?? shipment.carrierCode);
   const courierState = shipment.carrierResponse?.lastCarrierStatus?.value;
+  const levelLabel = useLevelLabel();
+  // Booked with names the merchant typed (the courier had no address list for the account).
+  const storedAddress = shipment.carrierResponse?.address;
+  const typedNames =
+    storedAddress && "names" in storedAddress && Array.isArray(storedAddress.names) ? storedAddress.names : null;
+  const typedLevels = carrier ? carrierLevels(carrier) : [];
   // The courier has no cancel API: cancelling needs the merchant's word
   // that it was done in the courier's dashboard (the 409 dialog).
   const cancelByHand = booked && cancelsManually(carrier);
@@ -579,6 +592,20 @@ function ShipmentRow({
           <span>{fmt(t.lastChecked, { carrier: carrierName, date: formatDateTime(shipment.lastPolledAt) })}</span>
         )}
       </div>
+
+      {booked && typedNames && typedNames.length > 0 && (
+        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-soft">
+          <span>{fmt(t.typedAddress, { carrier: carrierName })}</span>
+          {typedNames.map((name, i) => (
+            <span key={i}>
+              {typedLevels[i] ? `${levelLabel(typedLevels[i])}: ` : ""}
+              <bdi dir="auto" className="font-medium text-ink">
+                {name}
+              </bdi>
+            </span>
+          ))}
+        </p>
+      )}
 
       {shipment.cancelMode === "manual_ack" && (
         <p className="mt-2 text-xs text-ink-soft">
@@ -765,6 +792,12 @@ function CreateShipmentForm({
   const [districtId, setDistrictId] = useState("");
   // Any other courier: one id per address level, top first.
   const [areaPath, setAreaPath] = useState<string[]>([]);
+  // The courier refuses this account its address list: the merchant types
+  // its names instead. `namesAsked` is a 422 CARRIER_ADDRESS_NAMES_REQUIRED
+  // for that courier; a connection already marked shows them from the start.
+  const [namesAsked, setNamesAsked] = useState<{ code: string; levels: string[] } | null>(null);
+  const [typedNames, setTypedNames] = useState<string[] | null>(null);
+  const [typedProblems, setTypedProblems] = useState<TypedNamesProblem[]>([]);
   // "" books with the order's own weight tier.
   const [tierId, setTierId] = useState("");
   const [tierUnmapped, setTierUnmapped] = useState(false);
@@ -806,6 +839,29 @@ function CreateShipmentForm({
   if (order.paymentMethod !== "cod" && order.financialState !== "paid") manualBlockers.push(t.notPaidManual);
 
   const levels = courier ? carrierLevels(courier) : [];
+  const listUnavailable = Boolean(
+    courier?.capabilities?.typedAddressNames && courier.connection?.verification?.locationList === "unavailable"
+  );
+  const askedLevels = courier && namesAsked?.code === courier.code ? namesAsked.levels : null;
+  // null: the address comes from the courier's list (matched or picked).
+  const typedLevels = askedLevels ? (askedLevels.length > 0 ? askedLevels : levels) : listUnavailable ? levels : null;
+  const names = typedLevels
+    ? typedNames && typedNames.length === typedLevels.length
+      ? typedNames
+      : prefillTypedNames(typedLevels, order.shippingAddressSnapshot)
+    : [];
+
+  function changeTypedName(index: number, value: string) {
+    setTypedNames(names.map((n, i) => (i === index ? value : n)));
+    // The other values and a whole-address refusal stay until the next try.
+    setTypedProblems((current) => current.filter((p) => p.index !== index));
+  }
+
+  function resetTypedNames() {
+    setTypedNames(null);
+    setTypedProblems([]);
+  }
+
   const pickerIncomplete =
     picker !== null && (cityDistrict ? !cityId || !districtId : !isPathComplete(areaPath, levels));
 
@@ -818,8 +874,9 @@ function CreateShipmentForm({
 
   function chooseMethod(next: Method) {
     if (next !== method) {
-      // Another courier's address ids and tiers mean nothing to this one.
+      // Another courier's address ids, names and tiers mean nothing to this one.
       resetPicker();
+      resetTypedNames();
       setTierId("");
       setTierUnmapped(false);
     }
@@ -866,6 +923,7 @@ function CreateShipmentForm({
   }
 
   function chosenAddress(): CarrierAddressInput | undefined {
+    if (typedLevels) return { names: names.map((n) => n.trim()) };
     if (!picker) return undefined;
     if (cityDistrict) return cityId && districtId ? { cityId, districtId } : undefined;
     return isPathComplete(areaPath, levels) ? { path: areaPath } : undefined;
@@ -874,6 +932,14 @@ function CreateShipmentForm({
   async function submitCourier(e: FormEvent) {
     e.preventDefault();
     if (!courier || uncertain || blockers.length > 0 || pickerIncomplete) return;
+    if (typedLevels) {
+      const empty = names.flatMap((n, i) => (n.trim() ? [] : [{ index: i, kind: "required" as const }]));
+      if (empty.length > 0) {
+        setTypedProblems(empty);
+        return;
+      }
+      setTypedProblems([]);
+    }
     setSubmitting(true);
     setFormError(null);
     setFieldErrors({});
@@ -892,9 +958,39 @@ function CreateShipmentForm({
       setTierId("");
       setTierUnmapped(false);
       setNotSaved(null);
+      setNamesAsked(null);
+      resetTypedNames();
       onCreated();
     } catch (err) {
       setTierUnmapped(isApiErrorCode(err, "CARRIER_TIER_UNMAPPED"));
+      const namesLevels = carrierAddressNamesLevels(err);
+      if (namesLevels) {
+        // The courier refused its list just now: the names replace any picker.
+        resetPicker();
+        setTypedProblems([]);
+        setNamesAsked({ code: courier.code, levels: namesLevels });
+        return;
+      }
+      const rejection = carrierAddressRejection(err);
+      if (rejection && typedLevels) {
+        const index = rejection.index !== null && rejection.index < typedLevels.length ? rejection.index : null;
+        setTypedProblems([{ index, kind: "rejected" }]);
+        return;
+      }
+      // The server's own checks on the names (empty, too long, or not taken
+      // because the courier serves its list again).
+      const nameProblems = typedLevels
+        ? apiFieldProblems(err).filter((p) => p.field.startsWith("carrierAddress.names"))
+        : [];
+      if (nameProblems.length > 0) {
+        setTypedProblems(
+          nameProblems.map((p) => {
+            const match = /\.(\d+)$/.exec(p.field);
+            return { index: match ? Number(match[1]) : null, kind: "server" as const, message: p.message };
+          })
+        );
+        return;
+      }
       if (isApiErrorCode(err, "CARRIER_ADDRESS_UNMATCHED")) {
         const details = apiErrorDetails<AnyCarrierAddressUnmatchedDetails>(err);
         if (details) {
@@ -1126,7 +1222,18 @@ function CreateShipmentForm({
               disabled={submitting}
             />
           )}
-          {(!picker || picker.kind === "free") && blockers.length === 0 && (
+          {courier && typedLevels && (
+            <TypedAddressNames
+              carrierName={courierName}
+              levels={typedLevels}
+              names={names}
+              onChange={changeTypedName}
+              problems={typedProblems}
+              pickupUnchecked
+              disabled={submitting}
+            />
+          )}
+          {!typedLevels && (!picker || picker.kind === "free") && blockers.length === 0 && (
             <Button
               type="button"
               variant="ghost"

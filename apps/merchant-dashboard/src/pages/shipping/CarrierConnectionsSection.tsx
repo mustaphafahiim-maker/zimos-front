@@ -7,6 +7,8 @@ import {
   isApiErrorCode,
   type BostaTierPackage,
   type CarrierFieldDescriptor,
+  type CarrierConnection,
+  type CarrierConnectionVerification,
   type CarrierInfo,
   type CarrierPickupLocation,
   type ConnectCarrierPayload,
@@ -126,6 +128,9 @@ const STRINGS = {
     unverifiedTitle: "Customer code and password not checked yet",
     unverifiedNote:
       "The {name} connection is saved, but {name} didn't let us check the customer code and password yet. They'll be checked on your first booking; if that booking is refused, replace them here.",
+    locationListTitle: "Addresses are typed by hand",
+    locationListNote:
+      "{name} hasn't enabled the location list for this account, so the governorate, city and area are typed by hand when booking. The pickup address was saved without being checked against {name}'s names.",
   },
   ar: {
     title: "شركات الشحن",
@@ -214,6 +219,9 @@ const STRINGS = {
     unverifiedTitle: "لم يتم التحقق من كود العميل وكلمة المرور بعد",
     unverifiedNote:
       "تم حفظ ربط {name}، لكن {name} لم تسمح لنا بالتحقق من كود العميل وكلمة المرور بعد. سيتم التحقق منهما عند حجز أول شحنة؛ وإذا رُفض الحجز، غيّرهما من هنا.",
+    locationListTitle: "العناوين تُكتب يدويًا",
+    locationListNote:
+      "لم تفعّل {name} قائمة المواقع لهذا الحساب، لذلك تُكتب المحافظة والمدينة والمنطقة يدويًا عند الحجز. وحُفظ عنوان الاستلام دون مراجعته على أسماء {name}.",
   },
 } satisfies Messages;
 
@@ -377,9 +385,17 @@ function CarrierCard({
   const [credentialErrors, setCredentialErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
-  // Only a connect response says so (GET /carriers doesn't), so it lasts
-  // until the page reloads or a later key check comes back clean.
-  const [credentialsUnverified, setCredentialsUnverified] = useState(false);
+  // What the last connect could not check comes with the connection on
+  // GET /carriers. A connect's own answer is used until the list refresh
+  // it triggers arrives (a new `connection` object).
+  const [fresh, setFresh] = useState<{
+    connection: CarrierConnection | null;
+    verification: CarrierConnectionVerification;
+  } | null>(null);
+  const verification: CarrierConnectionVerification =
+    (fresh && fresh.connection === connection ? fresh.verification : connection?.verification) ?? {};
+  const credentialsUnverified = verification.customerCredentials === "unverified";
+  const locationListUnavailable = verification.locationList === "unavailable";
 
   const current: Settings = connection?.settings ?? {};
   const tiers = useWeightTiers();
@@ -426,10 +442,8 @@ function CarrierCard({
 
   async function put(payload: ConnectCarrierPayload) {
     const result = await apiClient.connectCarrier(workspaceId, carrier.code, payload);
-    const unverified = result.verification?.customerCredentials === "unverified";
-    // A settings-only save may not re-check the credentials, so its silence
-    // clears nothing; a credentials PUT's answer is the new reading.
-    if (unverified || payload.credentials) setCredentialsUnverified(unverified);
+    // Every connect sets the marks afresh, and the stored connection carries them.
+    setFresh({ connection, verification: result.carrier.connection?.verification ?? {} });
     return result;
   }
 
@@ -546,7 +560,7 @@ function CarrierCard({
       throw new Error(errorMessage(err));
     }
     rememberCarrierEnvironment(workspaceId, carrier.code, null);
-    setCredentialsUnverified(false);
+    setFresh({ connection, verification: {} });
     setDisconnecting(false);
     setMode("view");
     toast.success(fmt(t.disconnectedToast, { name }));
@@ -622,6 +636,16 @@ function CarrierCard({
         >
           <p className="font-medium">{t.unverifiedTitle}</p>
           <p className="mt-0.5">{fmt(t.unverifiedNote, { name })}</p>
+        </div>
+      )}
+
+      {connection && locationListUnavailable && mode !== "key" && (
+        <div
+          role="status"
+          className="mt-3 rounded-[0.5rem] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-dark"
+        >
+          <p className="font-medium">{t.locationListTitle}</p>
+          <p className="mt-0.5">{fmt(t.locationListNote, { name })}</p>
         </div>
       )}
 

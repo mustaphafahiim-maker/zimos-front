@@ -220,7 +220,14 @@ export const JTEXPRESS = (connected, extra = {}) => ({
     { key: "environment", label: "Environment", secret: false, options: ["production", "sandbox"] },
   ],
   settingFields: [],
-  capabilities: { cancel: "api", label: true, webhook: "none", polling: true, addressLevels: ["governorate", "city", "area"] },
+  capabilities: {
+    cancel: "api",
+    label: true,
+    webhook: "none",
+    polling: true,
+    addressLevels: ["governorate", "city", "area"],
+    typedAddressNames: true,
+  },
   connection: connected ? { ...connection("jtexpress"), ...extra } : null,
 });
 

@@ -22,6 +22,8 @@ export {
   apiErrorDetails,
   apiErrorRequestId,
   apiFieldProblems,
+  carrierAddressNamesLevels,
+  carrierAddressRejection,
   isApiErrorCode,
   isInvalidCursorError,
   manualCancelShipments,

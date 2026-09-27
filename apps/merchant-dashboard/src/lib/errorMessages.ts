@@ -71,6 +71,9 @@ const STRINGS = {
     CARRIER_SANDBOX_NOT_ALLOWED:
       "This courier connection uses the courier's sandbox, which only creates test shipments, so nothing was booked. A production account is required: connect one under Shipping.",
     CARRIER_ADDRESS_UNMATCHED: "The order's address couldn't be matched to the courier's list. Choose the delivery area.",
+    CARRIER_ADDRESS_NAMES_REQUIRED:
+      "The courier doesn't share its address list with this account. Type the governorate, city and area as the courier spells them.",
+    CARRIER_ADDRESS_REJECTED: "The courier didn't recognise the delivery address. Check the spelling and try again.",
     CARRIER_CURRENCY_UNSUPPORTED: "This courier only collects cash in EGP, and this order is in another currency.",
     CARRIER_COD_LIMIT: "The cash-on-delivery amount is above this courier's limit.",
     CARRIER_NOT_CONNECTED: "This courier isn't connected to your store anymore.",
@@ -161,6 +164,9 @@ const STRINGS = {
     CARRIER_SANDBOX_NOT_ALLOWED:
       "ربط شركة الشحن هذا يستخدم بيئة التجربة (Sandbox) الخاصة بها، وهي تنشئ شحنات تجريبية فقط، لذلك لم يُحجز شيء. يلزم حساب إنتاج (Production): اربطه من صفحة الشحن.",
     CARRIER_ADDRESS_UNMATCHED: "تعذّرت مطابقة عنوان الأوردر مع قائمة شركة الشحن. اختر منطقة التوصيل.",
+    CARRIER_ADDRESS_NAMES_REQUIRED:
+      "شركة الشحن لا تتيح قائمة عناوينها لهذا الحساب. اكتب المحافظة والمدينة والمنطقة كما تكتبها شركة الشحن.",
+    CARRIER_ADDRESS_REJECTED: "لم تتعرّف شركة الشحن على عنوان التوصيل. راجع طريقة الكتابة وحاول مرة أخرى.",
     CARRIER_CURRENCY_UNSUPPORTED: "شركة الشحن هذه تحصّل بالجنيه المصري فقط، وهذا الأوردر بعملة أخرى.",
     CARRIER_COD_LIMIT: "مبلغ الدفع عند الاستلام أعلى من الحد المسموح لشركة الشحن هذه.",
     CARRIER_NOT_CONNECTED: "شركة الشحن هذه لم تعد مربوطة بمتجرك.",

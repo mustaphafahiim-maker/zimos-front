@@ -2,6 +2,7 @@ import {
   isCityDistrictLevels,
   type CarrierInfo,
   type Order,
+  type OrderAddressSnapshot,
   type Shipment,
   type ShipmentStatus,
 } from "@store-builder/api-client";
@@ -187,4 +188,26 @@ export function carrierEnvironment(workspaceId: string, carrier: CarrierInfo): C
     // Unreadable or blocked storage: unknown.
   }
   return null;
+}
+
+/** The courier's limit per typed name (J&T: 60, after trimming). */
+export const TYPED_NAME_MAX = 60;
+
+/**
+ * First values for the typed names, from the order's free-text address:
+ * the province is the top level (governorate), and the city goes on the
+ * level below it. The bottom level (J&T's area) has nothing to come from.
+ */
+export function prefillTypedNames(levels: string[], address: OrderAddressSnapshot | null | undefined): string[] {
+  const names = levels.map(() => "");
+  if (!address) return names;
+  const province = address.province?.trim() ?? "";
+  const city = address.city?.trim() ?? "";
+  if (levels.length === 1) {
+    names[0] = city || province;
+  } else {
+    names[0] = province;
+    names[1] = city;
+  }
+  return names.map((n) => n.slice(0, TYPED_NAME_MAX));
 }

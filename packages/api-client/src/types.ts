@@ -1056,9 +1056,13 @@ export interface ShipmentCarrierResponse {
   /**
    * The drop-off address as the courier's ids: city/district couriers keep
    * `{ cityId, districtId, zoneId }`, any other courier `{ path }`, one id
-   * per address level, top first.
+   * per address level, top first. `{ names }` when the merchant typed the
+   * courier's names (the courier has no address list for this account).
    */
-  address?: { cityId: string; districtId: string; zoneId: string | null } | { path: string[] };
+  address?:
+    | { cityId: string; districtId: string; zoneId: string | null }
+    | { path: string[] }
+    | { names: string[] };
   /** The last state the courier reported (sync / webhook). */
   lastCarrierStatus?: CarrierShipmentStatus | null;
   [key: string]: unknown;
@@ -1243,7 +1247,9 @@ export interface CreateShipmentPayload {
   trackingUrl?: string;
   /**
    * Courier bookings only: the courier's ids for the drop-off address, sent
-   * after a 422 CARRIER_ADDRESS_UNMATCHED (or when the merchant picks it).
+   * after a 422 CARRIER_ADDRESS_UNMATCHED (or when the merchant picks it);
+   * or the courier's names as typed, after a 422
+   * CARRIER_ADDRESS_NAMES_REQUIRED.
    */
   carrierAddress?: CarrierAddressInput;
   notes?: string;
@@ -1255,8 +1261,15 @@ export interface CreateShipmentPayload {
  * The drop-off address in the courier's own ids. `{ cityId, districtId }`
  * for a city/district courier; `{ path }` — one id per address level, top
  * first, exactly `addressLevels.length` of them — for any courier.
+ * `{ names }` — the courier's own names as the merchant typed them, one per
+ * level, top first — only for a courier with `typedAddressNames` whose
+ * connection has `verification.locationList: "unavailable"` (anywhere else
+ * it is 422 VALIDATION_ERROR). Sent as typed; the courier checks them.
  */
-export type CarrierAddressInput = { cityId: string; districtId: string } | { path: string[] };
+export type CarrierAddressInput =
+  | { cityId: string; districtId: string }
+  | { path: string[] }
+  | { names: string[] };
 
 export interface UpdateShipmentPayload {
   status?: ShipmentStatus;
@@ -2470,6 +2483,21 @@ export interface CarrierConnection {
    * out, so the dashboard falls back to what it last connected with.
    */
   environment?: "production" | "sandbox";
+  /**
+   * Present only when the last connect (or a later booking) could not check
+   * everything; each mark is dropped once it no longer holds.
+   * `customerCredentials: "unverified"`: J&T let us check the API account
+   * but not the customer code and password; the first booking does.
+   * `locationList: "unavailable"`: the courier refuses this account its
+   * address list, so the pickup address was saved unchecked and bookings
+   * send typed names (`carrierAddress.names`, see `typedAddressNames`).
+   */
+  verification?: CarrierConnectionVerification;
+}
+
+export interface CarrierConnectionVerification {
+  customerCredentials?: "unverified";
+  locationList?: "unavailable";
 }
 
 /**
@@ -2500,6 +2528,13 @@ export interface CarrierCapabilities {
    * tree picked level by level and booked with `carrierAddress.path`.
    */
   addressLevels: string[];
+  /**
+   * When the courier refuses the account its address list
+   * (`connection.verification.locationList: "unavailable"`), a booking takes
+   * the courier's names as typed (`carrierAddress.names`). Absent on servers
+   * older than it: treat as false.
+   */
+  typedAddressNames?: boolean;
 }
 
 /**
@@ -2589,8 +2624,8 @@ export interface ConnectCarrierResult {
    */
   verification: {
     pickupLocations?: CarrierPickupLocation[];
-    customerCredentials?: "unverified";
-  } & Record<string, unknown>;
+  } & CarrierConnectionVerification &
+    Record<string, unknown>;
 }
 
 export interface CarrierDistrict {
@@ -2735,6 +2770,44 @@ export interface CarrierBookingNotSavedDetails {
   carrierCode: string;
   trackingNumber: string;
   manualCancelRequired: boolean;
+}
+
+/**
+ * `details[0]` of 422 CARRIER_ADDRESS_NAMES_REQUIRED: the courier refuses
+ * this account its address list. Resend with `carrierAddress: { names }`,
+ * one name per entry of `levels`, top first.
+ */
+export interface CarrierAddressNamesRequiredDetail {
+  field: "carrierAddress.names";
+  message: string;
+  levels: string[];
+}
+
+/**
+ * `details[0]` of 422 CARRIER_ADDRESS_REJECTED: the courier refused one
+ * level of the drop-off address (`field` "carrierAddress.names.1",
+ * `level` "city") or the whole of it (`field` "carrierAddress.names",
+ * `level` null). `carrierAddress.path…` when the address was picked.
+ * The error message names it; with the pickup address unchecked it also
+ * says the courier may mean that one.
+ */
+export interface CarrierAddressRejectedDetail {
+  field: string;
+  message: string;
+  level: string | null;
+  carrierErrorCode: string;
+}
+
+/**
+ * `details` of CARRIER_ERROR (424): the courier's own code, its message
+ * (credential values cut out, at most 300 characters) and HTTP status,
+ * when the courier sent them.
+ */
+export interface CarrierErrorDetails {
+  carrierErrorCode?: string | null;
+  carrierMessage?: string | null;
+  httpStatus?: number;
+  [key: string]: unknown;
 }
 
 /** `details` of 409 CARRIER_CANCEL_FAILED. */

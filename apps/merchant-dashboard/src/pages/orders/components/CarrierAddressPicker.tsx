@@ -12,6 +12,7 @@ import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { placeName } from "@/pages/shipping/carriers";
+import { useLevelLabel } from "./useLevelLabel";
 
 const STRINGS = {
   en: {
@@ -34,14 +35,6 @@ const STRINGS = {
     chooseLevelFirst: "Choose a {level} first",
     nothingBelow: "{carrier} lists no {level} here. Choose another {parent}.",
     allLevel: "All",
-    level_city: "City",
-    level_district: "District",
-    level_governorate: "Governorate",
-    level_province: "Province",
-    level_region: "Region",
-    level_zone: "Zone",
-    level_area: "Area",
-    level_neighborhood: "Neighborhood",
   },
   ar: {
     unmatchedCity: "لا توجد لدى {carrier} مدينة تطابق «{value}». اختر المدينة ثم المنطقة.",
@@ -62,18 +55,8 @@ const STRINGS = {
     chooseLevelFirst: "اختر {level} أولًا",
     nothingBelow: "لا توجد في قائمة {carrier} خيارات لخانة {level} هنا. غيّر اختيار {parent}.",
     allLevel: "الكل",
-    level_city: "المدينة",
-    level_district: "المنطقة",
-    level_governorate: "المحافظة",
-    level_province: "المحافظة",
-    level_region: "الإقليم",
-    level_zone: "النطاق",
-    level_area: "الحي",
-    level_neighborhood: "الحي",
   },
 } satisfies Messages;
-
-type Strings = (typeof STRINGS)["en"];
 
 export interface PlaceOption {
   id: string;
@@ -87,16 +70,6 @@ export type PickerSource =
   | { kind: "free" }
   | { kind: "unmatched"; details: CarrierAddressUnmatchedDetails }
   | { kind: "unmatchedArea"; details: CarrierAreaUnmatchedDetails };
-
-/** A level name from the courier ("governorate") in the active language; unknown ones as sent. */
-function useLevelLabel() {
-  const t = useT(STRINGS);
-  return (level: string) => {
-    const key = `level_${level.toLowerCase()}` as keyof Strings;
-    if (key in t) return t[key];
-    return level ? level.charAt(0).toUpperCase() + level.slice(1).replace(/_/g, " ") : level;
-  };
-}
 
 /**
  * City → district picker over the courier's own list. From scratch it lists

@@ -70,19 +70,23 @@ export async function connectUpstreamAndUnverified(browser, base, locale = "en")
   const upstream = "J&T Express didn't respond. Try again in a few minutes.";
   let jtPuts = 0;
   let jtConnected = false;
+  // As the server stores it: the last connect's marks, sent on GET /carriers too.
+  let jtVerification = null;
+  const jt$ = () => JTEXPRESS(jtConnected, jtVerification ? { verification: jtVerification } : {});
   let mylerzConnected = false;
   const session = await openPage(browser, base, {
     locale,
     handler: (method, path) => {
       if (method === "GET" && path === carriersPath) {
-        return ok({ configured: true, carriers: [JTEXPRESS(jtConnected), MYLERZ(mylerzConnected)] });
+        return ok({ configured: true, carriers: [jt$(), MYLERZ(mylerzConnected)] });
       }
       if (method === "PUT" && path === `${carriersPath}/jtexpress`) {
         jtPuts++;
         if (jtPuts === 1) return apiError(424, "CARRIER_ERROR", upstream);
         jtConnected = true;
         // 2nd: the account can't call the credential check. 3rd (key replaced): checked.
-        return ok(connectResult(JTEXPRESS(true), jtPuts === 2 ? { customerCredentials: "unverified" } : {}));
+        jtVerification = jtPuts === 2 ? { customerCredentials: "unverified" } : null;
+        return ok(connectResult(jt$(), jtVerification ?? {}));
       }
       if (method === "PUT" && path === `${carriersPath}/mylerz`) {
         mylerzConnected = true;
@@ -132,6 +136,11 @@ export async function connectUpstreamAndUnverified(browser, base, locale = "en")
   check(await note.isVisible(), "unverified: note on the J&T card");
   check(await note.getByText(L.note, { exact: false }).isVisible(), "unverified: saved, checked on the first booking");
   check((await jt.getByText(upstream).count()) === 0, "earlier error cleared after the connect succeeds");
+
+  // Read from GET /carriers, so it survives a reload.
+  await page.reload();
+  await settle(page);
+  check(await jt.getByRole("status").filter({ hasText: L.title }).isVisible(), "unverified: note still there after a reload");
 
   const mylerz = cardOf(page, "Mylerz");
   await mylerz.getByRole("button", { name: L.connectMylerz }).click();
