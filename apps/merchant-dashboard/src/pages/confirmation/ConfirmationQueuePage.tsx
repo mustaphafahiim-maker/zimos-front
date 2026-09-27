@@ -187,7 +187,8 @@ function ConfirmationCard({
     }
   }
 
-  const itemCount = order.items.length;
+  // The queue list may carry the order without its lines; then only the total is shown.
+  const itemCount = order.items?.length ?? null;
   const attempts = task.attemptCount;
 
   return (
@@ -201,7 +202,9 @@ function ConfirmationCard({
             {order.orderNumber}
           </Link>
           <p className="mt-0.5 text-sm text-ink-soft">
-            {itemCount === 1 ? t.itemsOne : fmt(t.itemsOther, { n: itemCount })} ·{" "}
+            {itemCount !== null && (
+              <>{itemCount === 1 ? t.itemsOne : fmt(t.itemsOther, { n: itemCount })} · </>
+            )}
             {formatMoney(order.totalAmount, order.currency)}
           </p>
         </div>
