@@ -2119,9 +2119,10 @@ export class ApiClient {
   // ---------------------------------------------------------------------
 
   async getAnalyticsSummary(workspaceId: string, params: AnalyticsSummaryParams = {}) {
-    return this.request<AnalyticsSummary>(
+    const { summary } = await this.request<{ summary: AnalyticsSummary }>(
       `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
     );
+    return summary;
   }
 
   // ---------------------------------------------------------------------
