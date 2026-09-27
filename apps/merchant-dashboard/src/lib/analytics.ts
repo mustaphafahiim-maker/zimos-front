@@ -1,7 +1,7 @@
 import type { AnalyticsSummary } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { getIntlLocale } from "@/i18n/LocaleContext";
+import { fetchAnalyticsPair, takePrefetchedAnalyticsSummary } from "@/lib/analyticsPrefetch";
 
 /** The ranges the analytics and profit screens offer. */
 export type AnalyticsRange = "7d" | "30d" | "90d";
@@ -44,14 +44,10 @@ export interface AnalyticsPair {
  * on its own.
  */
 export function useAnalyticsSummary(workspaceId: string, range: AnalyticsRange) {
-  return useAsync<AnalyticsPair>(async () => {
-    const { current, previous } = rangeWindows(range);
-    const [now, before] = await Promise.all([
-      apiClient.getAnalyticsSummary(workspaceId, current),
-      apiClient.getAnalyticsSummary(workspaceId, previous).catch(() => null),
-    ]);
-    return { current: now, previous: before };
-  }, [workspaceId, range]);
+  return useAsync<AnalyticsPair>(
+    () => takePrefetchedAnalyticsSummary(workspaceId, range) ?? fetchAnalyticsPair(workspaceId, range),
+    [workspaceId, range]
+  );
 }
 
 /**

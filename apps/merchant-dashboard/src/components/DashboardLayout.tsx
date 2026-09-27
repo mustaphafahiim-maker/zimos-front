@@ -4,6 +4,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -90,6 +91,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
 
+  // Analytics fetches two windows of data on mount; starting that request on
+  // hover/focus lets it run alongside the lazy-loaded page chunk instead of
+  // after it, so the numbers are often already there by the time it renders.
+  const workspaceId = currentWorkspace?.id;
+  const prefetchAnalytics = workspaceId ? () => prefetchAnalyticsSummary(workspaceId, "30d") : undefined;
+
   return (
     <>
       <div className="px-5 py-5">
@@ -145,6 +152,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     to={item.to}
                     end={item.to === "/"}
                     onClick={onNavigate}
+                    onMouseEnter={item.key === "analytics" ? prefetchAnalytics : undefined}
+                    onFocus={item.key === "analytics" ? prefetchAnalytics : undefined}
                     className={({ isActive }) =>
                       // Dark primary-dark stays deep (white text sits on it elsewhere),
                       // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
