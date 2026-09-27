@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { Columns3, Palette, Plus, Trash2, X } from "lucide-react";
-import { Button, Input, Label } from "@store-builder/ui";
+import { useState, type ReactNode } from "react";
+import { ChevronDown, Columns3, Palette, Plus, Trash2, X } from "lucide-react";
+import { Button, Input, Label, cn } from "@store-builder/ui";
 import type { PageColumn, PageElement, PageElementType, PageRow, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
@@ -11,6 +11,7 @@ import {
   ROW_SETTING_SPECS,
   SECTION_SETTING_SPECS,
   columnSetting,
+  columnTitle,
   elementPosition,
   moveElement,
   rowSetting,
@@ -781,11 +782,14 @@ function ColumnStyleFieldset({
   section,
   column,
   index,
+  heading = true,
   onChange,
 }: {
   section: PageSection;
   column: PageColumn;
   index: number;
+  /** Off inside a ColumnBlock, whose own row already names the column. */
+  heading?: boolean;
   onChange: (next: PageSection) => void;
 }) {
   const locale = useEditorLocale();
@@ -793,10 +797,12 @@ function ColumnStyleFieldset({
 
   return (
     <div className="space-y-3 border-b border-line bg-paper px-4 py-3">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
-        <Columns3 className="size-3.5" aria-hidden />
-        <span className="min-w-0 flex-1 truncate">{ui.column(index + 1)}</span>
-      </div>
+      {heading && (
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink-soft">
+          <Columns3 className="size-3.5" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">{ui.column(index + 1)}</span>
+        </div>
+      )}
       {COLUMN_SETTING_SPECS.map((spec, i) => (
         <SettingSelect
           key={spec.key}
@@ -806,6 +812,72 @@ function ColumnStyleFieldset({
           onChange={(value) => onChange(setColumnSetting(section, column.id, spec.key, value))}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One column of a laid-out section, foldable.
+ *
+ * A section like the six department tiles is twelve elements deep. Laid out
+ * flat — which is how this panel used to show it — the merchant scrolls past
+ * every other tile's fields to reach the one they clicked. So each column
+ * collapses to a single row that says what it holds (`columnTitle`: its own
+ * first words, "تخفيضات", not "Column 3") and opens on click.
+ *
+ * A section of one or two columns opens flat, exactly as before: there was
+ * never anything there to hunt through, and folding it would only add a click.
+ */
+function ColumnBlock({
+  section,
+  column,
+  index,
+  defaultOpen,
+  onChange,
+  renderElement,
+}: {
+  section: PageSection;
+  column: PageColumn;
+  index: number;
+  defaultOpen: boolean;
+  onChange: (next: PageSection) => void;
+  renderElement: (element: PageElement) => ReactNode;
+}) {
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+  const [open, setOpen] = useState(defaultOpen);
+  const elements = column.elements ?? [];
+  const title = columnTitle(column) ?? ui.column(index + 1);
+
+  return (
+    <div className="border-b border-line last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="cursor-pointer flex w-full items-center gap-2 bg-paper px-4 py-3 text-start hover:bg-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+      >
+        <ChevronDown
+          className={cn("size-4 shrink-0 text-ink-soft transition-transform", !open && "-rotate-90 rtl:rotate-90")}
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-ink">{title}</span>
+          <span className="block text-xs text-ink-soft">{ui.elementCount(elements.length)}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1 text-ink-soft" aria-hidden>
+          {elements.slice(0, 4).map((element) => {
+            const Icon = ELEMENT_SPECS[element.type].icon;
+            return <Icon key={element.id} className="size-3.5" />;
+          })}
+        </span>
+      </button>
+      {open && (
+        <div>
+          <ColumnStyleFieldset section={section} column={column} index={index} heading={false} onChange={onChange} />
+          {elements.map(renderElement)}
+        </div>
+      )}
     </div>
   );
 }
@@ -854,7 +926,10 @@ export function SectionInspector({
   const locale = useEditorLocale();
   const ui = editorUi(locale);
   const elements = sectionElements(section);
-  const multiColumn = sectionColumnCount(section) > 1;
+  const columnCount = sectionColumnCount(section);
+  const multiColumn = columnCount > 1;
+  // Two columns side by side are readable open; a row of six tiles is not.
+  const foldColumns = columnCount > 2;
 
   const fieldset = (element: PageElement) => (
     <ElementFieldset
@@ -906,15 +981,15 @@ export function SectionInspector({
                   <RowStyleFieldset section={section} row={row} index={r} onChange={onChange} />
                 )}
                 {columns.map((column) => (
-                  <div key={column.id}>
-                    <ColumnStyleFieldset
-                      section={section}
-                      column={column}
-                      index={columnIndex++}
-                      onChange={onChange}
-                    />
-                    {(column.elements ?? []).map(fieldset)}
-                  </div>
+                  <ColumnBlock
+                    key={column.id}
+                    section={section}
+                    column={column}
+                    index={columnIndex++}
+                    defaultOpen={foldColumns ? false : true}
+                    onChange={onChange}
+                    renderElement={fieldset}
+                  />
                 ))}
               </div>
             );

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
-import { Input, cn } from "@store-builder/ui";
+import { Input } from "@store-builder/ui";
+import { Select } from "@/components/Select";
 import { BLOCK_GROUPS, BLOCK_PRESETS, ELEMENT_SPECS, type BlockPreset } from "./blocks";
 import { BlockThumbnail } from "./BlockThumbnail";
 import { editorUi, elementLabel, groupLabel, presetText, useEditorLocale } from "./editorLocale";
@@ -151,24 +152,22 @@ export function BlockLibrary({
             className="h-8 ps-8 text-sm"
           />
         </div>
-        <div role="group" aria-label={ui.addBlock} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5">
+        {/* One line, whatever the number of groups. Seven pill tabs never fit
+            this panel: scrolled sideways they hid the groups that matter,
+            wrapped they stacked into a column that ate the space the cards
+            need. A native select shows every group and costs one row. */}
+        <Select
+          value={group}
+          onChange={(e) => setGroup(e.target.value as GroupFilter)}
+          aria-label={ui.addBlock}
+          className="h-8 py-0 text-sm"
+        >
           {tabs.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              aria-pressed={group === tab.value}
-              onClick={() => setGroup(tab.value)}
-              className={cn(
-                "cursor-pointer shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                group === tab.value
-                  ? "bg-primary-soft text-primary-dark dark:text-primary"
-                  : "text-ink-soft hover:bg-paper hover:text-ink"
-              )}
-            >
+            <option key={tab.value} value={tab.value}>
               {tab.label}
-            </button>
+            </option>
           ))}
-        </div>
+        </Select>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5">

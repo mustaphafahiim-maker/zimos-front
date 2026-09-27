@@ -481,7 +481,9 @@ function WebsiteEditor() {
         onMove={(from, to) => setSections((prev) => moveSection(prev, from, to))}
         onInsertAt={requestInsert}
       />
-      <div className="min-h-0 flex-1">
+      {/* Two thirds of the panel, so the cards are always reachable without
+          collapsing the outline above them. */}
+      <div className="min-h-0 flex-[2_1_0]">
         <BlockLibrary
           onAdd={addBlock}
           insertPosition={insertIndex === null ? null : insertIndex + 1}

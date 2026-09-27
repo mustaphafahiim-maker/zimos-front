@@ -93,7 +93,7 @@ export function LayerList({
   );
 
   return (
-    <div className="border-b border-line">
+    <div className={cn("flex min-h-0 flex-col border-b border-line", open ? "flex-[1_1_0]" : "shrink-0")}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -115,7 +115,7 @@ export function LayerList({
       </button>
 
       {open && (
-        <div className="max-h-[40vh] overflow-y-auto px-3 pb-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {sections.length === 0 ? (
             <p className="rounded-[0.5rem] border border-dashed border-line px-3 py-4 text-center text-xs text-ink-soft">
               {ui.emptyPage}

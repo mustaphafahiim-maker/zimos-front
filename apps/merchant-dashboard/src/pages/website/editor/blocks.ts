@@ -128,6 +128,21 @@ interface ElementSpec {
 const HEADING_LEVELS = [1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: `H${n}` }));
 
 /**
+ * How wide a picture is allowed to get. Named rather than measured in pixels,
+ * the way every other look control here works — the storefront turns each name
+ * into a width (see IMAGE_MAX_WIDTH in its elements.tsx) and paints anything it
+ * doesn't recognise, including an image that never chose, the way it always
+ * did: the full width of its column.
+ */
+export const IMAGE_SIZES = [
+  { value: "full", label: "Full width" },
+  { value: "large", label: "Large" },
+  { value: "medium", label: "Medium" },
+  { value: "small", label: "Small" },
+  { value: "icon", label: "Icon" },
+];
+
+/**
  * One entry per allowed element type. `defaultProps` mirrors the props the
  * seeded templates actually use, so a block added here looks like a block that
  * came from a template.
@@ -164,11 +179,20 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   image: {
     label: "Image",
     icon: Image,
+    // No `size` here on purpose: an image that never chose one renders exactly
+    // as it always did (the full width of its column).
     defaultProps: { src: "", alt: "" },
     fields: [
       { key: "src", label: "Image", kind: "image" },
       { key: "alt", label: "Alt text", kind: "text", hint: "Describes the image to screen readers." },
       { key: "href", label: "Links to", kind: "text", placeholder: "/products" },
+      {
+        key: "size",
+        label: "Size",
+        kind: "select",
+        options: IMAGE_SIZES,
+        hint: "How wide it is allowed to get. Anything but full width sits centred in its column.",
+      },
     ],
   },
   gallery: {
@@ -188,6 +212,16 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
           { value: "slideshow", label: "Autoplay slideshow" },
         ],
         hint: "Slideshow ignores Columns and plays full-bleed, one photo at a time.",
+      },
+      {
+        key: "fit",
+        label: "Picture shape",
+        kind: "select",
+        options: [
+          { value: "crop", label: "Fill the square" },
+          { value: "whole", label: "Show the whole picture" },
+        ],
+        hint: "Logos and icons usually want the whole picture; photographs fill the square.",
       },
     ],
   },
@@ -526,7 +560,7 @@ export interface BlockPreset {
   label: string;
   description: string;
   icon: LucideIcon;
-  group: "hero" | "trust" | "commerce" | "story" | "convert" | "basics";
+  group: "store" | "hero" | "trust" | "commerce" | "story" | "convert" | "basics";
   /**
    * The element types this preset drops into one full-width column — or, for
    * a preset with `rows`, every element type in document order (row by row,
@@ -780,7 +814,7 @@ function multiColumn(
   };
 }
 
-export const BLOCK_PRESETS: BlockPreset[] = [
+const CORE_PRESETS: BlockPreset[] = [
   // --------------------------------------------------------------------
   // Six groups, ordered the way a merchant actually builds a page —
   // opening, then trust, then the catalogue, then the story, then the push
@@ -2216,7 +2250,651 @@ export const BLOCK_PRESETS: BlockPreset[] = [
   },
 ];
 
-export const BLOCK_GROUPS: BlockPreset["group"][] = ["hero", "trust", "commerce", "story", "convert", "basics"];
+// ---------------------------------------------------------------------------
+// Ready-made store sections ("store kit")
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the kit's pictures are served from. The same folder ships in
+ * apps/storefront/public and apps/merchant-dashboard/public, so a root-relative
+ * path resolves both on a live storefront and in the editor's own image field —
+ * and stays portable when a store moves to its own domain.
+ */
+const KIT = "/store-kit";
+
+/**
+ * A whole shop front, cut into sections a merchant can drop anywhere — on a
+ * store page or on a funnel step, since both editors read this same list.
+ *
+ * Each preset is one floor of a classic e-commerce home page (opening
+ * slideshow, shop-by-department, product floors, promo banners, brand strip,
+ * journal, service row, footer), laid out in the 12-column grid the storefront
+ * already renders. Nothing new is needed on the backend: every element type
+ * below is on pageTree.js's allowlist.
+ *
+ * Two rules keep these honest and reusable:
+ *
+ *  1. **No colour is baked in.** A section only ever asks for a *role*
+ *     (`background: "primary"`, `"paper"`, `"ink"`…) and the storefront paints
+ *     it in the store's own palette (Store look → colours). So the same
+ *     section is a different store in every shop that adds it, which is the
+ *     whole point of shipping sections instead of whole themes.
+ *  2. **Pictures are placeholders, words are prompts.** The images are the
+ *     kit's own demo photography, there so a merchant sees a finished floor
+ *     the moment it lands. The copy is written AT the merchant ("اكتب هنا…")
+ *     or is a plain section title — never a price, a rating, a delivery time
+ *     or any other promise the store hasn't made.
+ */
+const STORE_KIT_PRESETS: BlockPreset[] = [
+  multiColumn({
+    key: "store-hero-slideshow",
+    label: "Store opening slideshow",
+    description: "A scrolling offer line, a full-width slideshow and the first call to action.",
+    icon: GalleryHorizontal,
+    group: "store",
+    settings: { width: "full", padding: "tight" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["marquee"],
+            content: [
+              {
+                items: [
+                  "اكتب هنا العرض اللي عايز كل زائر يشوفه",
+                  "اكتب هنا سبب تاني يخلي العميل يكمّل",
+                  "اكتب هنا ميزة تالتة في سطر قصير",
+                ],
+                speed: "normal",
+                tone: "primary",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["gallery"],
+            content: [
+              {
+                title: "",
+                layout: "slideshow",
+                columns: 1,
+                images: [`${KIT}/banner/text-image-banner-3.webp`, `${KIT}/banner/text-image-banner-4.webp`],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا الجملة اللي بتوصف متجرك في سطر", level: 1 },
+              { text: "اشرح في سطرين بتبيع إيه ولمين، وسيب الباقي للصور." },
+              { label: "تسوّق دلوقتي", href: "/products", variant: "primary" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-departments",
+    label: "Shop by department",
+    description: "A row of department pictures with a caption under each — where browsing starts.",
+    icon: Grid2x2,
+    group: "store",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [
+              { text: "تسوّق حسب القسم", level: 2 },
+              { text: "اكتب سطر يساعد العميل يعرف يبدأ منين." },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        settings: { gap: "tight" },
+        columns: [
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/1.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "تخفيضات" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/2.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "عروض" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/4.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "جاكيتات" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/5.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "موضة" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/6.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "إكسسوارات" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 2,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/multiple-img/7.webp`, alt: "صورة القسم", href: "/products" },
+              { text: "وصل حديثًا" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-product-floor",
+    label: "Product floor",
+    description: "A titled floor of products from your catalogue, the way a shop front opens its catalogue.",
+    icon: Rows3,
+    group: "store",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text", "product_list"],
+            content: [
+              { text: "منتجات مختارة", level: 2 },
+              { text: "اكتب سطر يوضّح ليه اخترت المنتجات دي بالذات." },
+              { title: "", source: "featured", limit: 8, columns: 4 },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-promo-duo",
+    label: "Two promo banners",
+    description: "Two wide banners side by side, each with its own line and link.",
+    icon: Columns3,
+    group: "store",
+    settings: { padding: "normal" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-7.webp`, alt: "صورة العرض", href: "/products" },
+              { text: "اكتب هنا عنوان العرض الأول", level: 3 },
+              { text: "اكتب سطر قصير عن العرض ده." },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 6,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-6.webp`, alt: "صورة العرض", href: "/products" },
+              { text: "اكتب هنا عنوان العرض التاني", level: 3 },
+              { text: "اكتب سطر قصير عن العرض ده." },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-feature-banner",
+    label: "Picture with a pitch",
+    description: "One big picture beside a heading, a paragraph and a button.",
+    icon: LayoutPanelLeft,
+    group: "store",
+    settings: { padding: "roomy", background: "paper" },
+    rows: [
+      {
+        settings: { gap: "loose" },
+        columns: [
+          {
+            span: 6,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/text-image-banner-9.webp`, alt: "صورة المنتج", href: "" }],
+            settings: { verticalAlign: "center" },
+          },
+          {
+            span: 6,
+            elements: ["text", "heading", "text", "button"],
+            content: [
+              { text: "اكتب هنا سطر تمهيدي قصير" },
+              { text: "اكتب هنا العنوان الكبير للعرض", level: 2 },
+              { text: "اشرح في سطرين إيه اللي بيتباع هنا، ولمين، وليه يستاهل." },
+              { label: "شوف التفاصيل", href: "/products", variant: "primary" },
+            ],
+            settings: { verticalAlign: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-brand-strip",
+    label: "Brand strip",
+    description: "A row of the brand marks you carry, under one title.",
+    icon: BadgeCheck,
+    group: "store",
+    settings: { padding: "normal", background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "gallery"],
+            content: [
+              { text: "براندات عندنا", level: 2 },
+              {
+                title: "",
+                columns: 6,
+                layout: "grid",
+                images: [
+                  `${KIT}/brands/1.webp`,
+                  `${KIT}/brands/2.webp`,
+                  `${KIT}/brands/3.webp`,
+                  `${KIT}/brands/4.webp`,
+                  `${KIT}/brands/5.webp`,
+                  `${KIT}/brands/6.webp`,
+                  `${KIT}/brands/7.webp`,
+                  `${KIT}/brands/8.webp`,
+                  `${KIT}/brands/9.webp`,
+                  `${KIT}/brands/10.webp`,
+                  `${KIT}/brands/11.webp`,
+                  `${KIT}/brands/12.webp`,
+                ],
+                fit: "whole",
+              },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-journal",
+    label: "Journal row",
+    description: "Four article cards — a picture, a title and a line each.",
+    icon: FileText,
+    group: "store",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [
+              { text: "من المدوّنة", level: 2 },
+              { text: "اكتب سطر يقول العميل هيلاقي إيه هنا." },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/blog/post-1.webp`, alt: "صورة المقال", href: "" },
+              { text: "اكتب هنا عنوان المقال", level: 4 },
+              { text: "اكتب سطر يلخّص المقال." },
+            ],
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/blog/post-2.webp`, alt: "صورة المقال", href: "" },
+              { text: "اكتب هنا عنوان المقال", level: 4 },
+              { text: "اكتب سطر يلخّص المقال." },
+            ],
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/blog/post-3.webp`, alt: "صورة المقال", href: "" },
+              { text: "اكتب هنا عنوان المقال", level: 4 },
+              { text: "اكتب سطر يلخّص المقال." },
+            ],
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/blog/post-4.webp`, alt: "صورة المقال", href: "" },
+              { text: "اكتب هنا عنوان المقال", level: 4 },
+              { text: "اكتب سطر يلخّص المقال." },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-service-row",
+    label: "Service row",
+    description: "The four things a shopper checks before buying — shipping, support, returns, payment.",
+    icon: Truck,
+    group: "store",
+    settings: { padding: "compact", background: "paper" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/services-icon/2.png`, alt: "أيقونة الخدمة", href: "", size: "icon" },
+              { text: "الشحن والتوصيل", level: 4 },
+              { text: "اكتب هنا مدة التوصيل والمناطق اللي بتشحن ليها." },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/services-icon/1.png`, alt: "أيقونة الخدمة", href: "", size: "icon" },
+              { text: "خدمة العملاء", level: 4 },
+              { text: "اكتب هنا مواعيد الخدمة وطريقة التواصل معاك." },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/services-icon/4.png`, alt: "أيقونة الخدمة", href: "", size: "icon" },
+              { text: "الاستبدال والاسترجاع", level: 4 },
+              { text: "اكتب هنا سياسة الاستبدال والاسترجاع بتاعتك." },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "heading", "text"],
+            content: [
+              { src: `${KIT}/services-icon/3.png`, alt: "أيقونة الخدمة", href: "", size: "icon" },
+              { text: "طرق الدفع", level: 4 },
+              { text: "اكتب هنا وسائل الدفع المتاحة في متجرك." },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-banner-wide",
+    label: "Full-width banner",
+    description: "One picture across the whole page — a season, a drop, a sale.",
+    icon: Frame,
+    group: "store",
+    settings: { width: "full", padding: "tight" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-2.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-banner-duo",
+    label: "Two banners",
+    description: "Two pictures side by side, each linking somewhere of its own.",
+    icon: Images,
+    group: "store",
+    settings: { padding: "normal" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-3.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+          {
+            span: 6,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-4.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-banner-trio",
+    label: "Three banners",
+    description: "Three equal pictures in a row.",
+    icon: Grid3x3,
+    group: "store",
+    settings: { padding: "normal" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 4,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-402-1.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+          {
+            span: 4,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-402-2.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+          {
+            span: 4,
+            elements: ["image"],
+            content: [{ src: `${KIT}/banner/banner-402-3.jpg`, alt: "صورة البانر", href: "/products" }],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-lookbook-quad",
+    label: "Four picture tiles",
+    description: "A title over four picture tiles, each with its own caption.",
+    icon: LayoutDashboard,
+    group: "store",
+    settings: { padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["heading", "text"],
+            content: [
+              { text: "اكتب هنا عنوان المجموعة", level: 2 },
+              { text: "اكتب سطر يوصف المجموعة دي." },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 3,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-403-1.webp`, alt: "صورة المجموعة", href: "/products" },
+              { text: "اكتب هنا اسم القطعة" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-403-2.webp`, alt: "صورة المجموعة", href: "/products" },
+              { text: "اكتب هنا اسم القطعة" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-403-3.webp`, alt: "صورة المجموعة", href: "/products" },
+              { text: "اكتب هنا اسم القطعة" },
+            ],
+            settings: { align: "center" },
+          },
+          {
+            span: 3,
+            elements: ["image", "text"],
+            content: [
+              { src: `${KIT}/banner/banner-403-4.webp`, alt: "صورة المجموعة", href: "/products" },
+              { text: "اكتب هنا اسم القطعة" },
+            ],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-mosaic",
+    label: "Picture mosaic",
+    description: "One tall picture beside two stacked ones — a lookbook without a slideshow.",
+    icon: Layers,
+    group: "store",
+    settings: { padding: "normal" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 6,
+            elements: ["image"],
+            content: [{ src: `${KIT}/image_plus_1.png`, alt: "صورة المجموعة", href: "/products" }],
+          },
+          {
+            span: 6,
+            elements: ["image", "image"],
+            content: [
+              { src: `${KIT}/image_plus_2.png`, alt: "صورة المجموعة", href: "/products" },
+              { src: `${KIT}/image_plus_3.png`, alt: "صورة المجموعة", href: "/products" },
+            ],
+          },
+        ],
+      },
+    ],
+  }),
+  multiColumn({
+    key: "store-footer",
+    label: "Store footer",
+    description: "The closing floor — a word about the store, three link columns and the payment marks.",
+    icon: PanelBottom,
+    group: "store",
+    settings: { background: "paper", padding: "roomy" },
+    rows: [
+      {
+        columns: [
+          {
+            span: 3,
+            elements: ["text", "social_icons"],
+            content: [{ text: "اكتب هنا سطرين عن متجرك وإيه اللي بتقدمه." }, { links: [] }],
+          },
+          {
+            span: 3,
+            elements: ["list"],
+            content: [{ title: "عن المتجر", items: ["مين إحنا", "تواصل معانا", "فروعنا"] }],
+          },
+          {
+            span: 3,
+            elements: ["list"],
+            content: [{ title: "حسابي", items: ["حسابي", "طلباتي", "المفضلة"] }],
+          },
+          {
+            span: 3,
+            elements: ["list"],
+            content: [{ title: "خدمة العملاء", items: ["الشحن والتوصيل", "الاستبدال والاسترجاع", "الأسئلة الشائعة"] }],
+          },
+        ],
+      },
+      {
+        columns: [
+          {
+            span: 12,
+            elements: ["divider", "image"],
+            content: [undefined, { src: `${KIT}/banner/pay_icons.png`, alt: "وسائل الدفع", href: "", size: "small" }],
+            settings: { align: "center" },
+          },
+        ],
+      },
+    ],
+  }),
+];
+
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS];
+
+export const BLOCK_GROUPS: BlockPreset["group"][] = [
+  "store",
+  "hero",
+  "trust",
+  "commerce",
+  "story",
+  "convert",
+  "basics",
+];
 
 // ---------------------------------------------------------------------------
 // Tree construction + immutable edits
@@ -2286,6 +2964,41 @@ export function createSection(preset: BlockPreset): PageSection {
   // exact shape the seeded templates write.
   if (preset.settings) section.settings = { ...preset.settings };
   return section;
+}
+
+/**
+ * What to call one column of a multi-column section: the first words it
+ * actually carries — a heading, a line of text, a button, a list's title, an
+ * image's alt text — trimmed to fit a panel header. Null when the column holds
+ * nothing with words in it (a bare picture, a spacer), and the caller falls
+ * back to numbering it.
+ *
+ * This is what makes a section of six department tiles editable: the merchant
+ * looks for "تخفيضات", not for "Column 3".
+ */
+export function columnTitle(column: PageColumn, max = 28): string | null {
+  const elements = column.elements ?? [];
+  const read = (element: PageElement, keys: string[]): string => {
+    const props = (element.props ?? {}) as Record<string, unknown>;
+    for (const key of keys) {
+      const value = props[key];
+      if (typeof value === "string" && value.trim() !== "") return value.trim();
+    }
+    return "";
+  };
+
+  // Two passes, because a tile usually leads with its picture: first the words
+  // the shopper actually reads, and only then the picture's alt text. Without
+  // that order, six department tiles would all be called "صورة القسم" — the
+  // alt of the image each one starts with — which names nothing.
+  const words =
+    elements.map((el) => read(el, ["text", "label", "title", "quote"])).find(Boolean) ??
+    elements.map((el) => read(el, ["alt", "name"])).find(Boolean) ??
+    "";
+  if (!words) return null;
+
+  const clean = words.replace(/\s+/g, " ");
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
 /** Every element in a section, in document order, across all rows/columns. */

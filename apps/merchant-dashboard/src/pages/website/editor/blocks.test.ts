@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   BLOCK_GROUPS,
   BLOCK_PRESETS,
+  IMAGE_SIZES,
   COLUMN_SETTING_SPECS,
   ROW_SETTING_SPECS,
   SECTION_SETTING_SPECS,
   columnSetting,
+  columnTitle,
   createSection,
   insertSection,
   rowSetting,
@@ -64,6 +66,9 @@ const ALLOWED_ELEMENT_TYPES = new Set([
 ]);
 
 const SETTING_KEYS = new Set(SECTION_SETTING_SPECS.map((s) => s.key));
+
+/** Where a ready-made store section's pictures are served from. */
+const KIT_PREFIX = "/store-kit/";
 
 /** Every preset with a column layout, paired with its key for `it.each`. */
 const LAID_OUT = BLOCK_PRESETS.filter((p) => p.rows).map((preset) => [preset.key, preset] as const);
@@ -144,14 +149,20 @@ describe("BLOCK_PRESETS", () => {
               expect(content.author, key).toBe("");
               expect(content.rating, key).toBe(0);
             }
-            if (type === "image") expect(content.src ?? "", key).toBe("");
+            // A ready-made store section is the one kind that starts with
+            // pictures already in it — the kit's own, which the suite at the
+            // bottom of this file checks in its place.
+            const isStoreKit = preset.group === "store";
+            if (type === "image" && !isStoreKit) expect(content.src ?? "", key).toBe("");
             if (type === "social_icons") expect(content.links, key).toEqual([]);
-            if (type === "gallery") expect(content.images, key).toEqual([]);
+            if (type === "gallery" && !isStoreKit) expect(content.images, key).toEqual([]);
             if (type === "map") expect(content.address, key).toBe("");
             // Western digits would be a statistic or a price; the numbered
             // steps use Arabic-Indic ordinals, which are labels, not data.
             for (const value of Object.values(content)) {
-              if (typeof value === "string") expect(value, `${key}: ${value}`).not.toMatch(/[0-9]/);
+              // A kit picture's path is a file name, never a number the store quotes.
+              if (typeof value === "string" && !value.startsWith(KIT_PREFIX))
+                expect(value, `${key}: ${value}`).not.toMatch(/[0-9]/);
             }
           });
         }
@@ -455,5 +466,205 @@ describe("insertSection", () => {
     const before = ids(page);
     insertSection(page, createSection(preset), 1);
     expect(ids(page)).toEqual(before);
+  });
+});
+
+/**
+ * The ready-made store sections are the one group that lands on a page already
+ * looking like a shop — pictures and all. That buys two obligations the rest of
+ * the library doesn't have: every picture has to be a file that actually ships,
+ * in both apps that serve it, and the look still has to come from the store's
+ * own palette rather than from a colour written into the preset.
+ */
+describe("the ready-made store sections", () => {
+  const STORE_KIT = BLOCK_PRESETS.filter((p) => p.group === "store");
+
+  /** Every picture path a store-kit preset starts with, wherever it sits. */
+  function kitPictures(preset: BlockPreset): string[] {
+    const rows = preset.rows ?? [];
+    const contents = rows.flatMap((row) => row.columns.flatMap((col) => col.content ?? []));
+    return contents.flatMap((content) => {
+      if (!content) return [];
+      const src = typeof content.src === "string" ? [content.src] : [];
+      const images = Array.isArray(content.images) ? (content.images as unknown[]) : [];
+      return [...src, ...images.filter((i): i is string => typeof i === "string")].filter((v) => v !== "");
+    });
+  }
+
+  /**
+   * The kit as it is actually served: every file under `store-kit` in each
+   * app's own `public` folder, keyed by the path the storefront requests.
+   * Vite's glob reads the folders at transform time, so this needs no node
+   * types in `src` — and a preset pointing at a file that was never copied
+   * (or was copied into only one of the two apps) fails here rather than
+   * as a broken picture on a merchant's page.
+   */
+  function served(files: Record<string, unknown>): Set<string> {
+    return new Set(
+      Object.keys(files).map((path) => path.slice(path.indexOf(KIT_PREFIX))).map((p) => p.split("?")[0])
+    );
+  }
+
+  const SERVED = {
+    "merchant dashboard": served(
+      import.meta.glob("../../../../public/store-kit/**/*", { eager: true, query: "?url" })
+    ),
+    storefront: served(
+      import.meta.glob("../../../../../storefront/public/store-kit/**/*", { eager: true, query: "?url" })
+    ),
+  };
+  it("offers whole floors of a shop front, not single elements", () => {
+    expect(STORE_KIT.length).toBeGreaterThanOrEqual(10);
+    for (const preset of STORE_KIT) {
+      expect(preset.rows, preset.key).toBeDefined();
+      expect(preset.key.startsWith("store-"), preset.key).toBe(true);
+    }
+  });
+
+  it("serves every picture it starts with from the kit folder", () => {
+    for (const preset of STORE_KIT) {
+      for (const src of kitPictures(preset)) {
+        expect(src.startsWith(KIT_PREFIX), `${preset.key}: ${src}`).toBe(true);
+      }
+    }
+  });
+
+  it("points at files that actually ship, in both apps that serve them", () => {
+    for (const [app, files] of Object.entries(SERVED)) {
+      expect(files.size, app).toBeGreaterThan(0);
+      for (const preset of STORE_KIT) {
+        for (const src of kitPictures(preset)) {
+          expect([...files], `${preset.key} on the ${app}`).toContain(src);
+        }
+      }
+    }
+  });
+
+  it("never paints a colour of its own, so every store gets its own", () => {
+    for (const preset of STORE_KIT) {
+      const strings = [
+        ...Object.values(preset.settings ?? {}),
+        ...(preset.rows ?? []).flatMap((row) => [
+          ...Object.values(row.settings ?? {}),
+          ...row.columns.flatMap((col) => [
+            ...Object.values(col.settings ?? {}),
+            ...(col.content ?? []).flatMap((c) => Object.values(c ?? {})),
+          ]),
+        ]),
+      ];
+      for (const value of strings) {
+        if (typeof value !== "string") continue;
+        expect(value, `${preset.key}: ${value}`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+      }
+    }
+  });
+
+  it("gives each one an Arabic name of its own in the library", () => {
+    for (const preset of STORE_KIT) {
+      const ar = presetText(preset.key, preset, "ar");
+      expect(ar.label, preset.key).not.toBe(preset.label);
+      expect(ar.description, preset.key).not.toBe(preset.description);
+    }
+  });
+
+  it("builds a saveable section, the same as any other preset", () => {
+    for (const preset of STORE_KIT) {
+      const section = createSection(preset);
+      expect(section.type).toBe("section");
+      const types = sectionElements(section).map((el) => el.type);
+      expect(types, preset.key).toEqual(preset.elements);
+      for (const type of types) expect([...ALLOWED_ELEMENT_TYPES], preset.key).toContain(type);
+    }
+  });
+});
+
+/**
+ * What the inspector calls one column of a laid-out section. Numbering them
+ * ("Column 4") is useless in a section of six identical tiles, so the panel
+ * asks the column what it holds; these are the rules it answers by.
+ */
+describe("columnTitle", () => {
+  const column = (elements: Array<{ type: string; props?: Record<string, unknown> }>) =>
+    ({
+      id: "c",
+      type: "column",
+      span: 2,
+      elements: elements.map((el, i) => ({ id: `e${i}`, ...el })),
+    }) as unknown as Parameters<typeof columnTitle>[0];
+
+  it("uses the words the shopper reads, not the picture's alt text", () => {
+    // A tile leads with its picture, so alt-first would call every department
+    // tile in a row by the same name.
+    expect(columnTitle(column([{ type: "image", props: { src: "/a.png", alt: "صورة القسم" } }, { type: "text", props: { text: "تخفيضات" } }]))).toBe(
+      "تخفيضات"
+    );
+    expect(columnTitle(column([{ type: "image", props: { src: "/a.png", alt: "صورة القسم" } }]))).toBe("صورة القسم");
+    expect(columnTitle(column([{ type: "image", props: { src: "/a.png" } }, { type: "text", props: { text: "تخفيضات" } }]))).toBe("تخفيضات");
+    expect(columnTitle(column([{ type: "button", props: { label: "تسوّق دلوقتي" } }]))).toBe("تسوّق دلوقتي");
+  });
+
+  it("skips elements with nothing to read and trims what is left", () => {
+    expect(columnTitle(column([{ type: "spacer", props: { height: 48 } }, { type: "heading", props: { text: "  من   المدوّنة " } }]))).toBe(
+      "من المدوّنة"
+    );
+    const long = columnTitle(column([{ type: "heading", props: { text: "ا".repeat(60) } }]), 10);
+    expect(long).toHaveLength(10);
+    expect(long?.endsWith("…")).toBe(true);
+  });
+
+  it("gives back nothing when the column holds no words, so the caller can number it", () => {
+    expect(columnTitle(column([{ type: "image", props: { src: "/a.png", alt: "" } }]))).toBeNull();
+    expect(columnTitle(column([]))).toBeNull();
+  });
+});
+
+/**
+ * The kit ships line icons (166px square) and a payment strip (300x37) beside
+ * full-bleed photography. Rendered the way an image always was — the full width
+ * of its column — those two are blown up several times their own size, so they
+ * say how wide they may get.
+ */
+describe("the store kit's icons and logos", () => {
+  const SIZE_VALUES = new Set(IMAGE_SIZES.map((o) => o.value));
+  const STORE_KIT = BLOCK_PRESETS.filter((p) => p.group === "store");
+
+  /** Every starting content object of every store-kit preset, with its element type. */
+  const contents = STORE_KIT.flatMap((preset) =>
+    (preset.rows ?? []).flatMap((row) =>
+      row.columns.flatMap((col) => col.elements.map((type, i) => ({ preset: preset.key, type, content: col.content?.[i] })))
+    )
+  );
+
+  it("only asks for sizes the storefront knows", () => {
+    for (const { preset, content } of contents) {
+      const size = content?.size;
+      if (size === undefined) continue;
+      expect(SIZE_VALUES, `${preset}: ${String(size)}`).toContain(size);
+    }
+  });
+
+  it("caps the icons and the payment strip instead of stretching them", () => {
+    const sizeOf = (src: string) =>
+      contents.find(({ content }) => typeof content?.src === "string" && (content.src as string).includes(src))?.content?.size;
+    expect(sizeOf("services-icon/1.png")).toBe("icon");
+    expect(sizeOf("services-icon/2.png")).toBe("icon");
+    expect(sizeOf("services-icon/3.png")).toBe("icon");
+    expect(sizeOf("services-icon/4.png")).toBe("icon");
+    expect(sizeOf("pay_icons.png")).toBe("small");
+  });
+
+  it("shows the brand marks whole rather than cropping them square", () => {
+    const brands = contents.find(
+      ({ type, content }) =>
+        type === "gallery" && Array.isArray(content?.images) && (content.images as string[]).some((i) => i.includes("/brands/"))
+    );
+    expect(brands?.content?.fit).toBe("whole");
+  });
+
+  it("leaves the photographs alone, at the full width of their column", () => {
+    const banner = contents.find(
+      ({ content }) => typeof content?.src === "string" && (content.src as string).includes("text-image-banner-9")
+    );
+    expect(banner?.content?.size).toBeUndefined();
   });
 });

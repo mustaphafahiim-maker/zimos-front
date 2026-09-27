@@ -58,11 +58,27 @@ export function TextElement({ props, large }: { props: Props; large?: boolean })
   );
 }
 
+/**
+ * How wide each named image size is allowed to get. A picture that never chose
+ * one — every image on every page written before this existed — falls through
+ * to `full`, which is the plain full-width image this always rendered.
+ *
+ * The names come from the editor (IMAGE_SIZES in its blocks.ts); an unknown
+ * value is treated as "full" rather than dropping the picture.
+ */
+const IMAGE_MAX_WIDTH: Record<string, string> = {
+  large: "44rem",
+  medium: "26rem",
+  small: "15rem",
+  icon: "5.5rem",
+};
+
 export function ImageElement({ props }: { props: Props }) {
   const src = safeUrl(str(props, "src"));
   if (!src) return null;
   const alt = str(props, "alt");
   const href = resolveHref(str(props, "href"));
+  const maxWidth = IMAGE_MAX_WIDTH[str(props, "size", "full")];
 
   const img = (
     // Merchant images are arbitrary remote URLs (the media host is configurable
@@ -79,11 +95,22 @@ export function ImageElement({ props }: { props: Props }) {
     />
   );
 
-  if (!href) return img;
-  return (
+  const linked = href ? (
     <StoreLink href={href} className="block rounded-2xl transition-opacity hover:opacity-90">
       {img}
     </StoreLink>
+  ) : (
+    img
+  );
+
+  // A capped picture is centred in its column rather than pinned to one side,
+  // so a row of icons or logos reads as a row. Uncapped, nothing wraps it and
+  // the markup is exactly what it always was.
+  if (!maxWidth) return linked;
+  return (
+    <div className="mx-auto w-full" style={{ maxWidth }}>
+      {linked}
+    </div>
   );
 }
 
@@ -99,6 +126,10 @@ export function GalleryElement({ props }: { props: Props }) {
   }
 
   const columns = num(props, "columns", 3, 1, 6);
+  // "whole" shows each picture complete inside its square instead of cropping
+  // it to fill — what a strip of logos or icons needs. Anything else, including
+  // the galleries written before this existed, crops as it always did.
+  const whole = str(props, "fit", "crop") === "whole";
 
   return (
     <div>
@@ -114,7 +145,9 @@ export function GalleryElement({ props }: { props: Props }) {
             height={600}
             loading="lazy"
             decoding="async"
-            className="aspect-square w-full rounded-2xl border border-line object-cover"
+            className={`aspect-square w-full rounded-2xl border border-line ${
+              whole ? "bg-paper object-contain p-4" : "object-cover"
+            }`}
           />
         ))}
       </div>

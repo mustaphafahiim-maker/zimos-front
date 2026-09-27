@@ -54,6 +54,8 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
 const FIELD_LABEL_AR: Record<string, string> = {
+  "image.size": "حجم الصورة",
+  "gallery.fit": "شكل الصور",
   text: "النص",
   level: "المستوى",
   src: "الصورة",
@@ -121,6 +123,13 @@ const FIELD_HINT_AR: Record<string, string> = {
 
 /** Keyed "<propKey>.<optionValue>". */
 const OPTION_LABEL_AR: Record<string, string> = {
+  "size.full": "بعرض العمود",
+  "size.large": "كبيرة",
+  "size.medium": "متوسطة",
+  "size.small": "صغيرة",
+  "size.icon": "أيقونة",
+  "fit.crop": "تملأ المربع",
+  "fit.whole": "الصورة كاملة",
   "variant.primary": "أساسي",
   "variant.secondary": "ثانوي",
   "variant.outline": "بإطار",
@@ -140,6 +149,21 @@ const OPTION_LABEL_AR: Record<string, string> = {
 
 /** Keyed by BlockPreset.key. */
 const PRESET_AR: Record<string, { label: string; description: string }> = {
+  // Ready-made store sections (BLOCK_PRESETS: the "store" group).
+  "store-hero-slideshow": { label: "واجهة المتجر بسلايدر", description: "شريط عروض متحرك، وسلايدر صور بعرض الشاشة، وأول زرار شراء." },
+  "store-departments": { label: "تسوّق حسب القسم", description: "صف صور للأقسام وتحت كل صورة اسمها — من هنا بيبدأ التصفح." },
+  "store-product-floor": { label: "طابق منتجات", description: "عنوان وسطر وشبكة منتجات من الكتالوج بتاعك." },
+  "store-promo-duo": { label: "بانرين عروض", description: "بانرين جنب بعض، كل واحد بعنوانه ورابطه." },
+  "store-feature-banner": { label: "صورة كبيرة مع عرض", description: "صورة على جنب، وعنوان وفقرة وزرار على الجنب التاني." },
+  "store-brand-strip": { label: "شريط البراندات", description: "صف لوجوهات البراندات اللي عندك تحت عنوان واحد." },
+  "store-journal": { label: "صف المدوّنة", description: "أربع كروت مقالات، كل كارت صورة وعنوان وسطر." },
+  "store-service-row": { label: "صف الخدمات", description: "الأربع حاجات اللي العميل بيسأل عنها: الشحن، الخدمة، الاسترجاع، الدفع." },
+  "store-banner-wide": { label: "بانر بعرض الصفحة", description: "صورة واحدة بعرض الصفحة كلها — موسم أو تشكيلة أو تخفيضات." },
+  "store-banner-duo": { label: "بانرين", description: "صورتين جنب بعض، كل واحدة برابطها." },
+  "store-banner-trio": { label: "تلات بانرات", description: "تلات صور متساوية في صف واحد." },
+  "store-lookbook-quad": { label: "أربع مربعات صور", description: "عنوان فوق أربع صور، كل صورة تحتها اسمها." },
+  "store-mosaic": { label: "موزاييك صور", description: "صورة طويلة جنبها صورتين فوق بعض — لوك بوك من غير سلايدر." },
+  "store-footer": { label: "فوتر المتجر", description: "الطابق الأخير: كلمة عن المتجر، وتلات أعمدة روابط، وأيقونات الدفع." },
   hero: { label: "واجهة ترحيبية", description: "عنوان كبير وسطر كلام وزرار يدعو للشراء." },
   heading: { label: "عنوان", description: "عنوان قسم لوحده." },
   text: { label: "نص", description: "فقرة كلام." },
@@ -408,6 +432,7 @@ const SECTION_SETTING_OPTION_AR: Record<string, string> = {
  * then the raw utility blocks — rather than by implementation category.
  */
 const GROUP_EN: Record<string, string> = {
+  store: "Ready-made Store Sections",
   hero: "Hero & Announcement",
   trust: "Trust & Social Proof",
   commerce: "Products & Collections",
@@ -417,6 +442,7 @@ const GROUP_EN: Record<string, string> = {
 };
 
 const GROUP_AR: Record<string, string> = {
+  store: "أقسام متجر جاهزة",
   hero: "الافتتاحية والإعلانات",
   trust: "الثقة والتقييمات",
   commerce: "المنتجات والمجموعات",
