@@ -269,6 +269,14 @@ export const PAGE_ELEMENT_TYPES = [
   "product_list",
   "collection_list",
   "cart",
+  // Immersive sections (backend pageTree.js accepts these too).
+  "shader_hero",
+  "product_3d",
+  "orbit_gallery",
+  "scroll_story",
+  // Storefront sections (backend pageTree.js accepts these too).
+  "marquee",
+  "comparison",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */
@@ -299,6 +307,12 @@ export interface PageSection {
   id: string;
   type: "section";
   rows: PageRow[];
+  /**
+   * Free-form look settings the backend stores and passes through untouched
+   * (pageTree.js validates node structure, never this). Optional everywhere:
+   * a section without it renders the way sections always have.
+   */
+  settings?: Record<string, unknown>;
 }
 
 export interface PageTree {
@@ -3815,4 +3829,335 @@ export interface PaymentTimeline {
   refunds: Refund[];
   /** Sync only: true when the gateway could not be reached for an open attempt. */
   unreachable?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Store analytics — /workspaces/:ws/analytics/summary (analytics.view)
+// Orders, revenue and profit are computed from real orders in the range;
+// `traffic` from the events the storefront's own tracker sends
+// (POST /store/:ws/events). Money is integer minor units, rates are
+// percentages (12.5 = 12.5%) and are `null` when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsSummaryParams {
+  /** ISO date. Defaults to 30 days back; a range over 366 days is clamped. */
+  from?: string;
+  /** ISO date, exclusive. Defaults to now. */
+  to?: string;
+}
+
+export interface AnalyticsOrderCounts {
+  placed: number;
+  pending: number;
+  confirmed: number;
+  rejected: number;
+  unreachable: number;
+  postponed: number;
+  cancelled: number;
+  /** Orders whose fulfilment state is `fulfilled`. */
+  delivered: number;
+  returned: number;
+}
+
+export interface AnalyticsRates {
+  /** Confirmed / decided (confirmed + rejected + unreachable). */
+  confirmation: number | null;
+  /** Delivered / confirmed. */
+  delivery: number | null;
+  /** Returned / (delivered + returned). */
+  return: number | null;
+}
+
+export interface AnalyticsRevenue {
+  /** Total of non-cancelled, non-rejected orders. */
+  gross: number;
+  /** Total of delivered orders. */
+  delivered: number;
+  collected: number;
+  refunded: number;
+  /** Shipping charged to customers on delivered orders (courier cost is unknown). */
+  shippingCharged: number;
+  /** Discounts given on delivered orders. */
+  discounts: number;
+  averageOrderValue: number;
+}
+
+export interface AnalyticsProfit {
+  deliveredItemsRevenue: number;
+  discounts: number;
+  /** From the cost snapshot on each order item. */
+  productCost: number;
+  refunded: number;
+  /** deliveredItemsRevenue - discounts - productCost - refunded. */
+  grossProfit: number;
+  /**
+   * Share of delivered quantity that had a cost recorded, as a percentage.
+   * Anything under 100 means `productCost` — and so `grossProfit` — is partial.
+   */
+  costCoverage: number | null;
+}
+
+/** One day of the range. Every day is present, zero-filled. */
+export interface AnalyticsSeriesPoint {
+  /** YYYY-MM-DD in the workspace's timezone. */
+  date: string;
+  orders: number;
+  revenue: number;
+  delivered: number;
+  /** Distinct storefront sessions that started that day; absent on older backends. */
+  sessions?: number;
+}
+
+/**
+ * Storefront visits, from the events the store's own tracker sends
+ * (page views, product views, add to cart, checkout, purchase).
+ */
+export interface AnalyticsTraffic {
+  sessions: number;
+  visitors: number;
+  pageViews: number;
+  productViews: number;
+  /** Distinct sessions that added to cart / reached checkout. */
+  addToCart: number;
+  checkouts: number;
+  purchases: number;
+  /** Sessions that placed an order ÷ sessions, as a percentage; null when there were no sessions. */
+  conversionRate: number | null;
+  addToCartRate: number | null;
+  checkoutRate: number | null;
+  byDevice: Array<{ device: "mobile" | "desktop" | "tablet" | "unknown"; sessions: number }>;
+  bySource: Array<{ source: string; medium: string | null; sessions: number; orders: number }>;
+  topPages: Array<{ path: string; views: number }>;
+}
+
+export interface AnalyticsTopProduct {
+  productId: string | null;
+  name: string | null;
+  quantity: number;
+  revenue: number;
+}
+
+export interface AnalyticsSummary {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  orders: AnalyticsOrderCounts;
+  rates: AnalyticsRates;
+  revenue: AnalyticsRevenue;
+  profit: AnalyticsProfit;
+  series: AnalyticsSeriesPoint[];
+  /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
+  topProducts: AnalyticsTopProduct[];
+  newCustomers: number;
+  /** Absent on a backend without the storefront events endpoint. */
+  traffic?: AnalyticsTraffic;
+}
+
+// ---------------------------------------------------------------------------
+// Web analytics — /workspaces/:ws/analytics/web/*
+// Umami-style page analytics over the storefront's own events: views are
+// page_view events, visitors are distinct sessions, visits are 30-minute
+// slices of a session, a bounce is a visit with one view and no event.
+// ---------------------------------------------------------------------------
+
+export type WebAnalyticsUnit = "minute" | "hour" | "day" | "month";
+export type WebAnalyticsCompare = "prev" | "yoy";
+
+export type WebAnalyticsFilterKey =
+  | "url"
+  | "referrer"
+  | "title"
+  | "browser"
+  | "os"
+  | "device"
+  | "country"
+  | "region"
+  | "city"
+  | "language"
+  | "screen"
+  | "event"
+  | "hostname"
+  | "tag"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term";
+
+export type WebAnalyticsFilters = Partial<Record<WebAnalyticsFilterKey, string>>;
+
+export interface WebAnalyticsRangeParams extends WebAnalyticsFilters {
+  from?: string;
+  to?: string;
+  compare?: WebAnalyticsCompare;
+  unit?: WebAnalyticsUnit;
+  tz?: string;
+}
+
+export interface WebAnalyticsStatsValues {
+  pageviews: number;
+  visitors: number;
+  visits: number;
+  bounces: number;
+  /** Seconds, summed across visits. */
+  totaltime: number;
+  bounceRate: number | null;
+  /** Seconds. */
+  avgVisitTime: number | null;
+}
+
+export interface WebAnalyticsStats extends WebAnalyticsStatsValues {
+  comparison?: WebAnalyticsStatsValues;
+}
+
+export interface WebAnalyticsSeriesPoint {
+  /** Bucket start, ISO. */
+  t: string;
+  pageviews: number;
+  visitors: number;
+}
+
+export interface WebAnalyticsSeries {
+  unit: WebAnalyticsUnit;
+  series: WebAnalyticsSeriesPoint[];
+  comparison?: WebAnalyticsSeriesPoint[];
+}
+
+export type WebAnalyticsMetricType =
+  | "path"
+  | "fullPath"
+  | "entry"
+  | "exit"
+  | "title"
+  | "query"
+  | "referrer"
+  | "channel"
+  | "hostname"
+  | "tag"
+  | "browser"
+  | "os"
+  | "device"
+  | "screen"
+  | "language"
+  | "country"
+  | "region"
+  | "city"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term"
+  | "event";
+
+export interface WebAnalyticsMetricRow {
+  x: string;
+  y: number;
+}
+
+export interface WebAnalyticsMetrics {
+  type: WebAnalyticsMetricType;
+  rows: WebAnalyticsMetricRow[];
+}
+
+export interface WebAnalyticsWeekly {
+  rows: Array<{ dow: number; hour: number; visitors: number }>;
+}
+
+export interface WebAnalyticsRealtimeActivity {
+  sessionId: string;
+  visitId: string | null;
+  type: "pageview" | "event";
+  eventName: string | null;
+  urlPath: string | null;
+  referrerDomain: string | null;
+  browser: string | null;
+  os: string | null;
+  device: string | null;
+  country: string | null;
+  createdAt: string;
+}
+
+export interface WebAnalyticsRealtime {
+  totals: { views: number; visitors: number; events: number; countries: number };
+  series: WebAnalyticsSeriesPoint[];
+  activity: WebAnalyticsRealtimeActivity[];
+  urls: WebAnalyticsMetricRow[];
+  referrers: WebAnalyticsMetricRow[];
+  countries: WebAnalyticsMetricRow[];
+  activeVisitors: number;
+  /** Server time the snapshot was taken, ISO. */
+  timestamp?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Funnel analytics — /workspaces/:ws/analytics/funnels[/:funnelId]
+// Sessions come from the funnel session log the storefront writes as a
+// visitor moves through a funnel; orders are the real orders placed inside
+// it. Rates are percentages, null when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface FunnelAnalyticsTotals {
+  /** Funnel sessions started in the range. */
+  sessions: number;
+  /** Sessions in which a checkout was completed. */
+  completed: number;
+  /** Non-cancelled, non-rejected orders placed inside the funnel. */
+  orders: number;
+  revenue: number;
+  /** Follow-on orders from accepted upsells/downsells, and their revenue. */
+  upsellOrders: number;
+  upsellRevenue: number;
+  /** completed ÷ sessions. */
+  conversionRate: number | null;
+}
+
+export interface FunnelAnalyticsRow extends FunnelAnalyticsTotals {
+  id: string;
+  name: string;
+  subdomain: string | null;
+  status: string;
+}
+
+export interface FunnelAnalyticsOverview {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  totals: FunnelAnalyticsTotals;
+  funnels: FunnelAnalyticsRow[];
+}
+
+export interface FunnelAnalyticsStep {
+  key: string;
+  name: string;
+  stepType: string;
+  /** Sessions that got to this step. */
+  reached: number;
+  /** Sessions still sitting on this step that never moved on. */
+  dropped: number;
+  /** reached ÷ sessions. */
+  reachRate: number | null;
+}
+
+export interface FunnelAnalyticsSource {
+  source: string;
+  medium: string | null;
+  campaign: string | null;
+  sessions: number;
+  completed: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsSeriesPoint {
+  date: string;
+  sessions: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsDetail extends FunnelAnalyticsTotals {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  funnel: { id: string; name: string; subdomain: string | null; status: string };
+  steps: FunnelAnalyticsStep[];
+  sources: FunnelAnalyticsSource[];
+  series: FunnelAnalyticsSeriesPoint[];
 }

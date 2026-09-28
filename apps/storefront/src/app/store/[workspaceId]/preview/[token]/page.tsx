@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { PageRenderer } from "@/components/page-renderer";
+import { PreviewBridge } from "@/components/preview/PreviewBridge";
+import { brandVars, type PreviewTheme } from "@/lib/brandTheme";
 import { getPreview } from "@/lib/previewStore";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
@@ -47,21 +49,60 @@ export default async function StorePreviewPage({
 
   const empty = (entry.tree.sections?.length ?? 0) === 0;
   const locale = await getStoreLocale(store);
+  // The website editor's extras: its unsaved store look, and the click-to-select
+  // canvas. A plain preview has neither and renders as it always has.
+  const options = entry.options;
+  const editable = Boolean(options?.editable && options.parentOrigin);
+  const themeCss = options?.theme ? themeStyle(options.theme) : "";
 
   return (
     <main className="flex-1">
+      {/* First paint in the unsaved look; the bridge takes over once hydrated. */}
+      {themeCss && <style id="zimos-preview-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
       {empty ? (
-        <p className="px-6 py-16 text-center text-sm text-ink-soft">
-          <span dir="rtl">الصفحة دي لسه فاضية.</span> · This page is empty.
-        </p>
+        <div className="px-6 py-16 text-center text-sm text-ink-soft">
+          <p>
+            <span dir="rtl">الصفحة دي لسه فاضية.</span> · This page is empty.
+          </p>
+          {editable && (
+            <button
+              type="button"
+              data-zimos-insert="0"
+              className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-xl border-2 border-dashed border-line px-5 text-sm font-medium text-ink hover:border-primary hover:text-primary"
+            >
+              + <span dir="rtl" className="mx-1">ضيف قسم</span> · Add a section
+            </button>
+          )}
+        </div>
       ) : (
         <PageRenderer
           tree={entry.tree}
           workspaceId={workspaceId}
           currency={store.currency}
           locale={locale}
+          editable={editable}
+        />
+      )}
+      {options?.parentOrigin && (
+        <PreviewBridge
+          parentOrigin={options.parentOrigin}
+          editable={editable}
+          token={token}
+          initialTheme={options.theme}
         />
       )}
     </main>
   );
+}
+
+/**
+ * The unsaved look as a stylesheet rule. Every value comes out of brandVars,
+ * which only ever emits a validated hex or one of its own fixed strings.
+ */
+function themeStyle(theme: PreviewTheme): string {
+  const vars = brandVars(theme as Record<string, unknown>, { complete: true });
+  const body = Object.entries(vars)
+    .map(([name, value]) => `${name}:${value} !important`)
+    .join(";");
+  return body ? `.brand-theme{${body}}` : "";
 }

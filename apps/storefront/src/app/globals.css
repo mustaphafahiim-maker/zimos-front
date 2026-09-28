@@ -236,6 +236,18 @@
   direction: ltr;
 }
 
+/* Transparent-over-hero header (StickyHeader's `data-overlay`): force the
+   dark-surface (light wordmark) export regardless of the `surface` prop or
+   the `.dark` class, since the header sits on arbitrary hero content while
+   unscrolled and always wants the light treatment there. */
+header[data-overlay] .zimos-logo .zimos-logo-on-light {
+  display: none !important;
+}
+
+header[data-overlay] .zimos-logo .zimos-logo-on-dark {
+  display: block !important;
+}
+
 .zimos-mark {
   display: inline-block;
   flex-shrink: 0;
@@ -249,4 +261,147 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ------------------------------------------------------------------ *
+ * Marquee — the `marquee` page-tree section.
+ *
+ * A strip of short claims that slides on forever. The track holds the
+ * same row twice (the second copy is aria-hidden), so translating it by
+ * exactly half its width lands back on an identical frame and the loop
+ * has no seam. That is the whole trick: one keyframe pair, no library,
+ * no JavaScript, and nothing for the server and the client to disagree
+ * about.
+ *
+ * It pauses on hover and on focus-within, so a shopper can read a claim
+ * and a keyboard user can tab through the strip without chasing it.
+ *
+ * RTL runs the other way. With `dir="rtl"` the flex track is laid out
+ * from the container's right edge, so "forward" is a positive translate;
+ * the LTR keyframes would scroll it backwards into the empty side.
+ *
+ * Under reduced motion the whole thing collapses to a plain, wrapping
+ * row of the same claims: the duplicate is dropped (it would read as the
+ * list said twice) and nothing moves.
+ * ------------------------------------------------------------------ */
+@keyframes zimos-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes zimos-marquee-rtl {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+
+.zimos-marquee {
+  overflow: hidden;
+  /* Fade the two ends so claims arrive and leave instead of being cut. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 3rem,
+    #000 calc(100% - 3rem),
+    transparent 100%
+  );
+}
+
+.zimos-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: zimos-marquee var(--zimos-marquee-duration, 40s) linear infinite;
+}
+
+[dir="rtl"] .zimos-marquee-track {
+  animation-name: zimos-marquee-rtl;
+}
+
+.zimos-marquee:hover .zimos-marquee-track,
+.zimos-marquee:focus-within .zimos-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-marquee {
+    overflow: visible;
+    mask-image: none;
+  }
+  .zimos-marquee-track {
+    animation: none;
+    width: 100%;
+  }
+  .zimos-marquee-row {
+    /* Back to an ordinary row of text: no screen-wide minimum to loop over,
+       and no spreading — it wraps and reads left to right like a list. */
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .zimos-marquee-copy {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Announcement bar rotation — `AnnouncementBar`, and the `gallery` element's
+ * `slideshow` layout (`GallerySlideshow`).
+ *
+ * Each message/slide remounts its own text or progress-fill node on a change
+ * (`key={index}`), which is what restarts the animation below — no timer
+ * ever has to fight a transition that was already playing. Reduced motion
+ * turns the fade off outright; the slideshow's autoplay timer never starts
+ * under reduced motion in the first place, so its progress-fill only ever
+ * needs to sit at "done" for the active slide, never animate.
+ * ------------------------------------------------------------------ */
+@keyframes zimos-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.zimos-announce-msg {
+  animation: zimos-fade-in 400ms ease;
+}
+
+@keyframes zimos-slide-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.zimos-slide-progress-fill {
+  transform-origin: left;
+  animation: zimos-slide-progress linear;
+}
+
+[dir="rtl"] .zimos-slide-progress-fill {
+  transform-origin: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-announce-msg {
+    animation: none;
+  }
+  .zimos-slide-progress-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* A small, occasional nudge on the product page's sticky mobile order button —
+   long pauses between wiggles so it reads as a tiny reminder, never a nag. */
+@keyframes zimos-wiggle {
+  0%, 92%, 100% { transform: rotate(0); }
+  93% { transform: rotate(-2deg); }
+  95% { transform: rotate(2deg); }
+  97% { transform: rotate(-1.5deg); }
+  99% { transform: rotate(1deg); }
+}
+
+.zimos-wiggle {
+  animation: zimos-wiggle 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-wiggle {
+    animation: none;
+  }
 }

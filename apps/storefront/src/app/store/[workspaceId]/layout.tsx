@@ -1,16 +1,21 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BackToTop } from "@/components/BackToTop";
+import { CartDrawer } from "@/components/CartDrawer";
 import { HideInFunnel } from "@/components/HideInFunnel";
+import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
+import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { resolveCheckoutSettings } from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
-import { brandStyle, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
+import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
@@ -75,7 +80,11 @@ export async function generateMetadata({
  *  - the shared header/footer, so every page of the store — including one the
  *    merchant built in the website editor — sits under the same branding.
  *    Funnel pages (`/f/…`) are the exception: they draw their own masthead,
- *    so HideInFunnel leaves these two out there.
+ *    so HideInFunnel leaves these two out there;
+ *  - the store's own analytics (StoreAnalytics): one page_view per navigation
+ *    for every page of the store, funnel pages included — the funnel layout
+ *    nests inside this one, so it deliberately doesn't mount it again. An
+ *    unavailable store renders none of this, so it is never tracked.
  */
 export default async function StoreLayout({
   children,
@@ -99,6 +108,8 @@ export default async function StoreLayout({
   const store = state.store;
 
   const locale = await getStoreLocale(store);
+  const t = getDictionary(locale);
+  const collections = await getStoreCollections(workspaceId);
   const info: StoreInfo = {
     workspaceId,
     id: store.id,
@@ -111,10 +122,17 @@ export default async function StoreLayout({
     // still give the forms the defaults.
     checkout: resolveCheckoutSettings(store.checkout),
   };
+  // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
+  // so events carry it as soon as the API sends one.
+  const websiteId = (store as { websiteId?: unknown }).websiteId;
 
   return (
     <StoreRouteProvider basePath={basePath}>
       <StoreContextProvider locale={locale} store={info}>
+        {/* Reads the search params, hence the Suspense boundary. */}
+        <Suspense fallback={null}>
+          <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+        </Suspense>
         <div
           lang={intlLocaleFor(locale)}
           dir={dirFor(locale)}
@@ -125,11 +143,17 @@ export default async function StoreLayout({
           <PaymentsPreviewBanner workspaceId={workspaceId} />
           <HideInFunnel>
             <StoreHeader store={store} locale={locale} />
+            <MobileCategoryStrip collections={collections} t={t} />
           </HideInFunnel>
           <div className="flex flex-1 flex-col">{children}</div>
           <HideInFunnel>
             <StoreFooter store={store} locale={locale} />
+            {/* The slide-over cart: opened by "add to cart" and the header's
+                cart icon. Funnel pages have no cart, so it steps aside with
+                the rest of the store's chrome. */}
+            <CartDrawer />
           </HideInFunnel>
+          <BackToTop label={t.common.backToTop} />
         </div>
       </StoreContextProvider>
     </StoreRouteProvider>

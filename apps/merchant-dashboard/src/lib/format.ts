@@ -147,7 +147,7 @@ export function formatPercent(bp: string | number | null | undefined): string {
  */
 export function formatPercentValue(ratio: number | null | undefined, digits = 1): string {
   if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "—";
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat(getIntlLocale(), {
     style: "percent",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

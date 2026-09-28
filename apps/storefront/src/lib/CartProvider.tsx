@@ -10,8 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, type Cart } from "@store-builder/api-client";
+import { ApiError, parseMoney, type Cart } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { track } from "@/lib/track";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -62,6 +63,15 @@ export interface CartContextValue {
   refreshCart: () => Promise<void>;
   /** Drop the local cart + token, e.g. right after a successful checkout. */
   clearCart: () => void;
+  /**
+   * The slide-over cart drawer (components/CartDrawer). Its open/closed state
+   * lives here — next to the one cart it shows — so "add to cart" anywhere in
+   * the store can open it without a second context. Nothing about the cart's
+   * contents is duplicated: the drawer reads `cart` like every other consumer.
+   */
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -82,6 +92,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => createStorefrontApiClient());
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Resolve the cart once per workspace: reuse a saved token when it still
   // points at a live cart, otherwise create a fresh one and remember its token.
@@ -137,7 +150,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     async (variantId: string, offerId?: string, quantity = 1) => {
       if (!workspaceId) return;
       const token = await ensureToken();
-      setCart(await client.addCartItem(workspaceId, token, { variantId, offerId, quantity }));
+      const next = await client.addCartItem(workspaceId, token, { variantId, offerId, quantity });
+      setCart(next);
+      // AddToCart for the store's own analytics: the line just added, valued at
+      // its unit price × the quantity added (not the whole line, which may have
+      // held the variant already).
+      try {
+        const line = next.items.find((l) => l.variantId === variantId && (l.offerId ?? undefined) === offerId);
+        const unit = line ? parseMoney(line.unitPriceSnapshot) : 0;
+        track("AddToCart", {
+          contentIds: [variantId],
+          valueMinor: Math.round(unit * quantity),
+          currency: next.currency,
+          numItems: quantity,
+        });
+      } catch {
+        /* tracking never breaks the cart */
+      }
     },
     [workspaceId, client, ensureToken]
   );
@@ -201,8 +230,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       refreshCart,
       clearCart,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
     }),
-    [cart, isLoading, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart]
+    [cart, isLoading, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart, isDrawerOpen, openDrawer, closeDrawer]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

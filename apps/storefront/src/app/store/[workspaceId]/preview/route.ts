@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { PageTree } from "@store-builder/api-client";
-import { previewOwner, putPreview } from "@/lib/previewStore";
+import { readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
+import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
 
 /**
  * Receives a draft page tree from the dashboard's live preview (a form post
@@ -17,6 +18,8 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Trees are a few KB; the backend caps them at 10 000 nodes.
 const MAX_TREE_CHARS = 1_000_000;
+// Same ~5KB ceiling the API puts on a saved themeSettings blob.
+const MAX_THEME_CHARS = 5_000;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
@@ -29,6 +32,39 @@ function notice(status: number, arabic: string, english: string) {
     status,
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
   });
+}
+
+/** An exact `scheme://host[:port]` origin, or null. */
+function readOrigin(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.origin === value ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The website editor's extras (see PreviewOptions). All optional — a post
+ * without them is a plain preview, exactly as before. A malformed theme is
+ * dropped rather than refused: the page still previews, in the saved look.
+ */
+function readOptions(form: FormData): PreviewOptions | undefined {
+  const editable = form.get("edit") === "1";
+  const parentOrigin = readOrigin(form.get("parentOrigin"));
+  const rawTheme = String(form.get("theme") ?? "");
+  let theme: PreviewTheme | null = null;
+  if (rawTheme && rawTheme.length <= MAX_THEME_CHARS) {
+    try {
+      theme = readPreviewTheme(JSON.parse(rawTheme));
+    } catch {
+      theme = null;
+    }
+  }
+  if (!editable && !parentOrigin && !theme) return undefined;
+  return { editable: editable && parentOrigin !== null, parentOrigin, theme };
 }
 
 async function canEditWorkspace(workspaceId: string, accessToken: string): Promise<boolean> {
@@ -89,7 +125,7 @@ export async function POST(
     );
   }
 
-  putPreview(token, workspaceId, tree);
+  putPreview(token, workspaceId, tree, readOptions(form));
   // 303 so the frame follows with a GET, whatever method brought it here.
   return NextResponse.redirect(new URL(`/store/${workspaceId}/preview/${token}`, request.url), 303);
 }

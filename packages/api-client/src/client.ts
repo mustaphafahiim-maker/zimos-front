@@ -65,6 +65,17 @@ import type {
   SupportTicketThread,
   AdminSubscription,
   AdminWorkspaceOverview,
+  AnalyticsSummary,
+  AnalyticsSummaryParams,
+  FunnelAnalyticsDetail,
+  FunnelAnalyticsOverview,
+  WebAnalyticsMetricType,
+  WebAnalyticsMetrics,
+  WebAnalyticsRangeParams,
+  WebAnalyticsRealtime,
+  WebAnalyticsSeries,
+  WebAnalyticsStats,
+  WebAnalyticsWeekly,
   ArchivedResponse,
   AuthTokens,
   AuthUser,
@@ -2796,6 +2807,64 @@ export class ApiClient {
       { method: "POST", body: payload, auth: false }
     );
     return session;
+  }
+
+  // ---------------------------------------------------------------------
+  // Store analytics — /workspaces/:ws/analytics/* (analytics.view)
+  // Computed on every call (orders, funnel sessions and the storefront's
+  // own events), so a wide range is a slower request, not a cached one.
+  // ---------------------------------------------------------------------
+
+  async getAnalyticsSummary(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    const { summary } = await this.request<{ summary: AnalyticsSummary }>(
+      `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
+    );
+    return summary;
+  }
+
+  // Funnel analytics — every funnel's sessions, orders and revenue for a
+  // range, and one funnel's step-by-step drop-off, sources and daily series.
+  async getFunnelAnalytics(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsOverview>(
+      `/workspaces/${workspaceId}/analytics/funnels${buildQuery({ ...params })}`
+    );
+  }
+
+  async getFunnelAnalyticsDetail(workspaceId: string, funnelId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsDetail>(
+      `/workspaces/${workspaceId}/analytics/funnels/${funnelId}${buildQuery({ ...params })}`
+    );
+  }
+
+  // Web analytics — Umami-style stats over the store's own page views.
+  private webAnalyticsBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/analytics/web`;
+  }
+
+  async getWebAnalyticsStats(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsStats>(`${this.webAnalyticsBase(workspaceId)}/stats${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsSeries(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsSeries>(`${this.webAnalyticsBase(workspaceId)}/series${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsMetrics(
+    workspaceId: string,
+    type: WebAnalyticsMetricType,
+    params: WebAnalyticsRangeParams & { limit?: number } = {}
+  ) {
+    return this.request<WebAnalyticsMetrics>(
+      `${this.webAnalyticsBase(workspaceId)}/metrics${buildQuery({ ...params, type })}`
+    );
+  }
+
+  async getWebAnalyticsWeekly(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsWeekly>(`${this.webAnalyticsBase(workspaceId)}/weekly${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsRealtime(workspaceId: string, params: { tz?: string } = {}) {
+    return this.request<WebAnalyticsRealtime>(`${this.webAnalyticsBase(workspaceId)}/realtime${buildQuery({ ...params })}`);
   }
 
   // ---------------------------------------------------------------------

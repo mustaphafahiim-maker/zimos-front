@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { BarChart3, Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   funnelsDelete,
@@ -16,7 +16,11 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney, formatPercentValue } from "@/lib/format";
+import { percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { canViewAnalytics } from "@/lib/analyticsAccess";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { RangeSwitch } from "@/components/RangeSwitch";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -26,22 +30,35 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { createFunnelFromStarter, duplicateFunnel, funnelPublicUrl, useFunnelErrorMessage, type StarterTemplateId } from "./funnelAdapter";
+import {
+  STARTER_TEMPLATE_IDS,
+  createFunnelFromStarter,
+  duplicateFunnel,
+  funnelPublicUrl,
+  starterPlan,
+  useFunnelErrorMessage,
+  type StarterTemplateId,
+  type UiStepType,
+} from "./funnelAdapter";
+import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
+import { StepChain } from "./StepChain";
 
 const STRINGS = {
   en: {
     title: "Funnels",
     description: "Single-product sales flows with order bumps, upsells and downsells.",
     createFunnel: "Create funnel",
-    kpiVisits: "Total visits",
-    kpiVisitsHint: "All funnels, all time",
+    kpiVisits: "Sessions",
+    kpiVisitsHint: "All funnels, in the period",
     kpiOrders: "Orders",
-    kpiOrdersHint: "Completed checkouts",
+    kpiOrdersHint: "Placed inside funnels",
     kpiRevenue: "Revenue",
-    kpiRevenueHint: "Including offers",
-    kpiConversion: "Avg. conversion",
-    kpiConversionHint: "Visits → orders, funnels with traffic",
-    statsUnavailable: "Stats appear once analytics is connected",
+    kpiRevenueHint: "Including upsells",
+    kpiConversion: "Conversion",
+    kpiConversionHint: "Checkouts ÷ sessions",
+    statsUnavailable: "Stats couldn't be loaded",
+    statsNoAccess: "Your role can't see analytics",
+    viewAnalytics: "Analytics",
     emptyTitle: "No funnels yet",
     emptyDescription: "Create a funnel to sell a single product with a focused landing page and one-click offers.",
     colFunnel: "Funnel",
@@ -80,15 +97,17 @@ const STRINGS = {
     title: "مسارات البيع",
     description: "مسارات بيع لمنتج واحد مع عروض إضافية عند الدفع وعروض بعد الشراء وعروض بديلة.",
     createFunnel: "إنشاء مسار بيع",
-    kpiVisits: "إجمالي الزيارات",
-    kpiVisitsHint: "كل المسارات، منذ البداية",
+    kpiVisits: "الجلسات",
+    kpiVisitsHint: "كل المسارات، خلال الفترة",
     kpiOrders: "الطلبات",
-    kpiOrdersHint: "عمليات دفع مكتملة",
+    kpiOrdersHint: "الطلبات المُنشأة داخل المسارات",
     kpiRevenue: "الإيرادات",
-    kpiRevenueHint: "شاملة العروض",
-    kpiConversion: "متوسط معدل التحويل",
-    kpiConversionHint: "من الزيارات إلى الطلبات، للمسارات التي بها زيارات",
-    statsUnavailable: "ستظهر الإحصاءات بعد ربط التحليلات",
+    kpiRevenueHint: "شاملة العروض الإضافية",
+    kpiConversion: "معدل التحويل",
+    kpiConversionHint: "عمليات الدفع ÷ الجلسات",
+    statsUnavailable: "تعذّر تحميل الإحصاءات",
+    statsNoAccess: "دورك لا يتيح عرض التحليلات",
+    viewAnalytics: "التحليلات",
     emptyTitle: "لا توجد مسارات بيع بعد",
     emptyDescription: "أنشئ مسار بيع لبيع منتج واحد بصفحة هبوط مركّزة وعروض بنقرة واحدة.",
     colFunnel: "مسار البيع",
@@ -158,22 +177,17 @@ interface StartTemplate {
   id: StarterTemplateId;
   name: string;
   description: string;
+  types: UiStepType[];
 }
 
-const START_TEMPLATES: Record<Locale, StartTemplate[]> = {
-  en: [
-    { id: "blank", name: "Blank", description: "Landing → checkout → thank you. Build the rest yourself." },
-    { id: "cod-single", name: "COD single product", description: "One product, cash on delivery, phone-first checkout." },
-    { id: "upsell-downsell", name: "Upsell + downsell", description: "Post-purchase offer with a fallback if declined." },
-    { id: "lead-magnet", name: "Lead magnet", description: "Collect a phone number first, sell on the thank-you page." },
-  ],
-  ar: [
-    { id: "blank", name: "فارغ", description: "صفحة الهبوط ← صفحة الدفع ← صفحة الشكر. وأكمل الباقي بنفسك." },
-    { id: "cod-single", name: "منتج واحد بالدفع عند الاستلام", description: "منتج واحد، دفع عند الاستلام، وصفحة دفع تبدأ برقم الهاتف." },
-    { id: "upsell-downsell", name: "عرض بعد الشراء + عرض بديل", description: "عرض بعد الشراء مع عرض بديل إذا رفضه العميل." },
-    { id: "lead-magnet", name: "جذب العملاء المحتملين", description: "اجمع رقم الهاتف أولًا، ثم اعرض البيع في صفحة الشكر." },
-  ],
-};
+/** Names/descriptions live in FunnelEditorPage.strings (the editor offers the same starters on an empty funnel). */
+function startTemplates(locale: Locale): StartTemplate[] {
+  return STARTER_TEMPLATE_IDS.map((id) => ({
+    id,
+    ...STARTER_TEMPLATE_TEXT[locale][id],
+    types: starterPlan(id, locale).steps.map((s) => s.type),
+  }));
+}
 
 function partialIdOf(err: unknown): string | null {
   const id = (err as { partialFunnelId?: unknown } | null)?.partialFunnelId;
@@ -206,6 +220,18 @@ export function FunnelsPage() {
     return new Map(entries);
   }, [workspaceId, idsKey]);
 
+  // Funnel stats need analytics.view; a role without it gets dashes, not a 403.
+  const { currentWorkspace } = useWorkspace();
+  const analyticsAllowed = canViewAnalytics(currentWorkspace?.role);
+  const [range, setRange] = useState<AnalyticsRange>("30d");
+  const stats = useAsync(
+    () =>
+      analyticsAllowed ? apiClient.getFunnelAnalytics(workspaceId, rangeWindows(range).current) : Promise.resolve(null),
+    [workspaceId, range, analyticsAllowed]
+  );
+  const statsById = new Map((stats.data?.funnels ?? []).map((row) => [row.id, row]));
+  const currency = stats.data?.currency ?? "EGP";
+
   const numberFmt = new Intl.NumberFormat(intlLocale);
 
   const statusLabel: Record<FunnelStatus, string> = {
@@ -214,12 +240,16 @@ export function FunnelsPage() {
     paused: t.statusPaused,
   };
 
-  /** No analytics endpoint exists for funnels yet: never fabricate numbers. */
+  /** Shown while the stats load, when they failed or aren't allowed: never a made-up number. */
+  const noStatReason = !analyticsAllowed ? t.statsNoAccess : stats.error ? t.statsUnavailable : undefined;
   const noStat = (
-    <span title={t.statsUnavailable} aria-label={t.statsUnavailable}>
+    <span title={noStatReason} aria-label={noStatReason}>
       —
     </span>
   );
+  const stat = (value: number | null | undefined, render: (v: number) => string) =>
+    value === null || value === undefined ? noStat : <bdi dir="ltr">{render(value)}</bdi>;
+  const totals = stats.data?.totals;
 
   async function changeStatus(f: FunnelDto) {
     setBusyId(f.id);
@@ -290,18 +320,41 @@ export function FunnelsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="size-4" aria-hidden /> {t.createFunnel}
-          </Button>
+          <>
+            {analyticsAllowed && <RangeSwitch value={range} onChange={setRange} />}
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="size-4" aria-hidden /> {t.createFunnel}
+            </Button>
+          </>
         }
       />
 
       <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard label={t.kpiVisits} value={noStat} icon={<Eye />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiOrders} value={noStat} icon={<ShoppingBag />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiRevenue} value={noStat} icon={<Wallet />} hint={t.statsUnavailable} />
-          <KpiCard label={t.kpiConversion} value={noStat} icon={<MousePointerClick />} hint={t.statsUnavailable} />
+          <KpiCard
+            label={t.kpiVisits}
+            value={stat(totals?.sessions, numberFmt.format)}
+            icon={<Eye />}
+            hint={noStatReason ?? t.kpiVisitsHint}
+          />
+          <KpiCard
+            label={t.kpiOrders}
+            value={stat(totals?.orders, numberFmt.format)}
+            icon={<ShoppingBag />}
+            hint={noStatReason ?? t.kpiOrdersHint}
+          />
+          <KpiCard
+            label={t.kpiRevenue}
+            value={stat(totals?.revenue, (v) => formatMoney(v, currency))}
+            icon={<Wallet />}
+            hint={noStatReason ?? t.kpiRevenueHint}
+          />
+          <KpiCard
+            label={t.kpiConversion}
+            value={stat(totals?.conversionRate, (v) => formatPercentValue(percentToRatio(v)))}
+            icon={<MousePointerClick />}
+            hint={noStatReason ?? t.kpiConversionHint}
+          />
         </div>
 
         {funnels.length === 0 ? (
@@ -334,6 +387,7 @@ export function FunnelsPage() {
                   const busy = busyId === f.id;
                   const url = funnelPublicUrl(f.subdomain);
                   const count = stepCounts.data?.get(f.id);
+                  const row = statsById.get(f.id);
                   return (
                     <tr
                       key={f.id}
@@ -356,13 +410,28 @@ export function FunnelsPage() {
                       <td className="px-4 py-3 tabular-nums text-ink-soft">
                         <bdi dir="ltr">{count === undefined ? "—" : numberFmt.format(count)}</bdi>
                       </td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{noStat}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.sessions, numberFmt.format)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.orders, numberFmt.format)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">
+                        {stat(row ? row.conversionRate : undefined, (v) => formatPercentValue(percentToRatio(v)))}
+                      </td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">
+                        {stat(row?.revenue, (v) => formatMoney(v, currency))}
+                      </td>
                       <td className="px-4 py-3 text-ink-soft">{formatDate(f.updatedAt)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-0.5">
+                          {analyticsAllowed && (
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              title={t.viewAnalytics}
+                              aria-label={t.viewAnalytics}
+                              onClick={() => navigate(`/analytics/funnels/${f.id}`)}
+                            >
+                              <BarChart3 className="size-4" aria-hidden />
+                            </Button>
+                          )}
                           <Button size="icon-sm" variant="ghost" title={c.edit} aria-label={c.edit} onClick={() => navigate(`/funnels/${f.id}`)}>
                             <Pencil className="size-4" aria-hidden />
                           </Button>
@@ -437,6 +506,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
   const describeError = useFunnelErrorMessage();
   const [name, setName] = useState("");
   const [templateId, setTemplateId] = useState<StarterTemplateId>("blank");
+  const templates = useMemo(() => startTemplates(locale), [locale]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -475,7 +545,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
       <div className="space-y-2">
         <Label>{t.startFrom}</Label>
         <div className="grid gap-2 sm:grid-cols-2">
-          {START_TEMPLATES[locale].map((tpl) => {
+          {templates.map((tpl) => {
             const active = tpl.id === templateId;
             return (
               <label
@@ -488,6 +558,7 @@ function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCre
                 <input type="radio" name="funnel-template" className="sr-only" checked={active} onChange={() => setTemplateId(tpl.id)} />
                 <p className={cn("text-sm font-semibold", active ? "text-primary-dark" : "text-ink")}>{tpl.name}</p>
                 <p className="mt-0.5 text-xs text-ink-soft">{tpl.description}</p>
+                <StepChain types={tpl.types} className="mt-2" />
               </label>
             );
           })}

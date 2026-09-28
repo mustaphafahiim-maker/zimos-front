@@ -1,9 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
+  BarChart3,
   ClipboardCheck,
   CreditCard,
   Globe,
   LayoutDashboard,
+  LineChart,
   LifeBuoy,
   Package,
   Settings,
@@ -18,6 +21,7 @@ import {
   Workflow,
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
+import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
 
 export type NavKey =
   | "overview"
@@ -34,17 +38,26 @@ export type NavKey =
   | "payments"
   | "website"
   | "funnels"
+  | "analytics"
+  | "webAnalytics"
+  | "realtime"
   | "settings"
   | "support";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "sell" | "catalog" | "grow" | "storefront";
+export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
   key: NavKey;
   to: string;
   icon: LucideIcon;
+  /**
+   * Role keys that don't see this entry: the system roles the backend refuses
+   * for the page's API (the page still handles a 403 for any other role).
+   * Entries without it are shown to everyone, as before.
+   */
+  hiddenForRoles?: ReadonlySet<string>;
 }
 
 export interface NavGroup {
@@ -101,6 +114,15 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "reports",
+    labelKey: "reports",
+    items: [
+      { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
+    ],
+  },
+  {
     id: "storefront",
     labelKey: "storefront",
     items: [{ key: "website", to: "/website", icon: Globe }],
@@ -114,6 +136,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+/** Whether a role sees an entry (see NavItem.hiddenForRoles). */
+export function isNavItemVisible(item: NavItem, role: string | null | undefined): boolean {
+  return !item.hiddenForRoles?.has(role ?? "");
+}
 
 /** Flat list, for anything that iterates items without caring about grouping. */
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
@@ -148,6 +175,9 @@ export const NAV_LABELS = {
     payments: "Payments",
     website: "Website",
     funnels: "Funnels",
+    analytics: "Analytics",
+    webAnalytics: "Web analytics",
+    realtime: "Realtime",
     settings: "Settings",
     support: "Contact support",
   },
@@ -166,6 +196,9 @@ export const NAV_LABELS = {
     payments: "المدفوعات",
     website: "الموقع",
     funnels: "مسارات البيع",
+    analytics: "التحليلات",
+    webAnalytics: "زيارات الموقع",
+    realtime: "مباشر الآن",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
   },
@@ -177,12 +210,14 @@ export const NAV_GROUP_LABELS = {
     sell: "Sell",
     catalog: "Catalog",
     grow: "Grow",
+    reports: "Reports",
     storefront: "Storefront",
   },
   ar: {
     sell: "البيع",
     catalog: "الكتالوج",
     grow: "النمو",
+    reports: "التقارير",
     storefront: "واجهة المتجر",
   },
 } satisfies Messages<NavGroupKey>;

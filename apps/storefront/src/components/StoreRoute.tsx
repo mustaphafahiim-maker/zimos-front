@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
+import { useSelectedLayoutSegment } from "next/navigation";
 import { storeHref } from "@/lib/storeHref";
 
 /**
@@ -38,6 +39,17 @@ export function useStoreBasePath(): string {
  * `/products/mug`. Absolute URLs, anchors and `mailto:` are left untouched, so
  * merchant-authored hrefs can go straight through.
  */
+/**
+ * True on the store's home page ("/") and nowhere else — the store layout's
+ * one child route with no further segment selected. The same technique
+ * `ShopChrome` already uses to spot the funnel routes, read here instead to
+ * gate the transparent-over-hero header: it never guesses from what the page
+ * looks like, only from which route is actually showing.
+ */
+export function useIsStoreHome(): boolean {
+  return useSelectedLayoutSegment() === null;
+}
+
 export function StoreLink({
   href,
   ...props

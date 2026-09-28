@@ -2,7 +2,8 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { useEffect, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem } from "@/lib/navigation";
+import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem, isNavItemVisible } from "@/lib/navigation";
+import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -67,6 +68,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navLabels = useT(NAV_LABELS);
   const groupLabels = useT(NAV_GROUP_LABELS);
   const storeName = currentWorkspace?.name;
+  const role = currentWorkspace?.role;
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(readCollapsedGroups);
   useEffect(() => {
@@ -102,7 +104,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
           const isClosed = Boolean(collapsed[group.id]);
-          const items = isClosed ? group.items.filter((i) => i.to === activeTo) : group.items;
+          // Entries this role can't use are left out; a group left empty goes too.
+          const visible = group.items.filter((i) => isNavItemVisible(i, role));
+          if (visible.length === 0) return null;
+          const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
 
           return (
             <div key={group.id} className={cn(index > 0 && "mt-4")}>
@@ -126,8 +131,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   <NavLink
                     key={item.to}
                     to={item.to}
-                    end={item.to === "/"}
+                    end={item.to === "/" || item.to === "/analytics"}
                     onClick={onNavigate}
+                    // Start the analytics fetch while the pointer is still on
+                    // the link, so the page opens with its numbers loading.
+                    onMouseEnter={
+                      item.key === "analytics" && currentWorkspace
+                        ? () => prefetchAnalyticsSummary(currentWorkspace.id, "30d")
+                        : undefined
+                    }
                     className={({ isActive }) =>
                       // Dark primary-dark stays deep (white text sits on it elsewhere),
                       // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.

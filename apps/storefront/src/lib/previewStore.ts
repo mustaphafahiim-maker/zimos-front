@@ -1,4 +1,5 @@
 import type { PageTree } from "@store-builder/api-client";
+import type { PreviewTheme } from "./brandTheme";
 
 /**
  * Draft page trees posted by the dashboard's live preview, held briefly in
@@ -13,10 +14,25 @@ import type { PageTree } from "@store-builder/api-client";
  * shared store here instead.
  */
 
+/**
+ * What the website editor sends besides the tree, so its preview can serve as
+ * the editing canvas. A plain preview (the funnel builder, the template
+ * gallery) sends none of it and renders exactly as before.
+ */
+export interface PreviewOptions {
+  /** Draw the click-to-select section outlines (components/preview/PreviewBridge). */
+  editable: boolean;
+  /** The dashboard window framing the preview, the only origin the bridge talks to. */
+  parentOrigin: string | null;
+  /** The editor's unsaved store look, laid over the saved one. */
+  theme: PreviewTheme | null;
+}
+
 export interface PreviewEntry {
   workspaceId: string;
   tree: PageTree;
   expiresAt: number;
+  options?: PreviewOptions;
 }
 
 const TTL_MS = 15 * 60 * 1000;
@@ -49,12 +65,17 @@ export function previewOwner(token: string): string | null {
   return entry && entry.expiresAt > Date.now() ? entry.workspaceId : null;
 }
 
-export function putPreview(token: string, workspaceId: string, tree: PageTree): void {
+export function putPreview(
+  token: string,
+  workspaceId: string,
+  tree: PageTree,
+  options?: PreviewOptions
+): void {
   const now = Date.now();
   const entries = store();
   // Re-insert so a refreshed preview counts as the newest entry.
   entries.delete(token);
-  entries.set(token, { workspaceId, tree, expiresAt: now + TTL_MS });
+  entries.set(token, { workspaceId, tree, expiresAt: now + TTL_MS, ...(options ? { options } : {}) });
   sweep(now);
 }
 

@@ -4,7 +4,8 @@
 // (providers.scenarios.mjs), upstream 424/502 errors and unverified J&T
 // credentials (upstream.scenarios.mjs), J&T typed address names
 // (typednames.scenarios.mjs), the subscription / suspension banner and the
-// creation lock (access.scenarios.mjs), driven in Chromium against a fully
+// creation lock (access.scenarios.mjs), and the analytics screens and their
+// role gating (analytics.scenarios.mjs), driven in Chromium against a fully
 // stubbed API.
 //
 //   npm run test:e2e                 all scenarios
@@ -49,6 +50,7 @@ import { newStoreRoleGatedScreens } from "./workspace.scenarios.mjs";
 import { expiringBannerDismissedForTheDay, restrictedBannerAndCreationLock, suspendedBanner } from "./access.scenarios.mjs";
 import { connectUpstreamAndUnverified, upstreamBookingErrors } from "./upstream.scenarios.mjs";
 import { cardShowsBothNotes, markedTypesEachLevel, namesRequiredThenResend } from "./typednames.scenarios.mjs";
+import { analyticsHiddenWithoutPermission, analyticsScreens, analyticsScreensArabic } from "./analytics.scenarios.mjs";
 
 // Toasts and alerts wrap tracking numbers in bidi isolates (U+2066 … U+2069).
 const LRI = String.fromCharCode(0x2066);
@@ -582,6 +584,9 @@ const SCENARIOS = {
   V: expiringBannerDismissedForTheDay,
   W: restrictedBannerAndCreationLock,
   X: suspendedBanner,
+  Y: analyticsScreens,
+  Y2: analyticsScreensArabic,
+  Z: analyticsHiddenWithoutPermission,
 };
 
 const only = process.argv[2]?.split(",").filter(Boolean);

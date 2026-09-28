@@ -3,8 +3,9 @@ import type { PageElementType } from "@store-builder/api-client";
 
 /**
  * Language for the shared page-editor pieces — the field inspector, the block
- * library, the image pickers. The website editor never provides a value, so it
- * stays English; the funnel builder provides the language its merchant picked.
+ * library, the image pickers. The website editor provides the dashboard's own
+ * language (LocaleContext); the funnel builder provides the language its
+ * merchant picked.
  *
  * English strings stay where they are (ELEMENT_SPECS, BLOCK_PRESETS, the
  * components); this module only holds the Arabic side and falls back to the
@@ -43,10 +44,18 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   product_list: "شبكة منتجات",
   collection_list: "المجموعات",
   cart: "السلة",
+  shader_hero: "واجهة متحركة",
+  product_3d: "منتج مجسّم",
+  orbit_gallery: "عرض دوّار",
+  scroll_story: "قصة مع التمرير",
+  marquee: "شريط عبارات متحرك",
+  comparison: "جدول مقارنة",
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
 const FIELD_LABEL_AR: Record<string, string> = {
+  "image.size": "حجم الصورة",
+  "gallery.fit": "شكل الصور",
   text: "النص",
   level: "المستوى",
   src: "الصورة",
@@ -55,9 +64,9 @@ const FIELD_LABEL_AR: Record<string, string> = {
   title: "العنوان",
   images: "الصور",
   columns: "عدد الأعمدة",
-  "button.label": "نص الزرار",
+  "button.label": "نص الزر",
   "countdown.label": "النص",
-  variant: "الشكل",
+  variant: "المظهر",
   "video.url": "رابط الفيديو",
   "embed.url": "رابط التضمين",
   height: "الارتفاع (px)",
@@ -80,17 +89,47 @@ const FIELD_LABEL_AR: Record<string, string> = {
   showBuyButton: "إظهار زرار الشراء",
   source: "المعروض",
   limit: "العدد",
+  subtitle: "السطر الفرعي",
+  ctaLabel: "نص الزر",
+  ctaHref: "رابط الزر",
+  modelUrl: "ملف 3D (.glb)",
+  collectionId: "المجموعة",
+  steps: "الخطوات",
+  "marquee.items": "العبارات",
+  speed: "السرعة",
+  tone: "المظهر",
+  usLabel: "اسم عمودك",
+  themLabel: "اسم العمود الثاني",
+  "comparison.rows": "الصفوف",
+  "gallery.layout": "شكل العرض",
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
   "rich_text.text": "نص عادي بس في المحرر ده — أدوات التنسيق جاية بعدين.",
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "embed.url": "رابط للتضمين. السيرفر بيرفض الـ HTML الخام.",
-  "product_card.productId": "سيبه فاضي علشان يتعرض أحدث منتج.",
+  "product_card.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
+  "shader_hero.height": "تتحرك الخلفية بألوان متجرك نفسه.",
+  "product_3d.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
+  "product_3d.modelUrl":
+    "اتركه فارغًا لاستخدام ملف GLB المرفوع مع صور المنتج. بدون ملف يُخفى هذا القسم.",
+  "orbit_gallery.collectionId": "اتركه فارغًا ليعمل على الكتالوج كله.",
+  "scroll_story.steps": "لكل خطوة صورتها، وتظهر مع تمرير العميل.",
+  "marquee.items":
+    "كل عبارة بضع كلمات فقط. يتوقف الشريط عندما يمرّر العميل المؤشر فوقه أو يصل إليه بلوحة المفاتيح، ويبقى ثابتًا لمن يطلب حركة أقل.",
+  "comparison.rows": "كلام قصير في كل خانة — أو اكتب yes أو no لتظهر علامة صح أو خطأ.",
+  "gallery.layout": "يتجاهل العرض التلقائي عدد الأعمدة، ويعرض الصور بعرض الصفحة واحدة تلو الأخرى.",
 };
 
 /** Keyed "<propKey>.<optionValue>". */
 const OPTION_LABEL_AR: Record<string, string> = {
+  "size.full": "بعرض العمود",
+  "size.large": "كبيرة",
+  "size.medium": "متوسطة",
+  "size.small": "صغيرة",
+  "size.icon": "أيقونة",
+  "fit.crop": "تملأ الإطار",
+  "fit.whole": "الصورة كاملة",
   "variant.primary": "أساسي",
   "variant.secondary": "ثانوي",
   "variant.outline": "بإطار",
@@ -99,10 +138,32 @@ const OPTION_LABEL_AR: Record<string, string> = {
   "source.newest": "الأحدث",
   "source.featured": "المميزة",
   "source.best_selling": "الأكثر مبيعًا",
+  "speed.slow": "بطيئة",
+  "speed.normal": "عادية",
+  "speed.fast": "سريعة",
+  "tone.line": "سطر عادي",
+  "tone.primary": "كبسولات بلون العلامة التجارية",
+  "layout.grid": "شبكة",
+  "layout.slideshow": "عرض تلقائي",
 };
 
 /** Keyed by BlockPreset.key. */
 const PRESET_AR: Record<string, { label: string; description: string }> = {
+  // Ready-made store sections (BLOCK_PRESETS: the "store" group).
+  "store-hero-slideshow": { label: "واجهة المتجر مع شرائح", description: "شريط عروض متحرك، وشرائح صور بعرض الشاشة، وأول زر شراء." },
+  "store-departments": { label: "تسوّق حسب القسم", description: "صف صور للأقسام وتحت كل صورة اسمها — ومن هنا يبدأ التصفح." },
+  "store-product-floor": { label: "قسم منتجات", description: "عنوان وسطر وشبكة منتجات من الكتالوج الخاص بك." },
+  "store-promo-duo": { label: "لافتتا عروض", description: "لافتتان متجاورتان، لكل منهما عنوانها ورابطها." },
+  "store-feature-banner": { label: "صورة كبيرة مع عرض", description: "صورة في جانب، وعنوان وفقرة وزر في الجانب الآخر." },
+  "store-brand-strip": { label: "شريط العلامات التجارية", description: "صف لشعارات العلامات التجارية لديك تحت عنوان واحد." },
+  "store-journal": { label: "صف المدوّنة", description: "أربع بطاقات مقالات، في كل بطاقة صورة وعنوان وسطر." },
+  "store-service-row": { label: "صف الخدمات", description: "الأمور الأربعة التي يسأل عنها العميل: الشحن، والخدمة، والاسترجاع، والدفع." },
+  "store-banner-wide": { label: "لافتة بعرض الصفحة", description: "صورة واحدة بعرض الصفحة كلها — لموسم أو تشكيلة أو تخفيضات." },
+  "store-banner-duo": { label: "لافتتان", description: "صورتان متجاورتان، لكل منهما رابطها." },
+  "store-banner-trio": { label: "ثلاث لافتات", description: "ثلاث صور متساوية في صف واحد." },
+  "store-lookbook-quad": { label: "أربع صور مربعة", description: "عنوان فوق أربع صور، وتحت كل صورة اسمها." },
+  "store-mosaic": { label: "فسيفساء صور", description: "صورة طويلة بجانبها صورتان فوق بعضهما — كتالوج إطلالات بلا شرائح." },
+  "store-footer": { label: "تذييل المتجر", description: "القسم الأخير: كلمة عن المتجر، وثلاثة أعمدة روابط، وأيقونات الدفع." },
   hero: { label: "واجهة ترحيبية", description: "عنوان كبير وسطر كلام وزرار يدعو للشراء." },
   heading: { label: "عنوان", description: "عنوان قسم لوحده." },
   text: { label: "نص", description: "فقرة كلام." },
@@ -127,13 +188,267 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   cart: { label: "السلة", description: "محتويات سلة العميل." },
   divider: { label: "فاصل", description: "خط أفقي بين الأقسام." },
   spacer: { label: "مسافة", description: "مساحة فاضية بين الأقسام." },
+
+  // الأقسام الجاهزة — تأتي بنص مبدئي تغيّره أنت.
+  "living-hero": { label: "واجهة متحركة", description: "شاشة افتتاحية تتحرك بهدوء بألوان متجرك." },
+  "product-3d": { label: "منتج مجسّم", description: "يدير العميل المنتج بإصبعه. يتطلب ملف ‎.glb‎." },
+  "orbit-gallery": { label: "عرض دوّار", description: "منتجات على أسطوانة دوّارة بدل الشبكة العادية." },
+  "scroll-story": { label: "قصة مع التمرير", description: "قبل وبعد، أو كيف يُصنع — خطوة بخطوة مع التمرير." },
+  "hero-trust": {
+    label: "واجهة مع أسباب الثقة",
+    description: "شاشة افتتاحية ومعها الأسباب التي تجعل العميل الجديد يثق بك.",
+  },
+  "living-hero-intro": {
+    label: "واجهة متحركة بنص",
+    description: "الشاشة الافتتاحية المتحركة، وفيها عنوان وسطر نصي وزر جاهزة.",
+  },
+  "hero-slideshow": {
+    label: "عرض تلقائي للصور",
+    description: "صورك بعرض الصفحة وتتبدّل تلقائيًا — مع زر إيقاف وتشغيل ونقاط للتنقل.",
+  },
+  features: { label: "مميزاتك", description: "عنوان قصير والمميزات التي تريد أن يتذكرها العميل." },
+  "why-us": {
+    label: "لماذا تشتري منّا",
+    description: "إجابات عمّا يمنع العميل من الشراء — صف لكل مخاوف.",
+  },
+  "bundle-offer": { label: "عروض وباقات", description: "سطر عن الباقة، والمنتجات التي تتضمنها، وزر لباقي العروض." },
+  "before-after": {
+    label: "قبل وبعد",
+    description: "خطوتان مع التمرير — الحال قبل وبعد. أضف صورة لكل منهما.",
+  },
+  "product-showcase-3d": {
+    label: "عرض منتج مجسّم",
+    description: "عنوان وسطر نصي والمنتج الذي يديره العميل بإصبعه.",
+  },
+  "orbit-showcase": { label: "عرض دوّار بعنوان", description: "عرض دوّار للمنتجات على أسطوانة، وفوقه عنوان." },
+  lookbook: { label: "كتالوج الإطلالات", description: "شبكة صور بعنوان، لمجموعة أو موسم." },
+  "faq-cta": { label: "أسئلة شائعة مع خطوة تالية", description: "أسئلة وإجاباتها، ثم طريقة للتواصل معك بشأن باقي الأسئلة." },
+  "flash-offer": { label: "عرض لفترة محدودة", description: "عدّاد تنازلي فوق شروط العرض وزر شراء." },
+  "shipping-returns": {
+    label: "الشحن والاستبدال",
+    description: "أين تشحن، وكيف تستبدل، وماذا تقبل — بكلماتك أنت.",
+  },
+  "claims-strip": {
+    label: "شريط عبارات متحرك",
+    description: "سطر من العبارات القصيرة يتحرك عبر الصفحة ويتوقف عندما ينظر إليه العميل.",
+  },
+  comparison: {
+    label: "جدول مقارنة",
+    description: "عمودك بجانب البديل، صفًا بصف — بكلماتك أنت ودون ذكر أسماء.",
+  },
+  testimonials: {
+    label: "آراء العملاء",
+    description: "ثلاث بطاقات آراء فارغة — املأها بآراء عملاء حقيقيين لديك.",
+  },
+
+  // مكتبة الأقسام — أقسام موزّعة على أعمدة، جاهزة لتُضاف إلى الصفحة كما هي.
+  "announcement-bar": {
+    label: "شريط إعلان",
+    description: "سطر واحد بلون علامتك أعلى الصفحة — عرض، أو ملاحظة عن الشحن، أو تاريخ.",
+  },
+  "hero-split": {
+    label: "واجهة بصورة",
+    description: "عنوان وسطر نصي وزر في جانب، وصورتك في الجانب الآخر.",
+  },
+  "hero-gallery": {
+    label: "واجهة بصف صور",
+    description: "جملة افتتاحية وزر في المنتصف، وتحتهما ثلاث صور من عندك.",
+  },
+  "cta-band": {
+    label: "شريط دعوة للشراء",
+    description: "شريط بلون علامتك: جملة واحدة، وسبب واحد، وزر واحد.",
+  },
+  bento: {
+    label: "شبكة بينتو",
+    description: "أربع بطاقات بمقاسين — صورة وسطر في كل منها، كما تعرض مواقع التطبيقات مميزاتها.",
+  },
+  "footer-links": {
+    label: "روابط التذييل",
+    description: "قائمتا روابط وحساباتك على وسائل التواصل جنبًا إلى جنب، لأسفل الصفحة.",
+  },
+  "feature-grid-3": {
+    label: "ثلاث بطاقات مميزات",
+    description: "ثلاث بطاقات، في كل منها أيقونة وعنوان قصير وسطر — صف المميزات الكلاسيكي.",
+  },
+  "feature-grid-4": {
+    label: "أربع مميزات",
+    description: "أربع نقاط قصيرة بعرض الصفحة، لكل منها أيقونة، في المنتصف.",
+  },
+  "image-text": {
+    label: "صورة ونص",
+    description: "صورتك في جانب، وعنوان ونص وزر في الجانب الآخر.",
+  },
+  "text-image": {
+    label: "نص وصورة",
+    description: "الاثنان نفسهما بالعكس: النص أولًا ثم الصورة — بدّل بينهما على طول الصفحة.",
+  },
+  multirow: {
+    label: "قصة متبادلة",
+    description: "خطوتان أو ثلاث، صورة ونص في كل منها بالتناوب — كيف يُصنع أو كيف يعمل، خطوة بخطوة.",
+  },
+  "related-products": {
+    label: "منتجات أخرى قد تعجبك",
+    description: "صف صغير تحت المحتوى الأساسي — منتجات مشابهة يراها العميل.",
+  },
+  "newsletter-banner": {
+    label: "نشرة بريدية بصورة",
+    description: "دعوة الاشتراك نفسها بجانب صورة، بدل أن تكون وحدها في المنتصف.",
+  },
+  "rich-text-band": {
+    label: "شريط نص طويل",
+    description: "عنوان فوق نص طويل — قصتك، أو طريقتك، أو وعدك للعميل.",
+  },
+  "faq-split": {
+    label: "أسئلة شائعة في عمودين",
+    description: "عنوان وسطر في جانب، والأسئلة وإجاباتها في الجانب الآخر.",
+  },
+  newsletter: {
+    label: "نشرة بريدية",
+    description: "دعوة في المنتصف ليبقى العميل على تواصل معك، وتحتها نموذج الاشتراك.",
+  },
+  "contact-map": {
+    label: "تواصل مع خريطة",
+    description: "نموذج التواصل بجانب عنوانك ورابطه على الخريطة.",
+  },
+  "trust-badges": {
+    label: "علامات ثقة",
+    description: "أربع رسائل طمأنة صغيرة في صف ضيق — الشحن، والاستبدال، والدفع، والدعم.",
+  },
+  "comparison-pitch": {
+    label: "مقارنة بكلمة",
+    description: "عنوان وزر بجانب جدول «لدينا» و«في مكان آخر».",
+  },
+  "pricing-tiers": {
+    label: "باقات",
+    description: "ثلاث بطاقات — اسم، وسطر، وما تتضمنه، وزر. الأسعار تكتبها أنت.",
+  },
+  "video-hero": {
+    label: "افتتاحية بفيديو",
+    description: "الفيديو الخاص بك أولًا، ثم عنوان وسطر وزر في المنتصف.",
+  },
+  "logo-strip": {
+    label: "شريط شعارات",
+    description: "صف هادئ من ست صور صغيرة — شركاء، أو نقاط بيع، أو صحافة — على شريط بلون الصفحة.",
+  },
+  collage: {
+    label: "كولاج صور",
+    description: "أربع صور في صفين بعروض مختلفة — واحدة عريضة بجانب أخرى ضيقة، ثم العكس.",
+  },
+  "stats-row": {
+    label: "صف أرقام",
+    description: "أربعة أرقام كبيرة وتحت كل منها كلمة — طلبات، سنوات، مدن. الأرقام تكتبها أنت.",
+  },
+  steps: {
+    label: "كيف يعمل",
+    description: "عنوان، ثم ثلاث خطوات مرقّمة بعرض الصفحة.",
+  },
+  timeline: {
+    label: "خط زمني",
+    description: "عنوان، ثم محطاتك في قائمتين متجاورتين — الأقدم أولًا.",
+  },
+  team: {
+    label: "الفريق",
+    description: "ثلاثة أشخاص — صورة واسم وسطر لكل منهم. املأها من فريقك أنت.",
+  },
+  "testimonial-wall": {
+    label: "جدار الآراء",
+    description: "عنوان وثلاث بطاقات آراء فارغة متجاورة — املأها بآراء عملاء حقيقيين.",
+  },
+  "testimonial-spotlight": {
+    label: "رأي واحد بارز",
+    description: "كلمة عميل واحد، كبيرة في المنتصف على لون العلامة الفاتح. تبقى فارغة حتى تضيفها.",
+  },
+  "claims-band": {
+    label: "شريط عبارات بعنوان",
+    description: "عنوان في المنتصف فوق شريط العبارات القصيرة المتحرك.",
+  },
+  "process-story": {
+    label: "كيف يُصنع",
+    description: "عنوان وسطر، ثم ثلاث خطوات مع التمرير — أضف صورة لكل منها.",
+  },
+  "collection-tiles": {
+    label: "بلاطات المجموعات",
+    description: "عنوان وسطر فوق مجموعاتك، بعرض واسع.",
+  },
+  "featured-product": {
+    label: "منتج مميز",
+    description: "منتج واحد بجانب أسباب شرائه وزر.",
+  },
+  "product-grid-intro": {
+    label: "شبكة منتجات بمقدمة",
+    description: "عنوان وسطر، ثم شبكة منتجاتك.",
+  },
+  "bundle-tiers": {
+    label: "ثلاثة عروض",
+    description: "ثلاثة منتجات متجاورة، لكل منها زر شراء — اختر منتجًا لكل عمود.",
+  },
+  "countdown-band": {
+    label: "شريط العدّاد",
+    description: "شريط داكن فيه اسم العرض والعدّاد وزر الشراء.",
+  },
+};
+
+/** Keyed by SectionSettingSpec.key — section, column and row settings alike. */
+const SECTION_SETTING_LABEL_AR: Record<string, string> = {
+  background: "الخلفية",
+  padding: "المسافة العلوية والسفلية",
+  width: "عرض المحتوى",
+  surface: "المظهر",
+  align: "محاذاة النص",
+  verticalAlign: "المكان الرأسي",
+  gap: "المسافة بين الأعمدة",
+};
+
+/** Keyed "<settingKey>.<optionValue>". */
+const SECTION_SETTING_OPTION_AR: Record<string, string> = {
+  "background.none": "بدون",
+  "background.paper": "لون الصفحة",
+  "background.raised": "لون بارز",
+  "background.primary-soft": "لون العلامة الفاتح",
+  "background.primary": "لون العلامة",
+  "background.ink": "داكن",
+  "padding.tight": "ضيقة جدًا",
+  "padding.compact": "ضيقة",
+  "padding.normal": "عادية",
+  "padding.roomy": "واسعة",
+  "width.normal": "عادي",
+  "width.wide": "عريض",
+  "width.full": "بعرض الشاشة",
+  "surface.none": "بدون",
+  "surface.card": "بطاقة",
+  "align.start": "من البداية",
+  "align.center": "في المنتصف",
+  "verticalAlign.start": "أعلى",
+  "verticalAlign.center": "في المنتصف",
+  "verticalAlign.end": "أسفل",
+  "gap.tight": "ضيقة",
+  "gap.normal": "عادية",
+  "gap.loose": "واسعة",
+};
+
+/**
+ * Keyed by BlockPreset.group. The six groups follow the order a merchant
+ * actually builds a page in — opening, trust, catalogue, story, conversion,
+ * then the raw utility blocks — rather than by implementation category.
+ */
+const GROUP_EN: Record<string, string> = {
+  store: "Ready-made Store Sections",
+  hero: "Hero & Announcement",
+  trust: "Trust & Social Proof",
+  commerce: "Products & Collections",
+  story: "Features & Story",
+  convert: "FAQ, Contact & Conversion",
+  basics: "Building Blocks",
 };
 
 const GROUP_AR: Record<string, string> = {
-  Layout: "التخطيط",
-  Content: "المحتوى",
-  Media: "الوسائط",
-  Commerce: "البيع",
+  store: "أقسام متجر جاهزة",
+  hero: "الافتتاحية والإعلانات",
+  trust: "الثقة والتقييمات",
+  commerce: "المنتجات والمجموعات",
+  story: "المميزات والقصة",
+  convert: "الأسئلة والتواصل والإقناع",
+  basics: "عناصر أساسية",
 };
 
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
@@ -172,14 +487,30 @@ export function presetText(
   return locale === "ar" ? (PRESET_AR[key] ?? fallback) : fallback;
 }
 
+export function sectionSettingLabel(key: string, fallback: string, locale: EditorLocale): string {
+  return locale === "ar" ? (SECTION_SETTING_LABEL_AR[key] ?? fallback) : fallback;
+}
+
+export function sectionSettingOption(
+  key: string,
+  value: string,
+  fallback: string,
+  locale: EditorLocale
+): string {
+  return locale === "ar" ? (SECTION_SETTING_OPTION_AR[`${key}.${value}`] ?? fallback) : fallback;
+}
+
 export function groupLabel(group: string, locale: EditorLocale): string {
-  return locale === "ar" ? (GROUP_AR[group] ?? group) : group;
+  return (locale === "ar" ? GROUP_AR[group] : GROUP_EN[group]) ?? group;
 }
 
 const UI_EN = {
   addBlock: "Add a block",
   addBlockHint: "Appended to the bottom of the page.",
   closePanel: "Close panel",
+  collapsePanel: "Collapse panel",
+  expandPanel: "Expand panel",
+  popularBlocks: "Commonly used",
   deleteSection: "Delete section",
   noElements: "This section has no elements to edit.",
   elementCount: (n: number) => `${n} ${n === 1 ? "element" : "elements"}`,
@@ -195,6 +526,21 @@ const UI_EN = {
   questionAria: (i: number) => `Question ${i}`,
   answerAria: (i: number) => `Answer ${i}`,
   removeQuestion: (i: number) => `Remove question ${i}`,
+  addStep: "Add step",
+  stepTitle: "Step title",
+  stepBody: "Step text",
+  stepTitleAria: (i: number) => `Step ${i} title`,
+  stepBodyAria: (i: number) => `Step ${i} text`,
+  stepImageAria: (i: number) => `Step ${i} picture`,
+  removeStep: (i: number) => `Remove step ${i}`,
+  addRow: "Add row",
+  rowLabel: "What you're comparing",
+  rowUs: "Your column",
+  rowThem: "Other column",
+  rowLabelAria: (i: number) => `Row ${i}`,
+  rowUsAria: (i: number) => `Row ${i} — your column`,
+  rowThemAria: (i: number) => `Row ${i} — other column`,
+  removeRow: (i: number) => `Remove row ${i}`,
   addLink: "Add link",
   platformAria: (i: number) => `Platform ${i}`,
   linkAria: (i: number) => `Link ${i}`,
@@ -207,6 +553,128 @@ const UI_EN = {
   prepareFailed: "Could not prepare the selected image.",
   moveElementUp: (label: string) => `Move ${label} up`,
   moveElementDown: (label: string) => `Move ${label} down`,
+  sectionStyle: "Section style",
+  sectionStyleHint: "How this whole section sits on the page.",
+  column: (n: number) => `Column ${n}`,
+  columnHint: "This column's own look. Columns stack on phones.",
+  rowGap: (n: number) => `Row ${n}`,
+
+  // --- the website editor's own frame (header, panes, dialogs) ---
+  editorTitle: "Website editor",
+  backToWebsite: "Back to website",
+  editingPage: (title: string) => `Editing "${title}". Click a section in the preview to change it.`,
+  unsavedChanges: "Unsaved changes",
+  allSaved: "All changes saved",
+  undo: "Undo",
+  redo: "Redo",
+  save: "Save",
+  saving: "Saving…",
+  publish: "Publish",
+  publishing: "Publishing…",
+  publishSaveFirst: "Save your changes first — publishing ships the last saved version.",
+  publishHint: "Publish the saved draft of every page",
+  cantPublish: "This site can't be published yet:",
+  pageSaved: "Page saved.",
+  lookSaved: "Store look saved.",
+  savedBoth: "Page and store look saved.",
+  saveFailed: "Couldn't save the page.",
+  lookSaveFailed: "Couldn't save the store look.",
+  published: (n: number) => `Site published — revision ${n} is live.`,
+  publishFailed: "Couldn't publish the site.",
+  noPagesToEdit: "This site has no pages to edit yet.",
+  noPages: "This site has no pages yet. Use “New page” above to add one.",
+  pageCreated: (title: string) => `"${title}" created.`,
+  pageDeleted: (title: string) => `"${title}" deleted.`,
+
+  layersTitle: "Page sections",
+  layersHint: "Drag to reorder, click to edit.",
+  showLayers: "Show page sections",
+  hideLayers: "Hide page sections",
+  emptyPage: "This page is empty. Pick a block below to start.",
+  addHere: "Add a section here",
+  addAbove: "Add a section above",
+  addBelow: "Add a section below",
+  moveSectionUp: "Move this section up",
+  moveSectionDown: "Move this section down",
+  insertingAt: (n: number) => `Adding as section ${n} of the page.`,
+  cancelInsert: "Cancel",
+  searchBlocks: "Search blocks",
+  noBlocksFound: "No blocks match that search.",
+  allGroups: "All",
+
+  previewTitle: "Live preview",
+  previewHint: "Your real storefront, unsaved changes included. Click a section to edit it.",
+  previewRefresh: "Refresh preview",
+  previewDesktop: "Desktop width",
+  previewTablet: "Tablet width",
+  previewMobile: "Mobile width",
+  previewClose: "Close preview",
+  previewFrame: "Storefront preview",
+
+  tabSection: "Section",
+  tabLook: "Store look",
+  pickSection: "Click a section in the preview or in the list to edit it here.",
+
+  deleteSectionTitle: "Delete this section?",
+  deleteSectionBody: (label: string) =>
+    `"${label}" and its content will be removed from the page. Nothing is deleted until you save.`,
+  deletePageTitle: "Delete this page?",
+  deletePageBody: (title: string, path: string) =>
+    `"${title}" (${path}) and everything on it will be permanently deleted. This can't be undone.`,
+  deletePage: "Delete page",
+  leaveTitle: "Leave without saving?",
+  switchBody: "This page has changes you haven't saved. Switching pages will discard them.",
+  switchConfirm: "Discard and switch",
+  leaveBody: "You have changes you haven't saved. Leaving the editor will discard them.",
+  leaveConfirm: "Discard and leave",
+
+  lookHint:
+    "Colours, font, corners and logo for your whole store. They go live on your store as soon as you save — no publishing needed.",
+  palettes: "Ready palettes",
+  paletteName: (key: string) =>
+    ((
+      {
+        nile: "Nile",
+        midnight: "Midnight",
+        rose: "Rose",
+        forest: "Forest",
+        violet: "Violet",
+        ocean: "Ocean",
+        charcoal: "Charcoal",
+      } as Record<string, string>
+    )[key] ?? key),
+  usePalette: (name: string) => `Use the ${name} palette`,
+  primaryColor: "Main colour",
+  primaryColorHint: "Buttons, links and highlights.",
+  accentColor: "Accent colour",
+  accentColorHint: "Badges and small touches.",
+  storeDefaultColor: "Not set yet — your store uses the default colour.",
+  font: "Font",
+  fontName: (key: string) =>
+    (({ classic: "Classic", modern: "Modern", tajawal: "Tajawal", system: "System" }) as Record<string, string>)[
+      key
+    ] ?? key,
+  corners: "Corners",
+  radiusName: (key: string) =>
+    (({ sharp: "Sharp", soft: "Soft", round: "Round" }) as Record<string, string>)[key] ?? key,
+  logo: "Logo",
+  logoHint: "Shown in your store's header.",
+
+  announcementBar: "Announcement bar",
+  announcementBarHint: "One line above your header — a promo, a shipping note, a closure date.",
+  announcementMessages: "Messages",
+  announcementMessagePlaceholder: "e.g. Free shipping over $50",
+  announcementMessageAria: (i: number) => `Message ${i}`,
+  announcementAddMessage: "Add message",
+  announcementRemoveMessage: (i: number) => `Remove message ${i}`,
+  announcementMoveUp: (i: number) => `Move message ${i} up`,
+  announcementMoveDown: (i: number) => `Move message ${i} down`,
+  announcementNeedsMessage: "Add at least one message — otherwise this saves as turned off.",
+  announcementLink: "Link (optional)",
+  announcementLinkHint: "Where the bar sends shoppers who click it.",
+  announcementBackground: "Bar background",
+  announcementTextColor: "Bar text colour",
+  announcementColorSetHint: "Applies to the announcement bar only.",
 };
 
 export type EditorUi = typeof UI_EN;
@@ -215,6 +683,9 @@ const UI_AR: EditorUi = {
   addBlock: "إضافة بلوك",
   addBlockHint: "بيتضاف في آخر الصفحة.",
   closePanel: "إغلاق اللوحة",
+  collapsePanel: "طي اللوحة",
+  expandPanel: "فتح اللوحة",
+  popularBlocks: "الأكثر استخدامًا",
   deleteSection: "حذف القسم",
   noElements: "القسم ده مفيهوش عناصر تتعدّل.",
   elementCount: (n) => (n === 1 ? "عنصر واحد" : n === 2 ? "عنصرين" : `${n} عناصر`),
@@ -230,6 +701,21 @@ const UI_AR: EditorUi = {
   questionAria: (i) => `السؤال ${i}`,
   answerAria: (i) => `الإجابة ${i}`,
   removeQuestion: (i) => `حذف السؤال ${i}`,
+  addStep: "إضافة خطوة",
+  stepTitle: "عنوان الخطوة",
+  stepBody: "نص الخطوة",
+  stepTitleAria: (i) => `عنوان الخطوة ${i}`,
+  stepBodyAria: (i) => `نص الخطوة ${i}`,
+  stepImageAria: (i) => `صورة الخطوة ${i}`,
+  removeStep: (i) => `حذف الخطوة ${i}`,
+  addRow: "إضافة صف",
+  rowLabel: "ما الذي تقارنه",
+  rowUs: "عمودك",
+  rowThem: "العمود الثاني",
+  rowLabelAria: (i) => `الصف ${i}`,
+  rowUsAria: (i) => `الصف ${i} — عمودك`,
+  rowThemAria: (i) => `الصف ${i} — العمود الثاني`,
+  removeRow: (i) => `حذف الصف ${i}`,
   addLink: "إضافة رابط",
   platformAria: (i) => `المنصة ${i}`,
   linkAria: (i) => `الرابط ${i}`,
@@ -242,6 +728,122 @@ const UI_AR: EditorUi = {
   prepareFailed: "مقدرناش نجهّز الصورة اللي اخترتها.",
   moveElementUp: (label) => `تحريك ${label} لفوق`,
   moveElementDown: (label) => `تحريك ${label} لتحت`,
+  sectionStyle: "شكل القسم",
+  sectionStyleHint: "كيف يظهر القسم كله في الصفحة.",
+  column: (n) => `العمود ${n}`,
+  columnHint: "مظهر هذا العمود وحده. تظهر الأعمدة فوق بعضها على الهاتف.",
+  rowGap: (n) => `الصف ${n}`,
+
+  editorTitle: "محرر الموقع",
+  backToWebsite: "العودة إلى الموقع",
+  editingPage: (title) => `أنت تعدّل "${title}". انقر أي قسم في المعاينة لتغييره.`,
+  unsavedChanges: "توجد تعديلات غير محفوظة",
+  allSaved: "كل التعديلات محفوظة",
+  undo: "تراجع",
+  redo: "إعادة",
+  save: "حفظ",
+  saving: "جارٍ الحفظ…",
+  publish: "نشر",
+  publishing: "جارٍ النشر…",
+  publishSaveFirst: "احفظ تعديلاتك أولًا — ينشر النشرُ آخر نسخة محفوظة.",
+  publishHint: "انشر آخر نسخة محفوظة من كل الصفحات",
+  cantPublish: "لا يمكن نشر الموقع بعد:",
+  pageSaved: "حُفظت الصفحة.",
+  lookSaved: "حُفظ مظهر المتجر.",
+  savedBoth: "حُفظت الصفحة ومظهر المتجر.",
+  saveFailed: "تعذّر حفظ الصفحة.",
+  lookSaveFailed: "تعذّر حفظ مظهر المتجر.",
+  published: (n) => `نُشر الموقع — النسخة ${n} تعمل الآن.`,
+  publishFailed: "تعذّر نشر الموقع.",
+  noPagesToEdit: "لا توجد في هذا الموقع صفحات لتعديلها بعد.",
+  noPages: "لا توجد في هذا الموقع صفحات بعد. استخدم «صفحة جديدة» في الأعلى لإضافة صفحة.",
+  pageCreated: (title) => `أُنشئت "${title}".`,
+  pageDeleted: (title) => `حُذفت "${title}".`,
+
+  layersTitle: "أقسام الصفحة",
+  layersHint: "اسحب لإعادة الترتيب، وانقر للتعديل.",
+  showLayers: "إظهار أقسام الصفحة",
+  hideLayers: "إخفاء أقسام الصفحة",
+  emptyPage: "هذه الصفحة فارغة. اختر قسمًا من الأسفل للبدء.",
+  addHere: "أضف قسمًا هنا",
+  addAbove: "أضف قسمًا أعلاه",
+  addBelow: "أضف قسمًا أسفله",
+  moveSectionUp: "حرّك هذا القسم لأعلى",
+  moveSectionDown: "حرّك هذا القسم لأسفل",
+  insertingAt: (n) => `سيُضاف بوصفه القسم رقم ${n} في الصفحة.`,
+  cancelInsert: "إلغاء",
+  searchBlocks: "ابحث عن قسم",
+  noBlocksFound: "لا توجد أقسام بهذا الاسم.",
+  allGroups: "الكل",
+
+  previewTitle: "معاينة حيّة",
+  previewHint: "هذا متجرك الحقيقي بالتعديلات التي لم تحفظها بعد. انقر أي قسم لتعديله.",
+  previewRefresh: "تحديث المعاينة",
+  previewDesktop: "عرض الكمبيوتر",
+  previewTablet: "عرض الجهاز اللوحي",
+  previewMobile: "عرض الهاتف",
+  previewClose: "إغلاق المعاينة",
+  previewFrame: "معاينة المتجر",
+
+  tabSection: "القسم",
+  tabLook: "مظهر المتجر",
+  pickSection: "انقر أي قسم في المعاينة أو في القائمة لتعديله هنا.",
+
+  deleteSectionTitle: "حذف هذا القسم؟",
+  deleteSectionBody: (label) => `سيُزال "${label}" بكل محتواه من الصفحة. لا يُحذف شيء إلا عند الحفظ.`,
+  deletePageTitle: "حذف هذه الصفحة؟",
+  deletePageBody: (title, path) => `ستُحذف "${title}" (${path}) وكل محتواها نهائيًا. لا يمكن التراجع عن هذه الخطوة.`,
+  deletePage: "احذف الصفحة",
+  leaveTitle: "الخروج دون حفظ؟",
+  switchBody: "في هذه الصفحة تعديلات غير محفوظة، وستضيع إذا انتقلت إلى صفحة أخرى.",
+  switchConfirm: "تجاهلها وانتقل",
+  leaveBody: "لديك تعديلات غير محفوظة، وستضيع إذا خرجت من المحرر.",
+  leaveConfirm: "تجاهلها واخرج",
+
+  lookHint: "الألوان والخط والحواف والشعار لمتجرك كله. تُطبَّق على متجرك فور الحفظ — دون نشر.",
+  palettes: "ألوان جاهزة",
+  paletteName: (key) =>
+    ((
+      {
+        nile: "النيل",
+        midnight: "منتصف الليل",
+        rose: "ورد",
+        forest: "غابة",
+        violet: "بنفسجي",
+        ocean: "بحر",
+        charcoal: "فحم",
+      } as Record<string, string>
+    )[key] ?? key),
+  usePalette: (name) => `استخدم ألوان ${name}`,
+  primaryColor: "اللون الأساسي",
+  primaryColorHint: "الأزرار والروابط والعناصر البارزة.",
+  accentColor: "لون التمييز",
+  accentColorHint: "الشارات واللمسات الصغيرة.",
+  storeDefaultColor: "لم يُحدَّد بعد — يستخدم متجرك اللون الافتراضي.",
+  font: "الخط",
+  fontName: (key) =>
+    (({ classic: "كلاسيكي", modern: "عصري", tajawal: "تجوال", system: "خط الجهاز" }) as Record<string, string>)[key] ??
+    key,
+  corners: "الحواف",
+  radiusName: (key) => (({ sharp: "حادة", soft: "ناعمة", round: "مدوّرة" }) as Record<string, string>)[key] ?? key,
+  logo: "الشعار",
+  logoHint: "يظهر أعلى متجرك في الترويسة.",
+
+  announcementBar: "شريط الإعلان",
+  announcementBarHint: "سطر واحد فوق الترويسة — عرض، أو ملاحظة عن الشحن، أو موعد إغلاق.",
+  announcementMessages: "الرسائل",
+  announcementMessagePlaceholder: "مثلًا: شحن مجاني للطلبات فوق 500 جنيه",
+  announcementMessageAria: (i) => `الرسالة ${i}`,
+  announcementAddMessage: "إضافة رسالة",
+  announcementRemoveMessage: (i) => `حذف الرسالة ${i}`,
+  announcementMoveUp: (i) => `تحريك الرسالة ${i} لأعلى`,
+  announcementMoveDown: (i) => `تحريك الرسالة ${i} لأسفل`,
+  announcementNeedsMessage: "أضف رسالة واحدة على الأقل — وإلا سيُحفظ الشريط معطّلًا.",
+  announcementLink: "الرابط (اختياري)",
+  announcementLinkHint: "الصفحة التي يصل إليها العميل عند النقر على الشريط.",
+  announcementBackground: "خلفية الشريط",
+  announcementTextColor: "لون نص الشريط",
+  announcementColorSetHint: "يُطبَّق على شريط الإعلان فقط.",
 };
 
 export function editorUi(locale: EditorLocale): EditorUi {

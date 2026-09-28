@@ -201,10 +201,24 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
  */
 export function mediaSrc(media: ProductMedia): string {
   if (media.path) return media.path;
+  return imageSrc(media.url) ?? media.url;
+}
+
+/**
+ * Same host-stripping for a bare URL — a stored `logoUrl`, say, which the API
+ * returns absolute against its own APP_URL. Rendering that directly breaks the
+ * image whenever the dashboard is served from another origin (dev, or a
+ * separate domain in production), so keep the path and let the proxy serve it.
+ * Data and blob URLs are already displayable and pass through untouched.
+ */
+export function imageSrc(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("/")) return url;
   try {
-    return new URL(media.url).pathname;
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}`;
   } catch {
-    return media.url;
+    return url;
   }
 }
 

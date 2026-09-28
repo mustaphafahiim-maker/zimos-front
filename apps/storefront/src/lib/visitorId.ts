@@ -5,41 +5,9 @@
  *
  * When storage or crypto.randomUUID is unavailable (private mode, an insecure
  * origin) the id lives in memory for the life of the page instead.
+ *
+ * It is the storefront's one visitor identity, so it now lives in ./visitor
+ * next to the analytics session it is reported with; this module keeps the
+ * name the checkout autosave imports.
  */
-
-const KEY_PREFIX = "zimos_visitor_";
-const memoryIds = new Map<string, string>();
-
-function isValid(id: string | null | undefined): id is string {
-  return typeof id === "string" && id.length >= 8 && id.length <= 64;
-}
-
-function newId(): string {
-  try {
-    const id = crypto.randomUUID();
-    if (isValid(id)) return id;
-  } catch {
-    // fall through
-  }
-  const rand = () => Math.random().toString(36).slice(2, 10).padEnd(8, "0");
-  return `v${Date.now().toString(36)}${rand()}${rand()}`;
-}
-
-export function getVisitorId(workspaceId: string): string {
-  const key = `${KEY_PREFIX}${workspaceId}`;
-  try {
-    const stored = window.sessionStorage.getItem(key);
-    if (isValid(stored)) return stored;
-    const id = memoryIds.get(key) ?? newId();
-    window.sessionStorage.setItem(key, id);
-    memoryIds.set(key, id);
-    return id;
-  } catch {
-    let id = memoryIds.get(key);
-    if (!id) {
-      id = newId();
-      memoryIds.set(key, id);
-    }
-    return id;
-  }
-}
+export { getVisitorId } from "./visitor";

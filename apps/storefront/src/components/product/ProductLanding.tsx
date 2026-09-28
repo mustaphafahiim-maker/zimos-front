@@ -34,6 +34,7 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { useStoreBasePath } from "../StoreRoute";
 import { AddToCartButton } from "../AddToCartButton";
+import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
@@ -344,28 +345,8 @@ export function ProductLanding({
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
           </span>
-          <div role="group" aria-labelledby="qty-label" className="inline-flex items-center rounded-xl border border-line bg-paper-raised">
-            <button
-              type="button"
-              aria-label={t.product.decrease}
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              disabled={quantity <= 1}
-              className="h-11 w-11 cursor-pointer text-lg text-ink disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              −
-            </button>
-            <output aria-live="polite" className="min-w-10 text-center text-base font-semibold tabular-nums text-ink">
-              {quantity}
-            </output>
-            <button
-              type="button"
-              aria-label={t.product.increase}
-              onClick={() => setQuantity((q) => Math.min(99, q + 1))}
-              className="h-11 w-11 cursor-pointer text-lg text-ink"
-            >
-              +
-            </button>
-          </div>
+          {/* The same stepper the cart page and the cart drawer use. */}
+          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
         </div>
       )}
 

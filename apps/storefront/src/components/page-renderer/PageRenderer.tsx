@@ -32,6 +32,14 @@ import {
   TextElement,
   VideoElement,
 } from "./elements";
+import {
+  OrbitGalleryElement,
+  Product3DElement,
+  ScrollStoryElement,
+  ShaderHeroElement,
+} from "./immersive";
+import { ComparisonElement, MarqueeElement } from "./sections";
+import { columnClasses, rowClasses, sectionClasses } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -140,11 +148,35 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "cart":
       // The cart is a way out of a funnel.
       return ctx.funnel ? null : <CartElement props={props} />;
+    case "shader_hero":
+      return <ShaderHeroElement props={props} locale={ctx.locale} />;
+    case "product_3d":
+      return <Product3DElement props={props} workspaceId={ctx.workspaceId} locale={ctx.locale} />;
+    case "orbit_gallery":
+      return (
+        <OrbitGalleryElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />
+      );
+    case "scroll_story":
+      return <ScrollStoryElement props={props} />;
+    case "marquee":
+      return <MarqueeElement props={props} />;
+    case "comparison":
+      return <ComparisonElement props={props} t={t} />;
     default:
-      // Unreachable for the 23 allowed types, but a tree written before this
+      // Unreachable for the 29 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.
       return null;
   }
+}
+
+/**
+ * Rows and columns carry the same kind of free-form `settings` as a section
+ * (a column's card surface and alignment, a row's gap — see layout.ts), but
+ * the api-client's types only declare it on sections and elements. Read it
+ * off the node as the unknown it is; layout.ts checks the shape.
+ */
+function settingsOf(node: PageRow | PageColumn): unknown {
+  return (node as { settings?: unknown }).settings;
 }
 
 function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
@@ -152,7 +184,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const elements = Array.isArray(column.elements) ? column.elements : [];
 
   return (
-    <div className={`flex min-w-0 flex-col gap-4 ${SPAN_CLASS[span]}`}>
+    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])}>
       {elements.map((element) => (
         <ElementNode key={element.id} element={element} ctx={ctx} />
       ))}
@@ -165,7 +197,7 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   if (columns.length === 0) return null;
 
   return (
-    <div className="grid gap-6 md:grid-cols-12">
+    <div className={rowClasses(settingsOf(row))}>
       {columns.map((column) => (
         <ColumnNode key={column.id} column={column} ctx={ctx} />
       ))}
@@ -173,13 +205,21 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   );
 }
 
+/**
+ * A section's optional `settings` — the small amount of look a section carries
+ * itself, written by the editor's block presets and its section panel. The
+ * class tables and their fallbacks live in layout.ts; a section without
+ * settings gets exactly the classes it always had.
+ */
 function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
+  const { outer, inner } = sectionClasses(section.settings);
+
   return (
-    <section className="px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <section className={outer}>
+      <div className={inner}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
         ))}
@@ -188,17 +228,55 @@ function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   );
 }
 
+/**
+ * A section as the website editor's canvas sees it: wrapped in a plain element
+ * that names it, so the preview bridge (components/preview/PreviewBridge) can
+ * outline it and report clicks to the editor. The wrapper has no styling of
+ * its own, so the section inside looks exactly as it does to shoppers. A
+ * section with no rows — which renders nothing at all on the store — gets a
+ * visible empty slot here, or the merchant could never click it.
+ */
+function EditableSectionNode({
+  section,
+  index,
+  ctx,
+}: {
+  section: PageSection;
+  index: number;
+  ctx: Ctx;
+}) {
+  const hasRows = Array.isArray(section.rows) && section.rows.length > 0;
+  return (
+    <div data-zimos-section={section.id} data-zimos-index={index}>
+      {hasRows ? (
+        <SectionNode section={section} ctx={ctx} />
+      ) : (
+        <div className="px-4 py-6 sm:px-6">
+          <div className="mx-auto h-24 max-w-6xl rounded-[var(--radius-card)] border-2 border-dashed border-line" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PageRenderer({
   tree,
   workspaceId,
   currency,
   locale,
+  editable = false,
   funnel,
 }: {
   tree: PageTree | null;
   workspaceId: string;
   currency: string;
   locale: Locale;
+  /**
+   * The website editor's preview only (app/store/[workspaceId]/preview): mark
+   * every section so it can be selected from the canvas. Never set on a page
+   * shoppers see, which renders exactly as it did before this existed.
+   */
+  editable?: boolean;
   /** A running funnel's step page — see PageRendererFunnel. */
   funnel?: PageRendererFunnel;
 }) {
@@ -208,9 +286,13 @@ export function PageRenderer({
 
   return (
     <div className="divide-y divide-line">
-      {sections.map((section) => (
-        <SectionNode key={section.id} section={section} ctx={ctx} />
-      ))}
+      {sections.map((section, index) =>
+        editable ? (
+          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} />
+        ) : (
+          <SectionNode key={section.id} section={section} ctx={ctx} />
+        )
+      )}
     </div>
   );
 }

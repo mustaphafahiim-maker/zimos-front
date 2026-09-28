@@ -19,6 +19,11 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * place; the store's own header and footer step aside here (HideInFunnel) and
  * this draws a minimal masthead instead — the store's logo and name, and
  * nothing that leads off the path.
+ *
+ * The store's own analytics (components/StoreAnalytics) are NOT mounted here:
+ * the store layout's tracker already sees every funnel page, and a second one
+ * would count each of them twice. A funnel step adds its funnelId to that
+ * tracker's context instead (components/funnel/FunnelStep.tsx).
  */
 export default async function FunnelLayout({
   children,

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
 function Confirmation() {
@@ -41,6 +42,22 @@ function Confirmation() {
   // /store/<workspaceId> path on the shared host.
   const storeUrl = isClient ? `${window.location.origin}${storeHref(basePath, "/")}` : "";
   const canShare = isClient && typeof navigator.share === "function";
+
+  // Purchase, once per order on this device (trackPurchaseOnce remembers it),
+  // as soon as the saved order is readable. A device with no snapshot has
+  // nothing to value the order with, so it sends nothing rather than a zero.
+  // The ref keeps this to one call even when storage is blocked.
+  const purchaseTracked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!snapshot || purchaseTracked.current === snapshot.id) return;
+    purchaseTracked.current = snapshot.id;
+    trackPurchaseOnce(snapshot.id, {
+      valueMinor: snapshot.totalAmount,
+      currency: snapshot.currency,
+      contentIds: snapshot.productIds,
+      numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
+    });
+  }, [snapshot]);
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
   const currency = snapshot?.currency ?? store?.currency;

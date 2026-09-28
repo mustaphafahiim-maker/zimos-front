@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { BoxIcon, CartGlyph } from "@/components/Icons";
+import { QuantityStepper } from "@/components/QuantityStepper";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
-import { btnPrimaryLg, btnSecondary, card, container } from "@/components/ui";
+import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
 import { firstImage, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
@@ -43,9 +44,26 @@ export default function CartPage() {
       <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{t.cart.title}</h1>
 
       {isLoading && !cart ? (
-        <p className="mt-10 text-sm text-ink-soft" role="status">
-          {t.cart.loading}
-        </p>
+        // The page's own shape while the cart resolves, so nothing jumps when it lands.
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]" role="status" aria-busy="true" aria-label={t.cart.loading}>
+          <ul className={`${card} divide-y divide-line`}>
+            {[0, 1].map((i) => (
+              <li key={i} className="flex gap-4 p-4 sm:p-5">
+                <span className={`${skeleton} h-20 w-20 shrink-0`} />
+                <span className="flex-1 space-y-2 pt-1">
+                  <span className={`${skeleton} block h-4 w-2/3`} />
+                  <span className={`${skeleton} block h-3 w-1/4`} />
+                  <span className={`${skeleton} mt-3 block h-11 w-32`} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className={`${card} space-y-3 p-5`}>
+            <span className={`${skeleton} block h-5 w-1/2`} />
+            <span className={`${skeleton} block h-4 w-full`} />
+            <span className={`${skeleton} block h-12 w-full`} />
+          </div>
+        </div>
       ) : isEmpty ? (
         <div className={`${card} mt-8 flex flex-col items-center px-6 py-16 text-center`}>
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -112,27 +130,13 @@ export default function CartPage() {
                       {line.priceChanged && <span className="mt-1 text-xs text-accent-dark">{t.cart.priceChanged}</span>}
 
                       <div className="mt-3 flex items-center justify-between gap-3">
-                        <div className="inline-flex items-center rounded-xl border border-line">
-                          <button
-                            type="button"
-                            aria-label={t.product.decrease}
-                            onClick={() => run(line.id, () => updateItem(line.id, line.quantity - 1), t.cart.updateFailed)}
-                            disabled={rowBusy || line.quantity <= 1}
-                            className="h-11 w-11 cursor-pointer text-lg text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            −
-                          </button>
-                          <span className="min-w-8 text-center text-sm font-semibold tabular-nums text-ink">{line.quantity}</span>
-                          <button
-                            type="button"
-                            aria-label={t.product.increase}
-                            onClick={() => run(line.id, () => updateItem(line.id, line.quantity + 1), t.cart.updateFailed)}
-                            disabled={rowBusy}
-                            className="h-11 w-11 cursor-pointer text-lg text-ink disabled:opacity-40"
-                          >
-                            +
-                          </button>
-                        </div>
+                        {/* The same stepper the drawer and the product page use. */}
+                        <QuantityStepper
+                          size="sm"
+                          value={line.quantity}
+                          disabled={rowBusy}
+                          onChange={(next) => run(line.id, () => updateItem(line.id, next), t.cart.updateFailed)}
+                        />
                         <span className="text-base font-bold text-ink">{money(line.lineTotal, currency)}</span>
                       </div>
                     </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
+import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/CheckoutProgress";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
@@ -26,12 +27,17 @@ import { afterOrder, orderErrorMessage, placeCodOrder, serverFieldErrors } from 
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 
 const FORM_PREFIX = "checkout";
+
+/** Which fields make up each step of the progress indicator. */
+const CONTACT_FIELDS: OrderFormField[] = ["fullName", "phone", "altPhone", "email"];
+const ADDRESS_FIELDS: OrderFormField[] = FIELD_ORDER.filter((f) => !CONTACT_FIELDS.includes(f) && f !== "notes");
 
 export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -61,6 +67,20 @@ export default function CheckoutPage() {
   const items = cart?.items ?? [];
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: items });
 
+  // InitiateCheckout once per visit to this page, the first time the cart is
+  // known to hold something (the cart loads after mount, so not on render 1).
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || !cart || cart.items.length === 0) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", {
+      contentIds: cart.items.map((line) => line.variantId),
+      valueMinor: cart.subtotal,
+      currency: cart.currency,
+      numItems: cart.items.reduce((sum, line) => sum + line.quantity, 0),
+    });
+  }, [cart]);
+
   const bump = useMemo(() => {
     if (!loaded) return null;
     const inCart = new Set(items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[]);
@@ -76,6 +96,19 @@ export default function CheckoutPage() {
   if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId ?? null, quantity: 1 });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines });
   const total = subtotal + bumpInTotals + shipping.amount;
+
+  // --- progress ------------------------------------------------------------
+  // Contact → Address → Confirm above the form, from the same validation the
+  // submit runs (with this store's field settings): a step is done once none
+  // of its fields has an error. Display only; the form is still one page.
+  const liveErrors = validateOrderForm(values, t, fields);
+  const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
+  const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
+  const progressDone: CheckoutStep[] = [
+    ...(contactDone ? (["contact"] as const) : []),
+    ...(addressDone ? (["address"] as const) : []),
+  ];
+  const progressCurrent: CheckoutStep = !contactDone ? "contact" : !addressDone ? "address" : "confirm";
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -166,6 +199,10 @@ export default function CheckoutPage() {
         {t.checkout.backToCart}
       </StoreLink>
       <h1 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">{t.checkout.title}</h1>
+
+      <div className="mt-6 max-w-xl">
+        <CheckoutProgress done={progressDone} current={progressCurrent} />
+      </div>
 
       <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem]">
         <div className="space-y-6">
