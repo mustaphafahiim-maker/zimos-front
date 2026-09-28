@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
@@ -237,7 +238,8 @@ function UseTemplateForm({
   onCancel: () => void;
 }) {
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -254,13 +256,16 @@ function UseTemplateForm({
   async function applyTemplateColour() {
     const styles = detail.data?.globalStyles;
     const colour = styles && typeof styles.primaryColor === "string" ? styles.primaryColor.trim() : "";
-    const existing = currentWorkspace?.themeSettings?.primaryColor;
-    if (!/^#[0-9a-f]{6}$/i.test(colour) || (typeof existing === "string" && existing.trim() !== "")) return;
+    const hasColour = (themeSettings: Record<string, unknown> | undefined) => {
+      const existing = themeSettings?.primaryColor;
+      return typeof existing === "string" && existing.trim() !== "";
+    };
+    if (!/^#[0-9a-f]{6}$/i.test(colour) || hasColour(currentWorkspace?.themeSettings)) return;
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        themeSettings: { ...(currentWorkspace?.themeSettings ?? {}), primaryColor: colour },
-      });
-      await refreshWorkspace();
+      // Asked again of the server's copy: another tab may have picked a colour since.
+      await saveThemeSettings((current) =>
+        hasColour(current) ? null : { themeSettings: { ...current, primaryColor: colour } }
+      );
     } catch {
       /* the site was created; the merchant can still pick a colour in the editor */
     }

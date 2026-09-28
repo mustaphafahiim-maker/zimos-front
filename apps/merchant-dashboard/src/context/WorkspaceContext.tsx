@@ -30,6 +30,12 @@ interface WorkspaceContextValue {
    * for a spinner, which is wrong after an in-page save.
    */
   refresh: (opts?: { silent?: boolean }) => Promise<void>;
+  /**
+   * Put a workspace the API just returned from a save into the list, so every
+   * screen reads what the server now holds — without a re-read, which would
+   * flip `loading` (see `refresh`).
+   */
+  applySavedWorkspace: (workspace: Workspace) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -133,6 +139,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return { workspace, addressError };
       },
       refresh,
+      applySavedWorkspace(saved) {
+        // A PATCH response carries no `role`; keep the one the list read gave,
+        // or every role-gated screen would treat the merchant as a non-owner.
+        setWorkspaces((prev) => prev.map((w) => (w.id === saved.id ? { ...w, ...saved, role: w.role } : w)));
+      },
     }),
     [workspaces, currentWorkspaceId, loading]
   );

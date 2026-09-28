@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import type { WebsiteTemplateDetail, WebsiteTemplateSummary } from "@store-builder/api-client";
-import { api, fake } from "@/test/mocks";
-import { renderWithProviders } from "@/test/renderWithProviders";
+import type { WebsiteTemplateDetail, WebsiteTemplateSummary, Workspace } from "@store-builder/api-client";
+import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
+import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
 import { MAX_LOADING_PREVIEWS } from "@/lib/templatePreview";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { WebsitePage } from "./WebsitePage";
@@ -162,5 +162,54 @@ describe("WebsitePage template gallery", () => {
     // Blank-document loads of the new frame don't free another slot either.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(submit).toHaveBeenCalledTimes(MAX_LOADING_PREVIEWS + 1);
+  });
+});
+
+describe("WebsitePage template colour", () => {
+  /** Opens the one template, lets its detail load, and creates the site from it. */
+  async function createFromTemplate() {
+    api.listWebsiteTemplates.mockResolvedValue([template("t_1", "Oud House", "perfume")]);
+    api.getWebsiteTemplate.mockResolvedValue(fake<WebsiteTemplateDetail>({ ...homeDetail, globalStyles: { primaryColor: "#7C2D12" } }));
+    api.createWebsite.mockResolvedValue(fake({ website: { id: "site_1", name: "Nile Store" }, pages: [] }));
+    const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    await user.click(await screen.findByRole("button", { name: "Preview Oud House" }));
+    await screen.findByText(/القالب فيه 1 صفحة/);
+    await user.click(screen.getByRole("button", { name: "Use this template" }));
+    await waitFor(() => expect(currentPath()).toBe("/website/site_1/edit"));
+  }
+
+  it("copies the template's colour onto the store's latest settings when it has none", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    // A theme saved from another tab after this one loaded.
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "warm" } })]);
+    const saved = fake<Workspace>({ id: "ws_1", themeSettings: { storeTheme: "warm", primaryColor: "#7C2D12" } });
+    api.updateWorkspace.mockResolvedValue(saved);
+
+    await createFromTemplate();
+
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
+      themeSettings: { storeTheme: "warm", primaryColor: "#7C2D12" },
+    });
+    expect(workspaceMock.applySavedWorkspace).toHaveBeenCalledWith(saved);
+  });
+
+  it("leaves a colour the store picked in another tab alone", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { primaryColor: "#BE123C" } })]);
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).toHaveBeenCalledTimes(1);
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("still opens the new site when the store's latest settings can't be loaded", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await createFromTemplate();
+
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
   });
 });

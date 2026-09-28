@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/apiClient";
 import { stepEdit, type CanvasEdit, type CanvasStep } from "@/lib/canvasDrag";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -160,7 +161,8 @@ function WebsiteEditor() {
   const { websiteId = "" } = useParams();
   const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -505,13 +507,8 @@ function WebsiteEditor() {
       return false;
     }
     try {
-      await apiClient.updateWorkspace(
-        workspaceId,
-        lookToWorkspacePatch(currentWorkspace?.themeSettings, look)
-      );
+      await saveThemeSettings((current) => lookToWorkspacePatch(current, look));
       setLookBaseline(look);
-      // The header's store switcher and the Settings page read the workspace list.
-      await refreshWorkspace();
       return true;
     } catch (err) {
       setSaveError(getErrorMessage(err));

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Check, Monitor, Moon, Smartphone, Sun } from "lucide-react";
 import { Alert, Button, cn } from "@store-builder/ui";
-import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
 import { useThemeFonts } from "@/lib/themeFonts";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
@@ -203,7 +203,8 @@ function ThemePreview({
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [mode, setMode] = useState<ColorMode>(initialMode);
@@ -225,13 +226,14 @@ function ThemePreview({
   async function use() {
     setSaving(true);
     setError(null);
-    // Merge, never replace: themeSettings is a blob other screens write to too.
-    const themeSettings: Record<string, unknown> = { ...(currentWorkspace?.themeSettings ?? {}) };
-    if (theme === ORIGINAL_LOOK) delete themeSettings.storeTheme;
-    else themeSettings.storeTheme = theme;
     try {
-      await apiClient.updateWorkspace(workspaceId, { themeSettings });
-      await refresh();
+      await saveThemeSettings((current) => {
+        // Merge, never replace: themeSettings is a blob other screens write to too.
+        const themeSettings: Record<string, unknown> = { ...current };
+        if (theme === ORIGINAL_LOOK) delete themeSettings.storeTheme;
+        else themeSettings.storeTheme = theme;
+        return { themeSettings };
+      });
       toast.success(fmt(t.applied, { name: spec.name[locale] }));
       onDone();
     } catch (err) {

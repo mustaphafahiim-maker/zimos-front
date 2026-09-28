@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import { api, fake, workspaceMock } from "@/test/mocks";
+import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import type { Workspace } from "@store-builder/api-client";
 import { ThemeGallery } from "./ThemeGallery";
@@ -15,6 +15,11 @@ beforeEach(() => {
 
 function store(themeSettings: Record<string, unknown>) {
   workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", tagline: null, themeSettings });
+}
+
+/** The store as GET /workspaces returns it now — what a save builds on. */
+function onServer(themeSettings: Record<string, unknown>) {
+  api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", name: "Nile Store", themeSettings })]);
 }
 
 /** The last form the live preview posted, as the storefront would read it. */
@@ -73,23 +78,27 @@ describe("ThemeGallery", () => {
     expect(lastPost().colorMode).toBe("dark");
   });
 
-  it("saves the theme into themeSettings without touching the rest", async () => {
+  it("saves the theme onto the store's latest themeSettings without touching the rest", async () => {
     store({ primaryColor: "#1E40AF", productCountdownHours: 6 });
-    api.updateWorkspace.mockResolvedValue(fake({}));
+    // The dark accent was saved from another tab after this one loaded.
+    onServer({ primaryColor: "#1E40AF", productCountdownHours: 6, primaryColorDark: "#93C5FD" });
+    const saved = fake<Workspace>({ id: "ws_1", themeSettings: { storeTheme: "bold" } });
+    api.updateWorkspace.mockResolvedValue(saved);
     const { user } = renderWithProviders(<ThemeGallery />);
 
     await user.click(screen.getByRole("button", { name: "Try the Bold theme" }));
     await user.click(screen.getByRole("button", { name: "Use this theme" }));
     await waitFor(() => expect(api.updateWorkspace).toHaveBeenCalledTimes(1));
     expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
-      themeSettings: { primaryColor: "#1E40AF", productCountdownHours: 6, storeTheme: "bold" },
+      themeSettings: { primaryColor: "#1E40AF", productCountdownHours: 6, primaryColorDark: "#93C5FD", storeTheme: "bold" },
     });
-    await waitFor(() => expect(workspaceMock.refresh).toHaveBeenCalled());
+    await waitFor(() => expect(workspaceMock.applySavedWorkspace).toHaveBeenCalledWith(saved));
     expect(await screen.findByText("Bold is now your store's theme.")).toBeInTheDocument();
   });
 
   it("goes back to the original look by dropping the key", async () => {
     store({ storeTheme: "minimal", primaryColor: "#2F4BFF" });
+    onServer({ storeTheme: "minimal", primaryColor: "#2F4BFF" });
     api.updateWorkspace.mockResolvedValue(fake({}));
     const { user } = renderWithProviders(<ThemeGallery />);
 
@@ -97,6 +106,22 @@ describe("ThemeGallery", () => {
     await user.click(screen.getByRole("button", { name: "Use this theme" }));
     await waitFor(() => expect(api.updateWorkspace).toHaveBeenCalled());
     expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", { themeSettings: { primaryColor: "#2F4BFF" } });
+  });
+
+  it("saves nothing, and says why, when the store's latest settings can't be loaded", async () => {
+    store({ primaryColor: "#1E40AF" });
+    api.listWorkspaces.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { user } = renderWithProviders(<ThemeGallery />);
+
+    await user.click(screen.getByRole("button", { name: "Try the Bold theme" }));
+    await user.click(screen.getByRole("button", { name: "Use this theme" }));
+    expect(
+      await screen.findByText(
+        "Couldn't load your store's latest settings, so nothing was saved. Check your connection and try again."
+      )
+    ).toBeInTheDocument();
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("says so when the theme is already the store's", async () => {

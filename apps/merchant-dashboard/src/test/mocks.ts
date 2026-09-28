@@ -39,6 +39,9 @@ export const api = new Proxy({} as ApiClientMock, {
   },
 });
 
+/** One store as `listWorkspaces` returns it: the workspace plus the caller's role key. */
+export type ListedWorkspace = Awaited<ReturnType<ApiClient["listWorkspaces"]>>[number];
+
 /** Cast a partial fixture to a full API type (tests only set what the screen reads). */
 export function fake<T>(value: Record<string, unknown>): T {
   return value as unknown as T;
@@ -69,6 +72,7 @@ export interface WorkspaceMock {
   selectWorkspace: Mock<(id: string) => void>;
   createWorkspace: Mock<(name: string, slug?: string) => Promise<CreateWorkspaceResult>>;
   refresh: Mock<() => Promise<void>>;
+  applySavedWorkspace: Mock<(workspace: Workspace) => void>;
 }
 
 export const authMock = {} as AuthMock;
@@ -91,6 +95,7 @@ export function resetMocks() {
     selectWorkspace: vi.fn(),
     createWorkspace: vi.fn(async () => ({ workspace: testWorkspace })),
     refresh: vi.fn(async () => undefined),
+    applySavedWorkspace: vi.fn(),
   } satisfies WorkspaceMock);
 }
 

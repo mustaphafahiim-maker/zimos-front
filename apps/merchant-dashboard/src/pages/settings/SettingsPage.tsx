@@ -11,6 +11,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { ColorField } from "@/components/ColorField";
@@ -54,7 +55,8 @@ export function SettingsPage() {
 
 function WorkspaceProfileSection() {
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
 
   const [name, setName] = useState(currentWorkspace?.name ?? "");
@@ -104,21 +106,19 @@ function WorkspaceProfileSection() {
     setFieldErrors({});
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
+      await saveThemeSettings((current) => ({
         name: name.trim(),
         tagline: tagline.trim() || null,
         logoUrl,
         // Merge, never replace: themeSettings is a shared blob and may already
         // carry keys owned by other parts of the product.
         themeSettings: {
-          ...(currentWorkspace?.themeSettings ?? {}),
+          ...current,
           primaryColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY,
           secondaryColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY,
         },
-      });
+      }));
       toast.success("Store profile saved.");
-      // Refresh the workspace list so the new name shows in the header switcher.
-      await refresh();
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
