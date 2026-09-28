@@ -13,9 +13,28 @@ import type {
   AdminBlockPayload,
   AdminBlockResult,
   AdminCarrierRegistry,
+  AdminAgentDetail,
+  AdminAgentList,
+  AdminCharge,
+  AdminRecordPaymentResult,
+  AdminReversePaymentResult,
+  AdminSpecialTerm,
+  AdminSpecialTermsInput,
+  AdminStoreAccess,
+  WorkspaceAccess,
+  AdminWorkspaceCharges,
+  AdminCommission,
+  AdminCommissionPage,
+  AdminCommissionParams,
+  AdminCreateAgentResult,
+  AdminGrantPayload,
   AdminGrantResult,
   AdminPaymentGatewayRegistry,
   AdminPlatformAdmin,
+  AdminReferralCode,
+  AdminReferralCodeInput,
+  AdminRolesResponse,
+  WorkspaceBilling,
   AdminProviderCheck,
   AdminRiskSignalPage,
   AdminRiskSignalParams,
@@ -589,12 +608,46 @@ export class ApiClient {
     return workspaces.map((entry) => ({ ...entry.workspace, role: entry.role?.key }));
   }
 
-  async createWorkspace(name: string) {
+  /** `referralCode` is an agent's code; an unusable one is a 422 REFERRAL_CODE_INVALID. */
+  async createWorkspace(name: string, referralCode?: string) {
     const { workspace } = await this.request<{ workspace: Workspace }>("/workspaces", {
       method: "POST",
-      body: { name },
+      body: referralCode ? { name, referralCode } : { name },
     });
     return workspace;
+  }
+
+  /** `GET /workspaces/:id/access` — restriction state and billing phase; any member. */
+  async getWorkspaceAccess(workspaceId: string): Promise<WorkspaceAccess> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/access`);
+    return unwrapObject<WorkspaceAccess>(body, "access");
+  }
+
+  /** Monthly or annual, from the next charge. 409 OPEN_CHARGE_EXISTS. */
+  async setWorkspaceBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing`, {
+      method: "PATCH",
+      body: { billingCycle },
+    });
+    return unwrapObject<WorkspaceBilling>(body, "billing");
+  }
+
+  /** `GET /workspaces/:id/billing` — needs billing.manage. */
+  async getWorkspaceBilling(workspaceId: string): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing`);
+    return unwrapObject<WorkspaceBilling>(body, "billing");
+  }
+
+  /**
+   * Attaches an agent's referral code to the subscription (201; 200 when it
+   * already was). 422 REFERRAL_CODE_INVALID, 409 REFERRAL_CODE_ALREADY_SET.
+   */
+  async attachReferralCode(workspaceId: string, code: string): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing/referral-code`, {
+      method: "POST",
+      body: { code },
+    });
+    return unwrapObject<WorkspaceBilling>(body, "billing");
   }
 
   /**
@@ -1247,7 +1300,13 @@ export class ApiClient {
     return unwrapObject<AdminSupportTicket>(body, "ticket");
   }
 
-  // --- Platform admins ---
+  // --- Platform users (roles and permissions) ---
+
+  /** `GET /admin/roles` → the role templates and every permission key. */
+  async adminListRoles(): Promise<AdminRolesResponse> {
+    const body = await this.request<AdminRolesResponse>("/admin/roles");
+    return { roles: unwrapList(body, "roles"), permissions: unwrapList(body, "permissions") };
+  }
 
   /** `GET /admin/admins` → `{ admins }`, oldest first. */
   async adminListAdmins(): Promise<AdminPlatformAdmin[]> {
@@ -1255,15 +1314,177 @@ export class ApiClient {
     return unwrapList<AdminPlatformAdmin>(body, "admins");
   }
 
-  /** `POST /admin/admins` — grants the flag to an existing account (201; 200 if it already had it). */
-  async adminGrantAdmin(email: string): Promise<AdminGrantResult> {
-    const body = await this.request<unknown>("/admin/admins", { method: "POST", body: { email } });
+  /**
+   * `POST /admin/admins` — gives an existing account a role (201; 200 if it
+   * already had that role). 403 CREATOR_REQUIRED / PERMISSION_NOT_HELD,
+   * 409 ALREADY_PLATFORM_USER / USER_NOT_ACTIVE, 404 USER_NOT_FOUND.
+   */
+  async adminGrantAdmin(payload: AdminGrantPayload): Promise<AdminGrantResult> {
+    const body = await this.request<unknown>("/admin/admins", { method: "POST", body: payload });
     return { admin: unwrapObject<AdminPlatformAdmin>(body, "admin"), granted: readFlag(body, "granted") };
   }
 
-  /** `DELETE /admin/admins/:userId` — 409 CANNOT_REVOKE_SELF / LAST_ADMIN. */
+  /**
+   * `PATCH /admin/admins/:userId` — a new role (its default set, unless
+   * `permissions` is given) and/or a new permission set.
+   * 409 CANNOT_EDIT_SELF / LAST_CREATOR, 403 CREATOR_REQUIRED.
+   */
+  async adminUpdateAdmin(
+    userId: string,
+    payload: { role?: string; permissions?: string[] }
+  ): Promise<AdminPlatformAdmin> {
+    const body = await this.request<unknown>(`/admin/admins/${userId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminPlatformAdmin>(body, "admin");
+  }
+
+  /** `DELETE /admin/admins/:userId` — 409 CANNOT_REVOKE_SELF / LAST_CREATOR. */
   async adminRevokeAdmin(userId: string) {
     return this.request<SuccessResponse>(`/admin/admins/${userId}`, { method: "DELETE" });
+  }
+
+  // --- Agents, referral codes, commission ledger ---
+
+  async adminListAgents(): Promise<AdminAgentList> {
+    const body = await this.request<AdminAgentList>("/admin/agents");
+    return { ...body, agents: unwrapList(body, "agents") };
+  }
+
+  async adminGetAgent(agentId: string): Promise<AdminAgentDetail> {
+    const body = await this.request<AdminAgentDetail>(`/admin/agents/${agentId}`);
+    return { ...body, agent: unwrapObject(body, "agent"), merchants: unwrapList(body, "merchants") };
+  }
+
+  /** Gives an existing account the agent role and, optionally, its first code. 409 ALREADY_AGENT. */
+  async adminCreateAgent(payload: {
+    email: string;
+    firstCode?: AdminReferralCodeInput & { code: string };
+  }): Promise<AdminCreateAgentResult> {
+    return this.request<AdminCreateAgentResult>("/admin/agents", { method: "POST", body: payload });
+  }
+
+  /** 409 REFERRAL_CODE_TAKEN / NOT_AN_AGENT. */
+  async adminCreateReferralCode(
+    agentId: string,
+    payload: AdminReferralCodeInput & { code: string }
+  ): Promise<AdminReferralCode> {
+    const body = await this.request<unknown>(`/admin/agents/${agentId}/codes`, { method: "POST", body: payload });
+    return unwrapObject<AdminReferralCode>(body, "code");
+  }
+
+  /** The code string itself cannot change. */
+  async adminUpdateReferralCode(codeId: string, payload: AdminReferralCodeInput): Promise<AdminReferralCode> {
+    const body = await this.request<unknown>(`/admin/referral-codes/${codeId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminReferralCode>(body, "code");
+  }
+
+  async adminListCommissions(params: AdminCommissionParams = {}): Promise<AdminCommissionPage> {
+    const body = await this.request<AdminCommissionPage>(`/admin/commissions${buildQuery({ ...params })}`);
+    return { ...body, commissions: unwrapList(body, "commissions"), totals: unwrapList(body, "totals") };
+  }
+
+  /** The ledger's one write. 409 COMMISSION_ALREADY_MARKED_PAID. */
+  async adminMarkCommissionPaid(commissionId: string, note?: string): Promise<AdminCommission> {
+    const body = await this.request<unknown>(`/admin/commissions/${commissionId}/mark-paid`, {
+      method: "POST",
+      body: note ? { note } : {},
+    });
+    return unwrapObject<AdminCommission>(body, "commission");
+  }
+
+  // --- Subscription charges ---
+
+  /** `GET /admin/workspaces/:id/charges` — subscription, next-charge price and every charge. */
+  async adminListCharges(workspaceId: string): Promise<AdminWorkspaceCharges> {
+    const body = await this.request<AdminWorkspaceCharges>(`/admin/workspaces/${workspaceId}/charges`);
+    return { ...body, subscription: unwrapObject(body, "subscription"), charges: unwrapList(body, "charges") };
+  }
+
+  /** Prices the next charge (201), or returns the open one (200). 409 PLAN_IS_FREE / NO_PLAN. */
+  async adminCreateCharge(workspaceId: string): Promise<{ charge: AdminCharge; created: boolean }> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/charges`, { method: "POST" });
+    return { charge: unwrapObject<AdminCharge>(body, "charge"), created: readFlag(body, "created") };
+  }
+
+  /**
+   * Records a payment received outside any gateway, through the same path as
+   * the gateway webhook. 409 CHARGE_ALREADY_PAID.
+   */
+  async adminRecordPayment(
+    chargeId: string,
+    payload: { amountReceived: number; note?: string; paidAt?: string }
+  ): Promise<AdminRecordPaymentResult> {
+    const body = await this.request<unknown>(`/admin/charges/${chargeId}/record-payment`, {
+      method: "POST",
+      body: payload,
+    });
+    return { charge: unwrapObject<AdminCharge>(body, "charge"), referralCodeLapsed: readFlag(body, "referralCodeLapsed") };
+  }
+
+  /**
+   * Undoes a payment recorded by hand: back to pending, ledger row voided.
+   * 409 CHARGE_NOT_PAID / PAYMENT_CONFIRMED_BY_GATEWAY / OPEN_CHARGE_EXISTS.
+   */
+  async adminReversePayment(chargeId: string, payload: { reason?: string } = {}): Promise<AdminReversePaymentResult> {
+    const body = await this.request<AdminReversePaymentResult>(`/admin/charges/${chargeId}/reverse-payment`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      charge: unwrapObject<AdminCharge>(body, "charge"),
+      voidedCommission: body.voidedCommission ?? null,
+      subscriptionStatus: body.subscriptionStatus,
+    };
+  }
+
+  /** Monthly or annual from the next charge (subscriptions.manage). 409 OPEN_CHARGE_EXISTS. */
+  async adminSetBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<AdminWorkspaceCharges> {
+    const body = await this.request<AdminWorkspaceCharges>(`/admin/workspaces/${workspaceId}/subscription`, {
+      method: "PATCH",
+      body: { billingCycle },
+    });
+    return { ...body, charges: unwrapList(body, "charges"), specialTerms: unwrapList(body, "specialTerms") };
+  }
+
+  /** Free months or a price override (subscriptions.manage). 409 SPECIAL_PRICE_ACTIVE / SUBSCRIPTION_CANCELLED. */
+  async adminGrantSpecialTerms(
+    workspaceId: string,
+    payload: AdminSpecialTermsInput
+  ): Promise<AdminWorkspaceCharges & { term: AdminSpecialTerm }> {
+    const body = await this.request<AdminWorkspaceCharges & { term: AdminSpecialTerm }>(
+      `/admin/workspaces/${workspaceId}/special-terms`,
+      { method: "POST", body: payload }
+    );
+    return { ...body, term: unwrapObject(body, "term"), charges: unwrapList(body, "charges"), specialTerms: unwrapList(body, "specialTerms") };
+  }
+
+  async adminGetStoreAccess(workspaceId: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/access`);
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** workspaces.manage; a reason is required. 409 WORKSPACE_ALREADY_SUSPENDED. */
+  async adminSuspendWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/suspend`, { method: "POST", body: { reason } });
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** workspaces.manage; a reason is required. 409 WORKSPACE_NOT_SUSPENDED. */
+  async adminReactivateWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/reactivate`, { method: "POST", body: { reason } });
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** An agent's own codes and referred merchants (referrals.view_own). */
+  async adminGetMyReferrals(): Promise<AdminAgentDetail> {
+    const body = await this.request<AdminAgentDetail>("/admin/my/referrals");
+    return { ...body, agent: unwrapObject(body, "agent"), merchants: unwrapList(body, "merchants") };
+  }
+
+  async adminListMyCommissions(
+    params: Omit<AdminCommissionParams, "agentId" | "workspaceId"> = {}
+  ): Promise<AdminCommissionPage> {
+    const body = await this.request<AdminCommissionPage>(`/admin/my/commissions${buildQuery({ ...params })}`);
+    return { ...body, commissions: unwrapList(body, "commissions"), totals: unwrapList(body, "totals") };
   }
 
   /** `GET /admin/risk/signals` — one identifier type per call, paged server-side. */

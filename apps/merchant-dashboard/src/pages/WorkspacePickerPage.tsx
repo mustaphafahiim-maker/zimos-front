@@ -16,6 +16,7 @@ export function WorkspacePickerPage() {
   const { workspaces, loading, selectWorkspace, createWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const addressId = useId();
+  const referralId = useId();
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -23,6 +24,8 @@ export function WorkspacePickerPage() {
   // case needs no thought. Once they have edited it, it is theirs and the name
   // stops overwriting it.
   const [slugEdited, setSlugEdited] = useState(false);
+  // An agent's referral code: optional, attached to the new store's plan.
+  const [referralCode, setReferralCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ workspace: Workspace; addressError?: string } | null>(
@@ -51,7 +54,7 @@ export function WorkspacePickerPage() {
     setError(null);
     setCreating(true);
     try {
-      const result = await createWorkspace(name.trim(), slug);
+      const result = await createWorkspace(name.trim(), slug, referralCode.trim() || undefined);
       setCreated(result);
     } catch (err) {
       setError(getErrorMessage(err, "Couldn't create the store. Try again."));
@@ -133,6 +136,23 @@ export function WorkspacePickerPage() {
                     state={slugCheck}
                     disabled={creating}
                   />
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor={referralId}>Referral code (optional)</Label>
+                    <Input
+                      id={referralId}
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. CAIRO10"
+                      maxLength={32}
+                      dir="ltr"
+                      className="max-w-60 font-mono"
+                      disabled={creating}
+                    />
+                    <p className="text-xs text-ink-soft">
+                      Got a code from a Zimos agent? Enter it now — it can also be added later in Settings.
+                    </p>
+                  </div>
 
                   <Button type="submit" disabled={!canSubmit}>
                     {creating ? "Creating…" : "Create store"}

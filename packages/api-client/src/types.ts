@@ -4,7 +4,12 @@ export interface AuthUser {
   fullName: string;
   phone: string | null;
   status: "pending_verification" | "active" | string;
+  /** May sign in to the platform console: true for any platform role. */
   platformAdmin: boolean;
+  /** Platform-console role, null for everyone else. */
+  platformRole?: string | null;
+  /** Platform-console permission keys (`*` = all). */
+  platformPermissions?: string[];
   emailVerifiedAt?: string | null;
   phoneVerifiedAt?: string | null;
 }
@@ -1867,6 +1872,12 @@ export interface AdminWorkspaceOverview {
   currentPeriodEnd: string | null;
   /** Lifetime orders placed in this workspace. */
   orderCount: number;
+  /** Suspended by a platform admin (independent of billing). */
+  suspended?: boolean;
+  suspendedAt?: string | null;
+  billingPhase?: BillingPhase;
+  /** Storefront unavailable and new products/funnels blocked, for either reason. */
+  restricted?: boolean;
 }
 
 export interface AdminPlan {
@@ -2458,7 +2469,30 @@ export interface AdminPaymentGatewayRegistry {
 // Platform admin — admin users (/admin/admins)
 // ---------------------------------------------------------------------------
 
-/** An account with the users.platform_admin flag. */
+/**
+ * A platform-console permission key (`overview.view`, `admins.manage`, …), or
+ * `*` — every key, held by the creator role only. The full list comes from
+ * `GET /admin/roles`; the backend's canonical list is
+ * `core/security/platformPermissions.js`.
+ */
+export type PlatformPermission = string;
+
+/** A platform role (`platform_roles`): data, not a fixed set. */
+export interface AdminPlatformRole {
+  key: string;
+  name: string;
+  description: string | null;
+  /** Copied onto an account when the role is assigned. */
+  defaultPermissions: PlatformPermission[];
+}
+
+export interface AdminRolesResponse {
+  roles: AdminPlatformRole[];
+  /** Every permission key, `*` excluded. */
+  permissions: PlatformPermission[];
+}
+
+/** An account with a platform role. */
 export interface AdminPlatformAdmin {
   id: string;
   email: string;
@@ -2466,14 +2500,354 @@ export interface AdminPlatformAdmin {
   status: "active" | "suspended" | "pending_verification";
   lastLoginAt: string | null;
   createdAt: string;
-  /** The signed-in viewer — who cannot revoke themselves. */
+  role: string;
+  roleName: string;
+  /** What the account can actually do; checks never look at the role. */
+  permissions: PlatformPermission[];
+  /** The signed-in viewer — who cannot edit or revoke themselves. */
   isYou: boolean;
+}
+
+export interface AdminGrantPayload {
+  email: string;
+  role: string;
+  /** Omit for the role's default set. */
+  permissions?: PlatformPermission[];
 }
 
 export interface AdminGrantResult {
   admin: AdminPlatformAdmin;
-  /** False when the account was already an admin (nothing changed). */
+  /** False when the account already had that role (nothing changed). */
   granted: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — agents, referral codes, commissions (/admin/agents, ...)
+// ---------------------------------------------------------------------------
+
+export type ReferralDiscountType = "none" | "percentage" | "fixed";
+
+/**
+ * Where a subscription stands against its period end
+ * (workspaces/workspaceAccessService):
+ *   ok           more than 3 days left
+ *   expiring     3 days or less left
+ *   payment_due  past due while the period still runs
+ *   grace        the period ended unpaid, less than a day ago
+ *   restricted   more than a day past the period end, unpaid
+ */
+export type BillingPhase = "ok" | "expiring" | "payment_due" | "grace" | "restricted";
+
+/** `GET /workspaces/:id/access` — any member. */
+export interface WorkspaceAccess {
+  /** Storefront unavailable and new products/funnels blocked. */
+  restricted: boolean;
+  /** Why: a manual suspension, an unpaid subscription past its grace day, or both. */
+  reasons: Array<"suspended" | "billing">;
+  billing: {
+    phase: BillingPhase;
+    status: SubscriptionStatus | null;
+    trialing: boolean;
+    periodEnd: string | null;
+    /** periodEnd + 1 day: when an unpaid store becomes restricted. */
+    restrictsAt: string | null;
+    /** False when billing restrictions only warn (BILLING_RESTRICTIONS=warn). */
+    enforced: boolean;
+  };
+  suspension: { suspended: boolean; since: string | null };
+}
+
+/**
+ * `GET /workspaces/:id/billing` — the merchant's own subscription summary. The
+ * referral code shows its discount only, never the agent or its label.
+ */
+export interface WorkspaceBilling {
+  subscription: {
+    status: SubscriptionStatus;
+    billingCycle: "monthly" | "yearly";
+    trialEndsAt: string | null;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    plan: { id: string; name: string; currency: string; monthlyPrice: number; yearlyPrice: number } | null;
+  };
+  referralCode: {
+    code: string;
+    discountType: ReferralDiscountType;
+    discountValue: number | null;
+    discountCurrency: string | null;
+    active: boolean;
+    attachedAt: string;
+  } | null;
+  /** What the next charge would be, in minor units; null on a free plan. */
+  nextCharge: { grossAmount: number; discountAmount: number; amount: number; currency: string } | null;
+}
+
+export interface AdminReferralCode {
+  id: string;
+  agentId: string;
+  /** Uppercase; what merchants type. Never changes once created. */
+  code: string;
+  label: string | null;
+  discountType: ReferralDiscountType;
+  /** Basis points for a percentage, minor units for a fixed amount. */
+  discountValue: number | null;
+  /** Only for a fixed amount. */
+  discountCurrency: string | null;
+  /** The code's own override, or null for the platform default. */
+  commissionRateBp: number | null;
+  effectiveCommissionRateBp: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminReferralCodeInput {
+  code?: string;
+  label?: string | null;
+  discountType?: ReferralDiscountType;
+  discountValue?: number | null;
+  discountCurrency?: string | null;
+  commissionRateBp?: number | null;
+  active?: boolean;
+}
+
+/** Suggested commission for one currency. Currencies are never added together. */
+export interface AdminCommissionTotals {
+  currency: string;
+  pending: number;
+  markedPaid: number;
+  amountPaid: number;
+  payments: number;
+}
+
+export interface AdminReferralCodeWithStats extends AdminReferralCode {
+  /** Subscriptions this code is attached to. */
+  merchantsReferred: number;
+  commission: AdminCommissionTotals[];
+}
+
+export interface AdminAgent {
+  id: string;
+  email: string;
+  fullName: string;
+  status: "active" | "suspended" | "pending_verification";
+  /** False once the role was changed or revoked; codes and ledger remain. */
+  isAgent: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  codes: AdminReferralCodeWithStats[];
+  merchantsReferred: number;
+  commission: AdminCommissionTotals[];
+}
+
+export interface AdminAgentList {
+  agents: AdminAgent[];
+  defaultCommissionRateBp: number;
+}
+
+export interface AdminReferredMerchant {
+  workspace: { id: string; name: string | null };
+  code: { id: string; code: string };
+  attachedAt: string;
+  subscriptionStatus: SubscriptionStatus;
+  planName: string | null;
+  billingCycle: "monthly" | "yearly";
+}
+
+export interface AdminAgentDetail {
+  agent: AdminAgent;
+  merchants: AdminReferredMerchant[];
+  defaultCommissionRateBp: number;
+}
+
+export interface AdminCreateAgentResult {
+  agent: Omit<AdminAgent, "codes" | "merchantsReferred" | "commission">;
+  code: AdminReferralCode | null;
+}
+
+export type CommissionPayoutStatus = "pending" | "marked_paid";
+
+// ---------------------------------------------------------------------------
+// Platform admin — subscription charges (/admin/workspaces/:id/charges)
+// ---------------------------------------------------------------------------
+
+export type AdminChargeStatus = "pending" | "paid" | "failed";
+
+/**
+ * One subscription charge (a billing invoice). Amounts in minor units of
+ * `currency`. `amountDue` is re-priced when the charge is paid, because the
+ * referral code is re-checked then.
+ */
+export interface AdminCharge {
+  id: string;
+  status: AdminChargeStatus;
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: number;
+  discountAmount: number;
+  amountDue: number;
+  /** What was actually received; null until paid. */
+  amountPaid: number | null;
+  currency: string;
+  referralCode: { id: string; code: string } | null;
+  /** When the money arrived: the gateway's time, or the date entered by hand. */
+  paidAt: string | null;
+  /** Only a "manual" payment can be reversed. */
+  paymentSource: "gateway" | "manual" | null;
+  /** When a manual payment was recorded; may be later than paidAt. */
+  paymentRecordedAt: string | null;
+  /** Priced with this special-terms price override. */
+  specialTermsId: string | null;
+  failureReason: string | null;
+  externalReference: string | null;
+  paymentNote: string | null;
+  /** Who recorded the payment by hand; null for a gateway payment. */
+  recordedBy: { id: string; fullName: string } | null;
+  commission: { id: string; suggestedCommission: number; payoutStatus: CommissionPayoutStatus } | null;
+  /** For an unpaid charge: what it comes to if paid now (the code re-checked). */
+  payableNow: {
+    discountAmount: number;
+    amountDue: number;
+    referralCodeApplies: boolean;
+    /** It was priced with a code that is no longer active. */
+    codeLapsed: boolean;
+  } | null;
+  createdAt: string;
+}
+
+export interface AdminWorkspaceCharges {
+  subscription: {
+    id: string;
+    status: SubscriptionStatus;
+    billingCycle: "monthly" | "yearly";
+    planName: string | null;
+    currentPeriodEnd: string;
+    referralCode: {
+      id: string;
+      code: string;
+      active: boolean;
+      discountType: ReferralDiscountType;
+      discountValue: number | null;
+      discountCurrency: string | null;
+      agent: { id: string; fullName: string } | null;
+      attachedAt: string;
+    } | null;
+    /** One period's price on each cycle; annual is always 10 × monthly. */
+    planPrices: { monthly: number; yearly: number; currency: string } | null;
+  };
+  /** The next charge's price; null while one is open or the plan is free. */
+  nextCharge: { grossAmount: number; discountAmount: number; amount: number; currency: string } | null;
+  /** Newest first. */
+  charges: AdminCharge[];
+  /** Every special-terms grant, newest first; `active` marks those in effect. */
+  specialTerms: AdminSpecialTerm[];
+}
+
+export type SpecialTermsKind = "free_months" | "price_override";
+
+/** A grant of non-standard terms (a comp, a bundle price). */
+export interface AdminSpecialTerm {
+  id: string;
+  kind: SpecialTermsKind;
+  active: boolean;
+  /** free_months: the comped window. */
+  months: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** price_override: the price, in minor units of `currency`, for the next N charges. */
+  priceAmount: number | null;
+  currency: string | null;
+  chargesTotal: number | null;
+  chargesUsed: number;
+  chargesLeft: number | null;
+  /** What was agreed and why. */
+  note: string;
+  createdBy: { id: string; fullName: string } | null;
+  createdAt: string;
+}
+
+export type AdminSpecialTermsInput =
+  | { kind: "free_months"; months: number; note: string }
+  | { kind: "price_override"; priceAmount: number; charges: number; note: string };
+
+/** The console's view of a store's access: manual suspension and billing side by side. */
+export interface AdminStoreAccess extends Omit<WorkspaceAccess, "suspension"> {
+  suspension: {
+    status: "active" | "suspended" | "closed";
+    suspended: boolean;
+    suspendedAt: string | null;
+    /** The admin's note; never shown to the merchant. */
+    suspensionReason: string | null;
+    suspendedBy: { id: string; fullName: string } | null;
+  };
+}
+
+export interface AdminRecordPaymentResult {
+  charge: AdminCharge;
+  /** The charge was priced with a code that had lapsed by the time it was paid. */
+  referralCodeLapsed: boolean;
+}
+
+export interface AdminReversePaymentResult {
+  /** Back to pending. */
+  charge: AdminCharge;
+  /** The ledger row voided by the reversal; payoutStatus "marked_paid" means the agent was already paid for it. */
+  voidedCommission: { id: string; suggestedCommission: number; payoutStatus: CommissionPayoutStatus } | null;
+  /** `to` is past_due when this payment is what had made the subscription active. */
+  subscriptionStatus: { from: SubscriptionStatus; to: SubscriptionStatus };
+}
+
+/** One ledger row: one paid subscription charge that carried a code. */
+export interface AdminCommission {
+  id: string;
+  agentId: string;
+  /** Absent in the agent's own view. */
+  agentName?: string;
+  code: { id: string; code?: string; label?: string | null };
+  workspace: { id: string; name?: string };
+  billingInvoiceId: string;
+  amountPaid: number;
+  currency: string;
+  paidAt: string;
+  commissionRateBp: number;
+  suggestedCommission: number;
+  /** The subscription's first paid charge (false = a renewal). */
+  isFirstPayment: boolean;
+  payoutStatus: CommissionPayoutStatus;
+  payoutNote: string | null;
+  markedPaidAt: string | null;
+  /** Null in the agent's own view. */
+  markedPaidBy: { id: string; fullName: string } | null;
+  /**
+   * Set when the payment behind the row was reversed. A voided row never
+   * counts in totals and can't be marked paid; its payoutStatus is kept, so
+   * "marked_paid" here means the agent was paid for a reversed payment.
+   */
+  voidedAt: string | null;
+  voidReason: string | null;
+  /** Null in the agent's own view. */
+  voidedBy: { id: string; fullName: string } | null;
+}
+
+/** The ledger filter: the two payout states count live rows only. */
+export type CommissionListStatus = CommissionPayoutStatus | "voided";
+
+export interface AdminCommissionParams {
+  agentId?: string;
+  codeId?: string;
+  workspaceId?: string;
+  status?: CommissionListStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminCommissionPage {
+  commissions: AdminCommission[];
+  total: number;
+  limit: number;
+  offset: number;
+  /** Over every row the filter matches, not just this page. */
+  totals: AdminCommissionTotals[];
 }
 
 // ---------------------------------------------------------------------------

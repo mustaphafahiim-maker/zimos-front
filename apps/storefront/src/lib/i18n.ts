@@ -339,6 +339,14 @@ const en = {
     body: "We couldn't find that page. It may have been moved or removed.",
     cta: "Back to the store",
   },
+  // Shown for every page of a store that is restricted (suspended, or its
+  // subscription lapsed): no store content at all.
+  unavailable: {
+    metaTitle: "Store unavailable",
+    title: "This store is currently unavailable",
+    body: (store: string) => `${store} isn't taking orders right now. Please check back later.`,
+    orders: "Placed an order here? Contact the store directly about it.",
+  },
   renderer: {
     item: (n: number) => `Item ${n}`,
     openInMaps: "Open in maps",
@@ -686,6 +694,12 @@ const ar: Dictionary = {
     title: "الصفحة غير موجودة",
     body: "مش لاقيين الصفحة دي. ممكن تكون اتنقلت أو اتشالت.",
     cta: "العودة للمتجر",
+  },
+  unavailable: {
+    metaTitle: "المتجر غير متاح",
+    title: "المتجر ده غير متاح حاليًا",
+    body: (store) => `${store} مش بيستقبل طلبات دلوقتي. من فضلك ارجع تاني بعدين.`,
+    orders: "عملت طلب من المتجر ده؟ تواصل مع المتجر مباشرة بخصوصه.",
   },
   renderer: {
     item: (n) => `عنصر ${n}`,

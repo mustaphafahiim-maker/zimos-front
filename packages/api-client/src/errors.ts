@@ -61,6 +61,25 @@ export type ApiErrorCode =
   | "FUNNEL_STEP_NOT_FOUND" // 404
   | "FUNNEL_OFFER_UNAVAILABLE" // 404
   | "FUNNEL_OFFER_NEEDS_ORDER" // 422, details[].field = "session"
+  // billing — agent referral codes
+  | "REFERRAL_CODE_INVALID" // 422 — unknown or inactive code (never says which)
+  | "REFERRAL_CODE_ALREADY_SET" // 409 — the subscription already has a code
+  | "CHARGE_ALREADY_PAID" // 409 — recording a payment on a paid charge (console)
+  | "CHARGE_NOT_PAID" // 409 — reversing a charge that isn't paid (console)
+  | "PAYMENT_CONFIRMED_BY_GATEWAY" // 409 — reversing a gateway payment; only manual ones can be (console)
+  | "OPEN_CHARGE_EXISTS" // 409 — reversing while the subscription has another pending charge (console)
+  | "COMMISSION_VOIDED" // 409 — marking a voided ledger row paid
+  // store access (workspaces/workspaceAccessService)
+  | "SUBSCRIPTION_REQUIRED" // 402 — creating a product or funnel while unpaid past the grace day
+  | "STORE_SUSPENDED" // 403 — creating a product or funnel while suspended by the platform
+  | "STORE_UNAVAILABLE" // 423 — any public store route of a restricted store; details.store = { name, slug, defaultLocale, logoUrl }
+  | "WORKSPACE_ALREADY_SUSPENDED" // 409 (console)
+  | "WORKSPACE_NOT_SUSPENDED" // 409 (console)
+  | "WORKSPACE_NOT_ACTIVE" // 409 (console)
+  | "SPECIAL_PRICE_ACTIVE" // 409 — another price override still has charges left (console)
+  | "SUBSCRIPTION_CANCELLED" // 409 — special terms on a cancelled subscription (console)
+  | "PLAN_IS_FREE" // 409 — pricing a charge on a free plan (console)
+  | "NO_PLAN" // 409 — pricing a charge for a subscription with no plan (console)
   // catalog
   | "PRODUCT_HAS_ORDERS" // 409 — permanent delete refused; archive instead
   | "PRODUCT_IN_FUNNEL" // 409, details[0] = { field: "funnelIds", message, funnelIds }

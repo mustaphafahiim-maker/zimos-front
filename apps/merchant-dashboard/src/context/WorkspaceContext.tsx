@@ -22,7 +22,8 @@ interface WorkspaceContextValue {
   currentWorkspace: Workspace | null;
   loading: boolean;
   selectWorkspace: (workspaceId: string) => void;
-  createWorkspace: (name: string, slug?: string) => Promise<CreateWorkspaceResult>;
+  /** `referralCode`: an agent's code, attached to the new store's subscription. */
+  createWorkspace: (name: string, slug?: string, referralCode?: string) => Promise<CreateWorkspaceResult>;
   /**
    * Re-read the workspace list. `silent` keeps the current list on screen —
    * without it `loading` flips and RequireWorkspace swaps the whole layout
@@ -103,8 +104,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
        * the picker still shows its "creating" state and the new store is in the
        * list, with its role, before anything navigates into it.
        */
-      async createWorkspace(name, slug) {
-        const created = await apiClient.createWorkspace(name);
+      async createWorkspace(name, slug, referralCode) {
+        // A bad referral code refuses the whole creation (422
+        // REFERRAL_CODE_INVALID), so nothing exists yet to clean up.
+        const created = await apiClient.createWorkspace(name, referralCode || undefined);
         let workspace = created;
         let addressError: string | undefined;
 

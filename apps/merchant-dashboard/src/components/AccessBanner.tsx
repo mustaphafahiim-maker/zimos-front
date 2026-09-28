@@ -1,0 +1,188 @@
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { AlertTriangle, Ban, X } from "lucide-react";
+import { cn } from "@store-builder/ui";
+import type { WorkspaceAccess } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+
+/**
+ * The subscription / suspension banner shown above every dashboard page, from
+ * GET /workspaces/:id/access (workspaces/workspaceAccessService):
+ *
+ *   expiring     "expires on {date}"          — dismissible for the day
+ *   payment_due  "a payment is due"           — dismissible for the day
+ *   grace        "expired; restricted {when}" — dismissible for the day
+ *   restricted   "store unavailable"          — stays up
+ *   suspended    "suspended by Zimos"         — stays up
+ *
+ * A dismissed banner comes back the next day while it still applies. Re-read
+ * on every page change, so a payment clears it without a reload.
+ */
+
+const STRINGS = {
+  en: {
+    expiring: "Your subscription expires on {date}. Renew it to keep your store running.",
+    expiringTrial: "Your free trial ends on {date}. Choose a plan to keep your store running.",
+    paymentDue: "A payment for your subscription is due. Your current period ends on {date}.",
+    grace:
+      "Your subscription expired on {date}. If it isn't renewed, your store will be restricted on {when}: shoppers won't be able to see it, and you won't be able to add new products or funnels.",
+    restricted:
+      "Your subscription has expired, so your store is unavailable to shoppers and you can't add new products or funnels. Everything else keeps working. Renew to restore it.",
+    notEnforced: "Your subscription has expired. Renew it to keep your store running.",
+    suspended:
+      "This store has been suspended by Zimos. It's unavailable to shoppers and new products and funnels can't be added. Contact Zimos support.",
+    billingLink: "Plan and billing",
+    dismiss: "Dismiss for today",
+  },
+  ar: {
+    expiring: "ينتهي اشتراكك في {date}. جدّده حتى يستمر متجرك في العمل.",
+    expiringTrial: "تنتهي فترتك التجريبية المجانية في {date}. اختر خطة حتى يستمر متجرك في العمل.",
+    paymentDue: "هناك دفعة مستحقة على اشتراكك. تنتهي فترتك الحالية في {date}.",
+    grace:
+      "انتهى اشتراكك في {date}. إذا لم يُجدَّد، سيُقيَّد متجرك في {when}: لن يتمكن المتسوقون من رؤيته، ولن تتمكن من إضافة منتجات أو مسارات بيع جديدة.",
+    restricted:
+      "انتهى اشتراكك، لذلك متجرك غير متاح للمتسوقين ولا يمكنك إضافة منتجات أو مسارات بيع جديدة. كل شيء آخر يعمل كالمعتاد. جدّد اشتراكك لاستعادته.",
+    notEnforced: "انتهى اشتراكك. جدّده حتى يستمر متجرك في العمل.",
+    suspended:
+      "أوقفت Zimos هذا المتجر. المتجر غير متاح للمتسوقين ولا يمكن إضافة منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
+    billingLink: "الخطة والفواتير",
+    dismiss: "إخفاء لليوم",
+  },
+} satisfies Messages;
+
+type Notice = { key: string; tone: "warning" | "danger"; text: string; dismissible: boolean; billing: boolean };
+
+/** Today in the viewer's time zone, as the dismissal stamp. */
+function localDay(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function storageKey(workspaceId: string, notice: string) {
+  return `zimos.accessBanner.${workspaceId}.${notice}`;
+}
+
+function isDismissedToday(workspaceId: string, notice: string): boolean {
+  try {
+    return localStorage.getItem(storageKey(workspaceId, notice)) === localDay();
+  } catch {
+    return false;
+  }
+}
+
+function noticeFor(access: WorkspaceAccess, t: Record<keyof (typeof STRINGS)["en"], string>): Notice | null {
+  if (access.suspension.suspended) {
+    return { key: "suspended", tone: "danger", text: t.suspended, dismissible: false, billing: false };
+  }
+  const b = access.billing;
+  const date = b.periodEnd ? formatDate(b.periodEnd) : "";
+  switch (b.phase) {
+    case "expiring":
+      return {
+        key: "expiring",
+        tone: "warning",
+        text: fmt(b.trialing ? t.expiringTrial : t.expiring, { date }),
+        dismissible: true,
+        billing: true,
+      };
+    case "payment_due":
+      return { key: "payment_due", tone: "warning", text: fmt(t.paymentDue, { date }), dismissible: true, billing: true };
+    case "grace":
+      return {
+        key: "grace",
+        tone: "danger",
+        text: b.enforced
+          ? fmt(t.grace, { date, when: b.restrictsAt ? formatDateTime(b.restrictsAt) : "" })
+          : t.notEnforced,
+        dismissible: true,
+        billing: true,
+      };
+    case "restricted":
+      return b.enforced
+        ? { key: "restricted", tone: "danger", text: t.restricted, dismissible: false, billing: true }
+        : { key: "restricted_warn", tone: "danger", text: t.notEnforced, dismissible: true, billing: true };
+    default:
+      return null;
+  }
+}
+
+export function AccessBanner() {
+  const t = useT(STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+  const location = useLocation();
+  const [access, setAccess] = useState<WorkspaceAccess | null>(null);
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    apiClient
+      .getWorkspaceAccess(workspaceId)
+      .then((a) => {
+        if (!cancelled) setAccess(a);
+      })
+      .catch(() => {
+        // A banner that can't load is simply not shown.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, location.pathname]);
+
+  if (!workspaceId || !access) return null;
+  const notice = noticeFor(access, t);
+  if (!notice) return null;
+  if (notice.dismissible && (dismissedKey === notice.key || isDismissedToday(workspaceId, notice.key))) return null;
+
+  const canSeeBilling = ["owner", "accountant"].includes(currentWorkspace?.role ?? "");
+
+  return (
+    <div
+      role={notice.tone === "danger" ? "alert" : "status"}
+      data-testid="access-banner"
+      className={cn(
+        "mb-4 flex items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-sm",
+        notice.tone === "danger" ? "border-danger/30 bg-danger-soft text-danger" : "border-accent/30 bg-accent-soft text-ink"
+      )}
+    >
+      {notice.key === "suspended" ? (
+        <Ban className="mt-0.5 size-4 shrink-0" aria-hidden />
+      ) : (
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+      )}
+      <p className="flex-1">
+        {notice.text}
+        {notice.billing && canSeeBilling && (
+          <>
+            {" "}
+            <Link to="/settings" className="font-medium underline underline-offset-2">
+              {t.billingLink}
+            </Link>
+          </>
+        )}
+      </p>
+      {notice.dismissible && (
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              localStorage.setItem(storageKey(workspaceId, notice.key), localDay());
+            } catch {
+              // Private mode: dismissed for this visit only.
+            }
+            setDismissedKey(notice.key);
+          }}
+          aria-label={t.dismiss}
+          title={t.dismiss}
+          className="cursor-pointer rounded p-0.5 opacity-70 hover:opacity-100"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      )}
+    </div>
+  );
+}

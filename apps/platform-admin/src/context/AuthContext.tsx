@@ -1,12 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApiError, type AuthUser, type LoginPayload } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
+import { hasPermission } from "@/lib/permissions";
 
 interface AuthContextValue {
   user: AuthUser | null;
   status: "loading" | "authenticated" | "guest";
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
+  /** Whether the signed-in account holds a platform permission key. */
+  can: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -22,8 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const me = await apiClient.me();
+      // platformAdmin is true for any platform role (creator, admin, agent);
+      // what the account may open is its permission set, checked per route.
       if (!me.platformAdmin) {
-        // Authenticated, but not a platform admin — treat as guest here.
+        // Authenticated, but no platform role — treat as guest here.
         apiClient.clearSession();
         setUser(null);
         setStatus("guest");
@@ -60,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus("guest");
       },
+      can: (permission) => hasPermission(user, permission),
     }),
     [user, status]
   );

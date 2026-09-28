@@ -6,6 +6,10 @@ import { DetailRow } from "@/components/Drawer";
 import { Mono, Panel } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { WorkspaceStatus } from "@/components/workspace";
+import { SubscriptionCharges } from "@/components/charges";
+import { StoreAccessPanel } from "@/components/storeAccess";
+import { useAuth } from "@/context/AuthContext";
+import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatMoney, formatNumber, formatRelative } from "@/lib/format";
@@ -26,6 +30,7 @@ export function WorkspaceDetailPage() {
   const tabParam = params.get("tab");
   const tab: TabKey = isTab(tabParam) ? tabParam : "overview";
   const { data, loading, error, refresh } = useAsync(() => adminApi.getWorkspaceRow(id), [id]);
+  const { can } = useAuth();
 
   if (loading || error) {
     return (
@@ -77,6 +82,9 @@ export function WorkspaceDetailPage() {
         </div>
 
         <TabsContent value="overview" className="pt-5">
+          <div className="mb-4">
+            <StoreAccessPanel workspaceId={ws.id} onChanged={() => void refresh({ silent: true })} />
+          </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title="Workspace">
               <dl>
@@ -171,9 +179,12 @@ export function WorkspaceDetailPage() {
             </div>
           )}
 
+          {sub && can(P.SUBSCRIPTIONS_VIEW) && <SubscriptionCharges workspaceId={ws.id} />}
+
           <p className="mt-4 text-xs text-ink-soft">
-            Read-only. Changing a plan, extending a trial, marking paid, cancelling or suspending
-            each need a billing mutation endpoint that doesn't exist yet.
+            Charges can be created and their payments recorded here by hand until a subscription
+            payment gateway exists. Changing a plan, extending a trial, cancelling or suspending each
+            need a billing mutation endpoint that doesn't exist yet.
           </p>
         </TabsContent>
       </Tabs>

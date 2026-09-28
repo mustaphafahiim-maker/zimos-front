@@ -458,13 +458,17 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
 const ERROR_STRINGS = {
   en: {
     permission: "You don't have permission to manage or publish funnels. Ask a workspace owner to update your role.",
-    subscription: "This workspace needs an active subscription to create or publish funnels. Update your plan in Billing.",
+    subscription:
+      "Your subscription has expired, so new funnels can't be created until it's renewed. Existing funnels keep working — see Settings → Plan and referral code.",
+    suspended: "This store has been suspended by Zimos, so new funnels can't be created. Contact Zimos support.",
     notPublished: "Publish this funnel before pausing or resuming it.",
     keyTaken: "A step with this key already exists in the funnel. Reload and try again.",
   },
   ar: {
     permission: "ليست لديك صلاحية لإدارة مسارات البيع أو نشرها. اطلب من مالك مساحة العمل تحديث دورك.",
-    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإنشاء مسارات البيع أو نشرها. حدّث خطتك من صفحة الفواتير.",
+    subscription:
+      "انتهى اشتراكك، لذلك لا يمكن إنشاء مسارات بيع جديدة حتى يُجدَّد. مسارات البيع الحالية تعمل كالمعتاد — راجع الإعدادات ← الخطة وكود الإحالة.",
+    suspended: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء مسارات بيع جديدة. تواصل مع دعم Zimos.",
     notPublished: "انشر مسار البيع أولًا قبل إيقافه مؤقتًا أو استئنافه.",
     keyTaken: "توجد خطوة بنفس المعرّف في مسار البيع. أعد التحميل وحاول مرة أخرى.",
   },
@@ -474,12 +478,13 @@ export function isSubscriptionError(err: unknown): boolean {
   return err instanceof ApiError && (err.code === "SUBSCRIPTION_REQUIRED" || err.status === 402);
 }
 
-/** Bilingual message for funnel API errors (403 permission, 402 subscription, known 409s). */
+/** Bilingual message for funnel API errors (403 permission or suspension, 402 subscription, known 409s). */
 export function useFunnelErrorMessage(): (err: unknown) => string {
   const t = useT(ERROR_STRINGS);
   return (err: unknown) => {
     if (isSubscriptionError(err)) return t.subscription;
     if (err instanceof ApiError) {
+      if (err.code === "STORE_SUSPENDED") return t.suspended;
       if (err.status === 403) return t.permission;
       if (err.code === "FUNNEL_NOT_PUBLISHED") return t.notPublished;
       if (err.code === "FUNNEL_STEP_KEY_TAKEN") return t.keyTaken;

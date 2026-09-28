@@ -95,6 +95,9 @@ const STATUS_TONES: Record<string, Tone> = {
   // admin users
   invited: "warning",
   disabled: "neutral",
+  // subscription charges (`pending` is shared with moderation above)
+  paid: "success",
+  failed: "danger",
 };
 
 /** Status pill with the tone looked up from a shared status vocabulary. */

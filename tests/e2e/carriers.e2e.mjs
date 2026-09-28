@@ -3,7 +3,9 @@
 // carrier error codes), plus provider logos and the carrier sandbox errors
 // (providers.scenarios.mjs), upstream 424/502 errors and unverified J&T
 // credentials (upstream.scenarios.mjs), J&T typed address names
-// (typednames.scenarios.mjs), driven in Chromium against a fully stubbed API.
+// (typednames.scenarios.mjs), the subscription / suspension banner and the
+// creation lock (access.scenarios.mjs), driven in Chromium against a fully
+// stubbed API.
 //
 //   npm run test:e2e                 all scenarios
 //   npm run test:e2e -- B,C          only these scenarios
@@ -44,6 +46,7 @@ import {
   shippingLogosAndSandbox,
 } from "./providers.scenarios.mjs";
 import { newStoreRoleGatedScreens } from "./workspace.scenarios.mjs";
+import { expiringBannerDismissedForTheDay, restrictedBannerAndCreationLock, suspendedBanner } from "./access.scenarios.mjs";
 import { connectUpstreamAndUnverified, upstreamBookingErrors } from "./upstream.scenarios.mjs";
 import { cardShowsBothNotes, markedTypesEachLevel, namesRequiredThenResend } from "./typednames.scenarios.mjs";
 
@@ -576,6 +579,9 @@ const SCENARIOS = {
   R: (browser, base) => namesRequiredThenResend(browser, base, "en"),
   R2: (browser, base) => namesRequiredThenResend(browser, base, "ar"),
   S: markedTypesEachLevel,
+  V: expiringBannerDismissedForTheDay,
+  W: restrictedBannerAndCreationLock,
+  X: suspendedBanner,
 };
 
 const only = process.argv[2]?.split(",").filter(Boolean);

@@ -8,6 +8,23 @@
  * `<ComingLater />` and show no data at all.
  */
 import type {
+  AdminCharge,
+  AdminSpecialTerm,
+  AdminSpecialTermsInput,
+  AdminStoreAccess,
+  AdminRecordPaymentResult,
+  AdminReversePaymentResult,
+  AdminWorkspaceCharges,
+  AdminAgentDetail,
+  AdminAgentList,
+  AdminCommission,
+  AdminCommissionPage,
+  AdminCommissionParams,
+  AdminCreateAgentResult,
+  AdminGrantPayload,
+  AdminReferralCode,
+  AdminReferralCodeInput,
+  AdminRolesResponse,
   AdminAnnouncement,
   AdminAnnouncementInput,
   AdminAttentionItem,
@@ -338,16 +355,121 @@ export function updateTicket(
 
 // ---------------------------------------------------------------- admin users
 
+export function listRoles(): Promise<AdminRolesResponse> {
+  return apiClient.adminListRoles();
+}
+
 export function listAdmins(): Promise<AdminPlatformAdmin[]> {
   return apiClient.adminListAdmins();
 }
 
-export function grantAdmin(email: string): Promise<AdminGrantResult> {
-  return apiClient.adminGrantAdmin(email);
+export function grantAdmin(payload: AdminGrantPayload): Promise<AdminGrantResult> {
+  return apiClient.adminGrantAdmin(payload);
+}
+
+export function updateAdmin(
+  userId: string,
+  payload: { role?: string; permissions?: string[] }
+): Promise<AdminPlatformAdmin> {
+  return apiClient.adminUpdateAdmin(userId, payload);
 }
 
 export async function revokeAdmin(userId: string): Promise<void> {
   await apiClient.adminRevokeAdmin(userId);
+}
+
+// --------------------------------------------- agents, codes, commissions
+
+export const COMMISSION_PAGE_SIZE = 50;
+
+export function listAgents(): Promise<AdminAgentList> {
+  return apiClient.adminListAgents();
+}
+
+export function getAgent(agentId: string): Promise<AdminAgentDetail> {
+  return apiClient.adminGetAgent(agentId);
+}
+
+export function createAgent(payload: {
+  email: string;
+  firstCode?: AdminReferralCodeInput & { code: string };
+}): Promise<AdminCreateAgentResult> {
+  return apiClient.adminCreateAgent(payload);
+}
+
+export function createReferralCode(
+  agentId: string,
+  payload: AdminReferralCodeInput & { code: string }
+): Promise<AdminReferralCode> {
+  return apiClient.adminCreateReferralCode(agentId, payload);
+}
+
+export function updateReferralCode(codeId: string, payload: AdminReferralCodeInput): Promise<AdminReferralCode> {
+  return apiClient.adminUpdateReferralCode(codeId, payload);
+}
+
+export function listCommissions(params: AdminCommissionParams): Promise<AdminCommissionPage> {
+  return apiClient.adminListCommissions({ limit: COMMISSION_PAGE_SIZE, ...params });
+}
+
+export function markCommissionPaid(commissionId: string, note?: string): Promise<AdminCommission> {
+  return apiClient.adminMarkCommissionPaid(commissionId, note);
+}
+
+// ------------------------------------------------------ subscription charges
+
+export function listCharges(workspaceId: string): Promise<AdminWorkspaceCharges> {
+  return apiClient.adminListCharges(workspaceId);
+}
+
+export function createCharge(workspaceId: string): Promise<{ charge: AdminCharge; created: boolean }> {
+  return apiClient.adminCreateCharge(workspaceId);
+}
+
+export function recordPayment(
+  chargeId: string,
+  payload: { amountReceived: number; note?: string; paidAt?: string }
+): Promise<AdminRecordPaymentResult> {
+  return apiClient.adminRecordPayment(chargeId, payload);
+}
+
+export function reversePayment(chargeId: string, reason?: string): Promise<AdminReversePaymentResult> {
+  return apiClient.adminReversePayment(chargeId, reason ? { reason } : {});
+}
+
+export function setBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<AdminWorkspaceCharges> {
+  return apiClient.adminSetBillingCycle(workspaceId, billingCycle);
+}
+
+export function grantSpecialTerms(
+  workspaceId: string,
+  payload: AdminSpecialTermsInput
+): Promise<AdminWorkspaceCharges & { term: AdminSpecialTerm }> {
+  return apiClient.adminGrantSpecialTerms(workspaceId, payload);
+}
+
+// --------------------------------------------------------------- store access
+
+export function getStoreAccess(workspaceId: string): Promise<AdminStoreAccess> {
+  return apiClient.adminGetStoreAccess(workspaceId);
+}
+
+export function suspendWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+  return apiClient.adminSuspendWorkspace(workspaceId, reason);
+}
+
+export function reactivateWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+  return apiClient.adminReactivateWorkspace(workspaceId, reason);
+}
+
+export function getMyReferrals(): Promise<AdminAgentDetail> {
+  return apiClient.adminGetMyReferrals();
+}
+
+export function listMyCommissions(
+  params: Omit<AdminCommissionParams, "agentId" | "workspaceId">
+): Promise<AdminCommissionPage> {
+  return apiClient.adminListMyCommissions({ limit: COMMISSION_PAGE_SIZE, ...params });
 }
 
 // -------------------------------------------------------------- system health

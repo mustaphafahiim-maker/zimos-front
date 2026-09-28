@@ -12,6 +12,7 @@ import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import * as adminApi from "@/lib/adminApi";
+import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
 import { PLAN_FEATURES } from "@/lib/planFeatures";
 import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
 import { formatBp, formatMoney, formatNumber, formatRelative } from "@/lib/format";
@@ -182,7 +183,8 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const nums = [form.monthlyPrice, form.yearlyPrice, form.trialDays, form.transactionFeeBp, form.codFeeBp].map(Number);
+    // The annual price is not sent: the API always sets it to 10 × monthly.
+    const nums = [form.monthlyPrice, "0", form.trialDays, form.transactionFeeBp, form.codFeeBp].map(Number);
     if (nums.some((n) => !Number.isFinite(n))) {
       setError("Prices, trial days and fees must be numbers.");
       return;
@@ -200,7 +202,7 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
         name: form.name,
         code: form.code,
         monthlyPrice: nums[0],
-        yearlyPrice: nums[1],
+        yearlyPrice: nums[0] * ANNUAL_PRICE_MONTHS,
         trialDays: Math.max(0, Math.round(nums[2])),
         orderQuota: quota,
         transactionFeeBp: Math.round(nums[3]),
@@ -238,7 +240,13 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
           <TextField label="Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
           <TextField label="Code" hint="Lowercase identifier used by billing. Derived from the name if empty." value={form.code} onChange={(e) => set("code", e.target.value)} />
           <TextField label="Monthly price" type="number" min={0} step="1" required value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} />
-          <TextField label="Yearly price" type="number" min={0} step="1" required value={form.yearlyPrice} onChange={(e) => set("yearlyPrice", e.target.value)} />
+          <TextField
+            label="Yearly price"
+            type="number"
+            readOnly
+            value={Number.isFinite(Number(form.monthlyPrice)) ? String(Number(form.monthlyPrice) * ANNUAL_PRICE_MONTHS) : ""}
+            hint={`Always ${ANNUAL_PRICE_MONTHS} × the monthly price (two months free).`}
+          />
           <TextField label="Trial days" type="number" min={0} max={90} required value={form.trialDays} onChange={(e) => set("trialDays", e.target.value)} />
           <TextField label="Order quota / month" type="number" min={1} hint="Leave empty for unlimited." value={form.orderQuota} onChange={(e) => set("orderQuota", e.target.value)} />
           <TextField

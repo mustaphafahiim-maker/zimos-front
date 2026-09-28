@@ -123,7 +123,7 @@ export function initials(name: string): string {
  */
 const minorDigits = new Map<string, number>();
 
-function minorUnitDigits(currency: string): number {
+export function minorUnitDigits(currency: string): number {
   let digits = minorDigits.get(currency);
   if (digits === undefined) {
     // The shared formatters pin maximumFractionDigits to 0, so this asks a
@@ -154,6 +154,22 @@ function minorUnitDigits(currency: string): number {
  */
 export function formatMinorMoney(minor: number, currency: string = PLATFORM_CURRENCY): string {
   return formatMoney(minor / 10 ** minorUnitDigits(currency), currency);
+}
+
+const exactMoneyFmts = new Map<string, Intl.NumberFormat>();
+
+/**
+ * Minor units → an amount with the currency's own decimals ($80.73, not $81).
+ * For ledgers and invoices, where the rounding `formatMinorMoney` does for
+ * headline figures would misstate the amount owed.
+ */
+export function formatMinorMoneyExact(minor: number, currency: string = PLATFORM_CURRENCY): string {
+  let f = exactMoneyFmts.get(currency);
+  if (!f) {
+    f = new Intl.NumberFormat("en", { style: "currency", currency });
+    exactMoneyFmts.set(currency, f);
+  }
+  return f.format(minor / 10 ** minorUnitDigits(currency));
 }
 
 export function formatMinorMoneyCompact(

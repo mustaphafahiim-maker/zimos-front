@@ -4,6 +4,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem } from "@/lib/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -308,6 +309,8 @@ export function DashboardLayout() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6">
+          {/* Subscription expiring / expired, or the store suspended. */}
+          <AccessBanner />
           {/* One crashing page shows an error here; the sidebar and header
               stay up so the merchant can move on. */}
           <RouteErrorBoundary resetKey={location.pathname}>

@@ -10,7 +10,14 @@ import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
-import { brandStyle, getStoreMeta } from "@/lib/storeMeta";
+import { brandStyle, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
+import { StoreUnavailable } from "@/components/StoreUnavailable";
+
+/** An unavailable store has no themeSettings; its own default language still counts. */
+function localeSource(store: UnavailableStore) {
+  const source = { themeSettings: {}, defaultLocale: store.defaultLocale ?? undefined };
+  return source;
+}
 import { getStoreBasePath } from "@/lib/storeRoute";
 
 /**
@@ -28,7 +35,12 @@ export async function generateMetadata({
   params: Promise<{ workspaceId: string }>;
 }): Promise<Metadata> {
   const { workspaceId } = await params;
-  const store = await getStoreMeta(workspaceId);
+  const state = await getStoreState(workspaceId);
+  if (state.kind === "unavailable") {
+    const t = getDictionary(await getStoreLocale(localeSource(state.store)));
+    return { title: { absolute: state.store.name ? `${state.store.name} — ${t.unavailable.metaTitle}` : t.unavailable.metaTitle }, robots: { index: false } };
+  }
+  const store = state.kind === "ok" ? state.store : null;
   if (!store) return {};
 
   const locale = await getStoreLocale(store);
@@ -73,11 +85,18 @@ export default async function StoreLayout({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const [store, basePath] = await Promise.all([
-    getStoreMeta(workspaceId),
+  const [state, basePath] = await Promise.all([
+    getStoreState(workspaceId),
     getStoreBasePath(workspaceId),
   ]);
-  if (!store) notFound();
+  // Suspended, or unpaid past its grace day: every page of the store is the
+  // "currently unavailable" page, and none of the store's own content.
+  if (state.kind === "unavailable") {
+    const locale = await getStoreLocale(localeSource(state.store));
+    return <StoreUnavailable store={state.store} locale={locale} />;
+  }
+  if (state.kind !== "ok") notFound();
+  const store = state.store;
 
   const locale = await getStoreLocale(store);
   const info: StoreInfo = {

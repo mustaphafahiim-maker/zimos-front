@@ -5,7 +5,8 @@ import { PageRenderer } from "@/components/page-renderer";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
-import { getStoreMeta } from "@/lib/storeMeta";
+import { getStoreMeta, isStoreUnavailable } from "@/lib/storeMeta";
+import type { StorefrontPageResult } from "@store-builder/api-client";
 import { getStoreBasePath } from "@/lib/storeRoute";
 
 export const revalidate = 60;
@@ -13,9 +14,15 @@ export const revalidate = 60;
 type Params = Promise<{ workspaceId: string; path: string[] }>;
 
 /** Deduped so generateMetadata and the page share one API call. */
-const getPublishedPage = cache(async (workspaceId: string, pagePath: string) => {
+const getPublishedPage = cache(async (workspaceId: string, pagePath: string): Promise<StorefrontPageResult> => {
   const client = await createServerStorefrontApiClient();
-  return client.getStorefrontPage(workspaceId, pagePath);
+  try {
+    return await client.getStorefrontPage(workspaceId, pagePath);
+  } catch (err) {
+    // The store layout draws the unavailable page; nothing to render here.
+    if (isStoreUnavailable(err)) return { kind: "notFound" };
+    throw err;
+  }
 });
 
 function pathOf(path: string[] | undefined) {
