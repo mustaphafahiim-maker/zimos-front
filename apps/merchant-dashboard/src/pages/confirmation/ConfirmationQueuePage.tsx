@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
+  ORDER_SORTS,
   apiErrorDetails,
   isApiErrorCode,
   isInvalidCursorError,
@@ -10,6 +11,7 @@ import {
   type ConfirmationLockDetails,
   type ConfirmationOutcome,
   type ConfirmationQueueCounts,
+  type ConfirmationQueueSort,
   type ConfirmationQueueTab,
   type ConfirmationTask,
   type RecordConfirmationOutcomePayload,
@@ -20,6 +22,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useCursorList } from "@/lib/useCursorList";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatAddress, formatDateTime, formatMoney } from "@/lib/format";
+import { useListSort } from "@/lib/listSort";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -32,11 +35,14 @@ import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Select } from "@/components/Select";
 import { useOrderLabels } from "@/pages/orders/orderLabels";
+import { OrderTimelineLines } from "@/pages/orders/components/OrderTimelineLines";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "./confirmationRoles";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
+const QUEUE_SORTS: readonly ConfirmationQueueSort[] = ["default", ...ORDER_SORTS];
 const PAGE_SIZE = 50;
 
 const STRINGS = {
@@ -104,6 +110,12 @@ const STRINGS = {
     correctSubmit: "Change to {outcome}",
     cancel: "Cancel",
     toastCorrected: "{order} changed to {outcome}.",
+    sortLabel: "Sort",
+    sort_default: "Queue order",
+    sort_newest: "Newest first",
+    sort_oldest: "Oldest first",
+    sort_total_desc: "Total: high to low",
+    sort_total_asc: "Total: low to high",
   },
   ar: {
     title: "قائمة التأكيد",
@@ -168,6 +180,12 @@ const STRINGS = {
     correctSubmit: "التغيير إلى {outcome}",
     cancel: "إلغاء",
     toastCorrected: "تم تغيير {order} إلى {outcome}.",
+    sortLabel: "الترتيب",
+    sort_default: "ترتيب القائمة",
+    sort_newest: "الأحدث أولًا",
+    sort_oldest: "الأقدم أولًا",
+    sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
+    sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
   },
 } satisfies Messages;
 
@@ -206,14 +224,18 @@ export function ConfirmationQueuePage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const [tab, setTab] = useState<ConfirmationQueueTab>("pending");
+  // "Queue order" is each tab's own order (due callbacks first on Pending),
+  // as the queue has always been; the rest sort on the server by the order.
+  const [sort, setSort] = useListSort<ConfirmationQueueSort>("zimos.confirmation.sort", QUEUE_SORTS, "default");
+  const sortId = useId();
 
   const counts = useAsync(() => apiClient.getConfirmationQueueCounts(workspaceId), [workspaceId]);
   const list = useCursorList<ConfirmationTask>(
     async (cursor) => {
-      const page = await apiClient.listConfirmationQueue(workspaceId, { status: tab, cursor, limit: PAGE_SIZE });
+      const page = await apiClient.listConfirmationQueue(workspaceId, { status: tab, cursor, limit: PAGE_SIZE, sort });
       return { items: page.tasks, nextCursor: page.nextCursor };
     },
-    [workspaceId, tab],
+    [workspaceId, tab, sort],
     { isStaleCursor: (err) => isInvalidCursorError(err) }
   );
 
@@ -240,6 +262,24 @@ export function ConfirmationQueuePage() {
   return (
     <div className="max-w-3xl">
       <PageHeader title={t.title} description={t.description} />
+
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <label htmlFor={sortId} className="text-sm text-ink-soft">
+          {t.sortLabel}
+        </label>
+        <Select
+          id={sortId}
+          value={sort}
+          onChange={(e) => setSort(e.target.value as ConfirmationQueueSort)}
+          className="h-11 w-auto min-w-48"
+        >
+          {QUEUE_SORTS.map((key) => (
+            <option key={key} value={key}>
+              {t[`sort_${key}`]}
+            </option>
+          ))}
+        </Select>
+      </div>
 
       <FilterTabs
         className="mb-4"
@@ -279,6 +319,7 @@ export function ConfirmationQueuePage() {
 function OrderSummary({ task, aside }: { task: ConfirmationTask; aside?: ReactNode }) {
   const t = useT(STRINGS);
   const orderLabels = useOrderLabels();
+  const now = useNow(60_000);
   const { order } = task;
   const riskFlags = order.riskFlags ?? [];
   const contact = order.contactSnapshot;
@@ -309,6 +350,7 @@ function OrderSummary({ task, aside }: { task: ConfirmationTask; aside?: ReactNo
               {riskFlags.map((flag) => orderLabels.riskFlag(flag)).join(" · ")}
             </p>
           )}
+          <OrderTimelineLines order={order} now={now} className="mt-1" />
         </div>
         {aside}
       </div>

@@ -767,15 +767,28 @@ function CreateShipmentForm({
   const errorMessage = useErrorMessage();
   const carrierError = useCarrierErrorMessage();
 
+  const { currentWorkspace } = useWorkspace();
   const connected = carriers.filter((c) => c.connection);
   // Until the merchant picks, the default follows the carriers list, which
-  // arrives after the first render: the one connected courier once it's
-  // known (booking stays one step), manual when there is none, and no
-  // default when there are several to choose from.
+  // arrives after the first render: the store's default courier (Shipping
+  // settings) when it is manual or connected; else the one connected courier
+  // once it's known (booking stays one step), manual when there is none, and
+  // no default when there are several to choose from. Whichever is booked,
+  // the order keeps the shipping price the customer paid.
   const [pickedMethod, setPickedMethod] = useState<Method | null>(null);
-  const picked = pickedMethod === MANUAL || connected.some((c) => c.code === pickedMethod) ? pickedMethod : null;
+  const usable = (code: string | null | undefined): code is Method =>
+    code === MANUAL || connected.some((c) => c.code === code);
+  const picked = usable(pickedMethod) ? pickedMethod : null;
+  const storeDefault = currentWorkspace?.settings?.default_carrier_code;
   const method: Method | null =
-    picked ?? (connected.length === 1 ? connected[0].code : connected.length === 0 ? MANUAL : null);
+    picked ??
+    (usable(storeDefault)
+      ? storeDefault
+      : connected.length === 1
+        ? connected[0].code
+        : connected.length === 0
+          ? MANUAL
+          : null);
   const courier = method && method !== MANUAL ? connected.find((c) => c.code === method) : undefined;
   const courierName = courier?.name ?? t.courierGeneric;
   const cityDistrict = courier ? usesCityDistrict(courier) : true;

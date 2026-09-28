@@ -8,6 +8,7 @@ import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
 import { useDialog, useSheetPresence } from "@/lib/useDialog";
 import { StoreLink } from "@/components/StoreRoute";
+import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { BoxIcon, CartGlyph, CrossIcon } from "./Icons";
 import { QuantityStepper } from "./QuantityStepper";
 import { backdrop, btnPrimaryLg, btnSecondary, focusRing, iconBtn, modalLayer, sheet, skeleton } from "./ui";
@@ -15,6 +16,7 @@ import { backdrop, btnPrimaryLg, btnSecondary, focusRing, iconBtn, modalLayer, s
 /**
  * The cart as a slide-over, opened by "add to cart" anywhere in the store and
  * by the header's cart icon: the lines, a quantity stepper, the subtotal and
+ * shipping (CartShippingSummary, quoted only while the drawer is open) and
  * the two ways out — checkout, or back to browsing. The cart page stays the
  * full view; this is the quick one.
  *
@@ -213,16 +215,7 @@ export function CartDrawer() {
 
         {!isEmpty && cart && (
           <div className="shrink-0 border-t border-line bg-paper-raised px-4 py-4 sm:px-5">
-            <dl className="space-y-1.5 text-sm">
-              <div className="flex justify-between gap-3">
-                <dt className="text-ink-soft">{t.cart.subtotal}</dt>
-                <dd className="text-base font-bold text-ink">{money(cart.subtotal, currency)}</dd>
-              </div>
-              <div className="flex justify-between gap-3 text-xs">
-                <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
-                <dd className="text-ink-soft">{t.cart.shippingAtCheckout}</dd>
-              </div>
-            </dl>
+            <CartShippingSummary workspaceId={workspaceId} cart={cart} enabled={isDrawerOpen} />
             <div className="mt-4 grid gap-2">
               <StoreLink href="/checkout" className={btnPrimaryLg} data-autofocus="">
                 {t.cart.checkout}

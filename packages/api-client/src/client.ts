@@ -111,7 +111,7 @@ import type {
   CollectionSummary,
   ConfirmationQueueCounts,
   ConfirmationQueuePage,
-  ConfirmationQueueTab,
+  ConfirmationQueueParams,
   ConfirmationTask,
   CorrectConfirmationOutcomePayload,
   ManualCancelAcknowledgement,
@@ -127,6 +127,9 @@ import type {
   SetPricingModePayload,
   SetPricingModeResult,
   ShippingQuote,
+  ShippingSettings,
+  ShippingSettingsResponse,
+  UpdateShippingSettingsPayload,
   ShippingQuotePayload,
   WeightTier,
   WeightTierSettings,
@@ -1900,10 +1903,7 @@ export class ApiClient {
     return `/workspaces/${workspaceId}/confirmation-tasks`;
   }
 
-  async listConfirmationQueue(
-    workspaceId: string,
-    params: { status?: ConfirmationQueueTab; mine?: boolean; cursor?: string; limit?: number } = {}
-  ) {
+  async listConfirmationQueue(workspaceId: string, params: ConfirmationQueueParams = {}) {
     return this.request<ConfirmationQueuePage>(
       `${this.confirmationTasksBase(workspaceId)}${buildQuery({ ...params })}`
     );
@@ -2107,6 +2107,19 @@ export class ApiClient {
       `${this.shippingBase(workspaceId)}/zones/${zoneId}/tier-prices`,
       { method: "PUT", body: { prices } }
     );
+  }
+
+  /** The store's default rate, governorate prices, free-shipping threshold and default courier. */
+  async getShippingSettings(workspaceId: string) {
+    return this.request<ShippingSettingsResponse>(`/workspaces/${workspaceId}/shipping/settings`);
+  }
+
+  async updateShippingSettings(workspaceId: string, payload: UpdateShippingSettingsPayload) {
+    const { settings } = await this.request<{ settings: ShippingSettings }>(
+      `/workspaces/${workspaceId}/shipping/settings`,
+      { method: "PATCH", body: payload }
+    );
+    return settings;
   }
 
   async setShippingPricingMode(workspaceId: string, payload: SetPricingModePayload) {

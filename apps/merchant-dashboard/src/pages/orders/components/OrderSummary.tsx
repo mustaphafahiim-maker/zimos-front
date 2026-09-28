@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@store-builder/ui";
-import type { Order } from "@store-builder/api-client";
+import type { Order, ShippingRule } from "@store-builder/api-client";
 import { formatMoney, formatOptions } from "@/lib/format";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { providerName } from "@/lib/providers";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
 
 const STRINGS = {
@@ -31,6 +32,16 @@ const STRINGS = {
     cancelUnconfirmedHint:
       "A delivery cancelled in the courier's dashboard still shows as moving there. Check the courier's dashboard; details under Shipments.",
     listSep: ", ",
+    rule_no_destination: "No address, so no shipping was charged",
+    rule_offer_override: "The offer's own shipping price",
+    rule_all_items_free: "Every product in the order ships free",
+    rule_free_threshold: "Free: the order reached the free-shipping amount",
+    rule_governorate_rate: "The governorate's shipping price",
+    rule_zone_rate: "Shipping zone rate",
+    rule_zone_tier_price: "Zone price for the weight tier",
+    rule_default_rate: "Default shipping price",
+    rule_no_rate: "No shipping price was set",
+    ruleExtras: "{rule} + {amount} in product extra fees",
   },
   ar: {
     items: "العناصر",
@@ -58,6 +69,16 @@ const STRINGS = {
     cancelUnconfirmedHint:
       "شحنة أُلغيت من لوحة تحكم شركة الشحن ما زالت تظهر كأنها تتحرك هناك. راجع لوحة تحكم الشركة؛ التفاصيل في قسم الشحنات.",
     listSep: "، ",
+    rule_no_destination: "لا يوجد عنوان، لذلك لم يُحتسب شحن",
+    rule_offer_override: "سعر الشحن الخاص بالعرض",
+    rule_all_items_free: "كل منتجات الطلب مجانية الشحن",
+    rule_free_threshold: "مجاني: بلغ الطلب حد الشحن المجاني",
+    rule_governorate_rate: "سعر الشحن الخاص بالمحافظة",
+    rule_zone_rate: "سعر منطقة الشحن",
+    rule_zone_tier_price: "سعر المنطقة حسب شريحة الوزن",
+    rule_default_rate: "سعر الشحن الافتراضي",
+    rule_no_rate: "لم يكن هناك سعر شحن محدد",
+    ruleExtras: "{rule} + {amount} رسوم إضافية للمنتجات",
   },
 } satisfies Messages;
 
@@ -141,6 +162,16 @@ export function OrderSummary({ order }: { order: Order }) {
               <AmountRow label={t.discount} value={`− ${formatMoney(order.discountAmount, c)}`} />
             )}
             <AmountRow label={t.shipping} value={formatMoney(order.shippingAmount, c)} />
+            {order.shippingSnapshot && (
+              <p className="text-end text-xs text-ink-soft">
+                {order.shippingSnapshot.extraFeesAmount > 0
+                  ? fmt(t.ruleExtras, {
+                      rule: t[`rule_${order.shippingSnapshot.rule as ShippingRule}`],
+                      amount: formatMoney(order.shippingSnapshot.extraFeesAmount, c),
+                    })
+                  : t[`rule_${order.shippingSnapshot.rule as ShippingRule}`]}
+              </p>
+            )}
             <AmountRow label={t.tax} value={formatMoney(order.taxAmount, c)} />
             <AmountRow label={t.total} value={formatMoney(order.totalAmount, c)} strong />
             {Number(order.amountPaid) > 0 && <AmountRow label={t.paid} value={formatMoney(order.amountPaid, c)} />}
@@ -181,7 +212,10 @@ export function OrderSummary({ order }: { order: Order }) {
           </div>
           <div>
             <h3 className="mb-1 font-medium text-ink">{t.payment}</h3>
-            <p className="text-ink-soft">{labels.paymentMethod(order.paymentMethod)}</p>
+            <p className="text-ink-soft">
+              {labels.paymentMethod(order.paymentMethod)}
+              {order.paymentProvider && ` · ${providerName(order.paymentProvider)}`}
+            </p>
           </div>
           {order.notes && (
             <div>

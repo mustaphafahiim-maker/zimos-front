@@ -6,6 +6,7 @@ import { BoxIcon, CartGlyph } from "@/components/Icons";
 import { QuantityStepper } from "@/components/QuantityStepper";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
 import { firstImage, variantLabel } from "@/lib/product";
@@ -149,20 +150,11 @@ export default function CartPage() {
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className={`${card} p-5`}>
               <h2 className="text-base font-semibold text-ink">{t.cart.summary}</h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.cart.subtotal}</dt>
-                  <dd className="font-semibold text-ink">{money(cart.subtotal, currency)}</dd>
-                </div>
-                {/* The API has no shipping quote for a cart — shipping is
-                    priced server-side from the delivery address when the order
-                    is placed — so the cart says so rather than showing a total
-                    it cannot know. */}
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
-                  <dd className="text-ink-soft">{t.cart.shippingAtCheckout}</dd>
-                </div>
-              </dl>
+              {/* Shipping comes from the same quote the order is charged by,
+                  once the shopper picks a governorate here or at checkout. */}
+              <div className="mt-4">
+                <CartShippingSummary workspaceId={workspaceId} cart={cart} />
+              </div>
               <StoreLink href="/checkout" className={`${btnPrimaryLg} mt-5`}>
                 {t.cart.checkout}
               </StoreLink>

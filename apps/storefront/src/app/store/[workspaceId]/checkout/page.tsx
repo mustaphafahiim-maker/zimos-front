@@ -7,7 +7,7 @@ import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/Check
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
-import { ShippingFee } from "@/components/checkout/ShippingFee";
+import { FreeShippingHint, ShippingFee } from "@/components/checkout/ShippingFee";
 import { ArrowIcon } from "@/components/Icons";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
@@ -31,6 +31,7 @@ import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 
 const FORM_PREFIX = "checkout";
@@ -50,6 +51,14 @@ export default function CheckoutPage() {
   const { products, byVariant, loaded } = useCatalog(workspaceId);
 
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The governorate chosen in the cart opens the form (once, and only into an
+  // empty field); choosing one here is remembered for the cart in turn.
+  const [shipTo, setShipTo] = useShipTo(workspaceId);
+  const [adoptedShipTo, setAdoptedShipTo] = useState(false);
+  if (!adoptedShipTo && shipTo) {
+    setAdoptedShipTo(true);
+    if (!values.governorate) setValues((prev) => ({ ...prev, governorate: shipTo }));
+  }
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +122,7 @@ export default function CheckoutPage() {
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (field === "governorate") setShipTo(value);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -323,6 +333,12 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            <FreeShippingHint
+              progress={shipping.freeShipping}
+              line={shipping.line}
+              currency={currency}
+              className="mt-3"
+            />
             <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
           </section>
 

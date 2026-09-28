@@ -1,0 +1,229 @@
+import { useState, type FormEvent } from "react";
+import { Alert, Button } from "@store-builder/ui";
+import type { ShippingSettingsResponse } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useAsync } from "@/lib/useAsync";
+import { getFieldErrors } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { majorToMinor, minorToMajorInput } from "@/lib/format";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { DataState } from "@/components/DataState";
+import { Field } from "@/components/Field";
+import { MoneyInput } from "@/components/MoneyInput";
+import { Select } from "@/components/Select";
+import { useToast } from "@/components/Toast";
+
+const STRINGS = {
+  en: {
+    title: "Shipping prices",
+    description:
+      "What customers pay for shipping. The checkout shows this exact amount as soon as the customer picks their governorate, and the order is charged the same.",
+    defaultRate: "Default shipping price",
+    defaultRateHint: "Charged for any governorate without its own price. Leave blank to charge nothing.",
+    threshold: "Free shipping from",
+    thresholdHint: "Orders with a subtotal at or above this amount ship free. Leave blank to turn off.",
+    carrier: "Default courier",
+    carrierHint: "Preselected when you ship an order. You can pick another one per order; the customer's price never changes.",
+    carrierNone: "No preference",
+    carrierManual: "Manual (I book the courier myself)",
+    carrierNotConnected: "{name} (not connected)",
+    governorates: "Price per governorate",
+    governoratesHint: "Leave a governorate blank to use the default price. Enter 0 to ship there free.",
+    tierModeNote:
+      "This store prices shipping by weight tier, so the prices per governorate below are not used until you switch back to rate pricing. The default price and free-shipping threshold still apply.",
+    invalidAmount: "Enter an amount of 0 or more, or leave it blank.",
+    save: "Save shipping prices",
+    saving: "Saving…",
+    saved: "Shipping prices saved.",
+    productNote: "Individual products can also ship free or add an extra fee — set it in each product's details.",
+  },
+  ar: {
+    title: "أسعار الشحن",
+    description:
+      "ما يدفعه العميل مقابل الشحن. تعرض صفحة الدفع هذا المبلغ نفسه بمجرد أن يختار العميل محافظته، ويُحاسَب الطلب عليه دون تغيير.",
+    defaultRate: "سعر الشحن الافتراضي",
+    defaultRateHint: "يُطبَّق على أي محافظة ليس لها سعر خاص. اتركه فارغًا لعدم احتساب أي مبلغ.",
+    threshold: "الشحن مجاني ابتداءً من",
+    thresholdHint: "الطلبات التي يبلغ إجماليها المبدئي هذا المبلغ أو أكثر تُشحن مجانًا. اتركه فارغًا لإيقافه.",
+    carrier: "شركة الشحن الافتراضية",
+    carrierHint: "تُختار تلقائيًا عند شحن الطلب. يمكنك اختيار شركة أخرى لكل طلب، ولا يتغير السعر الذي دفعه العميل.",
+    carrierNone: "بدون تفضيل",
+    carrierManual: "يدوي (أحجز مع شركة الشحن بنفسي)",
+    carrierNotConnected: "{name} (غير متصلة)",
+    governorates: "السعر حسب المحافظة",
+    governoratesHint: "اترك المحافظة فارغة لاستخدام السعر الافتراضي، أو أدخل 0 لشحن مجاني إليها.",
+    tierModeNote:
+      "يحتسب هذا المتجر الشحن حسب شرائح الوزن، لذلك لا تُستخدم أسعار المحافظات أدناه حتى تعود إلى التسعير بالأسعار. يظل السعر الافتراضي وحد الشحن المجاني مطبقين.",
+    invalidAmount: "أدخل مبلغًا يساوي 0 أو أكثر، أو اتركه فارغًا.",
+    save: "حفظ أسعار الشحن",
+    saving: "جارٍ الحفظ…",
+    saved: "تم حفظ أسعار الشحن.",
+    productNote: "يمكن أيضًا جعل شحن منتج بعينه مجانيًا أو إضافة رسوم إضافية عليه — من بيانات كل منتج.",
+  },
+} satisfies Messages;
+
+/** "" -> null; a valid amount -> minor units; anything else -> "invalid". */
+function parseAmount(input: string): number | null | "invalid" {
+  if (input.trim() === "") return null;
+  const minor = majorToMinor(input);
+  return Number.isFinite(minor) && minor >= 0 ? minor : "invalid";
+}
+
+/**
+ * The store's shipping prices: a default, a price per governorate, a free-
+ * shipping threshold and the default courier. Saved through PATCH
+ * /shipping/settings (shipping.manage), audited server-side.
+ */
+export function ShippingSettingsSection({ onSaved }: { onSaved?: () => Promise<void> | void }) {
+  const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const data = useAsync(() => apiClient.getShippingSettings(workspaceId), [workspaceId]);
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
+      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+      <DataState loading={data.loading} error={data.error} empty={false} onRetry={() => data.refresh()}>
+        {data.data && (
+          <SettingsForm
+            // Re-seed the form from what the server saved.
+            key={JSON.stringify(data.data.settings)}
+            initial={data.data}
+            onSaved={async (settings) => {
+              data.setData({ ...data.data!, settings });
+              await onSaved?.();
+            }}
+          />
+        )}
+      </DataState>
+    </section>
+  );
+}
+
+function SettingsForm({
+  initial,
+  onSaved,
+}: {
+  initial: ShippingSettingsResponse;
+  onSaved: (settings: ShippingSettingsResponse["settings"]) => Promise<void>;
+}) {
+  const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const { settings, governorates, carriers } = initial;
+
+  const [defaultRate, setDefaultRate] = useState(minorToMajorInput(settings.defaultRateAmount));
+  const [threshold, setThreshold] = useState(minorToMajorInput(settings.freeShippingThresholdAmount));
+  const [carrier, setCarrier] = useState(settings.defaultCarrierCode ?? "");
+  const [rates, setRates] = useState<Record<string, string>>(() =>
+    Object.fromEntries(governorates.map((g) => [g.code, minorToMajorInput(settings.governorateRates[g.code])]))
+  );
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (saving) return;
+    setFormError(null);
+
+    const errs: Record<string, string> = {};
+    const defaultAmount = parseAmount(defaultRate);
+    const thresholdAmount = parseAmount(threshold);
+    if (defaultAmount === "invalid") errs.defaultRateAmount = t.invalidAmount;
+    if (thresholdAmount === "invalid") errs.freeShippingThresholdAmount = t.invalidAmount;
+    const governorateRates: Record<string, number> = {};
+    for (const g of governorates) {
+      const amount = parseAmount(rates[g.code] ?? "");
+      if (amount === "invalid") errs[`governorateRates.${g.code}`] = t.invalidAmount;
+      else if (amount !== null) governorateRates[g.code] = amount;
+    }
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setSaving(true);
+    try {
+      const saved = await apiClient.updateShippingSettings(workspaceId, {
+        defaultRateAmount: defaultAmount as number | null,
+        freeShippingThresholdAmount: thresholdAmount as number | null,
+        governorateRates,
+        defaultCarrierCode: carrier || null,
+      });
+      toast.success(t.saved);
+      await onSaved(saved);
+    } catch (err) {
+      const fields = getFieldErrors(err);
+      setFieldErrors(fields);
+      if (Object.keys(fields).length === 0) setFormError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-4 space-y-5">
+      {formError && <Alert variant="danger">{formError}</Alert>}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <MoneyInput
+          label={t.defaultRate}
+          value={defaultRate}
+          onChange={setDefaultRate}
+          error={fieldErrors.defaultRateAmount}
+          hint={t.defaultRateHint}
+        />
+        <MoneyInput
+          label={t.threshold}
+          value={threshold}
+          onChange={setThreshold}
+          error={fieldErrors.freeShippingThresholdAmount}
+          hint={t.thresholdHint}
+        />
+      </div>
+
+      <Field label={t.carrier} hint={t.carrierHint} error={fieldErrors.defaultCarrierCode} className="sm:max-w-[calc(50%-0.5rem)]">
+        {({ id, ...aria }) => (
+          <Select id={id} {...aria} value={carrier} onChange={(e) => setCarrier(e.target.value)}>
+            <option value="">{t.carrierNone}</option>
+            <option value="manual">{t.carrierManual}</option>
+            {carriers.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.connected ? c.name : fmt(t.carrierNotConnected, { name: c.name })}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
+
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-medium text-ink">{t.governorates}</legend>
+        <p className="text-xs text-ink-soft">{t.governoratesHint}</p>
+        {settings.pricingMode === "weight_tiers" && <Alert variant="info">{t.tierModeNote}</Alert>}
+        {fieldErrors.governorateRates && <p className="text-xs font-medium text-danger">{fieldErrors.governorateRates}</p>}
+        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+          {governorates.map((g) => (
+            <MoneyInput
+              key={g.code}
+              label={g[locale]}
+              value={rates[g.code] ?? ""}
+              onChange={(value) => setRates((prev) => ({ ...prev, [g.code]: value }))}
+              error={fieldErrors[`governorateRates.${g.code}`]}
+              placeholder={defaultRate.trim() || "—"}
+            />
+          ))}
+        </div>
+      </fieldset>
+
+      <p className="text-xs text-ink-soft">{t.productNote}</p>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={saving}>
+          {saving ? t.saving : t.save}
+        </Button>
+      </div>
+    </form>
+  );
+}

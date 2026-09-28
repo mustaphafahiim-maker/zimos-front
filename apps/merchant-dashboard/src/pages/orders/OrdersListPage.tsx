@@ -3,10 +3,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
+  ORDER_SORTS,
   ORDER_STAGES,
   isInvalidCursorError,
   type Order,
   type OrderPipeline,
+  type OrderSort,
   type OrderStage,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -14,13 +16,18 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
+import { useListSort } from "@/lib/listSort";
+import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadMore } from "@/components/LoadMore";
+import { Select } from "@/components/Select";
+import { useNow } from "@/pages/confirmation/confirmationRoles";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
+import { OrderTimelineLines } from "./components/OrderTimelineLines";
 
 const STRINGS = {
   en: {
@@ -44,7 +51,13 @@ const STRINGS = {
     colCustomer: "Customer",
     colTotal: "Total",
     colStage: "Stage",
-    colDate: "Date",
+    colPayment: "Payment",
+    colTimeline: "Placed / confirmed",
+    sortLabel: "Sort",
+    sort_newest: "Newest first",
+    sort_oldest: "Oldest first",
+    sort_total_desc: "Total: high to low",
+    sort_total_asc: "Total: low to high",
     emptyAll: "No orders yet. Orders from your store will appear here.",
     emptyStage: "No orders under “{stage}” right now.",
     emptyFiltered: "No orders match this search and dates.",
@@ -72,7 +85,13 @@ const STRINGS = {
     colCustomer: "العميل",
     colTotal: "الإجمالي",
     colStage: "المرحلة",
-    colDate: "التاريخ",
+    colPayment: "الدفع",
+    colTimeline: "الطلب / التأكيد",
+    sortLabel: "الترتيب",
+    sort_newest: "الأحدث أولًا",
+    sort_oldest: "الأقدم أولًا",
+    sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
+    sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
     emptyAll: "لا توجد أوردرات بعد. ستظهر هنا أوردرات متجرك.",
     emptyStage: "لا توجد أوردرات في «{stage}» حاليًا.",
     emptyFiltered: "لا توجد أوردرات تطابق هذا البحث والتواريخ.",
@@ -155,6 +174,8 @@ export function OrdersListPage() {
   const errorMessage = useErrorMessage();
   const filters = useOrderFilters();
   const { stage, query } = filters;
+  // Sorted on the server; the default is the list's order as it always was.
+  const [sort, setSort] = useListSort<OrderSort>("zimos.orders.sort", ORDER_SORTS, "newest");
 
   const pipeline = useAsync<OrderPipeline>(
     () => apiClient.getOrderPipeline(workspaceId, query),
@@ -164,9 +185,9 @@ export function OrdersListPage() {
   const list = useCursorList<Order>(
     (cursor) =>
       apiClient
-        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, ...query })
+        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, sort, ...query })
         .then((r) => ({ items: r.orders, nextCursor: r.nextCursor })),
-    [workspaceId, stage, query.q, query.from, query.to],
+    [workspaceId, stage, sort, query.q, query.from, query.to],
     { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
 
@@ -181,6 +202,8 @@ export function OrdersListPage() {
       <PageHeader title={t.title} description={t.description} />
 
       <SearchAndDates filters={filters} />
+
+      <SortPicker value={sort} onChange={setSort} />
 
       <StageTabs
         value={stage}
@@ -360,6 +383,41 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
 
 // ---------------------------------------------------------------------------
 
+function SortPicker({ value, onChange }: { value: OrderSort; onChange: (next: OrderSort) => void }) {
+  const t = useT(STRINGS);
+  const id = useId();
+  return (
+    <div className="mb-3 flex items-center justify-end gap-2">
+      <label htmlFor={id} className="text-sm text-ink-soft">
+        {t.sortLabel}
+      </label>
+      <Select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as OrderSort)}
+        className="h-11 w-auto min-w-48"
+      >
+        {ORDER_SORTS.map((key) => (
+          <option key={key} value={key}>
+            {t[`sort_${key}`]}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
+/** "Cash on delivery", or "Card · Paymob" for an online order. */
+function usePaymentLabel() {
+  const labels = useOrderLabels();
+  return (order: Order) => {
+    const method = labels.paymentMethod(order.paymentMethod);
+    return order.paymentProvider ? `${method} · ${providerName(order.paymentProvider)}` : method;
+  };
+}
+
+// ---------------------------------------------------------------------------
+
 function StageTabs({
   value,
   onChange,
@@ -434,6 +492,9 @@ function StageTabs({
 function OrdersTable({ orders }: { orders: Order[] }) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
+  const paymentLabel = usePaymentLabel();
+  // One clock for the whole list, so every row's "3 hours ago" moves together.
+  const now = useNow(60_000);
 
   const rows = useMemo(
     () =>
@@ -475,8 +536,9 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                   <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
                 )}
                 {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                <span className="ms-auto text-xs text-ink-soft">{formatDate(order.createdAt)}</span>
+                <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
               </div>
+              <OrderTimelineLines order={order} now={now} className="mt-2" />
             </Link>
           </li>
         ))}
@@ -497,10 +559,13 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                 {t.colTotal}
               </th>
               <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colPayment}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colStage}
               </th>
               <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colDate}
+                {t.colTimeline}
               </th>
             </tr>
           </thead>
@@ -525,6 +590,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
+                <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {order.stage && stageLabel && (
@@ -533,7 +599,9 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                     {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-ink-soft">{formatDate(order.createdAt)}</td>
+                <td className="px-4 py-3">
+                  <OrderTimelineLines order={order} now={now} />
+                </td>
               </tr>
             ))}
           </tbody>

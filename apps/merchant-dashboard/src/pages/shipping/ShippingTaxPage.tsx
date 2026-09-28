@@ -5,7 +5,6 @@ import type {
   ShippingRateType,
   ShippingZone,
   TaxRate,
-  Workspace,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -30,6 +29,7 @@ import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
+import { ShippingSettingsSection } from "./ShippingSettingsSection";
 import { WeightTiersSection } from "./WeightTiersSection";
 
 const RATE_TYPE_LABEL: Record<ShippingRateType, string> = {
@@ -168,10 +168,11 @@ function ShippingTaxBody() {
         description="Shipping zones and their rates, plus the tax rates applied at checkout."
       />
 
+      <ShippingSettingsSection onSaved={refreshWorkspace} />
+
       <CarrierConnectionsSection />
 
       <StoreShippingTaxSettings
-        workspace={currentWorkspace}
         taxEnabled={taxEnabled}
         onTaxEnabledChange={setTaxEnabled}
         onSaved={refreshWorkspace}
@@ -1060,76 +1061,37 @@ function TaxRateForm({
 }
 
 /**
- * Storewide shipping/tax knobs kept in `workspace.settings` and saved through
- * the same `PATCH /workspaces/:id` used elsewhere. A blank money field is sent
- * as `null` (clear the key), never 0 — matching the backend's merge, where a
- * missing key is left untouched and `null` resets it to "not configured".
- * `taxEnabled` is owned by the page so the tax section below can react to it
- * before a save lands.
+ * The storewide tax switch, kept in `workspace.settings` and saved through the
+ * same `PATCH /workspaces/:id` used elsewhere. The free-shipping threshold and
+ * the default shipping rate used to live here too; they moved to
+ * ShippingSettingsSection with the governorate prices, so two forms never
+ * write the same keys. `taxEnabled` is owned by the page so the tax section
+ * below can react to it before a save lands.
  */
 function StoreShippingTaxSettings({
-  workspace,
   taxEnabled,
   onTaxEnabledChange,
   onSaved,
 }: {
-  workspace: Workspace | null;
   taxEnabled: boolean;
   onTaxEnabledChange: (value: boolean) => void;
   onSaved: () => Promise<void> | void;
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const settings = workspace?.settings;
-
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState(
-    minorToMajorInput(settings?.free_shipping_threshold_amount)
-  );
-  const [defaultShippingRate, setDefaultShippingRate] = useState(
-    minorToMajorInput(settings?.default_shipping_rate_amount)
-  );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  /** "" → null (clear the key); a valid ≥ 0 amount → minor units; else "invalid". */
-  function parseAmount(input: string): number | null | "invalid" {
-    if (input.trim() === "") return null;
-    const minor = majorToMinor(input);
-    if (!Number.isFinite(minor) || minor < 0) return "invalid";
-    return minor;
-  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setFieldErrors({});
-
-    const threshold = parseAmount(freeShippingThreshold);
-    const fallback = parseAmount(defaultShippingRate);
-    const errs: Record<string, string> = {};
-    if (threshold === "invalid") errs.free_shipping_threshold_amount = "Enter a valid amount.";
-    if (fallback === "invalid") errs.default_shipping_rate_amount = "Enter a valid amount.";
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
-    }
-
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        settings: {
-          free_shipping_threshold_amount: threshold === "invalid" ? null : threshold,
-          default_shipping_rate_amount: fallback === "invalid" ? null : fallback,
-          tax_enabled: taxEnabled,
-        },
-      });
-      toast.success("Store shipping & tax settings saved.");
+      await apiClient.updateWorkspace(workspaceId, { settings: { tax_enabled: taxEnabled } });
+      toast.success("Tax setting saved.");
       await onSaved();
     } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      setFormError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -1137,30 +1099,13 @@ function StoreShippingTaxSettings({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Store shipping &amp; tax</h2>
+      <h2 className="font-display text-lg font-medium text-ink">Tax at checkout</h2>
       <p className="mt-1 text-sm text-ink-soft">
-        Storewide rules applied at checkout, before any individual zone or rate.
+        Whether the tax rates below are added to orders.
       </p>
 
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <MoneyInput
-            label="Free shipping threshold"
-            value={freeShippingThreshold}
-            onChange={setFreeShippingThreshold}
-            error={fieldErrors.free_shipping_threshold_amount}
-            hint="Orders at or above this subtotal ship free. Leave blank to disable."
-          />
-          <MoneyInput
-            label="Default shipping rate"
-            value={defaultShippingRate}
-            onChange={setDefaultShippingRate}
-            error={fieldErrors.default_shipping_rate_amount}
-            hint="Charged when no active zone or rate matches. Leave blank to fall back to free."
-          />
-        </div>
 
         <label className="flex items-center gap-2 text-sm text-ink">
           <input
@@ -1173,7 +1118,7 @@ function StoreShippingTaxSettings({
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save settings"}
+            {saving ? "Saving…" : "Save tax setting"}
           </Button>
         </div>
       </form>

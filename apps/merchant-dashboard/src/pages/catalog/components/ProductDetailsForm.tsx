@@ -5,6 +5,7 @@ import {
   type CreateProductPayload,
   type Product,
   type ProductMedia,
+  type ProductShippingMode,
   type ProductStatus,
   type ProductType,
 } from "@store-builder/api-client";
@@ -12,7 +13,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { majorToMinor } from "@/lib/format";
+import { majorToMinor, minorToMajorInput } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Field, TextField } from "@/components/Field";
@@ -26,6 +27,7 @@ import { ProductImagesSection } from "./ProductImagesSection";
 
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"];
 const TYPES: ProductType[] = ["physical", "digital", "service"];
+const SHIPPING_MODES: ProductShippingMode[] = ["standard", "free", "extra_fee"];
 
 const STRINGS = {
   en: {
@@ -67,6 +69,15 @@ const STRINGS = {
     saveBasics: "Save basics",
     createdToast: "“{name}” created.",
     savedToast: "Product details saved.",
+    shippingMode: "Shipping",
+    mode_standard: "Store's shipping prices",
+    mode_free: "Free shipping",
+    mode_extra_fee: "Store's price plus an extra fee",
+    shippingModeHint:
+      "An order ships free when every product in it ships free. Mixed with other products, the store's price applies.",
+    extraFee: "Extra shipping fee per unit",
+    extraFeeHint: "Added to the store's shipping price for every unit of this product in the order.",
+    extraFeeInvalid: "Enter an amount greater than 0.",
   },
   ar: {
     basics: "البيانات الأساسية",
@@ -107,6 +118,15 @@ const STRINGS = {
     saveBasics: "حفظ البيانات الأساسية",
     createdToast: "تم إنشاء “{name}”.",
     savedToast: "تم حفظ بيانات المنتج.",
+    shippingMode: "الشحن",
+    mode_standard: "أسعار الشحن في المتجر",
+    mode_free: "شحن مجاني",
+    mode_extra_fee: "سعر المتجر مع رسوم إضافية",
+    shippingModeHint:
+      "يُشحن الطلب مجانًا عندما تكون كل منتجاته مجانية الشحن. وإذا ضم منتجات أخرى يُحتسب سعر الشحن في المتجر.",
+    extraFee: "رسوم شحن إضافية لكل قطعة",
+    extraFeeHint: "تُضاف إلى سعر الشحن في المتجر عن كل قطعة من هذا المنتج في الطلب.",
+    extraFeeInvalid: "أدخل مبلغًا أكبر من 0.",
   },
 } satisfies Messages;
 
@@ -139,6 +159,8 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? "draft");
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? "physical");
   const [tags, setTags] = useState((product?.tags ?? []).join(", "));
+  const [shippingMode, setShippingMode] = useState<ProductShippingMode>(product?.shippingMode ?? "standard");
+  const [extraFee, setExtraFee] = useState(minorToMajorInput(product?.shippingExtraAmount ?? null));
   // New-product flow: images and the first variant are collected here and
   // sent in the one create payload. Edit mode manages variants in VariantsSection.
   const [media, setMedia] = useState<ProductMedia[]>([]);
@@ -177,6 +199,10 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       if (Number.isNaN(kgInputToGrams(weight))) errs.weight = t.weightInvalid;
     }
     const weightGrams = kgInputToGrams(weight);
+    const extraFeeMinor = shippingMode === "extra_fee" ? majorToMinor(extraFee) : null;
+    if (extraFeeMinor !== null && (!Number.isFinite(extraFeeMinor) || extraFeeMinor < 1)) {
+      errs.shippingExtraAmount = t.extraFeeInvalid;
+    }
 
     if (Object.keys(errs).length > 0 || missingImage) {
       setFieldErrors(errs);
@@ -199,6 +225,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
         .split(/[,،]/)
         .map((tag) => tag.trim())
         .filter(Boolean),
+      // The fee goes with "extra_fee" only; any other mode clears it server-side.
+      shippingMode,
+      shippingExtraAmount: extraFeeMinor,
     };
 
     try {
@@ -310,6 +339,35 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
               error={fieldErrors.tags}
               placeholder={t.tagsPlaceholder}
             />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t.shippingMode} hint={t.shippingModeHint} error={fieldErrors.shippingMode}>
+                {({ id, ...aria }) => (
+                  <Select
+                    id={id}
+                    {...aria}
+                    value={shippingMode}
+                    onChange={(e) => setShippingMode(e.target.value as ProductShippingMode)}
+                  >
+                    {SHIPPING_MODES.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {t[`mode_${mode}`]}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              {shippingMode === "extra_fee" && (
+                <MoneyInput
+                  label={t.extraFee}
+                  required
+                  value={extraFee}
+                  onChange={setExtraFee}
+                  error={fieldErrors.shippingExtraAmount}
+                  hint={t.extraFeeHint}
+                />
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

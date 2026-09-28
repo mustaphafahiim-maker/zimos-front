@@ -57,6 +57,13 @@ export interface WorkspaceSettings {
   default_item_weight_grams?: number | null;
   /** Read-only here — changed through POST /shipping/pricing-mode. Absent = "rates". */
   shipping_pricing_mode?: ShippingPricingMode;
+  /**
+   * Read-only here — changed through PATCH /shipping/settings. The merchant's
+   * price per governorate code (rate pricing only); absent = the default rate.
+   */
+  shipping_governorate_rates?: Record<string, number>;
+  /** Read-only here — PATCH /shipping/settings. "manual" or a courier code, preselected when booking. */
+  default_carrier_code?: string;
   [key: string]: unknown;
 }
 
@@ -720,6 +727,8 @@ export interface CollectionSummary {
   updatedAt?: string;
 }
 
+export type ProductShippingMode = "standard" | "free" | "extra_fee";
+
 export interface Product {
   id: string;
   workspaceId: string;
@@ -739,6 +748,14 @@ export interface Product {
   media: ProductMedia[];
   tags: string[];
   seo: Record<string, unknown>;
+  /**
+   * How the product ships: the store's rates ("standard"), free, or the
+   * store's rate plus `shippingExtraAmount` per unit ("extra_fee"). Optional
+   * so a response from before the field reads as "standard".
+   */
+  shippingMode?: ProductShippingMode;
+  /** Minor units, per unit shipped; set exactly when shippingMode is "extra_fee". */
+  shippingExtraAmount?: string | number | null;
   createdAt: string;
   updatedAt: string;
   /** Present on list + detail. */
@@ -782,6 +799,9 @@ export interface CreateProductPayload {
   options?: ProductOption[];
   media?: ProductMedia[];
   seo?: Record<string, unknown>;
+  /** See Product.shippingMode. An extra fee needs "extra_fee"; other modes clear it. */
+  shippingMode?: ProductShippingMode;
+  shippingExtraAmount?: number | null;
   /**
    * Optional first variant, created with the product in one transaction so a
    * simple product is priced and stocked straight away. Money is integer
@@ -1147,6 +1167,15 @@ export interface Order {
   weightTierSnapshot?: OrderWeightTier | null;
   /** True when some item's weight came from the store's default item weight. */
   weightEstimated?: boolean;
+  /** How shippingAmount was reached; null on orders placed before it was recorded. */
+  shippingSnapshot?: OrderShippingSnapshot | null;
+  /** When the current confirmation happened; null while not confirmed (and on unconfirmed older orders). */
+  confirmedAt?: string | null;
+  /**
+   * The gateway an online (card / wallet) order is paid through — its latest
+   * attempt's provider. null for cash on delivery. On the list and on GET one.
+   */
+  paymentProvider?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
@@ -1165,6 +1194,30 @@ export interface Order {
   shipments?: Shipment[];
   /** Present on detail (GET one) only; null for an order that never had a task (prepaid). */
   confirmationTask?: OrderConfirmationTaskSummary | null;
+}
+
+/** Which shipping rule priced an order or a quote (backend shipping/shippingRules.js). */
+export type ShippingRule =
+  | "no_destination"
+  | "offer_override"
+  | "all_items_free"
+  | "free_threshold"
+  | "governorate_rate"
+  | "zone_rate"
+  | "zone_tier_price"
+  | "default_rate"
+  | "no_rate";
+
+export interface OrderShippingSnapshot {
+  rule: ShippingRule;
+  pricingMode: ShippingPricingMode;
+  /** The destination's rate, before extra fees. */
+  baseAmount: number;
+  /** The sum of the order's "extra fee" products. */
+  extraFeesAmount: number;
+  /** The governorate code a governorate price matched, else null. */
+  governorate: string | null;
+  freeShippingThresholdAmount: number | null;
 }
 
 export interface OrderListResponse {
@@ -1205,9 +1258,15 @@ export interface OrderSearchParams {
   to?: string;
 }
 
+/** Server-side sorts for the orders list (and, with "default", the queue). */
+export const ORDER_SORTS = ["newest", "oldest", "total_desc", "total_asc"] as const;
+export type OrderSort = (typeof ORDER_SORTS)[number];
+
 export interface OrderListParams extends OrderSearchParams {
   /** 1–200, default 50. */
   limit?: number;
+  /** Default "newest". A cursor only pages the sort it came from. */
+  sort?: OrderSort;
   /**
    * The previous page's `nextCursor` (an order id). An unknown one is a 422
    * VALIDATION_ERROR with `details[].field === "cursor"`.
@@ -1384,6 +1443,16 @@ export type ConfirmationOutcome = "confirmed" | "rejected" | "unreachable" | "po
 export type ConfirmationTaskStatus = "queued" | "in_progress" | "done";
 /** The queue's tabs. `pending` lists `queued` tasks, due callbacks first. */
 export type ConfirmationQueueTab = "pending" | "in_progress" | "done";
+/** "default" is each tab's own order; the rest sort the tab by its orders. */
+export type ConfirmationQueueSort = "default" | OrderSort;
+
+export interface ConfirmationQueueParams {
+  status?: ConfirmationQueueTab;
+  mine?: boolean;
+  cursor?: string;
+  limit?: number;
+  sort?: ConfirmationQueueSort;
+}
 /** Where an outcome was recorded. */
 export type ConfirmationAttemptSource = "queue" | "order_page" | "correction";
 
@@ -1688,6 +1757,13 @@ export interface ShippingQuotePayload {
   items?: Array<{ variantId: string; offerId?: string; quantity?: number }>;
 }
 
+export interface FreeShippingProgress {
+  thresholdAmount: number;
+  /** How much more subtotal ships free; 0 once qualified. */
+  remainingAmount: number;
+  qualified: boolean;
+}
+
 export interface ShippingQuote {
   pricingMode: ShippingPricingMode;
   amount: number;
@@ -1696,7 +1772,54 @@ export interface ShippingQuote {
   weightGrams: number | null;
   weightEstimated: boolean;
   tier: OrderWeightTier | null;
+  /*
+   * The fields below are newer than the quote itself; optional so a
+   * storefront deployed before the backend still reads an older answer.
+   */
+  /** Which rule priced it. */
+  rule?: ShippingRule;
+  baseAmount?: number;
+  extraFeesAmount?: number;
+  governorate?: string | null;
+  /** null when the store has no free-shipping threshold. */
+  freeShipping?: FreeShippingProgress | null;
+  /** The amount depends on the governorate — say so until one is chosen. */
+  destinationRequired?: boolean;
+  /** false: the store prices no shipping (every order is charged 0). */
+  configured?: boolean;
 }
+
+/** GET/PATCH /shipping/settings — the store's prices and default courier. */
+export interface ShippingSettings {
+  pricingMode: ShippingPricingMode;
+  defaultRateAmount: number | null;
+  freeShippingThresholdAmount: number | null;
+  /** Governorate code -> price. Rate pricing only. */
+  governorateRates: Record<string, number>;
+  /** "manual" or a courier code; null = no preference. */
+  defaultCarrierCode: string | null;
+}
+
+export interface ShippingGovernorate {
+  code: string;
+  ar: string;
+  en: string;
+}
+
+export interface ShippingSettingsResponse {
+  settings: ShippingSettings;
+  governorates: ShippingGovernorate[];
+  /** Couriers this store may choose, and whether each is connected. */
+  carriers: Array<{ code: string; name: string; connected: boolean }>;
+}
+
+/** Every field optional; null clears; `governorateRates` replaces the whole map. */
+export type UpdateShippingSettingsPayload = Partial<{
+  defaultRateAmount: number | null;
+  freeShippingThresholdAmount: number | null;
+  governorateRates: Record<string, number>;
+  defaultCarrierCode: string | null;
+}>;
 
 export interface CreateShippingRatePayload {
   name: string;
