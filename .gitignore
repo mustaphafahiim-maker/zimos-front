@@ -41,3 +41,8 @@ Thumbs.db
 .agents/
 .mcp.json
 skills-lock.json
+
+# Local audit / screenshot output (Lighthouse, axe, adaptive screenshots)
+lighthouse-*.json
+axe-violations.csv
+adaptive-screenshots/
