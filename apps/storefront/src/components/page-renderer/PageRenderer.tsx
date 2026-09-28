@@ -39,7 +39,7 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
-import { columnClasses, rowClasses, sectionClasses, sectionMinHeight } from "./layout";
+import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -189,12 +189,16 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const span = Number.isInteger(column.span) ? Math.min(12, Math.max(1, column.span!)) : 12;
   const elements = Array.isArray(column.elements) ? column.elements : [];
 
+  // `data-zt-col` / `data-zt-span` are store-theme hooks (globals.css); they
+  // change nothing on a store without a theme.
   if (ctx.editable) {
     return (
       <div
         className={columnClasses(settingsOf(column), SPAN_CLASS[span])}
         data-zimos-column={column.id}
         data-zimos-span={span}
+        data-zt-col=""
+        data-zt-span={span}
       >
         {elements.map((element) => (
           <div key={element.id} data-zimos-el={element.id} data-zimos-type={element.type} className="contents">
@@ -206,7 +210,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   }
 
   return (
-    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])}>
+    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span}>
       {elements.map((element) => (
         <ElementNode key={element.id} element={element} ctx={ctx} />
       ))}
@@ -233,15 +237,23 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
  * class tables and their fallbacks live in layout.ts; a section without
  * settings gets exactly the classes it always had.
  */
-function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
+function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx: Ctx; hero?: boolean }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
   const { outer, inner } = sectionClasses(section.settings);
   const minHeight = sectionMinHeight(section.settings);
 
+  // The hooks a store theme lays the section out by — its spacing, width and,
+  // for the page's opening section, its own hero layout. Attributes only: a
+  // store without a theme renders exactly the classes it always did.
   return (
-    <section className={outer} style={minHeight === null ? undefined : { minHeight }}>
+    <section
+      className={outer}
+      style={minHeight === null ? undefined : { minHeight }}
+      {...sectionHooks(section.settings)}
+      data-zimos-hero={hero ? "" : undefined}
+    >
       <div className={inner}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
@@ -263,16 +275,18 @@ function EditableSectionNode({
   section,
   index,
   ctx,
+  hero,
 }: {
   section: PageSection;
   index: number;
   ctx: Ctx;
+  hero: boolean;
 }) {
   const hasRows = Array.isArray(section.rows) && section.rows.length > 0;
   return (
     <div data-zimos-section={section.id} data-zimos-index={index}>
       {hasRows ? (
-        <SectionNode section={section} ctx={ctx} />
+        <SectionNode section={section} ctx={ctx} hero={hero} />
       ) : (
         <div className="px-4 py-6 sm:px-6">
           <div className="mx-auto h-24 max-w-6xl rounded-[var(--radius-card)] border-2 border-dashed border-line" />
@@ -306,14 +320,16 @@ export function PageRenderer({
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
   const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
+  const hero = heroSectionIndex(sections);
 
+  // `zt-sections` lets a store theme restyle the rules between sections.
   return (
-    <div className="divide-y divide-line">
+    <div className="zt-sections divide-y divide-line">
       {sections.map((section, index) =>
         editable ? (
-          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} />
+          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />
         ) : (
-          <SectionNode key={section.id} section={section} ctx={ctx} />
+          <SectionNode key={section.id} section={section} ctx={ctx} hero={index === hero} />
         )
       )}
     </div>

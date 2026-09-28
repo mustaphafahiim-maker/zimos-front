@@ -4,12 +4,18 @@
  * colour is a semantic token from globals.css, so merchant branding
  * (.brand-theme) flows through and light/dark flips without `dark:` variants.
  * Tap targets are ≥ 44px (min-h-11).
+ *
+ * The `zt-*` names are hooks, not styles: they do nothing on their own, and a
+ * store on one of the themes (Store look → Theme) restyles them in
+ * globals.css — button shape and weight, card frame and shadow, input and
+ * chip corners, the container width. A store with no theme renders these
+ * recipes exactly as they always were.
  */
 
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
-export const btnPrimary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
+export const btnPrimary = `zt-btn zt-btn-primary inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
 export const btnPrimaryLg = `${btnPrimary} w-full text-base py-3.5`;
 
@@ -23,22 +29,22 @@ export const btnMetal = `${btnPrimary} relative overflow-hidden border border-pr
 
 export const btnMetalLg = `${btnMetal} w-full text-base py-3.5`;
 
-export const btnSecondary = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-paper-raised px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
+export const btnSecondary = `zt-btn zt-btn-secondary inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-paper-raised px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 ${focus}`;
 
-export const btnGhost = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${focus}`;
+export const btnGhost = `zt-btn zt-btn-ghost inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${focus}`;
 
-export const iconBtn = `relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line bg-paper-raised text-ink transition-colors hover:border-primary hover:text-primary ${focus}`;
+export const iconBtn = `zt-icon-btn relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line bg-paper-raised text-ink transition-colors hover:border-primary hover:text-primary ${focus}`;
 
-export const card = "rounded-2xl border border-line bg-paper-raised";
+export const card = "zt-card rounded-2xl border border-line bg-paper-raised";
 
 export const input =
-  "block w-full min-h-11 rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-base text-ink placeholder:text-ink-soft outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/10";
+  "zt-input block w-full min-h-11 rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-base text-ink placeholder:text-ink-soft outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/10";
 
 export const label = "mb-1.5 block text-sm font-medium text-ink";
 
 export const sectionTitle = "text-lg font-semibold text-ink";
 
-export const container = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+export const container = "zt-container mx-auto w-full max-w-6xl px-4 sm:px-6";
 
 /** A loading placeholder block; size it at the call site. Holds still under reduced motion. */
 export const skeleton = "animate-pulse rounded-xl bg-line/60 motion-reduce:animate-none";
@@ -51,7 +57,7 @@ export const focusRing = focus;
  * pill that reads selected without relying on colour alone (border weight).
  */
 export const pill = (selected: boolean) =>
-  `inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 px-4 text-sm font-medium transition-colors ${
+  `zt-pill inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 px-4 text-sm font-medium transition-colors ${
     selected ? "border-primary bg-primary-soft text-primary" : "border-line bg-paper-raised text-ink hover:border-primary"
   } ${focus}`;
 

@@ -42,7 +42,7 @@ export function MobileCategoryStrip({
           <li key={c.id} className="shrink-0">
             <StoreLink
               href={`/?collection=${encodeURIComponent(c.id)}#products`}
-              className="inline-flex min-h-9 items-center rounded-full border border-line bg-paper px-3 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+              className="zt-chip inline-flex min-h-9 items-center rounded-full border border-line bg-paper px-3 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
             >
               {c.name}
             </StoreLink>

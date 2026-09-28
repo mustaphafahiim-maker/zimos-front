@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { PageRenderer } from "@/components/page-renderer";
 import { PreviewBridge } from "@/components/preview/PreviewBridge";
-import { brandVars, type PreviewTheme } from "@/lib/brandTheme";
+import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { brandVars, previewBootScript, type PreviewTheme } from "@/lib/brandTheme";
 import { getPreview } from "@/lib/previewStore";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
@@ -54,11 +55,17 @@ export default async function StorePreviewPage({
   const options = entry.options;
   const editable = Boolean(options?.editable && options.parentOrigin);
   const themeCss = options?.theme ? themeStyle(options.theme) : "";
+  const boot = previewBootScript(options?.theme ?? null, options?.colorMode ?? null);
 
   return (
     <main className="flex-1">
-      {/* First paint in the unsaved look; the bridge takes over once hydrated. */}
+      {/* First paint in the unsaved look; the bridge takes over once hydrated.
+          The script puts the unsaved theme on the store wrapper and the asked-for
+          colour mode on <html> while the page is still being parsed. */}
+      {boot && <script dangerouslySetInnerHTML={{ __html: boot }} />}
       {themeCss && <style id="zimos-preview-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
+      {/* Every theme's font stacks, so the editor can switch theme without a reload. */}
+      <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />
       {empty ? (
         <div className="px-6 py-16 text-center text-sm text-ink-soft">
           <p>

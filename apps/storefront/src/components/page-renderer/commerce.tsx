@@ -113,7 +113,7 @@ function FunnelProductTile({
   return (
     <StoreLink
       href={href}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="zt-card zt-product group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <span className="relative block aspect-square overflow-hidden bg-paper">
         {image ? (
@@ -196,8 +196,8 @@ export async function ProductCardElement({
   return (
     <div>
       <BlockTitle>{str(props, "title")}</BlockTitle>
-      <div className="grid gap-6 rounded-2xl border border-line bg-paper-raised p-5 sm:grid-cols-2 sm:p-6">
-        <div className="aspect-square overflow-hidden rounded-2xl bg-paper">
+      <div className="zt-card grid gap-6 rounded-2xl border border-line bg-paper-raised p-5 sm:grid-cols-2 sm:p-6">
+        <div className="zt-img aspect-square overflow-hidden rounded-2xl bg-paper">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" width={600} height={600} loading="lazy" className="h-full w-full object-cover" />
@@ -279,7 +279,7 @@ export async function CollectionListElement({
           <StoreLink
             key={collection.id}
             href={`/?collection=${encodeURIComponent(collection.id)}#products`}
-            className="block rounded-2xl border border-line bg-paper-raised p-5 transition-colors hover:border-primary"
+            className="zt-card zt-product block rounded-2xl border border-line bg-paper-raised p-5 transition-colors hover:border-primary"
           >
             <h3 className="font-semibold text-ink">{collection.name}</h3>
             {collection.description && (

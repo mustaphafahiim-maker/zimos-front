@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from "react";
-import { Monitor, RefreshCw, Smartphone, Tablet, X } from "lucide-react";
+import { Monitor, Moon, RefreshCw, Smartphone, Sun, Tablet, X } from "lucide-react";
 import { Button, Spinner, cn } from "@store-builder/ui";
 import type { PageTree } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -11,6 +11,7 @@ import {
   originOf,
   readFrameMessage,
   type CanvasStrings,
+  type ColorMode,
   type DragStateMessage,
   type EditorStateMessage,
   type PreviewTheme,
@@ -31,6 +32,9 @@ export interface PreviewLabels {
   frameTitle: string;
   /** Adds a tablet-width button to the device switch when given. */
   tablet?: string;
+  /** The light/dark switch's two labels — each says what pressing it does. */
+  lightMode?: string;
+  darkMode?: string;
 }
 
 /**
@@ -115,6 +119,8 @@ export function StorefrontPreview({
   onClose,
   className,
   canvas,
+  colorMode: controlledMode,
+  onColorModeChange,
 }: {
   workspaceId: string;
   tree: PageTree;
@@ -123,6 +129,14 @@ export function StorefrontPreview({
   onClose?: () => void;
   className?: string;
   canvas?: PreviewCanvas;
+  /**
+   * The preview's own light/dark mode, separate from the dashboard's. Null
+   * (or leaving it out) shows the page in whatever mode it opens in — the
+   * shopper-side stored choice or the system setting — until the switch in
+   * the toolbar picks one. Controlled when given with `onColorModeChange`.
+   */
+  colorMode?: ColorMode | null;
+  onColorModeChange?: (mode: ColorMode) => void;
 }) {
   const baseName = `storefront-preview-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const frameNames = [`${baseName}-a`, `${baseName}-b`] as const;
@@ -147,6 +161,24 @@ export function StorefrontPreview({
   const serialized = JSON.stringify(tree);
   const serializedRef = useRef(serialized);
   const editing = canvas !== undefined;
+
+  // Light or dark. `chosen` is an explicit pick (the toolbar switch, the page's
+  // own moon, or the editor); `frameMode` is what the page reported it opened
+  // in. Until either is known the system setting is the best guess.
+  const [ownMode, setOwnMode] = useState<ColorMode | null>(null);
+  const chosen = controlledMode !== undefined ? controlledMode : ownMode;
+  const [frameMode, setFrameMode] = useState<ColorMode | null>(null);
+  const shownMode: ColorMode =
+    chosen ?? frameMode ?? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const chosenRef = useRef(chosen);
+  const pickMode = useCallback(
+    (mode: ColorMode) => {
+      if (controlledMode === undefined) setOwnMode(mode);
+      onColorModeChange?.(mode);
+    },
+    [controlledMode, onColorModeChange]
+  );
+  const pickModeRef = useRef(pickMode);
   const themeJson = JSON.stringify(canvas?.theme ?? null);
   const shellJson = JSON.stringify(canvas?.shell ?? null);
 
@@ -160,6 +192,8 @@ export function StorefrontPreview({
     themeRef.current = themeJson;
     shellRef.current = shellJson;
     serializedRef.current = serialized;
+    chosenRef.current = chosen;
+    pickModeRef.current = pickMode;
   });
 
   const frames = useCallback(
@@ -192,6 +226,7 @@ export function StorefrontPreview({
     if (theme) theme.value = themeRef.current;
     const shell = form.elements.namedItem("shell") as HTMLInputElement | null;
     if (shell) shell.value = shellRef.current;
+    (form.elements.namedItem("colorMode") as HTMLInputElement).value = chosenRef.current ?? "";
     setLoading(true);
     form.submit();
   }, [baseName]);
@@ -231,6 +266,16 @@ export function StorefrontPreview({
     return () => window.clearTimeout(handle);
   }, [serialized, post, canvasDrag]);
 
+  // A plain preview has no bridge in the frame to switch it live, so a new
+  // mode is a new render. (The editor's canvas switches in place: the mode
+  // rides on zimos:editor-state below.)
+  const lastPostedMode = useRef(chosen);
+  useEffect(() => {
+    if (editing || chosen === lastPostedMode.current) return;
+    lastPostedMode.current = chosen;
+    void post(serializedRef.current);
+  }, [chosen, editing, post]);
+
   function onFrameLoad(index: 0 | 1) {
     const frame = index === 0 ? frameA.current : frameB.current;
     try {
@@ -261,6 +306,7 @@ export function StorefrontPreview({
         selectedShell: canvas.selectedShell ?? null,
         shellLabels: canvas.shellLabels ?? null,
         shell: canvas.shell ?? null,
+        colorMode: chosen,
       } satisfies EditorStateMessage)
     : "";
   const stateRef = useRef(stateJson);
@@ -364,6 +410,7 @@ export function StorefrontPreview({
         case "zimos:preview-ready": {
           const source = event.source as Window | null;
           if (!source || !STOREFRONT_ORIGIN) break;
+          if (message.colorMode) setFrameMode(message.colorMode);
           frameSections.current[source === frameA.current?.contentWindow ? 0 : 1] = message.sectionIds;
           if (stateRef.current) source.postMessage(JSON.parse(stateRef.current), STOREFRONT_ORIGIN);
           const waiting = pendingScroll.current;
@@ -399,6 +446,12 @@ export function StorefrontPreview({
         }
         case "zimos:canvas-step":
           current?.onCanvasStep?.(message.step);
+          break;
+        case "zimos:color-mode":
+          // The page's own moon (or the OS) switched it: follow, so the next
+          // render opens in the same mode and the toolbar switch agrees.
+          setFrameMode(message.mode);
+          if (message.mode !== chosenRef.current) pickModeRef.current(message.mode);
           break;
       }
     }
@@ -438,6 +491,23 @@ export function StorefrontPreview({
           {deviceButton("desktop", labels.desktop, Monitor)}
           {labels.tablet && deviceButton("tablet", labels.tablet, Tablet)}
           {deviceButton("mobile", labels.mobile, Smartphone)}
+          {(() => {
+            const label =
+              shownMode === "dark" ? (labels.lightMode ?? "Preview in light mode") : (labels.darkMode ?? "Preview in dark mode");
+            return (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={label}
+                title={label}
+                aria-pressed={shownMode === "dark"}
+                onClick={() => pickMode(shownMode === "dark" ? "light" : "dark")}
+              >
+                {shownMode === "dark" ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
+              </Button>
+            );
+          })()}
           <Button
             type="button"
             size="icon-sm"
@@ -506,6 +576,7 @@ export function StorefrontPreview({
         <input type="hidden" name="tree" />
         <input type="hidden" name="accessToken" />
         <input type="hidden" name="token" value={token} />
+        <input type="hidden" name="colorMode" />
         {editing && (
           <>
             <input type="hidden" name="edit" value="1" />

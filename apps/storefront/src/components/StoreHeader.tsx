@@ -148,15 +148,12 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   return (
     <StickyHeader sticky={header.sticky}>
       {announcement && <AnnouncementBar announcement={announcement} label={t.shop.announcement} />}
-      {/* Brand bar — the merchant's two colours, edge to edge. Hidden while
-          overlaid: a coloured hairline floating over a hero photo reads as a
-          rendering glitch, not a brand touch. */}
+      {/* Brand bar — the merchant's two colours, edge to edge (the gradient
+          is `.zt-brand-bar` in globals.css, where a store theme can restyle
+          or drop it). Hidden while overlaid: a coloured hairline floating
+          over a hero photo reads as a rendering glitch, not a brand touch. */}
       <div
-        className="h-1 w-full transition-opacity duration-200 group-data-[overlay]/header:opacity-0 motion-reduce:transition-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, var(--brand-primary), var(--brand-secondary))",
-        }}
+        className="zt-brand-bar h-1 w-full transition-opacity duration-200 group-data-[overlay]/header:opacity-0 motion-reduce:transition-none"
         aria-hidden
       />
       {centred ? (

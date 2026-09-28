@@ -14,10 +14,13 @@
  *   { type: "zimos:section-rects", sections }            each section's box, while a drag is on
  *   { type: "zimos:canvas-drag", phase, … }               drag / resize on the page itself (lib/canvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
+ *   { type: "zimos:color-mode", mode }                    the page went light or dark (its own switch, or the OS)
+ *
+ * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
  * Editor → frame (posted to the storefront origin, never "*"):
  *   { type: "zimos:editor-state", selectedId, labels, strings, theme,
- *     selectedShell, shellLabels, shell }
+ *     selectedShell, shellLabels, shell, colorMode }
  *   { type: "zimos:scroll-to-section", sectionId }
  *   { type: "zimos:scroll-to-shell", part }
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over the canvas
@@ -40,7 +43,10 @@
 
 /** An unsaved store look, as the storefront's `readPreviewTheme` accepts it. */
 export interface PreviewTheme {
+  /** A store theme key, or "original". */
+  storeTheme?: string;
   primaryColor?: string;
+  primaryColorDark?: string;
   secondaryColor?: string;
   fontFamily?: string;
   cornerRadius?: string;
@@ -49,6 +55,13 @@ export interface PreviewTheme {
 }
 
 import { readCanvasDrag, readCanvasStep, type CanvasDragMessage, type CanvasStep } from "./canvasDrag";
+
+/** Light or dark — the preview's own switch, independent of the dashboard's. */
+export type ColorMode = "light" | "dark";
+
+export function isColorMode(value: unknown): value is ColorMode {
+  return value === "light" || value === "dark";
+}
 
 /** The store's fixed parts — drawn by the store layout on every page, not by the page tree. */
 export type ShellPart = "header" | "footer" | "announcement";
@@ -74,7 +87,8 @@ export interface SectionRect {
 }
 
 export type FrameMessage =
-  | { type: "zimos:preview-ready"; sectionIds: string[] }
+  | { type: "zimos:preview-ready"; sectionIds: string[]; colorMode?: ColorMode }
+  | { type: "zimos:color-mode"; mode: ColorMode }
   | { type: "zimos:select-section"; sectionId: string }
   | { type: "zimos:select-shell"; part: ShellPart }
   | { type: "zimos:insert-section"; index: number }
@@ -112,6 +126,8 @@ export interface EditorStateMessage {
   shellLabels: Record<ShellPart, string> | null;
   /** Null shows the saved header and footer. */
   shell: ShellPreview | null;
+  /** Null leaves the frame on its own (stored or system) mode. */
+  colorMode: ColorMode | null;
 }
 
 export interface ScrollToSectionMessage {
@@ -156,7 +172,7 @@ function isId(value: unknown): value is string {
  * Reads a `message` event as a frame message, or null when it must be
  * ignored: from any origin but the storefront's, from a window that isn't one
  * of the editor's own preview frames (when `frames` is given), or not one of
- * the three shapes above. Anything can post to the dashboard window, so every
+ * the shapes above. Anything can post to the dashboard window, so every
  * field is checked rather than cast.
  */
 export function readFrameMessage(
@@ -175,7 +191,10 @@ export function readFrameMessage(
       return {
         type: "zimos:preview-ready",
         sectionIds: Array.isArray(data.sectionIds) ? data.sectionIds.filter(isId) : [],
+        ...(isColorMode(data.colorMode) ? { colorMode: data.colorMode } : {}),
       };
+    case "zimos:color-mode":
+      return isColorMode(data.mode) ? { type: "zimos:color-mode", mode: data.mode } : null;
     case "zimos:select-section":
       return isId(data.sectionId) ? { type: "zimos:select-section", sectionId: data.sectionId } : null;
     case "zimos:select-shell":

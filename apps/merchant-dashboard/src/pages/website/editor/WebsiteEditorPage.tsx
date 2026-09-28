@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/apiClient";
 import { stepEdit, type CanvasEdit, type CanvasStep } from "@/lib/canvasDrag";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useLocale } from "@/i18n/LocaleContext";
@@ -55,6 +56,7 @@ import {
   type StoreLook,
 } from "./storeLook";
 import { THEME_SETTINGS_MAX_CHARS, shellPartLabel, type ShellPart } from "./storeShell";
+import type { ColorMode } from "./storeThemes";
 
 /**
  * The website editor — a visual builder with the real storefront as its
@@ -159,7 +161,8 @@ function WebsiteEditor() {
   const { websiteId = "" } = useParams();
   const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -209,6 +212,10 @@ function WebsiteEditor() {
 
   // The builder's panes.
   const [inspectorTab, setInspectorTab] = useState<"section" | "look">("section");
+  // The preview's own light/dark mode (null: whatever the page opens in). The
+  // Store look panel switches it to the mode whose accent is being edited, so
+  // the change is always the one on screen.
+  const [previewMode, setPreviewMode] = useState<ColorMode | null>(null);
   /** Where "add a section here" pointed; the next block from the library lands there. */
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   /** The block library card currently being dragged, or null between drags. Drives the canvas's drop overlay. */
@@ -500,13 +507,8 @@ function WebsiteEditor() {
       return false;
     }
     try {
-      await apiClient.updateWorkspace(
-        workspaceId,
-        lookToWorkspacePatch(currentWorkspace?.themeSettings, look)
-      );
+      await saveThemeSettings((current) => lookToWorkspacePatch(current, look));
       setLookBaseline(look);
-      // The header's store switcher and the Settings page read the workspace list.
-      await refreshWorkspace();
       return true;
     } catch (err) {
       setSaveError(getErrorMessage(err));
@@ -665,7 +667,14 @@ function WebsiteEditor() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {inspectorTab === "look" ? (
-          <StoreLookPanel look={look} onChange={updateLook} onEditShell={(part) => selectShell(part, { scroll: true })} />
+          <StoreLookPanel
+            look={look}
+            onChange={updateLook}
+            onEditShell={(part) => selectShell(part, { scroll: true })}
+            storeName={currentWorkspace?.name ?? ""}
+            previewMode={previewMode ?? "light"}
+            onPreviewMode={setPreviewMode}
+          />
         ) : selectedShell ? (
           <ShellPanel
             part={selectedShell}
@@ -915,7 +924,11 @@ function WebsiteEditor() {
                     mobile: ui.previewMobile,
                     close: ui.previewClose,
                     frameTitle: ui.previewFrame,
+                    lightMode: ui.previewLightMode,
+                    darkMode: ui.previewDarkMode,
                   }}
+                  colorMode={previewMode}
+                  onColorModeChange={setPreviewMode}
                   canvas={{
                     selectedId,
                     labels,

@@ -17,7 +17,9 @@ import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/Stor
 import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
+import { storeThemeOf } from "@/lib/brandTheme";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
+import { THEME_FONT_CSS } from "@/app/themeFonts";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
 function localeSource(store: UnavailableStore) {
@@ -73,6 +75,12 @@ export async function generateMetadata({
  *  - the merchant's brand colours as CSS custom properties, so the whole
  *    subtree (header, buttons, links, badges) picks them up through the
  *    semantic tokens — see the `.brand-theme` block in globals.css;
+ *  - the store theme, when the merchant picked one: `data-store-theme` on the
+ *    wrapper switches on that theme's palette, type, shapes and hero layout
+ *    (globals.css "Store themes"), and the small stylesheet beside it holds
+ *    the themes' self-hosted font stacks (app/themeFonts.ts; the editor's
+ *    preview page renders it too, for switching). Without a theme the store
+ *    renders exactly as it did before themes existed;
  *  - the store's link prefix, resolved once for the client components below it,
  *    since only a server component can tell how the request arrived;
  *  - the store language: `lang`/`dir` on this wrapper, mirrored onto <html> by
@@ -126,6 +134,7 @@ export default async function StoreLayout({
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
   const websiteId = (store as { websiteId?: unknown }).websiteId;
+  const theme = storeThemeOf(store.themeSettings);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -137,12 +146,18 @@ export default async function StoreLayout({
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
           </Suspense>
+          {/* suppressHydrationWarning: the editor's preview page puts its
+              unsaved theme on this element before hydrating (brandTheme.ts
+              previewBootScript); a live store never changes it. */}
           <div
             lang={intlLocaleFor(locale)}
             dir={dirFor(locale)}
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
             style={brandStyle(store.themeSettings)}
+            data-store-theme={theme ?? undefined}
+            suppressHydrationWarning
           >
+            {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
             <DocumentLocale locale={locale} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             <HideInFunnel>

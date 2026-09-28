@@ -10,6 +10,7 @@ import {
 import type { PageTree } from "@store-builder/api-client";
 import { Spinner, cn } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
+import type { ColorMode, PreviewTheme } from "@/lib/previewBridge";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import {
   ensureFreshSession,
@@ -61,10 +62,17 @@ type Outcome = "ready" | "failed";
  * Commerce blocks pull the merchant's own catalogue, so a store without
  * products shows the template's other sections only — the storefront drops
  * product blocks that have nothing to list.
+ *
+ * The theme gallery uses the same frame for a page it builds itself: `page`
+ * replaces the template's home tree, and `theme` / `colorMode` render it in
+ * an unsaved store theme and in light or dark (a new value re-renders).
  */
 export function TemplateLivePreview({
   workspaceId,
   templateId,
+  page,
+  theme = null,
+  colorMode = null,
   title,
   fallback,
   variant = "card",
@@ -72,7 +80,13 @@ export function TemplateLivePreview({
   className,
 }: {
   workspaceId: string;
+  /** The template whose home page to show, or — with `page` — just the key its preview slot is kept under. */
   templateId: string;
+  /** A page tree to show instead of the template's own. */
+  page?: PageTree | null;
+  /** An unsaved store look, as the editor sends it (the storefront validates it). */
+  theme?: PreviewTheme | null;
+  colorMode?: ColorMode | null;
   /** Names the frame for screen readers (full variant only; the card's frame is decorative). */
   title: string;
   fallback: ReactNode;
@@ -91,12 +105,14 @@ export function TemplateLivePreview({
 
   // Without IntersectionObserver there is no "near the viewport": load now.
   const [inView, setInView] = useState(() => !card || typeof IntersectionObserver === "undefined");
-  const [tree, setTree] = useState<PageTree | null>(null);
+  const [loaded, setLoaded] = useState<PageTree | null>(null);
+  // A page handed in is the tree as it is — there is no template to fetch.
+  const tree = page !== undefined ? page : loaded;
   const [granted, setGranted] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   // The large preview skips the queue; a card waits for its turn.
   const slot = card ? granted : tree !== null;
-  const phase = outcome ?? (slot ? "loading" : "idle");
+  const phase = page === null ? "failed" : (outcome ?? (slot ? "loading" : "idle"));
 
   // Cards wake up a little before they scroll into view.
   useEffect(() => {
@@ -112,12 +128,12 @@ export function TemplateLivePreview({
   }, [card]);
 
   useEffect(() => {
-    if (!inView || tree || outcome === "failed") return;
+    if (page !== undefined || !inView || loaded || outcome === "failed") return;
     let cancelled = false;
     loadTemplateHome(templateId).then(
       (home) => {
         if (cancelled) return;
-        if (home) setTree(home);
+        if (home) setLoaded(home);
         else setOutcome("failed");
       },
       () => {
@@ -127,7 +143,7 @@ export function TemplateLivePreview({
     return () => {
       cancelled = true;
     };
-  }, [inView, tree, outcome, templateId]);
+  }, [page, inView, loaded, outcome, templateId]);
 
   // Wait for a render slot. A card that scrolls away before its turn leaves
   // the queue, so the ones on screen go first; once started, it finishes.
@@ -145,7 +161,9 @@ export function TemplateLivePreview({
   // Never hold a slot past unmount.
   useEffect(() => () => releaseRef.current?.(), []);
 
-  // The frame and form mount with the slot; post into them.
+  // The frame and form mount with the slot; post into them (again, whenever
+  // the look to render it in changes).
+  const themeJson = theme ? JSON.stringify(theme) : "";
   useEffect(() => {
     if (!slot || !tree) return;
     let cancelled = false;
@@ -155,6 +173,8 @@ export function TemplateLivePreview({
       (form.elements.namedItem("tree") as HTMLInputElement).value = JSON.stringify(tree);
       (form.elements.namedItem("accessToken") as HTMLInputElement).value =
         apiClient.tokens.accessToken ?? "";
+      (form.elements.namedItem("theme") as HTMLInputElement).value = themeJson;
+      (form.elements.namedItem("colorMode") as HTMLInputElement).value = colorMode ?? "";
       posted.current = true;
       form.submit();
     });
@@ -166,7 +186,7 @@ export function TemplateLivePreview({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [slot, tree]);
+  }, [slot, tree, themeJson, colorMode]);
 
   function onFrameLoad(e: SyntheticEvent<HTMLIFrameElement>) {
     // An empty iframe fires a load for its initial blank document too — some
@@ -236,6 +256,8 @@ export function TemplateLivePreview({
             <input type="hidden" name="tree" />
             <input type="hidden" name="accessToken" />
             <input type="hidden" name="token" value={token} />
+            <input type="hidden" name="theme" />
+            <input type="hidden" name="colorMode" />
           </form>
         </div>
       )}

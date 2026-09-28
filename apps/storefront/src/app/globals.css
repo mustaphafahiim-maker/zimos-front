@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* The six store themes (Store look → Theme). Inert unless the store wrapper
+   carries `data-store-theme`; see the file for how a theme is put together. */
+@import "./store-themes.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */
@@ -20,6 +23,9 @@
      deliberately mirror --color-primary / --color-accent below. */
   --brand-primary: #1f5d5b;
   --brand-secondary: #e2a33d;
+  /* The accent a store gets in this mode when it has saved none. A store
+     theme sets its own (see "Store themes" below). */
+  --brand-primary-default: #1f5d5b;
 
   --color-ink: #16211f;
   --color-ink-soft: #3c4a46;
@@ -65,6 +71,7 @@
 
   --brand-primary: #5b8df6;
   --brand-secondary: #e8b96a;
+  --brand-primary-default: #5b8df6;
 
   /* ink / paper / line / primary / accent — same identity as the
      marketing site's dark palette so the platform reads as one system. */
@@ -93,14 +100,28 @@
 
 /* ------------------------------------------------------------------ *
  * Per-store branding. The store layout puts this class on its wrapper and
- * sets --brand-primary / --brand-secondary inline from the workspace's
- * themeSettings; re-pointing the semantic primary/accent tokens at them
- * here means every existing `bg-primary` / `text-accent` / `border-primary`
- * utility inside the store picks up the merchant's colours, instead of
- * each component having to opt in. The -dark / -soft steps are derived so
- * a single hex still yields a coherent ramp.
+ * sets the merchant's accent inline from the workspace's themeSettings —
+ * once per mode, --brand-primary-light-mode / --brand-primary-dark-mode
+ * (each with a contrast-picked `-fg`), because an inline value can't follow
+ * the `.dark` class and a merchant may pick a different accent for each.
+ * --brand-primary is the one for the current mode, falling back to the
+ * default (a theme's own, or the stock teal/blue) when the merchant saved
+ * none. A store that saved a single colour has it written to both, so it
+ * looks exactly as it did when there was only one.
+ *
+ * --brand-secondary is still set inline, as it always was, on the original
+ * look (a store theme brings its own).
+ *
+ * Re-pointing the semantic primary/accent tokens at them here means every
+ * existing `bg-primary` / `text-accent` / `border-primary` utility inside the
+ * store picks up the merchant's colours, instead of each component having to
+ * opt in. The -dark / -soft steps are derived so a single hex still yields a
+ * coherent ramp.
  * ------------------------------------------------------------------ */
 .brand-theme {
+  --brand-primary: var(--brand-primary-light-mode, var(--brand-primary-default));
+  --brand-primary-foreground: var(--brand-primary-light-mode-fg);
+
   --color-primary: var(--brand-primary);
   --color-primary-dark: color-mix(in oklab, var(--brand-primary) 78%, #000);
   --color-primary-soft: color-mix(in oklab, var(--brand-primary) 12%, #fff);
@@ -120,6 +141,9 @@
 /* On dark backgrounds the "soft" tints have to sink toward the paper colour
    rather than white, or they read as glaring light blocks. */
 .dark .brand-theme {
+  --brand-primary: var(--brand-primary-dark-mode, var(--brand-primary-default));
+  --brand-primary-foreground: var(--brand-primary-dark-mode-fg);
+
   --color-primary-dark: color-mix(in oklab, var(--brand-primary) 72%, #fff);
   --color-primary-soft: color-mix(in oklab, var(--brand-primary) 22%, #0b1220);
   --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 72%, #fff);
@@ -179,6 +203,7 @@
     outline-offset: 2px;
   }
 }
+
 
 
 /* ------------------------------------------------------------------ *

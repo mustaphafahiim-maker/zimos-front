@@ -12,7 +12,9 @@ import { DEFAULT_FOOTER_LOOK, DEFAULT_HEADER_LOOK, newLink } from "./storeShell"
 /** A look with every field set, so a test only has to override what it cares about. */
 function baseLook(overrides: Partial<StoreLook> = {}): StoreLook {
   return {
+    storeTheme: "original",
     primaryColor: "#1E40AF",
+    primaryColorDark: null,
     secondaryColor: null,
     fontFamily: "modern",
     cornerRadius: "round",
@@ -27,7 +29,9 @@ function baseLook(overrides: Partial<StoreLook> = {}): StoreLook {
 describe("store look", () => {
   it("reads defaults from a workspace that has saved nothing", () => {
     expect(readStoreLook({ themeSettings: {}, logoUrl: null })).toEqual({
+      storeTheme: "original",
       primaryColor: null,
+      primaryColorDark: null,
       secondaryColor: null,
       fontFamily: "classic",
       cornerRadius: "soft",
@@ -70,6 +74,63 @@ describe("store look", () => {
     const preview = lookToPreview(readStoreLook({ themeSettings: {}, logoUrl: null }));
     expect(preview).not.toHaveProperty("primaryColor");
     expect(preview.logoUrl).toBeNull();
+  });
+
+  describe("theme and the accent per mode", () => {
+    it("keeps a store that saved one colour on that colour in both modes", () => {
+      // Saved before the modes could differ: no dark-mode key at all.
+      const look = readStoreLook({ themeSettings: { primaryColor: "#1e40af" }, logoUrl: null });
+      expect(look.primaryColor).toBe("#1E40AF");
+      expect(look.primaryColorDark).toBeNull();
+      expect(look.storeTheme).toBe("original");
+      // Saving it again writes no dark-mode key, so the storefront keeps using
+      // the one colour for dark mode too.
+      const saved = lookToWorkspacePatch({ primaryColor: "#1e40af" }, look).themeSettings;
+      expect(saved).not.toHaveProperty("primaryColorDark");
+      expect(saved).not.toHaveProperty("storeTheme");
+      expect(lookToPreview(look)).not.toHaveProperty("primaryColorDark");
+    });
+
+    it("reads and saves a theme and a separate dark-mode accent", () => {
+      const look = readStoreLook({
+        themeSettings: { storeTheme: "glass", primaryColor: "#6242F5", primaryColorDark: "#a594ff" },
+        logoUrl: null,
+      });
+      expect(look.storeTheme).toBe("glass");
+      expect(look.primaryColorDark).toBe("#A594FF");
+      const saved = lookToWorkspacePatch({ productCountdownHours: 6 }, look).themeSettings;
+      expect(saved).toMatchObject({
+        productCountdownHours: 6,
+        storeTheme: "glass",
+        primaryColor: "#6242F5",
+        primaryColorDark: "#A594FF",
+      });
+      expect(lookToPreview(look)).toMatchObject({ storeTheme: "glass", primaryColor: "#6242F5", primaryColorDark: "#A594FF" });
+    });
+
+    it("drops the theme and the dark accent when the merchant goes back to the defaults", () => {
+      const saved = lookToWorkspacePatch(
+        { storeTheme: "bold", primaryColorDark: "#FF5A4E", primaryColor: "#D7261E" },
+        baseLook({ storeTheme: "original", primaryColor: "#D7261E", primaryColorDark: null })
+      ).themeSettings;
+      expect(saved).not.toHaveProperty("storeTheme");
+      expect(saved).not.toHaveProperty("primaryColorDark");
+      expect(saved.primaryColor).toBe("#D7261E");
+    });
+
+    it("reads an unknown theme as the original look", () => {
+      expect(readStoreLook({ themeSettings: { storeTheme: "perfume" }, logoUrl: null }).storeTheme).toBe("original");
+    });
+
+    it("always tells the preview which theme to show, so going back to the original beats a saved theme", () => {
+      expect(lookToPreview(baseLook({ storeTheme: "original" })).storeTheme).toBe("original");
+    });
+
+    it("counts a theme or a dark accent change as a change to the look", () => {
+      expect(sameLook(baseLook(), baseLook({ storeTheme: "warm" }))).toBe(false);
+      expect(sameLook(baseLook(), baseLook({ primaryColorDark: "#FFFFFF" }))).toBe(false);
+      expect(sameLook(baseLook(), baseLook())).toBe(true);
+    });
   });
 
   it("never puts the announcement bar in the preview payload — the preview bridge doesn't know the field", () => {

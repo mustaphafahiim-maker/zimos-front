@@ -43,7 +43,7 @@ export function HeadingElement({ props }: { props: Props }) {
   if (!text.trim()) return null;
   const level = num(props, "level", 2, 1, 6);
   const Tag = `h${level}` as "h1";
-  return <Tag className={`text-ink ${HEADING_CLASS[level]}`}>{text}</Tag>;
+  return <Tag className={`zt-heading text-ink ${HEADING_CLASS[level]}`}>{text}</Tag>;
 }
 
 /** `text` and `rich_text` are both plain strings — the editor has no formatting
@@ -95,7 +95,7 @@ export function ImageElement({ props }: { props: Props }) {
       height={800}
       loading="lazy"
       decoding="async"
-      className="h-auto w-full rounded-2xl object-cover"
+      className="zt-img h-auto w-full rounded-2xl object-cover"
     />
   );
 
@@ -149,7 +149,7 @@ export function GalleryElement({ props }: { props: Props }) {
             height={600}
             loading="lazy"
             decoding="async"
-            className={`aspect-square w-full rounded-2xl border border-line ${
+            className={`zt-img aspect-square w-full rounded-2xl border border-line ${
               whole ? "bg-paper object-contain p-4" : "object-cover"
             }`}
           />
@@ -162,9 +162,9 @@ export function GalleryElement({ props }: { props: Props }) {
 const BUTTON_CLASS: Record<string, string> = {
   primary: btnPrimary,
   secondary:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15",
+    "zt-btn zt-btn-soft inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15",
   outline:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-transparent px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary",
+    "zt-btn zt-btn-outline inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-transparent px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary",
 };
 
 export function ButtonElement({ props }: { props: Props }) {
@@ -337,7 +337,7 @@ function Disclosures({ title, items, t }: { title: string; items: QaItem[]; t: D
   return (
     <div>
       {title.trim() && <h3 className="mb-4 text-xl font-semibold text-ink">{title}</h3>}
-      <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised">
+      <div className="zt-card divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised">
         {items.map((item, i) => (
           <details key={i} className="group">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
@@ -369,7 +369,7 @@ export function TestimonialElement({ props, t }: { props: Props; t: Dictionary }
   const rating = num(props, "rating", 0, 0, 5);
 
   return (
-    <figure className="rounded-2xl border border-line bg-paper-raised p-6">
+    <figure className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
       {rating > 0 && (
         <p className="mb-3 text-primary" aria-label={t.renderer.rating(rating)}>
           <span aria-hidden>{"★".repeat(rating) + "☆".repeat(5 - rating)}</span>
@@ -402,7 +402,7 @@ export function FormElement({ props, t }: { props: Props; t: Dictionary }) {
   const submitLabel = str(props, "submitLabel", t.renderer.formSend);
 
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-6">
+    <div className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
       {title.trim() && <h3 className="mb-4 text-xl font-semibold text-ink">{title}</h3>}
       <div className="space-y-4">
         <div>
@@ -443,7 +443,7 @@ export function MapElement({ props, t }: { props: Props; t: Dictionary }) {
   const query = encodeURIComponent(address);
 
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-6">
+    <div className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
       <p className="text-sm leading-relaxed text-ink">{address}</p>
       <a
         href={`https://www.google.com/maps/search/?api=1&query=${query}`}
@@ -481,7 +481,7 @@ export function SocialIconsElement({ props, t }: { props: Props; t: Dictionary }
               href={href}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+              className="zt-chip inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
             >
               {label}
             </a>
