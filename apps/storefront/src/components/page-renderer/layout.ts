@@ -124,7 +124,9 @@ export const COLUMN_SURFACE: Record<string, string> = {
  */
 export const COLUMN_ALIGN: Record<string, string> = {
   start: "",
-  center: "text-center [&_.self-start]:self-center [&>svg]:self-center",
+  // The second svg rule only ever matches in the editor's preview, where each
+  // element sits in a `display: contents` marker (PageRenderer's editable mode).
+  center: "text-center [&_.self-start]:self-center [&>svg]:self-center [&>[data-zimos-el]>svg]:self-center",
 };
 
 /** Where a column sits when its neighbour is taller. Only from `md`, where columns sit side by side. */
@@ -148,14 +150,35 @@ export function settingClass(
   return typeof value === "string" && value in table ? table[value] : table[fallback];
 }
 
-/** Classes for the `<section>` and for the width wrapper inside it. */
+/** The tallest minimum height a section may ask for, in px. */
+export const MAX_SECTION_MIN_HEIGHT = 2000;
+
+/**
+ * A section's minimum height in px — what dragging the handle under a section
+ * in the editor's preview sets — or null for its natural height, which is
+ * every section written before this existed. Numbers only, clamped.
+ */
+export function sectionMinHeight(settings: unknown): number | null {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
+  const raw = (settings as Record<string, unknown>).minHeight;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) return null;
+  return Math.min(MAX_SECTION_MIN_HEIGHT, Math.round(raw));
+}
+
+/**
+ * Classes for the `<section>` and for the width wrapper inside it. A section
+ * given a minimum height also centres its content vertically in the extra
+ * room, the way a tall hero band reads; without one, the classes are exactly
+ * what they always were.
+ */
 export function sectionClasses(settings: unknown): { outer: string; inner: string } {
   const background = settingClass(settings, "background", SECTION_BACKGROUND, "none");
   const tone = settingClass(settings, "background", SECTION_TONE, "none");
   const padding = settingClass(settings, "padding", SECTION_PADDING, "normal");
   const width = settingClass(settings, "width", SECTION_WIDTH, "normal");
+  const tall = sectionMinHeight(settings) !== null ? " flex flex-col justify-center" : "";
   return {
-    outer: `px-4 sm:px-6 ${padding} ${background}`.trimEnd(),
+    outer: `px-4 sm:px-6 ${padding} ${background}`.trimEnd() + tall,
     inner: `mx-auto flex flex-col gap-6 ${width} ${tone}`.trimEnd(),
   };
 }

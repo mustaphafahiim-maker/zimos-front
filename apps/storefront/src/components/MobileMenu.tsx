@@ -5,8 +5,9 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useDialog, useSheetPresence } from "@/lib/useDialog";
 import { useStore } from "@/lib/StoreContext";
-import { StoreLink } from "@/components/StoreRoute";
+import type { ResolvedShellLink } from "@/lib/storeShell";
 import { CrossIcon, MenuIcon } from "./Icons";
+import { ShellLink } from "./ShellLink";
 import { ThemeToggle } from "./ThemeToggle";
 import { backdrop, focusRing, iconBtn, modalLayer, sheet } from "./ui";
 
@@ -17,9 +18,22 @@ import { backdrop, focusRing, iconBtn, modalLayer, sheet } from "./ui";
  * it is open (lib/useDialog), Escape and the backdrop close it, and a link
  * that changes the route closes it too.
  *
- * Rendered only below `sm`; the desktop header keeps its inline links.
+ * Rendered only below `sm` — or `md` when the merchant has a menu of their
+ * own, which the header shows inline only from `md`. The links come from the
+ * header (StoreHeader), which knows the merchant's menu and which of the cart
+ * and order-tracking links they chose to show.
  */
-export function MobileMenu({ storeName }: { storeName: string }) {
+export function MobileMenu({
+  storeName,
+  links,
+  showTheme = true,
+  until = "sm",
+}: {
+  storeName: string;
+  links: ResolvedShellLink[];
+  showTheme?: boolean;
+  until?: "sm" | "md";
+}) {
   const { t } = useStore();
   const pathname = usePathname();
   // The sheet remembers the path it was opened on, so a link that changes the
@@ -35,7 +49,7 @@ export function MobileMenu({ storeName }: { storeName: string }) {
   const link = `flex min-h-12 items-center rounded-xl px-3 text-base font-medium text-ink transition-colors hover:bg-primary-soft hover:text-primary ${focusRing}`;
 
   return (
-    <div className="sm:hidden">
+    <div className={until === "md" ? "md:hidden" : "sm:hidden"}>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -76,28 +90,20 @@ export function MobileMenu({ storeName }: { storeName: string }) {
 
         <nav aria-label={t.common.menu} className="flex-1 overflow-y-auto p-3">
           <ul className="space-y-1">
-            <li>
-              <StoreLink href="/" className={link}>
-                {t.common.home}
-              </StoreLink>
-            </li>
-            <li>
-              <StoreLink href="/cart" className={link}>
-                {t.common.cart}
-              </StoreLink>
-            </li>
-            <li>
-              <StoreLink href="/track" className={link}>
-                {t.common.trackOrder}
-              </StoreLink>
-            </li>
+            {links.map((item) => (
+              <li key={item.key}>
+                <ShellLink link={item} className={link} />
+              </li>
+            ))}
           </ul>
         </nav>
 
         {/* The theme toggle the narrow header leaves out; it labels itself. */}
-        <div className="flex items-center justify-end border-t border-line px-4 py-3">
-          <ThemeToggle />
-        </div>
+        {showTheme && (
+          <div className="flex items-center justify-end border-t border-line px-4 py-3">
+            <ThemeToggle />
+          </div>
+        )}
       </div>
       </div>,
       document.querySelector<HTMLElement>(".brand-theme") ?? document.body

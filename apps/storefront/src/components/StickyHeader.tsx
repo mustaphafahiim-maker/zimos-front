@@ -21,13 +21,20 @@ import { useEffect, useState, type ReactNode } from "react";
  * The first paint is always the tall bar (nothing is measured on the server),
  * and the change is a transition on colour/shadow/height only — cheap, and
  * off under reduced motion.
+ *
+ * `sticky={false}` is the merchant's choice (the editor's Header panel) to
+ * let the bar scroll away with the page; it then never floats, so it never
+ * needs the scrolled shadow either. `data-zimos-shell` names the header for
+ * the editor preview's click-to-select; it changes nothing on a live page.
  */
 export function StickyHeader({
   children,
   transparent = false,
+  sticky = true,
 }: {
   children: ReactNode;
   transparent?: boolean;
+  sticky?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
 
@@ -48,17 +55,19 @@ export function StickyHeader({
     };
   }, []);
 
-  const overlay = transparent && !scrolled;
+  const floating = sticky && scrolled;
+  const overlay = transparent && !floating;
 
   return (
     <header
-      data-scrolled={scrolled ? "" : undefined}
+      data-zimos-shell="header"
+      data-scrolled={floating ? "" : undefined}
       data-overlay={overlay ? "" : undefined}
-      className={`group/header sticky top-0 z-30 border-b transition-[background-color,box-shadow,border-color] duration-200 motion-reduce:transition-none ${
+      className={`group/header ${sticky ? "sticky top-0" : "relative"} z-30 border-b transition-[background-color,box-shadow,border-color] duration-200 motion-reduce:transition-none ${
         overlay
           ? "border-transparent bg-transparent"
           : `border-line bg-paper-raised/95 backdrop-blur supports-[backdrop-filter]:bg-paper-raised/85 ${
-              scrolled ? "shadow-[0_1px_0_0_var(--color-line),0_8px_24px_-16px_rgba(0,0,0,0.35)]" : ""
+              floating ? "shadow-[0_1px_0_0_var(--color-line),0_8px_24px_-16px_rgba(0,0,0,0.35)]" : ""
             }`
       }`}
     >

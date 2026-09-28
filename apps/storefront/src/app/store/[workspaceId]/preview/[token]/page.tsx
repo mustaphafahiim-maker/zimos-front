@@ -89,6 +89,7 @@ export default async function StorePreviewPage({
           editable={editable}
           token={token}
           initialTheme={options.theme}
+          initialShell={options.shell ?? null}
         />
       )}
     </main>

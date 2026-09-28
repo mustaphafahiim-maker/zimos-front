@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
+import { useSetShellOverride } from "@/lib/StoreShellContext";
+import { useIsClient } from "@/lib/useIsClient";
+import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
+import { CanvasHandles, SectionGrip } from "./CanvasHandles";
+import { useCanvasDrag } from "./useCanvasDrag";
 
 /**
  * The storefront half of the website editor's canvas. Rendered only by the
@@ -16,14 +21,31 @@ import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from 
  * Frame → editor
  *   { type: "zimos:preview-ready", sectionIds }        after every (re)load
  *   { type: "zimos:select-section", sectionId }        a section was clicked
+ *   { type: "zimos:select-shell", part }                the header, footer or announcement bar was clicked
  *   { type: "zimos:insert-section", index }             "add a section here"
  *   { type: "zimos:move-section", sectionId, direction } the outline's own up/down buttons
  *   { type: "zimos:section-rects", sections }            every section's box, while a drag is on
+ *   { type: "zimos:canvas-drag", phase, … }               dragging / resizing on the page (useCanvasDrag.ts)
+ *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *
  * Editor → frame
- *   { type: "zimos:editor-state", selectedId, labels, strings, theme }
+ *   { type: "zimos:editor-state", selectedId, labels, strings, theme,
+ *     selectedShell, shellLabels, shell }
  *   { type: "zimos:scroll-to-section", sectionId }
+ *   { type: "zimos:scroll-to-shell", part }
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over us
+ *   { type: "zimos:canvas-feedback", feedback, done, committed }  what a canvas drag should draw
+ *
+ * Sections and elements also drag, and sections, column widths and pictures
+ * resize, right on the page (CanvasHandles.tsx, useCanvasDrag.ts): this frame
+ * owns the pointer and draws, the editor decides the edit.
+ *
+ * The store's header, footer and announcement bar are not part of the page
+ * tree — the store layout draws them — but they carry `data-zimos-shell`, so
+ * they outline and select the same way sections do (without the move and
+ * insert buttons: they are fixed). `shell` is the editor's unsaved
+ * header/footer settings, handed to the layout's StoreShellProvider so the
+ * real header and footer re-render with them in place, no reload needed.
  *
  * Everything it draws (outlines, name labels, the + buttons) is a fixed layer
  * above the page, so the page's own markup and layout are left untouched.
@@ -39,6 +61,17 @@ import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from 
  */
 
 const SECTION_ATTR = "data-zimos-section";
+const SHELL_ATTR = "data-zimos-shell";
+const SHELL_PARTS = ["header", "footer", "announcement"] as const;
+type ShellPart = (typeof SHELL_PARTS)[number];
+
+function isShellPart(value: unknown): value is ShellPart {
+  return typeof value === "string" && (SHELL_PARTS as readonly string[]).includes(value);
+}
+
+function shellEl(part: ShellPart): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${SHELL_ATTR}="${part}"]`);
+}
 const INDEX_ATTR = "data-zimos-index";
 const OVERLAY_ATTR = "data-zimos-overlay";
 const SERVER_THEME_ID = "zimos-preview-theme";
@@ -50,6 +83,11 @@ interface Strings {
   addBelow: string;
   moveUp: string;
   moveDown: string;
+  dragSection: string;
+  dragElement: string;
+  resizeHeight: string;
+  resizeColumns: string;
+  resizeImage: string;
 }
 
 const DEFAULT_STRINGS: Strings = {
@@ -57,6 +95,11 @@ const DEFAULT_STRINGS: Strings = {
   addBelow: "Add a section here",
   moveUp: "Move up",
   moveDown: "Move down",
+  dragSection: "Drag to move this section",
+  dragElement: "Drag to move this block",
+  resizeHeight: "Drag to change the section's height",
+  resizeColumns: "Drag to change the column widths",
+  resizeImage: "Drag to resize the picture",
 };
 
 function sectionEl(id: string): HTMLElement | null {
@@ -77,6 +120,7 @@ function sectionIds(): string[] {
 function applyTheme(theme: PreviewTheme | null) {
   const wrapper = document.querySelector<HTMLElement>(".brand-theme");
   if (!wrapper || !theme) return;
+  lastTheme = theme;
   document.getElementById(SERVER_THEME_ID)?.remove();
   const vars = brandVars(theme as Record<string, unknown>, { complete: true });
   for (const name of BRAND_VAR_NAMES) {
@@ -85,6 +129,16 @@ function applyTheme(theme: PreviewTheme | null) {
   }
   applyLogo(theme.logoUrl);
 }
+
+/** The look last laid over the page, so the logo can be re-applied after the header re-renders. */
+let lastTheme: PreviewTheme | null = null;
+
+/** The unsaved logo's classes at each header logo size — StoreHeader's own LOGO_IMG_CLASS. */
+const PREVIEW_LOGO_CLASS: Record<string, string> = {
+  sm: "h-8 w-8 shrink-0 rounded-xl object-contain",
+  md: "h-10 w-10 shrink-0 rounded-xl object-contain",
+  lg: "h-12 w-12 shrink-0 rounded-xl object-contain",
+};
 
 /**
  * Swaps the header logo for an unsaved one (see StoreHeader). The header link
@@ -122,11 +176,14 @@ function applyLogo(logoUrl: string | null | undefined) {
     preview = document.createElement("img");
     preview.setAttribute("data-zimos-logo", "");
     preview.alt = "";
-    preview.width = 40;
-    preview.height = 40;
-    preview.className = "h-10 w-10 shrink-0 rounded-xl object-contain";
     link.prepend(preview);
   }
+  // Sized like the header's own logo, which the merchant may be resizing too.
+  const size = link.getAttribute("data-logo-size") ?? "md";
+  const px = size === "sm" ? 32 : size === "lg" ? 48 : 40;
+  preview.width = px;
+  preview.height = px;
+  preview.className = PREVIEW_LOGO_CLASS[size] ?? PREVIEW_LOGO_CLASS.md;
   if (preview.src !== logoUrl) preview.src = logoUrl;
   show(savedImg, false);
   show(fallback, false);
@@ -156,6 +213,16 @@ function measure(id: string | null): Box | null {
   };
 }
 
+/** A header/footer/announcement box, shaped like a section's so the same outline draws it. */
+function measureShell(part: ShellPart | null): Box | null {
+  if (!part) return null;
+  const el = shellEl(part);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return null;
+  return { id: part, index: -1, top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+}
+
 /** Every section's box, in document order — what a drag in progress needs to place a drop. */
 function measureAll(): Box[] {
   return Array.from(document.querySelectorAll<HTMLElement>(`[${SECTION_ATTR}]`)).map((el) => {
@@ -176,14 +243,22 @@ export function PreviewBridge({
   editable,
   token,
   initialTheme,
+  initialShell = null,
 }: {
   parentOrigin: string;
   editable: boolean;
   token: string;
   initialTheme: PreviewTheme | null;
+  /** The editor's unsaved header/footer settings posted with the tree, for the first paint. */
+  initialShell?: ShellOverride | null;
 }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [hoveredShell, setHoveredShell] = useState<ShellPart | null>(null);
+  const [selectedShell, setSelectedShell] = useState<ShellPart | null>(null);
+  const [shellLabels, setShellLabels] = useState<Partial<Record<ShellPart, string>>>({});
+  const [shell, setShell] = useState<ShellOverride | null>(initialShell);
+  const setShellOverride = useSetShellOverride();
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [strings, setStrings] = useState<Strings>(DEFAULT_STRINGS);
   // A block from the library is being dragged over the canvas, and — once the
@@ -204,6 +279,12 @@ export function PreviewBridge({
     },
     [parentOrigin]
   );
+
+  // Dragging and resizing on the page itself (useCanvasDrag.ts).
+  const drag = useCanvasDrag({ post, parentOrigin, focusKey: `zimos-preview-focus:${token}` });
+  // The overlay measures the page as it renders, which only a browser can:
+  // on the server (and while hydrating) it draws nothing.
+  const isClient = useIsClient();
 
   // Theme, scroll restore and the ready handshake — once per load.
   useEffect(() => {
@@ -249,6 +330,17 @@ export function PreviewBridge({
     };
   }, [initialTheme, post, token]);
 
+  // The unsaved header/footer settings go to the layout's StoreShellProvider,
+  // which re-renders the real header and footer with them. The header's logo
+  // node may be new afterwards, so the unsaved logo is laid over it again.
+  useEffect(() => {
+    setShellOverride(shell);
+    const frameId = requestAnimationFrame(() => {
+      if (lastTheme) applyLogo(lastTheme.logoUrl);
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [shell, setShellOverride]);
+
   // Messages from the editor. Anything not from the framing dashboard is ignored.
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -258,6 +350,16 @@ export function PreviewBridge({
 
       if (data.type === "zimos:editor-state") {
         setSelected(typeof data.selectedId === "string" ? data.selectedId : null);
+        setSelectedShell(isShellPart(data.selectedShell) ? data.selectedShell : null);
+        if (data.shellLabels && typeof data.shellLabels === "object") {
+          const next: Partial<Record<ShellPart, string>> = {};
+          for (const part of SHELL_PARTS) {
+            const label = (data.shellLabels as Record<string, unknown>)[part];
+            if (typeof label === "string") next[part] = label.slice(0, 80);
+          }
+          setShellLabels(next);
+        }
+        if ("shell" in data) setShell(data.shell === null ? null : readShellOverride(data.shell));
         if (data.labels && typeof data.labels === "object") {
           const next: Record<string, string> = {};
           for (const [id, label] of Object.entries(data.labels as Record<string, unknown>)) {
@@ -267,12 +369,11 @@ export function PreviewBridge({
         }
         if (data.strings && typeof data.strings === "object") {
           const s = data.strings as Record<string, unknown>;
-          setStrings({
-            addAbove: typeof s.addAbove === "string" ? s.addAbove : DEFAULT_STRINGS.addAbove,
-            addBelow: typeof s.addBelow === "string" ? s.addBelow : DEFAULT_STRINGS.addBelow,
-            moveUp: typeof s.moveUp === "string" ? s.moveUp : DEFAULT_STRINGS.moveUp,
-            moveDown: typeof s.moveDown === "string" ? s.moveDown : DEFAULT_STRINGS.moveDown,
-          });
+          const next = { ...DEFAULT_STRINGS };
+          for (const key of Object.keys(DEFAULT_STRINGS) as Array<keyof Strings>) {
+            if (typeof s[key] === "string") next[key] = (s[key] as string).slice(0, 200);
+          }
+          setStrings(next);
         }
         if ("theme" in data) applyTheme(readPreviewTheme(data.theme));
       } else if (data.type === "zimos:scroll-to-section" && typeof data.sectionId === "string") {
@@ -284,6 +385,14 @@ export function PreviewBridge({
           top: el.getBoundingClientRect().top + window.scrollY - header - 8,
           behavior: reduce ? "auto" : "smooth",
         });
+      } else if (data.type === "zimos:scroll-to-shell" && isShellPart(data.part)) {
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const behavior = reduce ? "auto" : "smooth";
+        if (data.part === "footer") {
+          shellEl("footer")?.scrollIntoView({ behavior, block: "end" });
+        } else {
+          window.scrollTo({ top: 0, behavior });
+        }
       } else if (data.type === "zimos:drag-state") {
         setDragActive(data.active === true);
         setDragHoverIndex(typeof data.hoverIndex === "number" ? data.hoverIndex : null);
@@ -321,10 +430,20 @@ export function PreviewBridge({
         return;
       }
       if (target.closest("a[href]")) event.preventDefault();
+      // The header, footer and announcement bar: the innermost one wins, so a
+      // click on the announcement bar (inside the header) picks the bar.
+      const part = target.closest<HTMLElement>(`[${SHELL_ATTR}]`)?.getAttribute(SHELL_ATTR);
+      if (isShellPart(part)) {
+        setSelectedShell(part);
+        setSelected(null);
+        post({ type: "zimos:select-shell", part });
+        return;
+      }
       const section = target.closest<HTMLElement>(`[${SECTION_ATTR}]`);
       if (!section) return;
       const id = section.getAttribute(SECTION_ATTR) ?? "";
       setSelected(id);
+      setSelectedShell(null);
       post({ type: "zimos:select-section", sectionId: id });
     }
     function onSubmit(event: SubmitEvent) {
@@ -333,11 +452,16 @@ export function PreviewBridge({
     function onOver(event: MouseEvent) {
       const target = event.target as Element | null;
       if (target?.closest(`[${OVERLAY_ATTR}]`)) return;
+      const part = target?.closest<HTMLElement>(`[${SHELL_ATTR}]`)?.getAttribute(SHELL_ATTR);
+      setHoveredShell(isShellPart(part) ? part : null);
       const section = target?.closest<HTMLElement>(`[${SECTION_ATTR}]`);
       setHovered(section ? section.getAttribute(SECTION_ATTR) : null);
     }
     function onOut(event: MouseEvent) {
-      if (!event.relatedTarget) setHovered(null);
+      if (!event.relatedTarget) {
+        setHovered(null);
+        setHoveredShell(null);
+      }
     }
 
     document.addEventListener("click", onClick, true);
@@ -352,7 +476,7 @@ export function PreviewBridge({
     };
   }, [editable, post]);
 
-  if (!editable) return null;
+  if (!editable || !isClient) return null;
 
   const boxes: Array<{ box: Box; active: boolean }> = [];
   const selectedBox = measure(selected);
@@ -360,6 +484,11 @@ export function PreviewBridge({
   if (hoveredBox) boxes.push({ box: hoveredBox, active: false });
   if (selectedBox) boxes.push({ box: selectedBox, active: true });
   const total = sectionIds().length;
+  const shellBoxes: Array<{ box: Box; active: boolean }> = [];
+  const selectedShellBox = measureShell(selectedShell);
+  const hoveredShellBox = hoveredShell !== selectedShell ? measureShell(hoveredShell) : null;
+  if (hoveredShellBox) shellBoxes.push({ box: hoveredShellBox, active: false });
+  if (selectedShellBox) shellBoxes.push({ box: selectedShellBox, active: true });
 
   return (
     <div data-zimos-overlay="">
@@ -373,6 +502,21 @@ export function PreviewBridge({
           strings={strings}
           onInsert={(index) => post({ type: "zimos:insert-section", index })}
           onMove={(direction) => post({ type: "zimos:move-section", sectionId: box.id, direction })}
+          grip={active ? <SectionGrip drag={drag} sectionId={box.id} label={strings.dragSection} /> : null}
+        />
+      ))}
+      <CanvasHandles sectionId={selected} drag={drag} strings={strings} focusKey={`zimos-preview-focus:${token}`} />
+      {/* A section being dragged on the page: the same gap lines as a block
+          dragged in from the library, the nearest one as the editor says. */}
+      {drag.active?.kind === "section" && drag.feedback?.kind === "section" && (
+        <DragGaps hoverIndex={drag.feedback.gapIndex} />
+      )}
+      {shellBoxes.map(({ box, active }) => (
+        <ShellOutline
+          key={`${box.id}-${active ? "selected" : "hover"}`}
+          box={box}
+          active={active}
+          label={shellLabels[box.id as ShellPart] ?? ""}
         />
       ))}
       {/* While a block is being dragged in from the library, every gap is a
@@ -391,6 +535,7 @@ function SectionOutline({
   strings,
   onInsert,
   onMove,
+  grip = null,
 }: {
   box: Box;
   active: boolean;
@@ -400,6 +545,8 @@ function SectionOutline({
   strings: Strings;
   onInsert: (index: number) => void;
   onMove: (direction: "up" | "down") => void;
+  /** The selected section's drag grip (CanvasHandles.tsx), beside its up/down buttons. */
+  grip?: ReactNode;
 }) {
   // The top bar rides the top edge, but never scrolls out of view with a tall section.
   const chipTop = Math.min(Math.max(box.top, 0), box.top + box.height - 24);
@@ -454,14 +601,17 @@ function SectionOutline({
         ) : (
           <span />
         )}
-        <MoveButtons
-          canMoveUp={box.index > 0}
-          canMoveDown={box.index < total - 1}
-          upLabel={strings.moveUp}
-          downLabel={strings.moveDown}
-          onMoveUp={() => onMove("up")}
-          onMoveDown={() => onMove("down")}
-        />
+        <span style={{ display: "flex", gap: 3, pointerEvents: "auto", flexShrink: 0 }}>
+          {grip}
+          <MoveButtons
+            canMoveUp={box.index > 0}
+            canMoveDown={box.index < total - 1}
+            upLabel={strings.moveUp}
+            downLabel={strings.moveDown}
+            onMoveUp={() => onMove("up")}
+            onMoveDown={() => onMove("down")}
+          />
+        </span>
       </div>
       <InsertButton top={box.top} box={box} label={strings.addAbove} onClick={() => onInsert(box.index)} />
       <InsertButton
@@ -470,6 +620,62 @@ function SectionOutline({
         label={strings.addBelow}
         onClick={() => onInsert(box.index + 1)}
       />
+    </>
+  );
+}
+
+/**
+ * The header, footer or announcement bar's outline: the same frame and name
+ * chip a section gets, but none of its buttons — these parts are fixed, on
+ * every page, and can't be moved, inserted around or deleted.
+ */
+function ShellOutline({ box, active, label }: { box: Box; active: boolean; label: string }) {
+  const chipTop = Math.min(Math.max(box.top, 0), box.top + box.height - 22);
+  return (
+    <>
+      <div
+        style={{
+          position: "fixed",
+          top: box.top,
+          left: box.left,
+          width: box.width,
+          height: box.height,
+          outline: `${active ? 2 : 1}px ${active ? "solid" : "dashed"} ${EDITOR_BLUE}`,
+          outlineOffset: -2,
+          background: active ? "transparent" : "rgba(37, 99, 235, 0.04)",
+          pointerEvents: "none",
+          zIndex: 2147483000,
+        }}
+      />
+      {label && (
+        // A full-width row, like a section's chip bar, so the name sits at the
+        // inline start in either direction.
+        <div
+          style={{
+            position: "fixed",
+            top: chipTop,
+            left: box.left,
+            width: box.width,
+            display: "flex",
+            paddingInline: 4,
+            pointerEvents: "none",
+            zIndex: 2147483001,
+          }}
+        >
+          <span
+            style={{
+              background: EDITOR_BLUE,
+              color: "#fff",
+              font: "500 11px/1.2 ui-sans-serif, system-ui, sans-serif",
+              padding: "4px 8px",
+              borderRadius: "0 0 6px 6px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </span>
+        </div>
+      )}
     </>
   );
 }

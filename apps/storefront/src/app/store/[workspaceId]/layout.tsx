@@ -14,6 +14,7 @@ import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
+import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
@@ -129,32 +130,36 @@ export default async function StoreLayout({
   return (
     <StoreRouteProvider basePath={basePath}>
       <StoreContextProvider locale={locale} store={info}>
-        {/* Reads the search params, hence the Suspense boundary. */}
-        <Suspense fallback={null}>
-          <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
-        </Suspense>
-        <div
-          lang={intlLocaleFor(locale)}
-          dir={dirFor(locale)}
-          className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-          style={brandStyle(store.themeSettings)}
-        >
-          <DocumentLocale locale={locale} />
-          <PaymentsPreviewBanner workspaceId={workspaceId} />
-          <HideInFunnel>
-            <StoreHeader store={store} locale={locale} />
-            <MobileCategoryStrip collections={collections} t={t} />
-          </HideInFunnel>
-          <div className="flex flex-1 flex-col">{children}</div>
-          <HideInFunnel>
-            <StoreFooter store={store} locale={locale} />
-            {/* The slide-over cart: opened by "add to cart" and the header's
-                cart icon. Funnel pages have no cart, so it steps aside with
-                the rest of the store's chrome. */}
-            <CartDrawer />
-          </HideInFunnel>
-          <BackToTop label={t.common.backToTop} />
-        </div>
+        {/* Holds the editor preview's unsaved header/footer settings; empty,
+            and so invisible, on every page a shopper sees. */}
+        <StoreShellProvider>
+          {/* Reads the search params, hence the Suspense boundary. */}
+          <Suspense fallback={null}>
+            <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+          </Suspense>
+          <div
+            lang={intlLocaleFor(locale)}
+            dir={dirFor(locale)}
+            className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
+            style={brandStyle(store.themeSettings)}
+          >
+            <DocumentLocale locale={locale} />
+            <PaymentsPreviewBanner workspaceId={workspaceId} />
+            <HideInFunnel>
+              <StoreHeader store={store} locale={locale} />
+              <MobileCategoryStrip collections={collections} t={t} />
+            </HideInFunnel>
+            <div className="flex flex-1 flex-col">{children}</div>
+            <HideInFunnel>
+              <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+              {/* The slide-over cart: opened by "add to cart" and the header's
+                  cart icon. Funnel pages have no cart, so it steps aside with
+                  the rest of the store's chrome. */}
+              <CartDrawer />
+            </HideInFunnel>
+            <BackToTop label={t.common.backToTop} />
+          </div>
+        </StoreShellProvider>
       </StoreContextProvider>
     </StoreRouteProvider>
   );

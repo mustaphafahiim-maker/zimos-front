@@ -8,14 +8,24 @@
  * from a frame this editor owns):
  *   { type: "zimos:preview-ready", sectionIds }        after every (re)load
  *   { type: "zimos:select-section", sectionId }        a section was clicked
+ *   { type: "zimos:select-shell", part }                the header, footer or announcement bar was clicked
  *   { type: "zimos:insert-section", index }             "add a section here"
  *   { type: "zimos:move-section", sectionId, direction } the canvas's own up/down buttons
  *   { type: "zimos:section-rects", sections }            each section's box, while a drag is on
+ *   { type: "zimos:canvas-drag", phase, … }               drag / resize on the page itself (lib/canvasDrag.ts)
+ *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *
  * Editor → frame (posted to the storefront origin, never "*"):
- *   { type: "zimos:editor-state", selectedId, labels, strings, theme }
+ *   { type: "zimos:editor-state", selectedId, labels, strings, theme,
+ *     selectedShell, shellLabels, shell }
  *   { type: "zimos:scroll-to-section", sectionId }
+ *   { type: "zimos:scroll-to-shell", part }
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over the canvas
+ *   { type: "zimos:canvas-feedback", feedback, done, committed }  what a canvas drag should draw
+ *
+ * `shell` is the unsaved header/footer (and announcement bar) in the exact
+ * shape a save writes into themeSettings (`header` / `footer`); the frame
+ * reads it with the same functions the live store uses.
  *
  * Drag-and-drop from the block library onto the canvas is native HTML5 DnD
  * started in the dashboard (same-origin) and dropped on a cross-origin frame,
@@ -38,6 +48,22 @@ export interface PreviewTheme {
   logoUrl?: string | null;
 }
 
+import { readCanvasDrag, readCanvasStep, type CanvasDragMessage, type CanvasStep } from "./canvasDrag";
+
+/** The store's fixed parts — drawn by the store layout on every page, not by the page tree. */
+export type ShellPart = "header" | "footer" | "announcement";
+const SHELL_PART_SET = new Set<string>(["header", "footer", "announcement"]);
+
+export function isShellPart(value: unknown): value is ShellPart {
+  return typeof value === "string" && SHELL_PART_SET.has(value);
+}
+
+/** Unsaved header/footer settings, exactly as a save would write them into themeSettings. */
+export interface ShellPreview {
+  header: Record<string, unknown>;
+  footer: Record<string, unknown> | null;
+}
+
 /** One section's box, as the frame measures it (its own viewport, `getBoundingClientRect()`). */
 export interface SectionRect {
   sectionId: string;
@@ -50,21 +76,52 @@ export interface SectionRect {
 export type FrameMessage =
   | { type: "zimos:preview-ready"; sectionIds: string[] }
   | { type: "zimos:select-section"; sectionId: string }
+  | { type: "zimos:select-shell"; part: ShellPart }
   | { type: "zimos:insert-section"; index: number }
   | { type: "zimos:move-section"; sectionId: string; direction: "up" | "down" }
-  | { type: "zimos:section-rects"; sections: SectionRect[] };
+  | { type: "zimos:section-rects"; sections: SectionRect[] }
+  | CanvasDragMessage
+  | { type: "zimos:canvas-step"; step: CanvasStep };
+
+/**
+ * The canvas's own words, in the editor's language: the section outline's
+ * buttons, and the handles for dragging and resizing on the page. The frame
+ * falls back to English for any it isn't sent.
+ */
+export interface CanvasStrings {
+  addAbove: string;
+  addBelow: string;
+  moveUp: string;
+  moveDown: string;
+  dragSection?: string;
+  dragElement?: string;
+  resizeHeight?: string;
+  resizeColumns?: string;
+  resizeImage?: string;
+  /** The size badge for "no minimum height". */
+  auto?: string;
+}
 
 export interface EditorStateMessage {
   type: "zimos:editor-state";
   selectedId: string | null;
   labels: Record<string, string>;
-  strings: { addAbove: string; addBelow: string; moveUp: string; moveDown: string };
+  strings: CanvasStrings;
   theme: PreviewTheme | null;
+  selectedShell: ShellPart | null;
+  shellLabels: Record<ShellPart, string> | null;
+  /** Null shows the saved header and footer. */
+  shell: ShellPreview | null;
 }
 
 export interface ScrollToSectionMessage {
   type: "zimos:scroll-to-section";
   sectionId: string;
+}
+
+export interface ScrollToShellMessage {
+  type: "zimos:scroll-to-shell";
+  part: ShellPart;
 }
 
 /**
@@ -121,6 +178,8 @@ export function readFrameMessage(
       };
     case "zimos:select-section":
       return isId(data.sectionId) ? { type: "zimos:select-section", sectionId: data.sectionId } : null;
+    case "zimos:select-shell":
+      return isShellPart(data.part) ? { type: "zimos:select-shell", part: data.part } : null;
     case "zimos:insert-section":
       return typeof data.index === "number" && Number.isInteger(data.index) && data.index >= 0
         ? { type: "zimos:insert-section", index: data.index }
@@ -133,6 +192,12 @@ export function readFrameMessage(
       return Array.isArray(data.sections)
         ? { type: "zimos:section-rects", sections: data.sections.filter(isSectionRect) }
         : null;
+    case "zimos:canvas-drag":
+      return readCanvasDrag(data);
+    case "zimos:canvas-step": {
+      const step = readCanvasStep(data.step);
+      return step ? { type: "zimos:canvas-step", step } : null;
+    }
     default:
       return null;
   }

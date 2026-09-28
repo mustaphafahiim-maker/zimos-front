@@ -1,5 +1,6 @@
 import type { PageTree } from "@store-builder/api-client";
 import type { PreviewTheme } from "./brandTheme";
+import type { ShellOverride } from "./storeShell";
 
 /**
  * Draft page trees posted by the dashboard's live preview, held briefly in
@@ -26,6 +27,8 @@ export interface PreviewOptions {
   parentOrigin: string | null;
   /** The editor's unsaved store look, laid over the saved one. */
   theme: PreviewTheme | null;
+  /** The editor's unsaved header/footer settings (lib/StoreShellContext), if any. */
+  shell?: ShellOverride | null;
 }
 
 export interface PreviewEntry {

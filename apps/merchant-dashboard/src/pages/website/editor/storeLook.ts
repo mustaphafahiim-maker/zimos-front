@@ -1,6 +1,16 @@
 import type { Workspace } from "@store-builder/api-client";
 import { normalizeHex } from "@/lib/brandColors";
-import type { PreviewTheme } from "@/lib/previewBridge";
+import type { PreviewTheme, ShellPreview } from "@/lib/previewBridge";
+import {
+  readFooterLook,
+  readHeaderLook,
+  sameFooter,
+  sameHeader,
+  writeFooter,
+  writeHeader,
+  type FooterLook,
+  type HeaderLook,
+} from "./storeShell";
 
 /**
  * The store's look as the website editor's "Store look" panel edits it. It is
@@ -10,6 +20,10 @@ import type { PreviewTheme } from "@/lib/previewBridge";
  *
  * The storefront reads every key here in apps/storefront/src/lib/brandTheme.ts
  * — the option keys below must match THEME_FONTS / THEME_RADII there.
+ *
+ * The header and footer (storeShell.ts) are part of the look too: they live in
+ * the same `themeSettings` blob and are saved by the same PATCH, so they share
+ * its undo history, its dirty check and its Save.
  */
 
 export type FontKey = "classic" | "modern" | "tajawal" | "system";
@@ -42,6 +56,8 @@ export interface StoreLook {
   cornerRadius: RadiusKey;
   logoUrl: string | null;
   announcement: StoreAnnouncementLook;
+  header: HeaderLook;
+  footer: FooterLook;
 }
 
 /** Font pairings, each drawn in its own face in the panel. Only fonts the storefront already loads. */
@@ -90,6 +106,8 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
     cornerRadius: radius,
     logoUrl: workspace?.logoUrl ?? null,
     announcement: readAnnouncement(header.announcement),
+    header: readHeaderLook(ts.header),
+    footer: readFooterLook(ts.footer),
   };
 }
 
@@ -128,12 +146,8 @@ function readAnnouncement(raw: unknown): StoreAnnouncementLook {
 /**
  * What the preview frame lays over the saved look. Unset colours stay unset.
  *
- * Deliberately silent on `look.announcement`: `PreviewTheme` (this file and
- * its storefront-side twin in brandTheme.ts) only ever carries colours, font,
- * corners and the logo — the two apps share no code, so adding a field here
- * would do nothing until the storefront's `readPreviewTheme` / `PreviewBridge`
- * learned to apply it too. An unsaved announcement-bar edit previews only
- * after a real save and reload; see StoreLookPanel's module doc.
+ * Silent on the announcement bar, header and footer: those travel to the
+ * preview separately, as `lookToShellPreview` below.
  */
 export function lookToPreview(look: StoreLook): PreviewTheme {
   return {
@@ -162,11 +176,29 @@ export function lookToWorkspacePatch(
   if (look.primaryColor) themeSettings.primaryColor = look.primaryColor;
   if (look.secondaryColor) themeSettings.secondaryColor = look.secondaryColor;
 
-  const existingHeader =
-    existing?.header && typeof existing.header === "object" ? (existing.header as Record<string, unknown>) : {};
-  themeSettings.header = { ...existingHeader, announcement: announcementPatch(look.announcement) };
+  themeSettings.header = writeHeader(existing?.header, look.header, announcementPatch(look.announcement));
+  const footer = writeFooter(existing?.footer, look.footer);
+  if (footer) themeSettings.footer = footer;
+  else delete themeSettings.footer;
 
   return { logoUrl: look.logoUrl, themeSettings };
+}
+
+/**
+ * The unsaved header, footer and announcement bar as the preview shows them:
+ * exactly the `header` / `footer` objects a save would write, so what the
+ * merchant sees in the canvas is what the store will get.
+ */
+export function lookToShellPreview(existing: Record<string, unknown> | undefined, look: StoreLook): ShellPreview {
+  const { themeSettings } = lookToWorkspacePatch(existing, look);
+  const header = themeSettings.header as Record<string, unknown>;
+  const footer = (themeSettings.footer as Record<string, unknown> | undefined) ?? null;
+  return { header, footer };
+}
+
+/** How long the saved `themeSettings` JSON would be — the API refuses more than THEME_SETTINGS_MAX_CHARS. */
+export function themeSettingsSize(existing: Record<string, unknown> | undefined, look: StoreLook): number {
+  return JSON.stringify(lookToWorkspacePatch(existing, look).themeSettings).length;
 }
 
 /**
@@ -213,6 +245,20 @@ export function sameLook(a: StoreLook, b: StoreLook): boolean {
     a.fontFamily === b.fontFamily &&
     a.cornerRadius === b.cornerRadius &&
     a.logoUrl === b.logoUrl &&
-    sameAnnouncement(a.announcement, b.announcement)
+    sameAnnouncement(a.announcement, b.announcement) &&
+    sameHeader(a.header, b.header) &&
+    sameFooter(a.footer, b.footer)
+  );
+}
+
+/** Only the colours, font, corners and logo — what the Store look tab itself edits. */
+export function sameAppearance(a: StoreLook, b: StoreLook): boolean {
+  return sameLook({ ...a, announcement: b.announcement, header: b.header, footer: b.footer }, b);
+}
+
+/** Only the announcement bar, header and footer — what the preview's `shell` carries. */
+export function sameShellParts(a: StoreLook, b: StoreLook): boolean {
+  return (
+    sameAnnouncement(a.announcement, b.announcement) && sameHeader(a.header, b.header) && sameFooter(a.footer, b.footer)
   );
 }

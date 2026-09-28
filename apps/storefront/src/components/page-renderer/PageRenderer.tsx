@@ -39,7 +39,7 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
-import { columnClasses, rowClasses, sectionClasses } from "./layout";
+import { columnClasses, rowClasses, sectionClasses, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -78,6 +78,12 @@ interface Ctx {
   locale: Locale;
   t: Dictionary;
   funnel?: PageRendererFunnel;
+  /**
+   * The editor's preview: rows, columns and elements carry `data-zimos-*`
+   * markers so the canvas can drag and resize them (components/preview). The
+   * element marker is `display: contents`, so it adds no box of its own.
+   */
+  editable?: boolean;
 }
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
@@ -183,6 +189,22 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const span = Number.isInteger(column.span) ? Math.min(12, Math.max(1, column.span!)) : 12;
   const elements = Array.isArray(column.elements) ? column.elements : [];
 
+  if (ctx.editable) {
+    return (
+      <div
+        className={columnClasses(settingsOf(column), SPAN_CLASS[span])}
+        data-zimos-column={column.id}
+        data-zimos-span={span}
+      >
+        {elements.map((element) => (
+          <div key={element.id} data-zimos-el={element.id} data-zimos-type={element.type} className="contents">
+            <ElementNode element={element} ctx={ctx} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])}>
       {elements.map((element) => (
@@ -197,7 +219,7 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   if (columns.length === 0) return null;
 
   return (
-    <div className={rowClasses(settingsOf(row))}>
+    <div className={rowClasses(settingsOf(row))} data-zimos-row={ctx.editable ? row.id : undefined}>
       {columns.map((column) => (
         <ColumnNode key={column.id} column={column} ctx={ctx} />
       ))}
@@ -216,9 +238,10 @@ function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
   if (rows.length === 0) return null;
 
   const { outer, inner } = sectionClasses(section.settings);
+  const minHeight = sectionMinHeight(section.settings);
 
   return (
-    <section className={outer}>
+    <section className={outer} style={minHeight === null ? undefined : { minHeight }}>
       <div className={inner}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
@@ -282,7 +305,7 @@ export function PageRenderer({
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel };
+  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
 
   return (
     <div className="divide-y divide-line">

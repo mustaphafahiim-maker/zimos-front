@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Megaphone, PanelBottom, PanelTop, Plus, X } from "lucide-react";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import { ColorField } from "@/components/ColorField";
 import { TextField } from "@/components/Field";
@@ -15,6 +15,7 @@ import {
   type StoreAnnouncementLook,
   type StoreLook,
 } from "./storeLook";
+import type { ShellPart } from "./storeShell";
 
 /**
  * The inspector's "Store look" tab: colours, font, corners and logo for the
@@ -25,20 +26,19 @@ import {
  * `onChange` takes a history key so a burst of typing in a hex box, or a drag
  * across the native colour picker, is one undo step.
  *
- * The announcement bar section at the bottom previews live on the real
- * storefront once saved — `announcementOf` (storeAnnouncement.ts) reads it
- * straight off the workspace on every request. It does NOT preview inside
- * this editor's own live iframe before that save: the preview bridge's
- * `PreviewTheme` only ever carries colours/font/corners/logo (see
- * storeLook.ts's `lookToPreview`), so an unsaved toggle here has nothing to
- * show in the canvas until Save reloads it for real.
+ * The announcement bar, header and footer are part of the look too, but each
+ * has its own panel (ShellPanels.tsx), opened by clicking it in the preview or
+ * in the outline; the foot of this tab points there.
  */
 export function StoreLookPanel({
   look,
   onChange,
+  onEditShell,
 }: {
   look: StoreLook;
   onChange: (next: StoreLook, historyKey?: string) => void;
+  /** Opens the announcement bar's, header's or footer's own panel. */
+  onEditShell?: (part: ShellPart) => void;
 }) {
   const ui = editorUi(useEditorLocale());
 
@@ -158,10 +158,25 @@ export function StoreLookPanel({
         onChange={(url) => onChange({ ...look, logoUrl: url || null })}
       />
 
-      <AnnouncementSection
-        announcement={look.announcement}
-        onChange={(next) => onChange({ ...look, announcement: next })}
-      />
+      {onEditShell && (
+        <section className="space-y-2 border-t border-line pt-4">
+          <p className="text-xs text-ink-soft">{ui.shellEditHint}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["announcement", ui.announcementBar, Megaphone],
+                ["header", ui.shellHeader, PanelTop],
+                ["footer", ui.shellFooter, PanelBottom],
+              ] as const
+            ).map(([part, label, Icon]) => (
+              <Button key={part} type="button" size="sm" variant="outline" onClick={() => onEditShell(part)}>
+                <Icon className="size-4" aria-hidden />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -171,17 +186,25 @@ function announcementIsBlank(messages: string[]): boolean {
   return messages.every((m) => m.trim() === "");
 }
 
-function AnnouncementSection({
+/**
+ * The announcement bar's fields — its own panel in the inspector (see
+ * ShellPanels.tsx). `onChange` takes a history key, so typing a message or a
+ * link is one undo step rather than one per letter.
+ */
+export function AnnouncementSection({
   announcement,
   onChange,
+  bare = false,
 }: {
   announcement: StoreAnnouncementLook;
-  onChange: (next: StoreAnnouncementLook) => void;
+  onChange: (next: StoreAnnouncementLook, historyKey?: string) => void;
+  /** No top rule — the section is a panel of its own rather than the foot of another. */
+  bare?: boolean;
 }) {
   const ui = editorUi(useEditorLocale());
 
   return (
-    <section className="space-y-3 border-t border-line pt-4">
+    <section className={bare ? "space-y-3" : "space-y-3 border-t border-line pt-4"}>
       <label className="flex items-center gap-2 text-sm font-medium text-ink">
         <input
           type="checkbox"
@@ -198,7 +221,7 @@ function AnnouncementSection({
           <AnnouncementMessages
             messages={announcement.messages}
             ui={ui}
-            onChange={(messages) => onChange({ ...announcement, messages })}
+            onChange={(messages) => onChange({ ...announcement, messages }, "look:announcement:messages")}
           />
           {announcementIsBlank(announcement.messages) && (
             <p className="text-xs font-medium text-danger">{ui.announcementNeedsMessage}</p>
@@ -209,7 +232,9 @@ function AnnouncementSection({
             hint={ui.announcementLinkHint}
             dir="ltr"
             value={announcement.href ?? ""}
-            onChange={(e) => onChange({ ...announcement, href: e.target.value.trim() ? e.target.value : null })}
+            onChange={(e) =>
+              onChange({ ...announcement, href: e.target.value.trim() ? e.target.value : null }, "look:announcement:href")
+            }
           />
 
           <LookColor

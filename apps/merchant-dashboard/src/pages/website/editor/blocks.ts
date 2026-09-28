@@ -194,6 +194,14 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         options: IMAGE_SIZES,
         hint: "How wide it is allowed to get. Anything but full width sits centred in its column.",
       },
+      {
+        key: "width",
+        label: "Width (%)",
+        kind: "number",
+        min: 10,
+        max: 100,
+        hint: "A share of its column — or drag the picture's corner in the preview. Replaces Size; leave empty to use Size.",
+      },
     ],
   },
   gallery: {
@@ -3056,12 +3064,26 @@ function presetSignature(preset: BlockPreset): string {
  * template's single-column hero still gets called "Hero", and how a section
  * the merchant re-laid-out keeps its name.
  */
+/** Whether every setting a preset starts with is set the same way on the section. */
+function settingsWithin(preset: Record<string, unknown> | undefined, section: unknown): boolean {
+  const own = section && typeof section === "object" ? (section as Record<string, unknown>) : {};
+  return Object.entries(preset ?? {}).every(([key, value]) => own[key] === value);
+}
+
 function matchPreset(section: PageSection): BlockPreset | undefined {
   const rows = (section.rows ?? []).map((row) => ({
     columns: (row.columns ?? []).map((col) => ({ span: col.span, elements: col.elements ?? [] })),
   }));
   const signature = layoutSignature(rows);
-  const exact = BLOCK_PRESETS.find((p) => presetSignature(p) === signature);
+  // Several presets can share a shape and differ only in their section look —
+  // a plain Text and the Announcement bar are both one span-12 text. The one
+  // whose settings the section actually carries (the most of them) wins, so a
+  // plain text section isn't named after a coloured band it doesn't look like.
+  const exacts = BLOCK_PRESETS.filter((p) => presetSignature(p) === signature);
+  const carried = exacts
+    .filter((p) => settingsWithin(p.settings, section.settings))
+    .sort((a, b) => Object.keys(b.settings ?? {}).length - Object.keys(a.settings ?? {}).length);
+  const exact = carried[0] ?? exacts[0];
   if (exact) return exact;
   const types = sectionElements(section).map((el) => el.type);
   return BLOCK_PRESETS.find(
@@ -3124,7 +3146,15 @@ export function setElementProp(
   key: string,
   value: unknown
 ): PageSection {
-  const props = { ...(element.props ?? {}), [key]: value };
+  const props: Record<string, unknown> = { ...(element.props ?? {}), [key]: value };
+  // A picture is sized either by a named size or by a width in percent (what
+  // dragging its corner in the preview sets) — never both, so choosing one
+  // clears the other, and an emptied width is removed rather than kept as "".
+  if (element.type === "image" && key === "size") delete props.width;
+  if (element.type === "image" && key === "width") {
+    if (value === "" || value === null || value === undefined) delete props.width;
+    else delete props.size;
+  }
   return replaceElement(section, element.id, { ...element, props });
 }
 

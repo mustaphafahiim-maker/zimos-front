@@ -62,6 +62,8 @@ export function AnnouncementBar({ announcement, label }: { announcement: StoreAn
     <div
       role="region"
       aria-label={label}
+      // Names the bar for the editor preview's click-to-select; inert on a live page.
+      data-zimos-shell="announcement"
       className="bg-primary text-on-primary"
       style={style}
       onMouseEnter={() => (pausedRef.current = true)}

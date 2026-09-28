@@ -305,6 +305,16 @@ describe("createSection", () => {
     expect(sectionLabel(createSection(flat))).toBe(split.label);
   });
 
+  it("tells presets of the same shape apart by the section settings they carry", () => {
+    const byKey = (key: string) => BLOCK_PRESETS.find((p) => p.key === key)!;
+    // One span-12 text: a plain Text, not the brand-coloured Announcement bar.
+    expect(sectionLabel(createSection(byKey("text")))).toBe(byKey("text").label);
+    expect(sectionLabel(createSection(byKey("announcement-bar")))).toBe(byKey("announcement-bar").label);
+    // One span-12 image: a plain Image, not the Full-width banner.
+    expect(sectionLabel(createSection(byKey("image")))).toBe(byKey("image").label);
+    expect(sectionLabel(createSection(byKey("store-banner-wide")))).toBe(byKey("store-banner-wide").label);
+  });
+
   it("applies a preset's section settings and leaves the rest without any", () => {
     for (const preset of BLOCK_PRESETS) {
       const section = createSection(preset);

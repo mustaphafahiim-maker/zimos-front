@@ -78,7 +78,11 @@ export function ImageElement({ props }: { props: Props }) {
   if (!src) return null;
   const alt = str(props, "alt");
   const href = resolveHref(str(props, "href"));
-  const maxWidth = IMAGE_MAX_WIDTH[str(props, "size", "full")];
+  // A width in percent of the column — what dragging the picture's corner in
+  // the editor sets — wins over a named size; a picture with neither renders
+  // as it always did.
+  const widthPct = props.width === undefined ? 0 : num(props, "width", 0, 10, 100);
+  const maxWidth = widthPct > 0 ? `${widthPct}%` : IMAGE_MAX_WIDTH[str(props, "size", "full")];
 
   const img = (
     // Merchant images are arbitrary remote URLs (the media host is configurable

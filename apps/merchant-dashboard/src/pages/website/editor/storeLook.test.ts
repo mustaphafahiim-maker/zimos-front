@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { lookToPreview, lookToWorkspacePatch, readStoreLook, type StoreLook } from "./storeLook";
+import {
+  lookToPreview,
+  lookToShellPreview,
+  lookToWorkspacePatch,
+  readStoreLook,
+  sameLook,
+  type StoreLook,
+} from "./storeLook";
+import { DEFAULT_FOOTER_LOOK, DEFAULT_HEADER_LOOK, newLink } from "./storeShell";
 
 /** A look with every field set, so a test only has to override what it cares about. */
 function baseLook(overrides: Partial<StoreLook> = {}): StoreLook {
@@ -10,6 +18,8 @@ function baseLook(overrides: Partial<StoreLook> = {}): StoreLook {
     cornerRadius: "round",
     logoUrl: null,
     announcement: { enabled: false, messages: [], href: null, background: null, color: null },
+    header: DEFAULT_HEADER_LOOK,
+    footer: DEFAULT_FOOTER_LOOK,
     ...overrides,
   };
 }
@@ -23,6 +33,8 @@ describe("store look", () => {
       cornerRadius: "soft",
       logoUrl: null,
       announcement: { enabled: false, messages: [], href: null, background: null, color: null },
+      header: DEFAULT_HEADER_LOOK,
+      footer: DEFAULT_FOOTER_LOOK,
     });
   });
 
@@ -143,6 +155,52 @@ describe("store look", () => {
     it("a store that never saved one reads back as disabled with no messages", () => {
       const look = readStoreLook({ themeSettings: {}, logoUrl: null });
       expect(look.announcement).toEqual({ enabled: false, messages: [], href: null, background: null, color: null });
+    });
+  });
+
+  describe("header and footer", () => {
+    it("writes nothing for a header and footer left at their defaults", () => {
+      const patch = lookToWorkspacePatch({ footer: undefined }, baseLook());
+      expect(patch.themeSettings.header).toEqual({ announcement: { enabled: false } });
+      expect(patch.themeSettings).not.toHaveProperty("footer");
+    });
+
+    it("writes only the header settings that differ from the default", () => {
+      const patch = lookToWorkspacePatch(
+        {},
+        baseLook({ header: { ...DEFAULT_HEADER_LOOK, logoAlign: "center", showLanguage: false, sticky: false } })
+      );
+      expect(patch.themeSettings.header).toEqual({
+        announcement: { enabled: false },
+        logo: { align: "center" },
+        show: { language: false },
+        sticky: false,
+      });
+    });
+
+    it("round-trips a custom menu, keeping built-in links unlabelled", () => {
+      const menu = [newLink("home"), { ...newLink("url"), label: "Instagram", href: "https://instagram.com/x" }];
+      const look = baseLook({ header: { ...DEFAULT_HEADER_LOOK, menu } });
+      const saved = lookToWorkspacePatch({}, look).themeSettings;
+      expect((saved.header as Record<string, unknown>).menu).toEqual([
+        { label: "", href: "/", kind: "home" },
+        { label: "Instagram", href: "https://instagram.com/x", kind: "url" },
+      ]);
+      const reopened = readStoreLook({ themeSettings: saved, logoUrl: null });
+      expect(sameLook(reopened, look)).toBe(true);
+    });
+
+    it("drops the footer key again when it goes back to the defaults, keeping keys it doesn't own", () => {
+      const patch = lookToWorkspacePatch({ footer: { groups: [], extra: 1 } }, baseLook());
+      expect(patch.themeSettings.footer).toEqual({ extra: 1 });
+      expect(lookToWorkspacePatch({ footer: { text: "x" } }, baseLook()).themeSettings).not.toHaveProperty("footer");
+    });
+
+    it("previews exactly what a save would write", () => {
+      const look = baseLook({ footer: { ...DEFAULT_FOOTER_LOOK, text: "Cairo · since 2020", showHelp: false } });
+      const preview = lookToShellPreview({ header: { keep: true } }, look);
+      const saved = lookToWorkspacePatch({ header: { keep: true } }, look).themeSettings;
+      expect(preview).toEqual({ header: saved.header, footer: saved.footer });
     });
   });
 });

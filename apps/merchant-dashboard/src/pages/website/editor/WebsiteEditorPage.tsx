@@ -10,6 +10,7 @@ import type {
   WebsitePage,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
+import { stepEdit, type CanvasEdit, type CanvasStep } from "@/lib/canvasDrag";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
@@ -28,6 +29,9 @@ import { SectionInspector } from "./SectionInspector";
 import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
+import { ResizableSplit } from "./ResizableSplit";
+import { applyCanvasEdit, nudgeElement } from "./canvasEdits";
+import { ShellPanel } from "./ShellPanels";
 import {
   createSection,
   createStarterSections,
@@ -39,7 +43,18 @@ import {
 } from "./blocks";
 import { EditorLocaleContext, editorUi, useEditorLocale } from "./editorLocale";
 import { useEditHistory } from "./editHistory";
-import { lookToPreview, lookToWorkspacePatch, readStoreLook, sameLook, type StoreLook } from "./storeLook";
+import {
+  lookToPreview,
+  lookToShellPreview,
+  lookToWorkspacePatch,
+  readStoreLook,
+  sameAppearance,
+  sameLook,
+  sameShellParts,
+  themeSettingsSize,
+  type StoreLook,
+} from "./storeLook";
+import { THEME_SETTINGS_MAX_CHARS, shellPartLabel, type ShellPart } from "./storeShell";
 
 /**
  * The website editor — a visual builder with the real storefront as its
@@ -49,9 +64,13 @@ import { lookToPreview, lookToWorkspacePatch, readStoreLook, sameLook, type Stor
  *    and the block library gallery below it;
  *  - centre: the live preview (StorefrontPreview), re-rendered by the
  *    storefront itself shortly after every edit. Clicking a section there
- *    selects it here, and "+" between sections adds one at that spot;
+ *    selects it here, and "+" between sections adds one at that spot. On
+ *    the page itself sections and elements drag to new places, and sections,
+ *    column widths and pictures resize by their handles (lib/canvasDrag.ts,
+ *    canvasEdits.ts) — each release one undo step;
  *  - end: the inspector — the selected section's content, or the store's look
- *    (colours, font, corners, logo).
+ *    (colours, font, corners, logo), or the announcement bar, header or
+ *    footer (ShellPanels.tsx) when one of those is picked.
  *
  * Edits are held locally, with undo/redo, until Save. `draftData` is the only
  * page field written back. The rest of the tree — `version`, any
@@ -168,6 +187,8 @@ function WebsiteEditor() {
   const [baseline, setBaseline] = useState<string>("[]");
   const [lookBaseline, setLookBaseline] = useState<StoreLook>(() => readStoreLook(null));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** The announcement bar, header or footer, when one of those is open instead of a section. */
+  const [selectedShell, setSelectedShell] = useState<ShellPart | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -193,9 +214,12 @@ function WebsiteEditor() {
   /** The block library card currently being dragged, or null between drags. Drives the canvas's drop overlay. */
   const [draggingPreset, setDraggingPreset] = useState<BlockPreset | null>(null);
   const [scrollRequest, setScrollRequest] = useState<{ sectionId: string; nonce: number } | null>(null);
+  const [shellScrollRequest, setShellScrollRequest] = useState<{ part: ShellPart; nonce: number } | null>(null);
   /** Below lg / xl the start and end panes are drawers. */
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  /** "Page sections" unfolded, or folded to its header so the library gets the whole pane. */
+  const [layersOpen, setLayersOpen] = useState(true);
   /**
    * At lg / xl and up the panes sit beside the canvas instead — collapsible to
    * a slim rail so the live preview can use their width back. Per-session
@@ -253,6 +277,12 @@ function WebsiteEditor() {
   const pageDirty = JSON.stringify(sections) !== baseline;
   const lookDirty = !sameLook(look, lookBaseline);
   const dirty = pageDirty || lookDirty;
+  /** Only the Store look tab's own fields — the dot on that tab. */
+  const appearanceDirty = !sameAppearance(look, lookBaseline);
+  /** The announcement bar, header or footer have unsaved changes the preview should show. */
+  const shellDirty = !sameShellParts(look, lookBaseline);
+  /** How much of the API's themeSettings allowance a save would use (1 = full). */
+  const settingsUsage = themeSettingsSize(currentWorkspace?.themeSettings, look) / THEME_SETTINGS_MAX_CHARS;
 
   // Browsers only honour this on a real user gesture, but it's the standard
   // guard against losing an unsaved tree to a refresh or a closed tab.
@@ -285,16 +315,56 @@ function WebsiteEditor() {
   const selected = sections.find((s) => s.id === selectedId) ?? null;
 
   function setSections(update: (prev: PageSection[]) => PageSection[], key?: string) {
-    history.set((doc) => ({ ...doc, sections: update(doc.sections) }), key);
+    // An update that changes nothing (a drop in place) records no undo step.
+    history.set((doc) => {
+      const next = update(doc.sections);
+      return next === doc.sections ? doc : { ...doc, sections: next };
+    }, key);
+  }
+
+  /** A drag or resize released on the canvas: one tree edit, one undo step. */
+  function applyCanvas(edit: CanvasEdit, key?: string) {
+    setSections((prev) => applyCanvasEdit(prev, edit), key);
+    // Keep the moved element's section in the inspector.
+    if (edit.kind === "move-element") {
+      const owner = sections.find((s) =>
+        (s.rows ?? []).some((r) => (r.columns ?? []).some((c) => c.id === edit.columnId))
+      );
+      if (owner && owner.id !== selectedId) selectSection(owner.id, { scroll: false });
+    }
+  }
+
+  /**
+   * One arrow-key press on a canvas handle. Repeated presses on the same
+   * handle fold into one undo step, like a burst of typing.
+   */
+  function stepCanvas(step: CanvasStep) {
+    if (step.kind === "element") {
+      setSections((prev) => nudgeElement(prev, step.sectionId, step.elementId, step.delta));
+      return;
+    }
+    const edit = stepEdit(step);
+    if (edit) applyCanvas(edit, `canvas:${step.kind}:${step.sectionId}`);
   }
 
   /** Selecting from the editor side also brings the section into view in the preview. */
   function selectSection(sectionId: string, { scroll }: { scroll: boolean }) {
     setSelectedId(sectionId);
+    setSelectedShell(null);
     setInspectorTab("section");
     setEndOpen(true);
     setEndCollapsed(false); // a picked section is the point of opening the inspector
     if (scroll) setScrollRequest((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }));
+  }
+
+  /** Opens the announcement bar's, header's or footer's panel — and, from the editor side, scrolls the preview to it. */
+  function selectShell(part: ShellPart, { scroll }: { scroll: boolean }) {
+    setSelectedShell(part);
+    setSelectedId(null);
+    setInspectorTab("section");
+    setEndOpen(true);
+    setEndCollapsed(false);
+    if (scroll) setShellScrollRequest((prev) => ({ part, nonce: (prev?.nonce ?? 0) + 1 }));
   }
 
   function requestInsert(index: number) {
@@ -422,6 +492,13 @@ function WebsiteEditor() {
   }
 
   async function saveLook(): Promise<boolean> {
+    // The API refuses a themeSettings blob over ~5KB with a bare 422; say why
+    // before sending it, while the merchant can still trim a link or two.
+    if (settingsUsage > 1) {
+      setSaveError(ui.shellTooLarge);
+      toast.error(ui.lookSaveFailed);
+      return false;
+    }
     try {
       await apiClient.updateWorkspace(
         workspaceId,
@@ -515,20 +592,31 @@ function WebsiteEditor() {
 
   const labels = Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)]));
 
+  // The outline and the library share the pane on an adjustable split; the
+  // handle between them steps aside while the outline is folded away.
   const startPane = (
-    <div className="flex h-full min-h-0 flex-col">
-      <LayerList
-        sections={sections}
-        selectedId={selectedId}
-        insertIndex={insertIndex}
-        onSelect={(id) => selectSection(id, { scroll: true })}
-        onDelete={setPendingDelete}
-        onMove={(from, to) => setSections((prev) => moveSection(prev, from, to))}
-        onInsertAt={requestInsert}
-      />
-      {/* Two thirds of the panel, so the cards are always reachable without
-          collapsing the outline above them. */}
-      <div className="min-h-0 flex-[2_1_0]">
+    <ResizableSplit
+      storageKey="zimos:website-editor:layer-split"
+      label={ui.resizeSplit}
+      hint={ui.resizeSplitHint}
+      topCollapsed={!layersOpen}
+      top={
+        <LayerList
+          sections={sections}
+          selectedId={selectedId}
+          insertIndex={insertIndex}
+          onSelect={(id) => selectSection(id, { scroll: true })}
+          onDelete={setPendingDelete}
+          onMove={(from, to) => setSections((prev) => moveSection(prev, from, to))}
+          onInsertAt={requestInsert}
+          open={layersOpen}
+          onOpenChange={setLayersOpen}
+          selectedShell={selectedShell}
+          onSelectShell={(part) => selectShell(part, { scroll: true })}
+          announcementOn={look.announcement.enabled && look.announcement.messages.some((m) => m.trim() !== "")}
+        />
+      }
+      bottom={
         <BlockLibrary
           onAdd={addBlock}
           insertPosition={insertIndex === null ? null : insertIndex + 1}
@@ -536,8 +624,8 @@ function WebsiteEditor() {
           onDragStart={setDraggingPreset}
           onDragEnd={() => setDraggingPreset(null)}
         />
-      </div>
-    </div>
+      }
+    />
   );
 
   const endPane = (onClose?: () => void) => (
@@ -545,7 +633,7 @@ function WebsiteEditor() {
       <div role="tablist" aria-label={ui.tabLook} className="flex items-center gap-1 border-b border-line px-2 py-1.5">
         {(
           [
-            ["section", ui.tabSection, SlidersHorizontal],
+            ["section", selectedShell ? shellPartLabel(selectedShell, ui) : ui.tabSection, SlidersHorizontal],
             ["look", ui.tabLook, Palette],
           ] as const
         ).map(([value, label, Icon]) => (
@@ -564,7 +652,7 @@ function WebsiteEditor() {
           >
             <Icon className="size-4" aria-hidden />
             {label}
-            {value === "look" && lookDirty && (
+            {value === "look" && appearanceDirty && (
               <span className="size-1.5 rounded-full bg-accent" aria-label={ui.unsavedChanges} />
             )}
           </button>
@@ -577,7 +665,19 @@ function WebsiteEditor() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {inspectorTab === "look" ? (
-          <StoreLookPanel look={look} onChange={updateLook} />
+          <StoreLookPanel look={look} onChange={updateLook} onEditShell={(part) => selectShell(part, { scroll: true })} />
+        ) : selectedShell ? (
+          <ShellPanel
+            part={selectedShell}
+            look={look}
+            onChange={updateLook}
+            pages={pages}
+            usage={settingsUsage}
+            onClose={() => {
+              setSelectedShell(null);
+              setEndOpen(false);
+            }}
+          />
         ) : selected ? (
           <SectionInspector
             section={selected}
@@ -824,10 +924,29 @@ function WebsiteEditor() {
                       addBelow: ui.addBelow,
                       moveUp: ui.moveSectionUp,
                       moveDown: ui.moveSectionDown,
+                      dragSection: ui.canvasDragSection,
+                      dragElement: ui.canvasDragElement,
+                      resizeHeight: ui.canvasResizeHeight,
+                      resizeColumns: ui.canvasResizeColumns,
+                      resizeImage: ui.canvasResizeImage,
+                      auto: ui.canvasAuto,
                     },
                     theme: lookToPreview(look),
                     scrollRequest,
+                    selectedShell,
+                    shellLabels: {
+                      header: ui.shellHeader,
+                      footer: ui.shellFooter,
+                      announcement: ui.announcementBar,
+                    },
+                    // Only while there is something unsaved to show: otherwise
+                    // the frame draws the saved header and footer untouched.
+                    shell: shellDirty ? lookToShellPreview(currentWorkspace?.themeSettings, look) : null,
+                    shellScrollRequest,
+                    onSelectShell: (part) => selectShell(part, { scroll: false }),
                     onSelect: (id) => selectSection(id, { scroll: false }),
+                    onCanvasEdit: (edit) => applyCanvas(edit),
+                    onCanvasStep: stepCanvas,
                     onInsert: requestInsert,
                     onMoveSection: moveSectionBy,
                     dragActive: draggingPreset !== null,
@@ -863,7 +982,7 @@ function WebsiteEditor() {
         </div>
       )}
 
-      {endOpen && (selected || inspectorTab === "look") && (
+      {endOpen && (selected || selectedShell || inspectorTab === "look") && (
         <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-s border-line bg-paper-raised shadow-xl xl:hidden">
           {endPane(() => setEndOpen(false))}
         </div>

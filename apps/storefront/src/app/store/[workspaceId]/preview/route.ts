@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { PageTree } from "@store-builder/api-client";
 import { readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
 import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
+import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
 
 /**
  * Receives a draft page tree from the dashboard's live preview (a form post
@@ -20,6 +21,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_TREE_CHARS = 1_000_000;
 // Same ~5KB ceiling the API puts on a saved themeSettings blob.
 const MAX_THEME_CHARS = 5_000;
+// The header and footer live in that same blob, so the same ceiling, with room
+// for the unsaved edit the merchant hasn't trimmed yet.
+const MAX_SHELL_CHARS = 10_000;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
@@ -48,8 +52,9 @@ function readOrigin(value: FormDataEntryValue | null): string | null {
 
 /**
  * The website editor's extras (see PreviewOptions). All optional — a post
- * without them is a plain preview, exactly as before. A malformed theme is
- * dropped rather than refused: the page still previews, in the saved look.
+ * without them is a plain preview, exactly as before. A malformed theme or
+ * shell is dropped rather than refused: the page still previews, in the saved
+ * look.
  */
 function readOptions(form: FormData): PreviewOptions | undefined {
   const editable = form.get("edit") === "1";
@@ -63,8 +68,17 @@ function readOptions(form: FormData): PreviewOptions | undefined {
       theme = null;
     }
   }
-  if (!editable && !parentOrigin && !theme) return undefined;
-  return { editable: editable && parentOrigin !== null, parentOrigin, theme };
+  const rawShell = String(form.get("shell") ?? "");
+  let shell: ShellOverride | null = null;
+  if (rawShell && rawShell.length <= MAX_SHELL_CHARS) {
+    try {
+      shell = readShellOverride(JSON.parse(rawShell));
+    } catch {
+      shell = null;
+    }
+  }
+  if (!editable && !parentOrigin && !theme && !shell) return undefined;
+  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell };
 }
 
 async function canEditWorkspace(workspaceId: string, accessToken: string): Promise<boolean> {
