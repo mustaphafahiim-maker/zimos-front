@@ -11,6 +11,7 @@ import {
   type FooterLook,
   type HeaderLook,
 } from "./storeShell";
+import { ORIGINAL_LOOK, readThemeChoice, type ThemeChoice } from "./storeThemes";
 
 /**
  * The store's look as the website editor's "Store look" panel edits it. It is
@@ -19,7 +20,15 @@ import {
  * see lib/brandColors.ts), the logo is the workspace's own `logoUrl`.
  *
  * The storefront reads every key here in apps/storefront/src/lib/brandTheme.ts
- * — the option keys below must match THEME_FONTS / THEME_RADII there.
+ * — the option keys below must match THEME_FONTS / THEME_RADII there, and the
+ * theme keys STORE_THEMES (see storeThemes.ts).
+ *
+ * The theme (`storeTheme`) owns the whole look but one thing: the accent the
+ * merchant picks for each mode — `primaryColor` in light mode (the key the
+ * Settings page has always written) and `primaryColorDark` in dark mode, which
+ * stays unset — "same as light mode" — until the merchant picks one, so a
+ * store that saved one colour looks exactly as it always did. On the original
+ * look the merchant also picks the second colour, font and corners.
  *
  * The header and footer (storeShell.ts) are part of the look too: they live in
  * the same `themeSettings` blob and are saved by the same PATCH, so they share
@@ -49,8 +58,16 @@ export interface StoreAnnouncementLook {
 }
 
 export interface StoreLook {
-  /** Null while the store has never saved one — the storefront's own default applies. */
+  /** A store theme, or the original look — where font, corners and second colour are the merchant's. */
+  storeTheme: ThemeChoice;
+  /**
+   * The accent in light mode. Null while the store has never saved one — the
+   * theme's own default applies.
+   */
   primaryColor: string | null;
+  /** The accent in dark mode. Null follows `primaryColor` (or the theme's dark default without one). */
+  primaryColorDark: string | null;
+  /** Original look only; a theme brings its own. */
   secondaryColor: string | null;
   fontFamily: FontKey;
   cornerRadius: RadiusKey;
@@ -100,7 +117,9 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
     typeof ts.cornerRadius === "string" && RADIUS_KEYS.has(ts.cornerRadius) ? (ts.cornerRadius as RadiusKey) : "soft";
   const header = ts.header && typeof ts.header === "object" ? (ts.header as Record<string, unknown>) : {};
   return {
+    storeTheme: readThemeChoice(ts.storeTheme),
     primaryColor: color("primaryColor"),
+    primaryColorDark: color("primaryColorDark"),
     secondaryColor: color("secondaryColor"),
     fontFamily: font,
     cornerRadius: radius,
@@ -151,7 +170,10 @@ function readAnnouncement(raw: unknown): StoreAnnouncementLook {
  */
 export function lookToPreview(look: StoreLook): PreviewTheme {
   return {
+    // Always spelled out, so switching back to the original look beats a saved theme.
+    storeTheme: look.storeTheme,
     ...(look.primaryColor ? { primaryColor: look.primaryColor } : {}),
+    ...(look.primaryColorDark ? { primaryColorDark: look.primaryColorDark } : {}),
     ...(look.secondaryColor ? { secondaryColor: look.secondaryColor } : {}),
     fontFamily: look.fontFamily,
     cornerRadius: look.cornerRadius,
@@ -175,6 +197,12 @@ export function lookToWorkspacePatch(
   };
   if (look.primaryColor) themeSettings.primaryColor = look.primaryColor;
   if (look.secondaryColor) themeSettings.secondaryColor = look.secondaryColor;
+  // Both keys belong to this panel alone: dropping one is how "the original
+  // look" and "same as light mode" are saved, leaving no trace of either.
+  if (look.storeTheme !== ORIGINAL_LOOK) themeSettings.storeTheme = look.storeTheme;
+  else delete themeSettings.storeTheme;
+  if (look.primaryColorDark) themeSettings.primaryColorDark = look.primaryColorDark;
+  else delete themeSettings.primaryColorDark;
 
   themeSettings.header = writeHeader(existing?.header, look.header, announcementPatch(look.announcement));
   const footer = writeFooter(existing?.footer, look.footer);
@@ -240,7 +268,9 @@ function sameAnnouncement(a: StoreAnnouncementLook, b: StoreAnnouncementLook): b
 
 export function sameLook(a: StoreLook, b: StoreLook): boolean {
   return (
+    a.storeTheme === b.storeTheme &&
     a.primaryColor === b.primaryColor &&
+    a.primaryColorDark === b.primaryColorDark &&
     a.secondaryColor === b.secondaryColor &&
     a.fontFamily === b.fontFamily &&
     a.cornerRadius === b.cornerRadius &&
@@ -251,7 +281,7 @@ export function sameLook(a: StoreLook, b: StoreLook): boolean {
   );
 }
 
-/** Only the colours, font, corners and logo — what the Store look tab itself edits. */
+/** Only the theme, colours, font, corners and logo — what the Store look tab itself edits. */
 export function sameAppearance(a: StoreLook, b: StoreLook): boolean {
   return sameLook({ ...a, announcement: b.announcement, header: b.header, footer: b.footer }, b);
 }

@@ -30,7 +30,7 @@ export function TrustStrip({
       {items.map(({ Icon, title, hint }) => (
         <li
           key={title}
-          className={`flex items-center gap-3 rounded-2xl border border-line bg-paper-raised ${
+          className={`zt-card flex items-center gap-3 rounded-2xl border border-line bg-paper-raised ${
             compact ? "flex-col px-2 py-3 text-center" : "p-4"
           }`}
         >

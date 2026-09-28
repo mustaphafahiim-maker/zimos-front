@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { BRAND_VAR_NAMES, brandVars, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
+import {
+  BRAND_VAR_NAMES,
+  brandVars,
+  previewStoreTheme,
+  readColorMode,
+  readPreviewTheme,
+  type ColorMode,
+  type PreviewTheme,
+} from "@/lib/brandTheme";
+import { setColorMode } from "@/components/ThemeToggle";
 import { useSetShellOverride } from "@/lib/StoreShellContext";
 import { useIsClient } from "@/lib/useIsClient";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
@@ -27,10 +36,13 @@ import { useCanvasDrag } from "./useCanvasDrag";
  *   { type: "zimos:section-rects", sections }            every section's box, while a drag is on
  *   { type: "zimos:canvas-drag", phase, … }               dragging / resizing on the page (useCanvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
+ *   { type: "zimos:color-mode", mode }                    the page went light or dark (the in-page switch, or the OS)
+ *
+ * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
  * Editor → frame
  *   { type: "zimos:editor-state", selectedId, labels, strings, theme,
- *     selectedShell, shellLabels, shell }
+ *     selectedShell, shellLabels, shell, colorMode }
  *   { type: "zimos:scroll-to-section", sectionId }
  *   { type: "zimos:scroll-to-shell", part }
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over us
@@ -122,12 +134,22 @@ function applyTheme(theme: PreviewTheme | null) {
   if (!wrapper || !theme) return;
   lastTheme = theme;
   document.getElementById(SERVER_THEME_ID)?.remove();
+  // The store theme is a switch on the wrapper; every theme's styles and font
+  // stacks are already on the page (store-themes.css, the preview page).
+  const storeTheme = previewStoreTheme(theme);
+  if (storeTheme) wrapper.setAttribute("data-store-theme", storeTheme);
+  else if (storeTheme === null) wrapper.removeAttribute("data-store-theme");
   const vars = brandVars(theme as Record<string, unknown>, { complete: true });
   for (const name of BRAND_VAR_NAMES) {
     if (name in vars) wrapper.style.setProperty(name, vars[name], "important");
     else wrapper.style.removeProperty(name);
   }
   applyLogo(theme.logoUrl);
+}
+
+/** The mode the page is showing right now. */
+function pageColorMode(): ColorMode {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
 /** The look last laid over the page, so the logo can be re-applied after the header re-renders. */
@@ -320,7 +342,7 @@ export function PreviewBridge({
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(remeasure) : null;
     observer?.observe(document.body);
 
-    post({ type: "zimos:preview-ready", sectionIds: sectionIds() });
+    post({ type: "zimos:preview-ready", sectionIds: sectionIds(), colorMode: pageColorMode() });
 
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -340,6 +362,21 @@ export function PreviewBridge({
     });
     return () => cancelAnimationFrame(frameId);
   }, [shell, setShellOverride]);
+
+  // The page's mode, as the editor's switch should show it: the in-page moon
+  // (ThemeToggle), the OS setting or the editor itself all end up as the
+  // `.dark` class on <html>.
+  useEffect(() => {
+    let last = pageColorMode();
+    const observer = new MutationObserver(() => {
+      const mode = pageColorMode();
+      if (mode === last) return;
+      last = mode;
+      post({ type: "zimos:color-mode", mode });
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, [post]);
 
   // Messages from the editor. Anything not from the framing dashboard is ignored.
   useEffect(() => {
@@ -376,6 +413,8 @@ export function PreviewBridge({
           setStrings(next);
         }
         if ("theme" in data) applyTheme(readPreviewTheme(data.theme));
+        const mode = readColorMode(data.colorMode);
+        if (mode && mode !== pageColorMode()) setColorMode(mode);
       } else if (data.type === "zimos:scroll-to-section" && typeof data.sectionId === "string") {
         const el = sectionEl(data.sectionId);
         if (!el) return;
@@ -423,6 +462,9 @@ export function PreviewBridge({
     function onClick(event: MouseEvent) {
       const target = event.target as Element | null;
       if (!target || target.closest(`[${OVERLAY_ATTR}]`)) return;
+      // The page's own light/dark switch works as it does for a shopper,
+      // without selecting the header it sits in.
+      if (target.closest("[data-zimos-passthrough]")) return;
       // The empty page's own "add a section" button (see the preview page).
       const insert = target.closest<HTMLElement>("[data-zimos-insert]");
       if (insert) {

@@ -78,7 +78,7 @@ export function ProductCard({
   }
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
+    <article className="zt-card zt-product group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
       {/* `z-10` lifts this above the title's stretched link (below) so the
           swipe and the nav arrows receive their own pointer events; a plain
           tap still reaches the same product through the link inside it. */}
@@ -195,7 +195,7 @@ export function ProductCard({
           // where the options are chosen.
           <span
             aria-hidden
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
+            className="zt-btn zt-btn-primary mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
           >
             {anyInStock ? t.shop.chooseOptions : t.product.viewDetails}
           </span>

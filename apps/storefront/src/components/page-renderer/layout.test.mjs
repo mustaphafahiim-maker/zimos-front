@@ -10,8 +10,10 @@ import {
   SECTION_TONE,
   SECTION_WIDTH,
   columnClasses,
+  heroSectionIndex,
   rowClasses,
   sectionClasses,
+  sectionHooks,
   settingClass,
 } from "./layout.ts";
 
@@ -114,5 +116,50 @@ describe("a chosen value lands where the renderer expects it", () => {
       `flex min-w-0 flex-col gap-4 md:col-span-4 ${COLUMN_SURFACE.card} ${COLUMN_ALIGN.center} ${COLUMN_VERTICAL.end}`
     );
     assert.equal(rowClasses({ gap: "tight" }), "grid gap-3 md:grid-cols-12");
+  });
+});
+
+/**
+ * The hooks a store theme styles by. They add attributes only — the class
+ * strings pinned above are untouched — and they have to read the same
+ * fallbacks as the classes, or a theme would space a section differently
+ * from what its settings say.
+ */
+describe("theme hooks", () => {
+  it("names each section's space and width, and its background only once one is chosen", () => {
+    assert.deepEqual(sectionHooks(undefined), { "data-zt-section": "", "data-zt-pad": "normal", "data-zt-width": "normal" });
+    assert.deepEqual(sectionHooks({ padding: "roomy", width: "full", background: "ink" }), {
+      "data-zt-section": "",
+      "data-zt-pad": "roomy",
+      "data-zt-width": "full",
+      "data-zt-bg": "ink",
+    });
+    assert.deepEqual(sectionHooks({ padding: "huge", background: "none", width: 3 }), sectionHooks({}));
+  });
+
+  const heading = (level, text = "x") => ({ id: `h${level}`, type: "heading", props: { text, level } });
+  const el = (type) => ({ id: type, type, props: {} });
+  const section = (...columns) => ({ id: "s", type: "section", rows: [{ id: "r", type: "row", columns: columns.map((elements, i) => ({ id: `c${i}`, type: "column", elements })) }] });
+
+  it("finds the page's opening section by its headline", () => {
+    // A level-1 heading, wherever it sits in the section.
+    assert.equal(heroSectionIndex([section([heading(1), el("text")], [el("image")])]), 0);
+    // The editor's plain Hero block: a level-2 heading with a button beside it.
+    assert.equal(heroSectionIndex([section([heading(2), el("text"), el("button")])]), 0);
+    // Behind a thin announcement band.
+    assert.equal(heroSectionIndex([section([el("marquee")]), section([heading(1)])]), 1);
+  });
+
+  it("finds none rather than guessing", () => {
+    assert.equal(heroSectionIndex([]), -1);
+    assert.equal(heroSectionIndex(undefined), -1);
+    assert.equal(heroSectionIndex([section([el("product_list")]), section([heading(2)])]), -1);
+    // Only the first two sections are candidates.
+    assert.equal(heroSectionIndex([section([el("text")]), section([el("gallery")]), section([heading(1)])]), -1);
+    // A heading and a button in different columns is a layout, not a headline.
+    assert.equal(heroSectionIndex([section([heading(2)], [el("button")])]), -1);
+    // Junk nodes are skipped, not thrown on.
+    assert.equal(heroSectionIndex([null, { rows: "x" }, section([heading(1)])]), -1);
+    assert.equal(heroSectionIndex([{ rows: [{ columns: [{ elements: [null, { type: "heading", props: { level: "1" } }] }] }] }]), 0);
   });
 });

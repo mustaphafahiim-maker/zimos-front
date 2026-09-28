@@ -1,5 +1,5 @@
 import type { PageTree } from "@store-builder/api-client";
-import type { PreviewTheme } from "./brandTheme";
+import type { ColorMode, PreviewTheme } from "./brandTheme";
 import type { ShellOverride } from "./storeShell";
 
 /**
@@ -29,6 +29,11 @@ export interface PreviewOptions {
   theme: PreviewTheme | null;
   /** The editor's unsaved header/footer settings (lib/StoreShellContext), if any. */
   shell?: ShellOverride | null;
+  /**
+   * Light or dark, as the editor's (or the theme gallery's) own switch asks
+   * for it. Null leaves the preview on the shopper's stored or system choice.
+   */
+  colorMode?: ColorMode | null;
 }
 
 export interface PreviewEntry {

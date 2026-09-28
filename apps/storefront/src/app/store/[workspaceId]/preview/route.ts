@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { PageTree } from "@store-builder/api-client";
-import { readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
+import { readColorMode, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
 import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
 
@@ -77,8 +77,9 @@ function readOptions(form: FormData): PreviewOptions | undefined {
       shell = null;
     }
   }
-  if (!editable && !parentOrigin && !theme && !shell) return undefined;
-  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell };
+  const colorMode = readColorMode(form.get("colorMode"));
+  if (!editable && !parentOrigin && !theme && !shell && !colorMode) return undefined;
+  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell, colorMode };
 }
 
 async function canEditWorkspace(workspaceId: string, accessToken: string): Promise<boolean> {

@@ -20,6 +20,7 @@ import { TextField } from "@/components/Field";
 import { TemplateLivePreview } from "@/components/TemplateLivePreview";
 import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
+import { ThemeGallery } from "./ThemeGallery";
 
 const STRINGS = {
   en: {
@@ -38,6 +39,7 @@ const STRINGS = {
     desktop: "Desktop",
     mobile: "Mobile",
     noPreview: "No preview yet",
+    templatesTitle: "Page templates",
   },
   ar: {
     preview: "معاينة ←",
@@ -55,6 +57,7 @@ const STRINGS = {
     desktop: "الكمبيوتر",
     mobile: "الهاتف",
     noPreview: "لا توجد معاينة بعد",
+    templatesTitle: "قوالب الصفحات",
   },
 } satisfies Messages;
 
@@ -472,6 +475,9 @@ export function WebsitePage() {
 
       <ExistingSites />
 
+      <ThemeGallery />
+
+      <h2 className="mb-2 font-display text-base font-medium text-ink">{t.templatesTitle}</h2>
       <DataState
         loading={templates.loading}
         error={templates.error}
