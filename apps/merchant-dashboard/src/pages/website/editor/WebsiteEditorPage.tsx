@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Layers, Palette, Redo2, Rocket, Save, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Layers, Palette, Redo2, Rocket, Save, SlidersHorizontal, Undo2, X } from "lucide-react";
 import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import type {
   CreateWebsitePagePayload,
@@ -15,7 +15,6 @@ import { useAsync } from "@/lib/useAsync";
 import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useLocale } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -31,6 +30,7 @@ import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
 import {
   createSection,
+  createStarterSections,
   insertSection,
   moveSection,
   normalizeTree,
@@ -93,6 +93,36 @@ interface EditorDoc {
 function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || target.matches("input, textarea, select");
+}
+
+/**
+ * Whether the page tabs fit in the toolbar row. `slot` is the row's free space
+ * — `flex-1 basis-0`, so its width is what the other controls leave over,
+ * with or without the tabs inside it — and `strip` is the tab strip, `w-max`,
+ * so its scrollWidth is the width it needs in either place. Moving the strip
+ * between the row and its own line therefore can't flip the answer back.
+ *
+ * `contentKey` re-measures when the tabs change without the strip's box
+ * resizing (a strip already capped at the slot's width gaining a tab).
+ */
+function useFitsInSlot(
+  slot: RefObject<HTMLElement | null>,
+  strip: RefObject<HTMLElement | null>,
+  contentKey: string
+): boolean {
+  const [fits, setFits] = useState(false);
+  useEffect(() => {
+    const slotEl = slot.current;
+    const stripEl = strip.current;
+    if (!slotEl || !stripEl || typeof ResizeObserver === "undefined") return;
+    // Fires once on observe, then on every resize of either box.
+    const observer = new ResizeObserver(() => setFits(stripEl.scrollWidth <= slotEl.clientWidth));
+    observer.observe(slotEl);
+    observer.observe(stripEl);
+    return () => observer.disconnect();
+    // `fits` is a dependency because the strip remounts when it moves.
+  }, [slot, strip, contentKey, fits]);
+  return fits;
 }
 
 export function WebsiteEditorPage() {
@@ -174,6 +204,15 @@ function WebsiteEditor() {
    */
   const [startCollapsed, setStartCollapsed] = useSessionBool("zimos:website-editor:start-collapsed", false);
   const [endCollapsed, setEndCollapsed] = useSessionBool("zimos:website-editor:end-collapsed", false);
+
+  /** The page tabs sit in the toolbar row when they fit there, else on a slim line under it. */
+  const tabsSlotRef = useRef<HTMLDivElement>(null);
+  const tabsStripRef = useRef<HTMLDivElement>(null);
+  const tabsInline = useFitsInSlot(
+    tabsSlotRef,
+    tabsStripRef,
+    pages.map((p) => `${p.id}:${p.title}`).join("|")
+  );
 
   // Everything in the tree the editor doesn't touch, preserved across a save.
   const [treeMeta, setTreeMeta] = useState<Omit<PageTree, "sections">>({ version: 1 });
@@ -322,7 +361,13 @@ function WebsiteEditor() {
   }
 
   async function createPage(payload: CreateWebsitePagePayload) {
-    const created = await apiClient.createPage(workspaceId, websiteId, payload);
+    // A new page starts from a few placeholder sections rather than empty. The
+    // create call validates `draftData` exactly like a save, so it goes in the
+    // same request and the page opens saved, with nothing pending.
+    const created = await apiClient.createPage(workspaceId, websiteId, {
+      ...payload,
+      draftData: { version: 1, sections: createStarterSections(payload.title, locale) },
+    });
     const detail = site.data;
     if (detail) site.setData({ ...detail, pages: [...detail.pages, created] });
     // Open it straight away — the canvas re-seeds off the new id.
@@ -550,101 +595,179 @@ function WebsiteEditor() {
     </div>
   );
 
+  // Only once the site has loaded — until then there are no pages to switch
+  // between, and an empty strip would still measure as fitting.
+  const pageTabs = site.data && (
+    <PageTabs
+      ref={tabsStripRef}
+      inline={tabsInline}
+      pages={pages}
+      selectedId={selectedPageId}
+      onSelect={requestPageSwitch}
+      onDelete={setPendingPageDelete}
+      onAdd={() => setShowNewPage(true)}
+    />
+  );
+
   return (
     // A full-viewport page (mounted in EditorLayout, not DashboardLayout — see
     // App.tsx), so this is the page's only chrome apart from the access banner.
+    // EditorLayout is an h-dvh column with the banner as a fixed-height row
+    // above this one, so `h-full` here is the viewport minus the banner.
     <div className="flex h-full flex-col">
-      <div className="border-b border-line bg-paper-raised px-6 py-3">
-        <PageHeader
-          title={website ? website.name : ui.editorTitle}
-          titleMeta={page ? page.path : undefined}
-          back={{ to: "/website", label: ui.backToWebsite }}
-          description={page ? ui.editingPage(page.title) : undefined}
-          titleBadge={
-            website && (
-              <StatusBadge
-                value={website.status}
-                tone={
-                  website.status === "published"
-                    ? "success"
-                    : website.status === "suspended"
-                      ? "danger"
-                      : "neutral"
-                }
-              />
-            )
-          }
-          actions={
-            <>
-              <span
-                role="status"
-                className={cn(
-                  "flex items-center gap-1.5 text-xs",
-                  dirty ? "font-medium text-accent-dark" : "text-ink-soft"
-                )}
+      {/* One toolbar row: where you are on the start side, what you can do on
+          the end side, the page tabs in the space between when they fit. */}
+      <div className="shrink-0 border-b border-line bg-paper-raised">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-1.5 md:flex-nowrap">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to="/website"
+              title={ui.backToWebsite}
+              className="flex shrink-0 items-center gap-1 rounded-[0.375rem] px-1.5 py-1 text-sm text-ink-soft transition-colors hover:bg-paper hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <ArrowLeft className="size-4 rtl:-scale-x-100" aria-hidden />
+              <span className="sr-only xl:not-sr-only">{ui.backToWebsite}</span>
+            </Link>
+            <span className="h-5 w-px shrink-0 bg-line" aria-hidden />
+            <h1 className="min-w-0 max-w-64 truncate font-display text-base font-medium text-ink">
+              {website ? website.name : ui.editorTitle}
+            </h1>
+            {website && (
+              <span className="shrink-0">
+                <StatusBadge
+                  value={website.status}
+                  tone={
+                    website.status === "published"
+                      ? "success"
+                      : website.status === "suspended"
+                        ? "danger"
+                        : "neutral"
+                  }
+                />
+              </span>
+            )}
+            {page && (
+              <p
+                className="hidden min-w-0 truncate text-xs text-ink-soft sm:block"
+                title={`${ui.editingPage(page.title)} · ${page.path}`}
               >
-                <span className={cn("size-2 rounded-full", dirty ? "bg-accent" : "bg-success")} aria-hidden />
-                {dirty ? ui.unsavedChanges : ui.allSaved}
-              </span>
-              <span className="flex items-center">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={ui.undo}
-                  title={`${ui.undo} (Ctrl+Z)`}
-                  disabled={!history.canUndo}
-                  onClick={history.undo}
-                >
-                  <Undo2 className="size-4 rtl:-scale-x-100" aria-hidden />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={ui.redo}
-                  title={`${ui.redo} (Ctrl+Shift+Z)`}
-                  disabled={!history.canRedo}
-                  onClick={history.redo}
-                >
-                  <Redo2 className="size-4 rtl:-scale-x-100" aria-hidden />
-                </Button>
-              </span>
-              <Button type="button" onClick={() => void save()} disabled={!dirty || saving} title="Ctrl+S">
-                {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                {saving ? ui.saving : ui.save}
+                {ui.editingPage(page.title)}
+                <span className="mx-1.5" aria-hidden>
+                  ·
+                </span>
+                <span dir="ltr">{page.path}</span>
+              </p>
+            )}
+          </div>
+
+          <div ref={tabsSlotRef} className="min-w-0 flex-1 basis-0">
+            {tabsInline && pageTabs}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Below lg / xl the side panes are drawers, opened from here. */}
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              className="lg:hidden"
+              aria-label={ui.layersTitle}
+              title={ui.layersTitle}
+              onClick={() => setStartOpen(true)}
+            >
+              <Layers className="size-4" aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="outline"
+              className="xl:hidden"
+              aria-label={ui.tabLook}
+              title={ui.tabLook}
+              onClick={() => {
+                setInspectorTab("look");
+                setEndOpen(true);
+              }}
+            >
+              <Palette className="size-4" aria-hidden />
+            </Button>
+            <span
+              role="status"
+              title={dirty ? ui.unsavedChanges : ui.allSaved}
+              className={cn(
+                "flex items-center gap-1.5 whitespace-nowrap text-xs",
+                dirty ? "font-medium text-accent-dark" : "text-ink-soft"
+              )}
+            >
+              <span className={cn("size-2 rounded-full", dirty ? "bg-accent" : "bg-success")} aria-hidden />
+              <span className="sr-only lg:not-sr-only">{dirty ? ui.unsavedChanges : ui.allSaved}</span>
+            </span>
+            <span className="flex items-center">
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={ui.undo}
+                title={`${ui.undo} (Ctrl+Z)`}
+                disabled={!history.canUndo}
+                onClick={history.undo}
+              >
+                <Undo2 className="size-4 rtl:-scale-x-100" aria-hidden />
               </Button>
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => void publish()}
-                disabled={!website || dirty || publishing}
-                title={dirty ? ui.publishSaveFirst : ui.publishHint}
+                size="icon-sm"
+                variant="ghost"
+                aria-label={ui.redo}
+                title={`${ui.redo} (Ctrl+Shift+Z)`}
+                disabled={!history.canRedo}
+                onClick={history.redo}
               >
-                {publishing ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <Rocket className="size-4" aria-hidden />
-                )}
-                {publishing ? ui.publishing : ui.publish}
+                <Redo2 className="size-4 rtl:-scale-x-100" aria-hidden />
               </Button>
-            </>
-          }
-        />
-        {saveError && <Alert variant="danger">{saveError}</Alert>}
-        {publishError && <Alert variant="danger">{publishError}</Alert>}
-        {publishProblems.length > 0 && (
-          <Alert variant="danger">
-            <p className="font-medium">{ui.cantPublish}</p>
-            <ul className="mt-1 list-disc space-y-0.5 ps-5">
-              {publishProblems.map((problem, i) => (
-                <li key={`${problem.pageId ?? problem.field}-${i}`}>
-                  {problem.path && <span className="font-medium">{problem.path}: </span>}
-                  {problem.message}
-                </li>
-              ))}
-            </ul>
-          </Alert>
+            </span>
+            <Button type="button" size="sm" onClick={() => void save()} disabled={!dirty || saving} title="Ctrl+S">
+              {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
+              {saving ? ui.saving : ui.save}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void publish()}
+              disabled={!website || dirty || publishing}
+              title={dirty ? ui.publishSaveFirst : ui.publishHint}
+            >
+              {publishing ? (
+                <Spinner className="size-4" />
+              ) : (
+                <Rocket className="size-4" aria-hidden />
+              )}
+              {publishing ? ui.publishing : ui.publish}
+            </Button>
+          </div>
+        </div>
+
+        {!tabsInline && pageTabs}
+
+        {(saveError || publishError || publishProblems.length > 0) && (
+          <div className="space-y-2 px-3 pb-2">
+            {saveError && <Alert variant="danger">{saveError}</Alert>}
+            {publishError && <Alert variant="danger">{publishError}</Alert>}
+            {publishProblems.length > 0 && (
+              <Alert variant="danger">
+                <p className="font-medium">{ui.cantPublish}</p>
+                <ul className="mt-1 list-disc space-y-0.5 ps-5">
+                  {publishProblems.map((problem, i) => (
+                    <li key={`${problem.pageId ?? problem.field}-${i}`}>
+                      {problem.path && <span className="font-medium">{problem.path}: </span>}
+                      {problem.message}
+                    </li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
+          </div>
         )}
       </div>
 
@@ -656,108 +779,75 @@ function WebsiteEditor() {
           emptyMessage={ui.noPagesToEdit}
           onRetry={() => site.refresh()}
         >
-          <div className="flex h-full min-h-0 flex-col">
-            <PageTabs
-              pages={pages}
-              selectedId={selectedPageId}
-              onSelect={requestPageSwitch}
-              onDelete={setPendingPageDelete}
-              onAdd={() => setShowNewPage(true)}
-            />
+          {/* The three columns take whatever height the toolbar leaves; only
+              the side panes and the preview scroll, each on its own. Side
+              panes scale with the window between 240 and 320px. */}
+          <div className="flex h-full min-h-0">
+            <CollapsiblePane
+              side="start"
+              collapsed={startCollapsed}
+              onCollapsedChange={setStartCollapsed}
+              visibleClassName="lg:flex lg:w-[clamp(240px,22vw,320px)]"
+              railClassName="lg:flex"
+              collapseLabel={ui.collapsePanel}
+              expandLabel={ui.expandPanel}
+            >
+              {startPane}
+            </CollapsiblePane>
 
-            {/* Below lg / xl the side panes open as drawers from here. */}
-            <div className="flex items-center gap-2 border-b border-line bg-paper-raised px-4 py-2 xl:hidden">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="lg:hidden"
-                onClick={() => setStartOpen(true)}
-              >
-                <Layers className="size-4" aria-hidden />
-                {ui.layersTitle}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setInspectorTab("look");
-                  setEndOpen(true);
-                }}
-              >
-                <Palette className="size-4" aria-hidden />
-                {ui.tabLook}
-              </Button>
-            </div>
-
-            <div className="flex min-h-0 flex-1">
-              <CollapsiblePane
-                side="start"
-                collapsed={startCollapsed}
-                onCollapsedChange={setStartCollapsed}
-                visibleClassName="lg:flex lg:w-72"
-                railClassName="lg:flex"
-                collapseLabel={ui.collapsePanel}
-                expandLabel={ui.expandPanel}
-              >
-                {startPane}
-              </CollapsiblePane>
-
-              <main className="min-w-0 flex-1 bg-paper">
-                {!page ? (
-                  <div className="p-6">
-                    <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-16 text-center text-sm text-ink-soft">
-                      {ui.noPages}
-                    </div>
+            <main className="min-w-0 flex-1 bg-paper">
+              {!page ? (
+                <div className="p-6">
+                  <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-16 text-center text-sm text-ink-soft">
+                    {ui.noPages}
                   </div>
-                ) : (
-                  <StorefrontPreview
-                    workspaceId={workspaceId}
-                    tree={{ ...treeMeta, sections }}
-                    labels={{
-                      title: ui.previewTitle,
-                      hint: ui.previewHint,
-                      refresh: ui.previewRefresh,
-                      desktop: ui.previewDesktop,
-                      tablet: ui.previewTablet,
-                      mobile: ui.previewMobile,
-                      close: ui.previewClose,
-                      frameTitle: ui.previewFrame,
-                    }}
-                    canvas={{
-                      selectedId,
-                      labels,
-                      strings: {
-                        addAbove: ui.addAbove,
-                        addBelow: ui.addBelow,
-                        moveUp: ui.moveSectionUp,
-                        moveDown: ui.moveSectionDown,
-                      },
-                      theme: lookToPreview(look),
-                      scrollRequest,
-                      onSelect: (id) => selectSection(id, { scroll: false }),
-                      onInsert: requestInsert,
-                      onMoveSection: moveSectionBy,
-                      dragActive: draggingPreset !== null,
-                      onDrop: dropBlockAt,
-                    }}
-                  />
-                )}
-              </main>
+                </div>
+              ) : (
+                <StorefrontPreview
+                  workspaceId={workspaceId}
+                  tree={{ ...treeMeta, sections }}
+                  labels={{
+                    title: ui.previewTitle,
+                    hint: ui.previewHint,
+                    refresh: ui.previewRefresh,
+                    desktop: ui.previewDesktop,
+                    tablet: ui.previewTablet,
+                    mobile: ui.previewMobile,
+                    close: ui.previewClose,
+                    frameTitle: ui.previewFrame,
+                  }}
+                  canvas={{
+                    selectedId,
+                    labels,
+                    strings: {
+                      addAbove: ui.addAbove,
+                      addBelow: ui.addBelow,
+                      moveUp: ui.moveSectionUp,
+                      moveDown: ui.moveSectionDown,
+                    },
+                    theme: lookToPreview(look),
+                    scrollRequest,
+                    onSelect: (id) => selectSection(id, { scroll: false }),
+                    onInsert: requestInsert,
+                    onMoveSection: moveSectionBy,
+                    dragActive: draggingPreset !== null,
+                    onDrop: dropBlockAt,
+                  }}
+                />
+              )}
+            </main>
 
-              <CollapsiblePane
-                side="end"
-                collapsed={endCollapsed}
-                onCollapsedChange={setEndCollapsed}
-                visibleClassName="xl:flex xl:w-80"
-                railClassName="xl:flex"
-                collapseLabel={ui.collapsePanel}
-                expandLabel={ui.expandPanel}
-              >
-                {endPane()}
-              </CollapsiblePane>
-            </div>
+            <CollapsiblePane
+              side="end"
+              collapsed={endCollapsed}
+              onCollapsedChange={setEndCollapsed}
+              visibleClassName="xl:flex xl:w-[clamp(240px,22vw,320px)]"
+              railClassName="xl:flex"
+              collapseLabel={ui.collapsePanel}
+              expandLabel={ui.expandPanel}
+            >
+              {endPane()}
+            </CollapsiblePane>
           </div>
         </DataState>
       </div>

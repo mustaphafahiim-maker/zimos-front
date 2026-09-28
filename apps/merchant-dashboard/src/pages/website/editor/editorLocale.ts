@@ -562,7 +562,7 @@ const UI_EN = {
   // --- the website editor's own frame (header, panes, dialogs) ---
   editorTitle: "Website editor",
   backToWebsite: "Back to website",
-  editingPage: (title: string) => `Editing "${title}". Click a section in the preview to change it.`,
+  editingPage: (title: string) => `Editing "${title}"`,
   unsavedChanges: "Unsaved changes",
   allSaved: "All changes saved",
   undo: "Undo",
@@ -736,7 +736,7 @@ const UI_AR: EditorUi = {
 
   editorTitle: "محرر الموقع",
   backToWebsite: "العودة إلى الموقع",
-  editingPage: (title) => `أنت تعدّل "${title}". انقر أي قسم في المعاينة لتغييره.`,
+  editingPage: (title) => `أنت تعدّل "${title}"`,
   unsavedChanges: "توجد تعديلات غير محفوظة",
   allSaved: "كل التعديلات محفوظة",
   undo: "تراجع",

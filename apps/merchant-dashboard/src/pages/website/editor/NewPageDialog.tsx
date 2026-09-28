@@ -97,7 +97,7 @@ export function NewPageDialog({
       open={open}
       onClose={close}
       title="New page"
-      description="Adds an empty page to this site. You can add blocks to it right away."
+      description="Adds a page to this site with a few example blocks — a title, some text, a picture and a button — for you to edit or remove."
       footer={
         <>
           <Button variant="outline" onClick={close} disabled={busy}>

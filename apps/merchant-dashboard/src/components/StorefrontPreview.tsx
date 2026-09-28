@@ -318,7 +318,7 @@ export function StorefrontPreview({
   const deviceButton = (value: Device, label: string, Icon: typeof Monitor) => (
     <Button
       type="button"
-      size="icon"
+      size="icon-sm"
       variant={device === value ? "secondary" : "ghost"}
       aria-label={label}
       title={label}
@@ -333,22 +333,23 @@ export function StorefrontPreview({
     <div className={cn("flex h-full min-h-0 flex-col bg-paper-raised", className)}>
       {/* One compact row: title and hint share a line (the hint is a plain
           sentence, so it reads fine run-on) rather than stacking two lines of
-          text above the device switcher — chrome the canvas doesn't need. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-1.5">
-        <p className="min-w-0 truncate text-xs text-ink-soft">
+          text above the device switcher — chrome the canvas doesn't need. The
+          hint truncates rather than pushing the switcher onto a second line. */}
+      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-1">
+        <p className="min-w-0 flex-1 truncate text-xs text-ink-soft" title={labels.hint}>
           <span className="font-semibold text-ink">{labels.title}</span>
           <span className="mx-1.5 text-line" aria-hidden>
             ·
           </span>
           {labels.hint}
         </p>
-        <div className="flex items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           {deviceButton("desktop", labels.desktop, Monitor)}
           {labels.tablet && deviceButton("tablet", labels.tablet, Tablet)}
           {deviceButton("mobile", labels.mobile, Smartphone)}
           <Button
             type="button"
-            size="icon"
+            size="icon-sm"
             variant="ghost"
             aria-label={labels.refresh}
             title={labels.refresh}
@@ -357,7 +358,7 @@ export function StorefrontPreview({
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
           </Button>
           {onClose && (
-            <Button type="button" size="icon" variant="ghost" aria-label={labels.close} onClick={onClose}>
+            <Button type="button" size="icon-sm" variant="ghost" aria-label={labels.close} onClick={onClose}>
               <X className="size-4" aria-hidden />
             </Button>
           )}
@@ -370,7 +371,10 @@ export function StorefrontPreview({
             <Spinner className="size-5 text-ink-soft" />
           </div>
         )}
-        <div className={cn("relative mx-auto h-full min-h-[32rem] transition-[width]", DEVICE_WIDTH[device])}>
+        {/* Exactly the height it's given: a taller floor would put a second
+            scrollbar around the frame's own on a short laptop screen. The
+            small floor only stops it collapsing on a phone held sideways. */}
+        <div className={cn("relative mx-auto h-full min-h-64 transition-[width]", DEVICE_WIDTH[device])}>
           {([0, 1] as const).map((index) => (
             <iframe
               key={index}

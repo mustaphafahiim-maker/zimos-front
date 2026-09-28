@@ -2951,6 +2951,37 @@ export function createSection(preset: BlockPreset, locale: EditorLocale = "ar"):
   return section;
 }
 
+function presetByKey(key: string): BlockPreset {
+  const preset = BLOCK_PRESETS.find((p) => p.key === key);
+  if (!preset) throw new Error(`Unknown block preset "${key}"`);
+  return preset;
+}
+
+/**
+ * What a new page starts with instead of an empty canvas: its title, a line
+ * of intro copy, a picture slot and a button. They are four of the library's
+ * plain building blocks, made by `createSection` exactly as "Add a block"
+ * makes them, so each one edits, moves and deletes like any other section.
+ *
+ * The copy is the library's own starting prompts in the editor's `locale`
+ * (presetCopy.ts), written to the merchant, never claims on the store's
+ * behalf. The heading is the title the merchant just typed, set after
+ * localizing so a title that happens to match a prompt isn't translated.
+ */
+export function createStarterSections(pageTitle: string, locale: EditorLocale = "ar"): PageSection[] {
+  const heading = createSection({ ...presetByKey("heading"), content: [{ level: 1 }] }, locale);
+  const [titleElement] = sectionElements(heading);
+  return [
+    setElementProp(heading, titleElement, "text", pageTitle),
+    createSection(
+      { ...presetByKey("text"), content: [{ text: "اكتب سطرًا يخبر العميل بما سيجده هنا." }] },
+      locale
+    ),
+    createSection(presetByKey("image"), locale),
+    createSection(presetByKey("button"), locale),
+  ];
+}
+
 /**
  * What to call one column of a multi-column section: the first words it
  * actually carries — a heading, a line of text, a button, a list's title, an
