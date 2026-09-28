@@ -127,5 +127,10 @@ export async function POST(
 
   putPreview(token, workspaceId, tree, readOptions(form));
   // 303 so the frame follows with a GET, whatever method brought it here.
-  return NextResponse.redirect(new URL(`/store/${workspaceId}/preview/${token}`, request.url), 303);
+  // Relative, not resolved against request.url: behind the host's proxy that
+  // is the internal origin (https://localhost:8080), which the browser can't reach.
+  return new Response(null, {
+    status: 303,
+    headers: { Location: `/store/${workspaceId}/preview/${token}` },
+  });
 }
