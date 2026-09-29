@@ -109,6 +109,9 @@ import type {
   CheckoutPayload,
   CollectionDetail,
   CollectionSummary,
+  AssignConfirmationTasksResult,
+  ConfirmationAssignee,
+  ConfirmationChannel,
   ConfirmationQueueCounts,
   ConfirmationQueuePage,
   ConfirmationQueueParams,
@@ -1916,6 +1919,39 @@ export class ApiClient {
     return counts;
   }
 
+  /** Members a task may be assigned to (orders.manage). */
+  async listConfirmationAssignees(workspaceId: string) {
+    const { assignees } = await this.request<{ assignees: ConfirmationAssignee[] }>(
+      `${this.confirmationTasksBase(workspaceId)}/assignees`
+    );
+    return assignees;
+  }
+
+  /** Hands one open task to an agent (orders.manage). */
+  async assignConfirmationTask(workspaceId: string, taskId: string, userId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/assign`,
+      { method: "POST", body: { userId } }
+    );
+    return task;
+  }
+
+  async unassignConfirmationTask(workspaceId: string, taskId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/unassign`,
+      { method: "POST", body: {} }
+    );
+    return task;
+  }
+
+  /** One agent for up to 200 tasks; `userId: null` unassigns them. Done tasks are skipped. */
+  async assignConfirmationTasks(workspaceId: string, taskIds: string[], userId: string | null) {
+    return this.request<AssignConfirmationTasksResult>(`${this.confirmationTasksBase(workspaceId)}/assign`, {
+      method: "POST",
+      body: { taskIds, userId },
+    });
+  }
+
   async claimConfirmationTask(workspaceId: string, taskId: string) {
     const { task } = await this.request<{ task: ConfirmationTask }>(
       `${this.confirmationTasksBase(workspaceId)}/${taskId}/claim`,
@@ -1957,10 +1993,10 @@ export class ApiClient {
   }
 
   /** Confirms a COD order from the order page; resolves to the refreshed order detail. */
-  async confirmOrder(workspaceId: string, orderId: string, notes?: string) {
+  async confirmOrder(workspaceId: string, orderId: string, notes?: string, channel?: ConfirmationChannel) {
     return this.request<{ order: Order; task: ConfirmationTask }>(
       `${this.ordersBase(workspaceId)}/${orderId}/confirmation`,
-      { method: "POST", body: notes ? { notes } : {} }
+      { method: "POST", body: { ...(notes ? { notes } : {}), ...(channel ? { channel } : {}) } }
     );
   }
 

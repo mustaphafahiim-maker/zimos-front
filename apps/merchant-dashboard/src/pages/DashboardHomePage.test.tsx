@@ -19,7 +19,15 @@ const summary = (gross: number) =>
   });
 
 // Awaiting = waiting for a call (pending) + someone on it (inProgress).
-const queue: ConfirmationQueueCounts = { pending: 3, pendingDue: 3, inProgress: 2, inProgressMine: 0, done: 9 };
+const queue: ConfirmationQueueCounts = {
+  pending: 3,
+  pendingDue: 3,
+  inProgress: 2,
+  inProgressMine: 0,
+  done: 9,
+  assignedToMe: 0,
+  unassigned: 5,
+};
 
 const order = fake<Order>({
   id: "o1",

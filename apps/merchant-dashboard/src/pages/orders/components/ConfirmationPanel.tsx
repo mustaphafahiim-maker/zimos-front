@@ -4,8 +4,11 @@ import { Alert, Button, Card } from "@store-builder/ui";
 import {
   apiErrorDetails,
   isApiErrorCode,
+  type ConfirmationChannel,
   type ConfirmationLockDetails,
+  type ConfirmationOutcome,
   type Order,
+  type OrderConfirmationAttempt,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -15,7 +18,8 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useToast } from "@/components/Toast";
-import { CONFIRM_ROLES, minutesUntil, useNow } from "@/pages/confirmation/confirmationRoles";
+import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "@/pages/confirmation/confirmationRoles";
+import { ChannelPicker, WhatsAppButton, useChannelLabels } from "@/pages/confirmation/confirmationChannel";
 
 const STRINGS = {
   en: {
@@ -32,6 +36,16 @@ const STRINGS = {
     openQueue: "Open confirmation queue",
     confirmedToast: "Order confirmed. It's ready to ship.",
     lockedBy: "{name} is already on this call (claim expires in {n} min).",
+    assignedTo: "Assigned to {name}.",
+    assignedToYou: "Assigned to you.",
+    assignedToOther: "Assigned to {name}. Only they or a manager can confirm it.",
+    history: "Confirmation history",
+    outcome_confirmed: "Confirmed",
+    outcome_rejected: "Rejected",
+    outcome_unreachable: "Unreachable",
+    outcome_postponed: "Postponed",
+    via: "via {channel}",
+    unknownAgent: "Unknown user",
   },
   ar: {
     title: "التأكيد",
@@ -47,6 +61,16 @@ const STRINGS = {
     openQueue: "فتح قائمة التأكيد",
     confirmedToast: "تم تأكيد الأوردر. أصبح جاهزًا للشحن.",
     lockedBy: "{name} في هذه المكالمة بالفعل (ينتهي الاستلام خلال {n} دقيقة).",
+    assignedTo: "المعيّن له: {name}.",
+    assignedToYou: "المعيّن له: أنت.",
+    assignedToOther: "معيّن لـ {name}، ولا يؤكده غيره إلا المدير.",
+    history: "سجل التأكيد",
+    outcome_confirmed: "مؤكد",
+    outcome_rejected: "مرفوض",
+    outcome_unreachable: "تعذّر الوصول",
+    outcome_postponed: "مؤجل",
+    via: "عبر {channel}",
+    unknownAgent: "مستخدم غير معروف",
   },
 } satisfies Messages;
 
@@ -55,8 +79,11 @@ const OPEN_STATES = new Set(["pending", "unreachable", "postponed"]);
 /**
  * Confirm a COD order that's still waiting on its call, without going through
  * the queue. Same backend rules as a queue call (POST /orders/:id/confirmation):
- * refused while another agent holds a live claim. Rejecting stays with Cancel
- * order, which also closes the task.
+ * refused while another agent holds a live claim, or while the task is
+ * assigned to someone else (unless the viewer manages orders). Rejecting stays
+ * with Cancel order, which also closes the task.
+ *
+ * Once the order is past confirmation, only its attempt history stays.
  */
 export function ConfirmationPanel({ order, onChanged }: { order: Order; onChanged: () => void }) {
   const t = useT(STRINGS);
@@ -68,20 +95,35 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
   const now = useNow();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [channel, setChannel] = useState<ConfirmationChannel>("call");
 
-  if (order.paymentMethod !== "cod" || order.cancelledAt || !OPEN_STATES.has(order.confirmationState)) return null;
-
-  const canConfirm = CONFIRM_ROLES.has(currentWorkspace?.role ?? "");
   const task = order.confirmationTask ?? null;
+  const attempts = task?.attempts ?? [];
+  const open = order.paymentMethod === "cod" && !order.cancelledAt && OPEN_STATES.has(order.confirmationState);
+
+  if (!open) {
+    return attempts.length > 0 ? (
+      <Card className="space-y-3 p-5">
+        <h2 className="font-display text-lg font-medium text-ink">{t.history}</h2>
+        <AttemptList attempts={attempts} />
+      </Card>
+    ) : null;
+  }
+
+  const role = currentWorkspace?.role ?? "";
+  const canConfirm = CONFIRM_ROLES.has(role);
+  const canManage = MANAGE_ROLES.has(role);
   const heldMinutes = task?.lockedBy ? minutesUntil(task.lockExpiresAt, now) : 0;
   // The holder themselves may confirm here; the server allows it.
   const heldByOther = Boolean(task?.lockedBy) && task?.lockedBy?.id !== user?.id && heldMinutes > 0;
+  const assignee = task?.assignedTo ?? null;
+  const assignedToOther = Boolean(assignee) && assignee?.id !== user?.id && !canManage;
 
   async function confirm() {
     setBusy(true);
     setError(null);
     try {
-      await apiClient.confirmOrder(workspaceId, order.id);
+      await apiClient.confirmOrder(workspaceId, order.id, undefined, channel);
       toast.success(t.confirmedToast);
       onChanged();
     } catch (err) {
@@ -93,6 +135,9 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
             n: minutesUntil(lock?.lockExpiresAt ?? null, Date.now()),
           })
         );
+      } else if (isApiErrorCode(err, "TASK_ASSIGNED_TO_OTHER")) {
+        const details = apiErrorDetails<{ assignedTo: { fullName: string } | null }>(err);
+        setError(fmt(t.assignedToOther, { name: details?.assignedTo?.fullName ?? t.someone }));
       } else {
         setError(errorMessage(err));
       }
@@ -113,6 +158,15 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         {task?.nextRetryAt && task.status === "queued" && (
           <p>{fmt(t.callback, { time: formatDateTime(task.nextRetryAt) })}</p>
         )}
+        {assignee && (
+          <p className={assignedToOther ? "font-medium text-accent-dark" : undefined}>
+            {assignee.id === user?.id
+              ? t.assignedToYou
+              : assignedToOther
+                ? fmt(t.assignedToOther, { name: assignee.fullName })
+                : fmt(t.assignedTo, { name: assignee.fullName })}
+          </p>
+        )}
         {heldByOther && (
           <p className="font-medium text-accent-dark">
             {fmt(t.heldBy, { name: task?.lockedBy?.fullName ?? t.someone, n: heldMinutes })}
@@ -120,11 +174,18 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         )}
       </div>
 
+      {canConfirm && !heldByOther && !assignedToOther && (
+        <div className="space-y-3">
+          <WhatsAppButton order={order} onOpen={() => setChannel("whatsapp")} />
+          <ChannelPicker value={channel} onChange={setChannel} disabled={busy} />
+        </div>
+      )}
+
       {error && <Alert variant="danger">{error}</Alert>}
 
       <div className="flex flex-wrap items-center gap-3">
         {canConfirm && (
-          <Button onClick={confirm} disabled={busy || heldByOther} className="min-h-11">
+          <Button onClick={confirm} disabled={busy || heldByOther || assignedToOther} className="min-h-11">
             {busy ? t.confirming : t.confirm}
           </Button>
         )}
@@ -133,6 +194,35 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         </Link>
       </div>
       <p className="text-xs text-ink-soft">{t.rejectHint}</p>
+
+      {attempts.length > 0 && (
+        <details className="rounded-[0.5rem] border border-line px-4 py-2 text-sm">
+          <summary className="min-h-11 cursor-pointer content-center font-medium text-ink">{t.history}</summary>
+          <AttemptList attempts={attempts} />
+        </details>
+      )}
     </Card>
+  );
+}
+
+/** Each attempt: outcome, how the customer was reached, who, when and any note. */
+function AttemptList({ attempts }: { attempts: OrderConfirmationAttempt[] }) {
+  const t = useT(STRINGS);
+  const channelLabel = useChannelLabels();
+  const outcome = (o: ConfirmationOutcome) => t[`outcome_${o}`];
+  return (
+    <ol className="mt-2 space-y-2 text-sm">
+      {attempts.map((attempt) => (
+        <li key={attempt.id} className="border-b border-line pb-2 last:border-b-0 last:pb-0">
+          <p className="text-ink">
+            <span className="font-medium">{outcome(attempt.outcome)}</span>
+            {attempt.channel && <> · {fmt(t.via, { channel: channelLabel[attempt.channel] })}</>} ·{" "}
+            {attempt.agent?.fullName ?? t.unknownAgent}
+          </p>
+          <p className="text-xs text-ink-soft">{formatDateTime(attempt.createdAt)}</p>
+          {attempt.notes && <p className="mt-0.5 whitespace-pre-line text-ink-soft">{attempt.notes}</p>}
+        </li>
+      ))}
+    </ol>
   );
 }

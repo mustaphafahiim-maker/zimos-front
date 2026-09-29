@@ -64,6 +64,12 @@ export interface WorkspaceSettings {
   shipping_governorate_rates?: Record<string, number>;
   /** Read-only here — PATCH /shipping/settings. "manual" or a courier code, preselected when booking. */
   default_carrier_code?: string;
+  /**
+   * The text the confirmation queue's WhatsApp button opens with. Absent uses
+   * the dashboard's built-in message. Placeholders: {store} {orderNumber}
+   * {items} {total} {customerName}.
+   */
+  confirmation_whatsapp_template?: string;
   [key: string]: unknown;
 }
 
@@ -144,6 +150,8 @@ export interface UpdateWorkspacePayload {
      * `checkout_settings`; a `null` rule is "off".
      */
     fraud_rules?: { [K in keyof FraudRules]?: FraudRules[K] | null } | null;
+    /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
+    confirmation_whatsapp_template?: string | null;
   };
 }
 
@@ -1446,15 +1454,21 @@ export type ConfirmationQueueTab = "pending" | "in_progress" | "done";
 /** "default" is each tab's own order; the rest sort the tab by its orders. */
 export type ConfirmationQueueSort = "default" | OrderSort;
 
+/** The queue's assignment filter: tasks assigned to me, to nobody, or to one member (a user id). */
+export type ConfirmationAssigneeFilter = "me" | "unassigned" | (string & {});
+
 export interface ConfirmationQueueParams {
   status?: ConfirmationQueueTab;
   mine?: boolean;
+  assignedTo?: ConfirmationAssigneeFilter;
   cursor?: string;
   limit?: number;
   sort?: ConfirmationQueueSort;
 }
 /** Where an outcome was recorded. */
 export type ConfirmationAttemptSource = "queue" | "order_page" | "correction";
+/** How the customer was reached on an attempt. */
+export type ConfirmationChannel = "call" | "whatsapp" | "other";
 
 export interface ConfirmationUser {
   id: string;
@@ -1471,6 +1485,8 @@ export interface ConfirmationAttempt {
   source: ConfirmationAttemptSource;
   /** On a correction, the outcome it replaced. */
   previousOutcome: ConfirmationOutcome | null;
+  /** Null on attempts recorded before channels existed, or when none was picked. */
+  channel: ConfirmationChannel | null;
   createdAt: string;
 }
 
@@ -1485,6 +1501,10 @@ export interface ConfirmationTask {
   lockedBy: ConfirmationUser | null;
   /** When the lock lapses; null unless in progress. May be in the past until the next read. */
   lockExpiresAt: string | null;
+  /** The agent a manager handed the task to; only they (or a manager) may claim it. Null is open to all. */
+  assignedToUserId: string | null;
+  assignedTo: ConfirmationUser | null;
+  assignedAt: string | null;
   attemptCount: number;
   nextRetryAt: string | null;
   outcome: ConfirmationOutcome | null;
@@ -1516,6 +1536,36 @@ export interface ConfirmationQueueCounts {
   inProgress: number;
   inProgressMine: number;
   done: number;
+  /** Open tasks (pending or in progress) assigned to the viewer. */
+  assignedToMe: number;
+  /** Open tasks nobody is assigned to. */
+  unassigned: number;
+}
+
+/** A member a confirmation task may be assigned to (their role can confirm orders). */
+export interface ConfirmationAssignee {
+  id: string;
+  fullName: string;
+  email: string;
+  role: { key: string; name: string };
+}
+
+/** POST /confirmation-tasks/assign — the tasks now carrying the assignment, and the ones left alone. */
+export interface AssignConfirmationTasksResult {
+  assignedTo: ConfirmationUser | null;
+  tasks: ConfirmationTask[];
+  skipped: Array<{ taskId: string; code: "NOT_FOUND" | "TASK_ALREADY_DONE" }>;
+}
+
+/** One attempt as the order page lists it. */
+export interface OrderConfirmationAttempt {
+  id: string;
+  outcome: ConfirmationOutcome;
+  channel: ConfirmationChannel | null;
+  source: ConfirmationAttemptSource;
+  notes: string | null;
+  createdAt: string;
+  agent: ConfirmationUser | null;
 }
 
 /** GET order detail: the order's current confirmation task, if it has one. */
@@ -1530,12 +1580,17 @@ export interface OrderConfirmationTaskSummary {
   lockedBy: ConfirmationUser | null;
   lockedAt: string | null;
   lockExpiresAt: string | null;
+  assignedTo?: ConfirmationUser | null;
+  assignedAt?: string | null;
+  /** Oldest first. */
+  attempts?: OrderConfirmationAttempt[];
 }
 
 export interface RecordConfirmationOutcomePayload {
   outcome: ConfirmationOutcome;
   notes?: string;
   rejectionReason?: string;
+  channel?: ConfirmationChannel;
 }
 
 export interface CorrectConfirmationOutcomePayload {

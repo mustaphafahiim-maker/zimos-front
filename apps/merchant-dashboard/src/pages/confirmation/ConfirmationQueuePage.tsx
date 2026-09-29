@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
@@ -6,8 +6,10 @@ import {
   apiErrorDetails,
   isApiErrorCode,
   isInvalidCursorError,
+  type ConfirmationAssignee,
   type ConfirmationAttempt,
   type ConfirmationAttemptSource,
+  type ConfirmationChannel,
   type ConfirmationLockDetails,
   type ConfirmationOutcome,
   type ConfirmationQueueCounts,
@@ -40,6 +42,7 @@ import { useOrderLabels } from "@/pages/orders/orderLabels";
 import { OrderTimelineLines } from "@/pages/orders/components/OrderTimelineLines";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "./confirmationRoles";
+import { ChannelPicker, WhatsAppButton, useChannelLabels } from "./confirmationChannel";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
 const QUEUE_SORTS: readonly ConfirmationQueueSort[] = ["default", ...ORDER_SORTS];
@@ -116,6 +119,30 @@ const STRINGS = {
     sort_oldest: "Oldest first",
     sort_total_desc: "Total: high to low",
     sort_total_asc: "Total: low to high",
+    assignmentFilter: "Assignment",
+    filterAll: "All tasks",
+    filterMine: "Assigned to me",
+    filterUnassigned: "Unassigned",
+    filterAgents: "Assigned to an agent",
+    assignedTo: "Assigned to {name}",
+    assignedToYou: "Assigned to you",
+    notAssigned: "Not assigned",
+    assignTo: "Assign {order} to",
+    nobody: "Nobody (open to all)",
+    assignedToast: "{order} assigned to {name}.",
+    unassignedToast: "{order} is open to every agent again.",
+    assignedToOther: "Assigned to {name}. Only they or a manager can take it.",
+    selectTask: "Select {order}",
+    selectAll: "Select all shown",
+    selectedCount: "{n} selected",
+    bulkAgent: "Agent for the selected tasks",
+    chooseAgent: "Choose an agent",
+    bulkAssign: "Assign",
+    bulkUnassign: "Remove assignment",
+    clearSelection: "Clear selection",
+    bulkDone: "{n} tasks updated.",
+    bulkSkipped: "{n} finished tasks were left as they were.",
+    via: "via {channel}",
   },
   ar: {
     title: "قائمة التأكيد",
@@ -186,6 +213,30 @@ const STRINGS = {
     sort_oldest: "الأقدم أولًا",
     sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
     sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
+    assignmentFilter: "التعيين",
+    filterAll: "الكل",
+    filterMine: "طلباتي",
+    filterUnassigned: "غير معيّنة",
+    filterAgents: "معيّنة لموظف",
+    assignedTo: "المعيّن له: {name}",
+    assignedToYou: "المعيّن له: أنت",
+    notAssigned: "غير معيّن",
+    assignTo: "تعيين {order} إلى",
+    nobody: "لا أحد (متاح للجميع)",
+    assignedToast: "تم تعيين {order} إلى {name}.",
+    unassignedToast: "أصبح {order} متاحًا لجميع الموظفين.",
+    assignedToOther: "معيّن لـ {name}، ولا يستلمه غيره إلا المدير.",
+    selectTask: "تحديد {order}",
+    selectAll: "تحديد كل المعروض",
+    selectedCount: "المحدد: {n}",
+    bulkAgent: "الموظف للمهام المحددة",
+    chooseAgent: "اختر موظفًا",
+    bulkAssign: "تعيين",
+    bulkUnassign: "إلغاء التعيين",
+    clearSelection: "إلغاء التحديد",
+    bulkDone: "تم تحديث {n} من المهام.",
+    bulkSkipped: "تُركت {n} من المهام المنتهية كما هي.",
+    via: "عبر {channel}",
   },
 } satisfies Messages;
 
@@ -220,24 +271,90 @@ function useQueueAbilities() {
   };
 }
 
+/** The assignment filter: every task, mine, nobody's, or one agent's (their user id). */
+type AssignmentFilter = "all" | "me" | "unassigned" | (string & {});
+
 export function ConfirmationQueuePage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const { canManage } = useQueueAbilities();
   const [tab, setTab] = useState<ConfirmationQueueTab>("pending");
+  const [assignment, setAssignment] = useState<AssignmentFilter>("all");
+  const assignmentId = useId();
+  // Selection for a manager's bulk assignment; reset whenever the list changes shape.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [bulkAgent, setBulkAgent] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   // "Queue order" is each tab's own order (due callbacks first on Pending),
   // as the queue has always been; the rest sort on the server by the order.
   const [sort, setSort] = useListSort<ConfirmationQueueSort>("zimos.confirmation.sort", QUEUE_SORTS, "default");
   const sortId = useId();
 
   const counts = useAsync(() => apiClient.getConfirmationQueueCounts(workspaceId), [workspaceId]);
+  // Only a manager assigns, so only a manager needs the team.
+  const assignees = useAsync(
+    () => (canManage ? apiClient.listConfirmationAssignees(workspaceId) : Promise.resolve([] as ConfirmationAssignee[])),
+    [workspaceId, canManage]
+  );
   const list = useCursorList<ConfirmationTask>(
     async (cursor) => {
-      const page = await apiClient.listConfirmationQueue(workspaceId, { status: tab, cursor, limit: PAGE_SIZE, sort });
+      const page = await apiClient.listConfirmationQueue(workspaceId, {
+        status: tab,
+        cursor,
+        limit: PAGE_SIZE,
+        sort,
+        ...(assignment === "all" ? {} : { assignedTo: assignment }),
+      });
       return { items: page.tasks, nextCursor: page.nextCursor };
     },
-    [workspaceId, tab, sort],
+    [workspaceId, tab, sort, assignment],
     { isStaleCursor: (err) => isInvalidCursorError(err) }
   );
+  const team = assignees.data ?? [];
+  const openShown = useMemo(() => list.items.filter((task) => task.status !== "done"), [list.items]);
+  const selectable = canManage && tab !== "done";
+  const allShownSelected = openShown.length > 0 && openShown.every((task) => selected.has(task.id));
+
+  function changeTab(next: ConfirmationQueueTab) {
+    setTab(next);
+    setSelected(new Set());
+  }
+
+  function changeAssignment(next: AssignmentFilter) {
+    setAssignment(next);
+    setSelected(new Set());
+  }
+
+  function toggle(taskId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }
+
+  async function assignSelected(userId: string | null) {
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      const result = await apiClient.assignConfirmationTasks(workspaceId, [...selected], userId);
+      const byId = new Map(result.tasks.map((task) => [task.id, task]));
+      list.setItems((prev) => prev.map((task) => byId.get(task.id) ?? task));
+      toast.success(fmt(t.bulkDone, { n: result.tasks.length }));
+      const finished = result.skipped.filter((s) => s.code === "TASK_ALREADY_DONE").length;
+      if (finished > 0) toast.success(fmt(t.bulkSkipped, { n: finished }));
+      setSelected(new Set());
+      void counts.refresh({ silent: true });
+    } catch (err) {
+      setBulkError(errorMessage(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   function tabLabel(label: string, key: keyof ConfirmationQueueCounts) {
     const n = counts.data?.[key];
@@ -263,29 +380,55 @@ export function ConfirmationQueuePage() {
     <div className="max-w-3xl">
       <PageHeader title={t.title} description={t.description} />
 
-      <div className="mb-3 flex items-center justify-end gap-2">
-        <label htmlFor={sortId} className="text-sm text-ink-soft">
-          {t.sortLabel}
-        </label>
-        <Select
-          id={sortId}
-          value={sort}
-          onChange={(e) => setSort(e.target.value as ConfirmationQueueSort)}
-          className="h-11 w-auto min-w-48"
-        >
-          {QUEUE_SORTS.map((key) => (
-            <option key={key} value={key}>
-              {t[`sort_${key}`]}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <label htmlFor={assignmentId} className="text-sm text-ink-soft">
+            {t.assignmentFilter}
+          </label>
+          <Select
+            id={assignmentId}
+            value={assignment}
+            onChange={(e) => changeAssignment(e.target.value)}
+            className="h-11 w-auto min-w-44"
+          >
+            <option value="all">{t.filterAll}</option>
+            <option value="me">{t.filterMine}</option>
+            <option value="unassigned">{t.filterUnassigned}</option>
+            {canManage && team.length > 0 && (
+              <optgroup label={t.filterAgents}>
+                {team.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.fullName}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor={sortId} className="text-sm text-ink-soft">
+            {t.sortLabel}
+          </label>
+          <Select
+            id={sortId}
+            value={sort}
+            onChange={(e) => setSort(e.target.value as ConfirmationQueueSort)}
+            className="h-11 w-auto min-w-48"
+          >
+            {QUEUE_SORTS.map((key) => (
+              <option key={key} value={key}>
+                {t[`sort_${key}`]}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       <FilterTabs
         className="mb-4"
         label={t.tabsLabel}
         value={tab}
-        onChange={setTab}
+        onChange={changeTab}
         tabs={[
           { value: "pending", label: tabLabel(t.tabPending, "pending") },
           { value: "in_progress", label: tabLabel(t.tabInProgress, "inProgress") },
@@ -300,12 +443,83 @@ export function ConfirmationQueuePage() {
         emptyMessage={emptyMessage}
         onRetry={list.reload}
       >
+        {selectable && openShown.length > 0 && (
+          <div
+            role="region"
+            aria-label={t.bulkAgent}
+            className="mb-4 flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-line bg-paper px-4 py-3"
+          >
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={allShownSelected}
+                onChange={() =>
+                  setSelected(allShownSelected ? new Set() : new Set(openShown.map((task) => task.id)))
+                }
+              />
+              {t.selectAll}
+            </label>
+            {selected.size > 0 && (
+              <>
+                <span className="text-sm font-medium text-ink" aria-live="polite">
+                  {fmt(t.selectedCount, { n: selected.size })}
+                </span>
+                <Select
+                  aria-label={t.bulkAgent}
+                  value={bulkAgent}
+                  onChange={(e) => setBulkAgent(e.target.value)}
+                  className="h-11 w-auto min-w-44"
+                  disabled={bulkBusy}
+                >
+                  <option value="">{t.chooseAgent}</option>
+                  {team.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.fullName}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  className="min-h-11"
+                  disabled={bulkBusy || !bulkAgent}
+                  onClick={() => void assignSelected(bulkAgent)}
+                >
+                  {t.bulkAssign}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={bulkBusy}
+                  onClick={() => void assignSelected(null)}
+                >
+                  {t.bulkUnassign}
+                </Button>
+                <Button variant="ghost" className="min-h-11" disabled={bulkBusy} onClick={() => setSelected(new Set())}>
+                  {t.clearSelection}
+                </Button>
+              </>
+            )}
+            {bulkError && (
+              <Alert variant="danger" className="w-full">
+                {bulkError}
+              </Alert>
+            )}
+          </div>
+        )}
         <div className="space-y-4">
           {list.items.map((task) =>
             task.status === "done" ? (
               <DoneCard key={task.id} task={task} onChanged={replaceTask} />
             ) : (
-              <OpenCard key={task.id} task={task} onChanged={replaceTask} onResolved={removeTask} />
+              <OpenCard
+                key={task.id}
+                task={task}
+                team={team}
+                selected={selectable ? selected.has(task.id) : undefined}
+                onToggleSelected={() => toggle(task.id)}
+                onChanged={replaceTask}
+                onResolved={removeTask}
+              />
             )
           )}
         </div>
@@ -316,7 +530,7 @@ export function ConfirmationQueuePage() {
 }
 
 /** Order number, items, total, risk flags and the customer's contact — every card's top half. */
-function OrderSummary({ task, aside }: { task: ConfirmationTask; aside?: ReactNode }) {
+function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; aside?: ReactNode; contactAction?: ReactNode }) {
   const t = useT(STRINGS);
   const orderLabels = useOrderLabels();
   const now = useNow(60_000);
@@ -357,15 +571,18 @@ function OrderSummary({ task, aside }: { task: ConfirmationTask; aside?: ReactNo
 
       <div className="rounded-[0.5rem] bg-paper px-4 py-3">
         <p className="text-sm font-medium text-ink">{contact.fullName || t.unnamedCustomer}</p>
-        <p className="mt-0.5 font-display text-xl font-medium text-ink">
-          {contact.phone ? (
-            <a href={`tel:${contact.phone}`} className="hover:text-primary">
-              <bdi dir="ltr">{contact.phone}</bdi>
-            </a>
-          ) : (
-            <span className="text-ink-soft">{t.noPhone}</span>
-          )}
-        </p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="font-display text-xl font-medium text-ink">
+            {contact.phone ? (
+              <a href={`tel:${contact.phone}`} className="hover:text-primary">
+                <bdi dir="ltr">{contact.phone}</bdi>
+              </a>
+            ) : (
+              <span className="text-ink-soft">{t.noPhone}</span>
+            )}
+          </p>
+          {contactAction}
+        </div>
         <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
       </div>
     </>
@@ -385,10 +602,18 @@ function AttemptsBadge({ count }: { count: number }) {
 /** A pending or in-progress task: claim, record an outcome, release. */
 function OpenCard({
   task,
+  team,
+  selected,
+  onToggleSelected,
   onChanged,
   onResolved,
 }: {
   task: ConfirmationTask;
+  /** Members the task may be assigned to; empty unless the viewer manages orders. */
+  team: ConfirmationAssignee[];
+  /** Whether the card is ticked for bulk assignment; undefined hides the tick box. */
+  selected?: boolean;
+  onToggleSelected: () => void;
   onChanged: (task: ConfirmationTask) => void;
   onResolved: (taskId: string) => void;
 }) {
@@ -405,6 +630,14 @@ function OpenCard({
   const [outcome, setOutcome] = useState<ConfirmationOutcome | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [notes, setNotes] = useState("");
+  // The channel belongs to one claim: a fresh claim starts from "call" again,
+  // and opening WhatsApp while holding the claim picks WhatsApp.
+  const [channelChoice, setChannelChoice] = useState<{ lockedAt: string | null; channel: ConfirmationChannel }>({
+    lockedAt: null,
+    channel: "call",
+  });
+  const channelLabel = useChannelLabels();
+  const assignId = useId();
 
   const { order } = task;
   const inProgress = task.status === "in_progress";
@@ -413,6 +646,10 @@ function OpenCard({
   const holderName = task.lockedBy?.fullName ?? t.someone;
   const rejectionMissing = outcome === "rejected" && rejectionReason.trim() === "";
   const lastAttempt = task.attempts[task.attempts.length - 1];
+  const channel = channelChoice.lockedAt === task.lockedAt ? channelChoice.channel : "call";
+  const pickChannel = (next: ConfirmationChannel) => setChannelChoice({ lockedAt: task.lockedAt, channel: next });
+  const assignedToOther = Boolean(task.assignedTo) && task.assignedTo?.id !== userId;
+  const assignedName = task.assignedTo?.fullName ?? t.someone;
 
   function describe(err: unknown): string {
     if (isApiErrorCode(err, "TASK_ALREADY_LOCKED")) {
@@ -421,6 +658,10 @@ function OpenCard({
         name: lock?.lockedBy?.fullName ?? t.someone,
         n: minutesUntil(lock?.lockExpiresAt ?? null, Date.now()),
       });
+    }
+    if (isApiErrorCode(err, "TASK_ASSIGNED_TO_OTHER")) {
+      const details = apiErrorDetails<{ assignedTo: { fullName: string } | null }>(err);
+      return fmt(t.assignedToOther, { name: details?.assignedTo?.fullName ?? t.someone });
     }
     return errorMessage(err);
   }
@@ -445,10 +686,22 @@ function OpenCard({
       toast.success(fmt(t.toastReleased, { order: order.orderNumber }));
     });
 
+  const assign = (userId: string) =>
+    run(async () => {
+      if (userId) {
+        const updated = await apiClient.assignConfirmationTask(workspaceId, task.id, userId);
+        onChanged(updated);
+        toast.success(fmt(t.assignedToast, { order: order.orderNumber, name: updated.assignedTo?.fullName ?? "" }));
+      } else {
+        onChanged(await apiClient.unassignConfirmationTask(workspaceId, task.id));
+        toast.success(fmt(t.unassignedToast, { order: order.orderNumber }));
+      }
+    });
+
   const save = () =>
     run(async () => {
       if (!outcome || rejectionMissing) return;
-      const payload: RecordConfirmationOutcomePayload = { outcome };
+      const payload: RecordConfirmationOutcomePayload = { outcome, channel };
       if (notes.trim()) payload.notes = notes.trim();
       if (outcome === "rejected") payload.rejectionReason = rejectionReason.trim();
       await apiClient.recordConfirmationOutcome(workspaceId, task.id, payload);
@@ -476,7 +729,48 @@ function OpenCard({
 
   return (
     <Card className="space-y-4 p-5">
-      <OrderSummary task={task} aside={<AttemptsBadge count={task.attemptCount} />} />
+      {selected !== undefined && (
+        <label className="-mt-1 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm text-ink-soft">
+          <input type="checkbox" className="size-4 accent-primary" checked={selected} onChange={onToggleSelected} />
+          {fmt(t.selectTask, { order: order.orderNumber })}
+        </label>
+      )}
+      <OrderSummary
+        task={task}
+        aside={<AttemptsBadge count={task.attemptCount} />}
+        contactAction={<WhatsAppButton order={order} onOpen={() => mine && !expired && pickChannel("whatsapp")} />}
+      />
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+        <p className={task.assignedTo ? "font-medium text-ink" : "text-ink-soft"}>
+          {!task.assignedTo
+            ? t.notAssigned
+            : task.assignedTo.id === userId
+              ? t.assignedToYou
+              : fmt(t.assignedTo, { name: assignedName })}
+        </p>
+        {canManage && team.length > 0 && (
+          <>
+            <label htmlFor={assignId} className="sr-only">
+              {fmt(t.assignTo, { order: order.orderNumber })}
+            </label>
+            <Select
+              id={assignId}
+              value={task.assignedTo?.id ?? ""}
+              onChange={(e) => assign(e.target.value)}
+              disabled={busy}
+              className="h-11 w-auto min-w-44"
+            >
+              <option value="">{t.nobody}</option>
+              {team.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.fullName}
+                </option>
+              ))}
+            </Select>
+          </>
+        )}
+      </div>
 
       {(callbackLine || lastAttempt) && (
         <div className="space-y-0.5 text-sm text-ink-soft">
@@ -488,6 +782,7 @@ function OpenCard({
                 agent: lastAttempt.agent?.fullName ?? t.unknownAgent,
                 time: formatDateTime(lastAttempt.createdAt),
               })}
+              {lastAttempt.channel && <> · {fmt(t.via, { channel: channelLabel[lastAttempt.channel] })}</>}
             </p>
           )}
         </div>
@@ -517,6 +812,8 @@ function OpenCard({
               </Button>
             ))}
           </div>
+
+          <ChannelPicker value={channel} onChange={pickChannel} disabled={busy} />
 
           {outcome === "rejected" && (
             <TextField
@@ -549,11 +846,16 @@ function OpenCard({
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {canConfirm && (!inProgress || expired) && (
-            <Button onClick={claim} disabled={busy}>
-              {busy ? t.claiming : mine ? t.reclaim : inProgress ? t.takeOver : t.claimAndCall}
-            </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canConfirm && (!inProgress || expired) && assignedToOther && !canManage ? (
+            <p className="text-sm text-ink-soft">{fmt(t.assignedToOther, { name: assignedName })}</p>
+          ) : (
+            canConfirm &&
+            (!inProgress || expired) && (
+              <Button onClick={claim} disabled={busy}>
+                {busy ? t.claiming : mine ? t.reclaim : inProgress ? t.takeOver : t.claimAndCall}
+              </Button>
+            )
           )}
           {inProgress && !mine && !expired && canManage && (
             <Button variant="outline" onClick={release} disabled={busy}>
@@ -624,6 +926,7 @@ function DoneCard({ task, onChanged }: { task: ConfirmationTask; onChanged: (tas
 function AttemptRow({ attempt }: { attempt: ConfirmationAttempt }) {
   const t = useT(STRINGS);
   const outcomeLabel = useOutcomeLabels();
+  const channelLabel = useChannelLabels();
   const what = attempt.previousOutcome
     ? fmt(t.corrected, { from: outcomeLabel[attempt.previousOutcome], to: outcomeLabel[attempt.outcome] })
     : outcomeLabel[attempt.outcome];
@@ -632,6 +935,7 @@ function AttemptRow({ attempt }: { attempt: ConfirmationAttempt }) {
       <p className="text-ink">
         <span className="font-medium">{what}</span> · {sourceLabel(t, attempt.source)} ·{" "}
         {attempt.agent?.fullName ?? t.unknownAgent}
+        {attempt.channel && <> · {fmt(t.via, { channel: channelLabel[attempt.channel] })}</>}
       </p>
       <p className="text-xs text-ink-soft">{formatDateTime(attempt.createdAt)}</p>
       {attempt.notes && <p className="mt-0.5 whitespace-pre-line text-ink-soft">{attempt.notes}</p>}

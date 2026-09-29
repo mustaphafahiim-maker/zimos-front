@@ -1,0 +1,133 @@
+import { useId } from "react";
+import { MessageCircle } from "lucide-react";
+import { cn } from "@store-builder/ui";
+import type { ConfirmationChannel } from "@store-builder/api-client";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { whatsAppConfirmUrl, type WhatsAppOrder } from "@/lib/whatsapp";
+
+/**
+ * How an agent reached the customer on a confirmation attempt, shared by the
+ * confirmation queue and the order page's Confirmation panel: the picker, the
+ * WhatsApp button beside the phone number, and the label on each attempt.
+ */
+
+const STRINGS = {
+  en: {
+    channel: "How did you reach the customer?",
+    call: "Call",
+    whatsapp: "WhatsApp",
+    other: "Other",
+    openWhatsApp: "WhatsApp",
+    openWhatsAppLabel: "Message {name} on WhatsApp (opens in a new tab)",
+    customer: "the customer",
+  },
+  ar: {
+    channel: "كيف تواصلت مع العميل؟",
+    call: "اتصال",
+    whatsapp: "واتساب",
+    other: "أخرى",
+    openWhatsApp: "واتساب",
+    openWhatsAppLabel: "راسل {name} عبر واتساب (يفتح في علامة تبويب جديدة)",
+    customer: "العميل",
+  },
+} satisfies Messages;
+
+/** The channels an agent picks from. The API also accepts "other", which older clients may send. */
+export const PICKABLE_CHANNELS: readonly ConfirmationChannel[] = ["call", "whatsapp"];
+
+export function useChannelLabels(): Record<ConfirmationChannel, string> {
+  const t = useT(STRINGS);
+  return { call: t.call, whatsapp: t.whatsapp, other: t.other };
+}
+
+/** Call / WhatsApp as a row of radio pills, each a 44px target. */
+export function ChannelPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ConfirmationChannel;
+  onChange: (channel: ConfirmationChannel) => void;
+  disabled?: boolean;
+}) {
+  const t = useT(STRINGS);
+  const labels = useChannelLabels();
+  const name = useId();
+  const labelId = useId();
+  return (
+    <div className="space-y-1.5">
+      <p id={labelId} className="text-sm font-medium text-ink">
+        {t.channel}
+      </p>
+      <div role="radiogroup" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+        {PICKABLE_CHANNELS.map((channel) => {
+          const checked = value === channel;
+          return (
+            <label
+              key={channel}
+              className={cn(
+                "flex min-h-11 min-w-11 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 text-sm transition-colors",
+                "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
+                checked ? "border-primary bg-primary-soft/40 font-medium text-ink" : "border-line text-ink-soft hover:border-primary/50",
+                "has-[:disabled]:cursor-default has-[:disabled]:opacity-80"
+              )}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={channel}
+                checked={checked}
+                disabled={disabled}
+                onChange={() => onChange(channel)}
+                className="size-4 shrink-0 accent-primary"
+              />
+              {labels[channel]}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Opens WhatsApp with the customer's number and the store's confirmation
+ * message ready to send. Renders nothing when the number can't be dialled.
+ * `onOpen` lets the caller note that WhatsApp was used on this call.
+ */
+export function WhatsAppButton({
+  order,
+  onOpen,
+  className,
+}: {
+  order: WhatsAppOrder;
+  onOpen?: () => void;
+  className?: string;
+}) {
+  const t = useT(STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  const url = whatsAppConfirmUrl(
+    order,
+    currentWorkspace?.name ?? "",
+    currentWorkspace?.settings?.confirmation_whatsapp_template ?? null
+  );
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onOpen}
+      aria-label={fmt(t.openWhatsAppLabel, { name: order.contactSnapshot.fullName?.trim() || t.customer })}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-2 rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink transition-colors hover:border-primary hover:text-primary",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        className
+      )}
+    >
+      <MessageCircle className="size-4 shrink-0" aria-hidden />
+      {t.openWhatsApp}
+    </a>
+  );
+}

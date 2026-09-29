@@ -31,6 +31,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
 import { BillingSection } from "./BillingSection";
+import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
@@ -43,6 +44,7 @@ export function SettingsPage() {
       />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
       <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
+      <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
       <BillingSection key={`billing-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
     </div>
