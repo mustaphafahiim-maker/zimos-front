@@ -64,12 +64,15 @@ function WorkspaceProfileSection() {
   const [logoUrl, setLogoUrl] = useState<string | null>(currentWorkspace?.logoUrl ?? null);
   const [logoStage, setLogoStage] = useState<"preparing" | "uploading" | null>(null);
   const uploading = logoStage !== null;
-  const [primaryColor, setPrimaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY)
-  );
-  const [secondaryColor, setSecondaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY)
-  );
+  // What the colour fields opened with: a colour is only written once the
+  // merchant changes it here, so saving the name or logo never pins the
+  // platform default over a store theme's own accent.
+  const [initialColors] = useState(() => ({
+    primary: readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY),
+    secondary: readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY),
+  }));
+  const [primaryColor, setPrimaryColor] = useState(initialColors.primary);
+  const [secondaryColor, setSecondaryColor] = useState(initialColors.secondary);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -106,18 +109,20 @@ function WorkspaceProfileSection() {
     setFieldErrors({});
     setSaving(true);
     try {
-      await saveThemeSettings((current) => ({
-        name: name.trim(),
-        tagline: tagline.trim() || null,
-        logoUrl,
+      const primary = normalizeHex(primaryColor) ?? DEFAULT_PRIMARY;
+      const secondary = normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY;
+      await saveThemeSettings((current) => {
         // Merge, never replace: themeSettings is a shared blob and may already
         // carry keys owned by other parts of the product.
-        themeSettings: {
-          ...current,
-          primaryColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY,
-          secondaryColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY,
-        },
-      }));
+        const themeSettings: Record<string, unknown> = { ...current };
+        if (primary !== initialColors.primary) {
+          themeSettings.primaryColor = primary;
+          // The merchant's own colour now, no longer one a template carried over.
+          delete themeSettings.primaryColorSource;
+        }
+        if (secondary !== initialColors.secondary) themeSettings.secondaryColor = secondary;
+        return { name: name.trim(), tagline: tagline.trim() || null, logoUrl, themeSettings };
+      });
       toast.success("Store profile saved.");
     } catch (err) {
       const fields = getFieldErrors(err);

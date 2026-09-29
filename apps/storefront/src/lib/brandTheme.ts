@@ -19,6 +19,10 @@
  *    (globals.css, `[data-store-theme]`); the merchant only picks its accent;
  *  - `primaryColor` — `#rrggbb`, the accent (buttons, links, highlights) in
  *    light mode (Settings page and the website editor's "Store look" panel);
+ *  - `primaryColorSource` — `"template"` when `primaryColor` was carried over
+ *    from a website template rather than picked by the merchant. On a theme
+ *    such a colour is ignored, so the theme keeps its own accent; the original
+ *    look still uses it. Any colour the merchant saves drops the marker;
  *  - `primaryColorDark` — `#rrggbb`, the accent in dark mode. Absent means the
  *    light-mode colour is used in dark mode too, which is how every store with
  *    a saved colour looked before the two modes could differ;
@@ -77,6 +81,9 @@ export type StoreThemeKey = (typeof STORE_THEMES)[number];
 
 /** How a preview asks for the original look explicitly (a saved theme would win otherwise). */
 export const ORIGINAL_LOOK = "original";
+
+/** `primaryColorSource` for a colour a website template carried over. Must match the dashboard's storeLook.ts. */
+export const TEMPLATE_COLOR_SOURCE = "template";
 
 const THEME_SET = new Set<string>(STORE_THEMES);
 
@@ -171,7 +178,10 @@ export function brandVars(
   { complete = false }: { complete?: boolean } = {}
 ): Record<string, string> {
   const vars: Record<string, string> = {};
-  const light = hex(themeSettings, "primaryColor");
+  const onTheme = storeThemeOf(themeSettings) !== null;
+  // A template's colour never paints over a theme's own accent.
+  const fromTemplate = themeSettings?.primaryColorSource === TEMPLATE_COLOR_SOURCE;
+  const light = onTheme && fromTemplate ? null : hex(themeSettings, "primaryColor");
   const dark = hex(themeSettings, "primaryColorDark") ?? light;
   if (light) {
     vars["--brand-primary-light-mode"] = light;
@@ -183,7 +193,7 @@ export function brandVars(
   }
 
   // A theme owns everything below.
-  if (storeThemeOf(themeSettings)) return vars;
+  if (onTheme) return vars;
 
   const secondary = hex(themeSettings, "secondaryColor");
   if (secondary) {

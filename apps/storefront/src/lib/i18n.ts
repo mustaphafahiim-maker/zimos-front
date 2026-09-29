@@ -92,6 +92,9 @@ const en = {
     empty: "No products published yet — check back soon.",
     emptyCollection: "No products in this collection yet.",
     heroCta: "Shop now",
+    pages: "Pages",
+    firstPage: "Back to the first page",
+    morePage: "More products",
     welcome: "Welcome to",
   },
   product: {
@@ -517,6 +520,9 @@ const ar: Dictionary = {
     empty: "لا توجد منتجات منشورة حاليًا — تابعنا قريبًا.",
     emptyCollection: "لا توجد منتجات في هذا القسم حاليًا.",
     heroCta: "تسوّق الآن",
+    pages: "الصفحات",
+    firstPage: "ارجع لأول صفحة",
+    morePage: "منتجات تانية",
     welcome: "أهلًا بك في",
   },
   product: {

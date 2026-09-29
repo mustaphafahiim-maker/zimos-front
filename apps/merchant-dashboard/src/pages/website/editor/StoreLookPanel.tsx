@@ -14,6 +14,7 @@ import {
   MAX_ANNOUNCEMENT_MESSAGES,
   PALETTES,
   RADIUS_OPTIONS,
+  accentOf,
   type StoreAnnouncementLook,
   type StoreLook,
 } from "./storeLook";
@@ -70,11 +71,14 @@ export function StoreLookPanel({
   const spec = THEME_SPECS[theme];
   const original = theme === ORIGINAL_LOOK;
   const accentFor = (mode: ColorMode) =>
-    mode === "light" ? look.primaryColor : (look.primaryColorDark ?? look.primaryColor);
+    mode === "light" ? accentOf(look) : (look.primaryColorDark ?? accentOf(look));
 
   function setAccent(mode: ColorMode, hex: string | null, historyKey?: string) {
     onPreviewMode?.(mode);
-    onChange(mode === "light" ? { ...look, primaryColor: hex } : { ...look, primaryColorDark: hex }, historyKey);
+    onChange(
+      mode === "light" ? { ...look, primaryColor: hex, primaryColorFromTemplate: false } : { ...look, primaryColorDark: hex },
+      historyKey
+    );
   }
 
   return (
@@ -104,7 +108,7 @@ export function StoreLookPanel({
                 <ThemeSketch
                   theme={key}
                   mode={previewMode}
-                  accent={previewMode === "light" ? look.primaryColor : (look.primaryColorDark ?? look.primaryColor)}
+                  accent={previewMode === "light" ? accentOf(look, key) : (look.primaryColorDark ?? accentOf(look, key))}
                   title={storeName || option.name[locale]}
                 />
                 <span className="flex items-center gap-1 border-t border-line px-2 py-1.5 text-xs font-medium text-ink">
@@ -127,7 +131,7 @@ export function StoreLookPanel({
           <p className="mt-1 text-xs text-ink-soft">{ui.accentColorsHint}</p>
         </div>
         {(["light", "dark"] as const).map((mode) => {
-          const own = mode === "light" ? look.primaryColor : look.primaryColorDark;
+          const own = mode === "light" ? accentOf(look) : look.primaryColorDark;
           const effective = accentFor(mode) ?? spec.palette[mode].accent;
           const hint =
             mode === "light"
@@ -136,7 +140,7 @@ export function StoreLookPanel({
                 : ui.themeDefaultColor
               : own
                 ? ui.accentDarkHint
-                : look.primaryColor
+                : accentOf(look)
                   ? ui.accentDarkFollows
                   : ui.themeDefaultColor;
           return (
@@ -145,7 +149,7 @@ export function StoreLookPanel({
                 label={mode === "light" ? ui.lightMode : ui.darkMode}
                 icon={mode === "light" ? <Sun className="size-3.5" aria-hidden /> : <Moon className="size-3.5" aria-hidden />}
                 hint={hint}
-                value={mode === "light" ? look.primaryColor : accentFor("dark")}
+                value={accentFor(mode)}
                 fallback={spec.palette[mode].accent}
                 onChange={(hex) => setAccent(mode, hex, `look:accent:${mode}`)}
               />
@@ -177,7 +181,7 @@ export function StoreLookPanel({
             <div className="grid grid-cols-2 gap-1.5">
               {PALETTES.map((palette) => {
                 const name = ui.paletteName(palette.key);
-                const active = look.primaryColor === palette.primary && look.secondaryColor === palette.secondary;
+                const active = accentOf(look) === palette.primary && look.secondaryColor === palette.secondary;
                 return (
                   <button
                     key={palette.key}
@@ -185,7 +189,12 @@ export function StoreLookPanel({
                     aria-pressed={active}
                     aria-label={ui.usePalette(name)}
                     onClick={() =>
-                      onChange({ ...look, primaryColor: palette.primary, secondaryColor: palette.secondary })
+                      onChange({
+                        ...look,
+                        primaryColor: palette.primary,
+                        primaryColorFromTemplate: false,
+                        secondaryColor: palette.secondary,
+                      })
                     }
                     className={cn(
                       "cursor-pointer flex items-center gap-2 rounded-[0.5rem] border px-2 py-1.5 text-start text-xs font-medium text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",

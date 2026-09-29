@@ -39,6 +39,29 @@ describe("SettingsPage store profile", () => {
     expect(await screen.findByText("Store profile saved.")).toBeInTheDocument();
   });
 
+  it("never writes the default colours over a store theme when only the name changes", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({
+      id: "ws_1",
+      name: "Nile Store",
+      tagline: null,
+      logoUrl: null,
+      themeSettings: { storeTheme: "warm" },
+    });
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "warm" } })]);
+    api.updateWorkspace.mockResolvedValue(fake<Workspace>({ id: "ws_1", name: "Nile Store" }));
+    const { user } = renderWithProviders(<SettingsPage />);
+
+    await user.click(within(profileSection()).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(api.updateWorkspace).toHaveBeenCalledTimes(1));
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
+      name: "Nile Store",
+      tagline: null,
+      logoUrl: null,
+      themeSettings: { storeTheme: "warm" },
+    });
+  });
+
   it("saves nothing, and says why, when the store is gone from the account", async () => {
     workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
     api.listWorkspaces.mockResolvedValue([]);

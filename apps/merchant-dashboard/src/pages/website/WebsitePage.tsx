@@ -22,6 +22,8 @@ import { TemplateLivePreview } from "@/components/TemplateLivePreview";
 import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 import { ThemeGallery } from "./ThemeGallery";
+import { TEMPLATE_COLOR_SOURCE } from "./editor/storeLook";
+import { ORIGINAL_LOOK, readThemeChoice } from "./editor/storeThemes";
 
 const STRINGS = {
   en: {
@@ -61,6 +63,55 @@ const STRINGS = {
     templatesTitle: "قوالب الصفحات",
   },
 } satisfies Messages;
+
+/** The "use this template" modal: its description and the site-name form. */
+const USE_STRINGS = {
+  en: {
+    description: "Preview what this template includes, then name your site.",
+    loadingDetails: "Loading template details…",
+    detailError: "The template preview could not be loaded. You can still create the site.",
+    retry: "Try again",
+    pagesOne: "This template includes one page, which will be copied to your site:",
+    pagesTwo: "This template includes 2 pages, which will be copied to your site:",
+    pagesFew: "This template includes {count} pages, which will be copied to your site:",
+    pagesMany: "This template includes {count} pages, which will be copied to your site:",
+    pagesNone: "This template includes no pages yet.",
+    siteName: "Site name",
+    siteNameHint: "A temporary address (subdomain) is made from it. You can change it later.",
+    siteNamePlaceholder: "My store",
+    cancel: "Cancel",
+    creating: "Creating…",
+    useTemplate: "Use this template",
+    created: "Site \"{name}\" created.",
+  },
+  ar: {
+    description: "عاين محتوى القالب، ثم اختر اسمًا لموقعك.",
+    loadingDetails: "جارٍ تحميل تفاصيل القالب…",
+    detailError: "تعذّر تحميل معاينة القالب، ويمكنك مع ذلك متابعة إنشاء الموقع.",
+    retry: "إعادة المحاولة",
+    pagesOne: "يتضمن هذا القالب صفحة واحدة ستُنسخ إلى موقعك:",
+    pagesTwo: "يتضمن هذا القالب صفحتين ستُنسخان إلى موقعك:",
+    pagesFew: "يتضمن هذا القالب {count} صفحات ستُنسخ إلى موقعك:",
+    pagesMany: "يتضمن هذا القالب {count} صفحة ستُنسخ إلى موقعك:",
+    pagesNone: "لا يتضمن هذا القالب صفحات بعد.",
+    siteName: "اسم الموقع",
+    siteNameHint: "يُنشأ منه عنوان مؤقت (نطاق فرعي) يمكنك تغييره لاحقًا.",
+    siteNamePlaceholder: "متجري",
+    cancel: "إلغاء",
+    creating: "جارٍ الإنشاء…",
+    useTemplate: "استخدم هذا القالب",
+    created: "تم إنشاء الموقع \"{name}\".",
+  },
+} satisfies Messages;
+
+/** "This template includes N pages" with Arabic's one / two / few / many forms. */
+function pagesLine(t: Record<keyof (typeof USE_STRINGS)["en"], string>, count: number): string {
+  if (count === 0) return t.pagesNone;
+  if (count === 1) return t.pagesOne;
+  if (count === 2) return t.pagesTwo;
+  const few = count % 100 >= 3 && count % 100 <= 10;
+  return fmt(few ? t.pagesFew : t.pagesMany, { count });
+}
 
 /**
  * Stands in for a template with no thumbnail and no live render (yet, or at
@@ -242,6 +293,7 @@ function UseTemplateForm({
   const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
   const navigate = useNavigate();
+  const t = useT(USE_STRINGS);
 
   const detail = useAsync(() => apiClient.getWebsiteTemplate(template.id), [template.id]);
 
@@ -249,22 +301,33 @@ function UseTemplateForm({
    * A template's colour lives in its `globalStyles`, which createWebsite copies
    * onto the website row — but the storefront paints from the workspace's
    * `themeSettings`, so a "perfume" template would open in the platform blue.
-   * Carry the colour across here, only when the store has never chosen one, so
-   * a merchant's own look is never overwritten by picking a template. Best
-   * effort: the site exists either way, so a failure here is not surfaced.
+   * Carry the colour across here, only when the store has chosen neither a
+   * theme nor an accent of its own, so a merchant's look is never overwritten
+   * by picking a template. It is marked as the template's
+   * (`primaryColorSource`), so a theme picked later still shows its own accent.
+   * Best effort: the site exists either way, so a failure here is not surfaced.
    */
   async function applyTemplateColour() {
     const styles = detail.data?.globalStyles;
     const colour = styles && typeof styles.primaryColor === "string" ? styles.primaryColor.trim() : "";
-    const hasColour = (themeSettings: Record<string, unknown> | undefined) => {
-      const existing = themeSettings?.primaryColor;
-      return typeof existing === "string" && existing.trim() !== "";
+    const hasOwnLook = (themeSettings: Record<string, unknown> | undefined) => {
+      const set = (key: string) => {
+        const existing = themeSettings?.[key];
+        return typeof existing === "string" && existing.trim() !== "";
+      };
+      return (
+        set("primaryColor") ||
+        set("primaryColorDark") ||
+        readThemeChoice(themeSettings?.storeTheme) !== ORIGINAL_LOOK
+      );
     };
-    if (!/^#[0-9a-f]{6}$/i.test(colour) || hasColour(currentWorkspace?.themeSettings)) return;
+    if (!/^#[0-9a-f]{6}$/i.test(colour) || hasOwnLook(currentWorkspace?.themeSettings)) return;
     try {
-      // Asked again of the server's copy: another tab may have picked a colour since.
+      // Asked again of the server's copy: another tab may have picked a look since.
       await saveThemeSettings((current) =>
-        hasColour(current) ? null : { themeSettings: { ...current, primaryColor: colour } }
+        hasOwnLook(current)
+          ? null
+          : { themeSettings: { ...current, primaryColor: colour, primaryColorSource: TEMPLATE_COLOR_SOURCE } }
       );
     } catch {
       /* the site was created; the merchant can still pick a colour in the editor */
@@ -288,7 +351,7 @@ function UseTemplateForm({
     try {
       const result = await apiClient.createWebsite(workspaceId, payload);
       await applyTemplateColour();
-      toast.success(`Site "${result.website.name}" created.`);
+      toast.success(fmt(t.created, { name: result.website.name }));
       navigate(`/website/${result.website.id}/edit`);
     } catch (err) {
       const fields = getFieldErrors(err);
@@ -308,24 +371,22 @@ function UseTemplateForm({
       <div className="rounded-[0.5rem] border border-line bg-paper px-4 py-3 text-sm">
         {detail.loading ? (
           <span className="flex items-center gap-2 text-ink-soft">
-            <Spinner className="size-4" /> جارٍ تحميل تفاصيل القالب…
+            <Spinner className="size-4" /> {t.loadingDetails}
           </span>
         ) : detail.error ? (
           <span className="flex flex-wrap items-center gap-2 text-ink-soft">
-            تعذّر تحميل معاينة القالب، بس تقدر تكمّل الإنشاء عادي.
+            {t.detailError}
             <button
               type="button"
               onClick={() => detail.refresh()}
               className="cursor-pointer font-medium text-primary hover:underline"
             >
-              إعادة المحاولة
+              {t.retry}
             </button>
           </span>
         ) : (
           <>
-            <p className="text-ink-soft">
-              القالب فيه {pages.length} {pages.length === 1 ? "صفحة" : "صفحات"} هتتنسخ لموقعك:
-            </p>
+            <p className="text-ink-soft">{pagesLine(t, pages.length)}</p>
             {pages.length > 0 && (
               <ul className="mt-1.5 flex flex-wrap gap-1.5">
                 {pages.map((p) => (
@@ -343,21 +404,21 @@ function UseTemplateForm({
       </div>
 
       <TextField
-        label="Site name"
+        label={t.siteName}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        hint="هيتولّد منه رابط مؤقت (subdomain) تقدر تغيّره بعدين."
-        placeholder="My store"
+        hint={t.siteNameHint}
+        placeholder={t.siteNamePlaceholder}
       />
 
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {t.cancel}
         </Button>
         <Button type="submit" disabled={saving || name.trim().length === 0}>
-          {saving ? "Creating…" : "Use this template"}
+          {saving ? t.creating : t.useTemplate}
         </Button>
       </div>
     </form>
@@ -454,6 +515,7 @@ function ExistingSites() {
 
 export function WebsitePage() {
   const t = useT(STRINGS);
+  const tUse = useT(USE_STRINGS);
   const templates = useAsync(() => apiClient.listWebsiteTemplates(), []);
 
   const [selected, setSelected] = useState<WebsiteTemplateSummary | null>(null);
@@ -543,7 +605,7 @@ export function WebsitePage() {
         open={selected !== null}
         onClose={() => setSelected(null)}
         title={selected ? selected.name : ""}
-        description="Preview what this template ships with, then name your site."
+        description={tUse.description}
         className="max-w-6xl"
       >
         {selected && (

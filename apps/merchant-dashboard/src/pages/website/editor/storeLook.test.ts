@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  TEMPLATE_COLOR_SOURCE,
+  accentOf,
   lookToPreview,
   lookToShellPreview,
   lookToWorkspacePatch,
@@ -14,6 +16,7 @@ function baseLook(overrides: Partial<StoreLook> = {}): StoreLook {
   return {
     storeTheme: "original",
     primaryColor: "#1E40AF",
+    primaryColorFromTemplate: false,
     primaryColorDark: null,
     secondaryColor: null,
     fontFamily: "modern",
@@ -31,6 +34,7 @@ describe("store look", () => {
     expect(readStoreLook({ themeSettings: {}, logoUrl: null })).toEqual({
       storeTheme: "original",
       primaryColor: null,
+      primaryColorFromTemplate: false,
       primaryColorDark: null,
       secondaryColor: null,
       fontFamily: "classic",
@@ -130,6 +134,36 @@ describe("store look", () => {
       expect(sameLook(baseLook(), baseLook({ storeTheme: "warm" }))).toBe(false);
       expect(sameLook(baseLook(), baseLook({ primaryColorDark: "#FFFFFF" }))).toBe(false);
       expect(sameLook(baseLook(), baseLook())).toBe(true);
+    });
+  });
+
+  describe("a colour carried over from a website template", () => {
+    const saved = { storeTheme: "warm", primaryColor: "#2563eb", primaryColorSource: TEMPLATE_COLOR_SOURCE };
+
+    it("never paints over a theme's own accent, in the panel or the preview", () => {
+      const look = readStoreLook({ themeSettings: saved, logoUrl: null });
+      expect(look.primaryColorFromTemplate).toBe(true);
+      expect(accentOf(look)).toBeNull();
+      expect(lookToPreview(look)).not.toHaveProperty("primaryColor");
+    });
+
+    it("still counts on the original look", () => {
+      const look = readStoreLook({ themeSettings: { ...saved, storeTheme: undefined }, logoUrl: null });
+      expect(accentOf(look)).toBe("#2563EB");
+      expect(accentOf(look, "elegant")).toBeNull();
+      expect(lookToPreview(look).primaryColor).toBe("#2563EB");
+    });
+
+    it("keeps its marker through an unrelated save, and drops it once the merchant picks a colour", () => {
+      const look = readStoreLook({ themeSettings: saved, logoUrl: null });
+      expect(lookToWorkspacePatch(saved, { ...look, fontFamily: "system" }).themeSettings.primaryColorSource).toBe(
+        TEMPLATE_COLOR_SOURCE
+      );
+      const picked = { ...look, primaryColor: "#B45309", primaryColorFromTemplate: false };
+      const patch = lookToWorkspacePatch(saved, picked).themeSettings;
+      expect(patch).not.toHaveProperty("primaryColorSource");
+      expect(patch.primaryColor).toBe("#B45309");
+      expect(sameLook(look, picked)).toBe(false);
     });
   });
 
