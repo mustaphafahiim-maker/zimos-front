@@ -1,5 +1,10 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
+  CatalogOptionName,
+  CollectionReorderItem,
+  StorefrontListing,
+  StorefrontListingParams,
+  StorefrontSuggestions,
   AddCustomerAddressPayload,
   AdminAnnouncement,
   AdminAnnouncementInput,
@@ -1683,6 +1688,30 @@ export class ApiClient {
     return collection;
   }
 
+  /** Rearranges the tree: each listed collection's parent and position, checked as a whole. */
+  async reorderCollections(workspaceId: string, items: CollectionReorderItem[]) {
+    return this.request<{ changed: number }>(`${this.catalogBase(workspaceId)}/collections/reorder`, {
+      method: "POST",
+      body: { items },
+    });
+  }
+
+  /** The products of one collection, first to last; any left out keep their order after these. */
+  async reorderCollectionProducts(workspaceId: string, collectionId: string, productIds: string[]) {
+    return this.request<{ productIds: string[] }>(
+      `${this.catalogBase(workspaceId)}/collections/${collectionId}/products/order`,
+      { method: "PUT", body: { productIds } }
+    );
+  }
+
+  /** Product option names the store's variants use ("Size", "Color"). */
+  async listCatalogOptionNames(workspaceId: string) {
+    const { options } = await this.request<{ options: CatalogOptionName[] }>(
+      `${this.catalogBase(workspaceId)}/option-names`
+    );
+    return options;
+  }
+
   async deleteCollection(workspaceId: string, collectionId: string) {
     return this.request<DeletedResponse>(
       `${this.catalogBase(workspaceId)}/collections/${collectionId}`,
@@ -2586,6 +2615,35 @@ export class ApiClient {
     return this.request<StorefrontProductList>(`/store/${workspaceId}/products${qs ? `?${qs}` : ""}`, {
       auth: false,
     });
+  }
+
+  /**
+   * The searchable, filterable listing. Sends the new parameters, so the
+   * backend answers with page / total / facets rather than a cursor.
+   */
+  async searchStorefrontProducts(workspaceId: string, params: StorefrontListingParams = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.collection) query.set("collection", params.collection);
+    for (const tag of params.tags ?? []) query.append("tag", tag);
+    if (params.minPrice !== undefined) query.set("minPrice", String(params.minPrice));
+    if (params.maxPrice !== undefined) query.set("maxPrice", String(params.maxPrice));
+    for (const [name, values] of Object.entries(params.options ?? {})) {
+      for (const value of values) query.append(`option[${name}]`, value);
+    }
+    query.set("sort", params.sort ?? "newest");
+    query.set("page", String(params.page ?? 1));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.facets) query.set("facets", "true");
+    return this.request<StorefrontListing>(`/store/${workspaceId}/products?${query.toString()}`, { auth: false });
+  }
+
+  /** Suggestions for the search box, while the shopper types. */
+  async suggestStorefrontProducts(workspaceId: string, q: string, init?: { signal?: AbortSignal }) {
+    return this.request<StorefrontSuggestions>(
+      `/store/${workspaceId}/products/suggest?q=${encodeURIComponent(q)}`,
+      { auth: false, ...(init?.signal ? { signal: init.signal } : {}) }
+    );
   }
 
   async getStorefrontProduct(workspaceId: string, idOrSlug: string) {

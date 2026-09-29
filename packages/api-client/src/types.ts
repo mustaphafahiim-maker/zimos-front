@@ -150,6 +150,8 @@ export interface UpdateWorkspacePayload {
      * `checkout_settings`; a `null` rule is "off".
      */
     fraud_rules?: { [K in keyof FraudRules]?: FraudRules[K] | null } | null;
+    /** Sent whole; `null` goes back to the defaults. */
+    storefront_catalog?: StorefrontCatalogSettings | null;
     /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
     confirmation_whatsapp_template?: string | null;
   };
@@ -428,6 +430,91 @@ export interface StorefrontMeta {
   currency: string;
   /** Always fully populated — an unconfigured store gets the defaults. */
   checkout: CheckoutSettings;
+  /** The product listing's sidebar and default sort; always populated. */
+  catalog?: StorefrontCatalogSettings;
+}
+
+/** How a product listing may be sorted. "relevance" only means something with a search. */
+export type StorefrontSort = "relevance" | "newest" | "price_asc" | "price_desc" | "name" | "position";
+export type CatalogDefaultSort = Exclude<StorefrontSort, "relevance">;
+
+/**
+ * One sidebar filter, in order: the collection tree, a price range, tags,
+ * every product option ("options"), or one option by name.
+ */
+export type CatalogFilter =
+  | { key: "collections" }
+  | { key: "price" }
+  | { key: "tags" }
+  | { key: "options" }
+  | { key: "option"; name: string };
+
+/** settings.storefront_catalog — sent whole on save; the storefront reads it as store.catalog. */
+export interface StorefrontCatalogSettings {
+  sidebar_enabled: boolean;
+  default_sort: CatalogDefaultSort;
+  filters: CatalogFilter[];
+}
+
+export const DEFAULT_CATALOG_SETTINGS: StorefrontCatalogSettings = {
+  sidebar_enabled: true,
+  default_sort: "newest",
+  filters: [{ key: "collections" }, { key: "price" }, { key: "options" }, { key: "tags" }],
+};
+
+/** Query for the searchable, filterable listing (GET /store/:id/products). */
+export interface StorefrontListingParams {
+  search?: string;
+  /** A collection id or slug; its sub-collections are included. */
+  collection?: string;
+  tags?: string[];
+  /** Minor units. */
+  minPrice?: number;
+  maxPrice?: number;
+  /** Option name → accepted values, e.g. { Size: ["M", "L"] }. */
+  options?: Record<string, string[]>;
+  sort?: StorefrontSort;
+  page?: number;
+  limit?: number;
+  facets?: boolean;
+}
+
+export interface StorefrontFacets {
+  collections: Array<{ id: string; name: string; slug: string; parentId: string | null; count: number }>;
+  tags: Array<{ value: string; count: number }>;
+  options: Array<{ name: string; values: Array<{ value: string; count: number }> }>;
+  price: { min: number | null; max: number | null };
+}
+
+export interface StorefrontListing extends StorefrontProductList {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  sort: StorefrontSort;
+  /** Set when filtering by a collection. */
+  collection?: StorefrontCollection & { parentId: string | null; imageUrl: string | null };
+  /** From the top level down to the collection, inclusive. */
+  breadcrumbs?: Array<{ id: string; name: string; slug: string }>;
+  /** With a search: the same as `products`. */
+  matches?: StorefrontProduct[];
+  /** With a search, first page only: close products that did not match, never repeating one. */
+  related?: StorefrontProduct[];
+  facets?: StorefrontFacets;
+}
+
+/** GET /store/:id/products/suggest — at most eight rows, collections first. */
+export interface StorefrontSuggestions {
+  query: string;
+  collections: Array<{ id: string; name: string; slug: string; imageUrl: string | null }>;
+  products: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    priceAmount: string | null;
+    currency: string | null;
+  }>;
 }
 
 export interface StorefrontVariant {
@@ -520,6 +607,10 @@ export interface StorefrontCollection {
   slug: string;
   description: string | null;
   seo: Record<string, unknown> | null;
+  /** Null for a top-level collection. */
+  parentId?: string | null;
+  position?: number;
+  imageUrl?: string | null;
 }
 
 /**
@@ -731,6 +822,13 @@ export interface CollectionSummary {
   description: string | null;
   rules: Record<string, unknown> | null;
   seo: Record<string, unknown>;
+  /** The tree: null is a top-level collection (at most three levels). */
+  parentId: string | null;
+  /** Order among siblings, lowest first. */
+  position: number;
+  imageUrl: string | null;
+  /** Products directly in it (list only). */
+  productCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -778,6 +876,9 @@ export interface CollectionProductRef {
   name: string;
   slug: string;
   status: ProductStatus;
+  media?: ProductMedia[];
+  /** The product's place in this collection, lowest first. */
+  collectionPosition?: number;
 }
 
 export interface CollectionDetail extends CollectionSummary {
@@ -904,6 +1005,24 @@ export interface CreateCollectionPayload {
   description?: string;
   rules?: Record<string, unknown> | null;
   seo?: Record<string, unknown>;
+  /** Null or absent: a top-level collection. A cycle or a fourth level is refused (422). */
+  parentId?: string | null;
+  /** Absent: after its siblings. */
+  position?: number;
+  imageUrl?: string | null;
+}
+
+/** POST /collections/reorder — each listed collection's parent and position. */
+export interface CollectionReorderItem {
+  id: string;
+  parentId?: string | null;
+  position?: number;
+}
+
+/** GET /catalog/option-names — option names in use, most used first. */
+export interface CatalogOptionName {
+  name: string;
+  productCount: number;
 }
 
 export type UpdateCollectionPayload = Partial<CreateCollectionPayload>;

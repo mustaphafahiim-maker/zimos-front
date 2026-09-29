@@ -1,38 +1,66 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { StorefrontCollection } from "@store-builder/api-client";
-import { ArrowIcon } from "@/components/Icons";
+import {
+  ApiError,
+  DEFAULT_CATALOG_SETTINGS,
+  type StorefrontListing,
+  type StorefrontProduct,
+} from "@store-builder/api-client";
+import { CatalogFilters } from "@/components/catalog/CatalogFilters";
+import { FilterDrawer } from "@/components/catalog/FilterDrawer";
+import { SortSelect } from "@/components/catalog/SortSelect";
+import { ChevronIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
-import { btnSecondary, container } from "@/components/ui";
-import { getDictionary } from "@/lib/i18n";
+import { btnSecondary, container, focusRing } from "@/components/ui";
+import { activeFilterCount, catalogHref, readCatalogState, toListingParams, type CatalogState } from "@/lib/catalogQuery";
+import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
-import { getStoreMeta } from "@/lib/storeMeta";
+import { getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
 
 export const revalidate = 60;
 
 type Params = Promise<{ workspaceId: string }>;
-type Query = Promise<{ collection?: string | string[]; after?: string | string[] }>;
+type Query = Promise<Record<string, string | string[] | undefined>>;
 
 const PAGE_SIZE = 24;
 
-function one(value: string | string[] | undefined): string | undefined {
-  return typeof value === "string" && value.trim() !== "" ? value : undefined;
-}
-
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { workspaceId } = await params;
+export async function generateMetadata({ params, searchParams }: { params: Params; searchParams: Query }): Promise<Metadata> {
+  const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
   const store = await getStoreMeta(workspaceId);
   if (!store) return {};
   const t = getDictionary(await getStoreLocale(store));
-  return { title: t.home.shopAll, alternates: { canonical: "/products" } };
+  const state = readCatalogState(query);
+  if (state.q) {
+    // A results page is the shopper's own query, not a page to index.
+    return { title: t.catalog.searchTitle(state.q), robots: { index: false, follow: true } };
+  }
+  if (state.collection) {
+    const collections = await getStoreCollections(workspaceId);
+    const found = collections.find((c) => c.slug === state.collection || c.id === state.collection);
+    if (found) {
+      return {
+        title: found.name,
+        description: found.description || undefined,
+        alternates: { canonical: `/products?collection=${encodeURIComponent(found.slug)}` },
+      };
+    }
+  }
+  return { title: t.catalog.allProducts, alternates: { canonical: "/products" } };
 }
 
 /**
- * Every published product, the page the templates' "Shop now" buttons open.
- * Always the catalogue — it never depends on a website being published — with
- * the store's collections as chips and a link on to the next page.
+ * Every published product, one collection's, or a search's results — the
+ * page the templates' "Shop now" buttons, the collection chips and the header
+ * search all lead to. Its state is its URL (lib/catalogQuery.ts): search,
+ * collection, tags, price, options, sort and page. The sidebar and its
+ * filters are the merchant's choice (settings.storefront_catalog, read as
+ * store.catalog); on a phone they open as a sheet.
+ *
+ * Collections live here as `?collection=<slug>` rather than on a route of
+ * their own: "products" is a path the website editor already reserves, while
+ * a new "/collections" route would shadow any page a merchant built there.
  */
 export default async function ProductsPage({ params, searchParams }: { params: Params; searchParams: Query }) {
   const [{ workspaceId }, query] = await Promise.all([params, searchParams]);
@@ -41,94 +69,263 @@ export default async function ProductsPage({ params, searchParams }: { params: P
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
+  const catalog = store.catalog ?? DEFAULT_CATALOG_SETTINGS;
+  const state = readCatalogState(query);
   const client = await createServerStorefrontApiClient();
 
-  const activeCollection = one(query.collection);
-  const after = one(query.after);
-  const [productList, collections] = await Promise.all([
-    client
-      .listStorefrontProducts(workspaceId, { limit: PAGE_SIZE, collectionId: activeCollection, cursor: after })
-      // An unknown collection or a stale cursor is simply an empty page.
-      .catch(() => ({ products: [], nextCursor: null })),
-    client.listStorefrontCollections(workspaceId).catch((): StorefrontCollection[] => []),
-  ]);
+  let listing: StorefrontListing;
+  try {
+    listing = await client.searchStorefrontProducts(workspaceId, {
+      ...toListingParams(state, catalog.default_sort),
+      limit: PAGE_SIZE,
+      facets: catalog.sidebar_enabled,
+    });
+  } catch (err) {
+    // A collection that no longer exists.
+    if (err instanceof ApiError && err.status === 404) notFound();
+    throw err;
+  }
+  const collections = catalog.sidebar_enabled ? await getStoreCollections(workspaceId) : [];
+  const filterCount = activeFilterCount(state);
+  const sidebar = catalog.sidebar_enabled && listing.facets !== undefined;
+  const title = state.q ? t.catalog.searchTitle(state.q) : (listing.collection?.name ?? t.catalog.allProducts);
+  const clearHref = catalogHref(state, { collection: null, tags: [], min: null, max: null, options: {} });
 
-  const chip = (active: boolean) =>
-    `zt-chip inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
-      active
-        ? "border-primary bg-primary text-on-primary"
-        : "border-line bg-paper-raised text-ink-soft hover:border-primary hover:text-primary"
-    }`;
-  const listHref = (collection?: string, cursor?: string) => {
-    const qs = new URLSearchParams();
-    if (collection) qs.set("collection", collection);
-    if (cursor) qs.set("after", cursor);
-    const s = qs.toString();
-    return `/products${s ? `?${s}` : ""}`;
-  };
+  const filters = sidebar ? (
+    <CatalogFilters
+      state={state}
+      filters={catalog.filters}
+      facets={listing.facets}
+      collections={collections}
+      idPrefix="side"
+    />
+  ) : null;
 
   return (
     <main className="flex-1">
-      <section aria-labelledby="products-title" className={`${container} py-10 sm:py-12`}>
-        <h1 id="products-title" className="font-display text-3xl font-bold text-ink">
-          {t.home.shopAll}
-        </h1>
+      <div className={`${container} py-8 sm:py-10`}>
+        <Breadcrumbs t={t} listing={listing} searching={Boolean(state.q)} />
 
-        {collections.length > 0 && (
-          <nav aria-label={t.home.collections} className="-mx-4 mt-5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            <ul className="flex gap-2 pb-1">
-              <li>
-                <StoreLink
-                  href={listHref()}
-                  className={chip(!activeCollection)}
-                  aria-current={!activeCollection ? "page" : undefined}
-                >
-                  {t.home.allCollections}
-                </StoreLink>
-              </li>
-              {collections.map((c) => (
-                <li key={c.id}>
-                  <StoreLink
-                    href={listHref(c.id)}
-                    className={chip(activeCollection === c.id)}
-                    aria-current={activeCollection === c.id ? "page" : undefined}
-                  >
-                    {c.name}
-                  </StoreLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
-
-        {productList.products.length === 0 ? (
-          <p className="mt-8 rounded-2xl border border-dashed border-line bg-paper-raised py-16 text-center text-sm text-ink-soft">
-            {activeCollection ? t.home.emptyCollection : t.home.empty}
-          </p>
-        ) : (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {productList.products.map((product) => (
-              <ProductCard key={product.id} product={product} currency={store.currency} locale={locale} />
-            ))}
+        <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            {listing.collection?.imageUrl && (
+              // Merchant media are arbitrary remote URLs (no next/image allowlist).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={listing.collection.imageUrl}
+                alt=""
+                width={72}
+                height={72}
+                className="size-16 shrink-0 rounded-2xl border border-line object-cover sm:size-18"
+              />
+            )}
+            <div className="min-w-0">
+              <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{title}</h1>
+              {listing.collection?.description && (
+                <p className="mt-1 max-w-2xl text-sm text-ink-soft">{listing.collection.description}</p>
+              )}
+              <p className="mt-1 text-sm text-ink-soft" aria-live="polite">
+                {t.catalog.count(listing.total)}
+              </p>
+            </div>
           </div>
-        )}
+          <div className="flex flex-wrap items-center gap-3">
+            {sidebar && (
+              <FilterDrawer count={filterCount} total={listing.total}>
+                {/* The sheet's own copy: separate ids from the sidebar's. */}
+                <CatalogFilters
+                  state={state}
+                  filters={catalog.filters}
+                  facets={listing.facets}
+                  collections={collections}
+                  idPrefix="sheet"
+                />
+                {filterCount > 0 && (
+                  <StoreLink href={clearHref} scroll={false} className={`${btnSecondary} mt-6 w-full`}>
+                    {t.catalog.clearFilters}
+                  </StoreLink>
+                )}
+              </FilterDrawer>
+            )}
+            <SortSelect state={state} current={listing.sort} />
+          </div>
+        </header>
 
-        {(after || productList.nextCursor) && (
-          <nav aria-label={t.home.pages} className="mt-8 flex flex-wrap justify-center gap-3">
-            {after && (
-              <StoreLink href={listHref(activeCollection)} className={btnSecondary}>
-                {t.home.firstPage}
-              </StoreLink>
+        <div className={sidebar ? "mt-8 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10" : "mt-8"}>
+          {sidebar && (
+            <aside aria-label={t.catalog.filters} className="hidden lg:block">
+              {filters}
+              {filterCount > 0 && (
+                <StoreLink href={clearHref} scroll={false} className={`${btnSecondary} mt-6 w-full`}>
+                  {t.catalog.clearFilters}
+                </StoreLink>
+              )}
+            </aside>
+          )}
+
+          <div className="min-w-0">
+            {state.q ? (
+              <SearchResults t={t} state={state} listing={listing} currency={store.currency} locale={locale} />
+            ) : listing.products.length === 0 ? (
+              <EmptyState message={filterCount > 0 ? t.catalog.empty : t.home.empty}>
+                {filterCount > 0 && (
+                  <StoreLink href={clearHref} scroll={false} className={btnSecondary}>
+                    {t.catalog.clearFilters}
+                  </StoreLink>
+                )}
+              </EmptyState>
+            ) : (
+              <ProductGrid products={listing.products} currency={store.currency} locale={locale} />
             )}
-            {productList.nextCursor && (
-              <StoreLink href={listHref(activeCollection, productList.nextCursor)} className={btnSecondary} rel="next">
-                {t.home.morePage}
-                <ArrowIcon size={18} className="rtl:rotate-180" />
-              </StoreLink>
-            )}
-          </nav>
+
+            <Pagination t={t} state={state} listing={listing} />
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ProductGrid({ products, currency, locale }: { products: StorefrontProduct[]; currency: string; locale: Locale }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3">
+      {products.map((product) => (
+        <ProductCard key={product.id} product={product} currency={currency} locale={locale} />
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ message, children }: { message: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-line bg-paper-raised px-6 py-16 text-center">
+      <p className="text-sm text-ink-soft">{message}</p>
+      {children}
+    </div>
+  );
+}
+
+/** The matches, then — on the first page — products close to them that did not match. */
+function SearchResults({
+  t,
+  state,
+  listing,
+  currency,
+  locale,
+}: {
+  t: Dictionary;
+  state: CatalogState;
+  listing: StorefrontListing;
+  currency: string;
+  locale: Locale;
+}) {
+  const related = listing.related ?? [];
+  return (
+    <div className="space-y-12">
+      <section aria-labelledby="search-results-title">
+        <h2 id="search-results-title" className="mb-4 font-display text-xl font-bold text-ink">
+          {t.catalog.results}
+        </h2>
+        {listing.products.length === 0 ? (
+          <EmptyState message={t.catalog.noResults(state.q)}>
+            <p className="max-w-md text-sm text-ink-soft">{t.catalog.noResultsHint}</p>
+          </EmptyState>
+        ) : (
+          <ProductGrid products={listing.products} currency={currency} locale={locale} />
         )}
       </section>
-    </main>
+      {related.length > 0 && (
+        <section aria-labelledby="search-related-title">
+          <h2 id="search-related-title" className="mb-4 font-display text-xl font-bold text-ink">
+            {t.catalog.related}
+          </h2>
+          <ProductGrid products={related} currency={currency} locale={locale} />
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** Home › All products › the collection's parents › the collection (or the search). */
+function Breadcrumbs({ t, listing, searching }: { t: Dictionary; listing: StorefrontListing; searching: boolean }) {
+  const crumbs: Array<{ label: string; href?: string }> = [{ label: t.common.home, href: "/" }];
+  const trail = listing.breadcrumbs ?? [];
+  if (trail.length > 0 || searching) crumbs.push({ label: t.catalog.allProducts, href: "/products" });
+  else crumbs.push({ label: t.catalog.allProducts });
+  trail.forEach((c, i) =>
+    crumbs.push({ label: c.name, href: i < trail.length - 1 ? `/products?collection=${encodeURIComponent(c.slug)}` : undefined })
+  );
+  return (
+    <nav aria-label={t.catalog.breadcrumbs}>
+      <ol className="flex flex-wrap items-center gap-1 text-sm text-ink-soft">
+        {crumbs.map((crumb, i) => (
+          <li key={`${crumb.label}-${i}`} className="flex items-center gap-1">
+            {i > 0 && <ChevronIcon size={14} className="shrink-0 -rotate-90 rtl:rotate-90" aria-hidden />}
+            {crumb.href ? (
+              <StoreLink href={crumb.href} className={`inline-flex min-h-11 items-center rounded-md px-1 hover:text-primary ${focusRing}`}>
+                {crumb.label}
+              </StoreLink>
+            ) : (
+              <span aria-current="page" className="inline-flex min-h-11 items-center px-1 font-medium text-ink">
+                {crumb.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+/** Previous / numbered / next, the current page and two either side. */
+function Pagination({ t, state, listing }: { t: Dictionary; state: CatalogState; listing: StorefrontListing }) {
+  const pages = Math.max(1, Math.ceil(listing.total / listing.pageSize));
+  if (pages <= 1) return null;
+  const current = Math.min(listing.page, pages);
+  const shown = [...new Set([1, current - 2, current - 1, current, current + 1, current + 2, pages])]
+    .filter((p) => p >= 1 && p <= pages)
+    .sort((a, b) => a - b);
+  const cell = `inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors ${focusRing}`;
+
+  return (
+    <nav aria-label={t.catalog.pagination} className="mt-10">
+      <ul className="flex flex-wrap items-center justify-center gap-2">
+        {current > 1 && (
+          <li>
+            <StoreLink href={catalogHref(state, { page: current - 1 })} rel="prev" className={`${cell} border-line bg-paper-raised text-ink hover:border-primary hover:text-primary`}>
+              <ChevronIcon size={16} className="rotate-90 rtl:-rotate-90" aria-hidden />
+              <span className="sr-only">{t.catalog.previous}</span>
+            </StoreLink>
+          </li>
+        )}
+        {shown.map((page, i) => (
+          <li key={page} className="flex items-center gap-2">
+            {i > 0 && page - shown[i - 1] > 1 && <span aria-hidden className="text-ink-soft">…</span>}
+            {page === current ? (
+              <span aria-current="page" className={`${cell} border-primary bg-primary text-on-primary`}>
+                <span className="sr-only">{t.catalog.page(page)}</span>
+                <span aria-hidden>{page}</span>
+              </span>
+            ) : (
+              <StoreLink
+                href={catalogHref(state, { page })}
+                aria-label={t.catalog.page(page)}
+                className={`${cell} border-line bg-paper-raised text-ink hover:border-primary hover:text-primary`}
+              >
+                {page}
+              </StoreLink>
+            )}
+          </li>
+        ))}
+        {current < pages && (
+          <li>
+            <StoreLink href={catalogHref(state, { page: current + 1 })} rel="next" className={`${cell} border-line bg-paper-raised text-ink hover:border-primary hover:text-primary`}>
+              <span className="sr-only">{t.catalog.next}</span>
+              <ChevronIcon size={16} className="-rotate-90 rtl:rotate-90" aria-hidden />
+            </StoreLink>
+          </li>
+        )}
+      </ul>
+    </nav>
   );
 }

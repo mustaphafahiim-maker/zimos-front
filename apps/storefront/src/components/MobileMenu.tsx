@@ -8,6 +8,7 @@ import { useStore } from "@/lib/StoreContext";
 import type { ResolvedShellLink } from "@/lib/storeShell";
 import { CrossIcon, MenuIcon } from "./Icons";
 import { ShellLink } from "./ShellLink";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { ThemeToggle } from "./ThemeToggle";
 import { backdrop, focusRing, iconBtn, modalLayer, sheet } from "./ui";
 
@@ -27,11 +28,14 @@ export function MobileMenu({
   storeName,
   links,
   showTheme = true,
+  showLanguage = false,
   until = "sm",
 }: {
   storeName: string;
   links: ResolvedShellLink[];
   showTheme?: boolean;
+  /** The ع / EN switch, which the narrow header leaves out beside the search button. */
+  showLanguage?: boolean;
   until?: "sm" | "md";
 }) {
   const { t } = useStore();
@@ -98,10 +102,11 @@ export function MobileMenu({
           </ul>
         </nav>
 
-        {/* The theme toggle the narrow header leaves out; it labels itself. */}
-        {showTheme && (
-          <div className="flex items-center justify-end border-t border-line px-4 py-3">
-            <ThemeToggle />
+        {/* The controls the narrow header leaves out; each labels itself. */}
+        {(showTheme || showLanguage) && (
+          <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+            {showLanguage && <LanguageSwitch />}
+            {showTheme && <ThemeToggle />}
           </div>
         )}
       </div>
