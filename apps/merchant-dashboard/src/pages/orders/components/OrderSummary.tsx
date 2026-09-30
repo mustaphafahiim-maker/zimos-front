@@ -15,6 +15,8 @@ const STRINGS = {
     lineTotal: "Line total",
     offer: "Offer",
     sku: "SKU",
+    bumpBadge: "Checkout add-on",
+    upsellBadge: "Extra offer",
     subtotal: "Subtotal",
     discount: "Discount",
     shipping: "Shipping",
@@ -52,6 +54,8 @@ const STRINGS = {
     lineTotal: "الإجمالي",
     offer: "العرض",
     sku: "SKU",
+    bumpBadge: "إضافة عند الدفع",
+    upsellBadge: "عرض إضافي",
     subtotal: "المجموع الفرعي",
     discount: "الخصم",
     shipping: "الشحن",
@@ -132,6 +136,11 @@ export function OrderSummary({ order }: { order: Order }) {
                   <tr key={item.id} className="border-b border-line last:border-0 align-top">
                     <td className="py-2 pe-3">
                       <div className="font-medium text-ink">{item.productNameSnapshot}</div>
+                      {(item.isOrderBump || item.isUpsell) && (
+                        <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
+                          {item.isUpsell ? t.upsellBadge : t.bumpBadge}
+                        </span>
+                      )}
                       {formatOptions(item.variantOptionsSnapshot) && (
                         <div className="text-xs text-ink-soft">
                           {formatOptions(item.variantOptionsSnapshot)}

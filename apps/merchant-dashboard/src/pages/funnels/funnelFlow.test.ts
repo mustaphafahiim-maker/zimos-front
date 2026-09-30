@@ -361,7 +361,7 @@ describe("saving step pages", () => {
   beforeEach(() => Object.values(api).forEach((fn) => fn.mockClear()));
 
   function saved(overrides: Partial<UiStep> = {}): UiStep {
-    return { id: "s1", key: "landing", name: "Landing", type: "landing", offerId: null, experimentId: null, seo: {}, tree: stepPageTree("landing", "en"), x: 40, y: 64, ...overrides };
+    return { id: "s1", key: "landing", name: "Landing", type: "landing", offerId: null, bumpOfferId: null, experimentId: null, seo: {}, tree: stepPageTree("landing", "en"), x: 40, y: 64, ...overrides };
   }
 
   it("sends builderData only when the page changed", async () => {
@@ -374,6 +374,18 @@ describe("saving step pages", () => {
     const tree: PageTree = { ...before.steps[0].tree, sections: before.steps[0].tree.sections.slice(1) };
     await saveFunnelDiff("w1", before, uiFunnel([saved({ tree })]));
     expect(api.funnelsUpdateStep).toHaveBeenCalledWith(expect.anything(), "w1", "f1", "s1", { builderData: tree });
+  });
+
+  it("saves a checkout step's add-on offer, and clears it with the step type", async () => {
+    const checkout = (over: Partial<UiStep> = {}) => saved({ key: "checkout", type: "checkout", tree: stepPageTree("checkout", "en"), ...over });
+    const before = uiFunnel([checkout()]);
+    await saveFunnelDiff("w1", before, uiFunnel([checkout({ bumpOfferId: "of_1" })]));
+    expect(api.funnelsUpdateStep).toHaveBeenCalledWith(expect.anything(), "w1", "f1", "s1", { bumpOfferId: "of_1" });
+
+    api.funnelsUpdateStep.mockClear();
+    const withBump = uiFunnel([checkout({ bumpOfferId: "of_1" })]);
+    await saveFunnelDiff("w1", withBump, uiFunnel([checkout({ type: "sales", bumpOfferId: null })]));
+    expect(api.funnelsUpdateStep).toHaveBeenCalledWith(expect.anything(), "w1", "f1", "s1", { stepType: "sales", bumpOfferId: null });
   });
 
   it("creates a new step with its own page", async () => {

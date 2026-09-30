@@ -130,6 +130,7 @@ export default async function StoreLayout({
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
     checkout: resolveCheckoutSettings(store.checkout),
+    orderBump: store.orderBump ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.

@@ -18,7 +18,14 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
+import {
+  afterOrder,
+  isOrderBumpRefused,
+  orderErrorMessage,
+  placeCodOrder,
+  serverFieldErrors,
+  type OrderLine,
+} from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
@@ -53,7 +60,7 @@ const FORM_PREFIX = "quick";
 export function ProductLanding({
   workspaceId,
   product,
-  bump,
+  bump: bumpOffer,
   countdownHours,
   checkoutSettings,
 }: {
@@ -122,6 +129,9 @@ export function ProductLanding({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bumpOn, setBumpOn] = useState(false);
+  // Refused by the server since this page loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
+  const bump = bumpGone ? null : bumpOffer;
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
@@ -166,13 +176,13 @@ export function ProductLanding({
     const orderLine: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
     const visitorId = getVisitorId(workspaceId);
 
-    const bumpLine: OrderLine | null =
-      bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
     setSubmitting(true);
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
+    // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: bumpLine ? undefined : orderLine }),
+      ...toCheckoutPayload(values, fields, { item: orderLine }),
+      ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
@@ -183,7 +193,6 @@ export function ProductLanding({
           basePath,
           payload,
           method,
-          lines: bumpLine ? [orderLine, bumpLine] : undefined,
           visitorId,
         });
         if (external) {
@@ -198,7 +207,6 @@ export function ProductLanding({
         client,
         workspaceId,
         payload,
-        lines: bumpLine ? [orderLine, bumpLine] : undefined,
         visitorId,
       });
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
@@ -208,6 +216,11 @@ export function ProductLanding({
         setSubmitting(false);
         autosave.resume();
         return;
+      }
+      if (isOrderBumpRefused(err)) {
+        // The totals above drop the add-on with it; the shopper confirms again.
+        setBumpOn(false);
+        setBumpGone(true);
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);

@@ -13,7 +13,7 @@
  */
 import type { ApiClient } from "../client";
 import type { FunnelStepTypeDto } from "./funnels";
-import type { PageTree } from "../types";
+import type { PageTree, StorefrontOrderBump } from "../types";
 
 // ------------------------------------------------------------------ types --
 
@@ -58,6 +58,8 @@ export interface FunnelRuntimeState {
   session: FunnelRuntimeSession;
   step?: FunnelRuntimeStep;
   offer?: FunnelRuntimeOffer;
+  /** A checkout step's order bump; null when its offer can't be sold right now. */
+  bump?: StorefrontOrderBump | null;
 }
 
 export interface FunnelRuntimeStartResult extends FunnelRuntimeState {

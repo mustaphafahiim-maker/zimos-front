@@ -247,6 +247,7 @@ const en = {
       rejected: "Sorry, we couldn't place this order online. Please contact the store and we'll gladly help you complete it.",
       customFields:
         "A product in your cart is missing a detail, or its photo expired. Remove it and add it again from its page.",
+      bumpUnavailable: "The add-on you ticked is no longer available, so we took it off. Place the order again without it.",
       unavailable: "This product is unavailable right now.",
     },
   },
@@ -743,6 +744,7 @@ const ar: Dictionary = {
       generic: "تعذّر إتمام الطلب، حاول تاني.",
       rejected: "عذرًا، مش قادرين نكمّل الطلب ده أونلاين. تواصل مع المتجر وهيساعدوك تكمّله بكل سرور.",
       customFields: "منتج في السلة ناقصه بيانات أو صورته انتهت صلاحيتها. شيله وضيفه تاني من صفحته.",
+      bumpUnavailable: "الإضافة اللي اخترتها مبقتش متاحة، فشلناها من الطلب. أكّد الطلب تاني من غيرها.",
       unavailable: "المنتج غير متوفر حاليًا.",
     },
   },

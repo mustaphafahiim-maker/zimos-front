@@ -4,7 +4,10 @@ import type { OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { GiftIcon } from "../Icons";
 
-/** "Add to your order" checkbox card, shown right above the submit button. */
+/**
+ * "Add to your order" checkbox card, shown right above the submit button: the
+ * offer the merchant chose (store settings, or the funnel checkout step).
+ */
 export function OrderBumpCard({
   bump,
   checked,
@@ -49,8 +52,9 @@ export function OrderBumpCard({
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold uppercase tracking-wide text-primary">{t.bump.title}</span>
+        <span className="block text-xs font-semibold uppercase tracking-wide text-primary">{bump.heading || t.bump.title}</span>
         <span className="mt-0.5 block text-sm font-semibold text-ink">{bump.name}</span>
+        {bump.detail && <span className="block text-xs font-medium text-ink-soft">{bump.detail}</span>}
         {bump.description && (
           <span className="mt-0.5 line-clamp-2 block text-xs text-ink-soft">{bump.description}</span>
         )}

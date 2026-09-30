@@ -162,6 +162,7 @@ import type {
   MediaUploadResponse,
   Membership,
   Offer,
+  WorkspaceOfferOption,
   Order,
   OrderListParams,
   OrderListResponse,
@@ -1622,6 +1623,18 @@ export class ApiClient {
   async listOffers(workspaceId: string, productId: string) {
     const { offers } = await this.request<{ offers: Offer[] }>(
       `${this.catalogBase(workspaceId)}/products/${productId}/offers`
+    );
+    return offers;
+  }
+
+  /** Active offers across the store (product name, then offer name) — for pickers. */
+  async listWorkspaceOffers(workspaceId: string, params: { q?: string; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    const { offers } = await this.request<{ offers: WorkspaceOfferOption[] }>(
+      `${this.catalogBase(workspaceId)}/offers${qs ? `?${qs}` : ""}`
     );
     return offers;
   }

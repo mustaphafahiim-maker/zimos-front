@@ -70,6 +70,8 @@ export interface WorkspaceSettings {
    * {items} {total} {customerName}.
    */
   confirmation_whatsapp_template?: string;
+  /** The store checkout's order bump as stored — see OrderBumpSettings. */
+  order_bump?: OrderBumpSettings;
   [key: string]: unknown;
 }
 
@@ -152,6 +154,12 @@ export interface UpdateWorkspacePayload {
     fraud_rules?: { [K in keyof FraudRules]?: FraudRules[K] | null } | null;
     /** Sent whole; `null` goes back to the defaults. */
     storefront_catalog?: StorefrontCatalogSettings | null;
+    /**
+     * Sent whole; `null` removes it. Switching it on with an offer that cannot
+     * be a bump (archived, unpriced, a product with custom fields, another
+     * store's) is refused with 422.
+     */
+    order_bump?: OrderBumpSettings | null;
     /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
     confirmation_whatsapp_template?: string | null;
   };
@@ -432,6 +440,46 @@ export interface StorefrontMeta {
   checkout: CheckoutSettings;
   /** The product listing's sidebar and default sort; always populated. */
   catalog?: StorefrontCatalogSettings;
+  /** The store checkout's order bump; null when none is set or it can't be sold right now. */
+  orderBump?: StorefrontOrderBump | null;
+}
+
+/**
+ * settings.order_bump: the offer the store's checkout (product page and cart
+ * checkout) offers as an "add to your order" tick box. The offer id is kept
+ * while it is switched off.
+ */
+export interface OrderBumpSettings {
+  enabled: boolean;
+  offer_id: string | null;
+  /** Replaces the card's "Add to your order" heading. */
+  title?: string | null;
+  description?: string | null;
+}
+
+/**
+ * An order bump as the storefront shows it (store.orderBump, or a funnel
+ * checkout step's `bump`). Ticking it sends `orderBump: { offerId }` with the
+ * checkout; the server builds the line from the offer itself.
+ */
+export interface StorefrontOrderBump {
+  offerId: string;
+  /** The offer's first line — what the order line is filed under (and what a shipping quote needs). */
+  variantId: string;
+  productId: string;
+  productSlug: string | null;
+  /** The merchant's heading, or null for the default one. */
+  title: string | null;
+  /** The offer's name. */
+  name: string;
+  productName: string;
+  description: string | null;
+  imageUrl: string | null;
+  priceAmount: number;
+  /** What the offer's contents cost one by one, when that is more than its price. */
+  compareAtAmount: number | null;
+  currency: string;
+  lines: Array<{ variantId: string; quantity: number }>;
 }
 
 /** How a product listing may be sorted. "relevance" only means something with a search. */
@@ -777,6 +825,12 @@ export interface CheckoutPayload {
   checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
   item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
+  /**
+   * The shopper ticked the order bump. Accepted only when it is the bump this
+   * checkout offers (422 ORDER_BUMP_INVALID otherwise); 409
+   * ORDER_BUMP_UNAVAILABLE when it has just sold out or been withdrawn.
+   */
+  orderBump?: { offerId: string };
 }
 
 // ---------------------------------------------------------------------
@@ -872,6 +926,24 @@ export interface Offer {
   lines: OfferLine[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** Why an offer can't be an order bump (GET /catalog/offers → bumpProblem). */
+export type OrderBumpProblem = "not_found" | "inactive" | "no_price" | "no_lines" | "custom_fields";
+
+/** One active offer of the store, for pickers (GET /catalog/offers). */
+export interface WorkspaceOfferOption {
+  id: string;
+  name: string;
+  priceAmount: string | null;
+  currency: string;
+  isDefault: boolean;
+  productId: string;
+  productName: string;
+  imageUrl: string | null;
+  lines: Array<{ variantId: string; quantity: number }>;
+  /** null when it can be an order bump. */
+  bumpProblem: OrderBumpProblem | null;
 }
 
 export interface CollectionSummary {

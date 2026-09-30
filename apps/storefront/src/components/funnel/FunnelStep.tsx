@@ -11,8 +11,10 @@ import {
   type FunnelRuntimeOffer,
   type FunnelRuntimeOutcomeType,
   type FunnelStepTypeDto,
+  type StorefrontOrderBump,
   type StorefrontProduct,
 } from "@store-builder/api-client";
+import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { BoxIcon, CashIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
@@ -20,7 +22,7 @@ import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimaryLg, btnSecondary, card, container, input, label as labelClass, skeleton } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getOrderSnapshot, saveOrderSnapshot, snapshotFromOrder } from "@/lib/commerce";
+import { getOrderSnapshot, orderBumpOf, saveOrderSnapshot, snapshotFromOrder, type OrderBumpOffer } from "@/lib/commerce";
 import { funnelErrorKind, isOutOfStock } from "@/lib/funnelErrors";
 import {
   rememberFollowOn,
@@ -37,7 +39,7 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
+import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
@@ -210,6 +212,7 @@ export function FunnelStepActions({
   sessionId,
   step,
   offer,
+  bump,
   product,
   sessionOrderId,
 }: {
@@ -218,6 +221,8 @@ export function FunnelStepActions({
   sessionId: string;
   step: { key: string; name: string; stepType: FunnelStepTypeDto };
   offer: FunnelRuntimeOffer | null;
+  /** A checkout step's order bump, as the runtime sent it. */
+  bump?: StorefrontOrderBump | null;
   product: StorefrontProduct | null;
   sessionOrderId: string | null;
 }) {
@@ -257,6 +262,7 @@ export function FunnelStepActions({
         stepKey={step.key}
         sessionOrderId={sessionOrderId}
         product={product}
+        bumpOffer={orderBumpOf(bump, product ? [product.id] : [])}
         flow={flow}
       />
     );
@@ -308,6 +314,7 @@ function FunnelCheckout({
   stepKey,
   sessionOrderId,
   product,
+  bumpOffer,
   flow,
 }: {
   workspaceId: string;
@@ -316,6 +323,8 @@ function FunnelCheckout({
   stepKey: string;
   sessionOrderId: string | null;
   product: StorefrontProduct | null;
+  /** The step's order bump (funnel_steps.bump_offer_id), or null. */
+  bumpOffer: OrderBumpOffer | null;
   flow: Flow;
 }) {
   const { t, money, store } = useStore();
@@ -331,6 +340,10 @@ function FunnelCheckout({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [bumpOn, setBumpOn] = useState(false);
+  // Refused by the server since this step loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
+  const bump = bumpGone ? null : bumpOffer;
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
@@ -343,11 +356,13 @@ function FunnelCheckout({
   const currency = (offerId ? offer?.currency : variant?.currency) ?? store?.currency;
 
   const line: OrderLine | null = variant ? { variantId: variant.id, offerId, quantity: 1 } : null;
+  const autosaveLines: OrderLine[] = line && !placed ? [line] : [];
+  if (autosaveLines.length > 0 && bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({
     client,
     workspaceId,
     values,
-    lines: line && !placed ? [line] : [],
+    lines: autosaveLines,
     source: "funnel",
   });
 
@@ -390,6 +405,8 @@ function FunnelCheckout({
     const payload = {
       ...toCheckoutPayload(values, fields, { item: line }),
       funnelId,
+      // The server adds the step's bump to this order from its offer.
+      ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     let order;
@@ -397,6 +414,10 @@ function FunnelCheckout({
       order = await placeCodOrder({ client, workspaceId, payload });
     } catch (err) {
       submittingRef.current = false;
+      if (isOrderBumpRefused(err)) {
+        setBumpOn(false);
+        setBumpGone(true);
+      }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalidFromServer = FIELD_ORDER.filter((k) => fromServer[k]);
       if (invalidFromServer.length > 0) {
@@ -423,9 +444,9 @@ function FunnelCheckout({
     trackPurchaseOnce(order.id, {
       valueMinor: parseMoney(order.totalAmount),
       currency: order.currency,
-      contentIds: [product.id],
+      contentIds: bumpOn && bump ? [product.id, bump.productId] : [product.id],
       contentName: product.name,
-      numItems: 1,
+      numItems: bumpOn && bump ? 2 : 1,
     });
     submittingRef.current = false;
     setSubmitting(false);
@@ -513,6 +534,28 @@ function FunnelCheckout({
           </p>
         </div>
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+
+        {bump && !placed && (
+          <div className="mt-5 space-y-3">
+            <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
+            {bumpOn && variant && (
+              <dl className="space-y-1.5 rounded-xl bg-paper px-4 py-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{product.name}</dt>
+                  <dd className="shrink-0 text-ink">{money(unit, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{bump.name}</dt>
+                  <dd className="shrink-0 text-ink">{money(bump.priceAmount, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-line pt-1.5 font-semibold text-ink">
+                  <dt>{t.checkout.subtotal}</dt>
+                  <dd className="shrink-0">{money(unit + bump.priceAmount, currency)}</dd>
+                </div>
+              </dl>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 space-y-3">
           {placed && (

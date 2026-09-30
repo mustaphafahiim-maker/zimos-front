@@ -162,6 +162,7 @@ export function newStep(type: UiStepType, locale: Locale, takenKeys: Iterable<st
     name: STEP_DEFAULT_NAMES[locale][type],
     type,
     offerId: null,
+    bumpOfferId: null,
     experimentId: null,
     seo: {},
     tree: stepPageTree(type, locale),
@@ -227,7 +228,19 @@ export function applyStarterPlan(f: UiFunnel, plan: StarterPlan, takenKeys: Iter
     const key = uniqueStepKey(s.key, taken);
     taken.add(key);
     keyMap.set(s.key, key);
-    return { id: null, key, name: s.name, type: s.type, offerId: null, experimentId: null, seo: {}, tree: s.tree, x: s.x, y: s.y };
+    return {
+      id: null,
+      key,
+      name: s.name,
+      type: s.type,
+      offerId: null,
+      bumpOfferId: null,
+      experimentId: null,
+      seo: {},
+      tree: s.tree,
+      x: s.x,
+      y: s.y,
+    };
   });
   const edges = plan.edges.map((e) => edge(keyMap.get(e.from) ?? e.from, keyMap.get(e.to) ?? e.to, e.condition, e.priority));
   return { ...f, steps: [...f.steps, ...steps], edges: [...f.edges, ...edges] };
