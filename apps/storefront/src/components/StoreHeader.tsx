@@ -10,6 +10,7 @@ import { AnnouncementBar } from "./AnnouncementBar";
 import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { MobileMenu } from "./MobileMenu";
+import { SearchBox } from "./SearchBox";
 import { ShellLink } from "./ShellLink";
 import { StickyHeader } from "./StickyHeader";
 import { ThemeToggle } from "./ThemeToggle";
@@ -120,12 +121,20 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
 
   const controls = (
     <>
+      {/* Product search with suggestions (a button that opens it on a phone). */}
+      <SearchBox />
       {header.showTrackOrder && (
         <StoreLink href="/track" className={`${NAV_LINK} sm:inline-flex`}>
           {t.common.trackOrder}
         </StoreLink>
       )}
-      {header.showLanguage && <LanguageSwitch />}
+      {/* On a phone the language switch sits in the menu sheet too, so the
+          search button fits beside the cart without squeezing the store's name. */}
+      {header.showLanguage && (
+        <span className="hidden sm:contents">
+          <LanguageSwitch />
+        </span>
+      )}
       {/* On a phone the theme toggle lives in the menu sheet; a wrapper hides
           it here because the button's own recipe sets its display. */}
       {header.showTheme && (
@@ -139,6 +148,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           storeName={store.name}
           links={sheetLinks}
           showTheme={header.showTheme}
+          showLanguage={header.showLanguage}
           until={menu ? "md" : "sm"}
         />
       )}

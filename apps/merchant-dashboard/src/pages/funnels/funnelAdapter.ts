@@ -57,6 +57,8 @@ export interface UiStep {
   name: string;
   type: UiStepType;
   offerId: string | null;
+  /** Checkout steps: the order bump offered on the step's form. */
+  bumpOfferId: string | null;
   experimentId: string | null;
   /** Server seo object minus our canvas metadata. Round-tripped untouched. */
   seo: Record<string, unknown>;
@@ -154,6 +156,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
           name: s.name,
           type: s.stepType,
           offerId: s.offerId,
+          bumpOfferId: s.bumpOfferId ?? null,
           experimentId: s.abTestExperimentId,
           seo: stripCanvas(s.seo),
           tree: normalizeTree(s.builderData),
@@ -256,6 +259,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           name: s.name.trim() || s.key,
           builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
+          ...(s.type === "checkout" && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
           seo: withCanvas(s, order),
         })
       );
@@ -267,6 +271,10 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
+    // A step that stops being a checkout loses its bump on the server by itself.
+    if (s.bumpOfferId !== before.bumpOfferId && (s.type === "checkout" || s.bumpOfferId === null)) {
+      patch.bumpOfferId = s.bumpOfferId;
+    }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
     if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
     if (Object.keys(patch).length > 0) {
@@ -501,10 +509,14 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
   try {
     for (const s of src.steps) {
       const payload = { key: s.key, stepType: s.stepType, name: s.name, builderData: s.builderData, seo: s.seo ?? {} };
+      const offers = {
+        ...(s.offerId ? { offerId: s.offerId } : {}),
+        ...(s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
+      };
       try {
-        await funnelsCreateStep(apiClient, workspaceId, copy.id, s.offerId ? { ...payload, offerId: s.offerId } : payload);
+        await funnelsCreateStep(apiClient, workspaceId, copy.id, { ...payload, ...offers });
       } catch (err) {
-        if (s.offerId && err instanceof ApiError && err.status === 422) {
+        if ((s.offerId || s.bumpOfferId) && err instanceof ApiError && err.status === 422) {
           await funnelsCreateStep(apiClient, workspaceId, copy.id, payload);
         } else {
           throw err;

@@ -4,6 +4,7 @@ import {
   BRAND_VAR_NAMES,
   ORIGINAL_LOOK,
   STORE_THEMES,
+  TEMPLATE_COLOR_SOURCE,
   brandVars,
   onColor,
   previewBootScript,
@@ -100,6 +101,26 @@ describe("brandVars — themes own everything but the accent", () => {
     assert.equal(storeThemeOf({ storeTheme: ORIGINAL_LOOK }), null);
     assert.equal(storeThemeOf({}), null);
     assert.equal(STORE_THEMES.length, 6);
+  });
+
+  it("keeps every theme's own accent when the saved colour came from a website template", () => {
+    for (const key of STORE_THEMES) {
+      const vars = brandVars({ storeTheme: key, primaryColor: "#2563EB", primaryColorSource: TEMPLATE_COLOR_SOURCE });
+      assert.equal("--brand-primary-light-mode" in vars, false, key);
+      assert.equal("--brand-primary-dark-mode" in vars, false, key);
+    }
+  });
+
+  it("still uses a template's colour on the original look, and a merchant's own on a theme", () => {
+    const template = { primaryColor: "#2563EB", primaryColorSource: TEMPLATE_COLOR_SOURCE };
+    assert.equal(brandVars(template)["--brand-primary-light-mode"], "#2563EB");
+    assert.equal(brandVars({ ...template, storeTheme: ORIGINAL_LOOK })["--brand-primary-light-mode"], "#2563EB");
+    const own = brandVars({ storeTheme: "warm", primaryColor: "#B45309" });
+    assert.equal(own["--brand-primary-light-mode"], "#B45309");
+    // A dark-mode accent the merchant picked survives a template's light colour.
+    const mixed = brandVars({ ...template, storeTheme: "warm", primaryColorDark: "#F59E0B" });
+    assert.equal("--brand-primary-light-mode" in mixed, false);
+    assert.equal(mixed["--brand-primary-dark-mode"], "#F59E0B");
   });
 
   it("only ever writes properties the preview bridge knows how to clear", () => {

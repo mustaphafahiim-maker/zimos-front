@@ -6,6 +6,21 @@ import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
 import { unmetPasswordRules } from "@/lib/passwordRules";
+import { isApiErrorCode } from "@store-builder/api-client";
+import { UsernameField } from "@/components/UsernameField";
+import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const USERNAME_STRINGS = {
+  en: {
+    chooseUsername: "Choose an available username first.",
+    usernameTaken: "Someone just took this username. Choose another one.",
+  },
+  ar: {
+    chooseUsername: "اختر اسم مستخدم متاحًا أولًا.",
+    usernameTaken: "استخدم شخص آخر هذا الاسم للتو. اختر اسمًا آخر.",
+  },
+} satisfies Messages;
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
 function GoogleIcon() {
@@ -34,8 +49,11 @@ function GoogleIcon() {
 export function RegisterPage() {
   const { register, login } = useAuth();
   const navigate = useNavigate();
+  const u = useT(USERNAME_STRINGS);
 
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -66,17 +84,24 @@ export function RegisterPage() {
       setError("الباسورد وتأكيده مش زي بعض.");
       return;
     }
+    if (!usernameSubmittable(usernameStatus)) {
+      setError(u.chooseUsername);
+      document.getElementById("register-username")?.querySelector("input")?.focus();
+      return;
+    }
 
     setSubmitting(true);
     try {
-      await register({ fullName, email, phone: phone || undefined, password });
+      await register({ fullName, username: normalizeUsername(username), email, phone: phone || undefined, password });
       // Registration doesn't return tokens (email verification pending on the
       // backend), so we log in immediately with the same credentials to get
       // the merchant straight into the workspace picker.
       await login({ email, password });
       navigate("/workspaces", { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (isApiErrorCode(err, "USERNAME_TAKEN")) {
+        setError(u.usernameTaken);
+      } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("Something went wrong. Please try again.");
@@ -126,6 +151,10 @@ export function RegisterPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Your name"
               />
+            </div>
+
+            <div id="register-username">
+              <UsernameField value={username} onChange={setUsername} onStatus={setUsernameStatus} />
             </div>
 
             <div className="space-y-1.5">

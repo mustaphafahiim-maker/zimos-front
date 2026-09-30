@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { resolveCheckoutSettings, type StorefrontProduct } from "@store-builder/api-client";
+import { resolveCheckoutSettings } from "@store-builder/api-client";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -10,9 +10,8 @@ import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
-import { getOrderBump } from "@/lib/commerce";
+import { orderBumpOf } from "@/lib/commerce";
 import { firstImage, productImages } from "@/lib/product";
-import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 
@@ -80,15 +79,10 @@ export default async function ProductPage({ params }: { params: Params }) {
   ]);
   if (!store || !product) notFound();
 
-  const client = await createServerStorefrontApiClient();
-  const catalogue = await client
-    .listStorefrontProducts(workspaceId, { limit: 24 })
-    .then((r) => r.products)
-    .catch((): StorefrontProduct[] => []);
-
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const bump = getOrderBump(catalogue, [product.id]);
+  // The merchant's bump — not on its own product's page.
+  const bump = orderBumpOf(store.orderBump, [product.id]);
 
   // Details / shipping & returns / FAQ as tabs under the buy box. The
   // shipping tab is the delivery and returns answers from the FAQ, read as

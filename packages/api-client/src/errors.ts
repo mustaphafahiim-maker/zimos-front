@@ -48,6 +48,16 @@ export type ApiErrorCode =
   | "TASK_NOT_DONE" // 409 — correction on an open task
   | "OUTCOME_UNCHANGED" // 409 — correction to the outcome it already has
   | "CORRECTION_NOT_ALLOWED" // 409 — merchant-cancelled order, or no final outcome
+  | "TASK_ASSIGNED_TO_OTHER" // 403, details = { assignedTo } — only the assignee or a manager may take it
+  | "ASSIGNEE_NOT_MEMBER" // 422 — not an active member of this workspace
+  | "ASSIGNEE_CANNOT_CONFIRM" // 422 — their role lacks orders.confirm
+  // custom fields and shoppers' photos
+  | "CUSTOM_FIELDS_INVALID" // 422, details = [{ field: "customizations.<id>", code }]
+  | "FILE_TOO_LARGE" // 413
+  | "UNSUPPORTED_MEDIA_TYPE" // 415
+  | "IMAGE_UNREADABLE" // 422
+  | "TOO_MANY_PENDING_UPLOADS" // 429
+  | "VISITOR_ID_REQUIRED" // 400
   // storefront checkout / fraud / autosave
   | "ORDER_REJECTED"
   | "INVALID_PHONE"

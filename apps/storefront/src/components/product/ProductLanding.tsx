@@ -18,7 +18,14 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
+import {
+  afterOrder,
+  isOrderBumpRefused,
+  orderErrorMessage,
+  placeCodOrder,
+  serverFieldErrors,
+  type OrderLine,
+} from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
@@ -32,7 +39,9 @@ import {
   variantUnitPrice,
 } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
+import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
@@ -51,7 +60,7 @@ const FORM_PREFIX = "quick";
 export function ProductLanding({
   workspaceId,
   product,
-  bump,
+  bump: bumpOffer,
   countdownHours,
   checkoutSettings,
 }: {
@@ -100,6 +109,9 @@ export function ProductLanding({
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
 
+  // The product's custom fields: answered here, sent with the order line.
+  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
+
   const defaultOffer = defaultOfferOf(product);
   const mainLine: OrderLine | null = variant
     ? tier
@@ -117,6 +129,9 @@ export function ProductLanding({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bumpOn, setBumpOn] = useState(false);
+  // Refused by the server since this page loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
+  const bump = bumpGone ? null : bumpOffer;
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
@@ -151,14 +166,23 @@ export function ProductLanding({
       setFormError(t.form.errors.unavailable);
       return;
     }
+    if (!custom.check()) {
+      setFormError(t.custom.summary);
+      return;
+    }
+    // The answers ride on the line that places the order only: the shipping
+    // quote and the autosave above key on the lines and must not re-run per keystroke.
+    const customizations = custom.toInput();
+    const orderLine: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const visitorId = getVisitorId(workspaceId);
 
-    const bumpLine: OrderLine | null =
-      bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
     setSubmitting(true);
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
+    // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: bumpLine ? undefined : mainLine }),
+      ...toCheckoutPayload(values, fields, { item: orderLine }),
+      ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
@@ -169,7 +193,7 @@ export function ProductLanding({
           basePath,
           payload,
           method,
-          lines: bumpLine ? [mainLine, bumpLine] : undefined,
+          visitorId,
         });
         if (external) {
           setRedirecting(true);
@@ -183,10 +207,21 @@ export function ProductLanding({
         client,
         workspaceId,
         payload,
-        lines: bumpLine ? [mainLine, bumpLine] : undefined,
+        visitorId,
       });
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
+      if (custom.showServerProblems(err)) {
+        setFormError(t.custom.summary);
+        setSubmitting(false);
+        autosave.resume();
+        return;
+      }
+      if (isOrderBumpRefused(err)) {
+        // The totals above drop the add-on with it; the shopper confirms again.
+        setBumpOn(false);
+        setBumpGone(true);
+      }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
       if (invalid.length > 0) {
@@ -350,6 +385,9 @@ export function ProductLanding({
         </div>
       )}
 
+      {/* What the shopper fills in for this product (engraving, a note, their photo). */}
+      <CustomFieldInputs state={custom} />
+
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
       <div className="grid gap-3 sm:grid-cols-2">
         <button type="button" onClick={scrollToForm} disabled={!available} className={`${btnPrimary} w-full`}>
@@ -361,6 +399,9 @@ export function ProductLanding({
           offerId={mainLine?.offerId}
           defaultQuantity={mainLine?.quantity ?? 1}
           disabled={!available}
+          customizations={custom.fields.length > 0 ? custom.toInput() : undefined}
+          beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
+          onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
       </div>
 

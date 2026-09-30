@@ -13,7 +13,7 @@ import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
-import { getOrderBump } from "@/lib/commerce";
+import { orderBumpOf } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -23,16 +23,18 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, orderErrorMessage, placeCodOrder, serverFieldErrors } from "@/lib/placeOrder";
+import { afterOrder, isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { LineCustomizations } from "@/components/LineCustomizations";
 
 const FORM_PREFIX = "checkout";
 
@@ -44,11 +46,11 @@ export default function CheckoutPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const router = useRouter();
   const basePath = useStoreBasePath();
-  const { cart, addItem, clearCart } = useCart();
-  const { t, money } = useStore();
+  const { cart, clearCart } = useCart();
+  const { t, money, store } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
-  const { products, byVariant, loaded } = useCatalog(workspaceId);
+  const { byVariant } = useCatalog(workspaceId);
 
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   // The governorate chosen in the cart opens the form (once, and only into an
@@ -65,15 +67,15 @@ export default function CheckoutPage() {
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
   const [bumpOn, setBumpOn] = useState(false);
-  // True once the bump is a real cart line (a failed order leaves it there).
-  const [bumpAdded, setBumpAdded] = useState(false);
+  // Refused by the server since this page loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
 
   const currency = cart?.currency ?? "EGP";
-  const items = cart?.items ?? [];
+  const items = useMemo(() => cart?.items ?? [], [cart]);
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: items });
 
   // InitiateCheckout once per visit to this page, the first time the cart is
@@ -90,19 +92,19 @@ export default function CheckoutPage() {
     });
   }, [cart]);
 
+  // The merchant's bump — not offered when that product is already in the cart.
   const bump = useMemo(() => {
-    if (!loaded) return null;
-    const inCart = new Set(items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[]);
-    return getOrderBump(products ?? [], [...inCart]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, products]);
+    if (bumpGone) return null;
+    const inCart = items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[];
+    return orderBumpOf(store?.orderBump, inCart);
+  }, [bumpGone, items, byVariant, store?.orderBump]);
 
-  // Once the bump is a real line in the cart, the cart subtotal already has it.
-  const bumpInTotals = bumpOn && bump && !bumpAdded ? bump.priceAmount : 0;
+  // A ticked bump is not a cart line: the server adds it to the order.
+  const bumpInTotals = bumpOn && bump ? bump.priceAmount : 0;
   const subtotal = cart?.subtotal ?? 0;
   // The bump counts toward the parcel's weight as soon as it's ticked.
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
-  if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId ?? null, quantity: 1 });
+  if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines });
   const total = subtotal + bumpInTotals + shipping.amount;
 
@@ -148,13 +150,9 @@ export default function CheckoutPage() {
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
     try {
-      if (bumpOn && bump && !bumpAdded) {
-        await addItem(bump.variantId, bump.offerId, 1);
-        setBumpAdded(true);
-      }
-
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes }),
+        ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
       if (method.method !== "cod") {
@@ -165,6 +163,7 @@ export default function CheckoutPage() {
           payload,
           method,
           cartToken: cart.guestToken,
+          visitorId: getVisitorId(workspaceId),
         });
         clearCart();
         if (external) {
@@ -175,10 +174,21 @@ export default function CheckoutPage() {
         }
         return;
       }
-      const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
+      const order = await placeCodOrder({
+        client,
+        workspaceId,
+        payload,
+        cartToken: cart.guestToken,
+        visitorId: getVisitorId(workspaceId),
+      });
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
+      if (isOrderBumpRefused(err)) {
+        // The totals drop the add-on with it; the shopper confirms again.
+        setBumpOn(false);
+        setBumpGone(true);
+      }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
       if (invalid.length > 0) {
@@ -262,6 +272,7 @@ export default function CheckoutPage() {
                       <span className="min-w-0 text-ink-soft">
                         <span className="line-clamp-2 text-ink">{product?.name ?? (options || t.cart.item)}</span>
                         {product && options && <span className="block text-xs">{options}</span>}
+                        <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>

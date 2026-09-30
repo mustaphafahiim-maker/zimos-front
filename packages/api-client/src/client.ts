@@ -1,5 +1,12 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
+  CustomerUpload,
+  CustomizationInput,
+  CatalogOptionName,
+  CollectionReorderItem,
+  StorefrontListing,
+  StorefrontListingParams,
+  StorefrontSuggestions,
   AddCustomerAddressPayload,
   AdminAnnouncement,
   AdminAnnouncementInput,
@@ -65,6 +72,13 @@ import type {
   SupportTicketThread,
   AdminSubscription,
   AdminWorkspaceOverview,
+  AdminUserDetail,
+  AdminUserSearchPage,
+  AdminManualSubscription,
+  AdminManualActionResult,
+  AdminWorkspaceFeatures,
+  AdminFeatureOverride,
+  PlanFeatureKey,
   AnalyticsSummary,
   AnalyticsSummaryParams,
   FunnelAnalyticsDetail,
@@ -79,6 +93,7 @@ import type {
   ArchivedResponse,
   AuthTokens,
   AuthUser,
+  UsernameAvailability,
   BlacklistPayload,
   BlocklistEntry,
   BlockPhonePayload,
@@ -109,6 +124,9 @@ import type {
   CheckoutPayload,
   CollectionDetail,
   CollectionSummary,
+  AssignConfirmationTasksResult,
+  ConfirmationAssignee,
+  ConfirmationChannel,
   ConfirmationQueueCounts,
   ConfirmationQueuePage,
   ConfirmationQueueParams,
@@ -152,6 +170,7 @@ import type {
   MediaUploadResponse,
   Membership,
   Offer,
+  WorkspaceOfferOption,
   Order,
   OrderListParams,
   OrderListResponse,
@@ -609,6 +628,31 @@ export class ApiClient {
     return user;
   }
 
+  /** A free username to offer an account that has none yet (made through Google); null when it has one. */
+  async getUsernameSuggestion() {
+    const body = await this.request<{ user: AuthUser; suggestedUsername?: string }>("/auth/me");
+    return body.suggestedUsername ?? null;
+  }
+
+  /** Public, and tightly rate limited (429) — call it debounced. */
+  async checkUsernameAvailable(username: string) {
+    return this.request<UsernameAvailability>(`/auth/username-available?u=${encodeURIComponent(username)}`, {
+      auth: false,
+    });
+  }
+
+  /**
+   * Choose or change one's username. The first choice is free; after that one
+   * change per 30 days (409 USERNAME_CHANGE_TOO_SOON with nextChangeAt).
+   */
+  async changeUsername(username: string) {
+    const { user } = await this.request<{ user: AuthUser }>("/auth/me/username", {
+      method: "PATCH",
+      body: { username },
+    });
+    return user;
+  }
+
   // ---------------------------------------------------------------------
   // Workspaces
   // ---------------------------------------------------------------------
@@ -911,6 +955,79 @@ export class ApiClient {
   // ---------------------------------------------------------------------
   // Platform admin
   // ---------------------------------------------------------------------
+
+  // --- Manual subscription and feature overrides (one store) ---------------
+
+  async adminGetManualSubscription(workspaceId: string) {
+    return this.request<AdminManualSubscription>(`/admin/workspaces/${workspaceId}/subscription`);
+  }
+
+  /**
+   * One manual action. `idempotencyKey` should be made once per dialog, so a
+   * double click replays the first result (200, replayed) instead of acting twice.
+   */
+  async adminManualSubscriptionAction(
+    workspaceId: string,
+    action: "activate" | "change-plan" | "extend" | "end",
+    body: Record<string, unknown>,
+    idempotencyKey?: string
+  ) {
+    return this.request<AdminManualActionResult>(`/admin/workspaces/${workspaceId}/subscription/${action}`, {
+      method: "POST",
+      body,
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    });
+  }
+
+  async adminListWorkspaceFeatures(workspaceId: string) {
+    return this.request<AdminWorkspaceFeatures>(`/admin/workspaces/${workspaceId}/features`);
+  }
+
+  async adminAddFeatureOverride(
+    workspaceId: string,
+    body: { featureKey: PlanFeatureKey; mode: "grant" | "deny"; expiresAt?: string | null; reason: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides`,
+      { method: "POST", body }
+    );
+    return override;
+  }
+
+  async adminUpdateFeatureOverride(
+    workspaceId: string,
+    overrideId: string,
+    body: { mode?: "grant" | "deny"; expiresAt?: string | null; reason?: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}`,
+      { method: "PATCH", body }
+    );
+    return override;
+  }
+
+  async adminRevokeFeatureOverride(workspaceId: string, overrideId: string, reason?: string) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}/revoke`,
+      { method: "POST", body: { reason: reason ?? null } }
+    );
+    return override;
+  }
+
+  /** GET /admin/users — one search over name, username, email, id and the user's stores. */
+  async adminSearchUsers(params: { q?: string; page?: number; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return this.request<AdminUserSearchPage>(`/admin/users${qs ? `?${qs}` : ""}`);
+  }
+
+  async adminGetUser(userId: string) {
+    const { user } = await this.request<{ user: AdminUserDetail }>(`/admin/users/${userId}`);
+    return user;
+  }
 
   async adminListWorkspaces() {
     // The endpoint wraps the rows: { workspaces: [...] }. Unwrap here so every
@@ -1616,6 +1733,18 @@ export class ApiClient {
     return offers;
   }
 
+  /** Active offers across the store (product name, then offer name) — for pickers. */
+  async listWorkspaceOffers(workspaceId: string, params: { q?: string; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    const { offers } = await this.request<{ offers: WorkspaceOfferOption[] }>(
+      `${this.catalogBase(workspaceId)}/offers${qs ? `?${qs}` : ""}`
+    );
+    return offers;
+  }
+
   /** One offer with its lines, whatever its status. 404 when it isn't in the workspace. */
   async getOffer(workspaceId: string, offerId: string) {
     const { offer } = await this.request<{ offer: Offer }>(
@@ -1678,6 +1807,30 @@ export class ApiClient {
       { method: "PATCH", body: payload }
     );
     return collection;
+  }
+
+  /** Rearranges the tree: each listed collection's parent and position, checked as a whole. */
+  async reorderCollections(workspaceId: string, items: CollectionReorderItem[]) {
+    return this.request<{ changed: number }>(`${this.catalogBase(workspaceId)}/collections/reorder`, {
+      method: "POST",
+      body: { items },
+    });
+  }
+
+  /** The products of one collection, first to last; any left out keep their order after these. */
+  async reorderCollectionProducts(workspaceId: string, collectionId: string, productIds: string[]) {
+    return this.request<{ productIds: string[] }>(
+      `${this.catalogBase(workspaceId)}/collections/${collectionId}/products/order`,
+      { method: "PUT", body: { productIds } }
+    );
+  }
+
+  /** Product option names the store's variants use ("Size", "Color"). */
+  async listCatalogOptionNames(workspaceId: string) {
+    const { options } = await this.request<{ options: CatalogOptionName[] }>(
+      `${this.catalogBase(workspaceId)}/option-names`
+    );
+    return options;
   }
 
   async deleteCollection(workspaceId: string, collectionId: string) {
@@ -1916,6 +2069,39 @@ export class ApiClient {
     return counts;
   }
 
+  /** Members a task may be assigned to (orders.manage). */
+  async listConfirmationAssignees(workspaceId: string) {
+    const { assignees } = await this.request<{ assignees: ConfirmationAssignee[] }>(
+      `${this.confirmationTasksBase(workspaceId)}/assignees`
+    );
+    return assignees;
+  }
+
+  /** Hands one open task to an agent (orders.manage). */
+  async assignConfirmationTask(workspaceId: string, taskId: string, userId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/assign`,
+      { method: "POST", body: { userId } }
+    );
+    return task;
+  }
+
+  async unassignConfirmationTask(workspaceId: string, taskId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/unassign`,
+      { method: "POST", body: {} }
+    );
+    return task;
+  }
+
+  /** One agent for up to 200 tasks; `userId: null` unassigns them. Done tasks are skipped. */
+  async assignConfirmationTasks(workspaceId: string, taskIds: string[], userId: string | null) {
+    return this.request<AssignConfirmationTasksResult>(`${this.confirmationTasksBase(workspaceId)}/assign`, {
+      method: "POST",
+      body: { taskIds, userId },
+    });
+  }
+
   async claimConfirmationTask(workspaceId: string, taskId: string) {
     const { task } = await this.request<{ task: ConfirmationTask }>(
       `${this.confirmationTasksBase(workspaceId)}/${taskId}/claim`,
@@ -1957,10 +2143,10 @@ export class ApiClient {
   }
 
   /** Confirms a COD order from the order page; resolves to the refreshed order detail. */
-  async confirmOrder(workspaceId: string, orderId: string, notes?: string) {
+  async confirmOrder(workspaceId: string, orderId: string, notes?: string, channel?: ConfirmationChannel) {
     return this.request<{ order: Order; task: ConfirmationTask }>(
       `${this.ordersBase(workspaceId)}/${orderId}/confirmation`,
-      { method: "POST", body: notes ? { notes } : {} }
+      { method: "POST", body: { ...(notes ? { notes } : {}), ...(channel ? { channel } : {}) } }
     );
   }
 
@@ -2552,6 +2738,35 @@ export class ApiClient {
     });
   }
 
+  /**
+   * The searchable, filterable listing. Sends the new parameters, so the
+   * backend answers with page / total / facets rather than a cursor.
+   */
+  async searchStorefrontProducts(workspaceId: string, params: StorefrontListingParams = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.collection) query.set("collection", params.collection);
+    for (const tag of params.tags ?? []) query.append("tag", tag);
+    if (params.minPrice !== undefined) query.set("minPrice", String(params.minPrice));
+    if (params.maxPrice !== undefined) query.set("maxPrice", String(params.maxPrice));
+    for (const [name, values] of Object.entries(params.options ?? {})) {
+      for (const value of values) query.append(`option[${name}]`, value);
+    }
+    query.set("sort", params.sort ?? "newest");
+    query.set("page", String(params.page ?? 1));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.facets) query.set("facets", "true");
+    return this.request<StorefrontListing>(`/store/${workspaceId}/products?${query.toString()}`, { auth: false });
+  }
+
+  /** Suggestions for the search box, while the shopper types. */
+  async suggestStorefrontProducts(workspaceId: string, q: string, init?: { signal?: AbortSignal }) {
+    return this.request<StorefrontSuggestions>(
+      `/store/${workspaceId}/products/suggest?q=${encodeURIComponent(q)}`,
+      { auth: false, ...(init?.signal ? { signal: init.signal } : {}) }
+    );
+  }
+
   async getStorefrontProduct(workspaceId: string, idOrSlug: string) {
     const { product } = await this.request<{ product: StorefrontProductDetail }>(
       `/store/${workspaceId}/products/${idOrSlug}`,
@@ -2655,17 +2870,43 @@ export class ApiClient {
     });
   }
 
+  /**
+   * `customizations` answers the product's custom fields; a photo answer is
+   * the id of an upload this visitor made (uploadCustomerPhoto), so send the
+   * same `visitorId` with both.
+   */
   async addCartItem(
     workspaceId: string,
     cartToken: string,
-    payload: { variantId: string; offerId?: string; quantity?: number }
+    payload: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput },
+    opts: { visitorId?: string } = {}
   ) {
     return this.request<Cart>(`/store/${workspaceId}/cart/items`, {
       method: "POST",
       body: payload,
       auth: false,
-      headers: { "X-Cart-Token": cartToken },
+      headers: { "X-Cart-Token": cartToken, ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}) },
     });
+  }
+
+  /**
+   * A shopper's photo for a product's image field. The server re-encodes it
+   * (upright, no metadata, ≤ 5 MB) and keeps it for 48 hours unless an order
+   * takes it. 413 over 15 MB, 415 for anything but JPEG / PNG / WebP, 422 when
+   * it cannot be read, 429 when too many are waiting or too many were sent.
+   */
+  async uploadCustomerPhoto(workspaceId: string, file: File | Blob, opts: { visitorId: string; productId?: string }) {
+    const form = new FormData();
+    form.append("file", file, file instanceof File ? file.name : "photo");
+    if (opts.productId) form.append("productId", opts.productId);
+    // Multipart, so the raw path; no Content-Type here — the browser adds the boundary.
+    const res = await this.rawFetch(`/store/${workspaceId}/uploads`, {
+      method: "POST",
+      body: form,
+      headers: { "X-Visitor-Id": opts.visitorId },
+    });
+    const { upload } = (await res.json()) as { upload: CustomerUpload };
+    return upload;
   }
 
   async updateCartItem(
@@ -2695,13 +2936,17 @@ export class ApiClient {
    * cart's lines; omit it and put a single `item` in the payload for a "Buy
    * Now". The server replies with `{ order }` — unwrapped here like createOrder.
    */
-  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string) {
+  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string, opts: { visitorId?: string } = {}) {
     const { order } = await this.request<{ order: Order }>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,
       auth: false,
       idempotent: true,
-      headers: cartToken ? { "X-Cart-Token": cartToken } : {},
+      headers: {
+        ...(cartToken ? { "X-Cart-Token": cartToken } : {}),
+        // Whose uploaded photos the order may take (custom fields).
+        ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}),
+      },
     });
     return order;
   }
@@ -2715,11 +2960,13 @@ export class ApiClient {
   async placeCheckout(
     workspaceId: string,
     payload: CheckoutPayload,
-    opts: { cartToken?: string; previewToken?: string } = {}
+    opts: { cartToken?: string; previewToken?: string; visitorId?: string } = {}
   ) {
     const headers: Record<string, string> = {};
     if (opts.cartToken) headers["X-Cart-Token"] = opts.cartToken;
     if (opts.previewToken) headers["X-Store-Preview"] = opts.previewToken;
+    // Whose uploaded photos the order may take (custom fields).
+    if (opts.visitorId) headers["X-Visitor-Id"] = opts.visitorId;
     return this.request<CheckoutResult>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,

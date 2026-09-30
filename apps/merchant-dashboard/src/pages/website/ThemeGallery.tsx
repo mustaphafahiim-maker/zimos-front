@@ -10,7 +10,7 @@ import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { TemplateLivePreview } from "@/components/TemplateLivePreview";
 import { useToast } from "@/components/Toast";
-import { lookToPreview, readStoreLook } from "./editor/storeLook";
+import { accentOf, lookToPreview, readStoreLook } from "./editor/storeLook";
 import { ORIGINAL_LOOK, THEME_CHOICES, THEME_SPECS, type ColorMode, type ThemeChoice } from "./editor/storeThemes";
 import { ThemeSketch } from "./editor/ThemeSketch";
 import { themeShowcaseTree } from "./themeShowcase";
@@ -84,7 +84,9 @@ export function ThemeGallery() {
   useThemeFonts();
 
   const look = useMemo(() => readStoreLook(currentWorkspace), [currentWorkspace]);
-  const accent = mode === "light" ? look.primaryColor : (look.primaryColorDark ?? look.primaryColor);
+  // What each theme would paint with: a template's colour never counts on a theme.
+  const accentUnder = (theme: ThemeChoice) =>
+    mode === "light" ? accentOf(look, theme) : (look.primaryColorDark ?? accentOf(look, theme));
   const storeName = currentWorkspace?.name ?? "";
 
   return (
@@ -111,7 +113,7 @@ export function ThemeGallery() {
                 current ? "border-primary" : "border-line"
               )}
             >
-              <ThemeSketch theme={key} mode={mode} accent={accent} title={storeName || spec.name[locale]} />
+              <ThemeSketch theme={key} mode={mode} accent={accentUnder(key)} title={storeName || spec.name[locale]} />
               <div className="flex flex-1 flex-col gap-1 border-t border-line p-4">
                 <span className="flex items-center gap-2 font-medium text-ink">
                   {spec.name[locale]}

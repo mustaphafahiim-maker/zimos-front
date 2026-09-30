@@ -66,6 +66,8 @@ export interface FunnelStepDto {
   /** Page tree (section -> row -> column -> element). */
   builderData: unknown;
   offerId: string | null;
+  /** Checkout steps only: the order bump offered on the step's form. */
+  bumpOfferId?: string | null;
   abTestExperimentId: string | null;
   /** Arbitrary keys are accepted (Joi .unknown(true)). */
   seo: Record<string, unknown>;
@@ -131,6 +133,7 @@ export interface FunnelStepCreatePayload {
   name: string;
   builderData?: unknown;
   offerId?: string;
+  bumpOfferId?: string | null;
   seo?: Record<string, unknown>;
 }
 
@@ -139,6 +142,8 @@ export interface FunnelStepUpdatePayload {
   name?: string;
   builderData?: unknown;
   offerId?: string | null;
+  /** 422 on a step that is not a checkout, or with an offer that cannot be a bump. */
+  bumpOfferId?: string | null;
   seo?: Record<string, unknown>;
 }
 

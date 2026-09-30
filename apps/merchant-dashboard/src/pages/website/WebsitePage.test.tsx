@@ -174,24 +174,46 @@ describe("WebsitePage template colour", () => {
     const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
 
     await user.click(await screen.findByRole("button", { name: "Preview Oud House" }));
-    await screen.findByText(/القالب فيه 1 صفحة/);
+    await screen.findByText(/This template includes one page/);
     await user.click(screen.getByRole("button", { name: "Use this template" }));
     await waitFor(() => expect(currentPath()).toBe("/website/site_1/edit"));
   }
 
-  it("copies the template's colour onto the store's latest settings when it has none", async () => {
+  it("copies the template's colour, marked as the template's, onto a store with no look of its own", async () => {
     workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
-    // A theme saved from another tab after this one loaded.
-    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "warm" } })]);
-    const saved = fake<Workspace>({ id: "ws_1", themeSettings: { storeTheme: "warm", primaryColor: "#7C2D12" } });
+    // Another key saved from another tab after this one loaded: it must survive.
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { productCountdownHours: 6 } })]);
+    const saved = fake<Workspace>({
+      id: "ws_1",
+      themeSettings: { productCountdownHours: 6, primaryColor: "#7C2D12", primaryColorSource: "template" },
+    });
     api.updateWorkspace.mockResolvedValue(saved);
 
     await createFromTemplate();
 
     expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
-      themeSettings: { storeTheme: "warm", primaryColor: "#7C2D12" },
+      themeSettings: { productCountdownHours: 6, primaryColor: "#7C2D12", primaryColorSource: "template" },
     });
     expect(workspaceMock.applySavedWorkspace).toHaveBeenCalledWith(saved);
+  });
+
+  it("leaves a store on a theme with the theme's own accent", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: { storeTheme: "warm" } });
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).not.toHaveBeenCalled();
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("leaves a theme picked in another tab alone", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "elegant" } })]);
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).toHaveBeenCalledTimes(1);
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
   });
 
   it("leaves a colour the store picked in another tab alone", async () => {

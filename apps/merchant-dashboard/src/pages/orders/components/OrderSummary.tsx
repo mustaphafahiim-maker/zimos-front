@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@store-builder/ui";
 import type { Order, ShippingRule } from "@store-builder/api-client";
 import { formatMoney, formatOptions } from "@/lib/format";
 import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
+import { CustomizationList } from "./CustomizationList";
 
 const STRINGS = {
   en: {
@@ -14,6 +16,11 @@ const STRINGS = {
     lineTotal: "Line total",
     offer: "Offer",
     sku: "SKU",
+    bumpBadge: "Checkout add-on",
+    upsellBadge: "Extra offer",
+    linkedOrders: "Extra offers placed as separate orders",
+    linkedOrdersHint: "The customer took these funnel offers after this order had left its offers window. They ship free of charge.",
+    linkedFrom: "A funnel offer taken after order {order}; its shipping is free.",
     subtotal: "Subtotal",
     discount: "Discount",
     shipping: "Shipping",
@@ -51,6 +58,11 @@ const STRINGS = {
     lineTotal: "الإجمالي",
     offer: "العرض",
     sku: "SKU",
+    bumpBadge: "إضافة عند الدفع",
+    upsellBadge: "عرض إضافي",
+    linkedOrders: "عروض إضافية في طلبات منفصلة",
+    linkedOrdersHint: "قبِل العميل هذه العروض من مسار البيع بعد انتهاء نافذة العروض لهذا الطلب. تُشحن بدون رسوم شحن.",
+    linkedFrom: "عرض إضافي من مسار البيع بعد الطلب {order}، وشحنه مجاني.",
     subtotal: "المجموع الفرعي",
     discount: "الخصم",
     shipping: "الشحن",
@@ -131,6 +143,11 @@ export function OrderSummary({ order }: { order: Order }) {
                   <tr key={item.id} className="border-b border-line last:border-0 align-top">
                     <td className="py-2 pe-3">
                       <div className="font-medium text-ink">{item.productNameSnapshot}</div>
+                      {(item.isOrderBump || item.isUpsell) && (
+                        <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
+                          {item.isUpsell ? t.upsellBadge : t.bumpBadge}
+                        </span>
+                      )}
                       {formatOptions(item.variantOptionsSnapshot) && (
                         <div className="text-xs text-ink-soft">
                           {formatOptions(item.variantOptionsSnapshot)}
@@ -146,6 +163,7 @@ export function OrderSummary({ order }: { order: Order }) {
                           {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
                         </div>
                       )}
+                      <CustomizationList customizations={item.customizations} className="mt-2" />
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>
@@ -179,6 +197,35 @@ export function OrderSummary({ order }: { order: Order }) {
               <AmountRow label={t.refunded} value={formatMoney(order.amountRefunded, c)} />
             )}
           </div>
+
+          {order.linkedFromOrder && (
+            <p className="mt-4 rounded-[0.5rem] bg-paper px-3 py-2 text-sm text-ink-soft">
+              {t.linkedFrom.split("{order}")[0]}
+              <Link to={`/orders/${order.linkedFromOrder.id}`} className="font-medium text-primary hover:underline">
+                <bdi dir="ltr">{order.linkedFromOrder.orderNumber}</bdi>
+              </Link>
+              {t.linkedFrom.split("{order}")[1]}
+            </p>
+          )}
+
+          {order.linkedOrders && order.linkedOrders.length > 0 && (
+            <section className="mt-4 space-y-2 border-t border-line pt-3" aria-labelledby={`linked-${order.id}`}>
+              <h3 id={`linked-${order.id}`} className="text-sm font-medium text-ink">
+                {t.linkedOrders}
+              </h3>
+              <p className="text-xs text-ink-soft">{t.linkedOrdersHint}</p>
+              <ul className="space-y-1">
+                {order.linkedOrders.map((linked) => (
+                  <li key={linked.id} className="flex items-center justify-between gap-3 text-sm">
+                    <Link to={`/orders/${linked.id}`} className="inline-flex min-h-11 items-center font-medium text-primary hover:underline">
+                      <bdi dir="ltr">{linked.orderNumber}</bdi>
+                    </Link>
+                    <span className="text-ink-soft">{formatMoney(linked.totalAmount, linked.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </CardContent>
       </Card>
 

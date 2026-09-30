@@ -13,7 +13,7 @@
  */
 import type { ApiClient } from "../client";
 import type { FunnelStepTypeDto } from "./funnels";
-import type { PageTree } from "../types";
+import type { PageTree, StorefrontOrderBump } from "../types";
 
 // ------------------------------------------------------------------ types --
 
@@ -58,6 +58,10 @@ export interface FunnelRuntimeState {
   session: FunnelRuntimeSession;
   step?: FunnelRuntimeStep;
   offer?: FunnelRuntimeOffer;
+  /** On an offer step: accepting joins the checkout order (the store's funnel_upsell_merge, window open). */
+  offerJoinsOrder?: boolean;
+  /** A checkout step's order bump; null when its offer can't be sold right now. */
+  bump?: StorefrontOrderBump | null;
 }
 
 export interface FunnelRuntimeStartResult extends FunnelRuntimeState {
@@ -71,9 +75,37 @@ export interface FunnelRuntimeFollowOnOrder {
   linkedFromOrderId: string;
 }
 
+/** The checkout order after an accepted offer joined it: its new totals and lines. */
+export interface FunnelRuntimeMergedOrder {
+  id: string;
+  orderNumber: string;
+  currency: string;
+  subtotalAmount: string | number;
+  discountAmount: string | number;
+  shippingAmount: string | number;
+  taxAmount: string | number;
+  totalAmount: string | number;
+  items: Array<{
+    id: string;
+    productId: string | null;
+    productNameSnapshot: string;
+    variantOptionsSnapshot: Record<string, string> | null;
+    offerNameSnapshot: string | null;
+    quantity: number;
+    unitPriceAmount: string | number;
+    lineTotalAmount: string | number;
+    isOrderBump: boolean;
+    isUpsell: boolean;
+  }>;
+  /** The line the accepted offer added. */
+  addedItemId: string | null;
+}
+
 export interface FunnelRuntimeAdvanceResult extends FunnelRuntimeState {
   /** Set when an accepted upsell/downsell created a linked order. */
   followOnOrder?: FunnelRuntimeFollowOnOrder;
+  /** Set when it joined the checkout order instead (the store's funnel_upsell_merge). */
+  mergedOrder?: FunnelRuntimeMergedOrder;
 }
 
 export type FunnelRuntimeOutcomeType =

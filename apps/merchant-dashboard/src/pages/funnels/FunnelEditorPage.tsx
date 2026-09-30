@@ -69,6 +69,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { OfferPicker } from "@/components/OfferPicker";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { fmt, useCommon, useLocale, useT, type Locale } from "@/i18n/LocaleContext";
@@ -1409,6 +1410,7 @@ function StepInspector({
   onClose: () => void;
 }) {
   const t = useT(INSPECTOR_STRINGS);
+  const workspaceId = useWorkspaceId();
   const canvasT = useT(CANVAS_STRINGS);
   const c = useCommon();
   const { locale } = useLocale();
@@ -1482,7 +1484,15 @@ function StepInspector({
 
         <div className="space-y-1.5">
           <Label htmlFor="step-type">{t.type}</Label>
-          <Select id="step-type" value={step.type} onChange={(e) => onChange({ type: e.target.value as UiStepType })}>
+          <Select
+            id="step-type"
+            value={step.type}
+            onChange={(e) => {
+              const type = e.target.value as UiStepType;
+              // Only a checkout step has a form to offer a bump on.
+              onChange(type === "checkout" ? { type } : { type, bumpOfferId: null });
+            }}
+          >
             {STEP_TYPE_ORDER.map((type) => (
               <option key={type} value={type}>
                 {STEP_TYPE_LABELS[locale][type]}
@@ -1539,6 +1549,19 @@ function StepInspector({
               </>
             )}
             {needsOffer && !step.offerId && <p className="text-xs text-danger">{t.required}</p>}
+          </div>
+        )}
+
+        {step.type === "checkout" && (
+          <div className="space-y-2 rounded-2xl border border-line bg-paper p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.bump}</p>
+            <p className="text-xs text-ink-soft">{t.bumpHint}</p>
+            <OfferPicker
+              workspaceId={workspaceId}
+              value={step.bumpOfferId}
+              onChange={(bumpOfferId) => onChange({ bumpOfferId })}
+              label={t.bumpLabel}
+            />
           </div>
         )}
 

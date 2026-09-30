@@ -4,7 +4,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ApiClient, CheckoutPayload, CheckoutResult, StorefrontPaymentMethod } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import { storeHref } from "./storeHref";
-import type { OrderLine } from "./placeOrder";
 
 /**
  * Online payments on the storefront: which methods the store offers, the
@@ -131,7 +130,7 @@ export async function placeOnlineOrder({
   payload,
   method,
   cartToken,
-  lines,
+  visitorId,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -139,32 +138,22 @@ export async function placeOnlineOrder({
   payload: CheckoutPayload;
   method: StorefrontPaymentMethod;
   cartToken?: string;
-  lines?: OrderLine[];
+  /** Owns any photo answering a product's custom field. */
+  visitorId?: string;
 }): Promise<{ result: CheckoutResult; next: string; external: boolean }> {
   const previewToken = getPreviewToken(workspaceId);
-  let token = cartToken;
-  let body: CheckoutPayload = {
+  const token = cartToken;
+  const body: CheckoutPayload = {
     ...payload,
     paymentMethod: method.method,
     ...(method.provider ? { paymentProvider: method.provider } : {}),
   };
-  if (lines && lines.length > 0) {
-    // Several lines from a product page go through a fresh, isolated cart, as
-    // for cash on delivery (placeOrder.placeCodOrder).
-    const cart = await client.getOrCreateCart(workspaceId);
-    for (const line of lines) await client.addCartItem(workspaceId, cart.guestToken, line);
-    const { item: _ignored, ...rest } = body;
-    void _ignored;
-    body = rest;
-    token = cart.guestToken;
-  }
-
   // The return URL names the order, which only exists once the checkout
   // answers: the server fills in the {orderId} placeholder.
   const result = await client.placeCheckout(
     workspaceId,
     { ...body, returnUrl: paymentPageUrl(basePath, "{orderId}") },
-    { cartToken: token, previewToken }
+    { cartToken: token, previewToken, visitorId }
   );
 
   const order = result.order;

@@ -65,6 +65,13 @@ export interface StoreLook {
    * theme's own default applies.
    */
   primaryColor: string | null;
+  /**
+   * True while `primaryColor` is one a website template carried over
+   * (WebsitePage) and the merchant has not picked a colour since. On a theme
+   * such a colour is ignored — the theme keeps its own accent — so read the
+   * accent through `accentOf`, never `primaryColor` directly.
+   */
+  primaryColorFromTemplate: boolean;
   /** The accent in dark mode. Null follows `primaryColor` (or the theme's dark default without one). */
   primaryColorDark: string | null;
   /** Original look only; a theme brings its own. */
@@ -106,6 +113,21 @@ export const PALETTES: Array<{ key: string; primary: string; secondary: string }
   { key: "charcoal", primary: "#1F2937", secondary: "#D97706" },
 ];
 
+/**
+ * `themeSettings.primaryColorSource` for a colour a template carried over.
+ * Must match TEMPLATE_COLOR_SOURCE in apps/storefront/src/lib/brandTheme.ts.
+ */
+export const TEMPLATE_COLOR_SOURCE = "template";
+
+/**
+ * The light-mode accent the store actually paints with under `theme` (the
+ * look's own theme by default): a template's colour counts on the original
+ * look only, exactly as the storefront's brandVars reads it.
+ */
+export function accentOf(look: StoreLook, theme: ThemeChoice = look.storeTheme): string | null {
+  return look.primaryColorFromTemplate && theme !== ORIGINAL_LOOK ? null : look.primaryColor;
+}
+
 const FONT_KEYS = new Set<string>(FONT_OPTIONS.map((o) => o.value));
 const RADIUS_KEYS = new Set<string>(RADIUS_OPTIONS.map((o) => o.value));
 
@@ -119,6 +141,7 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
   return {
     storeTheme: readThemeChoice(ts.storeTheme),
     primaryColor: color("primaryColor"),
+    primaryColorFromTemplate: ts.primaryColorSource === TEMPLATE_COLOR_SOURCE && color("primaryColor") !== null,
     primaryColorDark: color("primaryColorDark"),
     secondaryColor: color("secondaryColor"),
     fontFamily: font,
@@ -169,10 +192,11 @@ function readAnnouncement(raw: unknown): StoreAnnouncementLook {
  * preview separately, as `lookToShellPreview` below.
  */
 export function lookToPreview(look: StoreLook): PreviewTheme {
+  const accent = accentOf(look);
   return {
     // Always spelled out, so switching back to the original look beats a saved theme.
     storeTheme: look.storeTheme,
-    ...(look.primaryColor ? { primaryColor: look.primaryColor } : {}),
+    ...(accent ? { primaryColor: accent } : {}),
     ...(look.primaryColorDark ? { primaryColorDark: look.primaryColorDark } : {}),
     ...(look.secondaryColor ? { secondaryColor: look.secondaryColor } : {}),
     fontFamily: look.fontFamily,
@@ -196,6 +220,9 @@ export function lookToWorkspacePatch(
     cornerRadius: look.cornerRadius,
   };
   if (look.primaryColor) themeSettings.primaryColor = look.primaryColor;
+  // Kept only until the merchant picks a colour of their own.
+  if (look.primaryColorFromTemplate) themeSettings.primaryColorSource = TEMPLATE_COLOR_SOURCE;
+  else delete themeSettings.primaryColorSource;
   if (look.secondaryColor) themeSettings.secondaryColor = look.secondaryColor;
   // Both keys belong to this panel alone: dropping one is how "the original
   // look" and "same as light mode" are saved, leaving no trace of either.
@@ -270,6 +297,7 @@ export function sameLook(a: StoreLook, b: StoreLook): boolean {
   return (
     a.storeTheme === b.storeTheme &&
     a.primaryColor === b.primaryColor &&
+    a.primaryColorFromTemplate === b.primaryColorFromTemplate &&
     a.primaryColorDark === b.primaryColorDark &&
     a.secondaryColor === b.secondaryColor &&
     a.fontFamily === b.fontFamily &&

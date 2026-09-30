@@ -9,6 +9,8 @@ import { LoginPage } from "@/pages/LoginPage";
 import { OverviewPage } from "@/pages/OverviewPage";
 import { WorkspacesPage } from "@/pages/WorkspacesPage";
 import { WorkspaceDetailPage } from "@/pages/WorkspaceDetailPage";
+import { UsersPage } from "@/pages/UsersPage";
+import { UserDetailPage } from "@/pages/UserDetailPage";
 import { SubscriptionsPage } from "@/pages/SubscriptionsPage";
 import { PlansPage } from "@/pages/PlansPage";
 import { TemplatesPage } from "@/pages/TemplatesPage";
@@ -55,6 +57,8 @@ export default function App() {
                 />
                 <Route path="/workspaces" element={gated(P.WORKSPACES_VIEW, <WorkspacesPage />)} />
                 <Route path="/workspaces/:id" element={gated(P.WORKSPACES_VIEW, <WorkspaceDetailPage />)} />
+                <Route path="/users" element={gated(P.WORKSPACES_VIEW, <UsersPage />)} />
+                <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
                 <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
                 <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
                 <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />

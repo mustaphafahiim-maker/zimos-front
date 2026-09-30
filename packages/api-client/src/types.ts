@@ -2,6 +2,13 @@ export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  /**
+   * Public handle, lower-case. Null only for an account made through Google
+   * until its owner picks one (the dashboard asks before anything else).
+   */
+  username?: string | null;
+  /** The owner's last change (null until they change it once; the first choice doesn't count). */
+  usernameChangedAt?: string | null;
   phone: string | null;
   status: "pending_verification" | "active" | string;
   /** May sign in to the platform console: true for any platform role. */
@@ -29,6 +36,16 @@ export interface RegisterPayload {
   password: string;
   fullName: string;
   phone?: string;
+  /** 3–30 of a–z 0–9 _ . — 409 USERNAME_TAKEN, 422 when invalid or reserved. */
+  username?: string;
+}
+
+/** Why a username can't be had (GET /auth/username-available). */
+export type UsernameUnavailableReason = "invalid" | "reserved" | "taken";
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason?: UsernameUnavailableReason;
 }
 
 /**
@@ -64,6 +81,21 @@ export interface WorkspaceSettings {
   shipping_governorate_rates?: Record<string, number>;
   /** Read-only here — PATCH /shipping/settings. "manual" or a courier code, preselected when booking. */
   default_carrier_code?: string;
+  /**
+   * The text the confirmation queue's WhatsApp button opens with. Absent uses
+   * the dashboard's built-in message. Placeholders: {store} {orderNumber}
+   * {items} {total} {customerName}.
+   */
+  confirmation_whatsapp_template?: string;
+  /**
+   * Funnel upsells join the checkout order while it waits in its offer
+   * window, instead of becoming orders of their own. Off unless true.
+   */
+  funnel_upsell_merge?: boolean;
+  /** How long a funnel order waits for its offers at most. Absent = 15. */
+  funnel_offer_window_minutes?: number;
+  /** The store checkout's order bump as stored — see OrderBumpSettings. */
+  order_bump?: OrderBumpSettings;
   [key: string]: unknown;
 }
 
@@ -144,6 +176,20 @@ export interface UpdateWorkspacePayload {
      * `checkout_settings`; a `null` rule is "off".
      */
     fraud_rules?: { [K in keyof FraudRules]?: FraudRules[K] | null } | null;
+    /** Sent whole; `null` goes back to the defaults. */
+    storefront_catalog?: StorefrontCatalogSettings | null;
+    /**
+     * Sent whole; `null` removes it. Switching it on with an offer that cannot
+     * be a bump (archived, unpriced, a product with custom fields, another
+     * store's) is refused with 422.
+     */
+    order_bump?: OrderBumpSettings | null;
+    /** Needs orders.manage on top of website.edit. */
+    funnel_upsell_merge?: boolean | null;
+    /** 1–120; needs orders.manage. `null` goes back to 15. */
+    funnel_offer_window_minutes?: number | null;
+    /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
+    confirmation_whatsapp_template?: string | null;
   };
 }
 
@@ -213,6 +259,8 @@ export interface WebsiteTemplateSummary {
   category: string | null;
   thumbnailUrl: string | null;
   templateVersionId: string;
+  /** The template's accent (its column, else its current version's globalStyles). */
+  primaryColor?: string | null;
 }
 
 export interface WebsiteTemplateDetail extends WebsiteTemplateSummary {
@@ -420,6 +468,131 @@ export interface StorefrontMeta {
   currency: string;
   /** Always fully populated — an unconfigured store gets the defaults. */
   checkout: CheckoutSettings;
+  /** The product listing's sidebar and default sort; always populated. */
+  catalog?: StorefrontCatalogSettings;
+  /** The store checkout's order bump; null when none is set or it can't be sold right now. */
+  orderBump?: StorefrontOrderBump | null;
+}
+
+/**
+ * settings.order_bump: the offer the store's checkout (product page and cart
+ * checkout) offers as an "add to your order" tick box. The offer id is kept
+ * while it is switched off.
+ */
+export interface OrderBumpSettings {
+  enabled: boolean;
+  offer_id: string | null;
+  /** Replaces the card's "Add to your order" heading. */
+  title?: string | null;
+  description?: string | null;
+}
+
+/**
+ * An order bump as the storefront shows it (store.orderBump, or a funnel
+ * checkout step's `bump`). Ticking it sends `orderBump: { offerId }` with the
+ * checkout; the server builds the line from the offer itself.
+ */
+export interface StorefrontOrderBump {
+  offerId: string;
+  /** The offer's first line — what the order line is filed under (and what a shipping quote needs). */
+  variantId: string;
+  productId: string;
+  productSlug: string | null;
+  /** The merchant's heading, or null for the default one. */
+  title: string | null;
+  /** The offer's name. */
+  name: string;
+  productName: string;
+  description: string | null;
+  imageUrl: string | null;
+  priceAmount: number;
+  /** What the offer's contents cost one by one, when that is more than its price. */
+  compareAtAmount: number | null;
+  currency: string;
+  lines: Array<{ variantId: string; quantity: number }>;
+}
+
+/** How a product listing may be sorted. "relevance" only means something with a search. */
+export type StorefrontSort = "relevance" | "newest" | "price_asc" | "price_desc" | "name" | "position";
+export type CatalogDefaultSort = Exclude<StorefrontSort, "relevance">;
+
+/**
+ * One sidebar filter, in order: the collection tree, a price range, tags,
+ * every product option ("options"), or one option by name.
+ */
+export type CatalogFilter =
+  | { key: "collections" }
+  | { key: "price" }
+  | { key: "tags" }
+  | { key: "options" }
+  | { key: "option"; name: string };
+
+/** settings.storefront_catalog — sent whole on save; the storefront reads it as store.catalog. */
+export interface StorefrontCatalogSettings {
+  sidebar_enabled: boolean;
+  default_sort: CatalogDefaultSort;
+  filters: CatalogFilter[];
+}
+
+export const DEFAULT_CATALOG_SETTINGS: StorefrontCatalogSettings = {
+  sidebar_enabled: true,
+  default_sort: "newest",
+  filters: [{ key: "collections" }, { key: "price" }, { key: "options" }, { key: "tags" }],
+};
+
+/** Query for the searchable, filterable listing (GET /store/:id/products). */
+export interface StorefrontListingParams {
+  search?: string;
+  /** A collection id or slug; its sub-collections are included. */
+  collection?: string;
+  tags?: string[];
+  /** Minor units. */
+  minPrice?: number;
+  maxPrice?: number;
+  /** Option name → accepted values, e.g. { Size: ["M", "L"] }. */
+  options?: Record<string, string[]>;
+  sort?: StorefrontSort;
+  page?: number;
+  limit?: number;
+  facets?: boolean;
+}
+
+export interface StorefrontFacets {
+  collections: Array<{ id: string; name: string; slug: string; parentId: string | null; count: number }>;
+  tags: Array<{ value: string; count: number }>;
+  options: Array<{ name: string; values: Array<{ value: string; count: number }> }>;
+  price: { min: number | null; max: number | null };
+}
+
+export interface StorefrontListing extends StorefrontProductList {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  sort: StorefrontSort;
+  /** Set when filtering by a collection. */
+  collection?: StorefrontCollection & { parentId: string | null; imageUrl: string | null };
+  /** From the top level down to the collection, inclusive. */
+  breadcrumbs?: Array<{ id: string; name: string; slug: string }>;
+  /** With a search: the same as `products`. */
+  matches?: StorefrontProduct[];
+  /** With a search, first page only: close products that did not match, never repeating one. */
+  related?: StorefrontProduct[];
+  facets?: StorefrontFacets;
+}
+
+/** GET /store/:id/products/suggest — at most eight rows, collections first. */
+export interface StorefrontSuggestions {
+  query: string;
+  collections: Array<{ id: string; name: string; slug: string; imageUrl: string | null }>;
+  products: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    priceAmount: string | null;
+    currency: string | null;
+  }>;
 }
 
 export interface StorefrontVariant {
@@ -460,6 +633,8 @@ export interface StorefrontProduct {
   seo: Record<string, unknown> | null;
   variants: StorefrontVariant[];
   offers: StorefrontOffer[];
+  /** Fields the shopper fills in when ordering; absent on older responses. */
+  customFields?: CustomField[];
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -512,6 +687,10 @@ export interface StorefrontCollection {
   slug: string;
   description: string | null;
   seo: Record<string, unknown> | null;
+  /** Null for a top-level collection. */
+  parentId?: string | null;
+  position?: number;
+  imageUrl?: string | null;
 }
 
 /**
@@ -566,6 +745,64 @@ export interface CartLine {
   lineTotal: number;
   variant: StorefrontVariant | null;
   isOrderBump: boolean;
+  /** The shopper's answers to the product's custom fields; null when none. */
+  customizations?: Customization[] | null;
+}
+
+// ---------------------------------------------------------------------
+// Product custom fields — what the shopper fills in when ordering.
+// ---------------------------------------------------------------------
+
+export type CustomFieldType = "text" | "textarea" | "image";
+
+/** A merchant's field definition; at most five per product. */
+export interface CustomField {
+  /** Stable key the answers are stored under: lowercase letters, digits, - and _. */
+  id: string;
+  type: CustomFieldType;
+  /** At least one of the two is set. */
+  label: { ar?: string; en?: string };
+  placeholder?: { ar?: string; en?: string };
+  required?: boolean;
+  /** Text and textarea only: text ≤ 200, textarea ≤ 2000 (defaults 100 / 500). */
+  maxLength?: number;
+}
+
+export const CUSTOM_FIELD_LIMITS = {
+  maxFields: 5,
+  text: { default: 100, max: 200 },
+  textarea: { default: 500, max: 2000 },
+} as const;
+
+/** One answer as stored on a cart or order line, with the field's label as it was then. */
+export interface Customization {
+  fieldId: string;
+  type: CustomFieldType;
+  label: { ar: string; en: string };
+  /** Text answers. */
+  value?: string;
+  /** Photo answers: the customer upload. */
+  uploadId?: string;
+  /** Staff responses only: a signed link that works for a few minutes. */
+  url?: string | null;
+  urlExpiresAt?: string;
+  width?: number | null;
+  height?: number | null;
+  /** The photo is gone from storage. */
+  missing?: boolean;
+}
+
+/** What the shopper sends: field id → text, or the id of an uploaded photo. */
+export type CustomizationInput = Record<string, string>;
+
+/** POST /store/:id/uploads — a shopper's photo, processed and waiting for an order. */
+export interface CustomerUpload {
+  uploadId: string;
+  mime: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  expiresAt: string;
 }
 
 export interface Cart {
@@ -617,7 +854,13 @@ export interface CheckoutPayload {
    */
   checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
-  item?: { variantId: string; offerId?: string; quantity?: number };
+  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
+  /**
+   * The shopper ticked the order bump. Accepted only when it is the bump this
+   * checkout offers (422 ORDER_BUMP_INVALID otherwise); 409
+   * ORDER_BUMP_UNAVAILABLE when it has just sold out or been withdrawn.
+   */
+  orderBump?: { offerId: string };
 }
 
 // ---------------------------------------------------------------------
@@ -715,6 +958,24 @@ export interface Offer {
   updatedAt?: string;
 }
 
+/** Why an offer can't be an order bump (GET /catalog/offers → bumpProblem). */
+export type OrderBumpProblem = "not_found" | "inactive" | "no_price" | "no_lines" | "custom_fields";
+
+/** One active offer of the store, for pickers (GET /catalog/offers). */
+export interface WorkspaceOfferOption {
+  id: string;
+  name: string;
+  priceAmount: string | null;
+  currency: string;
+  isDefault: boolean;
+  productId: string;
+  productName: string;
+  imageUrl: string | null;
+  lines: Array<{ variantId: string; quantity: number }>;
+  /** null when it can be an order bump. */
+  bumpProblem: OrderBumpProblem | null;
+}
+
 export interface CollectionSummary {
   id: string;
   workspaceId?: string;
@@ -723,6 +984,13 @@ export interface CollectionSummary {
   description: string | null;
   rules: Record<string, unknown> | null;
   seo: Record<string, unknown>;
+  /** The tree: null is a top-level collection (at most three levels). */
+  parentId: string | null;
+  /** Order among siblings, lowest first. */
+  position: number;
+  imageUrl: string | null;
+  /** Products directly in it (list only). */
+  productCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -756,6 +1024,8 @@ export interface Product {
   shippingMode?: ProductShippingMode;
   /** Minor units, per unit shipped; set exactly when shippingMode is "extra_fee". */
   shippingExtraAmount?: string | number | null;
+  /** Fields the shopper fills in when ordering; [] (or absent on older responses) for none. */
+  customFields?: CustomField[];
   createdAt: string;
   updatedAt: string;
   /** Present on list + detail. */
@@ -770,6 +1040,9 @@ export interface CollectionProductRef {
   name: string;
   slug: string;
   status: ProductStatus;
+  media?: ProductMedia[];
+  /** The product's place in this collection, lowest first. */
+  collectionPosition?: number;
 }
 
 export interface CollectionDetail extends CollectionSummary {
@@ -802,6 +1075,8 @@ export interface CreateProductPayload {
   /** See Product.shippingMode. An extra fee needs "extra_fee"; other modes clear it. */
   shippingMode?: ProductShippingMode;
   shippingExtraAmount?: number | null;
+  /** Sent whole; [] removes them all. A malformed or sixth field is refused (422). */
+  customFields?: CustomField[];
   /**
    * Optional first variant, created with the product in one transaction so a
    * simple product is priced and stocked straight away. Money is integer
@@ -896,6 +1171,24 @@ export interface CreateCollectionPayload {
   description?: string;
   rules?: Record<string, unknown> | null;
   seo?: Record<string, unknown>;
+  /** Null or absent: a top-level collection. A cycle or a fourth level is refused (422). */
+  parentId?: string | null;
+  /** Absent: after its siblings. */
+  position?: number;
+  imageUrl?: string | null;
+}
+
+/** POST /collections/reorder — each listed collection's parent and position. */
+export interface CollectionReorderItem {
+  id: string;
+  parentId?: string | null;
+  position?: number;
+}
+
+/** GET /catalog/option-names — option names in use, most used first. */
+export interface CatalogOptionName {
+  name: string;
+  productCount: number;
 }
 
 export type UpdateCollectionPayload = Partial<CreateCollectionPayload>;
@@ -966,6 +1259,8 @@ export interface OrderItem {
   isUpsell: boolean;
   /** One unit of the line (one bundle for an offer); null when unknown or placed before weights were stored. */
   unitWeightGrams?: number | null;
+  /** The shopper's answers to the product's custom fields; photos carry a short-lived `url` for staff. */
+  customizations?: Customization[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1194,6 +1489,18 @@ export interface Order {
   shipments?: Shipment[];
   /** Present on detail (GET one) only; null for an order that never had a task (prepaid). */
   confirmationTask?: OrderConfirmationTaskSummary | null;
+  /** Detail only: funnel offers taken after this order's offer window closed, placed as their own orders. */
+  linkedOrders?: LinkedOrderSummary[];
+  /** Detail only: the order this one is a late funnel offer of. */
+  linkedFromOrder?: { id: string; orderNumber: string } | null;
+}
+
+export interface LinkedOrderSummary {
+  id: string;
+  orderNumber: string;
+  totalAmount: string;
+  currency: string;
+  createdAt: string;
 }
 
 /** Which shipping rule priced an order or a quote (backend shipping/shippingRules.js). */
@@ -1446,15 +1753,21 @@ export type ConfirmationQueueTab = "pending" | "in_progress" | "done";
 /** "default" is each tab's own order; the rest sort the tab by its orders. */
 export type ConfirmationQueueSort = "default" | OrderSort;
 
+/** The queue's assignment filter: tasks assigned to me, to nobody, or to one member (a user id). */
+export type ConfirmationAssigneeFilter = "me" | "unassigned" | (string & {});
+
 export interface ConfirmationQueueParams {
   status?: ConfirmationQueueTab;
   mine?: boolean;
+  assignedTo?: ConfirmationAssigneeFilter;
   cursor?: string;
   limit?: number;
   sort?: ConfirmationQueueSort;
 }
 /** Where an outcome was recorded. */
 export type ConfirmationAttemptSource = "queue" | "order_page" | "correction";
+/** How the customer was reached on an attempt. */
+export type ConfirmationChannel = "call" | "whatsapp" | "other";
 
 export interface ConfirmationUser {
   id: string;
@@ -1471,6 +1784,8 @@ export interface ConfirmationAttempt {
   source: ConfirmationAttemptSource;
   /** On a correction, the outcome it replaced. */
   previousOutcome: ConfirmationOutcome | null;
+  /** Null on attempts recorded before channels existed, or when none was picked. */
+  channel: ConfirmationChannel | null;
   createdAt: string;
 }
 
@@ -1485,8 +1800,19 @@ export interface ConfirmationTask {
   lockedBy: ConfirmationUser | null;
   /** When the lock lapses; null unless in progress. May be in the past until the next read. */
   lockExpiresAt: string | null;
+  /** The agent a manager handed the task to; only they (or a manager) may claim it. Null is open to all. */
+  assignedToUserId: string | null;
+  assignedTo: ConfirmationUser | null;
+  assignedAt: string | null;
   attemptCount: number;
   nextRetryAt: string | null;
+  /**
+   * A funnel order's task waits until its offer window closes (the shopper may
+   * still add to the order); null is available at once.
+   */
+  availableAt?: string | null;
+  /** True while availableAt lies ahead: listed, but nobody can claim it yet. */
+  waitingForOffers?: boolean;
   outcome: ConfirmationOutcome | null;
   rejectionReason: string | null;
   /** When the task reached `done`. */
@@ -1513,9 +1839,41 @@ export interface ConfirmationQueueCounts {
   pending: number;
   /** Pending tasks with no callback scheduled, or one that is due. */
   pendingDue: number;
+  /** Pending funnel orders still in their offer window. */
+  waitingForOffers?: number;
   inProgress: number;
   inProgressMine: number;
   done: number;
+  /** Open tasks (pending or in progress) assigned to the viewer. */
+  assignedToMe: number;
+  /** Open tasks nobody is assigned to. */
+  unassigned: number;
+}
+
+/** A member a confirmation task may be assigned to (their role can confirm orders). */
+export interface ConfirmationAssignee {
+  id: string;
+  fullName: string;
+  email: string;
+  role: { key: string; name: string };
+}
+
+/** POST /confirmation-tasks/assign — the tasks now carrying the assignment, and the ones left alone. */
+export interface AssignConfirmationTasksResult {
+  assignedTo: ConfirmationUser | null;
+  tasks: ConfirmationTask[];
+  skipped: Array<{ taskId: string; code: "NOT_FOUND" | "TASK_ALREADY_DONE" }>;
+}
+
+/** One attempt as the order page lists it. */
+export interface OrderConfirmationAttempt {
+  id: string;
+  outcome: ConfirmationOutcome;
+  channel: ConfirmationChannel | null;
+  source: ConfirmationAttemptSource;
+  notes: string | null;
+  createdAt: string;
+  agent: ConfirmationUser | null;
 }
 
 /** GET order detail: the order's current confirmation task, if it has one. */
@@ -1525,17 +1883,24 @@ export interface OrderConfirmationTaskSummary {
   outcome: ConfirmationOutcome | null;
   attemptCount: number;
   nextRetryAt: string | null;
+  availableAt?: string | null;
+  waitingForOffers?: boolean;
   completedAt: string | null;
   /** Set only while another claim is live. */
   lockedBy: ConfirmationUser | null;
   lockedAt: string | null;
   lockExpiresAt: string | null;
+  assignedTo?: ConfirmationUser | null;
+  assignedAt?: string | null;
+  /** Oldest first. */
+  attempts?: OrderConfirmationAttempt[];
 }
 
 export interface RecordConfirmationOutcomePayload {
   outcome: ConfirmationOutcome;
   notes?: string;
   rejectionReason?: string;
+  channel?: ConfirmationChannel;
 }
 
 export interface CorrectConfirmationOutcomePayload {
@@ -2015,6 +2380,148 @@ export interface AdminWorkspaceOverview {
   billingPhase?: BillingPhase;
   /** Storefront unavailable and new products/funnels blocked, for either reason. */
   restricted?: boolean;
+  /** Who owns it. */
+  owner?: { id: string; username: string | null; fullName: string; email: string } | null;
+}
+
+/** What set a store's current subscription period. */
+export type AdminPeriodSource = "manual_admin" | "payment" | "special_terms" | "trial" | "other";
+
+export type AdminManualAction = "activate" | "change_plan" | "extend" | "end_now";
+
+export interface AdminManualChange {
+  id: string;
+  action: AdminManualAction;
+  source: "manual_admin";
+  planBefore: { id: string; name: string | null } | null;
+  planAfter: { id: string; name: string | null } | null;
+  statusBefore: string | null;
+  statusAfter: string | null;
+  periodStartBefore: string | null;
+  periodEndBefore: string | null;
+  periodStartAfter: string | null;
+  periodEndAfter: string | null;
+  note: string;
+  actor: { id: string; fullName: string } | null;
+  createdAt: string;
+}
+
+/** GET /admin/workspaces/:id/subscription */
+export interface AdminManualSubscription {
+  subscription: {
+    id: string;
+    plan: { id: string; name: string; code: string } | null;
+    /** As the lifecycle sees it (a lapsed period counts as past_due). */
+    status: string;
+    storedStatus: string;
+    phase: BillingPhase | string;
+    billingCycle: BillingCycle;
+    trialEndsAt: string | null;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    restrictsAt: string | null;
+    source: AdminPeriodSource;
+  };
+  /** A charge already open — manual actions leave it alone. */
+  openCharge: { id: string; amount: string | number; currency: string; periodStart: string; periodEnd: string } | null;
+  history: AdminManualChange[];
+}
+
+/** POST …/subscription/{activate|change-plan|extend|end} */
+export interface AdminManualActionResult extends AdminManualSubscription {
+  change: AdminManualChange;
+  /** True when an Idempotency-Key replayed an earlier identical request. */
+  replayed: boolean;
+}
+
+export type AdminDuration = { months: number } | { days: number };
+
+export interface AdminActivateSubscriptionInput {
+  planId: string;
+  startsAt?: string;
+  duration?: AdminDuration;
+  endsAt?: string;
+  billingCycle?: BillingCycle;
+  note: string;
+}
+
+export interface AdminFeatureOverride {
+  id: string;
+  featureKey: PlanFeatureKey;
+  mode: "grant" | "deny";
+  value: unknown;
+  expiresAt: string | null;
+  reason: string;
+  grantedBy: { id: string; fullName: string } | null;
+  createdAt: string;
+  revokedAt: string | null;
+  revokedBy: { id: string; fullName: string } | null;
+  revokeReason: string | null;
+  state: "active" | "expired" | "revoked";
+}
+
+/** One catalogue feature for a store: enabled or not, and why. */
+export interface AdminWorkspaceFeature {
+  key: PlanFeatureKey;
+  type: "boolean";
+  inPlan: boolean;
+  enabled: boolean;
+  source: "plan" | "override" | "none";
+  override: AdminFeatureOverride | null;
+  expiredOverride: AdminFeatureOverride | null;
+}
+
+export interface AdminWorkspaceFeatures {
+  features: AdminWorkspaceFeature[];
+  /** Every override the store has had, newest first. */
+  overrides: AdminFeatureOverride[];
+}
+
+/** A store in a user search row: theirs, or one they belong to. */
+export interface AdminUserStore {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  /** "owner", or the member's role key. */
+  role: string;
+  /** This store is what matched the search. */
+  matched: boolean;
+  subscription: {
+    status: string;
+    phase: BillingPhase | string;
+    plan: string | null;
+    planId: string | null;
+    currentPeriodEnd: string | null;
+  } | null;
+}
+
+/** One account in GET /admin/users. */
+export interface AdminUserRow {
+  id: string;
+  username: string | null;
+  fullName: string;
+  email: string;
+  status: string;
+  platformRole: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  emailVerified: boolean;
+  workspaces: AdminUserStore[];
+}
+
+export interface AdminUserSearchPage {
+  users: AdminUserRow[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+/** GET /admin/users/:id */
+export interface AdminUserDetail extends AdminUserRow {
+  phone: string | null;
+  usernameChangedAt: string | null;
 }
 
 export interface AdminPlan {

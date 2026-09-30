@@ -4,6 +4,7 @@ import {
   isApiErrorCode,
   type ApiClient,
   type CheckoutPayload,
+  type CustomizationInput,
   type Order,
 } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
@@ -15,6 +16,8 @@ export interface OrderLine {
   variantId: string;
   offerId?: string;
   quantity: number;
+  /** Answers to the product's custom fields (photos by upload id). */
+  customizations?: CustomizationInput;
 }
 
 /**
@@ -22,34 +25,35 @@ export interface OrderLine {
  * fresh Idempotency-Key per request).
  *
  *  - `cartToken`  → order from the shopper's cart (the /checkout page).
- *  - `lines`      → several lines from a product page (e.g. product + order
- *                   bump): they go into a *fresh, isolated* guest cart so the
- *                   shopper's main cart is never touched, then check out.
- *  - neither      → Buy Now: `payload.item` is the single line.
+ *  - no token     → Buy Now: `payload.item` is the single line.
+ *
+ * A ticked order bump rides along as `payload.orderBump` either way: the
+ * server adds it to the same order from the merchant's offer.
  */
 export async function placeCodOrder({
   client,
   workspaceId,
   payload,
   cartToken,
-  lines,
+  visitorId,
 }: {
   client: ApiClient;
   workspaceId: string;
   payload: CheckoutPayload;
   cartToken?: string;
-  lines?: OrderLine[];
+  /** The shopper's visitor id — it owns any photo answering a custom field. */
+  visitorId?: string;
 }): Promise<Order> {
-  if (lines && lines.length > 0) {
-    const cart = await client.getOrCreateCart(workspaceId);
-    for (const line of lines) {
-      await client.addCartItem(workspaceId, cart.guestToken, line);
-    }
-    const { item: _ignored, ...rest } = payload;
-    void _ignored;
-    return client.checkout(workspaceId, rest, cart.guestToken);
-  }
-  return client.checkout(workspaceId, payload, cartToken);
+  return client.checkout(workspaceId, payload, cartToken, { visitorId });
+}
+
+/**
+ * The ticked order bump was refused: it sold out or was withdrawn a moment
+ * ago (ORDER_BUMP_UNAVAILABLE), or the merchant changed it since this page
+ * loaded (ORDER_BUMP_INVALID). Either way the form unticks it and says so.
+ */
+export function isOrderBumpRefused(err: unknown): boolean {
+  return isApiErrorCode(err, "ORDER_BUMP_UNAVAILABLE") || isApiErrorCode(err, "ORDER_BUMP_INVALID");
 }
 
 /**
@@ -111,6 +115,9 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
  */
 export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   if (isApiErrorCode(err, "ORDER_REJECTED")) return copy.rejected;
+  // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
+  if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
+  if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;
