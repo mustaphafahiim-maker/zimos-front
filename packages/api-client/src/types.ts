@@ -2384,6 +2384,99 @@ export interface AdminWorkspaceOverview {
   owner?: { id: string; username: string | null; fullName: string; email: string } | null;
 }
 
+/** What set a store's current subscription period. */
+export type AdminPeriodSource = "manual_admin" | "payment" | "special_terms" | "trial" | "other";
+
+export type AdminManualAction = "activate" | "change_plan" | "extend" | "end_now";
+
+export interface AdminManualChange {
+  id: string;
+  action: AdminManualAction;
+  source: "manual_admin";
+  planBefore: { id: string; name: string | null } | null;
+  planAfter: { id: string; name: string | null } | null;
+  statusBefore: string | null;
+  statusAfter: string | null;
+  periodStartBefore: string | null;
+  periodEndBefore: string | null;
+  periodStartAfter: string | null;
+  periodEndAfter: string | null;
+  note: string;
+  actor: { id: string; fullName: string } | null;
+  createdAt: string;
+}
+
+/** GET /admin/workspaces/:id/subscription */
+export interface AdminManualSubscription {
+  subscription: {
+    id: string;
+    plan: { id: string; name: string; code: string } | null;
+    /** As the lifecycle sees it (a lapsed period counts as past_due). */
+    status: string;
+    storedStatus: string;
+    phase: BillingPhase | string;
+    billingCycle: BillingCycle;
+    trialEndsAt: string | null;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    restrictsAt: string | null;
+    source: AdminPeriodSource;
+  };
+  /** A charge already open — manual actions leave it alone. */
+  openCharge: { id: string; amount: string | number; currency: string; periodStart: string; periodEnd: string } | null;
+  history: AdminManualChange[];
+}
+
+/** POST …/subscription/{activate|change-plan|extend|end} */
+export interface AdminManualActionResult extends AdminManualSubscription {
+  change: AdminManualChange;
+  /** True when an Idempotency-Key replayed an earlier identical request. */
+  replayed: boolean;
+}
+
+export type AdminDuration = { months: number } | { days: number };
+
+export interface AdminActivateSubscriptionInput {
+  planId: string;
+  startsAt?: string;
+  duration?: AdminDuration;
+  endsAt?: string;
+  billingCycle?: BillingCycle;
+  note: string;
+}
+
+export interface AdminFeatureOverride {
+  id: string;
+  featureKey: PlanFeatureKey;
+  mode: "grant" | "deny";
+  value: unknown;
+  expiresAt: string | null;
+  reason: string;
+  grantedBy: { id: string; fullName: string } | null;
+  createdAt: string;
+  revokedAt: string | null;
+  revokedBy: { id: string; fullName: string } | null;
+  revokeReason: string | null;
+  state: "active" | "expired" | "revoked";
+}
+
+/** One catalogue feature for a store: enabled or not, and why. */
+export interface AdminWorkspaceFeature {
+  key: PlanFeatureKey;
+  type: "boolean";
+  inPlan: boolean;
+  enabled: boolean;
+  source: "plan" | "override" | "none";
+  override: AdminFeatureOverride | null;
+  expiredOverride: AdminFeatureOverride | null;
+}
+
+export interface AdminWorkspaceFeatures {
+  features: AdminWorkspaceFeature[];
+  /** Every override the store has had, newest first. */
+  overrides: AdminFeatureOverride[];
+}
+
 /** A store in a user search row: theirs, or one they belong to. */
 export interface AdminUserStore {
   id: string;

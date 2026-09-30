@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger, buttonVariants } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
@@ -8,6 +9,7 @@ import { Status, StatusBadge } from "@/components/StatusBadge";
 import { WorkspaceStatus } from "@/components/workspace";
 import { SubscriptionCharges } from "@/components/charges";
 import { StoreAccessPanel } from "@/components/storeAccess";
+import { FeatureOverridesPanel, ManualSubscriptionPanel, StoreAuditPanel } from "@/components/storeBilling";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
@@ -31,6 +33,10 @@ export function WorkspaceDetailPage() {
   const tab: TabKey = isTab(tabParam) ? tabParam : "overview";
   const { data, loading, error, refresh } = useAsync(() => adminApi.getWorkspaceRow(id), [id]);
   const { can } = useAuth();
+  // Bumped by a manual subscription or feature change, so the cards that read
+  // the same records (charges, features, audit log) load them again.
+  const [planVersion, setPlanVersion] = useState(0);
+  const [featureVersion, setFeatureVersion] = useState(0);
 
   if (loading || error) {
     return (
@@ -127,6 +133,24 @@ export function WorkspaceDetailPage() {
         </TabsContent>
 
         <TabsContent value="subscription" className="pt-5">
+          {sub && can(P.SUBSCRIPTIONS_VIEW) && (
+            <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <ManualSubscriptionPanel
+                workspaceId={ws.id}
+                canManage={can(P.SUBSCRIPTIONS_MANAGE)}
+                onChanged={() => {
+                  setPlanVersion((v) => v + 1);
+                  void refresh({ silent: true });
+                }}
+              />
+              <FeatureOverridesPanel
+                key={planVersion}
+                workspaceId={ws.id}
+                canManage={can(P.SUBSCRIPTIONS_MANAGE)}
+                onChanged={() => setFeatureVersion((v) => v + 1)}
+              />
+            </div>
+          )}
           {!sub ? (
             <EmptyBlock message="This workspace has never had a subscription." />
           ) : (
@@ -179,12 +203,18 @@ export function WorkspaceDetailPage() {
             </div>
           )}
 
-          {sub && can(P.SUBSCRIPTIONS_VIEW) && <SubscriptionCharges workspaceId={ws.id} />}
+          {sub && can(P.SUBSCRIPTIONS_VIEW) && <SubscriptionCharges key={planVersion} workspaceId={ws.id} />}
+
+          {can(P.AUDIT_LOG_VIEW) && (
+            <div className="mt-4">
+              <StoreAuditPanel key={`${planVersion}-${featureVersion}`} workspaceId={ws.id} />
+            </div>
+          )}
 
           <p className="mt-4 text-xs text-ink-soft">
             Charges can be created and their payments recorded here by hand until a subscription
-            payment gateway exists. Changing a plan, extending a trial, cancelling or suspending each
-            need a billing mutation endpoint that doesn't exist yet.
+            payment gateway exists. Activating, changing the plan, extending or ending the
+            subscription by hand never creates a charge or an agent commission.
           </p>
         </TabsContent>
       </Tabs>

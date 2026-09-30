@@ -14,6 +14,7 @@ import { getErrorMessage } from "@/lib/errors";
 import * as adminApi from "@/lib/adminApi";
 import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
 import { PLAN_FEATURES } from "@/lib/planFeatures";
+import { FeaturePicker } from "@/components/FeaturePicker";
 import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
 import { formatBp, formatMoney, formatNumber, formatRelative } from "@/lib/format";
 
@@ -269,25 +270,7 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
           />
         </div>
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium text-ink">Features</legend>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {PLAN_FEATURES.map((f) => {
-              const checked = form.features.includes(f.key);
-              return (
-                <label key={f.key} className="flex cursor-pointer items-center gap-2.5 rounded-[10px] border border-line px-3 py-2 text-sm text-ink hover:border-ink-soft">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-[var(--color-primary)]"
-                    checked={checked}
-                    onChange={() => set("features", checked ? form.features.filter((k) => k !== f.key) : [...form.features, f.key])}
-                  />
-                  {f.label}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
+        <FeaturePicker value={form.features} onChange={(next) => set("features", next)} />
 
         <Toggle label="Active" description="Inactive plans stay on existing workspaces but can't be chosen for new ones." checked={form.active} onChange={(v) => set("active", v)} />
       </form>

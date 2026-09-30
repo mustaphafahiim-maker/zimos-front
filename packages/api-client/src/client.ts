@@ -74,6 +74,11 @@ import type {
   AdminWorkspaceOverview,
   AdminUserDetail,
   AdminUserSearchPage,
+  AdminManualSubscription,
+  AdminManualActionResult,
+  AdminWorkspaceFeatures,
+  AdminFeatureOverride,
+  PlanFeatureKey,
   AnalyticsSummary,
   AnalyticsSummaryParams,
   FunnelAnalyticsDetail,
@@ -950,6 +955,64 @@ export class ApiClient {
   // ---------------------------------------------------------------------
   // Platform admin
   // ---------------------------------------------------------------------
+
+  // --- Manual subscription and feature overrides (one store) ---------------
+
+  async adminGetManualSubscription(workspaceId: string) {
+    return this.request<AdminManualSubscription>(`/admin/workspaces/${workspaceId}/subscription`);
+  }
+
+  /**
+   * One manual action. `idempotencyKey` should be made once per dialog, so a
+   * double click replays the first result (200, replayed) instead of acting twice.
+   */
+  async adminManualSubscriptionAction(
+    workspaceId: string,
+    action: "activate" | "change-plan" | "extend" | "end",
+    body: Record<string, unknown>,
+    idempotencyKey?: string
+  ) {
+    return this.request<AdminManualActionResult>(`/admin/workspaces/${workspaceId}/subscription/${action}`, {
+      method: "POST",
+      body,
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    });
+  }
+
+  async adminListWorkspaceFeatures(workspaceId: string) {
+    return this.request<AdminWorkspaceFeatures>(`/admin/workspaces/${workspaceId}/features`);
+  }
+
+  async adminAddFeatureOverride(
+    workspaceId: string,
+    body: { featureKey: PlanFeatureKey; mode: "grant" | "deny"; expiresAt?: string | null; reason: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides`,
+      { method: "POST", body }
+    );
+    return override;
+  }
+
+  async adminUpdateFeatureOverride(
+    workspaceId: string,
+    overrideId: string,
+    body: { mode?: "grant" | "deny"; expiresAt?: string | null; reason?: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}`,
+      { method: "PATCH", body }
+    );
+    return override;
+  }
+
+  async adminRevokeFeatureOverride(workspaceId: string, overrideId: string, reason?: string) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}/revoke`,
+      { method: "POST", body: { reason: reason ?? null } }
+    );
+    return override;
+  }
 
   /** GET /admin/users — one search over name, username, email, id and the user's stores. */
   async adminSearchUsers(params: { q?: string; page?: number; limit?: number } = {}) {
