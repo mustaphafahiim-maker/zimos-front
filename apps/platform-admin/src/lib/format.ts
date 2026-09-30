@@ -146,14 +146,23 @@ export function minorUnitDigits(currency: string): number {
  * Every money field on the `/admin` surface is stored and served in minor
  * units: `plans.monthly_price_amount` is a BIGINT of 29900 for a $299.00 plan,
  * and `AdminSubscription.mrr` and the overview's `mrr`/`gmv30d` follow it.
- * Passing those straight to `formatMoney` renders them 100x too high.
- *
- * NOTE: `PlansPage` and `SubscriptionsPage` currently do exactly that and are
- * overstating every price and MRR figure by 100x. Not corrected here — those
- * pages are outside this change — but they want this helper.
+ * Passing those straight to `formatMoney` renders them 100x too high: every
+ * figure the API sends goes through one of the `formatMinorMoney*` helpers,
+ * and the only division by the minor unit happens there (or in the two
+ * converters below, for form inputs).
  */
 export function formatMinorMoney(minor: number, currency: string = PLATFORM_CURRENCY): string {
-  return formatMoney(minor / 10 ** minorUnitDigits(currency), currency);
+  return formatMoney(toMajorAmount(minor, currency), currency);
+}
+
+/** Minor units → the amount a person reads and types (29900 USD → 299). */
+export function toMajorAmount(minor: number, currency: string = PLATFORM_CURRENCY): number {
+  return minor / 10 ** minorUnitDigits(currency);
+}
+
+/** An amount a person typed → minor units, rounded to the currency's own unit (299.5 USD → 29950). */
+export function toMinorAmount(major: number, currency: string = PLATFORM_CURRENCY): number {
+  return Math.round(major * 10 ** minorUnitDigits(currency));
 }
 
 const exactMoneyFmts = new Map<string, Intl.NumberFormat>();

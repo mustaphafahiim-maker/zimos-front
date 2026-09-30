@@ -16,12 +16,15 @@ import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
 import { PLAN_FEATURES } from "@/lib/planFeatures";
 import { FeaturePicker } from "@/components/FeaturePicker";
 import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
-import { formatBp, formatMoney, formatNumber, formatRelative } from "@/lib/format";
+import { formatBp, formatMinorMoney, formatNumber, formatRelative, minorUnitDigits, toMajorAmount, toMinorAmount } from "@/lib/format";
 
 interface PlanForm {
   id?: string;
   name: string;
   code: string;
+  /** The plan's currency: prices are typed in it and sent in its minor units. */
+  currency: string;
+  /** Whole currency units as typed (299), not minor units. */
   monthlyPrice: string;
   yearlyPrice: string;
   trialDays: string;
@@ -32,9 +35,11 @@ interface PlanForm {
   active: boolean;
 }
 
+// A new plan gets the API's default currency (plans.currency defaults to USD).
 const EMPTY: PlanForm = {
   name: "",
   code: "",
+  currency: "USD",
   monthlyPrice: "0",
   yearlyPrice: "0",
   trialDays: "14",
@@ -50,8 +55,9 @@ function toForm(p: Plan): PlanForm {
     id: p.id,
     name: p.name,
     code: p.code,
-    monthlyPrice: String(p.monthlyPrice),
-    yearlyPrice: String(p.yearlyPrice),
+    currency: p.currency,
+    monthlyPrice: String(toMajorAmount(p.monthlyPrice, p.currency)),
+    yearlyPrice: String(toMajorAmount(p.yearlyPrice, p.currency)),
     trialDays: String(p.trialDays),
     orderQuota: p.orderQuota === null ? "" : String(p.orderQuota),
     transactionFeeBp: String(p.transactionFeeBp),
@@ -100,11 +106,11 @@ export function PlansPage() {
               <div className="flex-1 space-y-4 px-5 py-4">
                 <div>
                   <p className="tabular text-2xl font-semibold text-ink">
-                    {formatMoney(p.monthlyPrice, p.currency)}
+                    {formatMinorMoney(p.monthlyPrice, p.currency)}
                     <span className="text-sm font-normal text-ink-soft"> / month</span>
                   </p>
                   <p className="tabular text-sm text-ink-soft">
-                    {formatMoney(p.yearlyPrice, p.currency)} / year
+                    {formatMinorMoney(p.yearlyPrice, p.currency)} / year
                   </p>
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -198,12 +204,13 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
     setBusy(true);
     setError(null);
     try {
+      const monthlyMinor = toMinorAmount(nums[0], form.currency);
       const saved = await adminApi.savePlan({
         id: form.id,
         name: form.name,
         code: form.code,
-        monthlyPrice: nums[0],
-        yearlyPrice: nums[0] * ANNUAL_PRICE_MONTHS,
+        monthlyPrice: monthlyMinor,
+        yearlyPrice: monthlyMinor * ANNUAL_PRICE_MONTHS,
         trialDays: Math.max(0, Math.round(nums[2])),
         orderQuota: quota,
         transactionFeeBp: Math.round(nums[3]),
@@ -240,12 +247,29 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField label="Name" required value={form.name} onChange={(e) => set("name", e.target.value)} />
           <TextField label="Code" hint="Lowercase identifier used by billing. Derived from the name if empty." value={form.code} onChange={(e) => set("code", e.target.value)} />
-          <TextField label="Monthly price" type="number" min={0} step="1" required value={form.monthlyPrice} onChange={(e) => set("monthlyPrice", e.target.value)} />
           <TextField
-            label="Yearly price"
+            label={`Monthly price (${form.currency})`}
+            type="number"
+            min={0}
+            step={minorUnitDigits(form.currency) > 0 ? String(10 ** -minorUnitDigits(form.currency)) : "1"}
+            required
+            value={form.monthlyPrice}
+            hint={
+              Number.isFinite(Number(form.monthlyPrice))
+                ? `= ${formatMinorMoney(toMinorAmount(Number(form.monthlyPrice), form.currency), form.currency)} a month`
+                : undefined
+            }
+            onChange={(e) => set("monthlyPrice", e.target.value)}
+          />
+          <TextField
+            label={`Yearly price (${form.currency})`}
             type="number"
             readOnly
-            value={Number.isFinite(Number(form.monthlyPrice)) ? String(Number(form.monthlyPrice) * ANNUAL_PRICE_MONTHS) : ""}
+            value={
+              Number.isFinite(Number(form.monthlyPrice))
+                ? String(toMajorAmount(toMinorAmount(Number(form.monthlyPrice), form.currency) * ANNUAL_PRICE_MONTHS, form.currency))
+                : ""
+            }
             hint={`Always ${ANNUAL_PRICE_MONTHS} × the monthly price (two months free).`}
           />
           <TextField label="Trial days" type="number" min={0} max={90} required value={form.trialDays} onChange={(e) => set("trialDays", e.target.value)} />

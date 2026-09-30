@@ -10,7 +10,7 @@ import { WorkspaceStatus } from "@/components/workspace";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminWorkspaceRow } from "@/lib/adminApi";
-import { formatDate, formatMoney, formatNumber } from "@/lib/format";
+import { formatDate, formatMinorMoney, formatNumber } from "@/lib/format";
 
 type SortKey = "name" | "createdAt" | "mrr" | "orders";
 type StatusFilter = "all" | "none" | "trialing" | "active" | "past_due" | "canceled";
@@ -191,7 +191,7 @@ export function WorkspacesPage() {
                         <WorkspaceStatus row={row} />
                       </Td>
                       <Td className="tabular text-end">
-                        {subscription ? formatMoney(subscription.mrr, subscription.currency) : "—"}
+                        {subscription ? formatMinorMoney(subscription.mrr, subscription.currency) : "—"}
                       </Td>
                       <Td className="tabular text-end">{formatNumber(workspace.orderCount)}</Td>
                       <Td className="text-ink-soft">{workspace.defaultCurrency}</Td>

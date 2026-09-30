@@ -11,7 +11,7 @@ import { Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminSubscriptionRow } from "@/lib/adminApi";
-import { formatDate, formatMoney, formatRelative } from "@/lib/format";
+import { formatDate, formatMinorMoney, formatRelative } from "@/lib/format";
 
 type Filter = "all" | SubscriptionStatus;
 type SortKey = "name" | "mrr" | "next";
@@ -132,7 +132,7 @@ export function SubscriptionsPage() {
                           <span className="mt-1 block text-xs text-ink-soft">Cancels at period end</span>
                         )}
                       </Td>
-                      <Td className="tabular text-end">{formatMoney(s.mrr, s.currency)}</Td>
+                      <Td className="tabular text-end">{formatMinorMoney(s.mrr, s.currency)}</Td>
                       <Td>
                         {next ? (
                           <>
@@ -162,7 +162,7 @@ export function SubscriptionsPage() {
                     Total ({filtered.length})
                   </Td>
                   <Td className="tabular text-end font-semibold">
-                    {totalCurrency ? formatMoney(totalMrr, totalCurrency) : "—"}
+                    {totalCurrency ? formatMinorMoney(totalMrr, totalCurrency) : "—"}
                   </Td>
                   <Td colSpan={2} />
                 </TableRow>

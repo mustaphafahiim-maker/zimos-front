@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
-import { formatDate, formatMoney, formatNumber, formatRelative } from "@/lib/format";
+import { formatDate, formatMinorMoney, formatNumber, formatRelative } from "@/lib/format";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -165,7 +165,7 @@ export function WorkspaceDetailPage() {
                     <span className="capitalize">{sub.billingCycle}</span>
                   </DetailRow>
                   <DetailRow label="MRR">
-                    <span className="tabular">{formatMoney(sub.mrr, sub.currency)}</span>
+                    <span className="tabular">{formatMinorMoney(sub.mrr, sub.currency)}</span>
                   </DetailRow>
                   <DetailRow label="Provider">{sub.externalProvider ?? "—"}</DetailRow>
                 </dl>
