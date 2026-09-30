@@ -10,6 +10,7 @@ import { btnPrimary } from "@/components/ui";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { EmptyBlock } from "./commerce";
 import { num, resolveHref, safeUrl, str, type Props } from "./props";
 
 /**
@@ -148,9 +149,8 @@ export async function OrbitGalleryElement({
   } catch {
     return null;
   }
-  if (products.length === 0) return null;
-
   const title = str(props, "title");
+  if (products.length === 0) return <EmptyBlock title={title} message={t.renderer.emptyProducts} />;
 
   return (
     <div>

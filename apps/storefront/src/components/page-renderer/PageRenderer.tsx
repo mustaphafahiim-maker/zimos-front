@@ -150,7 +150,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
         />
       );
     case "collection_list":
-      return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
+      return <CollectionListElement props={props} workspaceId={ctx.workspaceId} locale={ctx.locale} />;
     case "cart":
       // The cart is a way out of a funnel.
       return ctx.funnel ? null : <CartElement props={props} />;

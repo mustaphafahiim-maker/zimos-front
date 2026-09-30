@@ -242,6 +242,8 @@ export interface WebsiteTemplateSummary {
   category: string | null;
   thumbnailUrl: string | null;
   templateVersionId: string;
+  /** The template's accent (its column, else its current version's globalStyles). */
+  primaryColor?: string | null;
 }
 
 export interface WebsiteTemplateDetail extends WebsiteTemplateSummary {

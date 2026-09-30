@@ -19,6 +19,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { TemplateLivePreview } from "@/components/TemplateLivePreview";
+import type { PreviewTheme } from "@/lib/previewBridge";
 import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 import { ThemeGallery } from "./ThemeGallery";
@@ -31,7 +32,7 @@ const STRINGS = {
     previewOf: "Preview {name}",
     livePreview: "Live preview of {name}",
     catalogueNote:
-      "Previews are your store as it would look with this template — with your own products. Sections that list products stay hidden until you add some.",
+      "Previews are your store as it would look with this template — with your own products. Sections that list products show a “coming soon” note until you add some.",
     search: "Search templates",
     filterLabel: "Filter templates by category",
     all: "All",
@@ -49,7 +50,7 @@ const STRINGS = {
     previewOf: "معاينة {name}",
     livePreview: "معاينة حيّة لـ {name}",
     catalogueNote:
-      "تعرض المعاينة متجرك بهذا القالب مع منتجاتك أنت. لا تظهر الأقسام التي تعرض المنتجات إلا بعد إضافة منتجات.",
+      "تعرض المعاينة متجرك بهذا القالب مع منتجاتك أنت. تظهر أقسام المنتجات بملاحظة «قريبًا» إلى أن تضيف منتجات.",
     search: "ابحث عن قالب",
     filterLabel: "تصفية القوالب حسب الفئة",
     all: "الكل",
@@ -114,6 +115,30 @@ function pagesLine(t: Record<keyof (typeof USE_STRINGS)["en"], string>, count: n
 }
 
 /**
+ * Has the store a look of its own — a theme, or an accent the merchant chose?
+ * Then a template's colour never replaces it (see applyTemplateColour).
+ */
+function storeHasOwnLook(themeSettings: Record<string, unknown> | undefined): boolean {
+  const set = (key: string) => {
+    const existing = themeSettings?.[key];
+    return typeof existing === "string" && existing.trim() !== "";
+  };
+  return set("primaryColor") || set("primaryColorDark") || readThemeChoice(themeSettings?.storeTheme) !== ORIGINAL_LOOK;
+}
+
+/**
+ * The look a template's preview renders in: what applying it would give this
+ * store — the template's accent on a store with no look of its own, the
+ * store's own look otherwise (null: as saved).
+ */
+function useTemplatePreviewTheme(template: Pick<WebsiteTemplateSummary, "primaryColor">): PreviewTheme | null {
+  const { currentWorkspace } = useWorkspace();
+  const colour = typeof template.primaryColor === "string" ? template.primaryColor.trim() : "";
+  if (!/^#[0-9a-f]{6}$/i.test(colour) || storeHasOwnLook(currentWorkspace?.themeSettings)) return null;
+  return { primaryColor: colour };
+}
+
+/**
  * Stands in for a template with no thumbnail and no live render (yet, or at
  * all): a sketch of a storefront page — header, hero, product grid — so the
  * gallery keeps its rhythm instead of showing a bare icon. Decorative; the
@@ -157,12 +182,15 @@ function TemplateThumb({
   url,
   name,
   templateId,
+  primaryColor,
 }: {
   url: string | null;
   name: string;
   templateId: string;
+  primaryColor?: string | null;
 }) {
   const workspaceId = useWorkspaceId();
+  const theme = useTemplatePreviewTheme({ primaryColor });
   const [image, setImage] = useState<"checking" | "ok" | "broken">(url ? "checking" : "broken");
 
   // Probe first so a dead link never flashes a broken image. A card keeps its
@@ -193,6 +221,7 @@ function TemplateThumb({
     <TemplateLivePreview
       workspaceId={workspaceId}
       templateId={templateId}
+      theme={theme}
       title={name}
       fallback={<TemplatePlaceholder />}
     />
@@ -211,7 +240,12 @@ function TemplateCard({
   // The button's ::after covers the card, so all of it stays clickable.
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised text-start transition-colors hover:border-primary">
-      <TemplateThumb url={template.thumbnailUrl} name={template.name} templateId={template.id} />
+      <TemplateThumb
+        url={template.thumbnailUrl}
+        name={template.name}
+        templateId={template.id}
+        primaryColor={template.primaryColor}
+      />
       <div className="flex flex-1 flex-col gap-1 border-t border-line p-4">
         <span className="font-medium text-ink">{template.name}</span>
         {template.category && (
@@ -234,6 +268,7 @@ function TemplateCard({
 function TemplatePreviewPanel({ template }: { template: WebsiteTemplateSummary }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
+  const theme = useTemplatePreviewTheme(template);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
 
   return (
@@ -266,6 +301,7 @@ function TemplatePreviewPanel({ template }: { template: WebsiteTemplateSummary }
           device={device}
           workspaceId={workspaceId}
           templateId={template.id}
+          theme={theme}
           title={fmt(t.livePreview, { name: template.name })}
           fallback={<TemplatePlaceholder />}
         />
@@ -310,22 +346,11 @@ function UseTemplateForm({
   async function applyTemplateColour() {
     const styles = detail.data?.globalStyles;
     const colour = styles && typeof styles.primaryColor === "string" ? styles.primaryColor.trim() : "";
-    const hasOwnLook = (themeSettings: Record<string, unknown> | undefined) => {
-      const set = (key: string) => {
-        const existing = themeSettings?.[key];
-        return typeof existing === "string" && existing.trim() !== "";
-      };
-      return (
-        set("primaryColor") ||
-        set("primaryColorDark") ||
-        readThemeChoice(themeSettings?.storeTheme) !== ORIGINAL_LOOK
-      );
-    };
-    if (!/^#[0-9a-f]{6}$/i.test(colour) || hasOwnLook(currentWorkspace?.themeSettings)) return;
+    if (!/^#[0-9a-f]{6}$/i.test(colour) || storeHasOwnLook(currentWorkspace?.themeSettings)) return;
     try {
       // Asked again of the server's copy: another tab may have picked a look since.
       await saveThemeSettings((current) =>
-        hasOwnLook(current)
+        storeHasOwnLook(current)
           ? null
           : { themeSettings: { ...current, primaryColor: colour, primaryColorSource: TEMPLATE_COLOR_SOURCE } }
       );
