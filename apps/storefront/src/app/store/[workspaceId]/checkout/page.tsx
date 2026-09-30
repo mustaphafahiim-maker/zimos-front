@@ -27,12 +27,14 @@ import { afterOrder, orderErrorMessage, placeCodOrder, serverFieldErrors } from 
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { LineCustomizations } from "@/components/LineCustomizations";
 
 const FORM_PREFIX = "checkout";
 
@@ -165,6 +167,7 @@ export default function CheckoutPage() {
           payload,
           method,
           cartToken: cart.guestToken,
+          visitorId: getVisitorId(workspaceId),
         });
         clearCart();
         if (external) {
@@ -175,7 +178,13 @@ export default function CheckoutPage() {
         }
         return;
       }
-      const order = await placeCodOrder({ client, workspaceId, payload, cartToken: cart.guestToken });
+      const order = await placeCodOrder({
+        client,
+        workspaceId,
+        payload,
+        cartToken: cart.guestToken,
+        visitorId: getVisitorId(workspaceId),
+      });
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
@@ -262,6 +271,7 @@ export default function CheckoutPage() {
                       <span className="min-w-0 text-ink-soft">
                         <span className="line-clamp-2 text-ink">{product?.name ?? (options || t.cart.item)}</span>
                         {product && options && <span className="block text-xs">{options}</span>}
+                        <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>

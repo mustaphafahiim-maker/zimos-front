@@ -1,5 +1,7 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
+  CustomerUpload,
+  CustomizationInput,
   CatalogOptionName,
   CollectionReorderItem,
   StorefrontListing,
@@ -2749,17 +2751,43 @@ export class ApiClient {
     });
   }
 
+  /**
+   * `customizations` answers the product's custom fields; a photo answer is
+   * the id of an upload this visitor made (uploadCustomerPhoto), so send the
+   * same `visitorId` with both.
+   */
   async addCartItem(
     workspaceId: string,
     cartToken: string,
-    payload: { variantId: string; offerId?: string; quantity?: number }
+    payload: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput },
+    opts: { visitorId?: string } = {}
   ) {
     return this.request<Cart>(`/store/${workspaceId}/cart/items`, {
       method: "POST",
       body: payload,
       auth: false,
-      headers: { "X-Cart-Token": cartToken },
+      headers: { "X-Cart-Token": cartToken, ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}) },
     });
+  }
+
+  /**
+   * A shopper's photo for a product's image field. The server re-encodes it
+   * (upright, no metadata, ≤ 5 MB) and keeps it for 48 hours unless an order
+   * takes it. 413 over 15 MB, 415 for anything but JPEG / PNG / WebP, 422 when
+   * it cannot be read, 429 when too many are waiting or too many were sent.
+   */
+  async uploadCustomerPhoto(workspaceId: string, file: File | Blob, opts: { visitorId: string; productId?: string }) {
+    const form = new FormData();
+    form.append("file", file, file instanceof File ? file.name : "photo");
+    if (opts.productId) form.append("productId", opts.productId);
+    // Multipart, so the raw path; no Content-Type here — the browser adds the boundary.
+    const res = await this.rawFetch(`/store/${workspaceId}/uploads`, {
+      method: "POST",
+      body: form,
+      headers: { "X-Visitor-Id": opts.visitorId },
+    });
+    const { upload } = (await res.json()) as { upload: CustomerUpload };
+    return upload;
   }
 
   async updateCartItem(
@@ -2789,13 +2817,17 @@ export class ApiClient {
    * cart's lines; omit it and put a single `item` in the payload for a "Buy
    * Now". The server replies with `{ order }` — unwrapped here like createOrder.
    */
-  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string) {
+  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string, opts: { visitorId?: string } = {}) {
     const { order } = await this.request<{ order: Order }>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,
       auth: false,
       idempotent: true,
-      headers: cartToken ? { "X-Cart-Token": cartToken } : {},
+      headers: {
+        ...(cartToken ? { "X-Cart-Token": cartToken } : {}),
+        // Whose uploaded photos the order may take (custom fields).
+        ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}),
+      },
     });
     return order;
   }
@@ -2809,11 +2841,13 @@ export class ApiClient {
   async placeCheckout(
     workspaceId: string,
     payload: CheckoutPayload,
-    opts: { cartToken?: string; previewToken?: string } = {}
+    opts: { cartToken?: string; previewToken?: string; visitorId?: string } = {}
   ) {
     const headers: Record<string, string> = {};
     if (opts.cartToken) headers["X-Cart-Token"] = opts.cartToken;
     if (opts.previewToken) headers["X-Store-Preview"] = opts.previewToken;
+    // Whose uploaded photos the order may take (custom fields).
+    if (opts.visitorId) headers["X-Visitor-Id"] = opts.visitorId;
     return this.request<CheckoutResult>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,

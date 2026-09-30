@@ -4,6 +4,7 @@ import {
   isApiErrorCode,
   type ApiClient,
   type CheckoutPayload,
+  type CustomizationInput,
   type Order,
 } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
@@ -15,6 +16,8 @@ export interface OrderLine {
   variantId: string;
   offerId?: string;
   quantity: number;
+  /** Answers to the product's custom fields (photos by upload id). */
+  customizations?: CustomizationInput;
 }
 
 /**
@@ -33,23 +36,26 @@ export async function placeCodOrder({
   payload,
   cartToken,
   lines,
+  visitorId,
 }: {
   client: ApiClient;
   workspaceId: string;
   payload: CheckoutPayload;
   cartToken?: string;
   lines?: OrderLine[];
+  /** The shopper's visitor id — it owns any photo answering a custom field. */
+  visitorId?: string;
 }): Promise<Order> {
   if (lines && lines.length > 0) {
     const cart = await client.getOrCreateCart(workspaceId);
     for (const line of lines) {
-      await client.addCartItem(workspaceId, cart.guestToken, line);
+      await client.addCartItem(workspaceId, cart.guestToken, line, { visitorId });
     }
     const { item: _ignored, ...rest } = payload;
     void _ignored;
-    return client.checkout(workspaceId, rest, cart.guestToken);
+    return client.checkout(workspaceId, rest, cart.guestToken, { visitorId });
   }
-  return client.checkout(workspaceId, payload, cartToken);
+  return client.checkout(workspaceId, payload, cartToken, { visitorId });
 }
 
 /**
@@ -111,6 +117,8 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
  */
 export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   if (isApiErrorCode(err, "ORDER_REJECTED")) return copy.rejected;
+  // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
+  if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;

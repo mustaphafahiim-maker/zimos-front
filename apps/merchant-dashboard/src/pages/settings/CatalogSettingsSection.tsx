@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Alert, Button, cn } from "@store-builder/ui";
 import {
@@ -146,16 +146,16 @@ export function CatalogSettingsSection() {
   const [error, setError] = useState<string | null>(null);
 
   // Option names arrive after the first render: add them to the list without undoing edits.
-  useEffect(() => {
-    setRows((current) => {
-      const present = new Set(current.map((r) => keyOf(r.filter)));
-      const extra = names.filter((n) => !present.has(`option:${n}`)).map((name) => ({
-        filter: { key: "option" as const, name },
-        enabled: false,
-      }));
-      return extra.length > 0 ? [...current, ...extra] : current;
-    });
-  }, [names]);
+  const [namesSeen, setNamesSeen] = useState<string[]>([]);
+  if (names !== namesSeen) {
+    setNamesSeen(names);
+    const present = new Set(rows.map((r) => keyOf(r.filter)));
+    const extra = names.filter((n) => !present.has(`option:${n}`)).map((name) => ({
+      filter: { key: "option" as const, name },
+      enabled: false,
+    }));
+    if (extra.length > 0) setRows([...rows, ...extra]);
+  }
 
   const editable = EDITOR_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
   const draft: StorefrontCatalogSettings = {

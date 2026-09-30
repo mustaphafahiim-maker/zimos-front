@@ -30,7 +30,8 @@ export function ProductCard({
   // One variant and it is in stock: nothing to choose, so the card adds it in
   // one tap. Anything with options sends the shopper to the product page.
   const only = product.variants.length === 1 ? product.variants[0] : undefined;
-  const quickAdd = only && only.inStock ? only : undefined;
+  // A product with custom fields is answered on its own page, never quick-added.
+  const quickAdd = only && only.inStock && !(product.customFields && product.customFields.length > 0) ? only : undefined;
   const offer = quickAdd ? defaultOfferOf(product) : undefined;
 
   // --- image carousel: every real photo, not just the first ----------------

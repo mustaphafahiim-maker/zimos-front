@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   DndContext,
@@ -556,9 +556,11 @@ export function CollectionsPage() {
   const [offsetX, setOffsetX] = useState(0);
 
   // The server's tree is the truth; a move is shown at once and put back if the save fails.
-  useEffect(() => {
-    if (list.data) setFlat(flattenTree(list.data));
-  }, [list.data]);
+  const [shown, setShown] = useState<typeof list.data>(null);
+  if (list.data && list.data !== shown) {
+    setShown(list.data);
+    setFlat(flattenTree(list.data));
+  }
 
   const reload = () => list.refresh({ silent: true });
   const rtl = locale === "ar";

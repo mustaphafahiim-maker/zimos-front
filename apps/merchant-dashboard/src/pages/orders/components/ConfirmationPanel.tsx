@@ -20,6 +20,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useToast } from "@/components/Toast";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "@/pages/confirmation/confirmationRoles";
 import { ChannelPicker, WhatsAppButton, useChannelLabels } from "@/pages/confirmation/confirmationChannel";
+import { CustomizationList } from "./CustomizationList";
 
 const STRINGS = {
   en: {
@@ -40,6 +41,7 @@ const STRINGS = {
     assignedToYou: "Assigned to you.",
     assignedToOther: "Assigned to {name}. Only they or a manager can confirm it.",
     history: "Confirmation history",
+    customerDetails: "Confirm these details with the customer",
     outcome_confirmed: "Confirmed",
     outcome_rejected: "Rejected",
     outcome_unreachable: "Unreachable",
@@ -65,6 +67,7 @@ const STRINGS = {
     assignedToYou: "المعيّن له: أنت.",
     assignedToOther: "معيّن لـ {name}، ولا يؤكده غيره إلا المدير.",
     history: "سجل التأكيد",
+    customerDetails: "راجع هذه البيانات مع العميل",
     outcome_confirmed: "مؤكد",
     outcome_rejected: "مرفوض",
     outcome_unreachable: "تعذّر الوصول",
@@ -173,6 +176,20 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
           </p>
         )}
       </div>
+
+      {order.items.some((item) => item.customizations && item.customizations.length > 0) && (
+        <section aria-label={t.customerDetails} className="space-y-2">
+          <h3 className="text-sm font-medium text-ink">{t.customerDetails}</h3>
+          {order.items
+            .filter((item) => item.customizations && item.customizations.length > 0)
+            .map((item) => (
+              <div key={item.id} className="space-y-1">
+                <p className="text-xs font-medium text-ink-soft">{item.productNameSnapshot}</p>
+                <CustomizationList customizations={item.customizations} compact />
+              </div>
+            ))}
+        </section>
+      )}
 
       {canConfirm && !heldByOther && !assignedToOther && (
         <div className="space-y-3">

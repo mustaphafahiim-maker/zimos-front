@@ -43,6 +43,7 @@ import { OrderTimelineLines } from "@/pages/orders/components/OrderTimelineLines
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "./confirmationRoles";
 import { ChannelPicker, WhatsAppButton, useChannelLabels } from "./confirmationChannel";
+import { CustomizationList } from "@/pages/orders/components/CustomizationList";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
 const QUEUE_SORTS: readonly ConfirmationQueueSort[] = ["default", ...ORDER_SORTS];
@@ -568,6 +569,16 @@ function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; 
         </div>
         {aside}
       </div>
+
+      {/* The customer's answers to products' custom fields — confirmed on the call too. */}
+      {order.items
+        .filter((item) => item.customizations && item.customizations.length > 0)
+        .map((item) => (
+          <div key={item.id} className="space-y-1">
+            <p className="text-xs font-medium text-ink-soft">{item.productNameSnapshot}</p>
+            <CustomizationList customizations={item.customizations} compact />
+          </div>
+        ))}
 
       <div className="rounded-[0.5rem] bg-paper px-4 py-3">
         <p className="text-sm font-medium text-ink">{contact.fullName || t.unnamedCustomer}</p>

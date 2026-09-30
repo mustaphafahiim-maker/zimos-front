@@ -13,6 +13,7 @@ import { ProductImagesSection } from "./components/ProductImagesSection";
 import { VariantsSection } from "./components/VariantsSection";
 import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
+import { CustomFieldsSection } from "./components/CustomFieldsSection";
 
 const STRINGS = {
   en: {
@@ -113,6 +114,7 @@ export function ProductEditPage() {
               memberships={data.collections ?? []}
               onChanged={reload}
             />
+            <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
           </div>
         )}
       </DataState>

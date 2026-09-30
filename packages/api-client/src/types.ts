@@ -555,6 +555,8 @@ export interface StorefrontProduct {
   seo: Record<string, unknown> | null;
   variants: StorefrontVariant[];
   offers: StorefrontOffer[];
+  /** Fields the shopper fills in when ordering; absent on older responses. */
+  customFields?: CustomField[];
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -665,6 +667,64 @@ export interface CartLine {
   lineTotal: number;
   variant: StorefrontVariant | null;
   isOrderBump: boolean;
+  /** The shopper's answers to the product's custom fields; null when none. */
+  customizations?: Customization[] | null;
+}
+
+// ---------------------------------------------------------------------
+// Product custom fields — what the shopper fills in when ordering.
+// ---------------------------------------------------------------------
+
+export type CustomFieldType = "text" | "textarea" | "image";
+
+/** A merchant's field definition; at most five per product. */
+export interface CustomField {
+  /** Stable key the answers are stored under: lowercase letters, digits, - and _. */
+  id: string;
+  type: CustomFieldType;
+  /** At least one of the two is set. */
+  label: { ar?: string; en?: string };
+  placeholder?: { ar?: string; en?: string };
+  required?: boolean;
+  /** Text and textarea only: text ≤ 200, textarea ≤ 2000 (defaults 100 / 500). */
+  maxLength?: number;
+}
+
+export const CUSTOM_FIELD_LIMITS = {
+  maxFields: 5,
+  text: { default: 100, max: 200 },
+  textarea: { default: 500, max: 2000 },
+} as const;
+
+/** One answer as stored on a cart or order line, with the field's label as it was then. */
+export interface Customization {
+  fieldId: string;
+  type: CustomFieldType;
+  label: { ar: string; en: string };
+  /** Text answers. */
+  value?: string;
+  /** Photo answers: the customer upload. */
+  uploadId?: string;
+  /** Staff responses only: a signed link that works for a few minutes. */
+  url?: string | null;
+  urlExpiresAt?: string;
+  width?: number | null;
+  height?: number | null;
+  /** The photo is gone from storage. */
+  missing?: boolean;
+}
+
+/** What the shopper sends: field id → text, or the id of an uploaded photo. */
+export type CustomizationInput = Record<string, string>;
+
+/** POST /store/:id/uploads — a shopper's photo, processed and waiting for an order. */
+export interface CustomerUpload {
+  uploadId: string;
+  mime: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  expiresAt: string;
 }
 
 export interface Cart {
@@ -716,7 +776,7 @@ export interface CheckoutPayload {
    */
   checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
-  item?: { variantId: string; offerId?: string; quantity?: number };
+  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
 }
 
 // ---------------------------------------------------------------------
@@ -862,6 +922,8 @@ export interface Product {
   shippingMode?: ProductShippingMode;
   /** Minor units, per unit shipped; set exactly when shippingMode is "extra_fee". */
   shippingExtraAmount?: string | number | null;
+  /** Fields the shopper fills in when ordering; [] (or absent on older responses) for none. */
+  customFields?: CustomField[];
   createdAt: string;
   updatedAt: string;
   /** Present on list + detail. */
@@ -911,6 +973,8 @@ export interface CreateProductPayload {
   /** See Product.shippingMode. An extra fee needs "extra_fee"; other modes clear it. */
   shippingMode?: ProductShippingMode;
   shippingExtraAmount?: number | null;
+  /** Sent whole; [] removes them all. A malformed or sixth field is refused (422). */
+  customFields?: CustomField[];
   /**
    * Optional first variant, created with the product in one transaction so a
    * simple product is priced and stocked straight away. Money is integer
@@ -1093,6 +1157,8 @@ export interface OrderItem {
   isUpsell: boolean;
   /** One unit of the line (one bundle for an offer); null when unknown or placed before weights were stored. */
   unitWeightGrams?: number | null;
+  /** The shopper's answers to the product's custom fields; photos carry a short-lived `url` for staff. */
+  customizations?: Customization[] | null;
   createdAt: string;
   updatedAt: string;
 }

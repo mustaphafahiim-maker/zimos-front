@@ -4,6 +4,7 @@ import { formatMoney, formatOptions } from "@/lib/format";
 import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
+import { CustomizationList } from "./CustomizationList";
 
 const STRINGS = {
   en: {
@@ -146,6 +147,7 @@ export function OrderSummary({ order }: { order: Order }) {
                           {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
                         </div>
                       )}
+                      <CustomizationList customizations={item.customizations} className="mt-2" />
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>

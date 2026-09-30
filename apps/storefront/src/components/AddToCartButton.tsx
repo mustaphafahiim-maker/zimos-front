@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CustomizationInput } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { CartGlyph, CheckIcon } from "./Icons";
@@ -15,6 +16,9 @@ export function AddToCartButton({
   disabled = false,
   variant = "primary",
   className = "",
+  customizations,
+  beforeAdd,
+  onAddError,
 }: {
   variantId: string | undefined;
   offerId?: string;
@@ -23,6 +27,12 @@ export function AddToCartButton({
   disabled?: boolean;
   variant?: "primary" | "secondary";
   className?: string;
+  /** Answers to the product's custom fields, sent with the line. */
+  customizations?: CustomizationInput;
+  /** Runs first; false stops the add (e.g. a required custom field is empty — it says so itself). */
+  beforeAdd?: () => boolean;
+  /** Gets a failed add first; true when it showed the problem itself. */
+  onAddError?: (err: unknown) => boolean;
 }) {
   const { addItem, openDrawer } = useCart();
   const { t } = useStore();
@@ -33,10 +43,11 @@ export function AddToCartButton({
 
   async function handleClick() {
     if (!variantId || unavailable || status === "loading") return;
+    if (beforeAdd && !beforeAdd()) return;
     setStatus("loading");
     setError(null);
     try {
-      await addItem(variantId, offerId, defaultQuantity);
+      await addItem(variantId, offerId, defaultQuantity, customizations);
       setStatus("added");
       // The drawer is the confirmation: the line, the subtotal and the way to
       // checkout, without leaving the page. The button still says "added"
@@ -44,6 +55,10 @@ export function AddToCartButton({
       openDrawer();
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
     } catch (err) {
+      if (onAddError && onAddError(err)) {
+        setStatus("idle");
+        return;
+      }
       setStatus("error");
       setError(err instanceof Error && err.message ? err.message : t.product.addFailed);
     }
