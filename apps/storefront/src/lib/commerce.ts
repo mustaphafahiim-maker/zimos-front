@@ -1,4 +1,10 @@
-import { parseMoney, type Order, type StorefrontOrderBump, type StorefrontProduct } from "@store-builder/api-client";
+import {
+  parseMoney,
+  type FunnelRuntimeMergedOrder,
+  type Order,
+  type StorefrontOrderBump,
+  type StorefrontProduct,
+} from "@store-builder/api-client";
 import { firstImage, priceOf } from "./product";
 
 /**
@@ -222,6 +228,30 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
 }
 
 const ordersKey = (workspaceId: string) => `zimos_orders_${workspaceId}`;
+
+/**
+ * A funnel offer joined the order after it was placed (the store's
+ * funnel_upsell_merge): the saved copy takes its new totals and lines, so the
+ * thank-you page shows what the courier will collect.
+ */
+export function mergeIntoOrderSnapshot(workspaceId: string, merged: FunnelRuntimeMergedOrder) {
+  const saved = getOrderSnapshot(workspaceId, merged.id);
+  if (!saved) return;
+  saveOrderSnapshot(workspaceId, {
+    ...saved,
+    subtotalAmount: parseMoney(merged.subtotalAmount),
+    discountAmount: parseMoney(merged.discountAmount),
+    shippingAmount: parseMoney(merged.shippingAmount),
+    totalAmount: parseMoney(merged.totalAmount),
+    items: merged.items.map((item) => ({
+      name: item.productNameSnapshot,
+      options: Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "),
+      quantity: item.quantity,
+      lineTotal: parseMoney(item.lineTotalAmount),
+    })),
+    productIds: merged.items.map((i) => i.productId).filter((id): id is string => !!id),
+  });
+}
 
 export function saveOrderSnapshot(workspaceId: string, snapshot: OrderSnapshot) {
   const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];

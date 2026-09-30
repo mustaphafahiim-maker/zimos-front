@@ -29,6 +29,9 @@ const STRINGS = {
     attemptsOne: "1 call attempt so far.",
     attemptsOther: "{n} call attempts so far.",
     callback: "Callback scheduled for {time}.",
+    waiting:
+      "Waiting for the offers window: the customer is still on the sales funnel's offers and may add to this order. It can be confirmed in {n} min (at {time}).",
+    waitingSoon: "Waiting for the offers window: it can be confirmed in a moment.",
     heldBy: "{name} is calling the customer now (claim expires in {n} min). Confirming here is blocked until they finish or release it.",
     someone: "Another agent",
     confirm: "Confirm order",
@@ -63,6 +66,9 @@ const STRINGS = {
     openQueue: "فتح قائمة التأكيد",
     confirmedToast: "تم تأكيد الأوردر. أصبح جاهزًا للشحن.",
     lockedBy: "{name} في هذه المكالمة بالفعل (ينتهي الاستلام خلال {n} دقيقة).",
+    waiting:
+      "في انتظار نافذة العروض: ما زال العميل في عروض مسار البيع وقد يضيف إلى هذا الطلب. يمكن تأكيده خلال {n} دقيقة (في {time}).",
+    waitingSoon: "في انتظار نافذة العروض: يمكن تأكيده بعد لحظات.",
     assignedTo: "المعيّن له: {name}.",
     assignedToYou: "المعيّن له: أنت.",
     assignedToOther: "معيّن لـ {name}، ولا يؤكده غيره إلا المدير.",
@@ -121,6 +127,10 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
   const heldByOther = Boolean(task?.lockedBy) && task?.lockedBy?.id !== user?.id && heldMinutes > 0;
   const assignee = task?.assignedTo ?? null;
   const assignedToOther = Boolean(assignee) && assignee?.id !== user?.id && !canManage;
+  // A funnel order waits until the shopper is past the offers (the server refuses before).
+  const waiting =
+    task?.status === "queued" && Boolean(task.availableAt) && new Date(task.availableAt as string).getTime() > now;
+  const waitingMinutes = waiting ? minutesUntil(task?.availableAt ?? null, now) : 0;
 
   async function confirm() {
     setBusy(true);
@@ -170,6 +180,13 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
                 : fmt(t.assignedTo, { name: assignee.fullName })}
           </p>
         )}
+        {waiting && (
+          <p role="status" className="font-medium text-accent-dark">
+            {waitingMinutes > 0
+              ? fmt(t.waiting, { n: waitingMinutes, time: formatDateTime(task?.availableAt as string) })
+              : t.waitingSoon}
+          </p>
+        )}
         {heldByOther && (
           <p className="font-medium text-accent-dark">
             {fmt(t.heldBy, { name: task?.lockedBy?.fullName ?? t.someone, n: heldMinutes })}
@@ -191,7 +208,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         </section>
       )}
 
-      {canConfirm && !heldByOther && !assignedToOther && (
+      {canConfirm && !heldByOther && !assignedToOther && !waiting && (
         <div className="space-y-3">
           <WhatsAppButton order={order} onOpen={() => setChannel("whatsapp")} />
           <ChannelPicker value={channel} onChange={setChannel} disabled={busy} />
@@ -202,7 +219,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
 
       <div className="flex flex-wrap items-center gap-3">
         {canConfirm && (
-          <Button onClick={confirm} disabled={busy || heldByOther || assignedToOther} className="min-h-11">
+          <Button onClick={confirm} disabled={busy || heldByOther || assignedToOther || waiting} className="min-h-11">
             {busy ? t.confirming : t.confirm}
           </Button>
         )}

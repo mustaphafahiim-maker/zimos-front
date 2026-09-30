@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Hourglass } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
   ORDER_SORTS,
@@ -87,6 +88,11 @@ const STRINGS = {
     toastReleased: "{order} is back in Pending.",
     callbackDue: "Callback due since {time}",
     callbackLater: "Callback scheduled for {time}",
+    waitingTitle: "Waiting for the offers window",
+    waitingBody:
+      "The customer is still on the sales funnel's offers and may add to this order. It opens for confirmation in {n} min (at {time}), with its final total.",
+    waitingSoon: "The customer is still on the sales funnel's offers. It opens for confirmation in a moment.",
+    waitingCount: "{n} waiting for the offers window",
     lastAttempt: "Last: {outcome} by {agent}, {time}",
     yourClaim: "You're on this call · your claim expires in {n} min",
     yourClaimExpired: "Your claim expired. Claim it again before saving — someone else may take it.",
@@ -182,6 +188,11 @@ const STRINGS = {
     toastReleased: "عاد {order} إلى قائمة الانتظار.",
     callbackDue: "موعد معاودة الاتصال حان منذ {time}",
     callbackLater: "معاودة الاتصال مجدولة في {time}",
+    waitingTitle: "في انتظار نافذة العروض",
+    waitingBody:
+      "ما زال العميل في عروض مسار البيع وقد يضيف إلى هذا الطلب. يُتاح للتأكيد خلال {n} دقيقة (في {time}) بإجماليه النهائي.",
+    waitingSoon: "ما زال العميل في عروض مسار البيع. يُتاح الطلب للتأكيد بعد لحظات.",
+    waitingCount: "{n} في انتظار نافذة العروض",
     lastAttempt: "آخر محاولة: {outcome} بواسطة {agent}، {time}",
     yourClaim: "أنت في هذه المكالمة · ينتهي استلامك خلال {n} دقيقة",
     yourClaimExpired: "انتهت مدة استلامك. استلمه مرة أخرى قبل الحفظ — قد يستلمه شخص آخر.",
@@ -281,6 +292,8 @@ export function ConfirmationQueuePage() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const { canManage } = useQueueAbilities();
+  // Waiting funnel orders turn into workable cards when their window opens.
+  const now = useNow(30_000);
   const [tab, setTab] = useState<ConfirmationQueueTab>("pending");
   const [assignment, setAssignment] = useState<AssignmentFilter>("all");
   const assignmentId = useId();
@@ -511,6 +524,8 @@ export function ConfirmationQueuePage() {
           {list.items.map((task) =>
             task.status === "done" ? (
               <DoneCard key={task.id} task={task} onChanged={replaceTask} />
+            ) : isWaiting(task, now) ? (
+              <WaitingCard key={task.id} task={task} now={now} />
             ) : (
               <OpenCard
                 key={task.id}
@@ -597,6 +612,41 @@ function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; 
         <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
       </div>
     </>
+  );
+}
+
+/** A funnel order still in its offer window: listed, not workable yet. */
+const isWaiting = (task: ConfirmationTask, now: number) =>
+  task.status === "queued" && Boolean(task.availableAt) && new Date(task.availableAt as string).getTime() > now;
+
+/**
+ * The shopper may still add an upsell to this order, so nobody works it yet:
+ * the order number and when it opens, nothing to act on (the server refuses a
+ * claim until then). It turns into the normal card by itself when the time
+ * comes; the funnel may also close the window early.
+ */
+function WaitingCard({ task, now }: { task: ConfirmationTask; now: number }) {
+  const t = useT(STRINGS);
+  const minutes = minutesUntil(task.availableAt ?? null, now);
+  return (
+    <Card className="flex flex-wrap items-start gap-3 border-dashed p-5" aria-label={fmt(t.waitingCount, { n: 1 })}>
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-dark" aria-hidden>
+        <Hourglass className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <bdi dir="ltr" className="font-semibold text-ink">
+            {task.order.orderNumber}
+          </bdi>
+          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">{t.waitingTitle}</span>
+        </p>
+        <p className="text-sm text-ink-soft">
+          {minutes > 0
+            ? fmt(t.waitingBody, { n: minutes, time: formatDateTime(task.availableAt as string) })
+            : t.waitingSoon}
+        </p>
+      </div>
+    </Card>
   );
 }
 

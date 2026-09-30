@@ -140,3 +140,30 @@ describe("ConfirmationQueuePage channel", () => {
     );
   });
 });
+
+describe("ConfirmationQueuePage offers window", () => {
+  it("lists a funnel order still in its offers window without letting anyone take it", async () => {
+    asRole("owner");
+    api.getConfirmationQueueCounts.mockResolvedValue({ ...counts, pendingDue: 0, waitingForOffers: 1 });
+    api.listConfirmationQueue.mockResolvedValue({
+      tasks: [
+        task({
+          assignedToUserId: null,
+          assignedTo: null,
+          availableAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+          waitingForOffers: true,
+        }),
+      ],
+      nextCursor: null,
+    });
+    api.listConfirmationAssignees.mockResolvedValue([]);
+    renderWithProviders(<ConfirmationQueuePage />);
+
+    expect(await screen.findByText("Waiting for the offers window")).toBeInTheDocument();
+    expect(screen.getByText(/opens for confirmation in 10 min/)).toBeInTheDocument();
+    expect(screen.getByText("ORD-1001")).toBeInTheDocument();
+    // Nothing to act on, and no customer details yet.
+    expect(screen.queryByRole("button", { name: "Claim & call" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Mona Ali")).not.toBeInTheDocument();
+  });
+});

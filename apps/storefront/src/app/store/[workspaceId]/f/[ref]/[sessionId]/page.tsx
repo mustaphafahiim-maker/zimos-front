@@ -173,6 +173,7 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
             sessionId={sessionId}
             step={{ key: step.key, name: step.name, stepType: step.stepType }}
             offer={data.offer ?? null}
+            offerJoinsOrder={data.offerJoinsOrder ?? false}
             bump={data.bump ?? null}
             product={product}
             sessionOrderId={session.orderId}

@@ -22,7 +22,14 @@ import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimaryLg, btnSecondary, card, container, input, label as labelClass, skeleton } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getOrderSnapshot, orderBumpOf, saveOrderSnapshot, snapshotFromOrder, type OrderBumpOffer } from "@/lib/commerce";
+import {
+  getOrderSnapshot,
+  mergeIntoOrderSnapshot,
+  orderBumpOf,
+  saveOrderSnapshot,
+  snapshotFromOrder,
+  type OrderBumpOffer,
+} from "@/lib/commerce";
 import { funnelErrorKind, isOutOfStock } from "@/lib/funnelErrors";
 import {
   rememberFollowOn,
@@ -142,6 +149,20 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
         rememberFollowOn(sessionId, res.followOnOrder);
         trackPurchaseOnce(res.followOnOrder.id, { valueMinor: parseMoney(res.followOnOrder.totalAmount), numItems: 1 });
       }
+      if (res.mergedOrder) {
+        // Joined the checkout order: the thank-you page shows its new total,
+        // and the purchase is the added line alone (keyed by that line, since
+        // the order's own purchase was already sent).
+        mergeIntoOrderSnapshot(workspaceId, res.mergedOrder);
+        const added = res.mergedOrder.items.find((i) => i.id === res.mergedOrder?.addedItemId);
+        if (added) {
+          trackPurchaseOnce(added.id, {
+            valueMinor: parseMoney(added.lineTotalAmount),
+            currency: res.mergedOrder.currency,
+            numItems: added.quantity,
+          });
+        }
+      }
       // Stays pending: the refreshed step remounts this island.
       router.refresh();
     } catch (err) {
@@ -212,6 +233,7 @@ export function FunnelStepActions({
   sessionId,
   step,
   offer,
+  offerJoinsOrder = false,
   bump,
   product,
   sessionOrderId,
@@ -221,6 +243,8 @@ export function FunnelStepActions({
   sessionId: string;
   step: { key: string; name: string; stepType: FunnelStepTypeDto };
   offer: FunnelRuntimeOffer | null;
+  /** Accepting the offer joins the checkout order (the runtime says). */
+  offerJoinsOrder?: boolean;
   /** A checkout step's order bump, as the runtime sent it. */
   bump?: StorefrontOrderBump | null;
   product: StorefrontProduct | null;
@@ -268,7 +292,15 @@ export function FunnelStepActions({
     );
   }
   if (step.stepType === "upsell" || step.stepType === "downsell") {
-    return <FunnelOfferCard workspaceId={workspaceId} offer={offer} canAccept={!!sessionOrderId} flow={flow} />;
+    return (
+      <FunnelOfferCard
+        workspaceId={workspaceId}
+        offer={offer}
+        canAccept={!!sessionOrderId}
+        joinsOrder={offerJoinsOrder}
+        flow={flow}
+      />
+    );
   }
   if (step.stepType === "thank_you") {
     return <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={sessionOrderId} />;
@@ -594,11 +626,14 @@ function FunnelOfferCard({
   workspaceId,
   offer,
   canAccept,
+  joinsOrder = false,
   flow,
 }: {
   workspaceId: string;
   offer: FunnelRuntimeOffer | null;
   canAccept: boolean;
+  /** Accepting adds it to the checkout order rather than a second one. */
+  joinsOrder?: boolean;
   flow: Flow;
 }) {
   const { t, money } = useStore();
@@ -654,7 +689,7 @@ function FunnelOfferCard({
               {price !== null && compareAt !== null && (
                 <p className="mt-1 text-sm font-medium text-success">{t.upsell.save(money(compareAt - price, offer.currency))}</p>
               )}
-              <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{t.funnel.offerHint}</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{joinsOrder ? t.funnel.offerJoinsHint : t.funnel.offerHint}</p>
             </>
           ) : (
             <h2 id="funnel-offer-title" className="text-base font-medium text-ink-soft">

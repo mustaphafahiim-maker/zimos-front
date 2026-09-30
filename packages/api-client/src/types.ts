@@ -70,6 +70,13 @@ export interface WorkspaceSettings {
    * {items} {total} {customerName}.
    */
   confirmation_whatsapp_template?: string;
+  /**
+   * Funnel upsells join the checkout order while it waits in its offer
+   * window, instead of becoming orders of their own. Off unless true.
+   */
+  funnel_upsell_merge?: boolean;
+  /** How long a funnel order waits for its offers at most. Absent = 15. */
+  funnel_offer_window_minutes?: number;
   /** The store checkout's order bump as stored — see OrderBumpSettings. */
   order_bump?: OrderBumpSettings;
   [key: string]: unknown;
@@ -160,6 +167,10 @@ export interface UpdateWorkspacePayload {
      * store's) is refused with 422.
      */
     order_bump?: OrderBumpSettings | null;
+    /** Needs orders.manage on top of website.edit. */
+    funnel_upsell_merge?: boolean | null;
+    /** 1–120; needs orders.manage. `null` goes back to 15. */
+    funnel_offer_window_minutes?: number | null;
     /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
     confirmation_whatsapp_template?: string | null;
   };
@@ -1459,6 +1470,18 @@ export interface Order {
   shipments?: Shipment[];
   /** Present on detail (GET one) only; null for an order that never had a task (prepaid). */
   confirmationTask?: OrderConfirmationTaskSummary | null;
+  /** Detail only: funnel offers taken after this order's offer window closed, placed as their own orders. */
+  linkedOrders?: LinkedOrderSummary[];
+  /** Detail only: the order this one is a late funnel offer of. */
+  linkedFromOrder?: { id: string; orderNumber: string } | null;
+}
+
+export interface LinkedOrderSummary {
+  id: string;
+  orderNumber: string;
+  totalAmount: string;
+  currency: string;
+  createdAt: string;
 }
 
 /** Which shipping rule priced an order or a quote (backend shipping/shippingRules.js). */
@@ -1764,6 +1787,13 @@ export interface ConfirmationTask {
   assignedAt: string | null;
   attemptCount: number;
   nextRetryAt: string | null;
+  /**
+   * A funnel order's task waits until its offer window closes (the shopper may
+   * still add to the order); null is available at once.
+   */
+  availableAt?: string | null;
+  /** True while availableAt lies ahead: listed, but nobody can claim it yet. */
+  waitingForOffers?: boolean;
   outcome: ConfirmationOutcome | null;
   rejectionReason: string | null;
   /** When the task reached `done`. */
@@ -1790,6 +1820,8 @@ export interface ConfirmationQueueCounts {
   pending: number;
   /** Pending tasks with no callback scheduled, or one that is due. */
   pendingDue: number;
+  /** Pending funnel orders still in their offer window. */
+  waitingForOffers?: number;
   inProgress: number;
   inProgressMine: number;
   done: number;
@@ -1832,6 +1864,8 @@ export interface OrderConfirmationTaskSummary {
   outcome: ConfirmationOutcome | null;
   attemptCount: number;
   nextRetryAt: string | null;
+  availableAt?: string | null;
+  waitingForOffers?: boolean;
   completedAt: string | null;
   /** Set only while another claim is live. */
   lockedBy: ConfirmationUser | null;
