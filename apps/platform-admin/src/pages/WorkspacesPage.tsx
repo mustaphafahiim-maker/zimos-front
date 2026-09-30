@@ -48,7 +48,14 @@ export function WorkspacesPage() {
         ({ workspace }) =>
           !q ||
           workspace.name.toLowerCase().includes(q) ||
-          workspace.slug.toLowerCase().includes(q)
+          workspace.slug.toLowerCase().includes(q) ||
+          workspace.id.startsWith(q) ||
+          Boolean(
+            workspace.owner &&
+              (workspace.owner.fullName.toLowerCase().includes(q) ||
+                workspace.owner.email.toLowerCase().includes(q) ||
+                (workspace.owner.username ?? "").includes(q))
+          )
       )
       .sort((a, b) => {
         switch (sort.key) {
@@ -94,7 +101,7 @@ export function WorkspacesPage() {
         <div className="mb-4 flex flex-col gap-3">
           <FilterChips options={statusOptions} value={status} onChange={setStatus} />
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <SearchInput value={query} onChange={setQuery} placeholder="Search name or address" />
+            <SearchInput value={query} onChange={setQuery} placeholder="Store, address, ID or owner" />
             <NativeSelect
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
@@ -124,6 +131,7 @@ export function WorkspacesPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <SortHead label="Workspace" sortKey="name" sort={sort} onSort={setSort} />
+                  <Th>Owner</Th>
                   <Th>Plan</Th>
                   <Th>Status</Th>
                   <SortHead label="MRR" sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
@@ -152,6 +160,26 @@ export function WorkspacesPage() {
                         <span className="text-xs text-ink-soft">{workspace.slug}</span>
                       </Td>
                       <Td>
+                        {workspace.owner ? (
+                          <>
+                            <Link
+                              to={`/users/${workspace.owner.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="block text-ink hover:text-primary"
+                            >
+                              <bdi>{workspace.owner.fullName}</bdi>
+                            </Link>
+                            {workspace.owner.username && (
+                              <span dir="ltr" className="text-xs text-ink-soft">
+                                @{workspace.owner.username}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </Td>
+                      <Td>
                         {subscription?.planName ?? "—"}
                         {subscription && (
                           <span className="block text-xs text-ink-soft capitalize">
@@ -177,8 +205,9 @@ export function WorkspacesPage() {
         )}
       </DataState>
       <p className="mt-4 text-xs text-ink-soft">
-        Orders is a lifetime count. GMV, a 30-day window, owner and location need workspace metrics
-        on <code className="font-mono">GET /admin/workspaces</code>, which doesn't return them yet.
+        Orders is a lifetime count. GMV, a 30-day window and location need workspace metrics on{" "}
+        <code className="font-mono">GET /admin/workspaces</code>, which doesn't return them yet. To find a
+        person across all their stores, use Users.
       </p>
     </div>
   );

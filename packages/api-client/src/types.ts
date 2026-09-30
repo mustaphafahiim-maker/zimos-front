@@ -2,6 +2,13 @@ export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  /**
+   * Public handle, lower-case. Null only for an account made through Google
+   * until its owner picks one (the dashboard asks before anything else).
+   */
+  username?: string | null;
+  /** The owner's last change (null until they change it once; the first choice doesn't count). */
+  usernameChangedAt?: string | null;
   phone: string | null;
   status: "pending_verification" | "active" | string;
   /** May sign in to the platform console: true for any platform role. */
@@ -29,6 +36,16 @@ export interface RegisterPayload {
   password: string;
   fullName: string;
   phone?: string;
+  /** 3–30 of a–z 0–9 _ . — 409 USERNAME_TAKEN, 422 when invalid or reserved. */
+  username?: string;
+}
+
+/** Why a username can't be had (GET /auth/username-available). */
+export type UsernameUnavailableReason = "invalid" | "reserved" | "taken";
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason?: UsernameUnavailableReason;
 }
 
 /**
@@ -2363,6 +2380,55 @@ export interface AdminWorkspaceOverview {
   billingPhase?: BillingPhase;
   /** Storefront unavailable and new products/funnels blocked, for either reason. */
   restricted?: boolean;
+  /** Who owns it. */
+  owner?: { id: string; username: string | null; fullName: string; email: string } | null;
+}
+
+/** A store in a user search row: theirs, or one they belong to. */
+export interface AdminUserStore {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  /** "owner", or the member's role key. */
+  role: string;
+  /** This store is what matched the search. */
+  matched: boolean;
+  subscription: {
+    status: string;
+    phase: BillingPhase | string;
+    plan: string | null;
+    planId: string | null;
+    currentPeriodEnd: string | null;
+  } | null;
+}
+
+/** One account in GET /admin/users. */
+export interface AdminUserRow {
+  id: string;
+  username: string | null;
+  fullName: string;
+  email: string;
+  status: string;
+  platformRole: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  emailVerified: boolean;
+  workspaces: AdminUserStore[];
+}
+
+export interface AdminUserSearchPage {
+  users: AdminUserRow[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+/** GET /admin/users/:id */
+export interface AdminUserDetail extends AdminUserRow {
+  phone: string | null;
+  usernameChangedAt: string | null;
 }
 
 export interface AdminPlan {

@@ -34,6 +34,7 @@ import { BillingSection } from "./BillingSection";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
+import { AccountSection } from "./AccountSection";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
@@ -44,6 +45,7 @@ export function SettingsPage() {
         title="Settings"
         description="Your store profile and the people who can manage it."
       />
+      <AccountSection />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
       <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />

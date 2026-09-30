@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Truck,
   UserCog,
+  Users,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +38,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: "Merchants",
     items: [
       { label: "Workspaces", to: "/workspaces", icon: Building2, permission: P.WORKSPACES_VIEW },
+      { label: "Users", to: "/users", icon: Users, permission: P.WORKSPACES_VIEW },
       { label: "Subscriptions", to: "/subscriptions", icon: CreditCard, permission: P.SUBSCRIPTIONS_VIEW },
       { label: "Plans", to: "/plans", icon: Layers, permission: P.PLANS_VIEW },
     ],

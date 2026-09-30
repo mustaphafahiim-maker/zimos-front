@@ -72,6 +72,8 @@ import type {
   SupportTicketThread,
   AdminSubscription,
   AdminWorkspaceOverview,
+  AdminUserDetail,
+  AdminUserSearchPage,
   AnalyticsSummary,
   AnalyticsSummaryParams,
   FunnelAnalyticsDetail,
@@ -86,6 +88,7 @@ import type {
   ArchivedResponse,
   AuthTokens,
   AuthUser,
+  UsernameAvailability,
   BlacklistPayload,
   BlocklistEntry,
   BlockPhonePayload,
@@ -620,6 +623,31 @@ export class ApiClient {
     return user;
   }
 
+  /** A free username to offer an account that has none yet (made through Google); null when it has one. */
+  async getUsernameSuggestion() {
+    const body = await this.request<{ user: AuthUser; suggestedUsername?: string }>("/auth/me");
+    return body.suggestedUsername ?? null;
+  }
+
+  /** Public, and tightly rate limited (429) — call it debounced. */
+  async checkUsernameAvailable(username: string) {
+    return this.request<UsernameAvailability>(`/auth/username-available?u=${encodeURIComponent(username)}`, {
+      auth: false,
+    });
+  }
+
+  /**
+   * Choose or change one's username. The first choice is free; after that one
+   * change per 30 days (409 USERNAME_CHANGE_TOO_SOON with nextChangeAt).
+   */
+  async changeUsername(username: string) {
+    const { user } = await this.request<{ user: AuthUser }>("/auth/me/username", {
+      method: "PATCH",
+      body: { username },
+    });
+    return user;
+  }
+
   // ---------------------------------------------------------------------
   // Workspaces
   // ---------------------------------------------------------------------
@@ -922,6 +950,21 @@ export class ApiClient {
   // ---------------------------------------------------------------------
   // Platform admin
   // ---------------------------------------------------------------------
+
+  /** GET /admin/users — one search over name, username, email, id and the user's stores. */
+  async adminSearchUsers(params: { q?: string; page?: number; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return this.request<AdminUserSearchPage>(`/admin/users${qs ? `?${qs}` : ""}`);
+  }
+
+  async adminGetUser(userId: string) {
+    const { user } = await this.request<{ user: AdminUserDetail }>(`/admin/users/${userId}`);
+    return user;
+  }
 
   async adminListWorkspaces() {
     // The endpoint wraps the rows: { workspaces: [...] }. Unwrap here so every

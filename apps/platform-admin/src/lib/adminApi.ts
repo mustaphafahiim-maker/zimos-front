@@ -68,6 +68,8 @@ import type {
   AdminServiceTile,
   AdminSubscription,
   AdminWorkspaceOverview,
+  AdminUserDetail,
+  AdminUserSearchPage,
   HealthProbeResult,
 } from "@store-builder/api-client";
 import { apiClient } from "./apiClient";
@@ -158,6 +160,17 @@ export async function searchWorkspaces(query: string, limit = 8): Promise<AdminW
 export async function getWorkspaceRow(workspaceId: string): Promise<AdminWorkspaceRow | null> {
   const rows = await listWorkspaceRows();
   return rows.find((r) => r.workspace.id === workspaceId) ?? null;
+}
+
+// ----------------------------------------------------------------------- users
+
+/** `GET /admin/users` — name, username, email, id or a store of theirs. */
+export function searchUsers(params: { q?: string; page?: number; limit?: number }): Promise<AdminUserSearchPage> {
+  return apiClient.adminSearchUsers(params);
+}
+
+export function getUser(userId: string): Promise<AdminUserDetail> {
+  return apiClient.adminGetUser(userId);
 }
 
 // ----------------------------------------------------------------------- plans
