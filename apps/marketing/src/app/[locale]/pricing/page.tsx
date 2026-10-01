@@ -55,7 +55,7 @@ export default async function PricingPage({ params }: Params) {
 
             {plans && plans.length > 0 ? (
               <div className="mt-10">
-                <PlanCards plans={plans} copy={dict.pricing} locale={locale} idPrefix="pricing-page" />
+                <PlanCards plans={plans} copy={dict.pricing} locale={locale} idPrefix="pricing-page" headingLevel={2} />
               </div>
             ) : (
               <PricesComingSoon copy={dict.pricing} />

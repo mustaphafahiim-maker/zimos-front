@@ -31,6 +31,7 @@ export function PlanCards({
   locale,
   idPrefix,
   compact = false,
+  headingLevel = 3,
 }: {
   plans: PublicPlan[];
   copy: Copy;
@@ -38,7 +39,10 @@ export function PlanCards({
   /** Unique per instance on a page: the switch's inputs are found by id. */
   idPrefix: string;
   compact?: boolean;
+  /** 2 on the pricing page, under its h1; 3 in the home page's pricing section. */
+  headingLevel?: 2 | 3;
 }) {
+  const PlanHeading = headingLevel === 2 ? "h2" : "h3";
   const monthlyId = `${idPrefix}-monthly`;
   const yearlyId = `${idPrefix}-yearly`;
   const limit = (value: number | null) => (value === null ? copy.unlimited : formatNumber(value, locale));
@@ -77,9 +81,9 @@ export function PlanCards({
               aria-labelledby={`${idPrefix}-plan-${plan.id}`}
               className="relative flex flex-col overflow-hidden rounded-3xl border border-line bg-paper-raised p-6 sm:p-8"
             >
-              <h3 id={`${idPrefix}-plan-${plan.id}`} className="text-xl font-bold text-ink">
+              <PlanHeading id={`${idPrefix}-plan-${plan.id}`} className="text-xl font-bold text-ink">
                 {plan.name}
-              </h3>
+              </PlanHeading>
 
               <div className="mt-4">
                 {free ? (
