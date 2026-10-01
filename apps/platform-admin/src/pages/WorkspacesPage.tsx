@@ -13,12 +13,13 @@ import type { AdminWorkspaceRow } from "@/lib/adminApi";
 import { formatDate, formatMinorMoney, formatNumber } from "@/lib/format";
 
 type SortKey = "name" | "createdAt" | "mrr" | "orders";
-type StatusFilter = "all" | "none" | "trialing" | "active" | "past_due" | "canceled";
+type StatusFilter = "all" | "none" | "draft" | "trialing" | "active" | "past_due" | "canceled";
 
 function matchesStatus(row: AdminWorkspaceRow, f: StatusFilter) {
   if (f === "all") return true;
+  if (f === "draft") return Boolean(row.workspace.draft);
   if (f === "none") return !row.subscription;
-  return row.subscription?.status === f;
+  return !row.workspace.draft && row.subscription?.status === f;
 }
 
 export function WorkspacesPage() {
@@ -78,6 +79,7 @@ export function WorkspacesPage() {
       ["trialing", "Trialing"],
       ["past_due", "Past due"],
       ["canceled", "Canceled"],
+      ["draft", "Draft — not subscribed"],
       ["none", "No subscription"],
     ] as Array<[StatusFilter, string]>
   ).map(([value, label]) => ({

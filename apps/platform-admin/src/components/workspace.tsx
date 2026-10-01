@@ -11,7 +11,15 @@ export function WorkspaceStatus({ row }: { row: AdminWorkspaceRow }) {
   const ws = row.workspace;
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      {row.subscription ? <Status value={row.subscription.status} /> : <StatusBadge tone="neutral">No subscription</StatusBadge>}
+      {ws.draft ? (
+        <StatusBadge tone="info" dot>
+          Draft — not subscribed
+        </StatusBadge>
+      ) : row.subscription ? (
+        <Status value={row.subscription.status} />
+      ) : (
+        <StatusBadge tone="neutral">No subscription</StatusBadge>
+      )}
       {ws.suspended && (
         <StatusBadge tone="danger" dot>
           Suspended
