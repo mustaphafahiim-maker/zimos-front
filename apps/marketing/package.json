@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/check-policy-placeholders.mjs && next build",
     "start": "next start -p 8080",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:policies": "node scripts/check-policy-placeholders.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

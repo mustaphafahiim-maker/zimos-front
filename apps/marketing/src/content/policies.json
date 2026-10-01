@@ -1,0 +1,375 @@
+{
+  "lastUpdated": "2026-10-01",
+  "company": {
+    "ar": {
+      "brand": "ZIMOS",
+      "legalName": "[الاسم القانوني للكيان]",
+      "registration": "[رقم السجل التجاري]",
+      "address": "[العنوان]",
+      "email": "[البريد الإلكتروني للتواصل]",
+      "phone": "[رقم الهاتف]",
+      "hours": "[ساعات العمل]",
+      "governingLaw": "[القانون الواجب التطبيق والمحاكم المختصة]"
+    },
+    "en": {
+      "brand": "ZIMOS",
+      "legalName": "[Legal entity name]",
+      "registration": "[Commercial registration number]",
+      "address": "[Address]",
+      "email": "[Contact email]",
+      "phone": "[Phone number]",
+      "hours": "[Working hours]",
+      "governingLaw": "[Governing law and competent courts]"
+    }
+  },
+  "pages": {
+    "refund-policy": {
+      "ar": {
+        "title": "سياسة الاسترجاع",
+        "description": "متى يمكن استرجاع قيمة اشتراكك في منصة ZIMOS، وكيف تطلب ذلك، وكيف ومتى يُرد المبلغ.",
+        "intro": "تنطبق هذه السياسة على اشتراكك في منصة ZIMOS نفسها، أي ما تدفعه أنت كتاجر مقابل استخدام المنصة.",
+        "sections": [
+          {
+            "heading": "الفترة التجريبية المجانية",
+            "body": [
+              "بعض الخطط تبدأ بفترة تجريبية مجانية يظهر عدد أيامها على صفحة الأسعار. الفترة التجريبية مجانية بالكامل ولا نطلب خلالها أي بيانات دفع.",
+              "يمكنك التوقف عن استخدام المنصة قبل نهاية الفترة التجريبية دون دفع أي مبلغ. لا يتحول اشتراكك إلى اشتراك مدفوع إلا بعد أن تدفع قيمته بنفسك."
+            ]
+          },
+          {
+            "heading": "الاشتراكات المدفوعة",
+            "body": [
+              "يمكنك طلب استرجاع قيمة اشتراك مدفوع خلال [عدد الأيام] يومًا من تاريخ الدفع.",
+              "شروط قبول طلب الاسترجاع: [شروط قبول الاسترجاع]."
+            ]
+          },
+          {
+            "heading": "ما لا يُسترجع",
+            "body": ["[ما لا يُسترجع]."]
+          },
+          {
+            "heading": "كيف تطلب الاسترجاع",
+            "body": [
+              "راسلنا على {email} أو افتح تذكرة دعم من لوحة التحكم (الدعم)، واذكر اسم متجرك وتاريخ الدفع ومرجع التحويل.",
+              "نراجع الطلب ونرد عليك خلال [مدة المراجعة]."
+            ]
+          },
+          {
+            "heading": "رد المبلغ",
+            "body": [
+              "يُرد المبلغ المقبول إلى وسيلة الدفع نفسها التي دفعت بها خلال [مدة رد المبلغ]."
+            ]
+          },
+          {
+            "heading": "إلغاء الاشتراك",
+            "body": [
+              "لا يتجدد اشتراكك تلقائيًا، فيكفي ألا تدفع قيمة الفترة التالية، ويمكنك أيضًا طلب الإلغاء على {email}. يظل متجرك يعمل حتى نهاية الفترة التي دفعت مقابلها."
+            ]
+          },
+          {
+            "heading": "طلبات عملائك",
+            "body": [
+              "هذه السياسة خاصة باشتراكك في المنصة، ولا تنطبق على الطلبات التي يشتريها عملاؤك من متجرك. سياسة الاسترجاع لعملاء متجرك يحددها التاجر صاحب المتجر وهو المسؤول عنها."
+            ]
+          }
+        ]
+      },
+      "en": {
+        "title": "Refund Policy",
+        "description": "When a ZIMOS platform subscription can be refunded, how to ask for a refund, and how and when the money is returned.",
+        "intro": "This policy covers your subscription to the ZIMOS platform itself: what you, the merchant, pay to use the platform.",
+        "sections": [
+          {
+            "heading": "Free trial",
+            "body": [
+              "Some plans start with a free trial; its length is shown on the pricing page. The trial is entirely free and we ask for no payment details during it.",
+              "You can stop using the platform before the trial ends without paying anything. Your subscription only becomes a paid one once you pay for it yourself."
+            ]
+          },
+          {
+            "heading": "Paid subscriptions",
+            "body": [
+              "You can ask for a refund of a paid subscription within [number of days] days of the payment date.",
+              "A refund request is accepted when: [refund conditions]."
+            ]
+          },
+          {
+            "heading": "What is not refundable",
+            "body": ["[What is not refundable]."]
+          },
+          {
+            "heading": "How to ask for a refund",
+            "body": [
+              "Email us at {email} or open a support ticket from your dashboard (Support), with your store's name, the payment date and the transfer reference.",
+              "We review the request and answer within [review period]."
+            ]
+          },
+          {
+            "heading": "How the money is returned",
+            "body": ["An accepted refund is returned to the same payment method you paid with, within [refund period]."]
+          },
+          {
+            "heading": "Cancelling",
+            "body": [
+              "Your subscription does not renew on its own, so not paying for the next period is enough; you can also ask us to cancel at {email}. Your store keeps working until the end of the period you paid for."
+            ]
+          },
+          {
+            "heading": "Your customers' orders",
+            "body": [
+              "This policy covers your subscription to the platform only. It does not apply to orders your customers place in your store: the refund policy for your customers is set by you, the merchant, and is your responsibility."
+            ]
+          }
+        ]
+      }
+    },
+    "terms": {
+      "ar": {
+        "title": "شروط الاستخدام",
+        "description": "الشروط التي تحكم استخدامك لمنصة ZIMOS واشتراكك فيها.",
+        "intro": "باستخدامك منصة ZIMOS أو إنشاء حساب عليها فإنك توافق على هذه الشروط. تُقدَّم المنصة من {legalName}، سجل تجاري رقم {registration}.",
+        "sections": [
+          {
+            "heading": "وصف الخدمة",
+            "body": [
+              "ZIMOS منصة برمجيات كخدمة (SaaS) لبناء المتاجر الإلكترونية وإدارتها: إنشاء متجر وموقعه، ومسارات البيع، واستقبال الطلبات وتأكيدها، وربط شركات الشحن وبوابات الدفع التي يختارها التاجر، والتقارير.",
+              "ما نبيعه هو اشتراك شهري أو سنوي في استخدام المنصة وفق الخطة التي تختارها. لا نبيع منتجات التجار ولسنا طرفًا في البيع بين التاجر وعملائه."
+            ]
+          },
+          {
+            "heading": "الحساب والمسؤولية عنه",
+            "body": [
+              "تلتزم بتقديم بيانات صحيحة عند التسجيل وبالحفاظ على سرية كلمة المرور، وأنت مسؤول عن كل ما يجري من خلال حسابك وحسابات أعضاء فريقك.",
+              "أبلغنا فورًا على {email} إذا اشتبهت في استخدام غير مصرح به لحسابك."
+            ]
+          },
+          {
+            "heading": "الاشتراكات والدفع والتجديد والإلغاء",
+            "body": [
+              "تُعرض أسعار الخطط ومدتها الشهرية أو السنوية على صفحة الأسعار. يتم الدفع حاليًا بالتحويل اليدوي، ويُفعَّل الاشتراك بعد التحقق من وصول المبلغ.",
+              "لا يتجدد الاشتراك ولا يُخصم أي مبلغ تلقائيًا: كل فترة جديدة تبدأ بعد دفعها. إذا انتهت فترتك دون تجديد يظهر لك تنبيه، وقد يُقيَّد المتجر بعد يوم سماح.",
+              "يمكنك الإلغاء في أي وقت، ويظل متجرك يعمل حتى نهاية الفترة المدفوعة. يتم الاسترجاع وفق سياسة الاسترجاع."
+            ]
+          },
+          {
+            "heading": "الاستخدام المقبول",
+            "body": [
+              "لا يجوز استخدام المنصة لبيع ما يحظره القانون، أو لنشر محتوى مخالف أو مضلل أو منتهك لحقوق الغير، أو لإرسال رسائل غير مرغوب فيها، أو لمحاولة تعطيل المنصة أو الوصول إلى ما لا يخصك.",
+              "يحق لنا إيقاف المتجر أو الحساب الذي يخالف ذلك."
+            ]
+          },
+          {
+            "heading": "المحتوى",
+            "body": [
+              "يظل المحتوى الذي ترفعه (المنتجات والصور والنصوص) ملكًا لك، وتمنحنا ترخيصًا لاستضافته وعرضه بالقدر اللازم لتشغيل متجرك.",
+              "أنت مسؤول عن أن يكون لك الحق في استخدام هذا المحتوى."
+            ]
+          },
+          {
+            "heading": "إنهاء الخدمة",
+            "body": [
+              "يمكنك التوقف عن استخدام المنصة متى شئت. ويحق لنا إنهاء الخدمة أو إيقافها لمن يخالف هذه الشروط، أو لعدم الدفع بعد انتهاء الفترة.",
+              "يمكنك طلب نسخة من بيانات متجرك قبل الإنهاء على {email}."
+            ]
+          },
+          {
+            "heading": "حدود المسؤولية",
+            "body": [
+              "تُقدَّم المنصة بحالتها، ونبذل جهدًا معقولًا لاستمرار عملها. لا نتحمل المسؤولية عن الأضرار غير المباشرة أو خسارة الأرباح، ولا عن خدمات الأطراف الأخرى التي تربطها بمتجرك مثل شركات الشحن وبوابات الدفع.",
+              "في جميع الأحوال لا تتجاوز مسؤوليتنا ما دفعته لنا عن الاشتراك خلال [المدة التي تُحتسب عليها حدود المسؤولية]."
+            ]
+          },
+          {
+            "heading": "القانون الواجب التطبيق",
+            "body": ["تخضع هذه الشروط لـ {governingLaw}."]
+          },
+          {
+            "heading": "بيانات الشركة",
+            "body": [
+              "{legalName} — سجل تجاري رقم {registration}.",
+              "العنوان: {address}. البريد الإلكتروني: {email}. الهاتف: {phone}."
+            ]
+          }
+        ]
+      },
+      "en": {
+        "title": "Terms of Service",
+        "description": "The terms that govern your use of, and subscription to, the ZIMOS platform.",
+        "intro": "By using the ZIMOS platform or creating an account on it you agree to these terms. The platform is provided by {legalName}, commercial registration {registration}.",
+        "sections": [
+          {
+            "heading": "The service",
+            "body": [
+              "ZIMOS is a software-as-a-service (SaaS) platform for building and running online stores: the store and its website, sales funnels, taking and confirming orders, connecting the couriers and payment gateways the merchant chooses, and reports.",
+              "What we sell is a monthly or yearly subscription to use the platform on the plan you choose. We do not sell merchants' products and are not a party to sales between a merchant and its customers."
+            ]
+          },
+          {
+            "heading": "Your account",
+            "body": [
+              "You agree to give accurate details when you sign up and to keep your password secret. You are responsible for everything done through your account and your team members' accounts.",
+              "Tell us at once at {email} if you suspect unauthorised use of your account."
+            ]
+          },
+          {
+            "heading": "Subscriptions, payment, renewal and cancellation",
+            "body": [
+              "Plan prices and their monthly or yearly terms are shown on the pricing page. Payment is currently by manual transfer, and a subscription is activated once the payment has been confirmed.",
+              "Nothing renews or is charged automatically: each new period starts once it is paid. If your period ends without renewal you are warned, and the store may be restricted after one day of grace.",
+              "You can cancel at any time; your store keeps working until the end of the paid period. Refunds follow the refund policy."
+            ]
+          },
+          {
+            "heading": "Acceptable use",
+            "body": [
+              "You may not use the platform to sell anything the law forbids, to publish unlawful, misleading or infringing content, to send unsolicited messages, or to try to disrupt the platform or reach what is not yours.",
+              "We may suspend a store or account that does."
+            ]
+          },
+          {
+            "heading": "Content",
+            "body": [
+              "The content you upload (products, photos, text) remains yours, and you grant us a licence to host and display it as far as needed to run your store.",
+              "You are responsible for having the right to use that content."
+            ]
+          },
+          {
+            "heading": "Ending the service",
+            "body": [
+              "You can stop using the platform whenever you like. We may end or suspend the service for anyone who breaks these terms, or for non-payment after a period ends.",
+              "You can ask for a copy of your store's data before it ends at {email}."
+            ]
+          },
+          {
+            "heading": "Limitation of liability",
+            "body": [
+              "The platform is provided as is, and we make reasonable efforts to keep it running. We are not liable for indirect damage or lost profits, nor for third-party services you connect to your store such as couriers and payment gateways.",
+              "In any case our liability does not exceed what you paid us for the subscription during [the period liability is limited to]."
+            ]
+          },
+          {
+            "heading": "Governing law",
+            "body": ["These terms are governed by {governingLaw}."]
+          },
+          {
+            "heading": "Company details",
+            "body": [
+              "{legalName} — commercial registration {registration}.",
+              "Address: {address}. Email: {email}. Phone: {phone}."
+            ]
+          }
+        ]
+      }
+    },
+    "privacy": {
+      "ar": {
+        "title": "سياسة الخصوصية",
+        "description": "البيانات التي تجمعها منصة ZIMOS، ولماذا، ومن يعالجها، ومدة الاحتفاظ بها، وحقوقك فيها.",
+        "intro": "توضح هذه السياسة كيف تتعامل {legalName} مع البيانات في منصة ZIMOS.",
+        "sections": [
+          {
+            "heading": "البيانات التي نجمعها",
+            "body": [
+              "بيانات حسابك: الاسم واسم المستخدم والبريد الإلكتروني ورقم الهاتف إن أدخلته وكلمة المرور (نحفظ صورة مشفّرة منها فقط)، وبيانات تسجيل الدخول بحساب جوجل إن استخدمته.",
+              "بيانات متاجرك: إعدادات المتجر والمنتجات والموقع ومسارات البيع، والصور التي ترفعها.",
+              "بيانات طلبات عملائك التي يستقبلها متجرك: أسماؤهم وأرقام هواتفهم وعناوينهم وتفاصيل طلباتهم، ونعالجها نيابةً عنك كتاجر.",
+              "بيانات الاستخدام: سجلات الدخول وعنوان IP ونوع المتصفح، وسجل للعمليات المهمة على الحساب."
+            ]
+          },
+          {
+            "heading": "لماذا نستخدمها",
+            "body": [
+              "لتشغيل المنصة ومتجرك، وتأكيد حسابك برمز نرسله إلى بريدك أو هاتفك، وحماية الحسابات من الاستخدام غير المصرح به، والتواصل معك بشأن حسابك واشتراكك ودعمك، ومتابعة المدفوعات."
+            ]
+          },
+          {
+            "heading": "من يعالج البيانات معنا",
+            "body": [
+              "الاستضافة وقاعدة البيانات: Railway. البريد الإلكتروني: Brevo. الرسائل النصية: Twilio. تسجيل الدخول بحساب جوجل: Google. تخزين الصور: [مزوّد تخزين الصور].",
+              "وشركات الشحن وبوابات الدفع التي تربطها أنت بمتجرك، فنرسل إليها بيانات الطلبات اللازمة بناءً على اختيارك.",
+              "لا نبيع بياناتك ولا بيانات عملائك."
+            ]
+          },
+          {
+            "heading": "مدة الاحتفاظ والحذف",
+            "body": [
+              "نحتفظ بالبيانات طوال مدة حسابك، وبعد إغلاقه لمدة [مدة الاحتفاظ بعد إغلاق الحساب]، ثم نحذفها، ما لم يُلزمنا القانون بالاحتفاظ بها مدة أطول.",
+              "يمكنك طلب حذف حسابك وبياناتك على {email}."
+            ]
+          },
+          {
+            "heading": "حقوقك",
+            "body": [
+              "لك أن تطلب الاطلاع على بياناتك أو تصحيحها أو حذفها أو الحصول على نسخة منها، وأن تعترض على استخدامها في غير ما ذكرناه."
+            ]
+          },
+          {
+            "heading": "التواصل",
+            "body": ["لأي سؤال عن الخصوصية راسلنا على {email} أو اتصل بنا على {phone}."]
+          }
+        ]
+      },
+      "en": {
+        "title": "Privacy Policy",
+        "description": "What data the ZIMOS platform collects, why, who processes it, how long it is kept, and your rights over it.",
+        "intro": "This policy explains how {legalName} handles data on the ZIMOS platform.",
+        "sections": [
+          {
+            "heading": "What we collect",
+            "body": [
+              "Your account: name, username, email address, phone number if you give one, and your password (we keep only an encrypted hash of it), plus your Google sign-in details if you use it.",
+              "Your stores: store settings, products, website and funnels, and the photos you upload.",
+              "Your customers' orders that your store receives: their names, phone numbers, addresses and order details, which we process on your behalf as the merchant.",
+              "Usage: sign-in records, IP address and browser type, and a log of important actions on the account."
+            ]
+          },
+          {
+            "heading": "Why we use it",
+            "body": [
+              "To run the platform and your store, to confirm your account with a code we send to your email or phone, to protect accounts from unauthorised use, to contact you about your account, subscription and support, and to follow up payments."
+            ]
+          },
+          {
+            "heading": "Who processes it with us",
+            "body": [
+              "Hosting and database: Railway. Email: Brevo. Text messages: Twilio. Sign-in with Google: Google. Image storage: [image storage provider].",
+              "And the couriers and payment gateways you connect to your store, to which we send the order details they need, at your choice.",
+              "We do not sell your data or your customers' data."
+            ]
+          },
+          {
+            "heading": "Retention and deletion",
+            "body": [
+              "We keep data for as long as your account exists, and for [retention period after the account is closed] after it is closed, then delete it, unless the law requires us to keep it longer.",
+              "You can ask for your account and data to be deleted at {email}."
+            ]
+          },
+          {
+            "heading": "Your rights",
+            "body": [
+              "You may ask to see, correct, delete or receive a copy of your data, and object to its use for anything other than what is described here."
+            ]
+          },
+          {
+            "heading": "Contact",
+            "body": ["For any privacy question, email us at {email} or call {phone}."]
+          }
+        ]
+      }
+    },
+    "contact": {
+      "ar": {
+        "title": "تواصل معنا",
+        "description": "طرق التواصل مع فريق ZIMOS وبيانات الكيان القانوني.",
+        "intro": "يسعدنا الرد على أسئلتك عن المنصة والاشتراكات والدفع. التاجر المشترك يمكنه أيضًا فتح تذكرة دعم من لوحة التحكم.",
+        "sections": []
+      },
+      "en": {
+        "title": "Contact us",
+        "description": "How to reach the ZIMOS team, and our legal entity details.",
+        "intro": "We're happy to answer your questions about the platform, subscriptions and payment. Subscribed merchants can also open a support ticket from their dashboard.",
+        "sections": []
+      }
+    }
+  }
+}
