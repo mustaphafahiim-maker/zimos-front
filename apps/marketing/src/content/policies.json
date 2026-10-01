@@ -3,23 +3,23 @@
   "company": {
     "ar": {
       "brand": "ZIMOS",
-      "legalName": "[الاسم القانوني للكيان]",
-      "registration": "[رقم السجل التجاري]",
-      "address": "[العنوان]",
-      "email": "[البريد الإلكتروني للتواصل]",
-      "phone": "[رقم الهاتف]",
-      "hours": "[ساعات العمل]",
-      "governingLaw": "[القانون الواجب التطبيق والمحاكم المختصة]"
+      "legalName": "ZIMOS",
+      "registration": "قيد الإصدار",
+      "address": "طنطا، محافظة الغربية، مصر",
+      "email": "zimossupport@gmail.com",
+      "phone": "01023641956",
+      "hours": "24/7",
+      "governingLaw": "القانون المصري والمحاكم المصرية المختصة"
     },
     "en": {
       "brand": "ZIMOS",
-      "legalName": "[Legal entity name]",
-      "registration": "[Commercial registration number]",
-      "address": "[Address]",
-      "email": "[Contact email]",
-      "phone": "[Phone number]",
-      "hours": "[Working hours]",
-      "governingLaw": "[Governing law and competent courts]"
+      "legalName": "ZIMOS",
+      "registration": "Being issued",
+      "address": "Tanta, Gharbia, Egypt",
+      "email": "zimossupport@gmail.com",
+      "phone": "01023641956",
+      "hours": "24/7",
+      "governingLaw": "Egyptian law and the competent Egyptian courts"
     }
   },
   "pages": {
@@ -39,25 +39,25 @@
           {
             "heading": "الاشتراكات المدفوعة",
             "body": [
-              "يمكنك طلب استرجاع قيمة اشتراك مدفوع خلال [عدد الأيام] يومًا من تاريخ الدفع.",
-              "شروط قبول طلب الاسترجاع: [شروط قبول الاسترجاع]."
+              "يمكنك طلب استرجاع قيمة اشتراك مدفوع خلال 14 يومًا من تاريخ الدفع.",
+              "شروط قبول طلب الاسترجاع: أن يصل الطلب خلال المدة المحددة، وألا يكون المتجر قد استخدم الاشتراك بصورة مكثفة."
             ]
           },
           {
             "heading": "ما لا يُسترجع",
-            "body": ["[ما لا يُسترجع]."]
+            "body": ["الفترات التي انقضت بعد مدة الاسترجاع، ورسوم أي خدمات أطراف خارجية مثل الشحن وبوابات الدفع."]
           },
           {
             "heading": "كيف تطلب الاسترجاع",
             "body": [
               "راسلنا على {email} أو افتح تذكرة دعم من لوحة التحكم (الدعم)، واذكر اسم متجرك وتاريخ الدفع ومرجع التحويل.",
-              "نراجع الطلب ونرد عليك خلال [مدة المراجعة]."
+              "نراجع الطلب ونرد عليك خلال 3 أيام عمل."
             ]
           },
           {
             "heading": "رد المبلغ",
             "body": [
-              "يُرد المبلغ المقبول إلى وسيلة الدفع نفسها التي دفعت بها خلال [مدة رد المبلغ]."
+              "يُرد المبلغ المقبول إلى وسيلة الدفع نفسها التي دفعت بها خلال 7 أيام عمل."
             ]
           },
           {
@@ -89,24 +89,24 @@
           {
             "heading": "Paid subscriptions",
             "body": [
-              "You can ask for a refund of a paid subscription within [number of days] days of the payment date.",
-              "A refund request is accepted when: [refund conditions]."
+              "You can ask for a refund of a paid subscription within 14 days of the payment date.",
+              "A refund request is accepted when: the request arrives within that period and the subscription has not been heavily used."
             ]
           },
           {
             "heading": "What is not refundable",
-            "body": ["[What is not refundable]."]
+            "body": ["periods that ended after the refund window, and fees of third-party services such as couriers and payment gateways."]
           },
           {
             "heading": "How to ask for a refund",
             "body": [
               "Email us at {email} or open a support ticket from your dashboard (Support), with your store's name, the payment date and the transfer reference.",
-              "We review the request and answer within [review period]."
+              "We review the request and answer within 3 business days."
             ]
           },
           {
             "heading": "How the money is returned",
-            "body": ["An accepted refund is returned to the same payment method you paid with, within [refund period]."]
+            "body": ["An accepted refund is returned to the same payment method you paid with, within 7 business days."]
           },
           {
             "heading": "Cancelling",
@@ -176,7 +176,7 @@
             "heading": "حدود المسؤولية",
             "body": [
               "تُقدَّم المنصة بحالتها، ونبذل جهدًا معقولًا لاستمرار عملها. لا نتحمل المسؤولية عن الأضرار غير المباشرة أو خسارة الأرباح، ولا عن خدمات الأطراف الأخرى التي تربطها بمتجرك مثل شركات الشحن وبوابات الدفع.",
-              "في جميع الأحوال لا تتجاوز مسؤوليتنا ما دفعته لنا عن الاشتراك خلال [المدة التي تُحتسب عليها حدود المسؤولية]."
+              "في جميع الأحوال لا تتجاوز مسؤوليتنا ما دفعته لنا عن الاشتراك خلال آخر 12 شهرًا."
             ]
           },
           {
@@ -244,7 +244,7 @@
             "heading": "Limitation of liability",
             "body": [
               "The platform is provided as is, and we make reasonable efforts to keep it running. We are not liable for indirect damage or lost profits, nor for third-party services you connect to your store such as couriers and payment gateways.",
-              "In any case our liability does not exceed what you paid us for the subscription during [the period liability is limited to]."
+              "In any case our liability does not exceed what you paid us for the subscription during the previous 12 months."
             ]
           },
           {
@@ -285,7 +285,7 @@
           {
             "heading": "من يعالج البيانات معنا",
             "body": [
-              "الاستضافة وقاعدة البيانات: Railway. البريد الإلكتروني: Brevo. الرسائل النصية: Twilio. تسجيل الدخول بحساب جوجل: Google. تخزين الصور: [مزوّد تخزين الصور].",
+              "الاستضافة وقاعدة البيانات: Railway. البريد الإلكتروني: Brevo. الرسائل النصية: Twilio. تسجيل الدخول بحساب جوجل: Google. تخزين الصور: Cloudflare R2.",
               "وشركات الشحن وبوابات الدفع التي تربطها أنت بمتجرك، فنرسل إليها بيانات الطلبات اللازمة بناءً على اختيارك.",
               "لا نبيع بياناتك ولا بيانات عملائك."
             ]
@@ -293,7 +293,7 @@
           {
             "heading": "مدة الاحتفاظ والحذف",
             "body": [
-              "نحتفظ بالبيانات طوال مدة حسابك، وبعد إغلاقه لمدة [مدة الاحتفاظ بعد إغلاق الحساب]، ثم نحذفها، ما لم يُلزمنا القانون بالاحتفاظ بها مدة أطول.",
+              "نحتفظ بالبيانات طوال مدة حسابك، وبعد إغلاقه لمدة 90 يومًا، ثم نحذفها، ما لم يُلزمنا القانون بالاحتفاظ بها مدة أطول.",
               "يمكنك طلب حذف حسابك وبياناتك على {email}."
             ]
           },
@@ -332,7 +332,7 @@
           {
             "heading": "Who processes it with us",
             "body": [
-              "Hosting and database: Railway. Email: Brevo. Text messages: Twilio. Sign-in with Google: Google. Image storage: [image storage provider].",
+              "Hosting and database: Railway. Email: Brevo. Text messages: Twilio. Sign-in with Google: Google. Image storage: Cloudflare R2.",
               "And the couriers and payment gateways you connect to your store, to which we send the order details they need, at your choice.",
               "We do not sell your data or your customers' data."
             ]
@@ -340,7 +340,7 @@
           {
             "heading": "Retention and deletion",
             "body": [
-              "We keep data for as long as your account exists, and for [retention period after the account is closed] after it is closed, then delete it, unless the law requires us to keep it longer.",
+              "We keep data for as long as your account exists, and for 90 days after it is closed, then delete it, unless the law requires us to keep it longer.",
               "You can ask for your account and data to be deleted at {email}."
             ]
           },
