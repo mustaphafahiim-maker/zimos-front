@@ -188,8 +188,18 @@ export function WorkspaceDetailPage() {
                       "—"
                     )}
                   </DetailRow>
-                  <DetailRow label="Period start">{formatDate(sub.currentPeriodStart)}</DetailRow>
-                  <DetailRow label="Period end">{formatDate(sub.currentPeriodEnd)}</DetailRow>
+                  {ws.draft ? (
+                    // A draft's stored period is a placeholder (the trial it would
+                    // have had without REQUIRE_SUBSCRIPTION_TO_GO_LIVE); nothing runs yet.
+                    <DetailRow label="Period">
+                      <span className="text-ink-soft">Not started — the store is a draft</span>
+                    </DetailRow>
+                  ) : (
+                    <>
+                      <DetailRow label="Period start">{formatDate(sub.currentPeriodStart)}</DetailRow>
+                      <DetailRow label="Period end">{formatDate(sub.currentPeriodEnd)}</DetailRow>
+                    </>
+                  )}
                   <DetailRow label="Grace until">{formatDate(sub.graceUntil)}</DetailRow>
                   <DetailRow label="Cancels at period end">
                     {sub.cancelAtPeriodEnd ? (
