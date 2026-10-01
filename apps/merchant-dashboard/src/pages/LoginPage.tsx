@@ -5,6 +5,9 @@ import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
+import { VerifyCodePanel } from "@/components/VerifyCodePanel";
+import { useLocale } from "@/i18n/LocaleContext";
+import type { VerificationChallenge } from "@store-builder/api-client";
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
 function GoogleIcon() {
@@ -31,7 +34,11 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
+  const { locale } = useLocale();
+  // An account that still has to confirm its sign-up code gets the code
+  // screen here instead of being signed in.
+  const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
@@ -58,7 +65,11 @@ export function LoginPage() {
     setResent(false);
     setSubmitting(true);
     try {
-      await login({ email, password });
+      const pending = await login({ email, password, locale });
+      if (pending) {
+        setChallenge(pending);
+        return;
+      }
       navigate(from, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -91,6 +102,25 @@ export function LoginPage() {
     } finally {
       setResending(false);
     }
+  }
+
+  if (challenge) {
+    return (
+      <div className="flex min-h-screen">
+        <BrandPanel />
+        <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+          <div className="w-full max-w-sm">
+            <VerifyCodePanel
+              challenge={challenge}
+              onVerified={async () => {
+                await refreshUser();
+                navigate(from, { replace: true });
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
