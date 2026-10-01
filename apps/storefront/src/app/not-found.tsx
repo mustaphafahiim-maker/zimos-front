@@ -14,5 +14,15 @@ import { NotFoundContent } from "@/components/NotFoundContent";
  * site root, not a store home.
  */
 export default function NotFound() {
-  return <NotFoundContent homeHref="/" homeLabel="Back to home" />;
+  // A store that doesn't exist and one that isn't public yet (a draft) get the
+  // same neutral page: nothing here says which it was.
+  return (
+    <NotFoundContent
+      homeHref="/"
+      homeLabel="Back to home"
+      title="This store isn't available right now"
+      body="Check the address, or come back later."
+      secondary={{ lang: "ar", text: "المتجر ده غير متاح حاليًا. راجع العنوان أو ارجع تاني بعدين." }}
+    />
+  );
 }

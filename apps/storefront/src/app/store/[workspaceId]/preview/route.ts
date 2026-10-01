@@ -3,6 +3,7 @@ import type { PageTree } from "@store-builder/api-client";
 import { readColorMode, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
 import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
+import { STORE_PREVIEW_COOKIE, storePreviewCookieOptions } from "@/lib/storePreview";
 
 /**
  * Receives a draft page tree from the dashboard's live preview (a form post
@@ -82,6 +83,26 @@ function readOptions(form: FormData): PreviewOptions | undefined {
   return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell, colorMode };
 }
 
+/**
+ * A staff preview token for the store (POST /workspaces/:id/store-preview-token),
+ * so the preview page can read a store the public can't see yet — a draft.
+ * Null if the API won't give one; the preview of a live store needs none.
+ */
+async function storePreviewToken(workspaceId: string, accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/workspaces/${workspaceId}/store-preview-token`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { token?: unknown };
+    return typeof body.token === "string" ? body.token : null;
+  } catch {
+    return null;
+  }
+}
+
 async function canEditWorkspace(workspaceId: string, accessToken: string): Promise<boolean> {
   const headers = { Authorization: `Bearer ${accessToken}` };
   for (const resource of ["websites", "funnels"]) {
@@ -141,11 +162,17 @@ export async function POST(
   }
 
   putPreview(token, workspaceId, tree, readOptions(form));
+  const viewToken = await storePreviewToken(workspaceId, accessToken);
   // 303 so the frame follows with a GET, whatever method brought it here.
   // Relative, not resolved against request.url: behind the host's proxy that
   // is the internal origin (https://localhost:8080), which the browser can't reach.
-  return new Response(null, {
+  const response = new NextResponse(null, {
     status: 303,
     headers: { Location: `/store/${workspaceId}/preview/${token}` },
   });
+  if (viewToken) {
+    const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
+    response.cookies.set(STORE_PREVIEW_COOKIE, viewToken, storePreviewCookieOptions(secure));
+  }
+  return response;
 }

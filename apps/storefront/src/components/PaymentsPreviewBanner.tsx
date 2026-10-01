@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useStore } from "@/lib/StoreContext";
 import { setPreviewToken, usePreviewToken } from "@/lib/payments";
+import { STORE_PREVIEW_PARAM } from "@/lib/storePreview";
 
 /**
  * The merchant's "Test checkout in store preview" link opens the store with
@@ -22,8 +23,10 @@ export function PaymentsPreviewBanner({ workspaceId }: { workspaceId: string }) 
     if (fromUrl) {
       setPreviewToken(workspaceId, fromUrl);
       url.searchParams.delete("paymentsPreview");
-      window.history.replaceState(window.history.state, "", url.toString());
     }
+    // A draft store's preview link: the proxy already kept the token.
+    url.searchParams.delete(STORE_PREVIEW_PARAM);
+    if (url.toString() !== window.location.href) window.history.replaceState(window.history.state, "", url.toString());
   }, [workspaceId]);
 
   if (!active) return null;
