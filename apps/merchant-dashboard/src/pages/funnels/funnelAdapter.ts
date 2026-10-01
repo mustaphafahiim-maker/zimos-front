@@ -38,6 +38,8 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { draftRefusal } from "@/lib/goLive";
 import { useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { normalizeTree } from "../website/editor/blocks";
 import { layoutFlow } from "./funnelFlow";
@@ -566,7 +568,12 @@ export function isSubscriptionError(err: unknown): boolean {
 /** Bilingual message for funnel API errors (403 permission or suspension, 402 subscription, known 409s). */
 export function useFunnelErrorMessage(): (err: unknown) => string {
   const t = useT(ERROR_STRINGS);
+  const shared = useErrorMessage();
   return (err: unknown) => {
+    // A draft store's refusal and the plan's monthly funnel limit have their
+    // own sentences (lib/errorMessages); neither is an expired subscription
+    // or a missing permission.
+    if (draftRefusal(err) || (err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED")) return shared(err);
     if (isSubscriptionError(err)) return t.subscription;
     if (err instanceof ApiError) {
       if (err.code === "STORE_SUSPENDED") return t.suspended;

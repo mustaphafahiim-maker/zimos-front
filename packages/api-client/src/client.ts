@@ -29,6 +29,13 @@ import type {
   AdminSpecialTermsInput,
   AdminStoreAccess,
   WorkspaceAccess,
+  GoLiveResult,
+  PublicPlan,
+  SignupOptions,
+  VerificationChallenge,
+  VerificationChannel,
+  VerificationSent,
+  BillingCycle,
   AdminWorkspaceCharges,
   AdminCommission,
   AdminCommissionPage,
@@ -521,22 +528,78 @@ export class ApiClient {
   // Auth
   // ---------------------------------------------------------------------
 
+  /**
+   * Creates the account. While sign-up codes are on, the answer is a
+   * `VerificationChallenge` (no tokens) instead: confirm it with
+   * `confirmVerificationCode`.
+   */
   async register(payload: RegisterPayload) {
-    return this.request<{ user: AuthUser }>("/auth/register", {
+    return this.request<({ user: AuthUser } & Partial<AuthTokens>) | VerificationChallenge>("/auth/register", {
       method: "POST",
       body: payload,
       auth: false,
     });
   }
 
+  /**
+   * Signs in and keeps the tokens — unless the account still has to confirm
+   * a code, when the answer is a `VerificationChallenge` and nothing is kept.
+   */
   async login(payload: LoginPayload) {
-    const result = await this.request<AuthTokens & { user: AuthUser }>("/auth/login", {
+    const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge>("/auth/login", {
       method: "POST",
       body: payload,
       auth: false,
     });
+    if ("verificationRequired" in result) return result;
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
+  }
+
+  /** `GET /auth/signup-options` — public: whether a plan, the terms and a code are required. */
+  async getSignupOptions() {
+    return this.request<SignupOptions>("/auth/signup-options", { auth: false });
+  }
+
+  /** `GET /plans/public` — the plans on offer, in order (prices in minor units). */
+  async listPublicPlans() {
+    const { plans } = await this.request<{ plans: PublicPlan[] }>("/plans/public", { auth: false });
+    return plans;
+  }
+
+  /**
+   * A new sign-up code by email or SMS. 429 RESEND_TOO_SOON (with
+   * details.retryAfterSeconds) / VERIFICATION_LIMIT_REACHED, 422
+   * CHANNEL_NOT_AVAILABLE.
+   */
+  async sendVerificationCode(verificationToken: string, channel: VerificationChannel, locale?: "ar" | "en") {
+    return this.request<VerificationSent>("/auth/verify/send", {
+      method: "POST",
+      body: locale ? { channel, locale } : { channel },
+      headers: { Authorization: `Bearer ${verificationToken}` },
+      auth: false,
+    });
+  }
+
+  /**
+   * The code from the email or SMS: signs in on success (the tokens are kept).
+   * 422 INVALID_CODE (details.attemptsLeft) / CODE_EXPIRED / NO_ACTIVE_CODE,
+   * 429 TOO_MANY_ATTEMPTS, 401 VERIFICATION_TOKEN_INVALID.
+   */
+  async confirmVerificationCode(verificationToken: string, code: string) {
+    const result = await this.request<AuthTokens & { user: AuthUser }>("/auth/verify/confirm", {
+      method: "POST",
+      body: { code },
+      headers: { Authorization: `Bearer ${verificationToken}` },
+      auth: false,
+    });
+    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    return result;
+  }
+
+  /** The plan an account made through Google chooses (with the terms, when required). */
+  async choosePlan(payload: { planId: string; billingCycle?: BillingCycle; acceptTerms?: boolean }) {
+    return this.request<{ user: AuthUser; needsPlan: boolean }>("/auth/me/plan", { method: "POST", body: payload });
   }
 
   /**
@@ -628,6 +691,12 @@ export class ApiClient {
     return user;
   }
 
+  /** `/auth/me` whole: the user, and whether it must still choose a plan. */
+  async meDetails() {
+    const body = await this.request<{ user: AuthUser; needsPlan?: boolean; suggestedUsername?: string }>("/auth/me");
+    return { user: body.user, needsPlan: Boolean(body.needsPlan), suggestedUsername: body.suggestedUsername ?? null };
+  }
+
   /** A free username to offer an account that has none yet (made through Google); null when it has one. */
   async getUsernameSuggestion() {
     const body = await this.request<{ user: AuthUser; suggestedUsername?: string }>("/auth/me");
@@ -666,13 +735,35 @@ export class ApiClient {
     return workspaces.map((entry) => ({ ...entry.workspace, role: entry.role?.key }));
   }
 
-  /** `referralCode` is an agent's code; an unusable one is a 422 REFERRAL_CODE_INVALID. */
-  async createWorkspace(name: string, referralCode?: string) {
+  /**
+   * `referralCode` is an agent's code; an unusable one is a 422
+   * REFERRAL_CODE_INVALID. `plan` is one of the public plans, read while the
+   * server requires plans (422 PLAN_NOT_AVAILABLE / PLAN_REQUIRED); 403
+   * PLAN_LIMIT_REACHED past the owner's store or draft limit.
+   */
+  async createWorkspace(name: string, referralCode?: string, plan?: { planId: string; billingCycle?: BillingCycle }) {
     const { workspace } = await this.request<{ workspace: Workspace }>("/workspaces", {
       method: "POST",
-      body: referralCode ? { name, referralCode } : { name },
+      body: { name, ...(referralCode ? { referralCode } : {}), ...(plan ? plan : {}) },
     });
     return workspace;
+  }
+
+  /** A draft store's free trial, from now. 409 TRIAL_NOT_AVAILABLE (details.reason) / NOT_A_DRAFT. */
+  async startTrial(workspaceId: string) {
+    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/start-trial`, { method: "POST" });
+  }
+
+  /** A draft store on a plan that costs nothing goes live. 409 PLAN_NOT_FREE. */
+  async activateFreePlan(workspaceId: string) {
+    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/activate-free-plan`, { method: "POST" });
+  }
+
+  /** A short-lived X-Store-Preview token: the store as shoppers will see it, even while a draft. */
+  async createStorePreviewToken(workspaceId: string) {
+    return this.request<{ token: string; expiresAt: string }>(`/workspaces/${workspaceId}/store-preview-token`, {
+      method: "POST",
+    });
   }
 
   /** `GET /workspaces/:id/access` — restriction state and billing phase; any member. */

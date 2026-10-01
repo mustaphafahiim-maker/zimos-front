@@ -11,6 +11,8 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { ChooseUsernamePage } from "@/pages/ChooseUsernamePage";
+import { ChoosePlanPage } from "@/pages/ChoosePlanPage";
+import { GoLiveDialog } from "@/components/GoLiveDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
@@ -75,6 +77,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/choose-username" element={<ChooseUsernamePage />} />
+                  <Route path="/choose-plan" element={<ChoosePlanPage />} />
                   <Route path="/workspaces" element={<WorkspacePickerPage />} />
 
                   <Route element={<RequireWorkspace />}>
@@ -123,6 +126,8 @@ export default function App() {
                   </Route>
                 </Route>
               </Routes>
+              {/* A draft store's subscribe dialog, opened from anywhere (lib/goLive). */}
+              <GoLiveDialog />
             </ToastProvider>
           </WorkspaceProvider>
         </AuthProvider>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Workspace } from "@store-builder/api-client";
+import type { BillingCycle, Workspace } from "@store-builder/api-client";
 import { getErrorMessage } from "@/lib/errors";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "./AuthContext";
@@ -23,7 +23,13 @@ interface WorkspaceContextValue {
   loading: boolean;
   selectWorkspace: (workspaceId: string) => void;
   /** `referralCode`: an agent's code, attached to the new store's subscription. */
-  createWorkspace: (name: string, slug?: string, referralCode?: string) => Promise<CreateWorkspaceResult>;
+  /** `plan`: one of the public plans, while the server requires plans (see GET /auth/signup-options). */
+  createWorkspace: (
+    name: string,
+    slug?: string,
+    referralCode?: string,
+    plan?: { planId: string; billingCycle?: BillingCycle }
+  ) => Promise<CreateWorkspaceResult>;
   /**
    * Re-read the workspace list. `silent` keeps the current list on screen —
    * without it `loading` flips and RequireWorkspace swaps the whole layout
@@ -110,10 +116,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
        * the picker still shows its "creating" state and the new store is in the
        * list, with its role, before anything navigates into it.
        */
-      async createWorkspace(name, slug, referralCode) {
+      async createWorkspace(name, slug, referralCode, plan) {
         // A bad referral code refuses the whole creation (422
         // REFERRAL_CODE_INVALID), so nothing exists yet to clean up.
-        const created = await apiClient.createWorkspace(name, referralCode || undefined);
+        const created = await apiClient.createWorkspace(name, referralCode || undefined, plan);
         let workspace = created;
         let addressError: string | undefined;
 

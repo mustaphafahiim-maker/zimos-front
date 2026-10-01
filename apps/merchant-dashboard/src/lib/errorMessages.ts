@@ -9,6 +9,7 @@ import {
 import { fmt } from "@/i18n/LocaleContext";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { providerName } from "@/lib/providers";
+import { formatDate } from "@/lib/format";
 
 /**
  * Translated copy for the backend's stable error codes.
@@ -106,6 +107,12 @@ const STRINGS = {
     REFUND_EXCEEDS_PAYMENT: "No single payment has that much left. Refund each payment separately.",
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
+    PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
+    TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
+    draftRequired: "Your store is in draft mode. Subscribe to publish it.",
+    limitFunnels: "You've reached your plan's funnels for this month ({used} of {max}). You can create more from {date}.",
+    limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
+    limitDrafts: "Subscribe to one of your stores before starting another.",
     cancelFailedPermission:
       "The courier refused to cancel the delivery: the connected API key doesn't have Full Access. The order was not cancelled. Reconnect the courier with a Full Access key under Shipping, or cancel the delivery in the courier's dashboard first.",
     cancelFailedAuth:
@@ -202,6 +209,12 @@ const STRINGS = {
     REFUND_EXCEEDS_PAYMENT: "لا توجد دفعة واحدة متبقٍ فيها هذا المبلغ. استرد كل دفعة على حدة.",
     REFUND_PAYMENT_INVALID: "لا يمكن استرداد هذه الدفعة عبر البوابة.",
     ORDER_TEST_PAYMENT: "هذا الأوردر دُفع في وضع التجربة، لذلك لا يمكن شحنه.",
+    PLAN_LIMIT_REACHED: "بلغت الحد المسموح في خطتك. رقِّ خطتك لإضافة المزيد.",
+    TRIAL_NOT_AVAILABLE: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
+    draftRequired: "متجرك في وضع المسودة. اشترك لنشره.",
+    limitFunnels: "بلغت الحد الشهري لمسارات البيع في خطتك ({used} من {max}). يمكنك إنشاء المزيد بدءًا من {date}.",
+    limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
+    limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
     cancelFailedPermission:
       "رفضت شركة الشحن إلغاء الشحنة لأن مفتاح API المربوط ليس بصلاحية Full Access. لم يتم إلغاء الأوردر. أعد ربط الشركة بمفتاح Full Access من صفحة الشحن، أو ألغِ الشحنة من لوحة تحكم الشركة أولًا.",
     cancelFailedAuth:
@@ -228,6 +241,10 @@ const OWN_KEY_LIST = [
   "carrierPermissionBosta",
   "carrierSandboxNamed",
   "cancelFailedApiAccess",
+  "draftRequired",
+  "limitFunnels",
+  "limitStores",
+  "limitDrafts",
 ] as const;
 type CodeKey = Exclude<keyof typeof STRINGS.en, (typeof OWN_KEY_LIST)[number]>;
 const OWN_KEYS: ReadonlySet<string> = new Set(OWN_KEY_LIST);
@@ -263,6 +280,15 @@ export function useErrorMessage() {
         const override = overrides?.[code];
         if (override) return override;
         if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
+        // A draft store (not subscribed yet) is not an expired one.
+        if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
+        if (code === "PLAN_LIMIT_REACHED") {
+          const limit = apiErrorDetails<{ limit?: string; max?: number; used?: number; resetsAt?: string }>(err);
+          const counts = { max: limit?.max ?? "", used: limit?.used ?? "" };
+          if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
+          if (limit?.limit === "stores") return fmt(t.limitStores, counts);
+          if (limit?.limit === "draft_stores") return t.limitDrafts;
+        }
         if (code === "CARRIER_CANCEL_FAILED") {
           // Only order cancellation raises it. The courier-side cause decides
           // what the merchant can do next; the courier's own words come along

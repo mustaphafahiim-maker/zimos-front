@@ -7,7 +7,14 @@
  *   api.listSettlements.mockResolvedValue({ settlements: [], nextCursor: null });
  */
 import { vi, type Mock } from "vitest";
-import type { ApiClient, AuthUser, LoginPayload, RegisterPayload, Workspace } from "@store-builder/api-client";
+import type {
+  ApiClient,
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+  VerificationChallenge,
+  Workspace,
+} from "@store-builder/api-client";
 import type { CreateWorkspaceResult } from "@/context/WorkspaceContext";
 
 // oxlint-disable-next-line no-explicit-any
@@ -59,8 +66,9 @@ export const testWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store" })
 export interface AuthMock {
   user: AuthUser | null;
   status: "loading" | "authenticated" | "guest";
-  login: Mock<(payload: LoginPayload) => Promise<void>>;
-  register: Mock<(payload: RegisterPayload) => Promise<void>>;
+  needsPlan: boolean;
+  login: Mock<(payload: LoginPayload) => Promise<VerificationChallenge | null>>;
+  register: Mock<(payload: RegisterPayload) => Promise<VerificationChallenge | null>>;
   logout: Mock<() => Promise<void>>;
   refreshUser: Mock<() => Promise<void>>;
 }
@@ -83,8 +91,9 @@ export function resetMocks() {
   Object.assign(authMock, {
     user: testUser,
     status: "authenticated",
-    login: vi.fn(async () => undefined),
-    register: vi.fn(async () => undefined),
+    needsPlan: false,
+    login: vi.fn(async () => null),
+    register: vi.fn(async () => null),
     logout: vi.fn(async () => undefined),
     refreshUser: vi.fn(async () => undefined),
   } satisfies AuthMock);

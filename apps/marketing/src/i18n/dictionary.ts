@@ -1,3 +1,5 @@
+import type { PlanFeatureKey } from "@/lib/plans";
+
 /**
  * The shape every locale dictionary must satisfy.
  *
@@ -116,13 +118,64 @@ export interface Dictionary {
     note: string;
   };
 
+  /** Plans and prices come from the API (GET /plans/public); these are the words around them. */
   pricing: {
     kicker: string;
     heading: string;
     intro: string;
-    badge: string;
-    plans: [Plan, Plan, Plan];
-    note: string;
+    pageTitle: string;
+    pageDescription: string;
+    pageHeading: string;
+    pageIntro: string;
+    billingCycle: string;
+    monthly: string;
+    yearly: string;
+    yearlyNote: string;
+    perMonth: string;
+    perYear: string;
+    /** "{price}" */
+    yearlyEquivalent: string;
+    free: string;
+    /** "{days}" */
+    trial: string;
+    noTrial: string;
+    stores: string;
+    funnels: string;
+    orders: string;
+    unlimited: string;
+    cta: string;
+    ctaYearly: string;
+    seeAll: string;
+    comingSoon: string;
+    comingSoonBody: string;
+    comingSoonCta: string;
+    /** Followed by the refund policy link. */
+    paymentNote: string;
+    refundLink: string;
+    features: Record<PlanFeatureKey, string>;
+  };
+
+  /** What the service is and what is sold — said plainly on the home page. */
+  service: {
+    kicker: string;
+    heading: string;
+    body: string;
+    points: [string, string, string];
+  };
+
+  /** Shared by the policy and contact pages. */
+  legal: {
+    /** "{date}" */
+    lastUpdated: string;
+    contactHeading: string;
+    email: string;
+    phone: string;
+    address: string;
+    hours: string;
+    entityHeading: string;
+    legalName: string;
+    registration: string;
+    relatedHeading: string;
   };
 
   faq: {
@@ -141,9 +194,10 @@ export interface Dictionary {
 
   footer: {
     navLabel: string;
-    columns: [FooterColumn, FooterColumn, FooterColumn, FooterColumn];
+    columns: FooterColumn[];
     rights: string;
     languageLabel: string;
+    registration: string;
   };
 }
 
@@ -234,13 +288,6 @@ export interface IntegrationGroup {
   items: string[];
 }
 
-export interface Plan {
-  id: "starter" | "growth" | "scale";
-  name: string;
-  description: string;
-  features: string[];
-  cta: string;
-}
 
 export interface FaqItem {
   question: string;
@@ -249,6 +296,6 @@ export interface FaqItem {
 
 export interface FooterColumn {
   title: string;
-  /** `#anchor` for in-page targets, `/path` for routes (locale is prefixed at render). */
+  /** `#anchor` for a home-page section, `/path` for a page (the locale is prefixed at render). */
   links: { label: string; href: string }[];
 }

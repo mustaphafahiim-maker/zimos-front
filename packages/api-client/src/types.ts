@@ -19,6 +19,13 @@ export interface AuthUser {
   platformPermissions?: string[];
   emailVerifiedAt?: string | null;
   phoneVerifiedAt?: string | null;
+  /** The plan chosen at sign-up, applied to the first store. */
+  selectedPlanId?: string | null;
+  selectedBillingCycle?: BillingCycle | null;
+  /** A Google account made while a plan was required, still to choose one. */
+  requiresPlanSelection?: boolean;
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
 }
 
 export interface AuthTokens {
@@ -29,6 +36,8 @@ export interface AuthTokens {
 export interface LoginPayload {
   email: string;
   password: string;
+  /** The language of a sign-up code sent to an account not confirmed yet. */
+  locale?: "ar" | "en";
 }
 
 export interface RegisterPayload {
@@ -38,6 +47,64 @@ export interface RegisterPayload {
   phone?: string;
   /** 3–30 of a–z 0–9 _ . — 409 USERNAME_TAKEN, 422 when invalid or reserved. */
   username?: string;
+  /** A public plan (GET /plans/public); required while the server asks for one (signup options). */
+  planId?: string;
+  billingCycle?: BillingCycle;
+  /** "I accept the terms, the refund policy and the privacy policy." */
+  acceptTerms?: boolean;
+  /** The language of the sign-up code email/SMS. */
+  locale?: "ar" | "en";
+}
+
+export type VerificationChannel = "email" | "sms";
+
+/**
+ * The answer to a sign-up, or a sign-in to an account not confirmed yet,
+ * while sign-up codes are on: no tokens, a code on its way (`codeSent`), and a
+ * short-lived token that only the two /auth/verify endpoints accept.
+ */
+export interface VerificationChallenge {
+  verificationRequired: true;
+  verificationToken: string;
+  channels: VerificationChannel[];
+  /** Masked: { email: "a***@gmail.com", sms?: "01******234" }. */
+  targets: { email: string; sms?: string };
+  codeSent: boolean;
+  channel: VerificationChannel | null;
+  expiresAt: string | null;
+  resendAvailableAt: string | null;
+}
+
+/** POST /auth/verify/send */
+export interface VerificationSent {
+  sent: true;
+  channel: VerificationChannel;
+  /** Masked. */
+  target: string;
+  expiresAt: string;
+  resendAvailableAt: string;
+}
+
+/** GET /auth/signup-options — what the sign-up form must ask for right now. */
+export interface SignupOptions {
+  planRequired: boolean;
+  termsRequired: boolean;
+  termsVersion: string;
+  verificationRequired: boolean;
+}
+
+/** One plan on offer (GET /plans/public). Prices in minor units; null limits are unlimited. */
+export interface PublicPlan {
+  id: string;
+  name: string;
+  currency: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  trialDays: number;
+  maxStores: number | null;
+  maxFunnelsPerMonth: number | null;
+  softOrderQuota: number | null;
+  features: PlanFeatureKey[];
 }
 
 /** Why a username can't be had (GET /auth/username-available). */
@@ -2370,6 +2437,8 @@ export interface AdminWorkspaceOverview {
   billingCycle: BillingCycle | null;
   /** "none" when the workspace has never subscribed. */
   subscriptionStatus: SubscriptionStatus | "none";
+  /** Not subscribed yet, while subscriptions are required to go live. */
+  draft?: boolean;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   /** Lifetime orders placed in this workspace. */
@@ -2385,7 +2454,7 @@ export interface AdminWorkspaceOverview {
 }
 
 /** What set a store's current subscription period. */
-export type AdminPeriodSource = "manual_admin" | "payment" | "special_terms" | "trial" | "other";
+export type AdminPeriodSource = "manual_admin" | "payment" | "special_terms" | "trial" | "other" | "draft";
 
 export type AdminManualAction = "activate" | "change_plan" | "extend" | "end_now";
 
@@ -2421,7 +2490,11 @@ export interface AdminManualSubscription {
     currentPeriodEnd: string;
     restrictsAt: string | null;
     source: AdminPeriodSource;
+    /** Not subscribed yet: Activate takes it live. */
+    draft?: boolean;
   };
+  /** The owner's stores and this store's funnels this month, against the plan. */
+  limits?: PlanLimits;
   /** A charge already open — manual actions leave it alone. */
   openCharge: { id: string; amount: string | number; currency: string; periodStart: string; periodEnd: string } | null;
   history: AdminManualChange[];
@@ -2539,13 +2612,27 @@ export interface AdminPlan {
   codFeeBp: number;
   features: PlanFeatureKey[];
   active: boolean;
+  /** Stores one owner may have; null = unlimited. */
+  maxStores: number | null;
+  /** Funnels one store may make a month (Cairo time); null = unlimited. */
+  maxFunnelsPerMonth: number | null;
+  /** On the marketing site and at sign-up. */
+  isPublic: boolean;
+  displayOrder: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type AdminPlanInput = Omit<AdminPlan, "id" | "currency" | "createdAt" | "updatedAt"> & {
+export type AdminPlanInput = Omit<
+  AdminPlan,
+  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder"
+> & {
   id?: string;
   currency?: string;
+  maxStores?: number | null;
+  maxFunnelsPerMonth?: number | null;
+  isPublic?: boolean;
+  displayOrder?: number;
 };
 
 export type SubscriptionStatus =
@@ -2554,7 +2641,8 @@ export type SubscriptionStatus =
   | "past_due"
   | "canceled"
   | "expired"
-  | "paused";
+  | "paused"
+  | "draft";
 
 export type BillingCycle = "monthly" | "yearly";
 
@@ -3180,7 +3268,20 @@ export type ReferralDiscountType = "none" | "percentage" | "fixed";
  *   grace        the period ended unpaid, less than a day ago
  *   restricted   more than a day past the period end, unpaid
  */
-export type BillingPhase = "ok" | "expiring" | "payment_due" | "grace" | "restricted";
+export type BillingPhase = "ok" | "expiring" | "payment_due" | "grace" | "restricted" | "draft";
+
+/** A draft store's plan, and whether its owner can still take that plan's trial. */
+export interface DraftPlan {
+  planId: string | null;
+  planName: string | null;
+  trial: { eligible: boolean; days: number };
+}
+
+/** A plan's limits against what is used (null max = unlimited). */
+export interface PlanLimits {
+  stores: { used: number; max: number | null };
+  funnelsThisMonth: { used: number; max: number | null; resetsAt: string };
+}
 
 /** `GET /workspaces/:id/access` — any member. */
 export interface WorkspaceAccess {
@@ -3199,6 +3300,10 @@ export interface WorkspaceAccess {
     enforced: boolean;
   };
   suspension: { suspended: boolean; since: string | null };
+  /** Made while subscriptions are required to go live, and not subscribed yet. */
+  draft?: boolean;
+  /** Only on a draft. */
+  draftPlan?: DraftPlan;
 }
 
 /**
@@ -3212,7 +3317,18 @@ export interface WorkspaceBilling {
     trialEndsAt: string | null;
     currentPeriodStart: string;
     currentPeriodEnd: string;
-    plan: { id: string; name: string; currency: string; monthlyPrice: number; yearlyPrice: number } | null;
+    plan: {
+      id: string;
+      name: string;
+      currency: string;
+      monthlyPrice: number;
+      yearlyPrice: number;
+      trialDays?: number;
+      maxStores?: number | null;
+      maxFunnelsPerMonth?: number | null;
+      softOrderQuota?: number | null;
+      features?: PlanFeatureKey[];
+    } | null;
   };
   referralCode: {
     code: string;
@@ -3224,6 +3340,24 @@ export interface WorkspaceBilling {
   } | null;
   /** What the next charge would be, in minor units; null on a free plan. */
   nextCharge: { grossAmount: number; discountAmount: number; amount: number; currency: string } | null;
+  features?: PlanFeatureKey[];
+  trialEndsAt?: string | null;
+  limits?: PlanLimits;
+  draft?: boolean;
+  /** Only on a draft: its trial, whether its plan is free, and how to pay by hand. */
+  goLive?: {
+    trial: { eligible: boolean; days: number };
+    free: boolean;
+    paymentInstructions: { ar: string | null; en: string | null } | null;
+  } | null;
+}
+
+/** POST /workspaces/:id/start-trial and /activate-free-plan. */
+export interface GoLiveResult {
+  billing: WorkspaceBilling;
+  access: WorkspaceAccess;
+  /** False when it had already happened (a repeated click). */
+  started: boolean;
 }
 
 export interface AdminReferralCode {

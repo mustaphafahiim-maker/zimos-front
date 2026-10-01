@@ -17,6 +17,41 @@ export function formatMoney(
   return formatMoneyIn(amountMinorUnits, currency, locale);
 }
 
+const minorDigits = new Map<string, number>();
+
+/** Decimal places of a currency's minor unit (EGP/USD 2, JPY 0, KWD 3), from Intl. */
+function minorUnitDigits(currency: string): number {
+  let digits = minorDigits.get(currency);
+  if (digits === undefined) {
+    try {
+      digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    } catch {
+      digits = 2;
+    }
+    minorDigits.set(currency, digits);
+  }
+  return digits;
+}
+
+/**
+ * A plan price (minor units of its own currency, as the API sends every
+ * amount) for display, divided by that currency's own unit rather than by a
+ * fixed 100: "799 ج.م." / "EGP 799". Whole amounts show no decimals.
+ */
+export function formatMinorMoney(minor: number | string | null | undefined, currency: string): string {
+  const value = parseMoney(minor) / 10 ** minorUnitDigits(currency);
+  const locale = getLocale() === "ar" ? "ar-EG" : "en-EG";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: Number.isInteger(value) ? 0 : minorUnitDigits(currency),
+    }).format(value);
+  } catch {
+    return `${value} ${currency}`;
+  }
+}
+
 /**
  * Display form of a product's `productCode`, e.g. "#482910573". Returns null
  * when the field is absent (older responses / backend not deployed) so callers

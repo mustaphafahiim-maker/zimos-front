@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AlertTriangle, Ban, X } from "lucide-react";
-import { cn } from "@store-builder/ui";
+import { AlertTriangle, Ban, PencilRuler, X } from "lucide-react";
+import { Button, cn } from "@store-builder/ui";
 import type { WorkspaceAccess } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { getGoLiveState, openGoLive, subscribeGoLive } from "@/lib/goLive";
 
 /**
  * The subscription / suspension banner shown above every dashboard page, from
@@ -17,6 +18,8 @@ import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
  *   grace        "expired; restricted {when}" — dismissible for the day
  *   restricted   "store unavailable"          — stays up
  *   suspended    "suspended by Zimos"         — stays up
+ *   draft        "your store is a draft"      — stays up, with a Subscribe
+ *                button (the subscribe dialog, lib/goLive)
  *
  * A dismissed banner comes back the next day while it still applies. Re-read
  * on every page change, so a payment clears it without a reload.
@@ -36,6 +39,8 @@ const STRINGS = {
       "This store has been suspended by Zimos. It's unavailable to shoppers and new products and funnels can't be added. Contact Zimos support.",
     billingLink: "Plan and billing",
     dismiss: "Dismiss for today",
+    draft: "Your store is in draft mode: build as much as you like, and subscribe to publish it.",
+    subscribe: "Subscribe to publish your store",
   },
   ar: {
     expiring: "ينتهي اشتراكك في {date}. جدّده حتى يستمر متجرك في العمل.",
@@ -50,10 +55,12 @@ const STRINGS = {
       "أوقفت Zimos هذا المتجر. المتجر غير متاح للمتسوقين ولا يمكن إضافة منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
     billingLink: "الخطة والفواتير",
     dismiss: "إخفاء لليوم",
+    draft: "متجرك في وضع المسودة: ابنِ كما تشاء، واشترك لتنشره.",
+    subscribe: "اشترك لنشر متجرك",
   },
 } satisfies Messages;
 
-type Notice = { key: string; tone: "warning" | "danger"; text: string; dismissible: boolean; billing: boolean };
+type Notice = { key: string; tone: "warning" | "danger" | "draft"; text: string; dismissible: boolean; billing: boolean };
 
 /** Today in the viewer's time zone, as the dismissal stamp. */
 function localDay(): string {
@@ -76,6 +83,9 @@ function isDismissedToday(workspaceId: string, notice: string): boolean {
 function noticeFor(access: WorkspaceAccess, t: Record<keyof (typeof STRINGS)["en"], string>): Notice | null {
   if (access.suspension.suspended) {
     return { key: "suspended", tone: "danger", text: t.suspended, dismissible: false, billing: false };
+  }
+  if (access.draft) {
+    return { key: "draft", tone: "draft", text: t.draft, dismissible: false, billing: false };
   }
   const b = access.billing;
   const date = b.periodEnd ? formatDate(b.periodEnd) : "";
@@ -114,6 +124,9 @@ export function AccessBanner() {
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
   const location = useLocation();
+  // Re-read when a store goes live from the subscribe dialog, so the draft
+  // banner goes away without a reload.
+  const { liveVersion } = useSyncExternalStore(subscribeGoLive, getGoLiveState);
   const [access, setAccess] = useState<WorkspaceAccess | null>(null);
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
 
@@ -131,7 +144,7 @@ export function AccessBanner() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, location.pathname]);
+  }, [workspaceId, location.pathname, liveVersion]);
 
   if (!workspaceId || !access) return null;
   const notice = noticeFor(access, t);
@@ -146,11 +159,17 @@ export function AccessBanner() {
       data-testid="access-banner"
       className={cn(
         "mb-4 flex items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-sm",
-        notice.tone === "danger" ? "border-danger/30 bg-danger-soft text-danger" : "border-accent/30 bg-accent-soft text-ink"
+        notice.tone === "danger"
+          ? "border-danger/30 bg-danger-soft text-danger"
+          : notice.tone === "draft"
+            ? "flex-wrap items-center border-primary/30 bg-primary-soft text-ink"
+            : "border-accent/30 bg-accent-soft text-ink"
       )}
     >
       {notice.key === "suspended" ? (
         <Ban className="mt-0.5 size-4 shrink-0" aria-hidden />
+      ) : notice.key === "draft" ? (
+        <PencilRuler className="size-4 shrink-0 text-primary" aria-hidden />
       ) : (
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
       )}
@@ -165,6 +184,11 @@ export function AccessBanner() {
           </>
         )}
       </p>
+      {notice.key === "draft" && (
+        <Button size="sm" className="min-h-11 w-full sm:w-auto" onClick={() => openGoLive(access.draftPlan ?? null)}>
+          {t.subscribe}
+        </Button>
+      )}
       {notice.dismissible && (
         <button
           type="button"

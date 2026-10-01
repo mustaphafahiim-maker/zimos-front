@@ -55,6 +55,8 @@ export function humanize(value: string): string {
 const STATUS_TONES: Record<string, Tone> = {
   // subscriptions
   trialing: "info",
+  // A store made while subscriptions are required, not subscribed yet.
+  draft: "info",
   active: "success",
   past_due: "warning",
   canceled: "neutral",

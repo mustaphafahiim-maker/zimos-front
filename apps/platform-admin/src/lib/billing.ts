@@ -14,4 +14,5 @@ export const BILLING_PHASE_LABELS: Record<BillingPhase, { label: string; tone: T
   payment_due: { label: "Payment due", tone: "warning" },
   grace: { label: "Expired — grace day", tone: "danger" },
   restricted: { label: "Expired — restricted", tone: "danger" },
+  draft: { label: "Draft — not subscribed", tone: "info" },
 };

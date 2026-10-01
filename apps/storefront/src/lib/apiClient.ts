@@ -1,4 +1,5 @@
 import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
+import { readStorePreviewCookie } from "./storePreview";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -12,5 +13,11 @@ const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/a
  * API which shopper each call is for.
  */
 export function createStorefrontApiClient() {
-  return new ApiClient({ baseUrl, tokenStorage: createMemoryTokenStorage() });
+  // Staff previewing a store the public can't see yet (lib/storePreview).
+  const preview = readStorePreviewCookie();
+  return new ApiClient({
+    baseUrl,
+    tokenStorage: createMemoryTokenStorage(),
+    ...(preview ? { defaultHeaders: { "X-Store-Preview": preview } } : {}),
+  });
 }

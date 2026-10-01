@@ -6,6 +6,14 @@ import {
   isRootDomainHost,
   storeSlugFromHost,
 } from "@/lib/domains";
+import {
+  PAYMENTS_PREVIEW_PARAM,
+  STORE_PREVIEW_COOKIE,
+  STORE_PREVIEW_HEADER,
+  STORE_PREVIEW_PARAM,
+  isTokenShaped,
+  storePreviewCookieOptions,
+} from "@/lib/storePreview";
 
 /**
  * Paths that are served as they are, whatever the host: Next's own internals,
@@ -50,6 +58,23 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (isPassThrough(pathname)) return NextResponse.next();
 
+  // A staff preview token (lib/storePreview): from the link that opened the
+  // store, else from this browser's cookie. Server components send it to the
+  // API as X-Store-Preview; a token that came in the link is kept in the cookie.
+  const linked = request.nextUrl.searchParams.get(STORE_PREVIEW_PARAM) ?? request.nextUrl.searchParams.get(PAYMENTS_PREVIEW_PARAM);
+  const fromLink = isTokenShaped(linked) ? linked : null;
+  const stored = request.cookies.get(STORE_PREVIEW_COOKIE)?.value;
+  const preview = fromLink ?? (isTokenShaped(stored) ? stored : null);
+  const headers = new Headers(request.headers);
+  headers.delete(STORE_PREVIEW_HEADER);
+  if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
+  const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
+  const keep = (response: NextResponse) => {
+    if (fromLink) response.cookies.set(STORE_PREVIEW_COOKIE, fromLink, storePreviewCookieOptions(secure));
+    return response;
+  };
+  const next = () => keep(NextResponse.next({ request: { headers } }));
+
   const host = request.headers.get("host");
   const slug = storeSlugFromHost(host);
 
@@ -66,25 +91,24 @@ export function proxy(request: NextRequest) {
       if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
         const url = request.nextUrl.clone();
         url.pathname = pathname.slice(prefix.length) || "/";
-        return NextResponse.redirect(url);
+        return keep(NextResponse.redirect(url));
       }
       // Another workspace's path on this store's host — not ours to rewrite.
-      return NextResponse.next();
+      return next();
     }
 
     const url = request.nextUrl.clone();
     url.pathname = `/store/${slug}${pathname === "/" ? "" : pathname}`;
-    const headers = new Headers(request.headers);
     headers.set(STORE_SLUG_HEADER, slug);
-    return NextResponse.rewrite(url, { request: { headers } });
+    return keep(NextResponse.rewrite(url, { request: { headers } }));
   }
 
-  if (isInternalPath) return NextResponse.next();
+  if (isInternalPath) return next();
 
   // No store in the host, and this app has no front page of its own to show.
   // Temporary, not permanent: a browser caches a permanent redirect for the
   // life of the profile, which would outlive any change of mind here.
   if (isRootDomainHost(host)) return NextResponse.redirect(MARKETING_URL, 307);
 
-  return NextResponse.next();
+  return next();
 }

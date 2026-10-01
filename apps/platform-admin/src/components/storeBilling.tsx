@@ -31,6 +31,7 @@ const SOURCE_LABEL: Record<string, string> = {
   payment: "Paid",
   special_terms: "Special terms",
   trial: "Trial",
+  draft: "Not subscribed yet",
   other: "—",
 };
 const ACTION_LABEL: Record<string, string> = {
@@ -178,23 +179,54 @@ export function ManualSubscriptionPanel({ workspaceId, canManage, onChanged }: {
   );
 }
 
+function limitText(used: number, max: number | null) {
+  return max === null ? `${used} (unlimited)` : `${used} of ${max}`;
+}
+
 function SubscriptionSummary({ data }: { data: AdminManualSubscription }) {
   const s = data.subscription;
+  const limits = data.limits;
   return (
     <div className="space-y-4">
       <dl>
         <DetailRow label="Plan">{s.plan?.name ?? "—"}</DetailRow>
         <DetailRow label="Status">
-          <Status value={s.status} />
-          {s.phase !== "ok" && (
-            <StatusBadge tone={s.phase === "restricted" || s.phase === "grace" ? "danger" : "warning"} className="ms-2">
-              {s.phase.replace(/_/g, " ")}
+          {s.draft ? (
+            <StatusBadge tone="info" dot>
+              Draft — not subscribed
             </StatusBadge>
+          ) : (
+            <>
+              <Status value={s.status} />
+              {s.phase !== "ok" && (
+                <StatusBadge tone={s.phase === "restricted" || s.phase === "grace" ? "danger" : "warning"} className="ms-2">
+                  {s.phase.replace(/_/g, " ")}
+                </StatusBadge>
+              )}
+            </>
           )}
         </DetailRow>
-        <DetailRow label="Period">
-          {formatDate(s.currentPeriodStart)} → {formatDate(s.currentPeriodEnd)}
-        </DetailRow>
+        {s.draft ? (
+          <DetailRow label="Period">
+            <span className="text-ink-soft">Starts when the store is activated or starts its trial</span>
+          </DetailRow>
+        ) : (
+          <DetailRow label="Period">
+            {formatDate(s.currentPeriodStart)} → {formatDate(s.currentPeriodEnd)}
+          </DetailRow>
+        )}
+        <DetailRow label="Trial ends">{s.trialEndsAt ? formatDateTime(s.trialEndsAt) : "—"}</DetailRow>
+        {limits && (
+          <>
+            <DetailRow label="Owner's stores">
+              <span className="tabular">{limitText(limits.stores.used, limits.stores.max)}</span>
+            </DetailRow>
+            <DetailRow label="Funnels this month">
+              <span className="tabular">{limitText(limits.funnelsThisMonth.used, limits.funnelsThisMonth.max)}</span>
+              <span className="ms-2 text-xs text-ink-soft">resets {formatDate(limits.funnelsThisMonth.resetsAt)}</span>
+            </DetailRow>
+          </>
+        )}
         <DetailRow label="Set by">{SOURCE_LABEL[s.source] ?? s.source}</DetailRow>
         {s.restrictsAt && s.phase !== "ok" && s.phase !== "expiring" && (
           <DetailRow label="Restricted from">{formatDateTime(s.restrictsAt)}</DetailRow>

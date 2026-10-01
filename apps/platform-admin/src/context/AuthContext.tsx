@@ -53,6 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status,
       async login(payload) {
         const result = await apiClient.login(payload);
+        // An account still to confirm its sign-up code (REQUIRE_SIGNUP_VERIFICATION)
+        // does that in the merchant dashboard; nothing was signed in here.
+        if ("verificationRequired" in result) {
+          throw new ApiError("Confirm this account from the Zimos dashboard first, then sign in here.", 403);
+        }
         if (!result.user.platformAdmin) {
           apiClient.clearSession();
           throw new ApiError("This account doesn't have platform admin access.", 403);
