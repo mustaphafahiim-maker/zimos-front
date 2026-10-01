@@ -16,7 +16,16 @@ import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
 import { PLAN_FEATURES } from "@/lib/planFeatures";
 import { FeaturePicker } from "@/components/FeaturePicker";
 import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
-import { formatBp, formatMinorMoney, formatNumber, formatRelative, minorUnitDigits, toMajorAmount, toMinorAmount } from "@/lib/format";
+import {
+  PLATFORM_CURRENCY,
+  formatBp,
+  formatMinorMoney,
+  formatNumber,
+  formatRelative,
+  minorUnitDigits,
+  toMajorAmount,
+  toMinorAmount,
+} from "@/lib/format";
 
 interface PlanForm {
   id?: string;
@@ -43,11 +52,13 @@ interface PlanForm {
   displayOrder: string;
 }
 
-// A new plan gets the API's default currency (plans.currency defaults to USD).
+// A new plan is priced in the platform currency (EGP, also the API's default
+// for plans.currency) and is saved with it, so the price the form shows is the
+// one stored. An existing plan keeps its own currency.
 const EMPTY: PlanForm = {
   name: "",
   code: "",
-  currency: "USD",
+  currency: PLATFORM_CURRENCY,
   monthlyPrice: "0",
   yearlyPrice: "0",
   trialDays: "14",
@@ -270,6 +281,7 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
         id: form.id,
         name: form.name,
         code: form.code,
+        ...(form.id ? {} : { currency: form.currency }),
         monthlyPrice: monthlyMinor,
         yearlyPrice: monthlyMinor * ANNUAL_PRICE_MONTHS,
         trialDays,
