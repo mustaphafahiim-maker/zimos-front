@@ -2,23 +2,28 @@ import type { PlanLimits } from "@store-builder/api-client";
 import { formatDate } from "@/lib/format";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
+import { WalletSection } from "./WalletSection";
 
 /**
  * What the store uses of its plan's limits: stores (across the owner's
  * stores) and funnels created this month, from GET .../billing (`limits`, the
- * backend's entitlementsService). No usage endpoint of its own.
+ * backend's entitlementsService). Below them, the prepaid balance while it is
+ * switched on (WalletSection).
  */
 export function UsageTab({ limits }: { limits: PlanLimits }) {
   const t = useT(SUBSCRIPTION_STRINGS);
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <UsageMeter label={t.storesUsage} used={limits.stores.used} max={limits.stores.max} />
-      <UsageMeter
-        label={t.funnelsUsage}
-        used={limits.funnelsThisMonth.used}
-        max={limits.funnelsThisMonth.max}
-        note={fmt(t.resetsOn, { date: formatDate(limits.funnelsThisMonth.resetsAt) })}
-      />
+    <div className="space-y-8">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <UsageMeter label={t.storesUsage} used={limits.stores.used} max={limits.stores.max} />
+        <UsageMeter
+          label={t.funnelsUsage}
+          used={limits.funnelsThisMonth.used}
+          max={limits.funnelsThisMonth.max}
+          note={fmt(t.resetsOn, { date: formatDate(limits.funnelsThisMonth.resetsAt) })}
+        />
+      </div>
+      <WalletSection />
     </div>
   );
 }

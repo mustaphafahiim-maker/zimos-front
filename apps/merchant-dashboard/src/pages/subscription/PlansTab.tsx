@@ -21,6 +21,7 @@ import { CycleSwitch, PlanSummary } from "@/components/plans/PlanPicker";
 import { BillingCycleChoice } from "./billingParts";
 import { BILLING_STRINGS, codeDiscountLabel } from "./billingText";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
+import { WALLET_STRINGS } from "./walletStrings";
 
 /** What a card offers, from the subscription's state (see the backend's merchantPlansService). */
 type CardAction = "trial" | "choose" | "support" | "current" | "none";
@@ -95,7 +96,7 @@ export function PlansTab({
             onChanged={onChanged}
           />
         ))}
-        <PayPerOrderCard />
+        <PayPerOrderCard view={view} onPlansChange={onPlansChange} onChanged={onChanged} />
       </div>
     </div>
   );
@@ -311,16 +312,85 @@ function CodeField({
   );
 }
 
-/** The pay-per-order plan (the balance, a later phase): shown, not offered yet. */
-function PayPerOrderCard() {
+/**
+ * The pay-per-order plan (the prepaid balance, WALLET_ENABLED). Offered:
+ * chosen at once from a draft or a trial, through support once paid. Not
+ * offered (switched off, or no such plan): shown as coming soon.
+ */
+function PayPerOrderCard({
+  view,
+  onPlansChange,
+  onChanged,
+}: {
+  view: SubscriptionPlans;
+  onPlansChange: (next: SubscriptionPlans) => void;
+  onChanged: () => void;
+}) {
   const t = useT(SUBSCRIPTION_STRINGS);
+  const w = useT(WALLET_STRINGS);
+  const workspaceId = useWorkspaceId();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ppo = view.payPerOrder;
+  const plan = ppo?.plan ?? null;
+
+  if (!ppo || (!ppo.available && !ppo.current) || !plan) {
+    return (
+      <article className="flex flex-col rounded-[var(--radius-card)] border border-dashed border-line bg-paper p-5" aria-disabled="true">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <h3 className="font-display text-lg font-medium text-ink">{t.payPerOrder}</h3>
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-ink">{t.comingSoon}</span>
+        </div>
+        <p className="text-sm text-ink-soft">{t.payPerOrderBody}</p>
+      </article>
+    );
+  }
+
+  async function choose() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.choosePayPerOrder(workspaceId);
+      onPlansChange(await apiClient.getSubscriptionPlans(workspaceId));
+      onChanged();
+      toast.success(w.ppoChosen);
+    } catch (err) {
+      setError(errorMessage(err, { OPEN_CHARGE_EXISTS: w.ppoOpenCharge, PLAN_CHANGE_NEEDS_SUPPORT: w.ppoNeedsSupport }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <article className="flex flex-col rounded-[var(--radius-card)] border border-dashed border-line bg-paper p-5" aria-disabled="true">
+    <article
+      className={cn(
+        "flex flex-col rounded-[var(--radius-card)] border bg-paper-raised p-5",
+        ppo.current ? "border-primary" : "border-line"
+      )}
+    >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <h3 className="font-display text-lg font-medium text-ink">{t.payPerOrder}</h3>
-        <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-ink">{t.comingSoon}</span>
+        {ppo.current && <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">{w.ppoCurrent}</span>}
       </div>
-      <p className="text-sm text-ink-soft">{t.payPerOrderBody}</p>
+      <p className="tabular text-2xl font-semibold text-ink">{fmt(w.ppoFee, { fee: formatMinorMoney(plan.fee, plan.currency) })}</p>
+      <p className="mt-2 flex-1 text-sm text-ink-soft">{w.ppoBalanceHint}</p>
+      {!ppo.current &&
+        (view.planChange === "immediate" ? (
+          <Button type="button" className="mt-4 min-h-11 w-full" disabled={busy} onClick={() => void choose()}>
+            {busy ? w.ppoChoosing : w.ppoChoose}
+          </Button>
+        ) : (
+          <Button asChild variant="outline" className="mt-4 min-h-11 w-full">
+            <Link to="/support">{w.ppoSupport}</Link>
+          </Button>
+        ))}
+      {error && (
+        <Alert variant="danger" role="alert" className="mt-3">
+          {error}
+        </Alert>
+      )}
     </article>
   );
 }

@@ -41,6 +41,9 @@ const STRINGS = {
     dismiss: "Dismiss for today",
     draft: "Your store is in draft mode: build as much as you like, and subscribe to publish it.",
     subscribe: "Subscribe to publish your store",
+    walletLow: "Your prepaid balance is running low: fewer than 20 orders are left before the overdraft.",
+    walletOverdraft: "Your prepaid balance is at or below zero. Your store keeps selling until the overdraft runs out.",
+    walletExhausted: "Your prepaid balance has run out, so your store has stopped taking orders. Top it up to reopen it.",
   },
   ar: {
     expiring: "ينتهي اشتراكك في {date}. جدّده حتى يستمر متجرك في العمل.",
@@ -57,6 +60,9 @@ const STRINGS = {
     dismiss: "إخفاء لليوم",
     draft: "متجرك في وضع المسودة: ابنِ كما تشاء، واشترك لتنشره.",
     subscribe: "اشترك لنشر متجرك",
+    walletLow: "رصيدك المدفوع مسبقًا يقترب من النفاد: تبقّى أقل من 20 طلبًا قبل السحب على المكشوف.",
+    walletOverdraft: "رصيدك المدفوع مسبقًا صفر أو أقل. يواصل متجرك البيع حتى ينفد السحب على المكشوف.",
+    walletExhausted: "نفد رصيدك المدفوع مسبقًا، فتوقّف متجرك عن استقبال الطلبات. اشحنه لإعادة فتحه.",
   },
 } satisfies Messages;
 
@@ -86,6 +92,17 @@ function noticeFor(access: WorkspaceAccess, t: Record<keyof (typeof STRINGS)["en
   }
   if (access.draft) {
     return { key: "draft", tone: "draft", text: t.draft, dismissible: false, billing: false };
+  }
+  // The pay-per-order balance (absent from an API from before it).
+  const wallet = access.wallet;
+  if (wallet && wallet.phase === "exhausted") {
+    return { key: "wallet_exhausted", tone: "danger", text: t.walletExhausted, dismissible: false, billing: true };
+  }
+  if (wallet && wallet.phase === "overdraft") {
+    return { key: "wallet_overdraft", tone: "warning", text: t.walletOverdraft, dismissible: true, billing: true };
+  }
+  if (wallet && wallet.phase === "low") {
+    return { key: "wallet_low", tone: "warning", text: t.walletLow, dismissible: true, billing: true };
   }
   const b = access.billing;
   const date = b.periodEnd ? formatDate(b.periodEnd) : "";
@@ -178,7 +195,7 @@ export function AccessBanner() {
         {notice.billing && canSeeBilling && (
           <>
             {" "}
-            <Link to="/subscription" className="font-medium underline underline-offset-2">
+            <Link to={notice.key.startsWith("wallet_") ? "/subscription?tab=usage" : "/subscription"} className="font-medium underline underline-offset-2">
               {t.billingLink}
             </Link>
           </>
