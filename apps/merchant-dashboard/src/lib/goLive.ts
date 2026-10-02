@@ -76,6 +76,11 @@ export function holdForGoLive<T>(error: unknown, refusal: DraftPlan, retry: () =
   });
 }
 
+/** A store went live somewhere other than the dialog (the Subscription page): screens reading access refresh. */
+export function noteWentLive() {
+  set({ liveVersion: state.liveVersion + 1 });
+}
+
 /**
  * The dialog is done. `live`: the store is out of draft — the held requests
  * go out again; otherwise they fail with the refusal they got.

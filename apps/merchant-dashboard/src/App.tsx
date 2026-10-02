@@ -38,6 +38,7 @@ import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { SubscriptionPage } from "@/pages/subscription/SubscriptionPage";
 import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 
 // Analytics screens and the two editors are code-split: their charts, block
@@ -113,6 +114,7 @@ export default function App() {
                         path="/analytics/funnels/:funnelId"
                         element={<LazyRoute><FunnelAnalyticsPage /></LazyRoute>}
                       />
+                      <Route path="/subscription" element={<SubscriptionPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />

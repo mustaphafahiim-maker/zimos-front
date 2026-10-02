@@ -1,5 +1,5 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
@@ -32,29 +32,20 @@ import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
-import { BillingSection } from "./BillingSection";
+import { BILLING_ROLES } from "@/pages/subscription/billingText";
+import { SUBSCRIPTION_STRINGS } from "@/pages/subscription/subscriptionStrings";
+import { useT } from "@/i18n/LocaleContext";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 
-/**
- * A link that names one of the user's stores (?workspace=<id>, as on the way
- * back from the subscription payment page) opens that store, since the
- * current store is whichever was picked last in this browser.
- */
-function useStoreFromLink() {
-  const [params] = useSearchParams();
-  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
-  const wanted = params.get("workspace");
-  useEffect(() => {
-    if (wanted && wanted !== currentWorkspace?.id && workspaces.some((w) => w.id === wanted)) selectWorkspace(wanted);
-  }, [wanted, currentWorkspace?.id, workspaces, selectWorkspace]);
-}
-
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
-  useStoreFromLink();
+  const [params] = useSearchParams();
+  // Fawaterak's return links (?payment=…&workspace=…&result=…) were made
+  // for this page; the payment is now shown in Subscription, with the same query.
+  if (params.get("payment")) return <Navigate to={`/subscription?${params.toString()}`} replace />;
 
   return (
     <div className="max-w-3xl space-y-10">
@@ -68,9 +59,25 @@ export function SettingsPage() {
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
-      <BillingSection key={`billing-${workspaceId}`} />
+      <SubscriptionLinkSection />
       <TeamSection key={`team-${workspaceId}`} />
     </div>
+  );
+}
+
+/** The plan, payments and referral code moved to the Subscription section. */
+function SubscriptionLinkSection() {
+  const t = useT(SUBSCRIPTION_STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  if (!BILLING_ROLES.has(currentWorkspace?.role ?? "")) return null;
+  return (
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">{t.settingsTitle}</h2>
+      <p className="mt-1 text-sm text-ink-soft">{t.settingsBody}</p>
+      <Button asChild variant="outline" className="mt-4 min-h-11">
+        <Link to="/subscription">{t.settingsOpen}</Link>
+      </Button>
+    </section>
   );
 }
 
