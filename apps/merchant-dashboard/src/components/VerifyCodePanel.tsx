@@ -1,7 +1,14 @@
 import { useEffect, useId, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, cn } from "@store-builder/ui";
-import { ApiError, apiErrorDetails, type AuthUser, type VerificationChallenge, type VerificationChannel } from "@store-builder/api-client";
+import {
+  ApiError,
+  apiErrorDetails,
+  type AuthUser,
+  type VerificationChallenge,
+  type VerificationChannel,
+  type VerificationSent,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
 
@@ -10,11 +17,13 @@ const STRINGS = {
     title: "Enter the code we sent you",
     sentTo: "We sent a 6-digit code to {target}. It is valid for 10 minutes.",
     notSent: "Choose where to send your code.",
+    notSentSession: "We'll send a 6-digit code to {target}.",
     digit: "Digit {n} of 6",
     codeLabel: "Verification code",
     confirm: "Confirm",
     confirming: "Confirming…",
     resend: "Send a new code",
+    sendFirst: "Send the code",
     resendIn: "Send a new code in {seconds}s",
     sending: "Sending…",
     channel: "Send the code to",
@@ -38,11 +47,13 @@ const STRINGS = {
     title: "أدخل الرمز المرسل إليك",
     sentTo: "أرسلنا رمزًا من 6 أرقام إلى {target}. الرمز صالح لمدة 10 دقائق.",
     notSent: "اختر وسيلة إرسال الرمز.",
+    notSentSession: "سنرسل رمزًا من 6 أرقام إلى {target}.",
     digit: "الرقم {n} من 6",
     codeLabel: "رمز التأكيد",
     confirm: "تأكيد",
     confirming: "جارٍ التأكيد…",
     resend: "إرسال رمز جديد",
+    sendFirst: "إرسال الرمز",
     resendIn: "إرسال رمز جديد بعد {seconds} ثانية",
     sending: "جارٍ الإرسال…",
     channel: "أرسل الرمز إلى",
@@ -80,13 +91,27 @@ function secondsUntil(iso: string | null): number {
  * 60-second wait before a new code; the choice of email or the phone's SMS
  * when the account has both. A right code signs the person in
  * (`onVerified`).
+ *
+ * `session`: an account already signed in confirming its email (the
+ * dashboard's code dialog). The codes and their limits are the same; they go
+ * through /auth/me/email instead of the challenge's token, nothing new is
+ * signed in, and `onSent` hears of each code sent. `challenge` then only
+ * describes where the code goes and whether one is on its way. An account
+ * confirmed meanwhile (another tab) counts as verified, with no user.
+ * `compact` leaves the title to the surrounding dialog.
  */
 export function VerifyCodePanel({
   challenge,
   onVerified,
+  session = false,
+  onSent,
+  compact = false,
 }: {
   challenge: VerificationChallenge;
-  onVerified: (user: AuthUser) => void | Promise<void>;
+  onVerified: (user: AuthUser | null) => void | Promise<void>;
+  session?: boolean;
+  onSent?: (sent: VerificationSent) => void;
+  compact?: boolean;
 }) {
   const t = useT(STRINGS);
   const { locale } = useLocale();
@@ -152,10 +177,14 @@ export function VerifyCodePanel({
     setError(null);
     setInfo(null);
     try {
-      const result = await apiClient.confirmVerificationCode(challenge.verificationToken, code);
+      const result = session
+        ? await apiClient.confirmAccountCode(code)
+        : await apiClient.confirmVerificationCode(challenge.verificationToken, code);
       await onVerified(result.user);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (session && err instanceof ApiError && err.code === "ALREADY_VERIFIED") {
+        await onVerified(null);
+      } else if (err instanceof ApiError && err.status === 401) {
         setExpiredSession(true);
       } else {
         setError(describe(err));
@@ -172,7 +201,10 @@ export function VerifyCodePanel({
     setError(null);
     setInfo(null);
     try {
-      const sent = await apiClient.sendVerificationCode(challenge.verificationToken, next, locale);
+      const sent = session
+        ? await apiClient.sendAccountCode(locale)
+        : await apiClient.sendVerificationCode(challenge.verificationToken, next, locale);
+      onSent?.(sent);
       setTargets((current) => ({ ...current, [sent.channel]: sent.target }));
       setResendAt(sent.resendAvailableAt);
       setCodeSent(true);
@@ -180,7 +212,8 @@ export function VerifyCodePanel({
       setDigits(Array(LENGTH).fill(""));
       inputs.current[0]?.focus();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) setExpiredSession(true);
+      if (session && err instanceof ApiError && err.code === "ALREADY_VERIFIED") await onVerified(null);
+      else if (err instanceof ApiError && err.status === 401) setExpiredSession(true);
       else {
         const retry = apiErrorDetails<{ retryAfterSeconds?: number }>(err)?.retryAfterSeconds;
         if (err instanceof ApiError && err.code === "RESEND_TOO_SOON" && retry) {
@@ -245,9 +278,13 @@ export function VerifyCodePanel({
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
-        <h2 className="font-display text-2xl font-medium text-ink">{t.title}</h2>
-        <p id={statusId} className="mt-2 text-sm text-ink-soft" aria-live="polite">
-          {codeSent ? fmt(t.sentTo, { target: ltr(target) }) : t.notSent}
+        {!compact && <h2 className="font-display text-2xl font-medium text-ink">{t.title}</h2>}
+        <p id={statusId} className={cn("text-sm text-ink-soft", !compact && "mt-2")} aria-live="polite">
+          {codeSent
+            ? fmt(t.sentTo, { target: ltr(target) })
+            : session
+              ? fmt(t.notSentSession, { target: ltr(target) })
+              : t.notSent}
         </p>
       </div>
 
@@ -332,7 +369,7 @@ export function VerifyCodePanel({
           disabled={wait > 0 || busy !== null}
           onClick={() => void send()}
         >
-          {busy === "send" ? t.sending : wait > 0 ? fmt(t.resendIn, { seconds: wait }) : t.resend}
+          {busy === "send" ? t.sending : wait > 0 ? fmt(t.resendIn, { seconds: wait }) : codeSent ? t.resend : t.sendFirst}
         </Button>
         {channel === "email" && <p className="text-xs text-ink-soft">{t.spam}</p>}
       </div>

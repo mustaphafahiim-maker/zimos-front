@@ -67,6 +67,8 @@ export interface AuthMock {
   user: AuthUser | null;
   status: "loading" | "authenticated" | "guest";
   needsPlan: boolean;
+  /** The account's email (or phone) is confirmed; false shows the banner. */
+  confirmed: boolean;
   login: Mock<(payload: LoginPayload) => Promise<VerificationChallenge | null>>;
   register: Mock<(payload: RegisterPayload) => Promise<VerificationChallenge | null>>;
   logout: Mock<() => Promise<void>>;
@@ -92,6 +94,7 @@ export function resetMocks() {
     user: testUser,
     status: "authenticated",
     needsPlan: false,
+    confirmed: true,
     login: vi.fn(async () => null),
     register: vi.fn(async () => null),
     logout: vi.fn(async () => undefined),
