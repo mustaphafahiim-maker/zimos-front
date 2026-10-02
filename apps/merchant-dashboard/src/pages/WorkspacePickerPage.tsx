@@ -11,6 +11,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { apiClient } from "@/lib/apiClient";
 import { StoreAddressField } from "@/components/StoreAddressField";
 import { CopyButton } from "@/components/CopyButton";
+import { SignOutButton } from "@/components/SignOutButton";
 import { PlanPicker, type PlanChoice } from "@/components/plans/PlanPicker";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 
@@ -81,7 +82,7 @@ const STRINGS = {
 
 export function WorkspacePickerPage() {
   const t = useT(STRINGS);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { workspaces, loading, selectWorkspace, createWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const errorMessage = useErrorMessage();
@@ -189,9 +190,7 @@ export function WorkspacePickerPage() {
             <h1 className="font-display text-3xl font-medium text-ink">{workspaces.length > 0 ? t.choose : t.setUp}</h1>
             <p className="mt-2 text-sm text-ink-soft">
               {fmt(t.signedInAs, { email: user?.email ?? "" })}{" "}
-              <button onClick={() => logout()} className="min-h-11 cursor-pointer text-primary hover:underline">
-                {t.signOut}
-              </button>
+              <SignOutButton className="min-h-11 cursor-pointer text-primary hover:underline">{t.signOut}</SignOutButton>
             </p>
           </div>
         </div>
