@@ -13,6 +13,7 @@ import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { ChooseUsernamePage } from "@/pages/ChooseUsernamePage";
 import { ChoosePlanPage } from "@/pages/ChoosePlanPage";
 import { GoLiveDialog } from "@/components/GoLiveDialog";
+import { ConfirmEmailDialog } from "@/components/ConfirmEmailDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
@@ -128,6 +129,8 @@ export default function App() {
               </Routes>
               {/* A draft store's subscribe dialog, opened from anywhere (lib/goLive). */}
               <GoLiveDialog />
+              {/* The email-confirmation code, above it when both are open (lib/emailConfirm). */}
+              <ConfirmEmailDialog />
             </ToastProvider>
           </WorkspaceProvider>
         </AuthProvider>

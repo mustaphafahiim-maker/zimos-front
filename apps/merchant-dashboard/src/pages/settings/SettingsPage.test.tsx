@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import type { Workspace } from "@store-builder/api-client";
+import { ApiError, type Workspace } from "@store-builder/api-client";
 import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { SettingsPage } from "./SettingsPage";
@@ -73,5 +73,34 @@ describe("SettingsPage store profile", () => {
       await within(profileSection()).findByText("This store is no longer available to your account, so nothing was saved.")
     ).toBeInTheDocument();
     expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+});
+
+describe("SettingsPage team invitations", () => {
+  const inviteRefused = () =>
+    new ApiError("That person's account hasn't confirmed its email yet.", 409, "INVITEE_NOT_CONFIRMED", {
+      error: { code: "INVITEE_NOT_CONFIRMED", message: "That person's account hasn't confirmed its email yet." },
+    });
+
+  async function invite(locale: "en" | "ar") {
+    api.listWorkspaceMembers.mockResolvedValue([]);
+    api.listPendingInvites.mockResolvedValue([]);
+    api.listWorkspaceRoles.mockResolvedValue([fake({ id: "role_1", key: "order_operator", name: "Order operator" })]);
+    api.inviteMember.mockRejectedValue(inviteRefused());
+    const { user } = renderWithProviders(<SettingsPage />, { locale });
+    await user.click(await screen.findByRole("button", { name: "Invite member" }));
+    const dialog = screen.getByRole("dialog", { name: "Invite member" });
+    await user.type(within(dialog).getByLabelText(/Email/), "new.person@example.com");
+    await user.click(within(dialog).getByRole("button", { name: "Send invite" }));
+  }
+
+  it("tells the inviter that an unconfirmed account must confirm its email first", async () => {
+    await invite("en");
+    expect(await screen.findByText(/hasn't confirmed its email yet\. Ask them to confirm it, then invite them again\./)).toBeInTheDocument();
+  });
+
+  it("says it in Arabic on an Arabic dashboard", async () => {
+    await invite("ar");
+    expect(await screen.findByText("لم يؤكد صاحب هذا الحساب بريده الإلكتروني بعد. اطلب منه تأكيده، ثم أرسل الدعوة مرة أخرى.")).toBeInTheDocument();
   });
 });

@@ -86,3 +86,38 @@ describe("VerifyCodePanel", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 });
+
+describe("VerifyCodePanel for a signed-in account (session)", () => {
+  const sessionChallenge = (overrides: Partial<VerificationChallenge> = {}) =>
+    challenge({ verificationToken: "", channels: ["email"], targets: { email: "a***@example.com" }, codeSent: false, resendAvailableAt: null, ...overrides });
+
+  it("sends the first code through /auth/me/email, and confirms it there", async () => {
+    api.sendAccountCode.mockResolvedValue(
+      fake({ sent: true, channel: "email", target: "a***@example.com", expiresAt: "x", resendAvailableAt: new Date(Date.now() + 60_000).toISOString() })
+    );
+    api.confirmAccountCode.mockResolvedValue(fake({ user: testUser, confirmed: true }));
+    const onVerified = vi.fn();
+    const onSent = vi.fn();
+    const { user } = renderWithProviders(<VerifyCodePanel session challenge={sessionChallenge()} onSent={onSent} onVerified={onVerified} />);
+
+    expect(screen.getByText(/We'll send a 6-digit code to/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send the code" }));
+    await waitFor(() => expect(api.sendAccountCode).toHaveBeenCalledWith("en"));
+    expect(onSent).toHaveBeenCalledWith(expect.objectContaining({ target: "a***@example.com" }));
+    expect(api.sendVerificationCode).not.toHaveBeenCalled();
+
+    fireEvent.paste(digits()[0], { clipboardData: { getData: () => "123456" } });
+    await waitFor(() => expect(api.confirmAccountCode).toHaveBeenCalledWith("123456"));
+    await waitFor(() => expect(onVerified).toHaveBeenCalledWith(testUser));
+    expect(api.confirmVerificationCode).not.toHaveBeenCalled();
+  });
+
+  it("counts an account confirmed meanwhile (another tab) as verified", async () => {
+    api.confirmAccountCode.mockRejectedValue(new ApiError("already", 409, "ALREADY_VERIFIED", {}));
+    const onVerified = vi.fn();
+    renderWithProviders(<VerifyCodePanel session compact challenge={sessionChallenge({ codeSent: true })} onVerified={onVerified} />);
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    fireEvent.paste(digits()[0], { clipboardData: { getData: () => "123456" } });
+    await waitFor(() => expect(onVerified).toHaveBeenCalledWith(null));
+  });
+});

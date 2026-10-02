@@ -35,6 +35,7 @@ import type {
   VerificationChallenge,
   VerificationChannel,
   VerificationSent,
+  EmailCodeSent,
   BillingCycle,
   AdminWorkspaceCharges,
   AdminCommission,
@@ -531,16 +532,23 @@ export class ApiClient {
   // ---------------------------------------------------------------------
 
   /**
-   * Creates the account. While sign-up codes are on, the answer is a
-   * `VerificationChallenge` (no tokens) instead: confirm it with
-   * `confirmVerificationCode`.
+   * Creates the account and keeps its tokens: it is signed in at once, with a
+   * code on its way to confirm the email (`emailCode`). While sign-up codes
+   * are on, the answer is a `VerificationChallenge` (no tokens) instead:
+   * confirm it with `confirmVerificationCode`.
    */
   async register(payload: RegisterPayload) {
-    return this.request<({ user: AuthUser } & Partial<AuthTokens>) | VerificationChallenge>("/auth/register", {
+    const result = await this.request<
+      ({ user: AuthUser; emailCode?: EmailCodeSent } & Partial<AuthTokens>) | VerificationChallenge
+    >("/auth/register", {
       method: "POST",
       body: payload,
       auth: false,
     });
+    if (!("verificationRequired" in result) && result.accessToken && result.refreshToken) {
+      this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    }
+    return result;
   }
 
   /**
@@ -548,9 +556,14 @@ export class ApiClient {
    * a code, when the answer is a `VerificationChallenge` and nothing is kept.
    */
   async login(payload: LoginPayload) {
+    // An API from before identifier sign-in reads only `email` (and drops the
+    // fields it doesn't know), so an identifier that is an email also goes as
+    // `email`: the dashboard can deploy before the API.
+    const identifier = payload.identifier?.trim();
+    const body = identifier && identifier.includes("@") && !payload.email ? { ...payload, email: identifier } : payload;
     const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge>("/auth/login", {
       method: "POST",
-      body: payload,
+      body,
       auth: false,
     });
     if ("verificationRequired" in result) return result;
@@ -597,6 +610,30 @@ export class ApiClient {
     });
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
+  }
+
+  /**
+   * A code to confirm the signed-in account's email (the dashboard's banner).
+   * 429 RESEND_TOO_SOON (details.retryAfterSeconds) /
+   * VERIFICATION_LIMIT_REACHED, 409 ALREADY_VERIFIED, 503 EMAIL_UNAVAILABLE.
+   */
+  async sendAccountCode(locale?: "ar" | "en") {
+    return this.request<VerificationSent>("/auth/me/email/send-code", {
+      method: "POST",
+      body: locale ? { locale } : {},
+    });
+  }
+
+  /**
+   * Confirms the signed-in account's email with its code; the session goes on
+   * as it is. 422 INVALID_CODE (details.attemptsLeft) / CODE_EXPIRED /
+   * NO_ACTIVE_CODE, 429 TOO_MANY_ATTEMPTS, 409 ALREADY_VERIFIED.
+   */
+  async confirmAccountCode(code: string) {
+    return this.request<{ user: AuthUser; confirmed: true }>("/auth/me/email/confirm", {
+      method: "POST",
+      body: { code },
+    });
   }
 
   /** The plan an account made through Google chooses (with the terms, when required). */
@@ -693,10 +730,22 @@ export class ApiClient {
     return user;
   }
 
-  /** `/auth/me` whole: the user, and whether it must still choose a plan. */
+  /**
+   * `/auth/me` whole: the user, whether it must still choose a plan, and
+   * whether its email (or phone) is confirmed — until it is, starting a trial
+   * and publishing answer 403 EMAIL_NOT_VERIFIED.
+   */
   async meDetails() {
-    const body = await this.request<{ user: AuthUser; needsPlan?: boolean; suggestedUsername?: string }>("/auth/me");
-    return { user: body.user, needsPlan: Boolean(body.needsPlan), suggestedUsername: body.suggestedUsername ?? null };
+    const body = await this.request<{ user: AuthUser; needsPlan?: boolean; confirmed?: boolean; suggestedUsername?: string }>(
+      "/auth/me"
+    );
+    return {
+      user: body.user,
+      needsPlan: Boolean(body.needsPlan),
+      // An API from before this field: the user's own dates say the same.
+      confirmed: body.confirmed ?? Boolean(body.user.emailVerifiedAt || body.user.phoneVerifiedAt),
+      suggestedUsername: body.suggestedUsername ?? null,
+    };
   }
 
   /** A free username to offer an account that has none yet (made through Google); null when it has one. */

@@ -6,6 +6,7 @@ import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem, isNavItemVisible
 import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
+import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -321,6 +322,8 @@ export function DashboardLayout() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6">
+          {/* The account's email still to confirm. */}
+          <EmailConfirmBanner />
           {/* Subscription expiring / expired, or the store suspended. */}
           <AccessBanner />
           {/* One crashing page shows an error here; the sidebar and header

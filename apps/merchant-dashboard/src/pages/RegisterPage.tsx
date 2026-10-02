@@ -133,7 +133,7 @@ type Step = "plan" | "account" | "code";
  * as it always has.
  */
 export function RegisterPage() {
-  const { register, login, refreshUser } = useAuth();
+  const { register, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const t = useT(STRINGS);
@@ -253,10 +253,9 @@ export function RegisterPage() {
         setStep("code");
         return;
       }
-      // Without sign-up codes the account is signed in with the same
-      // credentials, straight into the store setup (or told to confirm the
-      // emailed link, as before).
-      await login({ email, password });
+      // Without sign-up codes the account is already signed in (AuthContext):
+      // straight into the store setup, with a code on its way to confirm the
+      // email (the dashboard's banner asks for it).
       navigate("/workspaces", { replace: true });
     } catch (err) {
       if (isApiErrorCode(err, "PLAN_NOT_AVAILABLE") || isApiErrorCode(err, "PLAN_REQUIRED")) setStep(planStep ? "plan" : "account");

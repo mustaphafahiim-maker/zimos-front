@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
 import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { ColorField } from "@/components/ColorField";
 import {
@@ -502,6 +503,9 @@ function InviteMemberForm({
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  // Translated by code: an account that hasn't confirmed its email yet can't
+  // be invited (INVITEE_NOT_CONFIRMED), which the inviter must understand.
+  const describeError = useErrorMessage();
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
@@ -521,7 +525,7 @@ function InviteMemberForm({
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      if (Object.keys(fields).length === 0) setFormError(describeError(err));
     } finally {
       setSaving(false);
     }
