@@ -1,4 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
@@ -36,8 +37,23 @@ import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 
+/**
+ * A link that names one of the user's stores (?workspace=<id>, as on the way
+ * back from the subscription payment page) opens that store, since the
+ * current store is whichever was picked last in this browser.
+ */
+function useStoreFromLink() {
+  const [params] = useSearchParams();
+  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
+  const wanted = params.get("workspace");
+  useEffect(() => {
+    if (wanted && wanted !== currentWorkspace?.id && workspaces.some((w) => w.id === wanted)) selectWorkspace(wanted);
+  }, [wanted, currentWorkspace?.id, workspaces, selectWorkspace]);
+}
+
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
+  useStoreFromLink();
 
   return (
     <div className="max-w-3xl space-y-10">

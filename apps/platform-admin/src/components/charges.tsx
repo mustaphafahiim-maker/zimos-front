@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Banknote, Gift, Receipt, Undo2 } from "lucide-react";
 import { Alert, Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
-import type { AdminCharge, AdminWorkspaceCharges } from "@store-builder/api-client";
+import type { AdminCharge, AdminOnlinePayment, AdminWorkspaceCharges } from "@store-builder/api-client";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { Mono, Panel, Td, Th } from "@/components/Panel";
@@ -20,13 +20,14 @@ import { describeDiscount } from "@/lib/referrals";
 /**
  * A workspace's subscription charges, on its Subscription tab.
  *
- * There is no subscription payment gateway yet, so a payment that arrived some
- * other way (a bank transfer, cash) is recorded here by hand, dated when it
- * arrived. That runs the same charge-paid path as a gateway payment: the
- * referral code is re-checked at that moment, and the commission ledger row is
- * written from the amount actually received. A payment recorded here — never
- * a gateway one — can be reversed: the charge goes back to pending and its
- * ledger row is voided.
+ * A merchant may pay a charge online through Fawaterak, when the platform has
+ * that switched on (ONLINE_BILLING_ENABLED); each attempt is listed under
+ * "Online payments". A payment that arrived some other way (a bank transfer,
+ * cash) is recorded here by hand, dated when it arrived. That runs the same
+ * charge-paid path as an online payment: the referral code is re-checked at
+ * that moment, and the commission ledger row is written from the amount
+ * actually received. A payment recorded here — never an online one — can be
+ * reversed: the charge goes back to pending and its ledger row is voided.
  */
 export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
   const toast = useToast();
@@ -86,7 +87,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
             />
             <SpecialTermsPanel data={data} onGrant={canManage ? () => setGranting(true) : undefined} />
             {data.charges.length === 0 ? (
-              <EmptyBlock message="No charges yet. There is no subscription payment gateway, so charges are created here." />
+              <EmptyBlock message="No charges yet. A charge is created here, or when the merchant pays online." />
             ) : (
               <ChargesTable
                 charges={data.charges}
@@ -94,6 +95,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
                 onReverse={canRecord ? setReversing : undefined}
               />
             )}
+            <OnlinePaymentsPanel charges={data.charges} />
           </div>
         )}
       </DataState>
@@ -463,9 +465,100 @@ function PaymentLine({ charge }: { charge: AdminCharge }) {
           </span>
         </>
       ) : (
-        " · gateway"
+        " · online"
       )}
     </span>
+  );
+}
+
+const ONLINE_STATUS_LABELS: Partial<Record<AdminOnlinePayment["status"], string>> = {
+  created: "Starting",
+  pending: "Awaiting payment",
+  paid_duplicate: "Paid twice",
+  mismatch: "Amount mismatch",
+  superseded: "Replaced",
+  error: "Not started",
+};
+
+/** What to do about an online payment, when anything. */
+function onlinePaymentNote(p: AdminOnlinePayment): string | null {
+  if (p.status === "paid_duplicate") {
+    return "Paid on a charge that was already paid, so it settled nothing. Refund it in Fawaterak.";
+  }
+  if (p.status === "mismatch") {
+    return `Fawaterak reports it paid, but ${p.failureReason ?? "not as expected"}. It settled nothing: check in Fawaterak, then record or refund by hand.`;
+  }
+  return p.failureReason;
+}
+
+/**
+ * Every online checkout (Fawaterak) the merchant started, newest first. Only
+ * a payment Fawaterak confirmed, for exactly the price frozen when they
+ * pressed Pay, settles a charge.
+ */
+function OnlinePaymentsPanel({ charges }: { charges: AdminCharge[] }) {
+  const rows = charges
+    .flatMap((charge) => (charge.onlinePayments ?? []).map((payment) => ({ charge, payment })))
+    .sort((a, b) => new Date(b.payment.createdAt).getTime() - new Date(a.payment.createdAt).getTime());
+  if (rows.length === 0) return null;
+  return (
+    <Panel flush title="Online payments">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <Th>Started</Th>
+            <Th>Charge</Th>
+            <Th className="text-end">Amount</Th>
+            <Th>Status</Th>
+            <Th>Fawaterak</Th>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(({ charge, payment: p }) => {
+            const note = onlinePaymentNote(p);
+            const differs = p.verifiedAmount != null && (p.verifiedAmount !== p.amount || p.verifiedCurrency !== p.currency);
+            return (
+              <TableRow key={p.id}>
+                <Td className="whitespace-nowrap text-sm">
+                  <span title={formatDateTime(p.createdAt)}>{formatDate(p.createdAt)}</span>
+                </Td>
+                <Td className="whitespace-nowrap text-sm">
+                  {formatDate(charge.periodStart)} – {formatDate(charge.periodEnd)}
+                </Td>
+                <Td className="text-end whitespace-nowrap text-sm tabular">
+                  {formatMinorMoneyExact(p.amount, p.currency)}
+                  {differs && (
+                    <span className="block text-xs text-danger">
+                      Paid {formatMinorMoneyExact(p.verifiedAmount!, p.verifiedCurrency ?? p.currency)}
+                    </span>
+                  )}
+                </Td>
+                <Td>
+                  <Status value={p.status} label={ONLINE_STATUS_LABELS[p.status]} />
+                  {p.paidAt && <span className="mt-1 block text-xs text-ink-soft">Paid {formatDate(p.paidAt)}</span>}
+                  {note && <span className="mt-1 block max-w-80 text-xs text-ink-soft">{note}</span>}
+                  {p.refundsReported.map((r) => (
+                    <span key={r.reportedAt} className="mt-1 block text-xs text-accent-dark">
+                      Refund of {r.amount} {r.currency} reported {formatDate(r.approvedAt ?? r.reportedAt)} — nothing was
+                      changed in Zimos.
+                    </span>
+                  ))}
+                </Td>
+                <Td className="text-xs text-ink-soft">
+                  {p.paymentMethod && <span className="block">{p.paymentMethod}</span>}
+                  {p.referenceNumber && <span className="block">Ref <Mono>{p.referenceNumber}</Mono></span>}
+                  {p.providerTransactionId != null && (
+                    <span className="block">
+                      Transaction <Mono>{p.providerTransactionId}</Mono>
+                    </span>
+                  )}
+                </Td>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Panel>
   );
 }
 
@@ -526,6 +619,9 @@ function ChargesTable({
                 <Td>
                   <Status value={c.status} />
                   <PaymentLine charge={c} />
+                  {c.onlinePaymentInProgress && (
+                    <span className="mt-1 block text-xs text-primary">Online payment in progress</span>
+                  )}
                   {c.status === "failed" && c.failureReason && (
                     <span className="mt-1 block text-xs text-ink-soft">{c.failureReason}</span>
                   )}
@@ -651,10 +747,17 @@ function RecordPaymentModal({
       <form id="record-payment-form" onSubmit={submit} className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <Alert>
-          This marks the charge paid exactly as a gateway payment would: the subscription becomes active for this
+          This marks the charge paid exactly as an online payment would: the subscription becomes active for this
           period, the referral code is checked again now, and any agent commission is worked out on the amount you
           enter. Zimos moves no money. A mistake can be undone with Reverse payment.
         </Alert>
+        {charge.onlinePaymentInProgress && (
+          <Alert variant="danger">
+            The merchant has an online payment in progress for this charge. Recording a payment here closes it in
+            Zimos, but Fawaterak's payment link can't be cancelled: if they pay it anyway, that payment settles nothing
+            and shows as "Paid twice", to refund in Fawaterak.
+          </Alert>
+        )}
         {charge.payableNow?.codeLapsed && (
           <Alert variant="danger">
             This charge was priced with a referral code that is no longer active, so the full price is due and no
