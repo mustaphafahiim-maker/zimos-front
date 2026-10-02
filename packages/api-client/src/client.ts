@@ -30,6 +30,9 @@ import type {
   AdminStoreAccess,
   WorkspaceAccess,
   GoLiveResult,
+  SubscriptionPlans,
+  ReferralCodePreview,
+  MerchantInvoicePage,
   PublicPlan,
   SignupOptions,
   VerificationChallenge,
@@ -801,8 +804,11 @@ export class ApiClient {
   }
 
   /** A draft store's free trial, from now. 409 TRIAL_NOT_AVAILABLE (details.reason) / NOT_A_DRAFT. */
-  async startTrial(workspaceId: string) {
-    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/start-trial`, { method: "POST" });
+  async startTrial(workspaceId: string, planId?: string) {
+    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/start-trial`, {
+      method: "POST",
+      ...(planId ? { body: { planId } } : {}),
+    });
   }
 
   /** A draft store on a plan that costs nothing goes live. 409 PLAN_NOT_FREE. */
@@ -861,6 +867,36 @@ export class ApiClient {
    * Attaches an agent's referral code to the subscription (201; 200 when it
    * already was). 422 REFERRAL_CODE_INVALID, 409 REFERRAL_CODE_ALREADY_SET.
    */
+  /** `GET /workspaces/:id/billing/plans` — the cards of the Subscription section (billing.manage). */
+  async getSubscriptionPlans(workspaceId: string): Promise<SubscriptionPlans> {
+    return this.request<SubscriptionPlans>(`/workspaces/${workspaceId}/billing/plans`);
+  }
+
+  /** What a referral code would take off each plan, before it is attached. 422 REFERRAL_CODE_INVALID. */
+  async previewReferralCode(workspaceId: string, code: string): Promise<ReferralCodePreview> {
+    return this.request<ReferralCodePreview>(`/workspaces/${workspaceId}/billing/code-preview`, {
+      method: "POST",
+      body: { code },
+    });
+  }
+
+  /** The store's subscription charges, newest first, a page at a time. */
+  async listBillingInvoices(workspaceId: string, { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {}) {
+    return this.request<MerchantInvoicePage>(`/workspaces/${workspaceId}/billing/invoices?page=${page}&pageSize=${pageSize}`);
+  }
+
+  /**
+   * Another plan on offer, at once, while nothing is paid (a draft or a
+   * trial). 409 PLAN_CHANGE_NEEDS_SUPPORT once paid, OPEN_CHARGE_EXISTS; 422
+   * PLAN_NOT_AVAILABLE. Takes no price: the server prices the plan.
+   */
+  async changeSubscriptionPlan(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle }) {
+    return this.request<{ changed: boolean; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan`, {
+      method: "POST",
+      body: payload,
+    });
+  }
+
   async attachReferralCode(workspaceId: string, code: string): Promise<WorkspaceBilling> {
     const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing/referral-code`, {
       method: "POST",

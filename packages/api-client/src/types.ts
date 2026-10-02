@@ -3371,6 +3371,79 @@ export interface WorkspaceBilling {
   };
 }
 
+/** A price on a plan card, in minor units: the plan's, the referral code's discount, and what is paid. */
+export interface PlanPrice {
+  gross: number;
+  discount: number;
+  net: number;
+}
+
+/** A referral code as the merchant sees it: the discount, never the agent. */
+export interface MerchantReferralCode {
+  code: string;
+  discountType: ReferralDiscountType;
+  discountValue: number | null;
+  discountCurrency: string | null;
+  active: boolean;
+}
+
+/** One card of the Subscription section. Prices come from the server; annual is 10 × monthly. */
+export interface SubscriptionPlan extends PublicPlan {
+  isCurrent: boolean;
+  /** False only for the store's own plan when it isn't on offer: shown, never chosen. */
+  isPublic: boolean;
+  prices: { monthly: PlanPrice; yearly: PlanPrice };
+}
+
+/** `GET /workspaces/:id/billing/plans` (billing.manage). */
+export interface SubscriptionPlans {
+  subscription: {
+    status: SubscriptionStatus;
+    billingCycle: BillingCycle;
+    planId: string | null;
+    trialEndsAt: string | null;
+    currentPeriodEnd: string;
+    /** Not subscribed yet (REQUIRE_SUBSCRIPTION_TO_GO_LIVE on). */
+    draft: boolean;
+  };
+  /** A trial starts only from a draft, once per account. */
+  trial: { available: boolean; used: boolean };
+  /** "immediate" while nothing is paid (a draft or a trial); "support" once paid. */
+  planChange: "immediate" | "support";
+  referralCode: MerchantReferralCode | null;
+  plans: SubscriptionPlan[];
+}
+
+/** `POST /workspaces/:id/billing/code-preview` — what a code would take off each listed plan. */
+export interface ReferralCodePreview {
+  code: MerchantReferralCode;
+  plans: { planId: string; prices: { monthly: PlanPrice; yearly: PlanPrice } }[];
+}
+
+/** A subscription charge as the merchant sees it. */
+export interface MerchantInvoice {
+  id: string;
+  status: "pending" | "paid" | "failed";
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: number;
+  discountAmount: number;
+  amountDue: number;
+  amountPaid: number | null;
+  currency: string;
+  paidAt: string | null;
+  paymentSource: "gateway" | "manual" | null;
+  createdAt: string;
+}
+
+/** `GET /workspaces/:id/billing/invoices` — newest first. */
+export interface MerchantInvoicePage {
+  invoices: MerchantInvoice[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 /**
  * An online checkout's state:
  *   created / open / pending  in progress (pending: an async method such as a
