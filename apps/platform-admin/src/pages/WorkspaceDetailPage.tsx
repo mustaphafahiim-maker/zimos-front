@@ -222,9 +222,10 @@ export function WorkspaceDetailPage() {
           )}
 
           <p className="mt-4 text-xs text-ink-soft">
-            Charges can be created and their payments recorded here by hand until a subscription
-            payment gateway exists. Activating, changing the plan, extending or ending the
-            subscription by hand never creates a charge or an agent commission.
+            Charges are created here, or when the merchant pays online (Fawaterak, while online
+            payment is switched on); a payment that arrived another way is recorded here by hand.
+            Activating, changing the plan, extending or ending the subscription by hand never
+            creates a charge or an agent commission.
           </p>
         </TabsContent>
       </Tabs>
