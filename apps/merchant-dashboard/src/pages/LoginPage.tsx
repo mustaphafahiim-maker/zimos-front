@@ -6,7 +6,7 @@ import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
-import { useLocale } from "@/i18n/LocaleContext";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import type { VerificationChallenge } from "@store-builder/api-client";
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
@@ -33,7 +33,57 @@ function GoogleIcon() {
   );
 }
 
+const STRINGS = {
+  en: {
+    title: "Welcome back",
+    subtitle: "Sign in to manage your store.",
+    google: "Continue with Google",
+    or: "or",
+    identifier: "Email or username",
+    identifierPlaceholder: "you@example.com",
+    password: "Password",
+    forgot: "Forgot password?",
+    show: "Show password",
+    hide: "Hide password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    newHere: "New to Zimos?",
+    create: "Create an account",
+    wrong: "Incorrect email, username or password.",
+    generic: "Something went wrong. Please try again.",
+    linkMissing: "Can't find the confirmation email?",
+    resend: "Send it again",
+    resending: "Sending…",
+    resent: "If an account uses this email, a new confirmation email is on its way.",
+    resendFailed: "The email couldn't be sent. Try again.",
+  },
+  ar: {
+    title: "مرحبًا بعودتك",
+    subtitle: "سجّل الدخول لإدارة متجرك.",
+    google: "المتابعة بحساب جوجل",
+    or: "أو",
+    identifier: "البريد الإلكتروني أو اسم المستخدم",
+    identifierPlaceholder: "you@example.com",
+    password: "كلمة المرور",
+    forgot: "نسيت كلمة المرور؟",
+    show: "إظهار كلمة المرور",
+    hide: "إخفاء كلمة المرور",
+    signIn: "تسجيل الدخول",
+    signingIn: "جارٍ تسجيل الدخول…",
+    newHere: "جديد على Zimos؟",
+    create: "أنشئ حسابًا",
+    wrong: "البريد الإلكتروني أو اسم المستخدم أو كلمة المرور غير صحيحة.",
+    generic: "حدث خطأ ما. حاول مرة أخرى.",
+    linkMissing: "لم تجد رسالة التأكيد؟",
+    resend: "أعد إرسالها",
+    resending: "جارٍ الإرسال…",
+    resent: "إذا كان هناك حساب بهذا البريد الإلكتروني، فستصلك رسالة تأكيد جديدة خلال دقائق.",
+    resendFailed: "تعذّر إرسال الرسالة. حاول مرة أخرى.",
+  },
+} satisfies Messages;
+
 export function LoginPage() {
+  const t = useT(STRINGS);
   const { login, refreshUser } = useAuth();
   const { locale } = useLocale();
   // An account that still has to confirm its sign-up code gets the code
@@ -43,16 +93,19 @@ export function LoginPage() {
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
 
-  const [email, setEmail] = useState("");
+  // The email or the username, as typed; the server tells them apart.
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // Shown only after a `pending_verification` account tries to sign in — lets
-  // them re-send the verification email straight from here.
+  // Only an API from before soft confirmation refuses a `pending_verification`
+  // account (ACCOUNT_INACTIVE); the confirmation link can then be sent again,
+  // when what was typed is an email.
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const typedEmail = identifier.includes("@") ? identifier.trim() : "";
 
   function handleGoogleLogin() {
     window.location.href = `${apiBaseUrl}/auth/google`;
@@ -65,7 +118,7 @@ export function LoginPage() {
     setResent(false);
     setSubmitting(true);
     try {
-      const pending = await login({ email, password, locale });
+      const pending = await login({ identifier: identifier.trim(), password, locale });
       if (pending) {
         setChallenge(pending);
         return;
@@ -73,12 +126,10 @@ export function LoginPage() {
       navigate(from, { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.status === 401 ? "Incorrect email or password." : err.message);
-        // AuthContext.login() throws this exact code for a pending_verification
-        // account — the only login error we offer a "resend link" affordance for.
+        setError(err.status === 401 ? t.wrong : err.message);
         if (err.code === "ACCOUNT_INACTIVE") setNeedsVerification(true);
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t.generic);
       }
     } finally {
       setSubmitting(false);
@@ -88,17 +139,13 @@ export function LoginPage() {
   async function handleResendVerification() {
     setResending(true);
     try {
-      await apiClient.resendVerification(email);
-      // Mirrors the password-reset request: a resolved call just means "show the
-      // notice", it doesn't confirm the address exists or is still unverified.
-      // `resent` then hides the button for the rest of this page load, so the
-      // link can't be spammed.
+      await apiClient.resendVerification(typedEmail);
+      // Like the password-reset request: a resolved call only means "show the
+      // notice"; it doesn't confirm the address exists. `resent` hides the
+      // button for the rest of this page load, so it can't be spammed.
       setResent(true);
     } catch (err) {
-      // Only a genuine server failure reaches here; surface it so they can retry.
-      setError(
-        err instanceof ApiError ? err.message : "تعذّر إرسال الرسالة، حاول تاني."
-      );
+      setError(err instanceof ApiError ? err.message : t.resendFailed);
     } finally {
       setResending(false);
     }
@@ -126,73 +173,74 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen">
       <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Welcome back</h2>
-          <p className="mt-2 text-sm text-ink-soft">
-            Sign in to manage your store.
-          </p>
+          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
+          <p className="mt-2 text-sm text-ink-soft">{t.subtitle}</p>
 
           <div className="mt-8">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleLogin}
-            >
+            <Button type="button" variant="outline" className="min-h-11 w-full" onClick={handleGoogleLogin}>
               <GoogleIcon />
-              المتابعة بحساب جوجل
+              {t.google}
             </Button>
 
             <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
               <span className="h-px flex-1 bg-line" />
-              أو
+              {t.or}
               <span className="h-px flex-1 bg-line" />
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && <Alert variant="danger">{error}</Alert>}
+            {error && (
+              <Alert variant="danger" role="alert">
+                {error}
+              </Alert>
+            )}
 
             {needsVerification &&
+              typedEmail &&
               (resent ? (
-                <Alert variant="success">
-                  لو في حساب مسجّل بالإيميل ده، هنبعتلك رسالة تأكيد جديدة خلال دقايق.
-                </Alert>
+                <Alert variant="success">{t.resent}</Alert>
               ) : (
                 <div className="text-sm text-ink-soft">
-                  مش لاقي رسالة التأكيد؟{" "}
+                  {t.linkMissing}{" "}
                   <Button
                     type="button"
                     variant="link"
                     size="sm"
                     className="h-auto p-0 text-sm"
                     onClick={handleResendVerification}
-                    disabled={resending || !email}
+                    disabled={resending}
                   >
-                    {resending ? "جارٍ الإرسال…" : "إعادة إرسال الرسالة"}
+                    {resending ? t.resending : t.resend}
                   </Button>
                 </div>
               ))}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">{t.identifier}</Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
+                id="identifier"
+                name="username"
+                type="text"
+                dir="ltr"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder={t.identifierPlaceholder}
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t.password}</Label>
                 <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                  Forgot password?
+                  {t.forgot}
                 </Link>
               </div>
               <div className="relative">
@@ -209,28 +257,24 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                  aria-label={showPassword ? t.hide : t.show}
                   aria-pressed={showPassword}
-                  className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
+                  className="absolute inset-y-0 end-0 flex cursor-pointer items-center px-3 text-ink-soft transition-colors hover:text-ink"
                 >
-                  {showPassword ? (
-                    <EyeOff className="size-4" aria-hidden />
-                  ) : (
-                    <Eye className="size-4" aria-hidden />
-                  )}
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
+            <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
+              {submitting ? t.signingIn : t.signIn}
             </Button>
           </form>
 
           <p className="mt-8 text-center text-sm text-ink-soft">
-            New to Zimos?{" "}
+            {t.newHere}{" "}
             <Link to="/register" className="font-medium text-primary hover:underline">
-              Create an account
+              {t.create}
             </Link>
           </p>
         </div>
