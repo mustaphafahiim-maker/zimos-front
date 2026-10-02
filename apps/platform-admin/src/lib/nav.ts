@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import {
   Activity,
   Ban,
+  Banknote,
   Building2,
   CreditCard,
   Factory,
@@ -14,6 +15,7 @@ import {
   Megaphone,
   MessageCircle,
   Puzzle,
+  Receipt,
   ScrollText,
   ShieldAlert,
   Truck,
@@ -41,6 +43,8 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Users", to: "/users", icon: Users, permission: P.WORKSPACES_VIEW },
       { label: "Subscriptions", to: "/subscriptions", icon: CreditCard, permission: P.SUBSCRIPTIONS_VIEW },
       { label: "Plans", to: "/plans", icon: Layers, permission: P.PLANS_VIEW },
+      { label: "Transfer proofs", to: "/payment-proofs", icon: Receipt, permission: P.PAYMENTS_RECORD },
+      { label: "Payment methods", to: "/payment-methods", icon: Banknote, permission: P.PAYMENTS_RECORD },
     ],
   },
   {
