@@ -645,12 +645,14 @@ export class ApiClient {
    * Kick off a password reset. The backend deliberately answers with the same
    * `{ success: true }` whether or not the address is registered (account
    * enumeration guard), so a resolved call just means "show the check-your-inbox
-   * notice" — it is not a signal that the email exists.
+   * notice" — it is not a signal that the email exists. `locale` is the
+   * language of the email. 503 PASSWORD_RESET_UNAVAILABLE when the server
+   * can't build the link; 429 past the per-IP hourly limit.
    */
-  async requestPasswordReset(email: string) {
+  async requestPasswordReset(email: string, locale?: "ar" | "en") {
     return this.request<{ success: boolean }>("/auth/password-reset/request", {
       method: "POST",
-      body: { email },
+      body: locale ? { email, locale } : { email },
       auth: false,
     });
   }

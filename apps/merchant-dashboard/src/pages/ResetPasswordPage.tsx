@@ -5,13 +5,64 @@ import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
-import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { MIN_PASSWORD_LENGTH, isPasswordStrong, passwordRuleLabel, unmetPasswordRules } from "@/lib/passwordRules";
 
+const STRINGS = {
+  en: {
+    title: "Set a new password",
+    intro: "Choose a new password for your account. You'll be signed out everywhere else.",
+    password: "New password",
+    passwordPlaceholder: "At least 8 characters",
+    confirm: "Confirm password",
+    show: "Show password",
+    hide: "Hide password",
+    save: "Save new password",
+    saving: "Saving…",
+    rulesUnmet: "The password still misses some of the rules listed below it.",
+    mismatch: "The two passwords don't match.",
+    invalidLink: "This link isn't valid: it may be incomplete or copied wrongly.",
+    expired: "This link has expired or was already used. Ask for a new one.",
+    askAgain: "Ask for a new link",
+    done: "Your password has been changed. Taking you to sign in…",
+    signIn: "Sign in",
+    back: "Back to sign in",
+    generic: "The password couldn't be changed. Try again.",
+  },
+  ar: {
+    title: "تعيين كلمة مرور جديدة",
+    intro: "اختر كلمة مرور جديدة لحسابك. سيُسجَّل خروجك من كل الأجهزة الأخرى.",
+    password: "كلمة المرور الجديدة",
+    passwordPlaceholder: "8 أحرف على الأقل",
+    confirm: "تأكيد كلمة المرور",
+    show: "إظهار كلمة المرور",
+    hide: "إخفاء كلمة المرور",
+    save: "حفظ كلمة المرور الجديدة",
+    saving: "جارٍ الحفظ…",
+    rulesUnmet: "كلمة المرور لا تستوفي بعد بعض الشروط المذكورة أسفلها.",
+    mismatch: "كلمتا المرور غير متطابقتين.",
+    invalidLink: "هذا الرابط غير صالح: ربما يكون ناقصًا أو نُسخ بشكل خاطئ.",
+    expired: "انتهت صلاحية هذا الرابط أو سبق استخدامه. اطلب رابطًا جديدًا.",
+    askAgain: "طلب رابط جديد",
+    done: "تم تغيير كلمة المرور. جارٍ نقلك إلى تسجيل الدخول…",
+    signIn: "تسجيل الدخول",
+    back: "العودة إلى تسجيل الدخول",
+    generic: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
+  },
+} satisfies Messages;
+
+/**
+ * The page the emailed link opens (/reset-password?token=…): a new password
+ * (the same rules as sign-up), then sign in. Works for an account made with
+ * Google, which sets its first password here. The server signs the account
+ * out everywhere and counts its email as confirmed.
+ */
 export function ResetPasswordPage() {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  // The emailed link is /reset-password?token=xxx — the token rides in a query
-  // param named exactly `token`.
+  // The emailed link is /reset-password?token=xxx.
   const token = searchParams.get("token");
 
   const [password, setPassword] = useState("");
@@ -19,13 +70,13 @@ export function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [linkDead, setLinkDead] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
   const unmetRules = unmetPasswordRules(password);
 
-  // On success, bounce to the login page after a short beat. The manual button
-  // below covers the case where the timer is missed (tab backgrounded, etc.).
+  // On success, on to sign in after a short beat; the button covers a missed timer.
   useEffect(() => {
     if (!done) return;
     const timer = setTimeout(() => navigate("/login", { replace: true }), 2000);
@@ -38,11 +89,11 @@ export function ResetPasswordPage() {
     setError(null);
 
     if (!isPasswordStrong(password)) {
-      setError("الباسورد لسه ناقص شوية شروط، بصّ على القايمة اللي تحت.");
+      setError(t.rulesUnmet);
       return;
     }
     if (password !== confirm) {
-      setError("الباسورد وتأكيده مش زي بعض.");
+      setError(t.mismatch);
       return;
     }
 
@@ -51,56 +102,63 @@ export function ResetPasswordPage() {
       await apiClient.resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      // Keep the form mounted so they can fix a typo or go request a fresh link.
-      setError(
-        err instanceof ApiError ? err.message : "تعذّر تغيير الباسورد، حاول تاني."
-      );
+      // An expired or used link can't be retried: send them for a new one.
+      if (err instanceof ApiError && err.code === "INVALID_RESET_TOKEN") setLinkDead(true);
+      else setError(t.generic);
     } finally {
       setSubmitting(false);
     }
   }
 
+  const askAgain = (
+    <Link to="/forgot-password" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
+      {t.askAgain}
+    </Link>
+  );
+
   return (
     <div className="flex min-h-screen">
       <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Set a new password</h2>
+          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 
           {!token ? (
             <>
-              <Alert variant="danger" className="mt-6">
-                الرابط غير صالح. يمكن يكون ناقص أو اتنسخ غلط.
+              <Alert variant="danger" className="mt-6" role="alert">
+                {t.invalidLink}
               </Alert>
-              <Link
-                to="/forgot-password"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                اطلب لينك جديد
-              </Link>
+              {askAgain}
+            </>
+          ) : linkDead ? (
+            <>
+              <Alert variant="danger" className="mt-6" role="alert">
+                {t.expired}
+              </Alert>
+              {askAgain}
             </>
           ) : done ? (
             <>
-              <Alert variant="success" className="mt-6">
-                تم تغيير الباسورد بنجاح. هنحوّلك لتسجيل الدخول…
+              <Alert variant="success" className="mt-6" role="status">
+                {t.done}
               </Alert>
-              <Button
-                type="button"
-                className="mt-6 w-full"
-                onClick={() => navigate("/login", { replace: true })}
-              >
-                تسجيل الدخول
+              <Button type="button" className="mt-6 min-h-11 w-full" onClick={() => navigate("/login", { replace: true })}>
+                {t.signIn}
               </Button>
             </>
           ) : (
             <>
-              <p className="mt-2 text-sm text-ink-soft">اختار باسورد جديد لحسابك.</p>
+              <p className="mt-2 text-sm text-ink-soft">{t.intro}</p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && <Alert variant="danger">{error}</Alert>}
+                {error && (
+                  <Alert variant="danger" role="alert">
+                    {error}
+                  </Alert>
+                )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">New password</Label>
+                  <Label htmlFor="password">{t.password}</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -110,22 +168,18 @@ export function ResetPasswordPage() {
                       minLength={MIN_PASSWORD_LENGTH}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder={t.passwordPlaceholder}
                       className="pe-10"
                       aria-describedby="password-rules"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      aria-label={showPassword ? t.hide : t.show}
                       aria-pressed={showPassword}
-                      className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
+                      className="absolute inset-y-0 end-0 flex cursor-pointer items-center px-3 text-ink-soft transition-colors hover:text-ink"
                     >
-                      {showPassword ? (
-                        <EyeOff className="size-4" aria-hidden />
-                      ) : (
-                        <Eye className="size-4" aria-hidden />
-                      )}
+                      {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                     </button>
                   </div>
                   {password.length > 0 && unmetRules.length > 0 && (
@@ -133,7 +187,7 @@ export function ResetPasswordPage() {
                       {unmetRules.map((rule) => (
                         <li key={rule.id} className="flex items-center gap-1.5">
                           <span aria-hidden>•</span>
-                          {rule.label}
+                          {passwordRuleLabel(rule, locale)}
                         </li>
                       ))}
                     </ul>
@@ -141,7 +195,7 @@ export function ResetPasswordPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirm">Confirm password</Label>
+                  <Label htmlFor="confirm">{t.confirm}</Label>
                   <div className="relative">
                     <Input
                       id="confirm"
@@ -156,32 +210,23 @@ export function ResetPasswordPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
-                      aria-label={showConfirm ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      aria-label={showConfirm ? t.hide : t.show}
                       aria-pressed={showConfirm}
-                      className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
+                      className="absolute inset-y-0 end-0 flex cursor-pointer items-center px-3 text-ink-soft transition-colors hover:text-ink"
                     >
-                      {showConfirm ? (
-                        <EyeOff className="size-4" aria-hidden />
-                      ) : (
-                        <Eye className="size-4" aria-hidden />
-                      )}
+                      {showConfirm ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
                     </button>
                   </div>
-                  {confirm.length > 0 && password !== confirm && (
-                    <p className="mt-1 text-xs text-danger">الباسورد وتأكيده مش زي بعض.</p>
-                  )}
+                  {confirm.length > 0 && password !== confirm && <p className="mt-1 text-xs text-danger">{t.mismatch}</p>}
                 </div>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "جارٍ الحفظ…" : "Save new password"}
+                <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
+                  {submitting ? t.saving : t.save}
                 </Button>
               </form>
 
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                ← Back to sign in
+              <Link to="/login" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
+                {t.back}
               </Link>
             </>
           )}
