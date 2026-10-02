@@ -237,6 +237,13 @@ import type {
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceRole,
+  BillingPaymentMethodList,
+  BillingPaymentProof,
+  OpenBillingInvoiceResult,
+  AdminPaymentMethod,
+  AdminPaymentMethods,
+  AdminPaymentProofPage,
+  AdminPaymentProofReview,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -853,11 +860,57 @@ export class ApiClient {
    * 409 ONLINE_PAYMENT_CURRENCY_UNSUPPORTED / PAYMENT_STARTING / PLAN_IS_FREE,
    * 502 ONLINE_PAYMENT_START_FAILED.
    */
-  async startOnlinePayment(workspaceId: string, lang: "ar" | "en"): Promise<{ payment: OnlinePayment; reused: boolean }> {
+  async startOnlinePayment(
+    workspaceId: string,
+    lang: "ar" | "en",
+    method?: string
+  ): Promise<{ payment: OnlinePayment; reused: boolean }> {
     return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/payments`, {
       method: "POST",
-      body: { lang },
+      // Without `method` the API uses Fawaterak, as before payment methods.
+      body: method ? { lang, method } : { lang },
     });
+  }
+
+  /** The ways this store can pay its charges now (never cached). */
+  async getPaymentMethods(workspaceId: string): Promise<BillingPaymentMethodList> {
+    return this.request<BillingPaymentMethodList>(`/workspaces/${workspaceId}/billing/payment-methods`);
+  }
+
+  /**
+   * The charge to pay now: the open one, or the next period's written by the
+   * server. 409 NO_PAYMENT_METHOD (contact support), PLAN_IS_FREE, NO_PLAN.
+   */
+  async openBillingInvoice(workspaceId: string): Promise<OpenBillingInvoiceResult> {
+    return this.request<OpenBillingInvoiceResult>(`/workspaces/${workspaceId}/billing/invoices/open`, { method: "POST", body: {} });
+  }
+
+  /**
+   * A transfer's proof for a charge: the method, the sender's mobile number
+   * and the screenshot. No amount: the server takes the charge's. 409
+   * PROOF_IMAGE_DUPLICATE / PROOF_ALREADY_OPEN / TOO_MANY_OPEN_PROOFS /
+   * CHARGE_NOT_PENDING, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422
+   * INVALID_SENDER_PHONE / PAYMENT_METHOD_NOT_AVAILABLE.
+   */
+  async submitBillingPaymentProof(
+    workspaceId: string,
+    invoiceId: string,
+    { methodCode, senderPhone, file }: { methodCode: string; senderPhone: string; file: File | Blob }
+  ): Promise<{ proof: BillingPaymentProof }> {
+    const form = new FormData();
+    form.append("methodCode", methodCode);
+    form.append("senderPhone", senderPhone);
+    form.append("file", file, file instanceof File ? file.name : "transfer");
+    const res = await this.rawFetch(`/workspaces/${workspaceId}/billing/invoices/${invoiceId}/payment-proofs`, {
+      method: "POST",
+      body: form,
+    });
+    return res.json() as Promise<{ proof: BillingPaymentProof }>;
+  }
+
+  /** The store's latest transfer proofs, newest first. */
+  async listBillingPaymentProofs(workspaceId: string): Promise<{ proofs: BillingPaymentProof[] }> {
+    return this.request<{ proofs: BillingPaymentProof[] }>(`/workspaces/${workspaceId}/billing/payment-proofs`);
   }
 
   /** An online payment's state; the server asks the gateway while it is in progress. */
@@ -1739,6 +1792,70 @@ export class ApiClient {
    * Records a payment received outside any gateway, through the same path as
    * the gateway webhook. 409 CHARGE_ALREADY_PAID.
    */
+  // --- payment methods and transfer proofs (billing/paymentAdminRoutes)
+
+  /** Every payment method, and the gateways with an adapter but no row yet (payments.record). */
+  async adminListPaymentMethods(): Promise<AdminPaymentMethods> {
+    return this.request<AdminPaymentMethods>("/admin/payment-methods");
+  }
+
+  /** On or off, and the labels (payment_methods.manage). 409 PAYMENT_METHOD_NEEDS_NUMBER. */
+  async adminUpdatePaymentMethod(
+    code: string,
+    payload: { enabled?: boolean; labelAr?: string; labelEn?: string }
+  ): Promise<AdminPaymentMethod> {
+    const { method } = await this.request<{ method: AdminPaymentMethod }>(`/admin/payment-methods/${code}`, {
+      method: "PATCH",
+      body: payload,
+    });
+    return method;
+  }
+
+  /** The order merchants see them in, first first (payment_methods.manage). */
+  async adminReorderPaymentMethods(codes: string[]): Promise<AdminPaymentMethods> {
+    return this.request<AdminPaymentMethods>("/admin/payment-methods/order", { method: "PUT", body: { codes } });
+  }
+
+  /** A manual method's number and note (payment_methods.edit_numbers), audited old and new. */
+  async adminUpdatePaymentMethodAccount(
+    code: string,
+    payload: { accountNumber?: string; noteAr?: string; noteEn?: string }
+  ): Promise<AdminPaymentMethod> {
+    const { method } = await this.request<{ method: AdminPaymentMethod }>(`/admin/payment-methods/${code}/account`, {
+      method: "PATCH",
+      body: payload,
+    });
+    return method;
+  }
+
+  async adminListPaymentProofs(params: { status?: string; page?: number; pageSize?: number } = {}): Promise<AdminPaymentProofPage> {
+    return this.request<AdminPaymentProofPage>(`/admin/payment-proofs${buildQuery(params)}`);
+  }
+
+  async adminGetPaymentProof(proofId: string): Promise<AdminPaymentProofReview> {
+    return this.request<AdminPaymentProofReview>(`/admin/payment-proofs/${proofId}`);
+  }
+
+  /**
+   * The amount that arrived (minor units). For a charge it must be exactly the
+   * amount asked: 422 RECEIVED_AMOUNT_MISMATCH, 409 CHARGE_ALREADY_PAID /
+   * CHARGE_REPRICED / PROOF_ALREADY_REVIEWED. A second approval is a no-op.
+   */
+  async adminApprovePaymentProof(proofId: string, receivedAmount: number): Promise<AdminPaymentProofReview> {
+    return this.request<AdminPaymentProofReview>(`/admin/payment-proofs/${proofId}/approve`, {
+      method: "POST",
+      body: { receivedAmount },
+    });
+  }
+
+  /** The note is required, and the merchant reads it. */
+  async adminRejectPaymentProof(proofId: string, note: string): Promise<AdminPaymentProofReview> {
+    return this.request<AdminPaymentProofReview>(`/admin/payment-proofs/${proofId}/reject`, {
+      method: "POST",
+      body: { note },
+    });
+  }
+
   async adminRecordPayment(
     chargeId: string,
     payload: { amountReceived: number; note?: string; paidAt?: string }
