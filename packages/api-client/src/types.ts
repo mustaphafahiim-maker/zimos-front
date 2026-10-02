@@ -2629,13 +2629,15 @@ export interface AdminPlan {
   /** On the marketing site and at sign-up. */
   isPublic: boolean;
   displayOrder: number;
+  /** The pay-per-order fee for one order, minor units; 0 = none. An API from before it sends nothing. */
+  perOrderFee?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export type AdminPlanInput = Omit<
   AdminPlan,
-  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder"
+  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder" | "perOrderFee"
 > & {
   id?: string;
   currency?: string;
@@ -2643,6 +2645,8 @@ export type AdminPlanInput = Omit<
   maxFunnelsPerMonth?: number | null;
   isPublic?: boolean;
   displayOrder?: number;
+  /** Only on a plan priced 0 a month, in EGP (422 PER_ORDER_FEE_NOT_ALLOWED). */
+  perOrderFee?: number;
 };
 
 export type SubscriptionStatus =
@@ -3297,8 +3301,11 @@ export interface PlanLimits {
 export interface WorkspaceAccess {
   /** Storefront unavailable and new products/funnels blocked. */
   restricted: boolean;
-  /** Why: a manual suspension, an unpaid subscription past its grace day, or both. */
-  reasons: Array<"suspended" | "billing">;
+  /**
+   * Why: a manual suspension, an unpaid subscription past its grace day, or
+   * (pay-per-order) a balance that can't pay the next order's fee.
+   */
+  reasons: Array<"suspended" | "billing" | "balance">;
   billing: {
     phase: BillingPhase;
     status: SubscriptionStatus | null;
@@ -3314,6 +3321,54 @@ export interface WorkspaceAccess {
   draft?: boolean;
   /** Only on a draft. */
   draftPlan?: DraftPlan;
+  /** The pay-per-order balance; null (or absent, from an older API) when the store pays no order fee. */
+  wallet?: WalletState | null;
+}
+
+/** Where a pay-per-order balance stands against the fee. Amounts in minor units. */
+export interface WalletState {
+  /** low: fewer than 20 orders before the overdraft; overdraft: at or below zero; exhausted: the next order is refused. */
+  phase: "ok" | "low" | "overdraft" | "exhausted";
+  balance: number;
+  fee: number | null;
+  ordersLeft: number | null;
+  ordersBeforeOverdraft: number | null;
+  overdraft: number;
+  currency: string;
+}
+
+/** `GET /workspaces/:id/billing/wallet` — the Usage tab's balance. */
+export interface WalletSummary extends WalletState {
+  /** WALLET_ENABLED: off, there is no balance to top up or spend. */
+  enabled: boolean;
+  onFeePlan: boolean;
+  totalToppedUp: number;
+  /** This calendar month in Cairo: fees net of those given back, and the orders behind them. */
+  month: { fees: number; orders: number; timeZone: string };
+  limits: { minTopup: number; maxTopup: number; maxOpenTopups: number; lowOrders: number };
+}
+
+export type WalletEntryType = "topup" | "order_fee" | "order_fee_reversal" | "order_fee_recharge";
+
+export interface WalletLedgerEntry {
+  id: string;
+  type: WalletEntryType;
+  /** Signed: a fee is negative. */
+  amount: number;
+  balanceAfter: number;
+  currency: string;
+  orderId: string | null;
+  orderNumber?: string | null;
+  paymentProofId: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface WalletLedgerPage {
+  entries: WalletLedgerEntry[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 /**
@@ -3412,6 +3467,8 @@ export interface SubscriptionPlans {
   planChange: "immediate" | "support";
   referralCode: MerchantReferralCode | null;
   plans: SubscriptionPlan[];
+  /** The pay-per-order card: `available` while it can be chosen; `current` when the store is on it. Absent from an older API. */
+  payPerOrder?: { available: boolean; current: boolean; plan: { id: string; name: string; fee: number; currency: string } | null };
 }
 
 /** `POST /workspaces/:id/billing/code-preview` — what a code would take off each listed plan. */
@@ -3600,6 +3657,8 @@ export interface AdminPaymentProofReview {
   } | null;
   /** Why an approval would be refused now (e.g. CHARGE_ALREADY_PAID); empty when it can go through. */
   approvalBlockers: string[];
+  /** A top-up: the store's balance now. */
+  wallet?: { balance: number; currency: string } | null;
   image: { url: string; expiresAt: string; mime: string };
   alreadyApproved?: boolean;
   alreadyRejected?: boolean;
