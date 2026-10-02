@@ -34,7 +34,10 @@ export interface AuthTokens {
 }
 
 export interface LoginPayload {
-  email: string;
+  /** The email or the username, as typed (either is case-insensitive). */
+  identifier?: string;
+  /** What clients from before usernames send; give `identifier` instead. */
+  email?: string;
   password: string;
   /** The language of a sign-up code sent to an account not confirmed yet. */
   locale?: "ar" | "en";
@@ -84,6 +87,13 @@ export interface VerificationSent {
   expiresAt: string;
   resendAvailableAt: string;
 }
+
+/**
+ * The code a new account gets to confirm its email while sign-up codes are
+ * off (it is signed in at once). `sent: false` when none could go out — the
+ * dashboard's banner offers to send one.
+ */
+export type EmailCodeSent = { sent: false } | ({ sent: true } & Omit<VerificationSent, "sent">);
 
 /** GET /auth/signup-options — what the sign-up form must ask for right now. */
 export interface SignupOptions {
