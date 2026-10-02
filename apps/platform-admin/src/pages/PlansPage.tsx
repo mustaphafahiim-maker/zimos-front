@@ -50,6 +50,8 @@ interface PlanForm {
   /** Listed on the marketing site and offered at sign-up. */
   isPublic: boolean;
   displayOrder: string;
+  /** The pay-per-order fee in whole currency units as typed (0.50); "0" = none. */
+  perOrderFee: string;
 }
 
 // A new plan is priced in the platform currency (EGP, also the API's default
@@ -74,6 +76,7 @@ const EMPTY: PlanForm = {
   // Never shown to the public until someone decides it should be.
   isPublic: false,
   displayOrder: "0",
+  perOrderFee: "0",
 };
 
 function toForm(p: Plan): PlanForm {
@@ -96,6 +99,7 @@ function toForm(p: Plan): PlanForm {
     funnelsUnlimited: p.maxFunnelsPerMonth === null || p.maxFunnelsPerMonth === undefined,
     isPublic: Boolean(p.isPublic),
     displayOrder: String(p.displayOrder ?? 0),
+    perOrderFee: String(toMajorAmount(p.perOrderFee ?? 0, p.currency)),
   };
 }
 
@@ -174,6 +178,12 @@ export function PlansPage() {
                   <dd className="text-end text-ink">{formatBp(p.transactionFeeBp)}</dd>
                   <dt className="text-ink-soft">COD fee</dt>
                   <dd className="text-end text-ink">{formatBp(p.codFeeBp)}</dd>
+                  {(p.perOrderFee ?? 0) > 0 && (
+                    <>
+                      <dt className="text-ink-soft">Fee per order</dt>
+                      <dd className="text-end text-ink">{formatMinorMoney(p.perOrderFee ?? 0, p.currency)}</dd>
+                    </>
+                  )}
                 </dl>
                 <ul className="space-y-1">
                   {PLAN_FEATURES.map((f) => {
@@ -273,6 +283,16 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
       setError("Display order must be a whole number from 0 to 10000.");
       return;
     }
+    const fee = Number(form.perOrderFee.trim() === "" ? "0" : form.perOrderFee);
+    if (!Number.isFinite(fee) || fee < 0) {
+      setError("The fee per order must be a number, 0 for none.");
+      return;
+    }
+    const feeMinor = toMinorAmount(fee, form.currency);
+    if (feeMinor > 0 && (toMinorAmount(nums[0], form.currency) !== 0 || form.currency !== "EGP")) {
+      setError("A fee per order is only for a plan priced 0 a month, in EGP. Set the monthly price to 0, or the fee to 0.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -294,6 +314,7 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
         maxFunnelsPerMonth: maxFunnels,
         isPublic: form.isPublic,
         displayOrder,
+        perOrderFee: feeMinor,
       });
       onSaved(saved);
     } catch (err) {
@@ -425,6 +446,14 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
             onChange={(e) => set("displayOrder", e.target.value)}
           />
         </div>
+
+        <TextField
+          label={`Fee per order (${form.currency})`}
+          inputMode="decimal"
+          hint="Pay per order: taken from the store's prepaid balance for each order (WALLET_ENABLED). Only on a plan priced 0 a month, in EGP. 0 = no fee."
+          value={form.perOrderFee}
+          onChange={(e) => set("perOrderFee", e.target.value)}
+        />
 
         <Toggle label="Active" description="Inactive plans stay on existing workspaces but can't be chosen for new ones." checked={form.active} onChange={(v) => set("active", v)} />
       </form>
