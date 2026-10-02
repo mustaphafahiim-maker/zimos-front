@@ -556,9 +556,14 @@ export class ApiClient {
    * a code, when the answer is a `VerificationChallenge` and nothing is kept.
    */
   async login(payload: LoginPayload) {
+    // An API from before identifier sign-in reads only `email` (and drops the
+    // fields it doesn't know), so an identifier that is an email also goes as
+    // `email`: the dashboard can deploy before the API.
+    const identifier = payload.identifier?.trim();
+    const body = identifier && identifier.includes("@") && !payload.email ? { ...payload, email: identifier } : payload;
     const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge>("/auth/login", {
       method: "POST",
-      body: payload,
+      body,
       auth: false,
     });
     if ("verificationRequired" in result) return result;
