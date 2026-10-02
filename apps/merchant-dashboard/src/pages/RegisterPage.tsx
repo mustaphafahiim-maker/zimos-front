@@ -12,7 +12,7 @@ import {
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
-import { unmetPasswordRules } from "@/lib/passwordRules";
+import { passwordRuleLabel, unmetPasswordRules } from "@/lib/passwordRules";
 import { UsernameField } from "@/components/UsernameField";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
@@ -445,7 +445,7 @@ export function RegisterPage() {
                 {unmetRules.map((rule) => (
                   <li key={rule.id} className="flex items-center gap-1.5">
                     <span aria-hidden>•</span>
-                    {rule.label}
+                    {passwordRuleLabel(rule, locale)}
                   </li>
                 ))}
               </ul>
