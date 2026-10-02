@@ -31,7 +31,7 @@ const STRINGS = {
     UNAUTHENTICATED: "Your session has ended. Sign in again to continue.",
     FORBIDDEN: "You don't have permission to do that. Ask the store owner to update your role.",
     SUBSCRIPTION_REQUIRED:
-      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Settings → Plan and referral code.",
+      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Subscription.",
     STORE_SUSPENDED:
       "This store has been suspended by Zimos, so new products and funnels can't be created. Contact Zimos support.",
     NOT_FOUND: "We couldn't find that. It may have been deleted.",
@@ -136,7 +136,7 @@ const STRINGS = {
     UNAUTHENTICATED: "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
     FORBIDDEN: "ليست لديك صلاحية للقيام بذلك. اطلب من مالك المتجر تحديث دورك.",
     SUBSCRIPTION_REQUIRED:
-      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع الإعدادات ← الخطة وكود الإحالة.",
+      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع قسم الاشتراك.",
     STORE_SUSPENDED: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
     NOT_FOUND: "لم نعثر على هذا العنصر. ربما تم حذفه.",
     CONFLICT: "تغيّر هذا العنصر في الأثناء. أعد التحميل وحاول مرة أخرى.",

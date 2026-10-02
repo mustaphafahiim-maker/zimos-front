@@ -4,6 +4,7 @@ import {
   BarChart3,
   ClipboardCheck,
   CreditCard,
+  Gem,
   Globe,
   LayoutDashboard,
   LineChart,
@@ -23,6 +24,12 @@ import {
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
 
+/**
+ * System roles without billing.manage (owner '*' and accountant hold it, see
+ * the backend's core/security/permissions.js): they don't see Subscription.
+ */
+const NO_BILLING_ROLES: ReadonlySet<string> = new Set(["workspace_manager", "editor", "order_operator", "confirmation_agent"]);
+
 export type NavKey =
   | "overview"
   | "orders"
@@ -41,6 +48,7 @@ export type NavKey =
   | "analytics"
   | "webAnalytics"
   | "realtime"
+  | "subscription"
   | "settings"
   | "support";
 
@@ -131,6 +139,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "config",
     labelKey: null,
     items: [
+      { key: "subscription", to: "/subscription", icon: Gem, hiddenForRoles: NO_BILLING_ROLES },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
@@ -178,6 +187,7 @@ export const NAV_LABELS = {
     analytics: "Analytics",
     webAnalytics: "Web analytics",
     realtime: "Realtime",
+    subscription: "Subscription",
     settings: "Settings",
     support: "Contact support",
   },
@@ -199,6 +209,7 @@ export const NAV_LABELS = {
     analytics: "التحليلات",
     webAnalytics: "زيارات الموقع",
     realtime: "مباشر الآن",
+    subscription: "الاشتراك",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
   },
