@@ -49,6 +49,8 @@ import type {
   AdminReferralCodeInput,
   AdminRolesResponse,
   WorkspaceBilling,
+  OnlinePayment,
+  OnlinePaymentResult,
   AdminProviderCheck,
   AdminRiskSignalPage,
   AdminRiskSignalParams,
@@ -785,6 +787,25 @@ export class ApiClient {
   async getWorkspaceBilling(workspaceId: string): Promise<WorkspaceBilling> {
     const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing`);
     return unwrapObject<WorkspaceBilling>(body, "billing");
+  }
+
+  /**
+   * The Pay button: opens an online checkout for the subscription charge,
+   * priced on the server (201; 200 with `reused` for a second press within a
+   * minute). 404 ONLINE_BILLING_DISABLED, 503 ONLINE_BILLING_UNAVAILABLE,
+   * 409 ONLINE_PAYMENT_CURRENCY_UNSUPPORTED / PAYMENT_STARTING / PLAN_IS_FREE,
+   * 502 ONLINE_PAYMENT_START_FAILED.
+   */
+  async startOnlinePayment(workspaceId: string, lang: "ar" | "en"): Promise<{ payment: OnlinePayment; reused: boolean }> {
+    return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/payments`, {
+      method: "POST",
+      body: { lang },
+    });
+  }
+
+  /** An online payment's state; the server asks the gateway while it is in progress. */
+  async getOnlinePayment(workspaceId: string, paymentId: string): Promise<OnlinePaymentResult> {
+    return this.request<OnlinePaymentResult>(`/workspaces/${workspaceId}/billing/payments/${paymentId}`);
   }
 
   /**

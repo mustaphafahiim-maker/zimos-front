@@ -79,6 +79,14 @@ export type ApiErrorCode =
   | "PAYMENT_CONFIRMED_BY_GATEWAY" // 409 — reversing a gateway payment; only manual ones can be (console)
   | "OPEN_CHARGE_EXISTS" // 409 — reversing while the subscription has another pending charge (console)
   | "COMMISSION_VOIDED" // 409 — marking a voided ledger row paid
+  // billing — paying the subscription online (Fawaterak)
+  | "ONLINE_BILLING_DISABLED" // 404 — online payment is switched off on the platform
+  | "ONLINE_BILLING_UNAVAILABLE" // 503 — the gateway keys are missing or refused
+  | "ONLINE_PAYMENT_CURRENCY_UNSUPPORTED" // 409 — the plan isn't priced in EGP
+  | "ONLINE_PAYMENT_START_FAILED" // 502 — the gateway gave no checkout; nothing was charged
+  | "PAYMENT_STARTING" // 409 — a second press while the first checkout is being made
+  | "NOTHING_TO_PAY" // 409 — the charge comes to nothing (a full discount)
+  | "CHARGE_NOT_PENDING" // 409 — the charge was settled in the meantime
   // store access (workspaces/workspaceAccessService)
   | "SUBSCRIPTION_REQUIRED" // 402 — creating a product or funnel while unpaid past the grace day
   | "STORE_SUSPENDED" // 403 — creating a product or funnel while suspended by the platform

@@ -3350,6 +3350,58 @@ export interface WorkspaceBilling {
     free: boolean;
     paymentInstructions: { ar: string | null; en: string | null } | null;
   } | null;
+  /**
+   * Paying the charge online (Fawaterak). `enabled` is false while the
+   * platform has it off, or the plan isn't priced in `currency`.
+   */
+  onlinePayment?: {
+    enabled: boolean;
+    currency: string;
+    latest: OnlinePayment | null;
+  };
+}
+
+/**
+ * An online checkout's state:
+ *   created / open / pending  in progress (pending: an async method such as a
+ *                             Fawry reference, awaiting the payment)
+ *   paid                      confirmed, and the charge settled
+ *   paid_duplicate            paid on a charge already paid: refunded by hand
+ *   mismatch                  paid with an unexpected amount: under review
+ *   failed / expired / superseded / error   not paid
+ */
+export type OnlinePaymentStatus =
+  | "created"
+  | "open"
+  | "pending"
+  | "paid"
+  | "paid_duplicate"
+  | "mismatch"
+  | "failed"
+  | "expired"
+  | "superseded"
+  | "error";
+
+/** One online checkout of the merchant's subscription charge. Amounts in minor units. */
+export interface OnlinePayment {
+  id: string;
+  status: OnlinePaymentStatus;
+  amount: number;
+  currency: string;
+  /** Fawaterak's hosted page; only while the payment is in progress. */
+  checkoutUrl: string | null;
+  paymentMethod: string | null;
+  /** An async method's reference (a Fawry code). */
+  referenceNumber: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  paidAt: string | null;
+}
+
+/** `GET /workspaces/:id/billing/payments/:paymentId`. */
+export interface OnlinePaymentResult {
+  payment: OnlinePayment;
+  chargeStatus: "pending" | "paid" | "failed";
 }
 
 /** POST /workspaces/:id/start-trial and /activate-free-plan. */
@@ -3490,7 +3542,33 @@ export interface AdminCharge {
     /** It was priced with a code that is no longer active. */
     codeLapsed: boolean;
   } | null;
+  /** The merchant's online checkouts of this charge, newest first. */
+  onlinePayments?: AdminOnlinePayment[];
+  /** The merchant may be paying online right now: recording by hand supersedes it. */
+  onlinePaymentInProgress?: boolean;
   createdAt: string;
+}
+
+/** An online checkout (Fawaterak) of a charge, as the console sees it. */
+export interface AdminOnlinePayment {
+  id: string;
+  provider: string;
+  status: OnlinePaymentStatus;
+  /** The price frozen when the merchant pressed Pay, in minor units. */
+  amount: number;
+  currency: string;
+  /** What Fawaterak reported as paid. */
+  verifiedAmount: number | null;
+  verifiedCurrency: string | null;
+  providerTransactionId: number | null;
+  paymentMethod: string | null;
+  referenceNumber: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  expiresAt: string | null;
+  /** Refunds Fawaterak reported as approved; nothing was changed for them. */
+  refundsReported: Array<{ amount: string | null; currency: string | null; approvedAt: string | null; reportedAt: string }>;
 }
 
 export interface AdminWorkspaceCharges {
