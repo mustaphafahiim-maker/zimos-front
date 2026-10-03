@@ -55,7 +55,8 @@ import {
 } from "./builderElements";
 import { ShowcaseElement } from "./showcase";
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
-import { SPAN_CLASS, propsOf } from "./props";
+import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
+import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
@@ -148,6 +149,21 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
+      // In a funnel, a button with no link of its own moves the shopper on:
+      // FunnelStep reports the click with this element's id, so the funnel
+      // map can route each button of a page to a different step.
+      if (ctx.funnel && !resolveHref(str(props, "href")) && str(props, "label").trim()) {
+        return (
+          <button
+            type="button"
+            data-funnel-action="clicked_through"
+            data-funnel-source={element.id}
+            className={`w-fit self-start ${btnPrimary}`}
+          >
+            {str(props, "label")}
+          </button>
+        );
+      }
       return <ButtonElement props={props} />;
     case "video":
       return <VideoElement props={props} t={t} />;

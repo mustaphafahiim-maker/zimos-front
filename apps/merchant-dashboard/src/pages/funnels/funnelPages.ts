@@ -172,6 +172,8 @@ function closingCta(c: Copy): SectionSpec {
 }
 
 const PAGES: Record<UiStepType, (c: Copy) => SectionSpec[]> = {
+  // An advertorial: a headline, the story, and one button that moves on.
+  article: (c) => [hero(c), { id: "story", elements: [["rich_text", { text: c.storyText }]] }, benefits(c), closingCta(c)],
   landing: (c) => [
     hero(c),
     { id: "product", elements: [["product_card", { title: c.productTitle, productId: "", showPrice: true, showBuyButton: false }]] },

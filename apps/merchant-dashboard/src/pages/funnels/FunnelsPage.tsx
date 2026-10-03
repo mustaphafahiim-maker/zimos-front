@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart3, Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { FunnelShareDialog, FunnelWizard, ShareFunnelButton } from "./FunnelWizard";
 import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   funnelsDelete,
@@ -206,6 +207,7 @@ export function FunnelsPage() {
 
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<FunnelDto | null>(null);
+  const [sharing, setSharing] = useState<FunnelDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const funnels = list.data ?? [];
@@ -461,6 +463,7 @@ export function FunnelsPage() {
                           >
                             {busy ? <Spinner className="size-4" /> : <Copy className="size-4" aria-hidden />}
                           </Button>
+                          <ShareFunnelButton onClick={() => setSharing(f)} />
                           {url && (
                             <Button size="sm" variant="ghost" onClick={() => void copyLink(url)}>
                               {t.copyShareLink}
@@ -481,8 +484,10 @@ export function FunnelsPage() {
       </DataState>
 
       <Modal open={creating} onClose={() => setCreating(false)} title={t.createFunnel} description={t.modalDescription}>
-        {creating && <CreateFunnelForm onCancel={() => setCreating(false)} onCreated={(id) => navigate(`/funnels/${id}`)} />}
+        {creating && <FunnelWizard onCancel={() => setCreating(false)} onCreated={(id) => navigate(`/funnels/${id}`)} />}
       </Modal>
+
+      <FunnelShareDialog funnel={sharing} onClose={() => setSharing(null)} />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -497,7 +502,8 @@ export function FunnelsPage() {
   );
 }
 
-function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
+/** The one-screen form the wizard replaced; kept for callers that want name + template only. */
+export function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(FORM_STRINGS);

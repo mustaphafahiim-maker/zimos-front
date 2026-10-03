@@ -381,6 +381,7 @@ export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
     downsell: "Downsell",
     thank_you: "Thank you",
     custom: "Custom page",
+    article: "Article",
   },
   ar: {
     landing: "صفحة الهبوط",
@@ -391,6 +392,7 @@ export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
     downsell: "عرض بديل",
     thank_you: "صفحة الشكر",
     custom: "صفحة مخصصة",
+    article: "مقال",
   },
 };
 
@@ -405,6 +407,7 @@ export const STEP_DEFAULT_NAMES: Record<Locale, Record<UiStepType, string>> = {
     downsell: "Downsell",
     thank_you: "Thank you",
     custom: "Custom page",
+    article: "Article",
   },
   ar: {
     landing: "صفحة الهبوط",
@@ -415,6 +418,7 @@ export const STEP_DEFAULT_NAMES: Record<Locale, Record<UiStepType, string>> = {
     downsell: "عرض بديل",
     thank_you: "شكرًا لطلبك",
     custom: "صفحة مخصصة",
+    article: "مقال",
   },
 };
 
