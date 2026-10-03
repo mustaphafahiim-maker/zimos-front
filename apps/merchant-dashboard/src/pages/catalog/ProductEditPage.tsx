@@ -14,6 +14,10 @@ import { VariantsSection } from "./components/VariantsSection";
 import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
 import { CustomFieldsSection } from "./components/CustomFieldsSection";
+import type { CatalogProduct } from "@store-builder/api-client";
+import { ProductPageSettingsSection } from "./components/ProductPageSettingsSection";
+import { ProductOptionsDisplaySection } from "./components/ProductOptionsDisplaySection";
+import { ProductCmsSection } from "./components/ProductCmsSection";
 
 const STRINGS = {
   en: {
@@ -115,6 +119,14 @@ export function ProductEditPage() {
               onChanged={reload}
             />
             <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
+            {/* The same product, read with the page fields lane 3 added. */}
+            <ProductOptionsDisplaySection
+              product={data as unknown as CatalogProduct}
+              variants={data.variants ?? []}
+              onChanged={reload}
+            />
+            <ProductPageSettingsSection product={data as unknown as CatalogProduct} onChanged={reload} />
+            <ProductCmsSection product={data as unknown as CatalogProduct} onChanged={reload} />
           </div>
         )}
       </DataState>

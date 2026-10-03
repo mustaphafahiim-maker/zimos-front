@@ -38,3 +38,5 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Catalog additions: product page settings, content, option display (lane 3).
+export * from "./endpoints/catalog";
