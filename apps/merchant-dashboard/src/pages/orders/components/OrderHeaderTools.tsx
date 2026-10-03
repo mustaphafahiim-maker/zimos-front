@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
-import { ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
+import { ordersInvoicePdf, ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -20,6 +20,9 @@ const STRINGS = {
     previous: "Previous order",
     next: "Next order",
     copyLink: "Copy customer link",
+    invoice: "Invoice",
+    invoicePreparing: "Preparing…",
+    invoiceNone: "This order has no invoice yet: it is issued once the order is paid or placed as cash on delivery.",
     archive: "Archive",
     unarchive: "Restore from archive",
     archiveTitle: "Archive this order?",
@@ -48,6 +51,9 @@ const STRINGS = {
     previous: "الأوردر السابق",
     next: "الأوردر التالي",
     copyLink: "نسخ رابط العميل",
+    invoice: "الفاتورة",
+    invoicePreparing: "جارٍ التجهيز…",
+    invoiceNone: "لا توجد فاتورة لهذا الأوردر بعد: تصدر عند الدفع أو عند طلبه بالدفع عند الاستلام.",
     archive: "أرشفة",
     unarchive: "استرجاع من الأرشيف",
     archiveTitle: "أرشفة هذا الأوردر؟",
@@ -147,6 +153,22 @@ export function OrderMetaActions({ order, onChanged }: { order: Order; onChanged
     onChanged();
   }
 
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  async function openInvoice() {
+    setInvoiceBusy(true);
+    try {
+      const blob = await ordersInvoicePdf(apiClient, workspaceId, order.id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      const code = err && typeof err === "object" && "code" in err ? String((err as { code?: string }).code) : "";
+      toast.error(code === "INVOICE_NOT_ISSUED" ? t.invoiceNone : errorMessage(err));
+    } finally {
+      setInvoiceBusy(false);
+    }
+  }
+
   async function toggleTest() {
     setBusy(true);
     try {
@@ -167,6 +189,9 @@ export function OrderMetaActions({ order, onChanged }: { order: Order; onChanged
         label={t.copyLink}
         className="min-h-11 rounded-md border border-line bg-paper-raised px-3 text-sm"
       />
+      <Button variant="outline" size="sm" className="min-h-11" onClick={openInvoice} disabled={invoiceBusy}>
+        {invoiceBusy ? t.invoicePreparing : t.invoice}
+      </Button>
       <Button variant="outline" size="sm" className="min-h-11" onClick={toggleTest} disabled={busy}>
         {meta.isTest ? t.unmarkTest : t.markTest}
       </Button>
