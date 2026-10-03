@@ -32,6 +32,15 @@ import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
+import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
+import {
+  OrderFilterBar,
+  useColumnLabel,
+  useOrderExtraFilters,
+  useOrderListPrefs,
+  useSourceLabel,
+  type OrderColumn,
+} from "./components/OrderListFilters";
 
 const STRINGS = {
   en: {
@@ -67,6 +76,8 @@ const STRINGS = {
     emptyFiltered: "No orders match this search and dates.",
     loadMoreFailed: "Couldn't load more orders.",
     phoneLabel: "Phone",
+    unseen: "Not seen yet",
+    test: "Test",
   },
   ar: {
     title: "الأوردرات",
@@ -101,6 +112,8 @@ const STRINGS = {
     emptyFiltered: "لا توجد أوردرات تطابق هذا البحث والتواريخ.",
     loadMoreFailed: "تعذّر تحميل المزيد من الأوردرات.",
     phoneLabel: "الهاتف",
+    unseen: "لم يُشاهد بعد",
+    test: "تجريبي",
   },
 } satisfies Messages;
 
@@ -183,28 +196,37 @@ export function OrdersListPage() {
   // Sorted on the server; the default is the list's order as it always was.
   const [sort, setSort] = useListSort<OrderSort>("zimos.orders.sort", ORDER_SORTS, "newest");
 
+  // SPEC §4.3 filters (tag, source, payment, governorate, courier, seen, test,
+  // archive), the column chooser and the page size.
+  const extra = useOrderExtraFilters();
+  const prefs = useOrderListPrefs();
+  // The API accepts them on the list, the counts and the export alike.
+  const fullQuery = { ...query, ...extra.query, ...risk.query } as OrderSearchParams;
+
   const pipeline = useAsync<OrderPipeline>(
-    () => apiClient.getOrderPipeline(workspaceId, { ...query, ...risk.query }),
-    [workspaceId, query.q, query.from, query.to, risk.risk]
+    () => apiClient.getOrderPipeline(workspaceId, fullQuery),
+    [workspaceId, query.q, query.from, query.to, extra.key, risk.risk]
   );
 
   const list = useCursorList<Order>(
     (cursor) =>
       apiClient
-        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, sort, ...query, ...risk.query })
+        .listOrders(workspaceId, { cursor, limit: prefs.pageSize, stage: stage ?? undefined, sort, ...fullQuery })
         .then((r) => ({ items: r.orders, nextCursor: r.nextCursor })),
-    [workspaceId, stage, sort, query.q, query.from, query.to, risk.risk],
+    [workspaceId, stage, sort, query.q, query.from, query.to, extra.key, prefs.pageSize, risk.risk],
     { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
 
   // The order page's previous / next arrows follow this list.
   useEffect(() => {
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries({ stage, sort, ...query })) if (value) params.set(key, String(value));
+    for (const [key, value] of Object.entries({ stage, sort, ...fullQuery })) {
+      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+    }
     rememberOrdersListQuery(params.toString());
-  }, [stage, sort, query.q, query.from, query.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stage, sort, query.q, query.from, query.to, extra.key, risk.risk]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const emptyMessage = filters.hasSearchFilters
+  const emptyMessage = filters.hasSearchFilters || extra.active.length > 0
     ? t.emptyFiltered
     : stage
       ? fmt(t.emptyStage, { stage: labels.stage(stage) })
@@ -215,10 +237,12 @@ export function OrdersListPage() {
       <PageHeader
         title={t.title}
         description={t.description}
-        actions={<ExportOrders filters={{ ...query, stage: stage ?? undefined, sort }} />}
+        actions={<ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />}
       />
 
       <SearchAndDates filters={filters} />
+
+      <OrderFilterBar filters={extra} prefs={prefs} />
 
       <SortPicker value={sort} onChange={setSort} />
 
@@ -247,7 +271,7 @@ export function OrdersListPage() {
         onRetry={list.reload}
       >
         <NetworkScoresProvider orders={list.items}>
-          <OrdersTable orders={list.items} />
+          <OrdersTable orders={list.items} columns={prefs.columns} />
         </NetworkScoresProvider>
         {list.error != null && list.items.length > 0 && (
           <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -510,8 +534,11 @@ function StageTabs({
 
 // ---------------------------------------------------------------------------
 
-function OrdersTable({ orders }: { orders: Order[] }) {
+function OrdersTable({ orders, columns }: { orders: Order[]; columns: OrderColumn[] }) {
   const t = useT(STRINGS);
+  const columnLabel = useColumnLabel();
+  const sourceLabel = useSourceLabel();
+  const show = (column: OrderColumn) => columns.includes(column);
   const labels = useOrderLabels();
   const paymentLabel = usePaymentLabel();
   // One clock for the whole list, so every row's "3 hours ago" moves together.
@@ -523,6 +550,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
         order,
         stageLabel: order.stage ? labels.stage(order.stage) : null,
         flagged: order.riskFlags.length > 0,
+        meta: ordersMeta(order),
       })),
     [orders, labels]
   );
@@ -531,14 +559,15 @@ function OrdersTable({ orders }: { orders: Order[] }) {
     <>
       {/* Phones and small tablets: one card per order. */}
       <ul className="space-y-3 md:hidden">
-        {rows.map(({ order, stageLabel, flagged }) => (
+        {rows.map(({ order, stageLabel, flagged, meta }) => (
           <li key={order.id}>
             <Link
               to={`/orders/${order.id}`}
               className="block rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-primary"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-ink">
+                <span className={cn("text-ink", meta.isSeen ? "font-medium" : "font-bold")}>
+                  {!meta.isSeen && <UnseenDot label={t.unseen} />}
                   <bdi dir="ltr">{order.orderNumber}</bdi>
                 </span>
                 <span className="text-sm text-ink">{formatMoney(order.totalAmount, order.currency)}</span>
@@ -559,6 +588,10 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                 {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
                 <RiskBadge order={order} />
                 <OrderNetworkRate order={order} />
+                {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} />}
+                {meta.tags.map((tag) => (
+                  <StatusBadge key={tag} value={tag} tone="info" text={tag} />
+                ))}
                 <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
               </div>
               <OrderTimelineLines order={order} now={now} className="mt-2" />
@@ -575,34 +608,55 @@ function OrdersTable({ orders }: { orders: Order[] }) {
               <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colOrder}
               </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colCustomer}
-              </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colTotal}
-              </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colPayment}
-              </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colStage}
-              </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colTimeline}
-              </th>
+              {show("customer") && (
+                <th scope="col" className="px-4 py-3 text-start font-medium">
+                  {t.colCustomer}
+                </th>
+              )}
+              {show("total") && (
+                <th scope="col" className="px-4 py-3 text-start font-medium">
+                  {t.colTotal}
+                </th>
+              )}
+              {show("payment") && (
+                <th scope="col" className="px-4 py-3 text-start font-medium">
+                  {t.colPayment}
+                </th>
+              )}
+              {show("stage") && (
+                <th scope="col" className="px-4 py-3 text-start font-medium">
+                  {t.colStage}
+                </th>
+              )}
+              {show("timeline") && (
+                <th scope="col" className="px-4 py-3 text-start font-medium">
+                  {t.colTimeline}
+                </th>
+              )}
+              {(["tags", "source", "governorate"] as const).filter(show).map((column) => (
+                <th key={column} scope="col" className="px-4 py-3 text-start font-medium">
+                  {columnLabel(column)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ order, stageLabel, flagged }) => (
+            {rows.map(({ order, stageLabel, flagged, meta }) => (
               <tr key={order.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
                 <td className="px-4 py-3">
                   <Link
                     to={`/orders/${order.id}`}
-                    className="inline-flex min-h-11 items-center font-medium text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                    className={cn(
+                      "inline-flex min-h-11 items-center text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary",
+                      meta.isSeen ? "font-medium" : "font-bold"
+                    )}
                   >
+                    {!meta.isSeen && <UnseenDot label={t.unseen} />}
                     <bdi dir="ltr">{order.orderNumber}</bdi>
                   </Link>
+                  {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} className="ms-2" />}
                 </td>
+                {show("customer") && (
                 <td className="px-4 py-3 text-ink-soft">
                   <div className="text-ink">{order.contactSnapshot?.fullName || "—"}</div>
                   {order.contactSnapshot?.phone && (
@@ -612,8 +666,12 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
-                <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>
+                )}
+                {show("total") && (
+                  <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
+                )}
+                {show("payment") && <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>}
+                {show("stage") && (
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {order.stage && stageLabel && (
@@ -624,14 +682,39 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                 <OrderNetworkRate order={order} />
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  <OrderTimelineLines order={order} now={now} />
-                </td>
+                )}
+                {show("timeline") && (
+                  <td className="px-4 py-3">
+                    <OrderTimelineLines order={order} now={now} />
+                  </td>
+                )}
+                {show("tags") && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {meta.tags.length === 0 ? (
+                        <span className="text-ink-soft">—</span>
+                      ) : (
+                        meta.tags.map((tag) => <StatusBadge key={tag} value={tag} tone="info" text={tag} />)
+                      )}
+                    </div>
+                  </td>
+                )}
+                {show("source") && <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>}
+                {show("governorate") && (
+                  <td className="px-4 py-3 text-xs text-ink-soft">{order.shippingAddressSnapshot?.province || "—"}</td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </>
+  );
+}
+
+/** The dot in front of an order nobody has opened yet. */
+function UnseenDot({ label }: { label: string }) {
+  return (
+    <span className="me-2 inline-block size-2 shrink-0 rounded-full bg-primary" role="img" aria-label={label} title={label} />
   );
 }
