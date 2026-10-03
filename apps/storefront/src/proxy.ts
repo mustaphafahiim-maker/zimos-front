@@ -54,8 +54,20 @@ function isPassThrough(pathname: string): boolean {
  *   • anything else — plain `localhost`, an IP, the platform's own health
  *     checks — left alone so development and deploys keep working.
  */
+/** Metadata files every store answers for itself, from its own settings. */
+const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml"]);
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // On a store's own host these two are the store's (app/store/[workspaceId]/…/route.ts).
+  if (STORE_FILES.has(pathname)) {
+    const storeSlug = storeSlugFromHost(request.headers.get("host"));
+    if (storeSlug) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/store/${storeSlug}${pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
   if (isPassThrough(pathname)) return NextResponse.next();
 
   // A staff preview token (lib/storePreview): from the link that opened the
