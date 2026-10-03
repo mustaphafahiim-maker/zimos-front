@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, cn } from "@store-builder/ui";
+import { Alert, cn } from "@store-builder/ui";
 import type { OnlinePaymentResult, OnlinePaymentStatus, WorkspaceBilling } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatMoney } from "@/lib/format";
-import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
+import { useT, fmt } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { BILLING_STRINGS, type ReturnHint } from "./billingText";
 
@@ -111,63 +111,6 @@ function returnMessage(
     default:
       return { message: t.notCompleted, variant: "danger" };
   }
-}
-
-/**
- * The Pay button, and a reference still awaiting payment (a Fawry code). An
- * open checkout's link isn't offered again: Fawaterak's links are single
- * attempts, so one already tried may be dead. Pay makes a new one.
- */
-export function OnlinePaymentPanel({ billing }: { billing: WorkspaceBilling }) {
-  const t = useT(BILLING_STRINGS);
-  const { locale } = useLocale();
-  const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const latest = billing.onlinePayment?.latest ?? null;
-  const awaiting = latest && latest.status === "pending" && latest.referenceNumber ? latest : null;
-  const amount = billing.nextCharge ? formatMoney(billing.nextCharge.amount, billing.nextCharge.currency) : "";
-
-  async function pay() {
-    setBusy(true);
-    setError(null);
-    try {
-      const { payment } = await apiClient.startOnlinePayment(workspaceId, locale);
-      if (!payment.checkoutUrl) throw new Error("no checkout");
-      window.location.assign(payment.checkoutUrl);
-    } catch (err) {
-      setError(
-        errorMessage(err, {
-          ONLINE_BILLING_DISABLED: t.payDisabled,
-          ONLINE_BILLING_UNAVAILABLE: t.payUnavailable,
-          ONLINE_PAYMENT_CURRENCY_UNSUPPORTED: t.payCurrency,
-          ONLINE_PAYMENT_START_FAILED: t.payStartFailed,
-          PAYMENT_STARTING: t.payStarting,
-          NOTHING_TO_PAY: t.nothingToPay,
-          PLAN_IS_FREE: t.nothingToPay,
-          CHARGE_NOT_PENDING: t.chargeSettled,
-        })
-      );
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-2 rounded-[10px] border border-line bg-paper px-4 py-3">
-      <p className="text-xs text-ink-soft">{t.payTitle}</p>
-      <p className="text-sm text-ink">{fmt(t.payHint, { amount })}</p>
-      {awaiting && (
-        <p className="text-sm text-ink-soft">
-          {fmt(t.awaitingReference, { method: awaiting.paymentMethod ?? "", reference: awaiting.referenceNumber! })}
-        </p>
-      )}
-      <Button type="button" onClick={() => void pay()} disabled={busy} className="min-h-10">
-        {busy ? t.opening : t.payNow}
-      </Button>
-      {error && <Alert variant="danger">{error}</Alert>}
-    </div>
-  );
 }
 
 /** The plan, its status and period, and the next charge priced with the store's code. */

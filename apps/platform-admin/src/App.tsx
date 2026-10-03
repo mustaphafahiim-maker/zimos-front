@@ -13,6 +13,9 @@ import { UsersPage } from "@/pages/UsersPage";
 import { UserDetailPage } from "@/pages/UserDetailPage";
 import { SubscriptionsPage } from "@/pages/SubscriptionsPage";
 import { PlansPage } from "@/pages/PlansPage";
+import { PaymentProofsPage } from "@/pages/PaymentProofsPage";
+import { PaymentProofPage } from "@/pages/PaymentProofPage";
+import { PaymentMethodsPage } from "@/pages/PaymentMethodsPage";
 import { TemplatesPage } from "@/pages/TemplatesPage";
 import { SuppliersPage } from "@/pages/SuppliersPage";
 import { AppsPage } from "@/pages/AppsPage";
@@ -61,6 +64,9 @@ export default function App() {
                 <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
                 <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
                 <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
+                <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
+                <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofPage />)} />
+                <Route path="/payment-methods" element={gated(P.PAYMENTS_RECORD, <PaymentMethodsPage />)} />
                 <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
                 <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
                 <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />

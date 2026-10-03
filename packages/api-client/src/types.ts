@@ -3487,6 +3487,124 @@ export interface OnlinePaymentResult {
   chargeStatus: "pending" | "paid" | "failed";
 }
 
+/**
+ * A way to pay Zimos (`GET /workspaces/:id/billing/payment-methods`):
+ *   manual   a transfer to `accountNumber`, then a proof with a screenshot
+ *   gateway  a hosted checkout (`startOnlinePayment` with its `code`)
+ */
+export interface BillingPaymentMethod {
+  code: string;
+  kind: "manual" | "gateway";
+  label: { ar: string; en: string };
+  /** Manual only: where the money goes, and how to send it. */
+  accountNumber?: string;
+  note?: { ar: string | null; en: string | null };
+}
+
+export interface BillingPaymentMethodList {
+  methods: BillingPaymentMethod[];
+  currency: string;
+  /** No method is offered: the merchant contacts support. */
+  contactSupport: boolean;
+}
+
+/** `POST /workspaces/:id/billing/invoices/open` — the charge to pay now (201 when written). */
+export interface OpenBillingInvoiceResult {
+  invoice: MerchantInvoice;
+  created: boolean;
+}
+
+export type BillingPaymentProofStatus = "pending" | "approved" | "rejected";
+
+/** A transfer's proof, as its store sees it. The amount is the server's. */
+export interface BillingPaymentProof {
+  id: string;
+  purpose: "invoice" | "topup";
+  invoiceId: string | null;
+  method: { code: string; label: { ar: string; en: string } | null };
+  senderPhone: string;
+  amount: number;
+  currency: string;
+  status: BillingPaymentProofStatus;
+  /** A rejection's reason; null otherwise. */
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+/** A payment method as the console sees it (`GET /admin/payment-methods`). */
+export interface AdminPaymentMethod {
+  id: string;
+  code: string;
+  kind: "manual" | "gateway";
+  labelAr: string;
+  labelEn: string;
+  sortOrder: number;
+  enabled: boolean;
+  /** Manual only. */
+  accountNumber?: string | null;
+  noteAr?: string | null;
+  noteEn?: string | null;
+  /** Gateway only: its adapter and environment, by variable names (never a value). */
+  gateway?: { name: string | null; adapterInstalled: boolean; configured: boolean; missing: string[]; currencies: string[] };
+  /** Whether merchants are offered it right now. */
+  offered: boolean;
+  updatedAt: string;
+}
+
+export interface AdminPaymentMethods {
+  methods: AdminPaymentMethod[];
+  /** Gateways this server has an adapter for, with no row yet. */
+  gatewaysNotAdded: Array<{ code: string; name: string; configured: boolean; missing: string[]; currencies: string[] }>;
+}
+
+/** A transfer's proof as the console sees it. Amounts in minor units. */
+export interface AdminPaymentProof {
+  id: string;
+  purpose: "invoice" | "topup";
+  workspace: { id: string; name?: string; slug?: string };
+  invoiceId: string | null;
+  method: { code: string; labelAr: string | null; labelEn: string | null };
+  /** The number the money was sent to, as it was when the proof was sent. */
+  receivingNumber: string;
+  senderPhone: string;
+  requestedAmount: number;
+  receivedAmount: number | null;
+  currency: string;
+  status: BillingPaymentProofStatus;
+  reviewNote: string | null;
+  reviewedBy: { id: string; fullName: string } | null;
+  reviewedAt: string | null;
+  submittedBy: { id: string; fullName: string; email: string } | null;
+  createdAt: string;
+}
+
+export interface AdminPaymentProofPage {
+  proofs: AdminPaymentProof[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** `GET /admin/payment-proofs/:id` — with the image behind a five-minute signed link. */
+export interface AdminPaymentProofReview {
+  proof: AdminPaymentProof;
+  invoice: {
+    id: string;
+    status: "pending" | "paid" | "failed";
+    amountDue: number;
+    currency: string;
+    periodStart: string;
+    periodEnd: string;
+    paidAt: string | null;
+  } | null;
+  /** Why an approval would be refused now (e.g. CHARGE_ALREADY_PAID); empty when it can go through. */
+  approvalBlockers: string[];
+  image: { url: string; expiresAt: string; mime: string };
+  alreadyApproved?: boolean;
+  alreadyRejected?: boolean;
+}
+
 /** POST /workspaces/:id/start-trial and /activate-free-plan. */
 export interface GoLiveResult {
   billing: WorkspaceBilling;

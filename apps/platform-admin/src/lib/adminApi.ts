@@ -8,6 +8,10 @@
  * `<ComingLater />` and show no data at all.
  */
 import type {
+  AdminPaymentMethod,
+  AdminPaymentMethods,
+  AdminPaymentProofPage,
+  AdminPaymentProofReview,
   AdminCharge,
   AdminSpecialTerm,
   AdminSpecialTermsInput,
@@ -427,6 +431,43 @@ export function listCommissions(params: AdminCommissionParams): Promise<AdminCom
 
 export function markCommissionPaid(commissionId: string, note?: string): Promise<AdminCommission> {
   return apiClient.adminMarkCommissionPaid(commissionId, note);
+}
+
+// ------------------------------------------- payment methods and transfer proofs
+
+export function listPaymentMethods(): Promise<AdminPaymentMethods> {
+  return apiClient.adminListPaymentMethods();
+}
+
+export function updatePaymentMethod(code: string, payload: { enabled?: boolean; labelAr?: string; labelEn?: string }): Promise<AdminPaymentMethod> {
+  return apiClient.adminUpdatePaymentMethod(code, payload);
+}
+
+export function reorderPaymentMethods(codes: string[]): Promise<AdminPaymentMethods> {
+  return apiClient.adminReorderPaymentMethods(codes);
+}
+
+export function updatePaymentMethodAccount(
+  code: string,
+  payload: { accountNumber?: string; noteAr?: string; noteEn?: string }
+): Promise<AdminPaymentMethod> {
+  return apiClient.adminUpdatePaymentMethodAccount(code, payload);
+}
+
+export function listPaymentProofs(params: { status?: string; page?: number; pageSize?: number } = {}): Promise<AdminPaymentProofPage> {
+  return apiClient.adminListPaymentProofs(params);
+}
+
+export function getPaymentProof(proofId: string): Promise<AdminPaymentProofReview> {
+  return apiClient.adminGetPaymentProof(proofId);
+}
+
+export function approvePaymentProof(proofId: string, receivedAmount: number): Promise<AdminPaymentProofReview> {
+  return apiClient.adminApprovePaymentProof(proofId, receivedAmount);
+}
+
+export function rejectPaymentProof(proofId: string, note: string): Promise<AdminPaymentProofReview> {
+  return apiClient.adminRejectPaymentProof(proofId, note);
 }
 
 // ------------------------------------------------------ subscription charges
