@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Layers, Tag } from "lucide-react";
+import { ChevronRight, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
 import { Card } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -16,6 +16,16 @@ const STRINGS = {
     description: "Tools that raise the value of every order.",
     bundles: "Bundles",
     bundlesHint: "Buy more, pay less per piece — one bundle for many products.",
+    bumps: "Order bumps",
+    bumpsHint: "A tick box on the order form: add this to your order.",
+    crossSell: "Cross-sell",
+    crossSellHint: "Suggest products that go with what is in the cart.",
+    upsells: "Post-purchase upsell",
+    upsellsHint: "One more offer on the thank-you page, added with one tap.",
+    exit: "Exit popup",
+    exitHint: "A last offer with a coupon for a visitor who is leaving.",
+    rules: "Minimum order and free shipping",
+    rulesHint: "A floor under small orders, and a bar that shows what is left for free shipping.",
     discounts: "Discount codes",
     discountsHint: "Coupons and automatic discounts.",
   },
@@ -24,6 +34,16 @@ const STRINGS = {
     description: "أدوات ترفع قيمة كل أوردر.",
     bundles: "الباقات",
     bundlesHint: "اشترِ أكثر وادفع أقل للقطعة — باقة واحدة لمنتجات كثيرة.",
+    bumps: "إضافات الطلب",
+    bumpsHint: "مربع اختيار في فورم الطلب: أضف هذا إلى طلبك.",
+    crossSell: "منتجات مقترحة",
+    crossSellHint: "اقترح منتجات تناسب ما في السلة.",
+    upsells: "عرض بعد الشراء",
+    upsellsHint: "عرض إضافي في صفحة الشكر، يُضاف بضغطة واحدة.",
+    exit: "نافذة الخروج",
+    exitHint: "عرض أخير بكوبون لزائر يغادر.",
+    rules: "الحد الأدنى للطلب والشحن المجاني",
+    rulesHint: "حد أدنى للأوردرات الصغيرة، وشريط يوضح المتبقي للشحن المجاني.",
     discounts: "أكواد الخصم",
     discountsHint: "الكوبونات والخصومات التلقائية.",
   },
@@ -57,6 +77,11 @@ export function OffersPage() {
   const t = useT(STRINGS);
   const tools: OfferTool[] = [
     { to: "/offers/bundles", icon: <Layers />, title: t.bundles, hint: t.bundlesHint },
+    { to: "/offers/order-bumps", icon: <PackagePlus />, title: t.bumps, hint: t.bumpsHint },
+    { to: "/offers/cross-sell", icon: <Shuffle />, title: t.crossSell, hint: t.crossSellHint },
+    { to: "/offers/upsells", icon: <Sparkles />, title: t.upsells, hint: t.upsellsHint },
+    { to: "/offers/exit-popup", icon: <DoorOpen />, title: t.exit, hint: t.exitHint },
+    { to: "/offers/order-rules", icon: <Truck />, title: t.rules, hint: t.rulesHint },
     { to: "/discounts", icon: <Tag />, title: t.discounts, hint: t.discountsHint },
   ];
   return (

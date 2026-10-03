@@ -30,6 +30,7 @@ import { Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { BulkCodesButton } from "./BulkCodesDialog";
 
 const TYPE_LABEL: Record<DiscountType, string> = {
   percentage: "Percentage off",
@@ -118,7 +119,12 @@ export function DiscountsPage() {
       <PageHeader
         title="Discounts"
         description="Codes and automatic discounts applied at checkout."
-        actions={<Button onClick={() => setFormTarget("new")}>Create discount</Button>}
+        actions={
+          <>
+            <BulkCodesButton onGenerated={reload} />
+            <Button onClick={() => setFormTarget("new")}>Create discount</Button>
+          </>
+        }
       />
 
       <DataState

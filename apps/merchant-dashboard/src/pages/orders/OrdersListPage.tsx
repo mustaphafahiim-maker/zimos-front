@@ -78,6 +78,7 @@ const STRINGS = {
     loadMoreFailed: "Couldn't load more orders.",
     phoneLabel: "Phone",
     unseen: "Not seen yet",
+    createOrder: "Create order",
     selectAll: "Select all orders shown",
     selectOrder: "Select order {number}",
     test: "Test",
@@ -116,6 +117,7 @@ const STRINGS = {
     loadMoreFailed: "تعذّر تحميل المزيد من الأوردرات.",
     phoneLabel: "الهاتف",
     unseen: "لم يُشاهد بعد",
+    createOrder: "إنشاء أوردر",
     selectAll: "تحديد كل الأوردرات المعروضة",
     selectOrder: "تحديد الأوردر {number}",
     test: "تجريبي",
@@ -257,7 +259,17 @@ export function OrdersListPage() {
       <PageHeader
         title={t.title}
         description={t.description}
-        actions={<ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />}
+        actions={
+          <>
+            <ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />
+            <Link
+              to="/orders/new"
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t.createOrder}
+            </Link>
+          </>
+        }
       />
 
       <SearchAndDates filters={filters} />
