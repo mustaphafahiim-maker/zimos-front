@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { ApiError, type TrackResult } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
@@ -20,6 +20,11 @@ export function TrackOrder() {
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
   const [errors, setErrors] = useState<{ phone?: string; number?: string }>({});
+  // A link the store sent (…/track?number=ORD-…) arrives with the number filled in.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("number");
+    if (fromLink) setNumber(fromLink.slice(0, 60));
+  }, []);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [result, setResult] = useState<TrackResult | null>(null);
   /** Set only when the lookup itself failed; a clean miss shows `t.track.notFound`. */

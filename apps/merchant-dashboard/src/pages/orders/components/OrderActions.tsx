@@ -11,10 +11,14 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
+import { Select } from "@/components/Select";
 import { isCarrierBooked } from "@/pages/shipping/carriers";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 
 const SHIPPED_STATES = ["fulfilled", "partially_fulfilled", "returned"];
+
+const CANCEL_REASON_KINDS = ["customer", "fake", "duplicate", "stock", "other"] as const;
+type CancelReasonKind = (typeof CANCEL_REASON_KINDS)[number];
 
 const STRINGS = {
   en: {
@@ -30,7 +34,13 @@ const STRINGS = {
     cancelConfirm: "Cancel this order",
     keepOrder: "Keep order",
     working: "Working…",
-    reason: "Reason",
+    reason: "Details",
+    reasonKind: "Reason",
+    reason_customer: "Customer cancelled",
+    reason_fake: "Fake order",
+    reason_duplicate: "Duplicate order",
+    reason_stock: "Out of stock",
+    reason_other: "Other",
     reasonPlaceholder: "Customer changed their mind",
     reasonRequired: "Enter a reason for the cancellation.",
     cancelledToast: "Order cancelled. The stock reservation has been released.",
@@ -63,7 +73,13 @@ const STRINGS = {
     cancelConfirm: "إلغاء هذا الأوردر",
     keepOrder: "الإبقاء على الأوردر",
     working: "جارٍ التنفيذ…",
-    reason: "السبب",
+    reason: "التفاصيل",
+    reasonKind: "السبب",
+    reason_customer: "العميل ألغى",
+    reason_fake: "أوردر وهمي",
+    reason_duplicate: "أوردر مكرر",
+    reason_stock: "المنتج غير متوفر",
+    reason_other: "سبب آخر",
     reasonPlaceholder: "العميل غيّر رأيه",
     reasonRequired: "أدخل سبب الإلغاء.",
     cancelledToast: "تم إلغاء الأوردر وتحرير حجز المخزون.",
@@ -97,6 +113,8 @@ export function OrderActions({ order, onChanged }: Props) {
   const errorMessage = useErrorMessage();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  // SPEC §4.4: the reason is picked from a list; "other" needs the details typed.
+  const [reasonKind, setReasonKind] = useState<CancelReasonKind>("customer");
   const [editing, setEditing] = useState(false);
   const [waybillBusy, setWaybillBusy] = useState(false);
   const manualCancelPrompt = useManualCancelPrompt();
@@ -131,8 +149,10 @@ export function OrderActions({ order, onChanged }: Props) {
   }
 
   async function confirmCancel() {
-    const cancelReason = reason.trim();
-    if (cancelReason.length === 0) throw new Error(t.reasonRequired);
+    const details = reason.trim();
+    if (reasonKind === "other" && details.length === 0) throw new Error(t.reasonRequired);
+    const cancelReason =
+      reasonKind === "other" ? details : details ? `${t[`reason_${reasonKind}`]} — ${details}`.slice(0, 500) : t[`reason_${reasonKind}`];
     try {
       await cancel(cancelReason, false);
     } catch (err) {
@@ -210,9 +230,25 @@ export function OrderActions({ order, onChanged }: Props) {
         onCancel={() => setCancelling(false)}
         onConfirm={confirmCancel}
       >
+        <Field label={t.reasonKind} className="mb-3">
+          {({ id }) => (
+            <Select
+              id={id}
+              value={reasonKind}
+              onChange={(e) => setReasonKind(e.target.value as CancelReasonKind)}
+              className="h-11"
+            >
+              {CANCEL_REASON_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {t[`reason_${kind}`]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
         <TextField
           label={t.reason}
-          required
+          required={reasonKind === "other"}
           value={reason}
           maxLength={500}
           onChange={(e) => setReason(e.target.value)}

@@ -6,6 +6,7 @@ import {
   Bot,
   ClipboardCheck,
   CreditCard,
+  Gift,
   Globe,
   Images,
   LayoutDashboard,
@@ -43,6 +44,7 @@ export type NavKey =
   | "reviews"
   | "customers"
   | "discounts"
+  | "offers"
   | "shipping"
   | "payments"
   | "website"
@@ -130,6 +132,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "grow",
     items: [
       { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "automations", to: "/automations", icon: Bot },
@@ -200,6 +203,7 @@ export const NAV_LABELS = {
     reviews: "Reviews",
     customers: "Contacts",
     discounts: "Discounts",
+    offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
     website: "Website",
@@ -230,6 +234,7 @@ export const NAV_LABELS = {
     reviews: "التقييمات",
     customers: "جهات الاتصال",
     discounts: "الخصومات",
+    offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",
     website: "الموقع",

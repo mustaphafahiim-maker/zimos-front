@@ -203,3 +203,45 @@ export interface OrderListFilters {
   seen?: boolean;
   test?: boolean;
 }
+
+// -------------------------------------------------- timeline, neighbours --
+
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook";
+
+export interface OrderTimelineEvent {
+  id: string;
+  type: OrderTimelineEventType;
+  at: string;
+  actor: { type: OrderActorType; name: string | null };
+  /**
+   * status: { from, to, reason } · audit: { action, entity, before, after } ·
+   * note: { body, visibility } · automation: { trigger, status, detail } ·
+   * webhook: { eventType, status, attempts, responseStatus }
+   */
+  data: Record<string, unknown>;
+}
+
+/** Everything that happened to the order, newest first. */
+export async function ordersTimeline(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string
+): Promise<OrderTimelineEvent[]> {
+  const { events } = await client.request<{ events: OrderTimelineEvent[] }>(`${base(workspaceId, orderId)}/timeline`);
+  return events;
+}
+
+export interface OrderNeighbors {
+  prevId: string | null;
+  nextId: string | null;
+}
+
+/** The orders before and after this one under the list's filters (a query string without "?"). */
+export async function ordersNeighbors(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  listQuery = ""
+): Promise<OrderNeighbors> {
+  return client.request<OrderNeighbors>(`${base(workspaceId, orderId)}/neighbors${listQuery ? `?${listQuery}` : ""}`);
+}

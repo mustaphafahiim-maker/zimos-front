@@ -1,6 +1,7 @@
 "use client";
 
 import { botGuardFields } from "./botGuard";
+import { withCheckoutOtp } from "./checkoutOtp";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ApiClient, CheckoutPayload, CheckoutResult, StorefrontPaymentMethod } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
@@ -153,10 +154,12 @@ export async function placeOnlineOrder({
   };
   // The return URL names the order, which only exists once the checkout
   // answers: the server fills in the {orderId} placeholder.
-  const result = await client.placeCheckout(
-    workspaceId,
-    { ...body, returnUrl: paymentPageUrl(basePath, "{orderId}") },
-    { cartToken: token, previewToken, visitorId }
+  const result = await withCheckoutOtp(workspaceId, body.contact.phone, (otp) =>
+    client.placeCheckout(
+      workspaceId,
+      { ...body, ...otp, returnUrl: paymentPageUrl(basePath, "{orderId}") },
+      { cartToken: token, previewToken, visitorId }
+    )
   );
 
   const order = result.order;
