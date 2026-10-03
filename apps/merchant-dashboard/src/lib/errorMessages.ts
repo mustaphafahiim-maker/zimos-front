@@ -5,9 +5,10 @@ import {
   apiErrorDetails,
   type ApiErrorCode,
   type CarrierCancelFailedDetails,
+  type PlanFeatureRequiredDetails,
 } from "@store-builder/api-client";
 import { fmt } from "@/i18n/LocaleContext";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { providerName } from "@/lib/providers";
 import { formatDate } from "@/lib/format";
 
@@ -108,6 +109,7 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
     PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
+    PLAN_FEATURE_REQUIRED: "Your plan doesn't include this feature. Upgrade your plan from Subscription to use it.",
     TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
     EMAIL_NOT_VERIFIED: "Confirm your email address first: use the code we send you from the banner at the top of the page.",
     INVITEE_NOT_CONFIRMED: "That person's account hasn't confirmed its email yet. Ask them to confirm it, then invite them again.",
@@ -115,6 +117,7 @@ const STRINGS = {
     limitFunnels: "You've reached your plan's funnels for this month ({used} of {max}). You can create more from {date}.",
     limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
     limitDrafts: "Subscribe to one of your stores before starting another.",
+    featureRequired: "Your plan doesn't include {feature}. Upgrade your plan from Subscription to use it.",
     cancelFailedPermission:
       "The courier refused to cancel the delivery: the connected API key doesn't have Full Access. The order was not cancelled. Reconnect the courier with a Full Access key under Shipping, or cancel the delivery in the courier's dashboard first.",
     cancelFailedAuth:
@@ -212,6 +215,7 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "لا يمكن استرداد هذه الدفعة عبر البوابة.",
     ORDER_TEST_PAYMENT: "هذا الأوردر دُفع في وضع التجربة، لذلك لا يمكن شحنه.",
     PLAN_LIMIT_REACHED: "بلغت الحد المسموح في خطتك. رقِّ خطتك لإضافة المزيد.",
+    PLAN_FEATURE_REQUIRED: "خطتك الحالية لا تشمل هذه الميزة. رقِّ خطتك من قسم الاشتراك لاستخدامها.",
     TRIAL_NOT_AVAILABLE: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
     EMAIL_NOT_VERIFIED: "أكّد بريدك الإلكتروني أولًا بالرمز الذي نرسله إليك من الشريط أعلى الصفحة.",
     INVITEE_NOT_CONFIRMED: "لم يؤكد صاحب هذا الحساب بريده الإلكتروني بعد. اطلب منه تأكيده، ثم أرسل الدعوة مرة أخرى.",
@@ -219,6 +223,7 @@ const STRINGS = {
     limitFunnels: "بلغت الحد الشهري لمسارات البيع في خطتك ({used} من {max}). يمكنك إنشاء المزيد بدءًا من {date}.",
     limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
     limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
+    featureRequired: "خطتك الحالية لا تشمل «{feature}». رقِّ خطتك من قسم الاشتراك لاستخدامها.",
     cancelFailedPermission:
       "رفضت شركة الشحن إلغاء الشحنة لأن مفتاح API المربوط ليس بصلاحية Full Access. لم يتم إلغاء الأوردر. أعد ربط الشركة بمفتاح Full Access من صفحة الشحن، أو ألغِ الشحنة من لوحة تحكم الشركة أولًا.",
     cancelFailedAuth:
@@ -249,6 +254,7 @@ const OWN_KEY_LIST = [
   "limitFunnels",
   "limitStores",
   "limitDrafts",
+  "featureRequired",
 ] as const;
 type CodeKey = Exclude<keyof typeof STRINGS.en, (typeof OWN_KEY_LIST)[number]>;
 const OWN_KEYS: ReadonlySet<string> = new Set(OWN_KEY_LIST);
@@ -276,6 +282,7 @@ function isNetworkError(err: unknown): boolean {
  */
 export function useErrorMessage() {
   const t = useT(STRINGS);
+  const { locale } = useLocale();
   return useCallback(
     (err: unknown, overrides?: ErrorOverrides): string => {
       if (isNetworkError(err)) return t.network;
@@ -292,6 +299,11 @@ export function useErrorMessage() {
           if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
           if (limit?.limit === "stores") return fmt(t.limitStores, counts);
           if (limit?.limit === "draft_stores") return t.limitDrafts;
+        }
+        // PLAN_FEATURE_ENFORCEMENT: the server names the feature in both languages.
+        if (code === "PLAN_FEATURE_REQUIRED") {
+          const feature = apiErrorDetails<PlanFeatureRequiredDetails>(err)?.label?.[locale];
+          if (feature) return fmt(t.featureRequired, { feature });
         }
         if (code === "CARRIER_CANCEL_FAILED") {
           // Only order cancellation raises it. The courier-side cause decides
@@ -319,7 +331,7 @@ export function useErrorMessage() {
       if (err instanceof Error && err.message) return err.message;
       return t.generic;
     },
-    [t]
+    [t, locale]
   );
 }
 

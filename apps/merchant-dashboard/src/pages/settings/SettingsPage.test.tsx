@@ -82,11 +82,21 @@ describe("SettingsPage team invitations", () => {
       error: { code: "INVITEE_NOT_CONFIRMED", message: "That person's account hasn't confirmed its email yet." },
     });
 
-  async function invite(locale: "en" | "ar") {
+  // PLAN_FEATURE_ENFORCEMENT on, and the store's plan has no staff accounts.
+  const planLacksStaff = () =>
+    new ApiError("Your plan doesn't include Staff accounts. Upgrade your plan to use it.", 403, "PLAN_FEATURE_REQUIRED", {
+      error: {
+        code: "PLAN_FEATURE_REQUIRED",
+        message: "Your plan doesn't include Staff accounts. Upgrade your plan to use it.",
+        details: { feature: "staff_accounts", label: { en: "Staff accounts", ar: "حسابات الفريق" } },
+      },
+    });
+
+  async function invite(locale: "en" | "ar", refusal: ApiError = inviteRefused()) {
     api.listWorkspaceMembers.mockResolvedValue([]);
     api.listPendingInvites.mockResolvedValue([]);
     api.listWorkspaceRoles.mockResolvedValue([fake({ id: "role_1", key: "order_operator", name: "Order operator" })]);
-    api.inviteMember.mockRejectedValue(inviteRefused());
+    api.inviteMember.mockRejectedValue(refusal);
     const { user } = renderWithProviders(<SettingsPage />, { locale });
     await user.click(await screen.findByRole("button", { name: "Invite member" }));
     const dialog = screen.getByRole("dialog", { name: "Invite member" });
@@ -102,5 +112,16 @@ describe("SettingsPage team invitations", () => {
   it("says it in Arabic on an Arabic dashboard", async () => {
     await invite("ar");
     expect(await screen.findByText("لم يؤكد صاحب هذا الحساب بريده الإلكتروني بعد. اطلب منه تأكيده، ثم أرسل الدعوة مرة أخرى.")).toBeInTheDocument();
+  });
+
+  it("asks for an upgrade, naming the feature, when the plan has no staff accounts", async () => {
+    await invite("en", planLacksStaff());
+    expect(await screen.findByText("Your plan doesn't include Staff accounts. Upgrade your plan from Subscription to use it.")).toBeInTheDocument();
+    expect(screen.queryByText(/don't have permission/)).not.toBeInTheDocument();
+  });
+
+  it("asks for it in Arabic on an Arabic dashboard", async () => {
+    await invite("ar", planLacksStaff());
+    expect(await screen.findByText("خطتك الحالية لا تشمل «حسابات الفريق». رقِّ خطتك من قسم الاشتراك لاستخدامها.")).toBeInTheDocument();
   });
 });
