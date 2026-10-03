@@ -68,6 +68,20 @@ const GOOGLE: Record<TrackEvent, string> = {
 // ---------------------------------------------------------------- registry --
 
 let registry: StorePixel[] = [];
+/**
+ * False when the merchant reports Purchase only once an order is confirmed or
+ * delivered (dashboard → Tracking tools): the server sends it then, and the
+ * browser pixels must not report it at checkout.
+ */
+let browserPurchase = true;
+
+export type PurchaseTiming = "on_order" | "on_confirmed" | "on_delivered";
+
+/** `purchaseEventTiming` of GET /store/:workspaceId, defaulting to the usual on_order. */
+export function purchaseTimingOf(store: unknown): PurchaseTiming {
+  const v = (store as { purchaseEventTiming?: unknown } | null)?.purchaseEventTiming;
+  return v === "on_confirmed" || v === "on_delivered" ? v : "on_order";
+}
 /** Scoped Snap pixels already initialised (Snap has no per-pixel send, so they are added on first match). */
 const snapInitialised = new Set<string>();
 
@@ -84,8 +98,9 @@ function viewedProducts(): string[] {
 }
 
 /** components/TrackingPixels calls this with the store's pixels before any event is sent. */
-export function registerPixels(pixels: StorePixel[]): void {
+export function registerPixels(pixels: StorePixel[], purchaseTiming: PurchaseTiming = "on_order"): void {
   registry = pixels;
+  browserPurchase = purchaseTiming === "on_order";
   setPixelInfoProvider(pixels.length ? pixelInfo : null);
 }
 
@@ -184,6 +199,7 @@ function initSnap(w: PixelWindow, pixelId: string): void {
 
 export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
   if (typeof window === "undefined") return;
+  if (event === "Purchase" && !browserPurchase) return;
   const w = window as PixelWindow;
   const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
   const common = { value, currency: data.currency };
