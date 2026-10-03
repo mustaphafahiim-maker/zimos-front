@@ -56,6 +56,8 @@ import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
+import { storefrontProductBundle } from "@store-builder/api-client";
+import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { OfferCountdown } from "./OfferCountdown";
 import { OptionPicker } from "./OptionPicker";
 import { productPageText } from "./productPageText";
@@ -121,14 +123,18 @@ export function ProductLanding({
   }
 
   // --- bundles / quantity --------------------------------------------------
-  const tiers = useMemo(() => bundleTiers(product), [product]);
+  // A reusable quantity bundle (BundlePicker) takes the place of the offer
+  // ladder and the quantity stepper; the server prices it.
+  const bundle = useMemo(() => storefrontProductBundle(product), [product]);
+  const bundleChoice = useBundleSelection({ client, workspaceId, bundle, product, mainVariant: variant });
+  const tiers = useMemo(() => (bundle ? [] : bundleTiers(product)), [bundle, product]);
   const [quantity, setQuantity] = useState(1);
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
   const tier = tiers.find((x) => x.id === tierId);
   const unit = variantUnitPrice(product, variant);
-  const pricing = bundlePricing(unit, quantity, tier);
+  const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
@@ -137,7 +143,11 @@ export function ProductLanding({
   const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
 
   const defaultOffer = defaultOfferOf(product);
-  const mainLine: OrderLine | null = variant
+  // The bundle's pieces beyond the first line (another variant per piece).
+  const bundleExtraLines: OrderLine[] = bundleChoice ? bundleChoice.lines.slice(1) : [];
+  const mainLine: OrderLine | null = bundleChoice
+    ? (bundleChoice.lines[0] ?? null)
+    : variant
     ? tier
       ? { variantId: variant.id, offerId: tier.offerId, quantity: 1 }
       : {
@@ -162,7 +172,7 @@ export function ProductLanding({
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
-  const autosaveLines: OrderLine[] = mainLine ? [mainLine] : [];
+  const autosaveLines: OrderLine[] = mainLine ? [mainLine, ...bundleExtraLines] : [];
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
@@ -206,6 +216,7 @@ export function ProductLanding({
     // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
       ...toCheckoutPayload(values, fields, { item: orderLine }),
+      ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
@@ -292,6 +303,7 @@ export function ProductLanding({
         mainLine.quantity,
         custom.fields.length > 0 ? custom.toInput() : undefined
       );
+      for (const line of bundleExtraLines) await cart.addItem(line.variantId, undefined, line.quantity);
       // skip_cart: straight to the checkout; otherwise the cart, to review first.
       router.push(storeHref(basePath, ps.skip_cart ? "/checkout" : "/cart"));
     } catch (err) {
@@ -352,6 +364,8 @@ export function ProductLanding({
         />
       ))}
 
+      {bundleChoice && <BundlePicker selection={bundleChoice} product={product} mainVariant={variant} />}
+
       {/* Bundle / quantity offer */}
       {tiers.length > 1 && (
         <fieldset>
@@ -405,7 +419,7 @@ export function ProductLanding({
         </fieldset>
       )}
 
-      {tiers.length === 0 && !ps.hide_quantity_selector && (
+      {tiers.length === 0 && !bundleChoice && !ps.hide_quantity_selector && (
         <div className="flex items-center justify-between gap-4">
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
@@ -433,6 +447,9 @@ export function ProductLanding({
         >
           {buying ? text.buying : buyLabel}
         </button>
+        {bundleChoice && custom.fields.length === 0 ? (
+          <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
+        ) : (
         <AddToCartButton
           variant="secondary"
           variantId={mainLine?.variantId}
@@ -443,6 +460,7 @@ export function ProductLanding({
           beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
           onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
+        )}
       </div>
 
       <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
@@ -481,7 +499,7 @@ export function ProductLanding({
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">
-                {product.name} × {tier ? tier.quantity : quantity}
+                {product.name} × {bundleChoice ? bundleChoice.quantity : tier ? tier.quantity : quantity}
               </dt>
               <dd className="shrink-0 text-ink">{money(pricing.full)}</dd>
             </div>
