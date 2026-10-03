@@ -67,3 +67,5 @@ export * from "./endpoints/trackingPixels";
 export * from "./endpoints/automations";
 // Quantity bundles (lane 3).
 export * from "./endpoints/bundles";
+// The WhatsApp inbox: filters, assignment, customer panel, quick replies, live stream.
+export * from "./endpoints/inbox";
