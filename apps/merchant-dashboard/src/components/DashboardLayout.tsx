@@ -16,6 +16,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
+import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 
 const STRINGS = {
   en: {
@@ -340,6 +341,7 @@ export function DashboardLayout() {
         <main className="flex-1 p-4 sm:p-6">
           {/* Subscription expiring / expired, or the store suspended. */}
           <AccessBanner />
+          <InstallAppPrompt />
           {/* One crashing page shows an error here; the sidebar and header
               stay up so the merchant can move on. */}
           <RouteErrorBoundary resetKey={location.pathname}>
