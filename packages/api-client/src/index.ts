@@ -70,3 +70,5 @@ export * from "./endpoints/automations";
 export * from "./endpoints/bundles";
 // Offer rules: product order bumps, cross-sell, thank-you upsell, exit popup (lane 3).
 export * from "./endpoints/offers";
+// Lost orders: refused and unfinished checkouts, recovery (lane 2).
+export * from "./endpoints/lostOrders";

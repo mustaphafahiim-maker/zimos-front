@@ -27,7 +27,7 @@ import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
-import { AbandonedCartsPage } from "@/pages/abandoned/AbandonedCartsPage";
+import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
 import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
@@ -119,7 +119,7 @@ export default function App() {
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
                       <Route path="/fraud" element={<FraudPage />} />
                       <Route path="/returns" element={<ReturnsPage />} />
-                      <Route path="/abandoned-carts" element={<AbandonedCartsPage />} />
+                      <Route path="/abandoned-carts" element={<LostOrdersPage />} />
 
                       <Route path="/catalog" element={<CatalogProductsPage />} />
                       <Route path="/catalog/collections" element={<CollectionsPage />} />

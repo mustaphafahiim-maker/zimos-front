@@ -1,5 +1,6 @@
 "use client";
 
+import { takeRecoveryPrefill } from "@/lib/recoveryPrefill";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
@@ -65,6 +66,11 @@ export default function CheckoutPage() {
   const { byVariant } = useCatalog(workspaceId);
 
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // Arriving from a recovery link (/r/:token): what the shopper had typed comes back, once.
+  useEffect(() => {
+    const prefill = takeRecoveryPrefill(workspaceId);
+    if (prefill) setValues((prev) => ({ ...prev, ...prefill }));
+  }, [workspaceId]);
   // The governorate chosen in the cart opens the form (once, and only into an
   // empty field); choosing one here is remembered for the cart in turn.
   const [shipTo, setShipTo] = useShipTo(workspaceId);
