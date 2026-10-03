@@ -1,6 +1,6 @@
 export { ApiClient, ApiError } from "./client";
 export type { ApiClientOptions } from "./client";
-export { createLocalStorageTokenStorage, createMemoryTokenStorage } from "./tokenStorage";
+export { createLocalStorageTokenStorage, createMemoryTokenStorage, createBrowserSessionTokenStorage } from "./tokenStorage";
 export type { TokenStorage, TokenPair } from "./tokenStorage";
 export type * from "./types";
 // Value exports: `export type *` above only carries the types, not these consts.

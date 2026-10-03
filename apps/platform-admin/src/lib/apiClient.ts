@@ -4,6 +4,7 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "/api/v
 
 export const apiClient = new ApiClient({
   baseUrl: API_BASE_URL,
+  appName: "admin",
   onSessionExpired: () => {
     // Full reload so every in-flight auth state resets cleanly.
     if (window.location.pathname !== "/login") {
