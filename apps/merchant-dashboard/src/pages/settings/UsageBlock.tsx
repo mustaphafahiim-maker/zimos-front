@@ -22,6 +22,9 @@ const STRINGS = {
     domains: "Domains",
     of: "{used} of {limit}",
     updated: "Updated {when}",
+    kb: "{n} KB",
+    mb: "{n} MB",
+    gb: "{n} GB",
   },
   ar: {
     title: "الشهر ده",
@@ -33,13 +36,16 @@ const STRINGS = {
     domains: "الدومينات",
     of: "{used} من {limit}",
     updated: "آخر تحديث {when}",
+    kb: "{n} كيلوبايت",
+    mb: "{n} ميجابايت",
+    gb: "{n} جيجابايت",
   },
 } satisfies Messages;
 
-function bytes(value: number): string {
-  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
-  if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(value / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+function bytes(value: number, t: Record<"kb" | "mb" | "gb", string>): string {
+  if (value < 1024 * 1024) return fmt(t.kb, { n: Math.round(value / 1024) });
+  if (value < 1024 * 1024 * 1024) return fmt(t.mb, { n: (value / (1024 * 1024)).toFixed(1) });
+  return fmt(t.gb, { n: (value / (1024 * 1024 * 1024)).toFixed(2) });
 }
 
 export function UsageBlock() {
@@ -60,7 +66,7 @@ export function UsageBlock() {
     { label: t.ai, value: number(data.current.aiRequests), ratio: null },
     {
       label: t.storage,
-      value: withLimit(data.current.storageBytes, data.limits.storage_bytes, bytes),
+      value: withLimit(data.current.storageBytes, data.limits.storage_bytes, (v) => bytes(v, t)),
       ratio: data.limits.storage_bytes ? data.current.storageBytes / data.limits.storage_bytes : null,
     },
     {

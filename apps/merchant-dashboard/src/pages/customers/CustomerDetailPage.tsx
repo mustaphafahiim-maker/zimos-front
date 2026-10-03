@@ -15,9 +15,139 @@ import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate, formatMoney } from "@/lib/format";
+import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
 import { ContactInsights } from "./ContactInsights";
 
+const STRINGS = {
+  en: {
+    customer: "Customer",
+    back: "Contacts",
+    summary: "{orders} orders · reliability {score}",
+    ordersTitle: "Orders",
+    ordersDescription: "Every order this customer has placed, newest first.",
+    ordersEmpty: "No orders from this customer yet.",
+    ordersIncomplete: "Only the store’s first 1,000 orders were searched, so this list may be incomplete.",
+    confLabel: "Conf",
+    shipLabel: "Ship",
+    // Order states, worded in English exactly as humanize() prints them.
+    conf_pending: "Pending",
+    conf_confirmed: "Confirmed",
+    conf_rejected: "Rejected",
+    conf_unreachable: "Unreachable",
+    conf_postponed: "Postponed",
+    ful_unfulfilled: "Unfulfilled",
+    ful_partially_fulfilled: "Partially fulfilled",
+    ful_fulfilled: "Fulfilled",
+    ful_returned: "Returned",
+    contactDetails: "Contact details",
+    fullName: "Full name",
+    email: "Email",
+    phone: "Phone",
+    phoneHint: "Set from the storefront / checkout — read-only here.",
+    alternatePhone: "Alternate phone",
+    marketingConsent: "Has consented to marketing",
+    customerUpdated: "Customer updated.",
+    blacklistTitle: "Blacklist",
+    blacklisted: "This customer is blacklisted.",
+    blacklistedReason: "This customer is blacklisted — {reason}.",
+    removeFromBlacklist: "Remove from blacklist",
+    blacklistNote: "Blacklisting stops this customer from checking out.",
+    blacklistCustomer: "Blacklist customer",
+    blacklistConfirmTitle: "Blacklist this customer?",
+    blacklistConfirmDescription: "They won't be able to check out until you remove them from the blacklist.",
+    blacklistConfirm: "Blacklist",
+    working: "Working…",
+    reason: "Reason",
+    reasonPlaceholder: "Repeated failed deliveries",
+    reasonRequired: "Enter a reason for blacklisting this customer.",
+    customerBlacklisted: "Customer blacklisted.",
+    unblacklistTitle: "Remove from blacklist?",
+    unblacklistDescription: "The customer will be able to place orders again.",
+    remove: "Remove",
+    customerUnblacklisted: "Customer removed from the blacklist.",
+    addressesTitle: "Addresses",
+    addAddress: "Add address",
+    noAddresses: "No addresses on file.",
+    defaultBadge: "Default",
+    editAddress: "Edit address",
+    addressSaved: "Address saved.",
+    addressAdded: "Address added.",
+    country: "Country",
+    countryHint: "Two-letter code.",
+    province: "Province",
+    city: "City",
+    postalCode: "Postal code",
+    addressLine: "Address line",
+    notes: "Notes",
+    defaultAddress: "Default address",
+    saveAddress: "Save address",
+  },
+  ar: {
+    customer: "عميل",
+    back: "جهات الاتصال",
+    summary: "عدد الطلبات: {orders} · درجة الموثوقية: {score}",
+    ordersTitle: "الطلبات",
+    ordersDescription: "كل طلبات هذا العميل، الأحدث أولًا.",
+    ordersEmpty: "لا توجد طلبات من هذا العميل بعد.",
+    ordersIncomplete: "تم البحث في أول 1,000 طلب في المتجر فقط، لذلك قد تكون هذه القائمة غير مكتملة.",
+    confLabel: "التأكيد",
+    shipLabel: "الشحن",
+    conf_pending: "في انتظار المكالمة",
+    conf_confirmed: "مؤكد",
+    conf_rejected: "مرفوض",
+    conf_unreachable: "لم يتم الوصول إليه",
+    conf_postponed: "مؤجل",
+    ful_unfulfilled: "لم يُشحن",
+    ful_partially_fulfilled: "شُحن جزئيًا",
+    ful_fulfilled: "مكتمل",
+    ful_returned: "مرتجع",
+    contactDetails: "بيانات التواصل",
+    fullName: "الاسم بالكامل",
+    email: "البريد الإلكتروني",
+    phone: "الهاتف",
+    phoneHint: "يأتي من المتجر عند إتمام الطلب، ولا يمكن تعديله من هنا.",
+    alternatePhone: "هاتف بديل",
+    marketingConsent: "وافق على استقبال رسائل تسويقية",
+    customerUpdated: "تم تحديث بيانات العميل.",
+    blacklistTitle: "الحظر",
+    blacklisted: "هذا العميل محظور.",
+    blacklistedReason: "هذا العميل محظور — {reason}.",
+    removeFromBlacklist: "إلغاء الحظر",
+    blacklistNote: "الحظر يمنع هذا العميل من إتمام أي طلب.",
+    blacklistCustomer: "حظر العميل",
+    blacklistConfirmTitle: "حظر هذا العميل؟",
+    blacklistConfirmDescription: "لن يتمكن من إتمام أي طلب حتى تلغي حظره.",
+    blacklistConfirm: "حظر",
+    working: "جارٍ التنفيذ…",
+    reason: "السبب",
+    reasonPlaceholder: "فشل التوصيل أكثر من مرة",
+    reasonRequired: "اكتب سبب حظر هذا العميل.",
+    customerBlacklisted: "تم حظر العميل.",
+    unblacklistTitle: "إلغاء حظر العميل؟",
+    unblacklistDescription: "سيتمكن العميل من الطلب مرة أخرى.",
+    remove: "إلغاء الحظر",
+    customerUnblacklisted: "تم إلغاء حظر العميل.",
+    addressesTitle: "العناوين",
+    addAddress: "إضافة عنوان",
+    noAddresses: "لا توجد عناوين مسجّلة.",
+    defaultBadge: "الافتراضي",
+    editAddress: "تعديل العنوان",
+    addressSaved: "تم حفظ العنوان.",
+    addressAdded: "تمت إضافة العنوان.",
+    country: "الدولة",
+    countryHint: "رمز من حرفين.",
+    province: "المحافظة",
+    city: "المدينة",
+    postalCode: "الرمز البريدي",
+    addressLine: "العنوان",
+    notes: "ملاحظات",
+    defaultAddress: "العنوان الافتراضي",
+    saveAddress: "حفظ العنوان",
+  },
+} satisfies Messages;
+
 export function CustomerDetailPage() {
+  const t = useT(STRINGS);
   const { customerId } = useParams<{ customerId: string }>();
   const workspaceId = useWorkspaceId();
   const detail = useAsync(
@@ -33,12 +163,12 @@ export function CustomerDetailPage() {
         title={
           customer
             ? customer.fullName || customer.phoneRaw || customer.phoneNormalized
-            : "Customer"
+            : t.customer
         }
-        back={{ to: "/customers", label: "Contacts" }}
+        back={{ to: "/customers", label: t.back }}
         description={
           customer
-            ? `${customer.totalOrders} orders · reliability ${customer.reliabilityScore}`
+            ? fmt(t.summary, { orders: customer.totalOrders, score: customer.reliabilityScore })
             : undefined
         }
       />
@@ -72,6 +202,7 @@ const HISTORY_MAX_PAGES = 20;
  * request at all.
  */
 function OrderHistorySection({ customer }: { customer: Customer }) {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const history = useAsync(async () => {
     const found: Order[] = [];
@@ -97,15 +228,15 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Orders</h2>
-      <p className="mt-1 text-sm text-ink-soft">Every order this customer has placed, newest first.</p>
+      <h2 className="font-display text-lg font-medium text-ink">{t.ordersTitle}</h2>
+      <p className="mt-1 text-sm text-ink-soft">{t.ordersDescription}</p>
 
       <div className="mt-4">
         <DataState
           loading={history.loading}
           error={history.error}
           empty={orders.length === 0}
-          emptyMessage="No orders from this customer yet."
+          emptyMessage={t.ordersEmpty}
           onRetry={() => history.refresh()}
         >
           <ul className="divide-y divide-line overflow-hidden rounded-[0.5rem] border border-line">
@@ -118,8 +249,8 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
                   <p className="text-xs text-ink-soft">{formatDate(order.createdAt)}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge label="Conf" value={order.confirmationState} />
-                  <StatusBadge label="Ship" value={order.fulfillmentState} />
+                  <StatusBadge label={t.confLabel} value={order.confirmationState} text={t[`conf_${order.confirmationState}`]} />
+                  <StatusBadge label={t.shipLabel} value={order.fulfillmentState} text={t[`ful_${order.fulfillmentState}`]} />
                   <span className="text-sm font-medium text-ink">
                     {formatMoney(order.totalAmount, order.currency)}
                   </span>
@@ -130,7 +261,7 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
         </DataState>
         {history.data && !history.data.complete && (
           <p className="mt-2 text-xs text-ink-soft">
-            Only the store&rsquo;s first 1,000 orders were searched, so this list may be incomplete.
+            {t.ordersIncomplete}
           </p>
         )}
       </div>
@@ -139,6 +270,8 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
 }
 
 function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () => void }) {
+  const t = useT(STRINGS);
+  const common = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [fullName, setFullName] = useState(customer.fullName ?? "");
@@ -161,7 +294,7 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
         alternatePhone: alternatePhone.trim() || null,
         marketingConsent,
       });
-      toast.success("Customer updated.");
+      toast.success(t.customerUpdated);
       onSaved();
     } catch (err) {
       const fields = getFieldErrors(err);
@@ -174,30 +307,30 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Contact details</h2>
+      <h2 className="font-display text-lg font-medium text-ink">{t.contactDetails}</h2>
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
-            label="Full name"
+            label={t.fullName}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             error={fieldErrors.fullName}
           />
           <TextField
-            label="Email"
+            label={t.email}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={fieldErrors.email}
           />
-          <Field label="Phone" hint="Set from the storefront / checkout — read-only here.">
+          <Field label={t.phone} hint={t.phoneHint}>
             {({ id }) => (
               <Input id={id} value={customer.phoneRaw || customer.phoneNormalized} disabled />
             )}
           </Field>
           <TextField
-            label="Alternate phone"
+            label={t.alternatePhone}
             value={alternatePhone}
             onChange={(e) => setAlternatePhone(e.target.value)}
             error={fieldErrors.alternatePhone}
@@ -209,11 +342,11 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
             checked={marketingConsent}
             onChange={(e) => setMarketingConsent(e.target.checked)}
           />
-          Has consented to marketing
+          {t.marketingConsent}
         </label>
         <div className="flex justify-end">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? common.saving : common.save}
           </Button>
         </div>
       </form>
@@ -228,6 +361,8 @@ function BlacklistSection({
   customer: Customer;
   onChanged: () => void;
 }) {
+  const t = useT(STRINGS);
+  const common = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [blacklisting, setBlacklisting] = useState(false);
@@ -235,12 +370,12 @@ function BlacklistSection({
   const [reason, setReason] = useState("");
 
   async function confirmBlacklist() {
-    if (reason.trim() === "") throw new Error("Enter a reason for blacklisting this customer.");
+    if (reason.trim() === "") throw new Error(t.reasonRequired);
     await apiClient.setCustomerBlacklist(workspaceId, customer.id, {
       isBlacklisted: true,
       reason: reason.trim(),
     });
-    toast.success("Customer blacklisted.");
+    toast.success(t.customerBlacklisted);
     setBlacklisting(false);
     setReason("");
     onChanged();
@@ -248,28 +383,29 @@ function BlacklistSection({
 
   async function confirmRemove() {
     await apiClient.setCustomerBlacklist(workspaceId, customer.id, { isBlacklisted: false });
-    toast.success("Customer removed from the blacklist.");
+    toast.success(t.customerUnblacklisted);
     setUnblacklisting(false);
     onChanged();
   }
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Blacklist</h2>
+      <h2 className="font-display text-lg font-medium text-ink">{t.blacklistTitle}</h2>
       {customer.isBlacklisted ? (
         <div className="mt-3 space-y-3">
           <p className="text-sm text-ink-soft">
-            This customer is blacklisted
-            {customer.blacklistReason ? ` — ${customer.blacklistReason}` : ""}.
+            {customer.blacklistReason
+              ? fmt(t.blacklistedReason, { reason: customer.blacklistReason })
+              : t.blacklisted}
           </p>
           <Button variant="outline" size="sm" onClick={() => setUnblacklisting(true)}>
-            Remove from blacklist
+            {t.removeFromBlacklist}
           </Button>
         </div>
       ) : (
         <div className="mt-3 space-y-3">
           <p className="text-sm text-ink-soft">
-            Blacklisting stops this customer from checking out.
+            {t.blacklistNote}
           </p>
           <Button
             variant="danger"
@@ -279,27 +415,29 @@ function BlacklistSection({
               setBlacklisting(true);
             }}
           >
-            Blacklist customer
+            {t.blacklistCustomer}
           </Button>
         </div>
       )}
 
       <ConfirmDialog
         open={blacklisting}
-        title="Blacklist this customer?"
-        description="They won't be able to check out until you remove them from the blacklist."
-        confirmLabel="Blacklist"
+        title={t.blacklistConfirmTitle}
+        description={t.blacklistConfirmDescription}
+        confirmLabel={t.blacklistConfirm}
+        cancelLabel={common.cancel}
+        busyLabel={t.working}
         destructive
         onCancel={() => setBlacklisting(false)}
         onConfirm={confirmBlacklist}
       >
-        <Field label="Reason" required>
+        <Field label={t.reason} required>
           {({ id }) => (
             <Textarea
               id={id}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Repeated failed deliveries"
+              placeholder={t.reasonPlaceholder}
             />
           )}
         </Field>
@@ -307,9 +445,11 @@ function BlacklistSection({
 
       <ConfirmDialog
         open={unblacklisting}
-        title="Remove from blacklist?"
-        description="The customer will be able to place orders again."
-        confirmLabel="Remove"
+        title={t.unblacklistTitle}
+        description={t.unblacklistDescription}
+        confirmLabel={t.remove}
+        cancelLabel={common.cancel}
+        busyLabel={t.working}
         onCancel={() => setUnblacklisting(false)}
         onConfirm={confirmRemove}
       />
@@ -324,20 +464,22 @@ function AddressesSection({
   customer: Customer;
   onChanged: () => void;
 }) {
+  const t = useT(STRINGS);
+  const common = useCommon();
   const [target, setTarget] = useState<CustomerAddress | "new" | null>(null);
   const addresses = customer.addresses ?? [];
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-medium text-ink">Addresses</h2>
+        <h2 className="font-display text-lg font-medium text-ink">{t.addressesTitle}</h2>
         <Button size="sm" onClick={() => setTarget("new")}>
-          Add address
+          {t.addAddress}
         </Button>
       </div>
 
       {addresses.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-soft">No addresses on file.</p>
+        <p className="mt-3 text-sm text-ink-soft">{t.noAddresses}</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {addresses.map((a) => (
@@ -352,10 +494,10 @@ function AddressesSection({
                     .join(", ")}
                 </p>
                 {a.notes && <p className="text-xs text-ink-soft">{a.notes}</p>}
-                {a.isDefault && <p className="text-xs text-primary">Default</p>}
+                {a.isDefault && <p className="text-xs text-primary">{t.defaultBadge}</p>}
               </div>
               <Button size="sm" variant="ghost" onClick={() => setTarget(a)}>
-                Edit
+                {common.edit}
               </Button>
             </li>
           ))}
@@ -365,7 +507,7 @@ function AddressesSection({
       <Modal
         open={target !== null}
         onClose={() => setTarget(null)}
-        title={target === "new" ? "Add address" : "Edit address"}
+        title={target === "new" ? t.addAddress : t.editAddress}
       >
         {target !== null && (
           <AddressForm
@@ -395,6 +537,8 @@ function AddressForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const t = useT(STRINGS);
+  const common = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const [country, setCountry] = useState(address?.country ?? "EG");
@@ -424,7 +568,7 @@ function AddressForm({
           notes: notes.trim() || null,
           isDefault,
         });
-        toast.success("Address saved.");
+        toast.success(t.addressSaved);
       } else {
         await apiClient.addCustomerAddress(workspaceId, customerId, {
           country: country.trim().toUpperCase(),
@@ -435,7 +579,7 @@ function AddressForm({
           notes: notes.trim() || undefined,
           isDefault,
         });
-        toast.success("Address added.");
+        toast.success(t.addressAdded);
       }
       onDone();
     } catch (err) {
@@ -452,41 +596,41 @@ function AddressForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Country"
+          label={t.country}
           required
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           error={fieldErrors.country}
-          hint="Two-letter code."
+          hint={t.countryHint}
         />
         <TextField
-          label="Province"
+          label={t.province}
           value={province}
           onChange={(e) => setProvince(e.target.value)}
           error={fieldErrors.province}
         />
         <TextField
-          label="City"
+          label={t.city}
           required
           value={city}
           onChange={(e) => setCity(e.target.value)}
           error={fieldErrors.city}
         />
         <TextField
-          label="Postal code"
+          label={t.postalCode}
           value={postalCode}
           onChange={(e) => setPostalCode(e.target.value)}
           error={fieldErrors.postalCode}
         />
       </div>
       <TextField
-        label="Address line"
+        label={t.addressLine}
         required
         value={addressLine}
         onChange={(e) => setAddressLine(e.target.value)}
         error={fieldErrors.addressLine}
       />
-      <Field label="Notes" error={fieldErrors.notes}>
+      <Field label={t.notes} error={fieldErrors.notes}>
         {({ id }) => (
           <Textarea id={id} value={notes} onChange={(e) => setNotes(e.target.value)} />
         )}
@@ -497,17 +641,17 @@ function AddressForm({
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
         />
-        Default address
+        {t.defaultAddress}
       </label>
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {common.cancel}
         </Button>
         <Button
           type="submit"
           disabled={saving || !country.trim() || !city.trim() || !addressLine.trim()}
         >
-          {saving ? "Saving…" : address ? "Save address" : "Add address"}
+          {saving ? common.saving : address ? t.saveAddress : t.addAddress}
         </Button>
       </div>
     </form>

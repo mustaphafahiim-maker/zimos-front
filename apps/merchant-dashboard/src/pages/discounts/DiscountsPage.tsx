@@ -21,6 +21,7 @@ import {
   minorToMajorInput,
   percentToBasisPoints,
 } from "@/lib/format";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -32,11 +33,161 @@ import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { BulkCodesButton } from "./BulkCodesDialog";
 
-const TYPE_LABEL: Record<DiscountType, string> = {
-  percentage: "Percentage off",
-  fixed: "Fixed amount off",
-  free_shipping: "Free shipping",
-  buy_x_get_y: "Buy X get Y",
+const STRINGS = {
+  en: {
+    title: "Discounts",
+    description: "Codes and automatic discounts applied at checkout.",
+    create: "Create discount",
+    empty: "No discounts yet. Create your first one.",
+    code: "Code",
+    type: "Type",
+    value: "Value",
+    status: "Status",
+    usage: "Usage",
+    dates: "Dates",
+    automatic: "Automatic",
+    type_percentage: "Percentage off",
+    type_fixed: "Fixed amount off",
+    type_free_shipping: "Free shipping",
+    type_buy_x_get_y: "Buy X get Y",
+    status_active: "Active",
+    status_disabled: "Disabled",
+    status_archived: "Archived",
+    status_scheduled: "Scheduled",
+    status_expired: "Expired",
+    noDateLimit: "No date limit",
+    dateFrom: "From {date}",
+    dateUntil: "Until {date}",
+    enable: "Enable",
+    disable: "Disable",
+    delete: "Delete",
+    enabledToast: "Discount enabled.",
+    disabledToast: "Discount disabled.",
+    archivedToast: "Discount archived.",
+    archivedCodeToast: '"{code}" archived.',
+    editTitle: "Edit discount",
+    archiveTitle: "Archive this discount?",
+    archiveTitleCode: 'Archive "{code}"?',
+    archiveDescription:
+      "A discount that has been redeemed is financial history, so it's archived rather than deleted — it stops applying at checkout and drops off active reporting.",
+    archiveConfirm: "Archive discount",
+    working: "Working…",
+    cancel: "Cancel",
+    percentInvalid: "Enter a percentage between 0 and 100.",
+    amountInvalid: "Enter a valid amount.",
+    percentTooHigh: "A percentage discount can't exceed 100%.",
+    limitInvalid: "Enter a whole number of 1 or more.",
+    productsRequired: "Select at least one product, or switch to all products.",
+    savedToast: "Discount saved.",
+    createdCodeToast: '"{code}" created.',
+    createdAutomaticToast: "Automatic discount created.",
+    codeHint: "Leave blank for an automatic discount with no code.",
+    generate: "Generate",
+    percentage: "Percentage",
+    percentageHint: "Between 0 and 100.",
+    amountOff: "Amount off",
+    minimumSubtotal: "Minimum subtotal",
+    minimumSubtotalHint: "Optional — the order subtotal must reach this before the discount applies.",
+    startsAt: "Starts at",
+    endsAt: "Ends at",
+    usageLimit: "Usage limit",
+    usageLimitHint: "Total redemptions allowed.",
+    perCustomerLimit: "Per-customer limit",
+    perCustomerLimitHint: "Redemptions allowed per customer.",
+    appliesTo: "Applies to",
+    allProducts: "All products",
+    specificProducts: "Specific products",
+    stackable: "Can be combined with other discounts",
+    saving: "Saving…",
+    save: "Save discount",
+    loading: "Loading",
+    filterProducts: "Filter products…",
+    selectedCount: "{count} selected",
+    noProducts: "No products yet — add one in Catalog first.",
+    noMatch: "No products match.",
+  },
+  ar: {
+    title: "الخصومات",
+    description: "أكواد الخصم والخصومات التلقائية التي تُطبَّق عند إتمام الطلب.",
+    create: "إنشاء خصم",
+    empty: "لا توجد خصومات بعد. أنشئ أول خصم.",
+    code: "الكود",
+    type: "النوع",
+    value: "القيمة",
+    status: "الحالة",
+    usage: "الاستخدام",
+    dates: "الفترة",
+    automatic: "تلقائي",
+    type_percentage: "خصم بنسبة",
+    type_fixed: "خصم بمبلغ ثابت",
+    type_free_shipping: "شحن مجاني",
+    type_buy_x_get_y: "اشترِ X واحصل على Y",
+    status_active: "مفعّل",
+    status_disabled: "متوقف",
+    status_archived: "مؤرشف",
+    status_scheduled: "مجدول",
+    status_expired: "منتهي",
+    noDateLimit: "بدون تاريخ محدد",
+    dateFrom: "من {date}",
+    dateUntil: "حتى {date}",
+    enable: "تفعيل",
+    disable: "إيقاف",
+    delete: "حذف",
+    enabledToast: "تم تفعيل الخصم.",
+    disabledToast: "تم إيقاف الخصم.",
+    archivedToast: "تمت أرشفة الخصم.",
+    archivedCodeToast: "تمت أرشفة «{code}».",
+    editTitle: "تعديل الخصم",
+    archiveTitle: "أرشفة هذا الخصم؟",
+    archiveTitleCode: "أرشفة «{code}»؟",
+    archiveDescription:
+      "الخصم الذي استخدمه العملاء جزء من السجل المالي، لذلك تتم أرشفته وليس حذفه — يتوقف تطبيقه عند إتمام الطلب ولا يظهر بعدها في التقارير النشطة.",
+    archiveConfirm: "أرشفة الخصم",
+    working: "جارٍ الأرشفة…",
+    cancel: "إلغاء",
+    percentInvalid: "أدخل نسبة بين 0 و100.",
+    amountInvalid: "أدخل مبلغًا صحيحًا.",
+    percentTooHigh: "نسبة الخصم لا يمكن أن تزيد عن 100%.",
+    limitInvalid: "أدخل رقمًا صحيحًا، 1 أو أكثر.",
+    productsRequired: "اختر منتجًا واحدًا على الأقل، أو اختر «كل المنتجات».",
+    savedToast: "تم حفظ الخصم.",
+    createdCodeToast: "تم إنشاء «{code}».",
+    createdAutomaticToast: "تم إنشاء خصم تلقائي.",
+    codeHint: "اتركه فارغًا لإنشاء خصم تلقائي بدون كود.",
+    generate: "توليد",
+    percentage: "النسبة",
+    percentageHint: "بين 0 و100.",
+    amountOff: "مبلغ الخصم",
+    minimumSubtotal: "الحد الأدنى للطلب",
+    minimumSubtotalHint: "اختياري — يجب أن يصل المجموع الفرعي للطلب إلى هذا المبلغ حتى يُطبَّق الخصم.",
+    startsAt: "تاريخ البداية",
+    endsAt: "تاريخ النهاية",
+    usageLimit: "حد الاستخدام",
+    usageLimitHint: "إجمالي عدد مرات الاستخدام المسموح بها.",
+    perCustomerLimit: "الحد لكل عميل",
+    perCustomerLimitHint: "عدد مرات الاستخدام المسموح بها لكل عميل.",
+    appliesTo: "يُطبَّق على",
+    allProducts: "كل المنتجات",
+    specificProducts: "منتجات محددة",
+    stackable: "يمكن استخدامه مع خصومات أخرى",
+    saving: "جارٍ الحفظ…",
+    save: "حفظ الخصم",
+    loading: "جارٍ التحميل",
+    filterProducts: "ابحث في المنتجات…",
+    selectedCount: "تم تحديد {count}",
+    noProducts: "لا توجد منتجات بعد — أضف منتجًا من صفحة المنتجات أولًا.",
+    noMatch: "لا توجد منتجات مطابقة.",
+  },
+} satisfies Messages;
+
+type Strings = (typeof STRINGS)["en"];
+
+/** Discount type -> its label key in STRINGS. */
+const TYPE_LABEL: Record<DiscountType, keyof Strings> = {
+  percentage: "type_percentage",
+  fixed: "type_fixed",
+  free_shipping: "type_free_shipping",
+  buy_x_get_y: "type_buy_x_get_y",
 };
 
 /** Value column: percent for %, money for fixed, a plain caption otherwise. */
@@ -66,10 +217,10 @@ function displayStatus(d: Discount): DisplayStatus {
   return "active";
 }
 
-function dateRangeLabel(d: Discount): string {
-  if (!d.startsAt && !d.endsAt) return "No date limit";
-  if (d.startsAt && !d.endsAt) return `From ${formatDate(d.startsAt)}`;
-  if (!d.startsAt && d.endsAt) return `Until ${formatDate(d.endsAt)}`;
+function dateRangeLabel(d: Discount, t: Strings): string {
+  if (!d.startsAt && !d.endsAt) return t.noDateLimit;
+  if (d.startsAt && !d.endsAt) return fmt(t.dateFrom, { date: formatDate(d.startsAt) });
+  if (!d.startsAt && d.endsAt) return fmt(t.dateUntil, { date: formatDate(d.endsAt) });
   return `${formatDate(d.startsAt)} – ${formatDate(d.endsAt)}`;
 }
 
@@ -84,6 +235,7 @@ function generateCode(): string {
 }
 
 export function DiscountsPage() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const list = useAsync(() => apiClient.listDiscounts(workspaceId), [workspaceId]);
@@ -99,7 +251,7 @@ export function DiscountsPage() {
     const next = d.status === "active" ? "disabled" : "active";
     try {
       await apiClient.setDiscountStatus(workspaceId, d.id, next);
-      toast.success(next === "active" ? "Discount enabled." : "Discount disabled.");
+      toast.success(next === "active" ? t.enabledToast : t.disabledToast);
       reload();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -109,7 +261,7 @@ export function DiscountsPage() {
   async function confirmDelete() {
     if (!deleting) return;
     await apiClient.deleteDiscount(workspaceId, deleting.id);
-    toast.success(deleting.code ? `"${deleting.code}" archived.` : "Discount archived.");
+    toast.success(deleting.code ? fmt(t.archivedCodeToast, { code: deleting.code }) : t.archivedToast);
     setDeleting(null);
     reload();
   }
@@ -117,12 +269,12 @@ export function DiscountsPage() {
   return (
     <div className="max-w-5xl">
       <PageHeader
-        title="Discounts"
-        description="Codes and automatic discounts applied at checkout."
+        title={t.title}
+        description={t.description}
         actions={
           <>
             <BulkCodesButton onGenerated={reload} />
-            <Button onClick={() => setFormTarget("new")}>Create discount</Button>
+            <Button onClick={() => setFormTarget("new")}>{t.create}</Button>
           </>
         }
       />
@@ -131,19 +283,19 @@ export function DiscountsPage() {
         loading={list.loading}
         error={list.error}
         empty={discounts.length === 0}
-        emptyMessage="No discounts yet. Create your first one."
+        emptyMessage={t.empty}
         onRetry={() => list.refresh()}
       >
         <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Value</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Usage</th>
-                <th className="px-4 py-3 font-medium">Dates</th>
+                <th className="px-4 py-3 font-medium">{t.code}</th>
+                <th className="px-4 py-3 font-medium">{t.type}</th>
+                <th className="px-4 py-3 font-medium">{t.value}</th>
+                <th className="px-4 py-3 font-medium">{t.status}</th>
+                <th className="px-4 py-3 font-medium">{t.usage}</th>
+                <th className="px-4 py-3 font-medium">{t.dates}</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -158,26 +310,26 @@ export function DiscountsPage() {
                     {d.code ? (
                       <span className="font-medium text-ink">{d.code}</span>
                     ) : (
-                      <span className="text-ink-soft">Automatic</span>
+                      <span className="text-ink-soft">{t.automatic}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-ink-soft">{TYPE_LABEL[d.type]}</td>
+                  <td className="px-4 py-3 text-ink-soft">{t[TYPE_LABEL[d.type]]}</td>
                   <td className="px-4 py-3 text-ink-soft">{discountValueLabel(d)}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge value={displayStatus(d)} />
+                    <StatusBadge value={displayStatus(d)} text={t[`status_${displayStatus(d)}`]} />
                   </td>
                   <td className="px-4 py-3 text-ink-soft">
                     {d.usageCount}
                     {d.usageLimit != null ? ` / ${d.usageLimit}` : ""}
                   </td>
-                  <td className="px-4 py-3 text-ink-soft">{dateRangeLabel(d)}</td>
+                  <td className="px-4 py-3 text-ink-soft">{dateRangeLabel(d, t)}</td>
                   <td
                     className="whitespace-nowrap px-4 py-3 text-end"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {d.status !== "archived" && (
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(d)}>
-                        {d.status === "active" ? "Disable" : "Enable"}
+                        {d.status === "active" ? t.disable : t.enable}
                       </Button>
                     )}
                     <Button
@@ -186,7 +338,7 @@ export function DiscountsPage() {
                       className="text-danger hover:bg-danger-soft"
                       onClick={() => setDeleting(d)}
                     >
-                      Delete
+                      {t.delete}
                     </Button>
                   </td>
                 </tr>
@@ -199,7 +351,7 @@ export function DiscountsPage() {
       <Modal
         open={formTarget !== null}
         onClose={() => setFormTarget(null)}
-        title={formTarget === "new" ? "Create discount" : "Edit discount"}
+        title={formTarget === "new" ? t.create : t.editTitle}
       >
         {formTarget !== null && (
           <DiscountForm
@@ -216,9 +368,11 @@ export function DiscountsPage() {
 
       <ConfirmDialog
         open={deleting !== null}
-        title={deleting?.code ? `Archive "${deleting.code}"?` : "Archive this discount?"}
-        description="A discount that has been redeemed is financial history, so it's archived rather than deleted — it stops applying at checkout and drops off active reporting."
-        confirmLabel="Archive discount"
+        title={deleting?.code ? fmt(t.archiveTitleCode, { code: deleting.code }) : t.archiveTitle}
+        description={t.archiveDescription}
+        confirmLabel={t.archiveConfirm}
+        cancelLabel={t.cancel}
+        busyLabel={t.working}
         destructive
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
@@ -236,6 +390,7 @@ function DiscountForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const isEdit = Boolean(discount);
@@ -280,12 +435,12 @@ function DiscountForm({
       if (!Number.isFinite(valueNum) || valueNum < 0) {
         setFieldErrors({
           value:
-            type === "percentage" ? "Enter a percentage between 0 and 100." : "Enter a valid amount.",
+            type === "percentage" ? t.percentInvalid : t.amountInvalid,
         });
         return;
       }
       if (type === "percentage" && valueNum > 10000) {
-        setFieldErrors({ value: "A percentage discount can't exceed 100%." });
+        setFieldErrors({ value: t.percentTooHigh });
         return;
       }
     }
@@ -294,7 +449,7 @@ function DiscountForm({
     if (minimumSubtotal.trim() !== "") {
       minSubtotalNum = majorToMinor(minimumSubtotal);
       if (!Number.isFinite(minSubtotalNum) || minSubtotalNum < 0) {
-        setFieldErrors({ minimumSubtotal: "Enter a valid amount." });
+        setFieldErrors({ minimumSubtotal: t.amountInvalid });
         return;
       }
     }
@@ -303,7 +458,7 @@ function DiscountForm({
     if (usageLimit.trim() !== "") {
       usageLimitNum = Math.floor(Number(usageLimit));
       if (!Number.isFinite(usageLimitNum) || usageLimitNum < 1) {
-        setFieldErrors({ usageLimit: "Enter a whole number of 1 or more." });
+        setFieldErrors({ usageLimit: t.limitInvalid });
         return;
       }
     }
@@ -312,13 +467,13 @@ function DiscountForm({
     if (perCustomerLimit.trim() !== "") {
       perCustomerNum = Math.floor(Number(perCustomerLimit));
       if (!Number.isFinite(perCustomerNum) || perCustomerNum < 1) {
-        setFieldErrors({ perCustomerLimit: "Enter a whole number of 1 or more." });
+        setFieldErrors({ perCustomerLimit: t.limitInvalid });
         return;
       }
     }
 
     if (productScope === "products" && productIds.length === 0) {
-      setFieldErrors({ productRestrictions: "Select at least one product, or switch to all products." });
+      setFieldErrors({ productRestrictions: t.productsRequired });
       return;
     }
 
@@ -341,7 +496,7 @@ function DiscountForm({
           stackable,
         };
         await apiClient.updateDiscount(workspaceId, discount.id, payload);
-        toast.success("Discount saved.");
+        toast.success(t.savedToast);
       } else {
         const payload: CreateDiscountPayload = { type, stackable, productRestrictions: restrictions };
         if (codeValue) payload.code = codeValue;
@@ -352,7 +507,7 @@ function DiscountForm({
         if (usageLimitNum != null) payload.usageLimit = usageLimitNum;
         if (perCustomerNum != null) payload.perCustomerLimit = perCustomerNum;
         await apiClient.createDiscount(workspaceId, payload);
-        toast.success(codeValue ? `"${codeValue}" created.` : "Automatic discount created.");
+        toast.success(codeValue ? fmt(t.createdCodeToast, { code: codeValue }) : t.createdAutomaticToast);
       }
       onDone();
     } catch (err) {
@@ -369,9 +524,9 @@ function DiscountForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <Field
-        label="Code"
+        label={t.code}
         error={fieldErrors.code}
-        hint="Leave blank for an automatic discount with no code."
+        hint={t.codeHint}
       >
         {({ id, ...aria }) => (
           <div className="flex gap-2">
@@ -384,18 +539,18 @@ function DiscountForm({
               className={fieldErrors.code ? "border-danger focus-visible:ring-danger/30" : undefined}
             />
             <Button type="button" variant="outline" onClick={() => setCode(generateCode())}>
-              Generate
+              {t.generate}
             </Button>
           </div>
         )}
       </Field>
 
-      <Field label="Type" error={fieldErrors.type}>
+      <Field label={t.type} error={fieldErrors.type}>
         {({ id }) => (
           <Select id={id} value={type} onChange={(e) => setType(e.target.value as DiscountType)}>
-            {(Object.keys(TYPE_LABEL) as DiscountType[]).map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABEL[t]}
+            {(Object.keys(TYPE_LABEL) as DiscountType[]).map((opt) => (
+              <option key={opt} value={opt}>
+                {t[TYPE_LABEL[opt]]}
               </option>
             ))}
           </Select>
@@ -403,7 +558,7 @@ function DiscountForm({
       </Field>
 
       {type === "percentage" && (
-        <Field label="Percentage" required error={fieldErrors.value} hint="Between 0 and 100.">
+        <Field label={t.percentage} required error={fieldErrors.value} hint={t.percentageHint}>
           {({ id, ...aria }) => (
             <div className="relative">
               <Input
@@ -427,7 +582,7 @@ function DiscountForm({
 
       {type === "fixed" && (
         <MoneyInput
-          label="Amount off"
+          label={t.amountOff}
           required
           value={value}
           onChange={setValue}
@@ -436,15 +591,15 @@ function DiscountForm({
       )}
 
       <MoneyInput
-        label="Minimum subtotal"
+        label={t.minimumSubtotal}
         value={minimumSubtotal}
         onChange={setMinimumSubtotal}
         error={fieldErrors.minimumSubtotal}
-        hint="Optional — the order subtotal must reach this before the discount applies."
+        hint={t.minimumSubtotalHint}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Starts at" error={fieldErrors.startsAt}>
+        <Field label={t.startsAt} error={fieldErrors.startsAt}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -455,7 +610,7 @@ function DiscountForm({
             />
           )}
         </Field>
-        <Field label="Ends at" error={fieldErrors.endsAt}>
+        <Field label={t.endsAt} error={fieldErrors.endsAt}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -469,7 +624,7 @@ function DiscountForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Usage limit" error={fieldErrors.usageLimit} hint="Total redemptions allowed.">
+        <Field label={t.usageLimit} error={fieldErrors.usageLimit} hint={t.usageLimitHint}>
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -482,9 +637,9 @@ function DiscountForm({
           )}
         </Field>
         <Field
-          label="Per-customer limit"
+          label={t.perCustomerLimit}
           error={fieldErrors.perCustomerLimit}
-          hint="Redemptions allowed per customer."
+          hint={t.perCustomerLimitHint}
         >
           {({ id, ...aria }) => (
             <Input
@@ -500,7 +655,7 @@ function DiscountForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Applies to</Label>
+        <Label>{t.appliesTo}</Label>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-ink">
             <input
@@ -509,7 +664,7 @@ function DiscountForm({
               checked={productScope === "all"}
               onChange={() => setProductScope("all")}
             />
-            All products
+            {t.allProducts}
           </label>
           <label className="flex items-center gap-2 text-sm text-ink">
             <input
@@ -518,7 +673,7 @@ function DiscountForm({
               checked={productScope === "products"}
               onChange={() => setProductScope("products")}
             />
-            Specific products
+            {t.specificProducts}
           </label>
           {productScope === "products" && (
             <ProductScopePicker selected={productIds} onChange={setProductIds} />
@@ -535,15 +690,15 @@ function DiscountForm({
           checked={stackable}
           onChange={(e) => setStackable(e.target.checked)}
         />
-        Can be combined with other discounts
+        {t.stackable}
       </label>
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
+          {t.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : isEdit ? "Save discount" : "Create discount"}
+          {saving ? t.saving : isEdit ? t.save : t.create}
         </Button>
       </div>
     </form>
@@ -561,6 +716,7 @@ function ProductScopePicker({
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const products = useAsync(
     () => apiClient.listProducts(workspaceId, { limit: 200 }).then((r) => r.products),
@@ -581,7 +737,7 @@ function ProductScopePicker({
     onChange(selectedSet.has(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   }
 
-  if (products.loading) return <Spinner className="size-4" />;
+  if (products.loading) return <Spinner className="size-4" aria-label={t.loading} />;
   if (products.error) return <p className="text-sm text-danger">{getErrorMessage(products.error)}</p>;
 
   return (
@@ -590,14 +746,14 @@ function ProductScopePicker({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter products…"
+          placeholder={t.filterProducts}
           className="max-w-xs"
         />
-        <span className="whitespace-nowrap text-xs text-ink-soft">{selected.length} selected</span>
+        <span className="whitespace-nowrap text-xs text-ink-soft">{fmt(t.selectedCount, { count: selected.length })}</span>
       </div>
       {filtered.length === 0 ? (
         <p className="text-sm text-ink-soft">
-          {all.length === 0 ? "No products yet — add one in Catalog first." : "No products match."}
+          {all.length === 0 ? t.noProducts : t.noMatch}
         </p>
       ) : (
         <div className="max-h-48 space-y-1 overflow-y-auto">

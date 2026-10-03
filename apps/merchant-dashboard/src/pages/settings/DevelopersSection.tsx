@@ -137,6 +137,14 @@ const STRINGS = {
     status_delivered: "Delivered",
     status_failed: "Retrying",
     status_exhausted: "Gave up",
+    // The status word a badge shows after its caption.
+    badge_revoked: "Revoked",
+    badge_active: "Active",
+    badge_inactive: "Inactive",
+    badge_pending: "Pending",
+    badge_delivered: "Delivered",
+    badge_failed: "Failed",
+    badge_exhausted: "Exhausted",
   },
   ar: {
     title: "المطوّرين",
@@ -219,6 +227,13 @@ const STRINGS = {
     status_delivered: "وصل",
     status_failed: "بيتعاد",
     status_exhausted: "وقفنا المحاولة",
+    badge_revoked: "ملغي",
+    badge_active: "شغال",
+    badge_inactive: "متوقف",
+    badge_pending: "في الانتظار",
+    badge_delivered: "وصل",
+    badge_failed: "فشل",
+    badge_exhausted: "المحاولات خلصت",
   },
 } satisfies Messages;
 
@@ -340,7 +355,7 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                   </p>
                 </div>
                 {key.revokedAt ? (
-                  <StatusBadge value="revoked" tone="neutral" label={t.revoked} />
+                  <StatusBadge value="revoked" tone="neutral" label={t.revoked} text={t.badge_revoked} />
                 ) : (
                   <Button size="sm" variant="outline" onClick={() => setRevoking(key)}>
                     {t.revoke}
@@ -554,6 +569,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                   <StatusBadge
                     value={endpoint.isActive ? "active" : "inactive"}
                     label={endpoint.isActive ? t.active : t.paused}
+                    text={endpoint.isActive ? t.badge_active : t.badge_inactive}
                   />
                 </div>
                 <p className="text-xs text-ink-soft">
@@ -831,6 +847,7 @@ function DeliveriesModal({ t, endpoint, onClose }: { t: T; endpoint: WebhookEndp
                   value={delivery.status}
                   tone={DELIVERY_TONE[delivery.status]}
                   label={t[`status_${delivery.status}`]}
+                  text={t[`badge_${delivery.status}`]}
                 />
                 <span className="ms-auto text-xs text-ink-soft">{when(delivery.createdAt)}</span>
               </div>

@@ -77,6 +77,7 @@ const STRINGS = {
     payStarting: "A payment is already being opened. Wait a moment and try again.",
     nothingToPay: "Nothing is due right now.",
     chargeSettled: "This charge was settled in the meantime. Reload the page.",
+    noCheckout: "no checkout",
   },
   ar: {
     title: "الخطة وكود الإحالة",
@@ -134,6 +135,7 @@ const STRINGS = {
     payStarting: "هناك عملية دفع يجري فتحها بالفعل. انتظر لحظة ثم حاول مرة أخرى.",
     nothingToPay: "لا يوجد مبلغ مستحق حاليًا.",
     chargeSettled: "تمت تسوية هذه الدفعة في الأثناء. أعد تحميل الصفحة.",
+    noCheckout: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد بضع دقائق.",
   },
 } satisfies Messages;
 
@@ -312,7 +314,7 @@ function OnlinePaymentPanel({ billing }: { billing: WorkspaceBilling }) {
     setError(null);
     try {
       const { payment } = await apiClient.startOnlinePayment(workspaceId, locale);
-      if (!payment.checkoutUrl) throw new Error("no checkout");
+      if (!payment.checkoutUrl) throw new Error(t.noCheckout);
       window.location.assign(payment.checkoutUrl);
     } catch (err) {
       setError(

@@ -28,6 +28,7 @@ import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { BillingSection } from "./BillingSection";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { WhatsappSection } from "./WhatsappSection";
@@ -39,6 +40,133 @@ import { TeamInviteForm } from "./TeamInviteForm";
 import { DevelopersSection } from "./DevelopersSection";
 import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 import { OrderEmailsSection } from "./OrderEmailsSection";
+
+const STRINGS = {
+  en: {
+    pageTitle: "Settings",
+    pageDescription: "Your store profile and the people who can manage it.",
+    // Store profile
+    profileTitle: "Store profile",
+    profileDescription: "The name, logo, and tagline shown across your dashboard and storefront.",
+    profileSaved: "Store profile saved.",
+    name: "Name",
+    logo: "Logo",
+    logoAlt: "Store logo",
+    logoNone: "None",
+    logoResizing: "Resizing…",
+    logoUploading: "Uploading…",
+    logoUpload: "Upload logo",
+    logoFormats: "PNG, JPEG, GIF or WEBP, up to 5MB.",
+    remove: "Remove",
+    tagline: "Tagline",
+    taglineHint: "Optional — a short line shown under your store name.",
+    coloursTitle: "Store colours",
+    coloursHint: "Used for your storefront header, buttons and links.",
+    primary: "Primary",
+    primaryHint: "Buttons, links and highlights.",
+    secondary: "Secondary",
+    secondaryHint: "Accents and badges.",
+    preview: "Preview",
+    previewAddToCart: "Add to cart",
+    previewSale: "Sale",
+    previewDetails: "View details",
+    save: "Save",
+    saving: "Saving…",
+    // Team members
+    teamTitle: "Team members",
+    teamDescription: "People who can sign in to this store, and the role that sets what they can do.",
+    inviteMember: "Invite member",
+    inviteDescription: "They'll get an email with a link to join this store.",
+    member: "Member",
+    role: "Role",
+    email: "Email",
+    you: "(you)",
+    roleFor: "Role for {who}",
+    roleForFallback: "member",
+    cantRemoveSelf: "You can't remove yourself",
+    pendingInvites: "Pending invites",
+    invited: "Invited",
+    resend: "Resend",
+    roleUpdated: "Role updated.",
+    inviteResent: "Invite re-sent to {email}.",
+    memberRemoved: "Member removed.",
+    removeTitle: "Remove {name}?",
+    removeTitleFallback: "Remove this member?",
+    removeDescription: "They lose access to this store immediately. You can invite them again later.",
+    removeConfirm: "Remove member",
+    cancel: "Cancel",
+    working: "Working…",
+    // The built-in roles, by role key (the names the server gives them). A role
+    // made for one store has no entry here and keeps the name it was given.
+    role_owner: "Owner",
+    role_workspace_manager: "Workspace Manager",
+    role_editor: "Editor",
+    role_order_operator: "Order Operator",
+    role_confirmation_agent: "Confirmation Agent",
+    role_fulfillment: "Fulfillment",
+    role_accountant: "Accountant",
+  },
+  ar: {
+    pageTitle: "الإعدادات",
+    pageDescription: "بيانات متجرك والأشخاص الذين يمكنهم إدارته.",
+    profileTitle: "بيانات المتجر",
+    profileDescription: "اسم المتجر وشعاره وشعاره النصي كما تظهر في لوحة التحكم والمتجر.",
+    profileSaved: "تم حفظ بيانات المتجر.",
+    name: "الاسم",
+    logo: "الشعار",
+    logoAlt: "شعار المتجر",
+    logoNone: "لا يوجد",
+    logoResizing: "جارٍ تصغير الصورة…",
+    logoUploading: "جارٍ الرفع…",
+    logoUpload: "رفع الشعار",
+    logoFormats: "PNG أو JPEG أو GIF أو WEBP، بحد أقصى 5 ميجابايت.",
+    remove: "إزالة",
+    tagline: "الشعار النصي",
+    taglineHint: "اختياري — سطر قصير يظهر تحت اسم متجرك.",
+    coloursTitle: "ألوان المتجر",
+    coloursHint: "تُستخدم في الشريط العلوي والأزرار والروابط في متجرك.",
+    primary: "اللون الأساسي",
+    primaryHint: "الأزرار والروابط والعناصر البارزة.",
+    secondary: "اللون الثانوي",
+    secondaryHint: "عناصر التمييز والشارات.",
+    preview: "معاينة",
+    previewAddToCart: "أضف إلى السلة",
+    previewSale: "تخفيض",
+    previewDetails: "عرض التفاصيل",
+    save: "حفظ",
+    saving: "جارٍ الحفظ…",
+    teamTitle: "أعضاء الفريق",
+    teamDescription: "الأشخاص الذين يمكنهم الدخول إلى هذا المتجر، والدور الذي يحدد ما يمكنهم فعله.",
+    inviteMember: "دعوة عضو",
+    inviteDescription: "ستصله رسالة على بريده الإلكتروني فيها رابط للانضمام إلى هذا المتجر.",
+    member: "العضو",
+    role: "الدور",
+    email: "البريد الإلكتروني",
+    you: "(أنت)",
+    roleFor: "دور {who}",
+    roleForFallback: "العضو",
+    cantRemoveSelf: "لا يمكنك إزالة نفسك",
+    pendingInvites: "دعوات في انتظار القبول",
+    invited: "مدعو",
+    resend: "إعادة الإرسال",
+    roleUpdated: "تم تحديث الدور.",
+    inviteResent: "تمت إعادة إرسال الدعوة إلى {email}.",
+    memberRemoved: "تمت إزالة العضو.",
+    removeTitle: "إزالة {name}؟",
+    removeTitleFallback: "إزالة هذا العضو؟",
+    removeDescription: "سيفقد إمكانية الدخول إلى هذا المتجر فورًا. يمكنك دعوته مرة أخرى لاحقًا.",
+    removeConfirm: "إزالة العضو",
+    cancel: "إلغاء",
+    working: "جارٍ التنفيذ…",
+    role_owner: "مالك المتجر",
+    role_workspace_manager: "مدير مساحة العمل",
+    role_editor: "محرر",
+    role_order_operator: "مسؤول الطلبات",
+    role_confirmation_agent: "موظف التأكيد",
+    role_fulfillment: "موظف الشحن",
+    role_accountant: "محاسب",
+  },
+} satisfies Messages;
 
 /**
  * A link that names one of the user's stores (?workspace=<id>, as on the way
@@ -55,14 +183,15 @@ function useStoreFromLink() {
 }
 
 export function SettingsPage() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   useStoreFromLink();
 
   return (
     <div className="max-w-3xl space-y-10">
       <PageHeader
-        title="Settings"
-        description="Your store profile and the people who can manage it."
+        title={t.pageTitle}
+        description={t.pageDescription}
       />
       <AccountSection />
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
@@ -87,6 +216,7 @@ export function SettingsPage() {
 // ---------------------------------------------------------------------
 
 function WorkspaceProfileSection() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
   const saveThemeSettings = useSaveThemeSettings();
@@ -156,7 +286,7 @@ function WorkspaceProfileSection() {
         if (secondary !== initialColors.secondary) themeSettings.secondaryColor = secondary;
         return { name: name.trim(), tagline: tagline.trim() || null, logoUrl, themeSettings };
       });
-      toast.success("Store profile saved.");
+      toast.success(t.profileSaved);
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
@@ -168,16 +298,16 @@ function WorkspaceProfileSection() {
 
   return (
     <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">Store profile</h2>
+      <h2 className="font-display text-lg font-medium text-ink">{t.profileTitle}</h2>
       <p className="mt-1 text-sm text-ink-soft">
-        The name, logo, and tagline shown across your dashboard and storefront.
+        {t.profileDescription}
       </p>
 
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
         <TextField
-          label="Name"
+          label={t.name}
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -185,17 +315,17 @@ function WorkspaceProfileSection() {
         />
 
         <div className="space-y-1.5">
-          <Label>Logo</Label>
+          <Label>{t.logo}</Label>
           <div className="flex flex-wrap items-center gap-4">
             {logoUrl ? (
               <img
                 src={logoUrl}
-                alt="Store logo"
+                alt={t.logoAlt}
                 className="size-16 rounded-[0.5rem] border border-line bg-paper object-contain"
               />
             ) : (
               <div className="flex size-16 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-xs text-ink-soft">
-                None
+                {t.logoNone}
               </div>
             )}
             <label
@@ -204,7 +334,7 @@ function WorkspaceProfileSection() {
                 uploading && "pointer-events-none opacity-50"
               )}
             >
-              {logoStage === "preparing" ? "Resizing…" : logoStage === "uploading" ? "Uploading…" : "Upload logo"}
+              {logoStage === "preparing" ? t.logoResizing : logoStage === "uploading" ? t.logoUploading : t.logoUpload}
               <input
                 type="file"
                 accept={ACCEPTED_IMAGE_ACCEPT}
@@ -215,46 +345,46 @@ function WorkspaceProfileSection() {
             </label>
             {logoUrl && (
               <Button type="button" variant="ghost" size="sm" onClick={() => setLogoUrl(null)}>
-                Remove
+                {t.remove}
               </Button>
             )}
           </div>
-          <p className="text-xs text-ink-soft">PNG, JPEG, GIF or WEBP, up to 5MB.</p>
+          <p className="text-xs text-ink-soft">{t.logoFormats}</p>
         </div>
 
         <TextField
-          label="Tagline"
+          label={t.tagline}
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
           error={fieldErrors.tagline}
-          hint="Optional — a short line shown under your store name."
+          hint={t.taglineHint}
         />
 
         <div className="space-y-4 rounded-[0.5rem] border border-line p-4">
           <div>
-            <h3 className="text-sm font-medium text-ink">Store colours</h3>
+            <h3 className="text-sm font-medium text-ink">{t.coloursTitle}</h3>
             <p className="mt-0.5 text-xs text-ink-soft">
-              Used for your storefront header, buttons and links.
+              {t.coloursHint}
             </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
             <ColorField
-              label="Primary"
-              hint="Buttons, links and highlights."
+              label={t.primary}
+              hint={t.primaryHint}
               value={primaryColor}
               onChange={setPrimaryColor}
             />
             <ColorField
-              label="Secondary"
-              hint="Accents and badges."
+              label={t.secondary}
+              hint={t.secondaryHint}
               value={secondaryColor}
               onChange={setSecondaryColor}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Preview</Label>
+            <Label>{t.preview}</Label>
             <div
               className="flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-line p-3"
               style={{ backgroundColor: `${normalizeHex(primaryColor) ?? DEFAULT_PRIMARY}14` }}
@@ -263,19 +393,19 @@ function WorkspaceProfileSection() {
                 className="rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-white"
                 style={{ backgroundColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
               >
-                Add to cart
+                {t.previewAddToCart}
               </span>
               <span
                 className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
                 style={{ backgroundColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY }}
               >
-                Sale
+                {t.previewSale}
               </span>
               <span
                 className="text-sm font-medium"
                 style={{ color: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
               >
-                View details
+                {t.previewDetails}
               </span>
             </div>
           </div>
@@ -283,7 +413,7 @@ function WorkspaceProfileSection() {
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving || uploading || !name.trim() || !colorsValid}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t.saving : t.save}
           </Button>
         </div>
       </form>
@@ -296,9 +426,11 @@ function WorkspaceProfileSection() {
 // ---------------------------------------------------------------------
 
 function TeamSection() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const { user } = useAuth();
   const toast = useToast();
+  const roleName = (role: { key: string; name: string }) => (t as Record<string, string>)[`role_${role.key}`] ?? role.name;
 
   const data = useAsync(
     () =>
@@ -321,7 +453,7 @@ function TeamSection() {
   async function changeRole(member: WorkspaceMember, roleId: string) {
     try {
       await apiClient.updateMemberRole(workspaceId, member.id, roleId);
-      toast.success("Role updated.");
+      toast.success(t.roleUpdated);
       reload();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -331,7 +463,7 @@ function TeamSection() {
   async function resend(invite: WorkspaceInvite) {
     try {
       await apiClient.resendInvite(workspaceId, invite.id);
-      toast.success(`Invite re-sent to ${invite.invitedEmail}.`);
+      toast.success(fmt(t.inviteResent, { email: String(invite.invitedEmail) }));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -340,7 +472,7 @@ function TeamSection() {
   async function confirmRemove() {
     if (!removing) return;
     await apiClient.removeMember(workspaceId, removing.id);
-    toast.success("Member removed.");
+    toast.success(t.memberRemoved);
     setRemoving(null);
     reload();
   }
@@ -349,13 +481,13 @@ function TeamSection() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-medium text-ink">Team members</h2>
+          <h2 className="font-display text-lg font-medium text-ink">{t.teamTitle}</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            People who can sign in to this store, and the role that sets what they can do.
+            {t.teamDescription}
           </p>
         </div>
         <Button onClick={() => setInviting(true)} disabled={roles.length === 0}>
-          Invite member
+          {t.inviteMember}
         </Button>
       </div>
 
@@ -365,8 +497,8 @@ function TeamSection() {
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 font-medium">Member</th>
-                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">{t.member}</th>
+                  <th className="px-4 py-3 font-medium">{t.role}</th>
                   <th className="px-4 py-3 font-medium" />
                 </tr>
               </thead>
@@ -379,7 +511,7 @@ function TeamSection() {
                         <div className="font-medium text-ink">
                           {member.user?.fullName || member.user?.email || "—"}
                           {isSelf && (
-                            <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
+                            <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
                           )}
                         </div>
                         {member.user?.email && (
@@ -388,17 +520,17 @@ function TeamSection() {
                       </td>
                       <td className="px-4 py-3">
                         {isSelf ? (
-                          <span className="text-ink-soft">{member.role.name}</span>
+                          <span className="text-ink-soft">{roleName(member.role)}</span>
                         ) : (
                           <Select
-                            aria-label={`Role for ${member.user?.email ?? "member"}`}
+                            aria-label={fmt(t.roleFor, { who: member.user?.email ?? t.roleForFallback })}
                             value={member.role.id}
                             onChange={(e) => changeRole(member, e.target.value)}
                             className="max-w-[220px]"
                           >
                             {roles.map((role) => (
                               <option key={role.id} value={role.id}>
-                                {role.name}
+                                {roleName(role)}
                               </option>
                             ))}
                           </Select>
@@ -408,7 +540,7 @@ function TeamSection() {
                         {isSelf ? (
                           <span
                             className="text-xs text-ink-soft"
-                            title="You can't remove yourself"
+                            title={t.cantRemoveSelf}
                           >
                             —
                           </span>
@@ -419,7 +551,7 @@ function TeamSection() {
                             className="text-danger hover:bg-danger-soft"
                             onClick={() => setRemoving(member)}
                           >
-                            Remove
+                            {t.remove}
                           </Button>
                         )}
                       </td>
@@ -432,13 +564,13 @@ function TeamSection() {
 
           {invites.length > 0 && (
             <div>
-              <h3 className="mb-2 text-sm font-medium text-ink">Pending invites</h3>
+              <h3 className="mb-2 text-sm font-medium text-ink">{t.pendingInvites}</h3>
               <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead>
                     <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
+                      <th className="px-4 py-3 font-medium">{t.email}</th>
+                      <th className="px-4 py-3 font-medium">{t.role}</th>
                       <th className="px-4 py-3 font-medium" />
                     </tr>
                   </thead>
@@ -448,13 +580,13 @@ function TeamSection() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="text-ink">{invite.invitedEmail}</span>
-                            <StatusBadge value="invited" tone="warning" />
+                            <StatusBadge value="invited" tone="warning" text={t.invited} />
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-ink-soft">{invite.role.name}</td>
+                        <td className="px-4 py-3 text-ink-soft">{roleName(invite.role)}</td>
                         <td className="px-4 py-3 text-end">
                           <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
-                            Resend
+                            {t.resend}
                           </Button>
                         </td>
                       </tr>
@@ -470,8 +602,8 @@ function TeamSection() {
       <Modal
         open={inviting}
         onClose={() => setInviting(false)}
-        title="Invite member"
-        description="They'll get an email with a link to join this store."
+        title={t.inviteMember}
+        description={t.inviteDescription}
       >
         <TeamInviteForm
           onCancel={() => setInviting(false)}
@@ -486,11 +618,13 @@ function TeamSection() {
         open={removing !== null}
         title={
           removing?.user
-            ? `Remove ${removing.user.fullName || removing.user.email}?`
-            : "Remove this member?"
+            ? fmt(t.removeTitle, { name: removing.user.fullName || removing.user.email })
+            : t.removeTitleFallback
         }
-        description="They lose access to this store immediately. You can invite them again later."
-        confirmLabel="Remove member"
+        description={t.removeDescription}
+        confirmLabel={t.removeConfirm}
+        cancelLabel={t.cancel}
+        busyLabel={t.working}
         destructive
         onCancel={() => setRemoving(null)}
         onConfirm={confirmRemove}

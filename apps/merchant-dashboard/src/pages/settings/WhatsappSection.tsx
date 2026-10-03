@@ -71,6 +71,7 @@ const STRINGS = {
     disconnectDescription:
       "You won't be able to send or receive WhatsApp messages until you connect again. Your saved conversations stay.",
     disconnected: "WhatsApp disconnected.",
+    working: "Working…",
   },
   ar: {
     waTitle: "واتساب Cloud API",
@@ -126,6 +127,7 @@ const STRINGS = {
     disconnectDescription:
       "مش هتقدر تبعت أو تستقبل رسايل واتساب لحد ما تربط تاني. المحادثات القديمة هتفضل موجودة.",
     disconnected: "واتساب اتفصل.",
+    working: "جارٍ التنفيذ…",
   },
 } satisfies Messages;
 
@@ -199,6 +201,8 @@ export function WhatsappSection() {
         title={t.disconnectTitle}
         description={t.disconnectDescription}
         confirmLabel={t.disconnect}
+        cancelLabel={t.cancelReconnect}
+        busyLabel={t.working}
         destructive
         onCancel={() => setConfirmDisconnect(false)}
         onConfirm={disconnect}
