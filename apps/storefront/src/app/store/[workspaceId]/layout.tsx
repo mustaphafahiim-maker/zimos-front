@@ -10,6 +10,7 @@ import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
+import { OtpGate } from "@/components/OtpGate";
 import { TrackingPixels } from "@/components/TrackingPixels";
 import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
 import {
@@ -178,6 +179,7 @@ export default async function StoreLayout({
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
             <BotGuard workspaceId={workspaceId} />
+            <OtpGate />
           </Suspense>
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
