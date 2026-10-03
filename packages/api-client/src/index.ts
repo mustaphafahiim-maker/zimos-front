@@ -56,3 +56,5 @@ export * from "./endpoints/orders";
 export * from "./endpoints/contacts";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
+// Automations as step sequences (the Automations page).
+export * from "./endpoints/automations";
