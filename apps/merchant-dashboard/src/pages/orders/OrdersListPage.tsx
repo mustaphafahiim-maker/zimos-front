@@ -31,6 +31,7 @@ import { useNow } from "@/pages/confirmation/confirmationRoles";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
+import { rememberOrdersListQuery } from "./orderListQuery";
 
 const STRINGS = {
   en: {
@@ -195,6 +196,13 @@ export function OrdersListPage() {
     [workspaceId, stage, sort, query.q, query.from, query.to, risk.risk],
     { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
+
+  // The order page's previous / next arrows follow this list.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries({ stage, sort, ...query })) if (value) params.set(key, String(value));
+    rememberOrdersListQuery(params.toString());
+  }, [stage, sort, query.q, query.from, query.to]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const emptyMessage = filters.hasSearchFilters
     ? t.emptyFiltered
