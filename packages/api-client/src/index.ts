@@ -73,6 +73,8 @@ export * from "./endpoints/digital";
 export * from "./endpoints/ai";
 // Affiliates: marketers, commissions, payouts and the portal (lane 8).
 export * from "./endpoints/affiliates";
+// Customer subscriptions and installments (lane 8).
+export * from "./endpoints/customerSubscriptions";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
