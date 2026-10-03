@@ -94,3 +94,7 @@ export * from "./endpoints/lostOrders";
 export * from "./endpoints/whatsappCampaigns";
 // Social proof, newsletter sign-up, referral results (lane 3).
 export * from "./endpoints/engagement";
+// Product feed, Google Merchant checklist, offers summary (lane 3).
+export * from "./endpoints/feeds";
+// The shopper's order tracking page: steps, courier, signed tracking link.
+export * from "./endpoints/orderTracking";

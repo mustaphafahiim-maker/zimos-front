@@ -172,7 +172,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
             {t.cancel}
           </Button>
           <Button onClick={download} disabled={busy || !catalogue || chosen === 0}>
-            {busy ? t.downloading : t.download}
+            {busy ? t.downloading : format === "xlsx" ? t.download.replace("CSV", "Excel") : t.download}
           </Button>
         </>
       }
