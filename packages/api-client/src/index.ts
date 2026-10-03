@@ -38,6 +38,10 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Catalog additions: product page settings, content, option display (lane 3).
+export * from "./endpoints/catalog";
+// Protection against fake orders: blocklist, rules, risk (Fraud protection page).
+export * from "./endpoints/protection";
 // Dashboard home overview, attribution, profit and ad spend.
 export * from "./endpoints/insights";
 // Merchant notifications (the header bell and its preferences).
