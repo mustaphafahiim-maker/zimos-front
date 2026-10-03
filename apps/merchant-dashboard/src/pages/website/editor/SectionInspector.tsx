@@ -30,6 +30,7 @@ import {
 import { MoveButtons } from "./MoveButtons";
 import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
 import { SaveSectionPanel } from "./SavedSections";
+import { BindingFields } from "./DataBinding";
 import {
   editorUi,
   elementLabel,
@@ -718,6 +719,9 @@ export function ElementFieldset({
             onChange={(key, value) => onPropChange(element, key, value)}
           />
         ))}
+      {(tab === "content" || !onSettingsChange) && (
+        <BindingFields element={element} onChange={(bindings) => onPropChange(element, "bindings", bindings)} />
+      )}
       {onSettingsChange && tab !== "content" && (
         <ElementStylePanel
           element={element}

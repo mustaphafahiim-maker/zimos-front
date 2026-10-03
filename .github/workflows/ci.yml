@@ -1,0 +1,55 @@
+# Typecheck and build of the four apps (SPEC §3.5). No test suites run here
+# (owner's decision, docs/LANES.md rule 2): this catches what breaks a deploy —
+# a type error or a build that no longer completes.
+name: CI
+
+on:
+  push:
+    branches: [main, zimos-additions]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `build` of the two Vite apps already runs `tsc -b` first.
+          - app: merchant-dashboard
+            typecheck: npx tsc -b
+          - app: platform-admin
+            typecheck: npx tsc -b
+          - app: storefront
+            typecheck: npx tsc --noEmit
+          - app: marketing
+            typecheck: npx tsc --noEmit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: apps/${{ matrix.app }}
+        run: ${{ matrix.typecheck }}
+
+      - name: Build
+        working-directory: apps/${{ matrix.app }}
+        run: npm run build
+        env:
+          # Build-time placeholders: nothing is called while building.
+          VITE_API_BASE_URL: http://localhost:4000/api/v1
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+          NEXT_PUBLIC_ROOT_DOMAIN: zimos.test
