@@ -1,4 +1,6 @@
 import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
+import { storeGetShoppableImage, type PublicShoppableImage } from "@store-builder/api-client";
+import { ShoppableImageView } from "@/components/ShoppableImageView";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { BoxIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
@@ -330,4 +332,23 @@ export async function CollectionListElement({
 /** `cart` — a live count plus a link into the real cart page. */
 export function CartElement({ props }: { props: Props }) {
   return <CartSummary title={str(props, "title")} />;
+}
+
+/**
+ * A shoppable image picked in the editor (`imageId`). A picture that was deleted
+ * or hidden drops the block rather than breaking the page.
+ */
+export async function ShoppableImageElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
+  const imageId = str(props, "imageId").trim();
+  if (!imageId) return null;
+  const client = await createServerStorefrontApiClient();
+  let image: PublicShoppableImage;
+  try {
+    image = await storeGetShoppableImage(client, workspaceId, imageId);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+  const title = str(props, "title").trim();
+  return <ShoppableImageView image={title ? { ...image, title } : image} heading="h2" />;
 }

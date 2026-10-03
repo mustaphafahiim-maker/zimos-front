@@ -1,13 +1,24 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  FileDown,
+  GraduationCap,
+  MousePointerClick,
+  Handshake,
+  Repeat,
+  UsersRound,
+  Sparkles,
   Activity,
+  BadgeDollarSign,
   BarChart3,
   Bot,
   ClipboardCheck,
   CreditCard,
+  Gift,
   Globe,
+  History,
   Images,
   LayoutDashboard,
+  LayoutGrid,
   LineChart,
   LifeBuoy,
   Megaphone,
@@ -19,7 +30,9 @@ import {
   ShoppingBag,
   ShoppingCart,
   Star,
+  Store,
   Tag,
+  Target,
   Truck,
   Undo2,
   Users,
@@ -40,21 +53,35 @@ export type NavKey =
   | "reviews"
   | "customers"
   | "discounts"
+  | "offers"
   | "shipping"
   | "payments"
   | "website"
   | "funnels"
   | "analytics"
   | "webAnalytics"
+  | "attribution"
   | "realtime"
   | "settings"
   | "support"
   | "settlements"
   | "inbox"
   | "automations"
+  | "campaigns"
   | "marketing"
   | "profit"
-  | "media";
+  | "ads"
+  | "media"
+  | "digital"
+  | "ai"
+  | "affiliates"
+  | "subscriptions"
+  | "services"
+  | "shoppableImages"
+  | "courses"
+  | "storeSettings"
+  | "apps"
+  | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -107,6 +134,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "payments", to: "/payments", icon: CreditCard },
       { key: "returns", to: "/returns", icon: Undo2 },
       { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
     ],
   },
   {
@@ -117,6 +145,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "reviews", to: "/reviews", icon: Star },
       { key: "customers", to: "/customers", icon: Users },
       { key: "media", to: "/media", icon: Images },
+      { key: "digital", to: "/digital", icon: FileDown },
+      { key: "courses", to: "/courses", icon: GraduationCap },
+      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
     ],
   },
   {
@@ -124,9 +155,13 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "grow",
     items: [
       { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "ai", to: "/ai", icon: Sparkles },
+      { key: "affiliates", to: "/affiliates", icon: UsersRound },
+      { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "automations", to: "/automations", icon: Bot },
+      { key: "campaigns", to: "/campaigns", icon: Megaphone },
       { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
@@ -136,20 +171,28 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
     id: "storefront",
     labelKey: "storefront",
-    items: [{ key: "website", to: "/website", icon: Globe }],
+    items: [
+      { key: "website", to: "/website", icon: Globe },
+      { key: "storeSettings", to: "/store-settings", icon: Store },
+    ],
   },
   {
     id: "config",
     labelKey: null,
     items: [
+      { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
+      { key: "activity", to: "/activity", icon: History },
+      { key: "services", to: "/services", icon: Handshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -184,26 +227,40 @@ export const NAV_LABELS = {
     confirmationQueue: "Confirmation queue",
     fraud: "Fraud protection",
     returns: "Returns",
-    abandonedCarts: "Abandoned carts",
+    abandonedCarts: "Lost orders",
     catalog: "Catalog",
     reviews: "Reviews",
-    customers: "Customers",
+    customers: "Contacts",
     discounts: "Discounts",
+    offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
     website: "Website",
     funnels: "Funnels",
     analytics: "Analytics",
     webAnalytics: "Web analytics",
+    attribution: "Sales attribution",
     realtime: "Realtime",
+    apps: "Apps",
+    activity: "Activity log",
     settings: "Settings",
     support: "Contact support",
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
+    campaigns: "WhatsApp campaigns",
     marketing: "Marketing",
     profit: "Profit",
+    ads: "Ad campaigns",
     media: "Media library",
+    digital: "Digital products",
+    ai: "AI studio",
+    affiliates: "Affiliates",
+    subscriptions: "Subscriptions",
+    services: "Services",
+    shoppableImages: "Shoppable images",
+    courses: "Courses",
+    storeSettings: "Store settings",
   },
   ar: {
     overview: "نظرة عامة",
@@ -211,26 +268,40 @@ export const NAV_LABELS = {
     confirmationQueue: "قائمة التأكيد",
     fraud: "الحماية من الاحتيال",
     returns: "المرتجعات",
-    abandonedCarts: "السلات المتروكة",
+    abandonedCarts: "الطلبات المفقودة",
     catalog: "الكتالوج",
     reviews: "التقييمات",
-    customers: "العملاء",
+    customers: "جهات الاتصال",
     discounts: "الخصومات",
+    offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",
     website: "الموقع",
     funnels: "مسارات البيع",
     analytics: "التحليلات",
     webAnalytics: "زيارات الموقع",
+    attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
+    apps: "التطبيقات",
+    activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
     settlements: "تحصيل الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
+    campaigns: "حملات واتساب",
     marketing: "التسويق",
     profit: "الأرباح",
+    ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
+    digital: "المنتجات الرقمية",
+    ai: "استوديو الذكاء الاصطناعي",
+    affiliates: "المسوّقون بالعمولة",
+    subscriptions: "الاشتراكات",
+    services: "الخدمات",
+    shoppableImages: "الصور التفاعلية",
+    courses: "الكورسات",
+    storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
 

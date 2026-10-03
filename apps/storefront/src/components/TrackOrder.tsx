@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, type TrackResult } from "@store-builder/api-client";
+import { ApiError, orderTrackingByToken, type TrackResult } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { SearchIcon } from "./Icons";
-import { StatusTimeline } from "./StatusTimeline";
+import { TrackOrderProgress } from "./TrackOrderProgress";
+import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -19,10 +21,39 @@ export function TrackOrder() {
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
   const [errors, setErrors] = useState<{ phone?: string; number?: string }>({});
+  // A link the store sent (…/track?number=ORD-…) arrives with the number filled in.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("number");
+    if (fromLink) setNumber(fromLink.slice(0, 60));
+  }, []);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [result, setResult] = useState<TrackResult | null>(null);
   /** Set only when the lookup itself failed; a clean miss shows `t.track.notFound`. */
   const [failure, setFailure] = useState<string | null>(null);
+
+  // A signed tracking link (…/track?t=<token>, from the store's messages or "Copy
+  // tracking link") opens its order straight away, with no phone number to type.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("t");
+    if (!token) return;
+    let stale = false;
+    setStatus("loading");
+    orderTrackingByToken(api, workspaceId, token)
+      .then((found) => {
+        if (stale) return;
+        setResult(found);
+        if (found) setNumber(found.orderNumber);
+      })
+      .catch(() => {
+        if (!stale) setResult(null);
+      })
+      .finally(() => {
+        if (!stale) setStatus("done");
+      });
+    return () => {
+      stale = true;
+    };
+  }, [workspaceId]);
 
   /** Maps a failed lookup onto one of the shopper-facing messages. */
   function lookupError(err: unknown): string {
@@ -147,7 +178,7 @@ export function TrackOrder() {
                   #{result.orderNumber}
                 </span>
               </div>
-              <StatusTimeline stage={result.stage} />
+              <TrackOrderProgress result={result} />
 
               {result.items.length > 0 && (
                 <>
@@ -186,6 +217,10 @@ export function TrackOrder() {
                   <dd>{money(result.totalAmount, currency)}</dd>
                 </div>
               </dl>
+
+              <TrackOrderDownloads result={result} />
+
+              <TrackOrderNotes result={result} />
 
               {result.updatedAt && (
                 <p className="mt-5 text-xs text-ink-soft">

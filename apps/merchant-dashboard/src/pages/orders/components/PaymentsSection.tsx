@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { RefundLinesPicker } from "./FulfillAndRefundLines";
 import { RefreshCw } from "lucide-react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, Payment, PaymentTimeline, Refund } from "@store-builder/api-client";
@@ -9,6 +10,9 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
+import { ManualTransfersCard } from "./ManualTransfersCard";
+import { PaymentLinkButton } from "./PaymentLinkButton";
+import { SavedMethodsCard } from "./SavedMethodsCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { providerName } from "@/lib/providers";
@@ -211,6 +215,9 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
                 {syncing ? t.syncing : t.sync}
               </Button>
             )}
+            {(order.paymentMethod === "card" || order.paymentMethod === "wallet") &&
+              order.financialState === "pending" &&
+              !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
             {data && data.refundable > 0 && (
               <Button variant="outline" className="min-h-11" onClick={() => setDialog({})}>
                 {t.refund}
@@ -220,6 +227,25 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
+
+        <SavedMethodsCard
+          workspaceId={workspaceId}
+          orderId={order.id}
+          currency={order.currency}
+          onChanged={() => {
+            void timeline.refresh({ silent: true });
+            onChanged();
+          }}
+        />
+
+        <ManualTransfersCard
+          workspaceId={workspaceId}
+          orderId={order.id}
+          onChanged={() => {
+            void timeline.refresh({ silent: true });
+            onChanged();
+          }}
+        />
 
         {timeline.loading && !data ? (
           <p className="flex items-center gap-2 text-sm text-ink-soft">
@@ -477,6 +503,14 @@ function RefundDialog({
             )}
           </Field>
         )}
+        {/* Lane 1: refund by items — fills the amount and the reason. */}
+        <RefundLinesPicker
+          order={order}
+          onQuote={(minor, lines) => {
+            setAmount(minorToMajorInput(Math.min(minor, max)));
+            setReason((prev) => prev || lines);
+          }}
+        />
         <MoneyInput
           label={t.amount}
           value={amount}

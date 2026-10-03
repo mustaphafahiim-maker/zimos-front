@@ -1,6 +1,7 @@
 "use client";
 
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
+import { SocialLinks } from "./SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
@@ -55,6 +56,27 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
         { title: t.footer.links, links: builtIn },
       ])
     : [];
+  // Settings → store settings: the pages flagged "show in footer" and the
+  // legal policies the store has written, each as its own column.
+  const design = storefrontDesignMeta(store);
+  const footerPages = design.navPages.filter((p) => p.showInFooter);
+  if (footerPages.length > 0) {
+    groups.push({
+      title: t.footer.pages,
+      links: footerPages.map((p) => ({ key: `page:${p.path}`, label: p.title, href: p.path, external: false })),
+    });
+  }
+  if (design.legal.length > 0) {
+    groups.push({
+      title: t.policies.title,
+      links: design.legal.map((key) => ({
+        key: `policy:${key}`,
+        label: t.policies[key],
+        href: `/policies/${key.replace(/_/g, "-")}`,
+        external: false,
+      })),
+    });
+  }
   const about = footer.text ?? store.tagline;
   const blocks = (footer.showBrand ? 1 : 0) + groups.length + (footer.showHelp ? 1 : 0);
 
@@ -107,10 +129,17 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
         </div>
       )}
 
+      {Object.keys(storefrontGeneralMeta(store).social).length > 0 && (
+        <div className={`${container} pb-6`}>
+          <SocialLinks links={storefrontGeneralMeta(store).social} />
+        </div>
+      )}
+
       <div className="border-t border-line">
         <div className={`${container} flex flex-col items-center justify-between gap-2 py-4 sm:flex-row`}>
           <p className="text-xs text-ink-soft">{t.footer.rights(store.name, year)}</p>
-          <PoweredByZimos label={t.footer.poweredBy} />
+          {/* Removed for stores whose plan includes it (Plan.features.remove_branding). */}
+          {(store as { removeBranding?: unknown }).removeBranding !== true && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>
       </div>
     </footer>

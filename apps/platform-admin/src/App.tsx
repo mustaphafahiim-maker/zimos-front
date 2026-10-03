@@ -22,6 +22,7 @@ import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
 import { TicketDetailPage } from "@/pages/TicketDetailPage";
 import { AnnouncementsPage } from "@/pages/AnnouncementsPage";
+import { ServiceListingsPage } from "@/pages/ServiceListingsPage";
 import { FeatureFlagsPage } from "@/pages/FeatureFlagsPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
 import { SystemHealthPage } from "@/pages/SystemHealthPage";
@@ -30,6 +31,9 @@ import { AgentsPage } from "@/pages/AgentsPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { MyReferralsPage } from "@/pages/MyReferralsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { QueuesPage } from "@/pages/QueuesPage";
+import { UsagePage } from "@/pages/UsagePage";
+import { NetworkStatsPage } from "@/pages/NetworkStatsPage";
 import { P } from "@/lib/permissions";
 
 /** A console page that needs `permission` (the view key its endpoints check). */
@@ -75,9 +79,13 @@ export default function App() {
                 <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
                 <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
                 <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
+                <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
                 <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
                 <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />
                 <Route path="/system-health" element={gated(P.SYSTEM_VIEW, <SystemHealthPage />)} />
+                <Route path="/queues" element={gated(P.SYSTEM_VIEW, <QueuesPage />)} />
+                <Route path="/usage" element={gated(P.SUBSCRIPTIONS_VIEW, <UsagePage />)} />
+                <Route path="/network-stats" element={gated(P.RISK_VIEW, <NetworkStatsPage />)} />
                 <Route path="/admin-users" element={gated(P.ADMINS_VIEW, <AdminUsersPage />)} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>

@@ -1,4 +1,4 @@
-import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
+import { createBrowserSessionTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
   CustomerUpload,
   CustomizationInput,
@@ -383,6 +383,8 @@ export interface ApiClientOptions {
   /** e.g. http://localhost:4000/api/v1 */
   baseUrl: string;
   tokenStorage?: TokenStorage;
+  /** Keeps this app's refresh cookie apart from another app's on the same API host (e.g. "admin"). */
+  appName?: string;
   /** Called whenever refresh fails / the session becomes invalid. */
   onSessionExpired?: () => void;
   /** Sent with every request; a call's own headers win on a clash. */
@@ -424,17 +426,26 @@ function randomKey(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/** Runs `fn` under a lock shared by every tab of this origin, where the browser has one. */
+function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
+  if (!locks) return fn();
+  return locks.request("zimos-auth-refresh", fn) as Promise<T>;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private tokenStorage: TokenStorage;
   private onSessionExpired?: () => void;
   private defaultHeaders: Record<string, string>;
   private refreshPromise: Promise<boolean> | null = null;
+  private appName?: string;
   private addressTrees = new Map<string, { at: number; value: Promise<CarrierAddressTree> }>();
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
-    this.tokenStorage = options.tokenStorage ?? createLocalStorageTokenStorage();
+    this.tokenStorage = options.tokenStorage ?? createBrowserSessionTokenStorage();
+    this.appName = options.appName;
     this.onSessionExpired = options.onSessionExpired;
     this.defaultHeaders = options.defaultHeaders ?? {};
   }
@@ -444,11 +455,18 @@ export class ApiClient {
   }
 
   isAuthenticated(): boolean {
+    if (this.tokenStorage.hasSession) return this.tokenStorage.hasSession();
     return Boolean(this.tokenStorage.get().accessToken);
   }
 
-  setTokens(tokens: AuthTokens) {
-    this.tokenStorage.set(tokens);
+  /** After a redirect sign-in (Google) left the refresh cookie: the next call fetches an access token. */
+  adoptCookieSession() {
+    this.tokenStorage.markSession?.();
+  }
+
+  setTokens(tokens: { accessToken: string; refreshToken?: string | null }) {
+    // In cookie mode the server keeps the refresh token to itself.
+    this.tokenStorage.set({ accessToken: tokens.accessToken ?? null, refreshToken: tokens.refreshToken ?? null });
   }
 
   clearSession() {
@@ -481,14 +499,28 @@ export class ApiClient {
       if (idempotent) {
         finalHeaders["Idempotency-Key"] = randomKey();
       }
+      // Sign-in routes set and read the httpOnly refresh cookie.
+      const cookieAuth = Boolean(this.tokenStorage.hasSession) && path.startsWith("/auth/");
+      if (cookieAuth) {
+        finalHeaders["X-Zimos-Token-Mode"] = "cookie";
+        if (this.appName) finalHeaders["X-Zimos-App"] = this.appName;
+      }
       return fetch(`${this.baseUrl}${path}`, {
         method,
         headers: finalHeaders,
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal,
         redirect,
+        ...(cookieAuth ? { credentials: "include" as const } : {}),
       });
     };
+
+    // After a reload the access token is gone from memory but the session
+    // (refresh cookie) is not: fetch a token first instead of sending a
+    // request that can only come back 401.
+    if (auth && !this.tokenStorage.get().accessToken && this.tokenStorage.hasSession?.()) {
+      await this.tryRefresh();
+    }
 
     let res = await doFetch();
 
@@ -526,17 +558,22 @@ export class ApiClient {
   }
 
   private async tryRefresh(): Promise<boolean> {
-    const { refreshToken } = this.tokenStorage.get();
-    if (!refreshToken) return false;
+    const cookieSession = Boolean(this.tokenStorage.hasSession?.());
+    if (!this.tokenStorage.get().refreshToken && !cookieSession) return false;
 
     // Coalesce concurrent 401s into a single refresh call.
     if (!this.refreshPromise) {
       this.refreshPromise = (async () => {
         try {
-          const result = await this.request<AuthTokens>("/auth/refresh", {
-            method: "POST",
-            body: { refreshToken },
-            auth: false,
+          // One refresh at a time across tabs: the token rotates on use, and a
+          // second tab sending the old one would look like a stolen token.
+          const result = await withRefreshLock(() => {
+            const { refreshToken } = this.tokenStorage.get();
+            return this.request<AuthTokens>("/auth/refresh", {
+              method: "POST",
+              body: refreshToken ? { refreshToken } : {},
+              auth: false,
+            });
           });
           this.setTokens(result);
           return true;
@@ -580,6 +617,8 @@ export class ApiClient {
       auth: false,
     });
     if ("verificationRequired" in result) return result;
+    // Two-step sign-in (endpoints/security.ts): a challenge, no tokens yet.
+    if ("twoFactorRequired" in result) return result;
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
   }
@@ -708,7 +747,7 @@ export class ApiClient {
   async logout() {
     const { refreshToken } = this.tokenStorage.get();
     try {
-      await this.request("/auth/logout", { method: "POST", body: { refreshToken } });
+      await this.request("/auth/logout", { method: "POST", body: refreshToken ? { refreshToken } : {} });
     } finally {
       this.clearSession();
     }

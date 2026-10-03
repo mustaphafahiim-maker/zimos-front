@@ -3,6 +3,9 @@
 import type { StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
+import { asTransferMethod, useTransferCopy } from "./TransferDetails";
+import { PaymentAdjustmentNote } from "./PaymentAdjustmentNote";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -21,9 +24,12 @@ export function PaymentMethodPicker({
   idPrefix: string;
 }) {
   const { t } = useStore();
+  const transferCopy = useTransferCopy();
 
   const copy = (m: StorefrontPaymentMethod) =>
-    m.method === "card"
+    asTransferMethod(m)
+      ? { title: asTransferMethod(m)!.name, hint: transferCopy.hint, Icon: WalletIcon }
+      : m.method === "card"
       ? { title: t.payment.card, hint: t.payment.cardHint, Icon: CardIcon }
       : m.method === "wallet"
         ? { title: t.payment.wallet, hint: t.payment.walletHint, Icon: WalletIcon }
@@ -61,7 +67,11 @@ export function PaymentMethodPicker({
               name={`${idPrefix}-payment`}
               value={m.id}
               checked={checked}
-              onChange={() => onChange(m.id)}
+              onChange={() => {
+                // Choosing an online method is the ad platforms' AddPaymentInfo.
+                if (m.method !== "cod") track("AddPaymentInfo");
+                onChange(m.id);
+              }}
               className="size-4 shrink-0 accent-primary"
             />
             <Icon className="shrink-0 text-primary" />
@@ -75,6 +85,7 @@ export function PaymentMethodPicker({
                 )}
               </span>
               <span className="block text-xs text-ink-soft">{hint}</span>
+              <PaymentAdjustmentNote method={m} />
             </span>
           </label>
         );

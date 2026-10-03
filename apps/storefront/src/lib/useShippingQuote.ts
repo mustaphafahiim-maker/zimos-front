@@ -1,5 +1,6 @@
 "use client";
 
+import { storefrontQuoteExtras, type StorefrontQuoteExtras } from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
@@ -21,6 +22,8 @@ export interface ShippingQuoteState {
   amount: number;
   /** Progress to the store's free-shipping threshold; null when it has none. */
   freeShipping: FreeShippingProgress | null;
+  /** The automatic discount, the minimum order and the bundle saving the quote reports (lane 3). */
+  extras: StorefrontQuoteExtras;
 }
 
 /**
@@ -77,14 +80,15 @@ export function useShippingQuote({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestKey, active]);
 
-  if (!active) return { line: { kind: "on_confirmation" }, amount: 0, freeShipping: null };
-  if (!state) return { line: province ? { kind: "calculating" } : { kind: "pick_governorate" }, amount: 0, freeShipping: null };
+  const extras = storefrontQuoteExtras(active ? state?.quote : null);
+  if (!active) return { line: { kind: "on_confirmation" }, amount: 0, freeShipping: null, extras };
+  if (!state) return { line: province ? { kind: "calculating" } : { kind: "pick_governorate" }, amount: 0, freeShipping: null, extras };
   if (state.failed || !state.quote) {
     // A failure for an older request says nothing about this one yet.
-    return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null };
+    return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null, extras };
   }
 
   const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping };
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras };
 }

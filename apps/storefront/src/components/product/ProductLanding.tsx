@@ -3,13 +3,21 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { parseMoney, type CheckoutSettings, type StorefrontProductDetail } from "@store-builder/api-client";
+import {
+  parseMoney,
+  storefrontProductPage,
+  type CheckoutSettings,
+  type StorefrontProductDetail,
+} from "@store-builder/api-client";
+import { useCart } from "@/lib/CartProvider";
+import { storeHref } from "@/lib/storeHref";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
+  formOptionsOf,
   FIELD_ORDER,
   quickFormFields,
   toCheckoutPayload,
@@ -41,13 +49,20 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
+import { CodeSlot } from "../CustomCode";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
-import { Countdown } from "../page-renderer/Countdown";
+import { storefrontProductBundle } from "@store-builder/api-client";
+import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
+import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
+import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
+import { OfferCountdown } from "./OfferCountdown";
+import { OptionPicker } from "./OptionPicker";
+import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
 const FORM_PREFIX = "quick";
@@ -61,17 +76,30 @@ export function ProductLanding({
   workspaceId,
   product,
   bump: bumpOffer,
-  countdownHours,
+  description,
   checkoutSettings,
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
   bump: OrderBumpOffer | null;
-  countdownHours: number | null;
+  /** Shown above the order form when the product puts its description first. */
+  description?: string | null;
   /** From this page's own render, not the layout's — see useFreshCheckoutSettings. */
   checkoutSettings: CheckoutSettings;
 }) {
-  const { t, money } = useStore();
+  const { t, money, locale } = useStore();
+  const text = productPageText(locale);
+  // The product page's settings (SPEC §7.3), defaults filled in.
+  const page = useMemo(() => storefrontProductPage(product), [product]);
+  // The store's purchase form layout (settings → purchase form) outranks the
+  // product's own switch: "one_step" keeps every product page free of the
+  // form and sends "Buy now" straight to the checkout.
+  const ps =
+    formOptionsOf(checkoutSettings).layout === "one_step"
+      ? { ...page.pageSettings, inline_checkout: false, skip_cart: true }
+      : page.pageSettings;
+  const cart = useCart();
+  const buyLabel = ps.buy_now_text || (ps.inline_checkout ? t.product.orderNow : text.buyNow);
   const quickFields = useMemo(() => quickFormFields(checkoutSettings), [checkoutSettings]);
   const { fields, reveal } = useOrderFormFields(quickFields);
   const basePath = useStoreBasePath();
@@ -97,14 +125,18 @@ export function ProductLanding({
   }
 
   // --- bundles / quantity --------------------------------------------------
-  const tiers = useMemo(() => bundleTiers(product), [product]);
+  // A reusable quantity bundle (BundlePicker) takes the place of the offer
+  // ladder and the quantity stepper; the server prices it.
+  const bundle = useMemo(() => storefrontProductBundle(product), [product]);
+  const bundleChoice = useBundleSelection({ client, workspaceId, bundle, product, mainVariant: variant });
+  const tiers = useMemo(() => (bundle ? [] : bundleTiers(product)), [bundle, product]);
   const [quantity, setQuantity] = useState(1);
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
   const tier = tiers.find((x) => x.id === tierId);
   const unit = variantUnitPrice(product, variant);
-  const pricing = bundlePricing(unit, quantity, tier);
+  const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
@@ -113,7 +145,11 @@ export function ProductLanding({
   const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
 
   const defaultOffer = defaultOfferOf(product);
-  const mainLine: OrderLine | null = variant
+  // The bundle's pieces beyond the first line (another variant per piece).
+  const bundleExtraLines: OrderLine[] = bundleChoice ? bundleChoice.lines.slice(1) : [];
+  const mainLine: OrderLine | null = bundleChoice
+    ? (bundleChoice.lines[0] ?? null)
+    : variant
     ? tier
       ? { variantId: variant.id, offerId: tier.offerId, quantity: 1 }
       : {
@@ -132,18 +168,30 @@ export function ProductLanding({
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
   const bump = bumpGone ? null : bumpOffer;
+  // The product's own order bumps (Offers → Order bumps), beside the store-wide one.
+  const productBumps = useProductBumps(client, workspaceId, product.id, bumpOffer?.offerId);
+  const productBumpsAmount = productBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
-  const autosaveLines: OrderLine[] = mainLine ? [mainLine] : [];
+  const autosaveLines: OrderLine[] = mainLine ? [mainLine, ...bundleExtraLines] : [];
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
 
-  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0) + shipping.amount;
+  // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
+  const linkCoupon = useStoredCoupon(workspaceId);
+  const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
+  const total =
+    pricing.total +
+    (bumpOn && bump ? bump.priceAmount : 0) +
+    productBumpsAmount +
+    shipping.amount -
+    discountOff(shipping.extras, coupon);
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -181,8 +229,13 @@ export function ProductLanding({
     const checkoutSessionId = await autosave.stop();
     // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: orderLine }),
+      // Only a coupon the server said applies is sent: a stale link must not fail the order.
+      ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+      ...(productBumps.selected.length > 0
+        ? { orderBumps: productBumps.selected.map((b) => ({ offerId: b.offerId })) }
+        : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
@@ -221,6 +274,7 @@ export function ProductLanding({
         // The totals above drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
         setBumpGone(true);
+        productBumps.reset();
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
@@ -252,6 +306,32 @@ export function ProductLanding({
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  // --- buy now without the inline form --------------------------------------
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  async function buyNow() {
+    if (!mainLine || !available || buying) return;
+    if (custom.fields.length > 0 && !custom.check()) return;
+    setBuying(true);
+    setBuyError(null);
+    try {
+      await cart.addItem(
+        mainLine.variantId,
+        mainLine.offerId,
+        mainLine.quantity,
+        custom.fields.length > 0 ? custom.toInput() : undefined
+      );
+      for (const line of bundleExtraLines) await cart.addItem(line.variantId, undefined, line.quantity);
+      // skip_cart: straight to the checkout; otherwise the cart, to review first.
+      router.push(storeHref(basePath, ps.skip_cart ? "/checkout" : "/cart"));
+    } catch (err) {
+      if (!custom.showServerProblems(err)) {
+        setBuyError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+      }
+      setBuying(false);
+    }
+  }
 
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -289,38 +369,21 @@ export function ProductLanding({
         </p>
       </div>
 
-      {countdownHours ? <Countdown label={t.product.offerEnds} endsInHours={countdownHours} /> : null}
+      {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
 
       {/* Variant options */}
       {groups.map((group) => (
-        <fieldset key={group.name}>
-          <legend className="mb-2 text-sm font-semibold text-ink">
-            {group.name}
-            {selection[group.name] && <span className="ms-2 font-normal text-ink-soft">{selection[group.name]}</span>}
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {group.values.map((value) => {
-              const selected = selection[group.name] === value;
-              const ok = isValueAvailable(group.name, value);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setSelection((prev) => ({ ...prev, [group.name]: value }))}
-                  className={`min-h-11 min-w-11 cursor-pointer rounded-xl border-2 px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                    selected
-                      ? "border-primary bg-primary-soft text-primary"
-                      : "border-line bg-paper-raised text-ink hover:border-primary"
-                  } ${ok ? "" : "text-ink-soft line-through decoration-1"}`}
-                >
-                  {value}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+        <OptionPicker
+          key={group.name}
+          group={group}
+          display={page.options.find((o) => o.name === group.name)}
+          selected={selection[group.name]}
+          isAvailable={(value) => isValueAvailable(group.name, value)}
+          onSelect={(value) => setSelection((prev) => ({ ...prev, [group.name]: value }))}
+        />
       ))}
+
+      {bundleChoice && <BundlePicker selection={bundleChoice} product={product} mainVariant={variant} />}
 
       {/* Bundle / quantity offer */}
       {tiers.length > 1 && (
@@ -375,7 +438,7 @@ export function ProductLanding({
         </fieldset>
       )}
 
-      {tiers.length === 0 && (
+      {tiers.length === 0 && !bundleChoice && !ps.hide_quantity_selector && (
         <div className="flex items-center justify-between gap-4">
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
@@ -389,10 +452,23 @@ export function ProductLanding({
       <CustomFieldInputs state={custom} />
 
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
+      {page.specialOfferText && (
+        <p className="rounded-xl border border-primary/25 bg-primary-soft px-4 py-2.5 text-center text-sm font-semibold text-primary">
+          {page.specialOfferText}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <button type="button" onClick={scrollToForm} disabled={!available} className={`${btnPrimary} w-full`}>
-          {t.product.orderNow}
+        <button
+          type="button"
+          onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
+          disabled={!available || buying}
+          className={`${btnPrimary} w-full`}
+        >
+          {buying ? text.buying : buyLabel}
         </button>
+        {bundleChoice && custom.fields.length === 0 ? (
+          <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
+        ) : (
         <AddToCartButton
           variant="secondary"
           variantId={mainLine?.variantId}
@@ -403,9 +479,21 @@ export function ProductLanding({
           beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
           onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
+        )}
       </div>
 
+      <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
+
+      {ps.inline_checkout && !ps.checkout_before_description && description ? (
+        <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+          {description}
+        </div>
+      ) : null}
+
+      {ps.inline_checkout && <CodeSlot name="above_form" />}
+
       {/* Inline quick order form */}
+      {ps.inline_checkout && (
       <section
         ref={formRef}
         id="order-form"
@@ -430,7 +518,7 @@ export function ProductLanding({
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">
-                {product.name} × {tier ? tier.quantity : quantity}
+                {product.name} × {bundleChoice ? bundleChoice.quantity : tier ? tier.quantity : quantity}
               </dt>
               <dd className="shrink-0 text-ink">{money(pricing.full)}</dd>
             </div>
@@ -446,6 +534,13 @@ export function ProductLanding({
                 <dd className="shrink-0 text-ink">{money(bump.priceAmount)}</dd>
               </div>
             )}
+            {productBumps.selected.map((b) => (
+              <div key={b.offerId} className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{b.name}</dt>
+                <dd className="shrink-0 text-ink">{money(b.priceAmount)}</dd>
+              </div>
+            ))}
+            <DiscountRows extras={shipping.extras} coupon={coupon} />
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
               <dd className="shrink-0 text-ink">
@@ -458,7 +553,10 @@ export function ProductLanding({
             </div>
           </dl>
 
+          <MinimumOrderNotice extras={shipping.extras} />
+
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
+          <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
           {payment.methods.length > 1 && (
             <PaymentMethodPicker
@@ -490,8 +588,11 @@ export function ProductLanding({
           )}
         </form>
       </section>
+      )}
+      {ps.inline_checkout && <CodeSlot name="below_form" />}
 
       {/* Sticky mobile bar */}
+      {ps.sticky_buy_button && (
       <div
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 py-3 shadow-lg backdrop-blur transition-transform duration-200 md:hidden ${
           formVisible ? "translate-y-full" : "translate-y-0"
@@ -505,15 +606,16 @@ export function ProductLanding({
           </div>
           <button
             type="button"
-            onClick={scrollToForm}
-            disabled={!available}
+            onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
+            disabled={!available || buying}
             tabIndex={formVisible ? -1 : 0}
             className={`${btnPrimary} flex-1`}
           >
-            {t.product.stickyOrder}
+            {ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow)}
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

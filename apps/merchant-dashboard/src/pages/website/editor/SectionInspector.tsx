@@ -14,6 +14,7 @@ import {
   columnTitle,
   elementPosition,
   moveElement,
+  replaceElement,
   rowSetting,
   sectionColumnCount,
   sectionElements,
@@ -27,6 +28,9 @@ import {
   type SectionSettingSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
+import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
+import { SaveSectionPanel } from "./SavedSections";
+import { BindingFields } from "./DataBinding";
 import {
   editorUi,
   elementLabel,
@@ -695,11 +699,19 @@ export function ElementFieldset({
   element,
   onPropChange,
   actions,
+  onSettingsChange,
+  namedStyles = [],
+  onNamedStylesChange,
 }: {
   element: PageElement;
   onPropChange: (element: PageElement, key: string, value: unknown) => void;
   actions?: ReactNode;
+  /** With it the element gets Style and Layout tabs (ElementStylePanel). */
+  onSettingsChange?: (element: PageElement, settings: Record<string, unknown> | undefined) => void;
+  namedStyles?: NamedStyle[];
+  onNamedStylesChange?: (next: NamedStyle[]) => void;
 }) {
+  const [tab, setTab] = useState<"content" | "style" | "layout">("content");
   const locale = useEditorLocale();
   const spec = ELEMENT_SPECS[element.type];
   const Icon = spec.icon;
@@ -712,15 +724,29 @@ export function ElementFieldset({
         <span className="min-w-0 flex-1 truncate">{elementLabel(element.type, spec.label, locale)}</span>
         {actions}
       </div>
-      {spec.fields.map((field) => (
-        <ElementField
-          key={field.key}
-          elementType={element.type}
-          spec={field}
-          props={props}
-          onChange={(key, value) => onPropChange(element, key, value)}
+      {onSettingsChange && <ElementTabs value={tab} onChange={setTab} />}
+      {(tab === "content" || !onSettingsChange) &&
+        spec.fields.map((field) => (
+          <ElementField
+            key={field.key}
+            elementType={element.type}
+            spec={field}
+            props={props}
+            onChange={(key, value) => onPropChange(element, key, value)}
+          />
+        ))}
+      {(tab === "content" || !onSettingsChange) && (
+        <BindingFields element={element} onChange={(bindings) => onPropChange(element, "bindings", bindings)} />
+      )}
+      {onSettingsChange && tab !== "content" && (
+        <ElementStylePanel
+          element={element}
+          tab={tab}
+          named={namedStyles}
+          onSettingsChange={(settings) => onSettingsChange(element, settings)}
+          onNamedChange={onNamedStylesChange}
         />
-      ))}
+      )}
     </div>
   );
 }
@@ -953,11 +979,16 @@ export function SectionInspector({
   onChange,
   onDelete,
   onClose,
+  namedStyles,
+  onNamedStylesChange,
 }: {
   section: PageSection;
   onChange: (next: PageSection) => void;
   onDelete: () => void;
   onClose: () => void;
+  /** The page's named styles (tree.globalStyles.named) and how to change them. */
+  namedStyles?: NamedStyle[];
+  onNamedStylesChange?: (next: NamedStyle[]) => void;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -972,6 +1003,13 @@ export function SectionInspector({
       key={element.id}
       element={element}
       onPropChange={(el, key, value) => onChange(setElementProp(section, el, key, value))}
+      onSettingsChange={(el, settings) => {
+        const { settings: _old, ...bare } = el;
+        void _old;
+        onChange(replaceElement(section, el.id, settings ? { ...bare, settings } : bare));
+      }}
+      namedStyles={namedStyles}
+      onNamedStylesChange={onNamedStylesChange}
       actions={
         <ElementMoveButtons
           section={section}
@@ -1032,6 +1070,8 @@ export function SectionInspector({
           })
         )}
       </div>
+
+      <SaveSectionPanel section={section} onChange={onChange} />
 
       <div className="border-t border-line px-4 py-3">
         <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>

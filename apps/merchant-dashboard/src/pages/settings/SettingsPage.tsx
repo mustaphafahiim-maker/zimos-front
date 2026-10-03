@@ -2,10 +2,8 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
-  InviteMemberPayload,
   WorkspaceInvite,
   WorkspaceMember,
-  WorkspaceRole,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -26,18 +24,21 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { TextField, Field } from "@/components/Field";
+import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
 import { BillingSection } from "./BillingSection";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { WhatsappSection } from "./WhatsappSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
+import { SecuritySection } from "./SecuritySection";
+import { TeamInviteForm } from "./TeamInviteForm";
 import { DevelopersSection } from "./DevelopersSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { OrderEmailsSection } from "./OrderEmailsSection";
 
 /**
  * A link that names one of the user's stores (?workspace=<id>, as on the way
@@ -64,15 +65,18 @@ export function SettingsPage() {
         description="Your store profile and the people who can manage it."
       />
       <AccountSection />
+      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
       {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
       <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+      {/* The emails customers get about their orders. */}
+      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
       <BillingSection key={`billing-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
+      <SecuritySection key={`security-${workspaceId}`} />
       <DevelopersSection key={`developers-${workspaceId}`} />
     </div>
   );
@@ -469,8 +473,7 @@ function TeamSection() {
         title="Invite member"
         description="They'll get an email with a link to join this store."
       >
-        <InviteMemberForm
-          roles={roles}
+        <TeamInviteForm
           onCancel={() => setInviting(false)}
           onDone={() => {
             setInviting(false);
@@ -496,76 +499,3 @@ function TeamSection() {
   );
 }
 
-function InviteMemberForm({
-  roles,
-  onCancel,
-  onDone,
-}: {
-  roles: WorkspaceRole[];
-  onCancel: () => void;
-  onDone: () => void;
-}) {
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const [email, setEmail] = useState("");
-  const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setFieldErrors({});
-    setSaving(true);
-    try {
-      const payload: InviteMemberPayload = { email: email.trim(), roleId };
-      await apiClient.inviteMember(workspaceId, payload);
-      toast.success(`Invite sent to ${payload.email}.`);
-      onDone();
-    } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-
-      <TextField
-        label="Email"
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        error={fieldErrors.email}
-        placeholder="teammate@example.com"
-      />
-
-      <Field label="Role" required error={fieldErrors.roleId}>
-        {({ id }) => (
-          <Select id={id} value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Field>
-
-      <div className="flex justify-end gap-3 pt-1">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={saving || !email.trim() || !roleId}>
-          {saving ? "Sending…" : "Send invite"}
-        </Button>
-      </div>
-    </form>
-  );
-}

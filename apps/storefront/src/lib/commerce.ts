@@ -196,6 +196,8 @@ export interface OrderSnapshot {
   id: string;
   orderNumber: string;
   phone: string;
+  /** The name the order was placed under, for the thank-you message. */
+  customerName?: string;
   currency: string;
   createdAt: string;
   subtotalAmount: number;
@@ -211,6 +213,7 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
     id: order.id,
     orderNumber: order.orderNumber,
     phone,
+    customerName: (order as { contactSnapshot?: { fullName?: string } }).contactSnapshot?.fullName ?? undefined,
     currency: order.currency,
     createdAt: order.createdAt ?? new Date().toISOString(),
     subtotalAmount: parseMoney(order.subtotalAmount),
@@ -257,6 +260,12 @@ export function saveOrderSnapshot(workspaceId: string, snapshot: OrderSnapshot) 
   const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];
   const next = [snapshot, ...list.filter((o) => o.id !== snapshot.id)].slice(0, 20);
   writeJson(ordersKey(workspaceId), next);
+}
+
+/** The order this device placed last in this store, if any (newest is kept first). */
+export function latestOrderSnapshot(workspaceId: string): OrderSnapshot | null {
+  const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];
+  return list[0] ?? null;
 }
 
 export function getOrderSnapshot(workspaceId: string, orderId: string): OrderSnapshot | null {

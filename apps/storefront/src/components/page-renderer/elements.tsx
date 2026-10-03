@@ -4,6 +4,7 @@ import { btnPrimary, input } from "@/components/ui";
 import type { Dictionary } from "@/lib/i18n";
 import { Countdown } from "./Countdown";
 import { GallerySlideshow } from "./GallerySlideshow";
+import { PageForm } from "./PageForm";
 import {
   COLUMN_CLASS,
   type LinkItem,
@@ -388,47 +389,53 @@ export function CountdownElement({ props }: { props: Props }) {
 }
 
 /**
- * The `form` element is presentational only, and says so on the page.
- *
- * Two reasons it cannot submit: the element carries no field definitions at all
- * (its props are just `{ title, submitLabel }`), and the backend exposes no
- * endpoint for generic form submissions — there is nothing to POST to. Showing
- * a working-looking form would quietly drop every enquiry a shopper sends, so
- * the submit button stays disabled and the notice below is deliberate, not
- * placeholder text to tidy away later.
+ * The `form` element: name, phone, email and message, sent to the store's
+ * form submissions (and the sender becomes a contact). Props: `title`,
+ * `submitLabel`, `successMessage`, `askConsent`, and `tags` — read by the
+ * server from the published page, never sent by the browser.
  */
-export function FormElement({ props, t }: { props: Props; t: Dictionary }) {
-  const title = str(props, "title");
-  const submitLabel = str(props, "submitLabel", t.renderer.formSend);
-
+export function FormElement({
+  props,
+  t,
+  workspaceId,
+  elementId,
+  disabled,
+}: {
+  props: Props;
+  t: Dictionary;
+  workspaceId: string;
+  elementId: string;
+  disabled?: boolean;
+}) {
   return (
-    <div className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
-      {title.trim() && <h3 className="mb-4 text-xl font-semibold text-ink">{title}</h3>}
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-name">
-            {t.renderer.formName}
-          </label>
-          <input id="page-form-name" type="text" disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-email">
-            {t.renderer.formEmail}
-          </label>
-          <input id="page-form-email" type="email" dir="ltr" disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-message">
-            {t.renderer.formMessage}
-          </label>
-          <textarea id="page-form-message" rows={3} disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <button type="button" disabled title={t.renderer.formUnavailable} className={`${btnPrimary} w-full`}>
-          {submitLabel}
-        </button>
-        <p className="text-xs text-ink-soft">{t.renderer.formPreview}</p>
-      </div>
-    </div>
+    <PageForm
+      workspaceId={workspaceId}
+      elementId={elementId}
+      disabled={disabled}
+      title={str(props, "title")}
+      submitLabel={str(props, "submitLabel", t.renderer.formSend)}
+      successMessage={str(props, "successMessage")}
+      askConsent={props.askConsent !== false}
+      extra={{
+        fields: strList(props, "extraFields").slice(0, 8),
+        choiceLabel: str(props, "choiceLabel"),
+        choices: strList(props, "choices").slice(0, 20),
+        checkboxLabel: str(props, "checkboxLabel"),
+      }}
+      labels={{
+        name: t.renderer.formName,
+        phone: t.renderer.formPhone,
+        email: t.renderer.formEmail,
+        message: t.renderer.formMessage,
+        send: t.renderer.formSend,
+        sending: t.renderer.formSending,
+        sent: t.renderer.formSent,
+        error: t.renderer.formError,
+        invalidPhone: t.renderer.formInvalidPhone,
+        needContact: t.renderer.formNeedContact,
+        consent: t.renderer.formConsent,
+      }}
+    />
   );
 }
 

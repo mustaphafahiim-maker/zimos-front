@@ -13,12 +13,17 @@ import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { CommandPalette } from "@/components/CommandPalette";
+import { SidebarShortcuts } from "@/components/SidebarShortcuts";
+import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 
 const STRINGS = {
   en: {
     signOut: "Sign out",
     selectStore: "Select a store",
     newStore: "+ New store",
+    allStores: "All my stores",
     openNav: "Open navigation",
     closeNav: "Close navigation",
     navLabel: "Main navigation",
@@ -32,6 +37,7 @@ const STRINGS = {
     signOut: "تسجيل الخروج",
     selectStore: "اختر متجرًا",
     newStore: "+ متجر جديد",
+    allStores: "كل متاجري",
     openNav: "فتح القائمة",
     closeNav: "إغلاق القائمة",
     navLabel: "القائمة الرئيسية",
@@ -101,6 +107,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
       <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
+        <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
           const isClosed = Boolean(collapsed[group.id]);
@@ -292,6 +299,15 @@ export function DashboardLayout() {
                   <button
                     onClick={() => {
                       setSwitcherOpen(false);
+                      navigate("/stores");
+                    }}
+                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-ink hover:bg-primary-soft"
+                  >
+                    {t.allStores}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSwitcherOpen(false);
                       navigate("/workspaces");
                     }}
                     className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-primary hover:bg-primary-soft"
@@ -311,6 +327,8 @@ export function DashboardLayout() {
             {/* Dashboard-wide locale switch. Lives in the header (not the
                 sidebar footer beside ThemeToggle) so it stays reachable on
                 mobile, where the sidebar collapses into the drawer. */}
+            <CommandPalette />
+            <NotificationsBell />
             <LanguageSwitch className="hidden sm:inline-flex" />
             <LanguageSwitch compact className="sm:hidden" />
             <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
@@ -323,6 +341,7 @@ export function DashboardLayout() {
         <main className="flex-1 p-4 sm:p-6">
           {/* Subscription expiring / expired, or the store suspended. */}
           <AccessBanner />
+          <InstallAppPrompt />
           {/* One crashing page shows an error here; the sidebar and header
               stay up so the merchant can move on. */}
           <RouteErrorBoundary resetKey={location.pathname}>

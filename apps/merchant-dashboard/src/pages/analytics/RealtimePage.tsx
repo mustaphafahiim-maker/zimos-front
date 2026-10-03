@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Activity, Eye, Globe, MousePointerClick, Users } from "lucide-react";
 import { Card, cn } from "@store-builder/ui";
@@ -8,6 +8,7 @@ import { DataState } from "@/components/DataState";
 import { BarChart } from "@/components/charts";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
+import { LivePanel, useLiveView } from "./LiveView";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatCount } from "@/lib/analytics";
 import { countryName, flagOf } from "@/lib/webAnalytics";
@@ -113,13 +114,20 @@ export function RealtimePage() {
   const [kind, setKind] = useState<"all" | "pageview" | "event">("all");
   const [query, setQuery] = useState("");
 
+  // The server pushes a snapshot whenever something changes (LiveView.tsx);
+  // the ten-second poll below only runs while that stream is not connected.
+  const [funnelId, setFunnelId] = useState("");
+  const live = useLiveView(workspaceId, funnelId);
+  const frame = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    if (live.connected) return;
     const id = setInterval(() => setTick((n) => n + 1), 10_000);
     return () => clearInterval(id);
-  }, []);
+  }, [live.connected]);
 
   const data = useAsync(() => apiClient.getWebAnalyticsRealtime(workspaceId), [workspaceId, tick]);
-  const d = data.data;
+  const d = live.snapshot?.realtime ?? data.data;
 
   const q = query.trim().toLowerCase();
   const activity = (d?.activity ?? []).filter(
@@ -140,8 +148,19 @@ export function RealtimePage() {
     a.type === "event" ? fmt(t.fired, { event: a.eventName ?? "" }) : fmt(t.viewed, { path: a.urlPath ?? "/" });
 
   return (
-    <div className="min-w-0 max-w-7xl">
+    <div ref={frame} className="min-w-0 max-w-7xl bg-paper [&:fullscreen]:max-w-none [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-6">
       <PageHeader back={{ to: "/analytics/web", label: t.back }} title={t.title} description={t.description} />
+
+      <div className="mb-4">
+        <LivePanel
+          workspaceId={workspaceId}
+          live={live.snapshot?.live ?? null}
+          connected={live.connected}
+          funnelId={funnelId}
+          onFunnelChange={setFunnelId}
+          fullscreenTarget={frame}
+        />
+      </div>
 
       <DataState loading={data.loading && !d} error={data.error} onRetry={() => data.refresh()}>
         {d && (

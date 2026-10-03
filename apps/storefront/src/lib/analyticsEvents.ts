@@ -35,13 +35,21 @@ import {
   type UrlOptions,
 } from "./trackerCore";
 import { captureAttribution, getSessionId, getVisitorId, type Attribution } from "./visitor";
+import { currentTouches, type Touches } from "./touches";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
 /** Umami waits this long after a navigation before reading document.title. */
 export const TITLE_DELAY_MS = 300;
 
-export type AnalyticsEventName = "page_view" | "view_content" | "add_to_cart" | "begin_checkout" | "purchase";
+export type AnalyticsEventName =
+  | "page_view"
+  | "view_content"
+  | "add_to_cart"
+  | "begin_checkout"
+  | "add_payment_info"
+  | "purchase"
+  | "lead";
 
 /** JSON-compatible custom event data (Umami's EventData). */
 export type EventDataValue = boolean | number | string | null | EventData | EventDataValue[];
@@ -67,6 +75,8 @@ export interface AnalyticsEvent {
   /** ISO 4217 code of revenueAmount. */
   currency?: string;
   dedupeId?: string;
+  /** The id the browser ad pixels got for this same event, so the API's server-side copy dedupes against it. */
+  eventId?: string;
   occurredAt?: string;
   metadata?: Record<string, unknown>;
   /** Custom event data (`window.zimos.track(name, data)`, `data-zimos-event-*`). */
@@ -96,7 +106,18 @@ interface Batch {
   language?: string;
   /** location.hostname */
   hostname?: string;
+  /** The 30-day first/last touch (lib/touches.ts); the API copies it onto an order with its purchase event. */
+  touches?: Touches;
+  /** Ad-platform browser ids and viewed products, for server-side pixel events (lib/adPixels.ts). */
+  pixel?: Record<string, unknown>;
   events: AnalyticsEvent[];
+}
+
+let pixelInfo: (() => Record<string, unknown> | undefined) | null = null;
+
+/** lib/adPixels.ts registers this when the store has pixels; the result rides on every batch. */
+export function setPixelInfoProvider(provider: (() => Record<string, unknown> | undefined) | null) {
+  pixelInfo = provider;
 }
 
 const MAX_NAME = 50;
@@ -233,6 +254,14 @@ function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean)
   };
   const attribution = captureAttribution();
   if (Object.keys(attribution).length > 0) body.attribution = attribution;
+  const touches = currentTouches();
+  if (touches) body.touches = touches;
+  try {
+    const pixel = pixelInfo?.();
+    if (pixel && Object.keys(pixel).length > 0) body.pixel = pixel;
+  } catch {
+    /* optional */
+  }
   try {
     if (window.screen) body.screen = `${window.screen.width}x${window.screen.height}`;
     if (navigator.language) body.language = navigator.language;

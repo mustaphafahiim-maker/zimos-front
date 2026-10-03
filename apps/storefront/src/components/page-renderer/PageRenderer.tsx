@@ -10,6 +10,7 @@ import {
   CartElement,
   CollectionListElement,
   ProductCardElement,
+  ShoppableImageElement,
   ProductListElement,
 } from "./commerce";
 import {
@@ -39,9 +40,40 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
+import {
+  CarouselElement,
+  CheckoutSummaryElement,
+  CodFormElement,
+  OrderSummaryElement,
+  PriceElement,
+  ReviewsListElement,
+  StarsDisplayElement,
+  TabsElement,
+  TextLinkElement,
+  ToggleElement,
+  UpsellActionElement,
+} from "./builderElements";
 import { ShowcaseElement } from "./showcase";
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
+import { pageStyleSheet, styleKey } from "./elementStyle";
+import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
+import { RepeaterElement } from "./repeater";
+
+/**
+ * An element with a style of its own (the editor's Style and Layout tabs) is
+ * wrapped in a box its rules target; any other element is rendered bare, the
+ * way it always was.
+ */
+function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+  const key = styleKey(element);
+  if (!key) return <ElementNode element={element} ctx={ctx} />;
+  return (
+    <div data-zs={key}>
+      <ElementNode element={element} ctx={ctx} />
+    </div>
+  );
+}
 
 /**
  * Renders a published page built in the merchant's website editor.
@@ -85,10 +117,23 @@ interface Ctx {
    * element marker is `display: contents`, so it adds no box of its own.
    */
   editable?: boolean;
+  /** What the page's bindings and repeaters read (bindings.ts); null on a page that uses neither. */
+  data: BindingData | null;
+  /** The page's product, for product elements that name none; "" when the page has none. */
+  pageProductId: string;
 }
 
+/** Elements whose empty `productId` means "the page's product". */
+const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form"]);
+
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
-  const props = propsOf(element);
+  // Bound props are replaced by live data before the element ever sees them.
+  const bound = ctx.data ? applyBindings(element, ctx.data) : propsOf(element);
+  // A product element with no product of its own follows the page's product.
+  const props =
+    ctx.pageProductId && PAGE_PRODUCT_TYPES.has(element.type) && !bound.productId
+      ? { ...bound, productId: ctx.pageProductId }
+      : bound;
   const { t } = ctx;
 
   switch (element.type) {
@@ -125,7 +170,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "countdown":
       return <CountdownElement props={props} />;
     case "form":
-      return <FormElement props={props} t={t} />;
+      return <FormElement props={props} t={t} workspaceId={ctx.workspaceId} elementId={element.id} disabled={ctx.editable} />;
     case "map":
       return <MapElement props={props} t={t} />;
     case "social_icons":
@@ -140,6 +185,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
           funnel={ctx.funnel}
         />
       );
+    case "shoppable_image":
+      return <ShoppableImageElement props={props} workspaceId={ctx.workspaceId} />;
     case "product_list":
       return (
         <ProductListElement
@@ -169,6 +216,33 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <MarqueeElement props={props} />;
     case "comparison":
       return <ComparisonElement props={props} t={t} />;
+    // --- SPEC §9.3 builder elements (builderElements.tsx) ---
+    case "text_link":
+      return <TextLinkElement props={props} />;
+    case "tabs":
+      return <TabsElement props={props} />;
+    case "toggle":
+      return <ToggleElement props={props} />;
+    case "carousel":
+      return <CarouselElement props={props} />;
+    case "stars_display":
+      return <StarsDisplayElement props={props} t={t} />;
+    case "price":
+      return <PriceElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />;
+    case "reviews_list":
+      return <ReviewsListElement props={props} workspaceId={ctx.workspaceId} t={t} locale={ctx.locale} />;
+    case "cod_form":
+      return <CodFormElement props={props} workspaceId={ctx.workspaceId} funnel={ctx.funnel} editable={ctx.editable} />;
+    case "checkout_summary":
+      return <CheckoutSummaryElement props={props} funnel={ctx.funnel} />;
+    case "order_summary":
+      return <OrderSummaryElement props={props} workspaceId={ctx.workspaceId} />;
+    case "upsell_accept_button":
+      return <UpsellActionElement props={props} action="accepted_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    case "upsell_decline_link":
+      return <UpsellActionElement props={props} action="declined_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    case "repeater":
+      return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
       // The showcase sections (./showcase) draw their own types; anything
       // else is a type this renderer does not know, and a tree written for a
@@ -210,7 +284,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
       >
         {elements.map((element) => (
           <div key={element.id} data-zimos-el={element.id} data-zimos-type={element.type} className="contents">
-            <ElementNode element={element} ctx={ctx} />
+            <StyledElement element={element} ctx={ctx} />
           </div>
         ))}
       </div>
@@ -220,7 +294,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   return (
     <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span}>
       {elements.map((element) => (
-        <ElementNode key={element.id} element={element} ctx={ctx} />
+        <StyledElement key={element.id} element={element} ctx={ctx} />
       ))}
     </div>
   );
@@ -304,13 +378,14 @@ function EditableSectionNode({
   );
 }
 
-export function PageRenderer({
+export async function PageRenderer({
   tree,
   workspaceId,
   currency,
   locale,
   editable = false,
   funnel,
+  siteStyles,
 }: {
   tree: PageTree | null;
   workspaceId: string;
@@ -324,15 +399,30 @@ export function PageRenderer({
   editable?: boolean;
   /** A running funnel's step page — see PageRendererFunnel. */
   funnel?: PageRendererFunnel;
+  /** The website's global styles: its named styles apply on every page (elementStyle.ts). */
+  siteStyles?: unknown;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
+  const ctx: Ctx = {
+    workspaceId,
+    currency,
+    locale,
+    t: getDictionary(locale),
+    funnel,
+    editable,
+    // One load for the whole page; null (and no call at all) when nothing is bound.
+    data: await loadBindingData(tree, workspaceId, currency, locale),
+    pageProductId: pageProductId(tree),
+  };
   const hero = heroSectionIndex(sections);
+  const css = pageStyleSheet(tree, siteStyles);
 
   // `zt-sections` lets a store theme restyle the rules between sections.
   return (
     <div className="zt-sections divide-y divide-line">
+      {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
+      {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />

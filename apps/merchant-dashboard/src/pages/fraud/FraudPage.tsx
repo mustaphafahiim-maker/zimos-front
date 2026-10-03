@@ -3,11 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { PageHeader } from "@/components/PageHeader";
-import { FraudRulesTab } from "./FraudRulesTab";
+import { ProtectionRulesTab } from "./ProtectionRulesTab";
 import { FlaggedOrdersTab } from "./FlaggedOrdersTab";
-import { BlocklistTab } from "./BlocklistTab";
+import { BlockedEntriesTab } from "./BlockedEntriesTab";
+import { ProtectionStatsTab } from "./ProtectionStatsTab";
 
-const TABS = ["rules", "flagged", "blocklist"] as const;
+const TABS = ["rules", "flagged", "blocklist", "stats"] as const;
 type FraudTab = (typeof TABS)[number];
 
 const STRINGS = {
@@ -17,7 +18,8 @@ const STRINGS = {
     tabsLabel: "Fraud sections",
     rules: "Rules",
     flagged: "Flagged",
-    blocklist: "Blocklist",
+    blocklist: "Blocked",
+    stats: "Statistics",
   },
   ar: {
     title: "الحماية من الاحتيال",
@@ -25,7 +27,8 @@ const STRINGS = {
     tabsLabel: "أقسام الحماية من الاحتيال",
     rules: "القواعد",
     flagged: "المشتبه بها",
-    blocklist: "قائمة الحظر",
+    blocklist: "المحظورون",
+    stats: "الإحصائيات",
   },
 } satisfies Messages;
 
@@ -58,7 +61,7 @@ export function FraudPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       <PageHeader title={t.title} description={t.description} />
 
       <Tabs value={tab} onValueChange={selectTab}>
@@ -75,13 +78,16 @@ export function FraudPage() {
 
         {/* Keyed on the workspace so switching stores resets every tab's local state. */}
         <TabsContent value="rules" className="pt-4">
-          <FraudRulesTab key={workspaceId} />
+          <ProtectionRulesTab key={workspaceId} />
         </TabsContent>
         <TabsContent value="flagged" className="pt-4">
           <FlaggedOrdersTab key={workspaceId} />
         </TabsContent>
         <TabsContent value="blocklist" className="pt-4">
-          <BlocklistTab key={workspaceId} />
+          <BlockedEntriesTab key={workspaceId} />
+        </TabsContent>
+        <TabsContent value="stats" className="pt-4">
+          <ProtectionStatsTab key={workspaceId} />
         </TabsContent>
       </Tabs>
     </div>

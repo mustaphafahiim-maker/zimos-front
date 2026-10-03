@@ -1,6 +1,7 @@
 "use client";
 
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontHeaderCollections } from "@store-builder/api-client";
+import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { getDictionary, type Locale } from "@/lib/i18n";
@@ -70,7 +71,24 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   // The merchant's own menu, when they wrote one. Wide screens show it inline
   // from `md` (it can be several links long) and phones in the menu sheet,
   // which therefore stays available up to `md` instead of `sm`.
-  const menu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
+  // Pages flagged "show in header" (store settings → pages) join the menu.
+  const headerPages: ResolvedShellLink[] = storefrontDesignMeta(store)
+    .navPages.filter((p) => p.showInHeader)
+    .map((p) => ({ key: `page:${p.path}`, label: p.title, href: p.path, external: false }));
+  // Collections flagged "show in header" (catalog → collections) join it too.
+  for (const c of storefrontHeaderCollections(store)) {
+    headerPages.push({
+      key: `collection:${c.id}`,
+      label: c.name,
+      href: `/products?collection=${encodeURIComponent(c.slug)}`,
+      external: false,
+    });
+  }
+  const ownMenu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
+  const menu: ResolvedShellLink[] | null =
+    headerPages.length > 0
+      ? [...(ownMenu ?? [{ key: "home", label: t.common.home, href: "/", external: false }]), ...headerPages]
+      : ownMenu;
   // A menu link may open a list under it (shell/NavDropdown): `menu[i].children`.
   const children = menuChildren(store.themeSettings, t.common);
   const menuLinks = menu?.map((link) => {

@@ -374,6 +374,12 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text" },
       { key: "submitLabel", label: "Submit button text", kind: "text" },
+      { key: "successMessage", label: "Message after sending", kind: "text" },
+      { key: "tags", label: "Tags added to the contact (comma-separated)", kind: "text" },
+      { key: "extraFields", label: "Extra text fields", kind: "stringList", itemLabel: "Field label" },
+      { key: "choiceLabel", label: "Choice list — its label", kind: "text" },
+      { key: "choices", label: "Choice list — its options", kind: "stringList", itemLabel: "Option" },
+      { key: "checkboxLabel", label: "Checkbox — its label", kind: "text" },
     ],
   },
   map: {
@@ -390,6 +396,15 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     icon: Share2,
     defaultProps: { links: [] },
     fields: [{ key: "links", label: "Links", kind: "linkList" }],
+  },
+  shoppable_image: {
+    label: "Shoppable image",
+    icon: ShoppingBag,
+    defaultProps: { title: "", imageId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "imageId", label: "Shoppable image ID", kind: "text", hint: "Copy it from Catalog → Shoppable images." },
+    ],
   },
   product_card: {
     label: "Single product",
@@ -554,6 +569,155 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     ],
   },
 
+  // --- Builder elements of SPEC §9.3 (backend rules: ELEMENT_PROP_RULES) ------
+  text_link: {
+    label: "Text link",
+    icon: MousePointerClick,
+    defaultProps: { text: "", href: "", newTab: false },
+    fields: [
+      { key: "text", label: "Text", kind: "text" },
+      { key: "href", label: "Link", kind: "text", placeholder: "/about-us" },
+      { key: "newTab", label: "Open in a new tab", kind: "boolean" },
+    ],
+  },
+  tabs: {
+    label: "Tabs",
+    icon: PanelBottom,
+    defaultProps: { title: "", items: [] },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "items", label: "Tabs", kind: "qaList", hint: "The question is the tab's name, the answer is what it shows." },
+    ],
+  },
+  toggle: {
+    label: "Toggle",
+    icon: ChevronDown,
+    defaultProps: { title: "", body: "", open: false },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "body", label: "Text", kind: "textarea" },
+      { key: "open", label: "Start open", kind: "boolean" },
+    ],
+  },
+  carousel: {
+    label: "Carousel",
+    icon: GalleryHorizontal,
+    defaultProps: { title: "", images: [], autoplay: true },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "images", label: "Images", kind: "imageList" },
+    ],
+  },
+  stars_display: {
+    label: "Star rating",
+    icon: BadgeCheck,
+    defaultProps: { rating: 5, label: "" },
+    fields: [
+      { key: "rating", label: "Stars", kind: "number", min: 1, max: 5 },
+      { key: "label", label: "Text beside the stars", kind: "text" },
+    ],
+  },
+  price: {
+    label: "Product price",
+    icon: Tag,
+    defaultProps: { productId: "", showCompareAt: true, size: "medium" },
+    fields: [
+      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "showCompareAt", label: "Show the price before discount", kind: "boolean" },
+      {
+        key: "size",
+        label: "Size",
+        kind: "select",
+        options: [
+          { value: "small", label: "Small" },
+          { value: "medium", label: "Medium" },
+          { value: "large", label: "Large" },
+        ],
+      },
+    ],
+  },
+  reviews_list: {
+    label: "Customer reviews",
+    icon: MessageSquareQuote,
+    defaultProps: { title: "", productId: "", limit: 6 },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "limit", label: "How many reviews", kind: "number", min: 1, max: 50 },
+    ],
+  },
+  cod_form: {
+    label: "Order form (cash on delivery)",
+    icon: FormInput,
+    defaultProps: { title: "", productId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      {
+        key: "productId",
+        label: "Product ID",
+        kind: "text",
+        hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
+      },
+    ],
+  },
+  checkout_summary: {
+    label: "Cart summary",
+    icon: ShoppingCart,
+    defaultProps: { title: "", buttonLabel: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "buttonLabel", label: "Button text", kind: "text" },
+    ],
+  },
+  order_summary: {
+    label: "Order summary",
+    icon: FileText,
+    defaultProps: { title: "" },
+    fields: [{ key: "title", label: "Title", kind: "text" }],
+  },
+  upsell_accept_button: {
+    label: "Accept offer button",
+    icon: Zap,
+    defaultProps: { label: "" },
+    fields: [{ key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+  },
+  repeater: {
+    label: "Repeater",
+    icon: Rows3,
+    defaultProps: { title: "", source: "product.cms.features", layout: "grid", limit: 6, productId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      {
+        key: "source",
+        label: "Repeat for each",
+        kind: "select",
+        options: [
+          { value: "product.cms.features", label: "Product feature" },
+          { value: "product.cms.testimonials", label: "Product testimonial" },
+          { value: "product.cms.faqs", label: "Product question" },
+          { value: "product.reviews", label: "Approved review" },
+        ],
+        hint: "The items come from the product itself (Catalog → product → content), so the page fits any product.",
+      },
+      {
+        key: "layout",
+        label: "Layout",
+        kind: "select",
+        options: [
+          { value: "grid", label: "Grid" },
+          { value: "list", label: "List" },
+        ],
+      },
+      { key: "limit", label: "How many at most", kind: "number", min: 1, max: 24 },
+      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the page product." },
+    ],
+  },
+  upsell_decline_link: {
+    label: "Decline offer link",
+    icon: Minus,
+    defaultProps: { label: "" },
+    fields: [{ key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+  },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
 };
@@ -1865,6 +2029,104 @@ const CORE_PRESETS: BlockPreset[] = [
       },
     ],
   }),
+
+  // --- Builder elements (SPEC §9.3) ---------------------------------------------
+  {
+    key: "cod-form",
+    label: "Order form",
+    description: "Your product's options and the purchase form — the shopper orders without leaving the page.",
+    icon: FormInput,
+    group: "commerce",
+    elements: ["cod_form"],
+  },
+  {
+    key: "product-price",
+    label: "Product price",
+    description: "The product's real price, with the price before discount.",
+    icon: Tag,
+    group: "commerce",
+    elements: ["price"],
+  },
+  {
+    key: "reviews-list",
+    label: "Customer reviews",
+    description: "The approved reviews of a product, with their stars.",
+    icon: MessageSquareQuote,
+    group: "trust",
+    elements: ["reviews_list"],
+  },
+  {
+    key: "stars-display",
+    label: "Star rating",
+    description: "A row of stars with a short line beside it.",
+    icon: BadgeCheck,
+    group: "trust",
+    elements: ["stars_display"],
+  },
+  {
+    key: "cart-summary",
+    label: "Cart summary",
+    description: "What is in the shopper's cart and the way to checkout.",
+    icon: ShoppingCart,
+    group: "commerce",
+    elements: ["checkout_summary"],
+  },
+  {
+    key: "order-summary",
+    label: "Order summary",
+    description: "The order the shopper just placed — for a thank-you page.",
+    icon: FileText,
+    group: "convert",
+    elements: ["order_summary"],
+  },
+  {
+    key: "upsell-actions",
+    label: "Offer buttons",
+    description: "\"Yes, add it\" and \"No, thanks\" for a funnel's offer page.",
+    icon: Zap,
+    group: "convert",
+    elements: ["upsell_accept_button", "upsell_decline_link"],
+  },
+  {
+    key: "tabs",
+    label: "Tabs",
+    description: "Several panels of text behind a row of titles.",
+    icon: PanelBottom,
+    group: "story",
+    elements: ["tabs"],
+  },
+  {
+    key: "toggle",
+    label: "Toggle",
+    description: "One title that opens to show more text.",
+    icon: ChevronDown,
+    group: "story",
+    elements: ["toggle"],
+  },
+  {
+    key: "carousel",
+    label: "Carousel",
+    description: "Images that slide one after another.",
+    icon: GalleryHorizontal,
+    group: "story",
+    elements: ["carousel"],
+  },
+  {
+    key: "repeater",
+    label: "Repeater",
+    description: "One card per feature, testimonial, question or review of the page's product.",
+    icon: Rows3,
+    group: "story",
+    elements: ["repeater"],
+  },
+  {
+    key: "text-link",
+    label: "Text link",
+    description: "A plain link to a page or an outside address.",
+    icon: MousePointerClick,
+    group: "basics",
+    elements: ["text_link"],
+  },
 
   // --- FAQ, contact & conversion: answer, reach, close --------------------------
   {

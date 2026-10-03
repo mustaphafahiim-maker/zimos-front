@@ -101,6 +101,7 @@ export default async function CustomStorePage({ params }: { params: Params }) {
         workspaceId={workspaceId}
         currency={store.currency}
         locale={locale}
+        siteStyles={result.data.site?.globalStyles}
       />
     </main>
   );

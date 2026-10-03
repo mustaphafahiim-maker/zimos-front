@@ -7,7 +7,7 @@ import { CheckIcon } from "@/components/Icons";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getPaymentToken, paymentPageUrl, usePreviewToken } from "@/lib/payments";
+import { getPaymentToken, paymentPageUrl, savePaymentToken, usePreviewToken } from "@/lib/payments";
 import { useIsClient } from "@/lib/useIsClient";
 import { orderErrorMessage } from "@/lib/placeOrder";
 import { useStore } from "@/lib/StoreContext";
@@ -51,8 +51,14 @@ function PaymentPage() {
   // undefined until hydrated; null when this browser holds no token for the order.
   const isClient = useIsClient();
   const token = useMemo(
-    () => (isClient ? getPaymentToken(workspaceId, orderId) : undefined),
-    [isClient, workspaceId, orderId]
+    () => {
+      if (!isClient) return undefined;
+      // A "try again" link from the store carries a fresh token: keep it like the one checkout gave.
+      const fromLink = search.get("t");
+      if (fromLink && /^[A-Za-z0-9_-]{20,200}$/.test(fromLink)) savePaymentToken(workspaceId, orderId, fromLink);
+      return getPaymentToken(workspaceId, orderId);
+    },
+    [isClient, workspaceId, orderId, search]
   );
   const [status, setStatus] = useState<ShopperPaymentStatus | null>(null);
   const [error, setError] = useState<string | null>(null);

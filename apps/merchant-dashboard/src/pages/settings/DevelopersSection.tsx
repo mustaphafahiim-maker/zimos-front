@@ -17,8 +17,10 @@ import {
   type ApiKeyScope,
   type WebhookDeliveryDto,
   type WebhookEndpointDto,
+  type WebhookFilter,
+  webhooksCreateFiltered,
 } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient, apiBaseUrl } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -28,6 +30,8 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
+import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -85,6 +89,8 @@ const STRINGS = {
     createdBy: "Created by {name}",
     scopeRead: "read",
     scopeWrite: "write",
+    scopeMore: "+{count} more",
+    apiDocs: "API reference",
     // Webhooks
     hooksTitle: "Webhooks",
     hooksHint: "We send a signed request to your URL within seconds of a new order or any status change — confirmation, payment, shipping, delivery.",
@@ -167,6 +173,8 @@ const STRINGS = {
     createdBy: "عمله {name}",
     scopeRead: "قراءة",
     scopeWrite: "تحديث",
+    scopeMore: "+{count} أنواع بيانات",
+    apiDocs: "توثيق الـ API",
     hooksTitle: "الويب هوكس",
     hooksHint: "بنبعت طلب موقّع للرابط بتاعك في خلال ثواني من أي أوردر جديد أو أي تغيير في حالته — تأكيد، دفع، شحن، تسليم.",
     addEndpoint: "إضافة رابط",
@@ -289,7 +297,17 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-medium text-ink">{t.keysTitle}</h3>
-          <p className="text-sm text-ink-soft">{t.keysHint}</p>
+          <p className="text-sm text-ink-soft">
+            {t.keysHint}{" "}
+            <a
+              href={`${apiBaseUrl.replace(/\/api\/v\d+\/?$/, "")}/public-docs`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              {t.apiDocs}
+            </a>
+          </p>
         </div>
         <Button onClick={() => setCreating(true)}>{t.newKey}</Button>
       </div>
@@ -312,7 +330,10 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                       {key.keyPrefix}…
                     </code>
                     {" · "}
-                    {key.scopes.includes("orders:write") ? `${t.scopeRead} + ${t.scopeWrite}` : t.scopeRead}
+                    {key.scopes.some((s) => s.startsWith("orders:") && s !== "orders:read") ? `${t.scopeRead} + ${t.scopeWrite}` : t.scopeRead}
+                    {countExtraResources(key.scopes) > 0 && (
+                      <span title={key.scopes.join(", ")}> {fmt(t.scopeMore, { count: countExtraResources(key.scopes) })}</span>
+                    )}
                     {" · "}
                     {key.lastUsedAt ? fmt(t.lastUsed, { when: when(key.lastUsedAt) }) : t.neverUsed}
                     {key.createdBy.fullName ? ` · ${fmt(t.createdBy, { name: key.createdBy.fullName })}` : ""}
@@ -368,6 +389,7 @@ function NewKeyModal({ t, open, onClose, onCreated }: { t: T; open: boolean; onC
   const errorMessage = useErrorMessage();
   const [name, setName] = useState("");
   const [write, setWrite] = useState(true);
+  const [access, setAccess] = useState<AccessMap>(EMPTY_ACCESS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -375,6 +397,7 @@ function NewKeyModal({ t, open, onClose, onCreated }: { t: T; open: boolean; onC
   function close() {
     setName("");
     setWrite(true);
+    setAccess(EMPTY_ACCESS);
     setError(null);
     setSecret(null);
     onClose();
@@ -385,7 +408,7 @@ function NewKeyModal({ t, open, onClose, onCreated }: { t: T; open: boolean; onC
     setBusy(true);
     setError(null);
     try {
-      const scopes: ApiKeyScope[] = write ? ["orders:read", "orders:write"] : ["orders:read"];
+      const scopes: ApiKeyScope[] = [...(write ? (["orders:read", "orders:write"] as ApiKeyScope[]) : (["orders:read"] as ApiKeyScope[])), ...scopesForAccess(access)];
       const created = await developersCreateApiKey(apiClient, workspaceId, { name: name.trim(), scopes });
       setSecret(created.secret);
       onCreated();
@@ -437,6 +460,7 @@ function NewKeyModal({ t, open, onClose, onCreated }: { t: T; open: boolean; onC
             </label>
           ))}
         </fieldset>
+        <ApiKeyAccessPicker value={access} onChange={setAccess} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={busy}>
@@ -538,6 +562,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                     {endpoint.secretHint}
                   </code>
                 </p>
+                <WebhookEndpointNotes endpoint={endpoint} />
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
                     {testing === endpoint.id ? t.testing : t.sendTest}
@@ -560,6 +585,8 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
           </ul>
         </DataState>
       </div>
+
+      {endpoints.length > 0 && <WebhookDeliveryLog />}
 
       <NewEndpointModal
         t={t}
@@ -645,6 +672,7 @@ function NewEndpointModal({
   const [url, setUrl] = useState("");
   const [all, setAll] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
+  const [filter, setFilter] = useState<WebhookFilter | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -653,6 +681,7 @@ function NewEndpointModal({
     setUrl("");
     setAll(true);
     setPicked([]);
+    setFilter(null);
     setError(null);
     setSecret(null);
     onClose();
@@ -663,10 +692,10 @@ function NewEndpointModal({
     setBusy(true);
     setError(null);
     try {
-      const created = await developersCreateWebhook(apiClient, workspaceId, {
-        url: url.trim(),
-        events: all ? ["*"] : picked,
-      });
+      const body = { url: url.trim(), events: all ? ["*"] : picked };
+      const created = filter
+        ? await webhooksCreateFiltered(apiClient, workspaceId, { ...body, filter })
+        : await developersCreateWebhook(apiClient, workspaceId, body);
       setSecret(created.signingSecret);
       onCreated();
     } catch (err) {
@@ -734,6 +763,7 @@ function NewEndpointModal({
             </div>
           )}
         </fieldset>
+        <WebhookFilterField value={filter} onChange={setFilter} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={busy}>

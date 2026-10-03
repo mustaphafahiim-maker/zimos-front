@@ -96,6 +96,8 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
   const [catalogue, setCatalogue] = useState<OrderExportCatalogue | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rowPer, setRowPer] = useState<RowPer>("order");
+  // CSV, or an Excel workbook (the API's `format`).
+  const [format, setFormat] = useState<"csv" | "xlsx">("csv");
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,8 +143,11 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
     try {
       // In the catalogue's order, whatever order the boxes were ticked in.
       const columns = visible.filter((c) => selected.includes(c.key)).map((c) => c.key);
-      const blob = await apiClient.exportOrdersCsv(workspaceId, { ...filters, columns, rowPer, lang: locale === "ar" ? "ar" : "en" });
-      saveBlob(blob, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
+      const params = { ...filters, columns, rowPer, lang: locale === "ar" ? "ar" : "en", format } as Parameters<
+        typeof apiClient.exportOrdersCsv
+      >[1];
+      const blob = await apiClient.exportOrdersCsv(workspaceId, params);
+      saveBlob(blob, `orders-${new Date().toISOString().slice(0, 10)}.${format}`);
       toast.success(t.done);
       onClose();
     } catch (err) {
@@ -167,7 +172,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
             {t.cancel}
           </Button>
           <Button onClick={download} disabled={busy || !catalogue || chosen === 0}>
-            {busy ? t.downloading : t.download}
+            {busy ? t.downloading : format === "xlsx" ? t.download.replace("CSV", "Excel") : t.download}
           </Button>
         </>
       }
@@ -183,6 +188,18 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
           <p className="text-sm text-ink-soft">
             {filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
           </p>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-ink">{locale === "ar" ? "صيغة الملف" : "File format"}</legend>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {(["csv", "xlsx"] as const).map((kind) => (
+                <label key={kind} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="export-format" checked={format === kind} onChange={() => setFormat(kind)} />
+                  {kind === "csv" ? "CSV" : "Excel (.xlsx)"}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-ink">{t.rowPer}</legend>

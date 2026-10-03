@@ -1,6 +1,19 @@
+import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { resolveCheckoutSettings } from "@store-builder/api-client";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  storefrontDesignMeta,
+  storefrontProductPage,
+} from "@store-builder/api-client";
+import { StoreInfoCards } from "@/components/StoreInfoCards";
+import { CodeSlot } from "@/components/CustomCode";
+import { ProductJsonLd } from "@/components/product/ProductJsonLd";
+import { storeOrigin } from "@/lib/domains";
+import { ProductContent } from "@/components/product/ProductContent";
+import { storefrontProductReviews } from "@store-builder/api-client";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -63,12 +76,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-function countdownHoursFrom(themeSettings: Record<string, unknown>): number | null {
-  const raw = themeSettings?.productCountdownHours;
-  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 720) : null;
-}
-
 export default async function ProductPage({ params }: { params: Params }) {
   const { workspaceId, idOrSlug } = await params;
 
@@ -83,6 +90,14 @@ export default async function ProductPage({ params }: { params: Params }) {
   const t = getDictionary(locale);
   // The merchant's bump — not on its own product's page.
   const bump = orderBumpOf(store.orderBump, [product.id]);
+  // The product page's own settings and content (lane 3), defaults filled in.
+  const page = storefrontProductPage(product);
+  const ps = page.pageSettings;
+  // With "form above the description" off, the buy box shows the description itself.
+  const descriptionInBuyBox = ps.inline_checkout && !ps.checkout_before_description;
+  // The merchant's own questions replace the store-wide ones.
+  const faqItems =
+    page.cms.faqs.length > 0 ? page.cms.faqs.map((item) => ({ q: item.question, a: item.answer })) : t.product.faqItems;
 
   // Details / shipping & returns / FAQ as tabs under the buy box. The
   // shipping tab is the delivery and returns answers from the FAQ, read as
@@ -90,7 +105,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   // four one-line promises); the FAQ tab is the whole list, as before.
   const shippingItems = t.product.faqItems.filter((_, i) => i === 1 || i === 2).map((item) => ({ title: item.q, hint: item.a }));
   const tabs: ProductTab[] = [
-    ...(product.description
+    ...(product.description && !descriptionInBuyBox
       ? [
           {
             id: "details",
@@ -120,12 +135,29 @@ export default async function ProductPage({ params }: { params: Params }) {
     {
       id: "faq",
       label: t.product.faq,
-      content: <Faq title={t.product.faq} items={t.product.faqItems} titleHidden />,
+      content: <Faq title={t.product.faq} items={faqItems} titleHidden />,
     },
   ];
 
   return (
     <main className="flex-1 pb-24 md:pb-0">
+      {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
+      <PixelScope productIds={[product.id]} />
+      {/* schema.org Product for search engines and Google Merchant. */}
+      <ProductJsonLd
+        product={product}
+        url={`${storeOrigin(store.slug)}/products/${product.slug}`}
+        currency={store.currency}
+        storeName={store.name}
+      />
+      {/* A landing page without the store's menu: hidden only while this page is shown. */}
+      {ps.hide_header && (
+        <style
+          dangerouslySetInnerHTML={{
+            __html: '[data-zimos-shell="header"],[data-zimos-shell="header"]+nav{display:none!important}',
+          }}
+        />
+      )}
       <div className={`${container} py-6 sm:py-8`}>
         <StoreLink
           href="/"
@@ -137,21 +169,35 @@ export default async function ProductPage({ params }: { params: Params }) {
 
         <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
+            <CodeSlot name="above_gallery" />
             <ProductGallery images={productImages(product)} name={product.name} />
+            <CodeSlot name="below_gallery" />
           </div>
           <ProductLanding
             workspaceId={workspaceId}
             product={product}
             bump={bump}
-            countdownHours={countdownHoursFrom(store.themeSettings)}
-            checkoutSettings={resolveCheckoutSettings(store.checkout)}
+            description={descriptionInBuyBox ? product.description : null}
+            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
           />
         </div>
+
+        <ProductContent cms={page.cms} locale={locale} />
+
+        {ps.reviews_enabled && (
+          <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
+        )}
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            <TrustStrip t={t} inAside />
+            {/* The merchant's own shipping / returns / COD cards when written; the generic row otherwise. */}
+            {resolveCheckoutForm(store.checkout).show_trust_badges &&
+              (storefrontDesignMeta(store).storeInfo?.cards.length ? (
+                <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
+              ) : (
+                <TrustStrip t={t} inAside />
+              ))}
           </aside>
         </div>
       </div>
