@@ -7,6 +7,7 @@ import {
   type CustomizationInput,
   type Order,
 } from "@store-builder/api-client";
+import { botGuardFields } from "./botGuard";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import type { Dictionary } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
@@ -44,7 +45,9 @@ export async function placeCodOrder({
   /** The shopper's visitor id — it owns any photo answering a custom field. */
   visitorId?: string;
 }): Promise<Order> {
-  return client.checkout(workspaceId, payload, cartToken, { visitorId });
+  // The bot guard's token and honeypot ride along with every order (lib/botGuard).
+  const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)) };
+  return client.checkout(workspaceId, guarded, cartToken, { visitorId });
 }
 
 /**

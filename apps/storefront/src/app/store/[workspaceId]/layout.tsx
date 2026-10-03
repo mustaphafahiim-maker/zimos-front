@@ -9,6 +9,7 @@ import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
+import { BotGuard } from "@/components/BotGuard";
 import { TrackingPixels } from "@/components/TrackingPixels";
 import { storePixelsOf } from "@/lib/adPixels";
 import { resolveCheckoutForm, resolveCheckoutSettings, resolveThankYouPage } from "@store-builder/api-client";
@@ -151,6 +152,7 @@ export default async function StoreLayout({
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+            <BotGuard workspaceId={workspaceId} />
           </Suspense>
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
