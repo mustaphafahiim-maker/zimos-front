@@ -54,5 +54,7 @@ export * from "./endpoints/notifications";
 export * from "./endpoints/orders";
 // Contacts, segments and form submissions (lane 8).
 export * from "./endpoints/contacts";
+// All my stores and duplicate store (lane 8).
+export * from "./endpoints/stores";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";

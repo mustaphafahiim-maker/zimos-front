@@ -11,7 +11,7 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { storePixelsOf } from "@/lib/adPixels";
+import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
 import {
   resolveCheckoutForm,
   resolveCheckoutSettings,
@@ -182,7 +182,7 @@ export default async function StoreLayout({
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels pixels={pixels} />
+              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} />
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its

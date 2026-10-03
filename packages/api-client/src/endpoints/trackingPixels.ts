@@ -171,3 +171,25 @@ export async function trackingPixelsSendTest(
 ): Promise<TrackingPixelTestResult> {
   return client.request<TrackingPixelTestResult>(`${base(workspaceId)}/${pixelId}/test`, { method: "POST" });
 }
+
+// -------------------------------------------------------- purchase timing --
+
+/** When an order is reported to the ad platforms as a Purchase (SPEC §13.3). */
+export type TrackingPurchaseEventTiming = "on_order" | "on_confirmed" | "on_delivered";
+
+export interface TrackingSettings {
+  purchaseEventTiming: TrackingPurchaseEventTiming;
+  options: TrackingPurchaseEventTiming[];
+}
+
+export async function trackingPixelsGetSettings(client: ApiClient, workspaceId: string): Promise<TrackingSettings> {
+  return client.request<TrackingSettings>(`${base(workspaceId)}/settings`);
+}
+
+export async function trackingPixelsUpdateSettings(
+  client: ApiClient,
+  workspaceId: string,
+  payload: { purchaseEventTiming: TrackingPurchaseEventTiming }
+): Promise<TrackingSettings> {
+  return client.request<TrackingSettings>(`${base(workspaceId)}/settings`, { method: "PUT", body: payload });
+}
