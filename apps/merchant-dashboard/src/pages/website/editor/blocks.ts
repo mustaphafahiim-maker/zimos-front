@@ -658,6 +658,37 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { label: "" },
     fields: [{ key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
   },
+  repeater: {
+    label: "Repeater",
+    icon: Rows3,
+    defaultProps: { title: "", source: "product.cms.features", layout: "grid", limit: 6, productId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      {
+        key: "source",
+        label: "Repeat for each",
+        kind: "select",
+        options: [
+          { value: "product.cms.features", label: "Product feature" },
+          { value: "product.cms.testimonials", label: "Product testimonial" },
+          { value: "product.cms.faqs", label: "Product question" },
+          { value: "product.reviews", label: "Approved review" },
+        ],
+        hint: "The items come from the product itself (Catalog → product → content), so the page fits any product.",
+      },
+      {
+        key: "layout",
+        label: "Layout",
+        kind: "select",
+        options: [
+          { value: "grid", label: "Grid" },
+          { value: "list", label: "List" },
+        ],
+      },
+      { key: "limit", label: "How many at most", kind: "number", min: 1, max: 24 },
+      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the page product." },
+    ],
+  },
   upsell_decline_link: {
     label: "Decline offer link",
     icon: Minus,
@@ -2054,6 +2085,14 @@ const CORE_PRESETS: BlockPreset[] = [
     icon: GalleryHorizontal,
     group: "story",
     elements: ["carousel"],
+  },
+  {
+    key: "repeater",
+    label: "Repeater",
+    description: "One card per feature, testimonial, question or review of the page's product.",
+    icon: Rows3,
+    group: "story",
+    elements: ["repeater"],
   },
   {
     key: "text-link",

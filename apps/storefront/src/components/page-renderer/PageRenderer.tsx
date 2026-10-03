@@ -55,6 +55,8 @@ import {
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 import { pageStyleSheet, styleKey } from "./elementStyle";
+import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
+import { RepeaterElement } from "./repeater";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
@@ -113,10 +115,23 @@ interface Ctx {
    * element marker is `display: contents`, so it adds no box of its own.
    */
   editable?: boolean;
+  /** What the page's bindings and repeaters read (bindings.ts); null on a page that uses neither. */
+  data: BindingData | null;
+  /** The page's product, for product elements that name none; "" when the page has none. */
+  pageProductId: string;
 }
 
+/** Elements whose empty `productId` means "the page's product". */
+const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form"]);
+
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
-  const props = propsOf(element);
+  // Bound props are replaced by live data before the element ever sees them.
+  const bound = ctx.data ? applyBindings(element, ctx.data) : propsOf(element);
+  // A product element with no product of its own follows the page's product.
+  const props =
+    ctx.pageProductId && PAGE_PRODUCT_TYPES.has(element.type) && !bound.productId
+      ? { ...bound, productId: ctx.pageProductId }
+      : bound;
   const { t } = ctx;
 
   switch (element.type) {
@@ -222,6 +237,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <UpsellActionElement props={props} action="accepted_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
     case "upsell_decline_link":
       return <UpsellActionElement props={props} action="declined_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    case "repeater":
+      return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
       // Unreachable for the 29 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.
@@ -350,7 +367,7 @@ function EditableSectionNode({
   );
 }
 
-export function PageRenderer({
+export async function PageRenderer({
   tree,
   workspaceId,
   currency,
@@ -376,7 +393,17 @@ export function PageRenderer({
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
+  const ctx: Ctx = {
+    workspaceId,
+    currency,
+    locale,
+    t: getDictionary(locale),
+    funnel,
+    editable,
+    // One load for the whole page; null (and no call at all) when nothing is bound.
+    data: await loadBindingData(tree, workspaceId, currency, locale),
+    pageProductId: pageProductId(tree),
+  };
   const hero = heroSectionIndex(sections);
   const css = pageStyleSheet(tree, siteStyles);
 

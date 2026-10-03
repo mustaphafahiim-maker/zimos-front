@@ -412,6 +412,8 @@ export const PAGE_ELEMENT_TYPES = [
   "order_summary",
   "upsell_accept_button",
   "upsell_decline_link",
+  // SPEC §9.4: one block per item of a product list.
+  "repeater",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */
