@@ -7,6 +7,7 @@ import {
   PROTECTION_SWITCH_RULES,
   protectionResolveRules,
   protectionSaveRules,
+  type CheckoutOtpSettings,
   type ProtectionAction,
   type ProtectionNumberRule,
   type ProtectionRuleKey,
@@ -83,6 +84,18 @@ const STRINGS = {
     allowedCountriesHint: "Two-letter country codes separated by commas, for example EG, SA. Leave empty for your store's country only.",
     allowedCountriesError: "Use two-letter country codes separated by commas.",
     rangeError: "Enter a whole number from {min} to {max}.",
+    otpHeading: "Phone verification",
+    otpEnabled: "Ask for a code before the order is placed",
+    otpEnabledHint: "The shopper gets a code and types it in. No order, stock hold or pixel event exists until the number is verified; unverified attempts go to lost orders.",
+    otpChannel: "Send the code by",
+    otpChannel_whatsapp: "WhatsApp (SMS if it cannot be sent)",
+    otpChannel_sms: "SMS",
+    otpApply: "Ask",
+    otpApply_all: "Every order",
+    otpApply_cod_only: "Cash-on-delivery orders only",
+    otpApply_risky_only: "Risky orders only",
+    otpLength: "Code length",
+    otpDigits: "{n} digits",
     visitorsHeading: "Visitors",
     botProtection: "Bot protection",
     botProtectionHint: "Refuses orders sent by scripts: a hidden field only a bot fills, and a check that the form was open for at least three seconds. Refused attempts go to lost orders.",
@@ -141,6 +154,18 @@ const STRINGS = {
     allowedCountriesHint: "أكواد الدول من حرفين مفصولة بفواصل، مثل EG, SA. اتركها فارغة لدولة متجرك فقط.",
     allowedCountriesError: "استخدم أكواد دول من حرفين مفصولة بفواصل.",
     rangeError: "أدخل رقمًا صحيحًا من {min} إلى {max}.",
+    otpHeading: "تأكيد رقم الموبايل",
+    otpEnabled: "طلب كود تحقق قبل تسجيل الأوردر",
+    otpEnabledHint: "يوصل للمشتري كود ويكتبه. لا يُسجَّل أوردر ولا يُحجز مخزون ولا يُرسَل حدث بيكسل قبل تأكيد الرقم؛ المحاولات غير المؤكدة تذهب إلى الطلبات المفقودة.",
+    otpChannel: "إرسال الكود عبر",
+    otpChannel_whatsapp: "واتساب (ورسالة SMS إذا تعذّر)",
+    otpChannel_sms: "رسالة SMS",
+    otpApply: "يُطلب من",
+    otpApply_all: "كل الأوردرات",
+    otpApply_cod_only: "أوردرات الدفع عند الاستلام فقط",
+    otpApply_risky_only: "الأوردرات الخطرة فقط",
+    otpLength: "طول الكود",
+    otpDigits: "{n} أرقام",
     visitorsHeading: "الزوار",
     botProtection: "الحماية من البوتات",
     botProtectionHint: "ترفض الأوردرات المرسلة بسكربتات: حقل مخفي لا يملؤه إلا البوت، والتأكد أن الفورم كان مفتوحًا ثلاث ثوانٍ على الأقل. المحاولات المرفوضة تذهب إلى الطلبات المفقودة.",
@@ -176,6 +201,7 @@ interface Draft {
   countries: string;
   blockedCountries: string;
   botProtection: boolean;
+  otp: CheckoutOtpSettings;
   on: Record<ProtectionRuleKey, boolean>;
   /** Raw input text of the number rules. */
   values: Record<ProtectionNumberRule, string>;
@@ -197,6 +223,7 @@ function toDraft(rules: ProtectionRules): Draft {
     blockedCountries: rules.blocked_countries.join(", "),
     // Unset means the platform default, which is on for a live store.
     botProtection: rules.bot_protection !== false,
+    otp: { ...rules.checkout_otp },
     on,
     values,
     actions: { ...rules.actions },
@@ -223,6 +250,7 @@ function toRules(draft: Draft): ProtectionRules {
     allowed_countries: parseCountries(draft.countries) ?? [],
     blocked_countries: parseCountries(draft.blockedCountries) ?? [],
     bot_protection: draft.botProtection,
+    checkout_otp: { ...draft.otp },
     numbers,
     switches,
     actions: { ...draft.actions },
@@ -346,6 +374,61 @@ export function ProtectionRulesTab() {
           </div>
         </Card>
       ))}
+
+      <Card className="space-y-3 p-5">
+        <h2 className="font-display text-lg font-medium text-ink">{t.otpHeading}</h2>
+        <ChoiceRow
+          checked={draft.otp.enabled}
+          disabled={disabled}
+          onChange={(enabled) => patch({ otp: { ...draft.otp, enabled } })}
+          label={t.otpEnabled}
+          hint={t.otpEnabledHint}
+        />
+        {draft.otp.enabled && (
+          <div className="grid gap-3 ps-3 sm:grid-cols-3">
+            <label className="space-y-1.5 text-sm">
+              <span className="text-ink-soft">{t.otpChannel}</span>
+              <Select
+                value={draft.otp.channel}
+                disabled={disabled}
+                className="h-11"
+                onChange={(e) => patch({ otp: { ...draft.otp, channel: e.target.value as CheckoutOtpSettings["channel"] } })}
+              >
+                <option value="whatsapp">{t.otpChannel_whatsapp}</option>
+                <option value="sms">{t.otpChannel_sms}</option>
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-ink-soft">{t.otpApply}</span>
+              <Select
+                value={draft.otp.apply_to}
+                disabled={disabled}
+                className="h-11"
+                onChange={(e) => patch({ otp: { ...draft.otp, apply_to: e.target.value as CheckoutOtpSettings["apply_to"] } })}
+              >
+                <option value="all">{t.otpApply_all}</option>
+                <option value="cod_only">{t.otpApply_cod_only}</option>
+                <option value="risky_only">{t.otpApply_risky_only}</option>
+              </Select>
+            </label>
+            <label className="space-y-1.5 text-sm">
+              <span className="text-ink-soft">{t.otpLength}</span>
+              <Select
+                value={String(draft.otp.code_length)}
+                disabled={disabled}
+                className="h-11"
+                onChange={(e) => patch({ otp: { ...draft.otp, code_length: Number(e.target.value) } })}
+              >
+                {[4, 5, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {fmt(t.otpDigits, { n })}
+                  </option>
+                ))}
+              </Select>
+            </label>
+          </div>
+        )}
+      </Card>
 
       <Card className="space-y-3 p-5">
         <h2 className="font-display text-lg font-medium text-ink">{t.visitorsHeading}</h2>
