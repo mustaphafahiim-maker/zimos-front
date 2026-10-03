@@ -13,6 +13,8 @@ import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
 import { ReturnsSection } from "./components/ReturnsSection";
 import { PaymentsSection } from "./components/PaymentsSection";
+import { StatusChanger } from "./components/StatusChanger";
+import { StatusHistorySection } from "./components/StatusHistorySection";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 
 const STRINGS = {
@@ -58,6 +60,7 @@ export function OrderDetailPage() {
             <StatusBadge value={data.stage} tone={STAGE_TONE[data.stage]} text={labels.stage(data.stage)} />
           ) : undefined
         }
+        actions={data ? <StatusChanger order={data} onChanged={reload} /> : undefined}
       />
 
       <DataState loading={order.loading} error={order.error} onRetry={() => order.refresh()}>
@@ -88,6 +91,8 @@ export function OrderDetailPage() {
             <ShipmentsSection order={data} onChanged={reload} />
 
             <ReturnsSection order={data} onOrderMaybeChanged={reload} />
+
+            <StatusHistorySection order={data} refreshKey={`${data.stage}:${data.updatedAt}`} />
           </div>
         )}
       </DataState>

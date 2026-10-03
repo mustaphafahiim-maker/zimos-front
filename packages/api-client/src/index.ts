@@ -40,3 +40,5 @@ export * from "./endpoints/funnelRuntime";
 export * from "./endpoints/developers";
 // Protection against fake orders: blocklist, rules, risk (Fraud protection page).
 export * from "./endpoints/protection";
+// Orders: status changes, history, notes, tags, bulk actions (lane 1).
+export * from "./endpoints/orders";
