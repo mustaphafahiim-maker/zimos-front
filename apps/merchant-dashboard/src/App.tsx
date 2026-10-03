@@ -42,6 +42,7 @@ import { BundlesPage } from "@/pages/offers/BundlesPage";
 import { OrderBumpsPage, UpsellsPage } from "@/pages/offers/OrderBumpsPage";
 import { CrossSellPage } from "@/pages/offers/CrossSellPage";
 import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
+import { OrderRulesPage } from "@/pages/offers/OrderRulesPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -147,6 +148,7 @@ export default function App() {
                       <Route path="/offers/cross-sell" element={<CrossSellPage />} />
                       <Route path="/offers/upsells" element={<UpsellsPage />} />
                       <Route path="/offers/exit-popup" element={<ExitDownsellPage />} />
+                      <Route path="/offers/order-rules" element={<OrderRulesPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />

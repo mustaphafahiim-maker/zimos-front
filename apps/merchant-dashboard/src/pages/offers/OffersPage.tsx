@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
+import { ChevronRight, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
 import { Card } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -24,6 +24,8 @@ const STRINGS = {
     upsellsHint: "One more offer on the thank-you page, added with one tap.",
     exit: "Exit popup",
     exitHint: "A last offer with a coupon for a visitor who is leaving.",
+    rules: "Minimum order and free shipping",
+    rulesHint: "A floor under small orders, and a bar that shows what is left for free shipping.",
     discounts: "Discount codes",
     discountsHint: "Coupons and automatic discounts.",
   },
@@ -40,6 +42,8 @@ const STRINGS = {
     upsellsHint: "عرض إضافي في صفحة الشكر، يُضاف بضغطة واحدة.",
     exit: "نافذة الخروج",
     exitHint: "عرض أخير بكوبون لزائر يغادر.",
+    rules: "الحد الأدنى للطلب والشحن المجاني",
+    rulesHint: "حد أدنى للأوردرات الصغيرة، وشريط يوضح المتبقي للشحن المجاني.",
     discounts: "أكواد الخصم",
     discountsHint: "الكوبونات والخصومات التلقائية.",
   },
@@ -77,6 +81,7 @@ export function OffersPage() {
     { to: "/offers/cross-sell", icon: <Shuffle />, title: t.crossSell, hint: t.crossSellHint },
     { to: "/offers/upsells", icon: <Sparkles />, title: t.upsells, hint: t.upsellsHint },
     { to: "/offers/exit-popup", icon: <DoorOpen />, title: t.exit, hint: t.exitHint },
+    { to: "/offers/order-rules", icon: <Truck />, title: t.rules, hint: t.rulesHint },
     { to: "/discounts", icon: <Tag />, title: t.discounts, hint: t.discountsHint },
   ];
   return (

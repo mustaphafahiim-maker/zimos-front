@@ -76,3 +76,5 @@ export * from "./endpoints/bundles";
 export * from "./endpoints/inbox";
 // Offer rules: product order bumps, cross-sell, thank-you upsell, exit popup (lane 3).
 export * from "./endpoints/offers";
+// Coupons: bulk codes, minimum order, coupon preview (lane 3).
+export * from "./endpoints/coupons";
