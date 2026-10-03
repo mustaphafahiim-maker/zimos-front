@@ -24,6 +24,11 @@ const STRINGS = {
     browser: "Browser",
     unknown: "Unknown",
     blockIp: "Block IP",
+    device: "Device",
+    blockDevice: "Block device",
+    blockDeviceTitle: "Block this device?",
+    blockDeviceDescription: "Orders placed from this browser will be flagged as blocked (or refused, if your rules say so), whatever number or address they use.",
+    deviceBlocked: "The device is now blocked.",
     blockTitle: "Block {ip}?",
     blockDescription: "Orders from this address will be flagged as blocked (or refused, if your rules say so), and it will no longer see your store.",
     blocking: "Blocking…",
@@ -48,6 +53,11 @@ const STRINGS = {
     browser: "المتصفح",
     unknown: "غير معروف",
     blockIp: "حظر الـ IP",
+    device: "الجهاز",
+    blockDevice: "حظر الجهاز",
+    blockDeviceTitle: "حظر هذا الجهاز؟",
+    blockDeviceDescription: "الأوردرات من هذا المتصفح ستُميَّز كمحظورة (أو تُرفض إذا كانت قواعدك تقول ذلك) مهما كان الرقم أو العنوان المستخدم.",
+    deviceBlocked: "تم حظر الجهاز.",
     blockTitle: "حظر {ip}؟",
     blockDescription: "الأوردرات من هذا العنوان ستُميَّز كمحظورة (أو تُرفض إذا كانت قواعدك تقول ذلك)، ولن يرى متجرك بعد الآن.",
     blocking: "جارٍ الحظر…",
@@ -69,6 +79,7 @@ interface OrderVisitorFields {
   ipAddress?: string | null;
   ipCountry?: string | null;
   userAgent?: string | null;
+  deviceId?: string | null;
 }
 
 function countryName(code: string, locale: string): string {
@@ -92,6 +103,7 @@ export function OrderProtectionSection({ order }: { order: Order }) {
   const reasonLabel = useRiskReasonLabel();
   const [confirming, setConfirming] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [blockingDevice, setBlockingDevice] = useState(false);
   // Null while the feature is off for the store, or for an order with no customer.
   const network = useAsync(
     () => (order.customerId ? protectionNetworkScore(apiClient, workspaceId, order.customerId) : Promise.resolve(null)),
@@ -119,6 +131,22 @@ export function OrderProtectionSection({ order }: { order: Order }) {
     }
     toast.success(fmt(t.blocked, { ip }));
     setConfirming(false);
+  }
+
+  async function blockDevice() {
+    if (!extra.deviceId) return;
+    try {
+      await protectionAddBlocked(apiClient, workspaceId, {
+        type: "device",
+        value: extra.deviceId,
+        scopes: ["orders"],
+        reason: fmt(t.blockReason, { number: order.orderNumber }),
+      });
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
+    toast.success(t.deviceBlocked);
+    setBlockingDevice(false);
   }
 
   async function report() {
@@ -178,7 +206,7 @@ export function OrderProtectionSection({ order }: { order: Order }) {
           </div>
         )}
         {ip && (
-          <dl className="grid gap-3 text-sm sm:grid-cols-3">
+          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <dt className="text-xs text-ink-soft">{t.ip}</dt>
               <dd className="font-medium text-ink">
@@ -189,6 +217,19 @@ export function OrderProtectionSection({ order }: { order: Order }) {
               <dt className="text-xs text-ink-soft">{t.country}</dt>
               <dd className="font-medium text-ink">{extra.ipCountry ? countryName(extra.ipCountry, locale) : t.unknown}</dd>
             </div>
+            {extra.deviceId && (
+              <div className="min-w-0">
+                <dt className="text-xs text-ink-soft">{t.device}</dt>
+                <dd className="flex flex-wrap items-center gap-2">
+                  <bdi dir="ltr" className="truncate text-ink" title={extra.deviceId}>
+                    {extra.deviceId.slice(0, 13)}…
+                  </bdi>
+                  <Button variant="outline" size="sm" className="min-h-8" onClick={() => setBlockingDevice(true)}>
+                    {t.blockDevice}
+                  </Button>
+                </dd>
+              </div>
+            )}
             <div className="min-w-0">
               <dt className="text-xs text-ink-soft">{t.browser}</dt>
               <dd className="truncate text-ink" dir="ltr" title={extra.userAgent ?? undefined}>
@@ -198,6 +239,16 @@ export function OrderProtectionSection({ order }: { order: Order }) {
           </dl>
         )}
       </div>
+      <ConfirmDialog
+        open={blockingDevice}
+        title={t.blockDeviceTitle}
+        description={t.blockDeviceDescription}
+        confirmLabel={t.blockDevice}
+        busyLabel={t.blocking}
+        cancelLabel={t.cancel}
+        onCancel={() => setBlockingDevice(false)}
+        onConfirm={blockDevice}
+      />
       <ConfirmDialog
         open={reporting}
         title={t.reportTitle}

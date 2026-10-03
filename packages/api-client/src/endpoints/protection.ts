@@ -160,6 +160,8 @@ export interface ProtectionRules {
   blocked_countries: string[];
   /** Checkout bot guard. null = the platform default (on in production). */
   bot_protection: boolean | null;
+  /** Adds the invisible challenge to the bot guard; only acts once a challenge provider is configured. */
+  bot_captcha: boolean;
   /** Phone verification at checkout. */
   checkout_otp: CheckoutOtpSettings;
   numbers: Record<ProtectionNumberRule, number | null>;
@@ -204,6 +206,7 @@ export function protectionResolveRules(stored: unknown): ProtectionRules {
     allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
     blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
     bot_protection: typeof s.bot_protection === "boolean" ? s.bot_protection : null,
+    bot_captcha: s.bot_captcha === true,
     checkout_otp: protectionResolveCheckoutOtp(s),
     numbers,
     switches,
@@ -226,6 +229,7 @@ export async function protectionSaveRules(
     allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
     blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
     bot_protection: rules.bot_protection,
+    bot_captcha: rules.bot_captcha,
     checkout_otp: rules.checkout_otp,
   };
   for (const key of PROTECTION_NUMBER_RULES) {
