@@ -38,6 +38,7 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+export * from "./endpoints/webhookExtras";
 // Store design and settings: purchase form builder, thank-you page (lane 5).
 export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).
@@ -58,5 +59,11 @@ export * from "./endpoints/orders";
 export * from "./endpoints/contacts";
 // All my stores and duplicate store (lane 8).
 export * from "./endpoints/stores";
+// Global search, setup guide, sidebar shortcuts (lane 8).
+export * from "./endpoints/dashboard";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
+// Automations as step sequences (the Automations page).
+export * from "./endpoints/automations";
+// Quantity bundles (lane 3).
+export * from "./endpoints/bundles";

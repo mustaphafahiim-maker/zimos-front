@@ -367,3 +367,53 @@ export async function protectionVerifyCheckoutOtp(
 export async function protectionResendCheckoutOtp(client: ApiClient, workspaceId: string, phone: string): Promise<void> {
   await client.request<unknown>(`/store/${workspaceId}/checkout/otp/resend`, { method: "POST", body: { phone }, auth: false });
 }
+
+// ------------------------------------------------- block and cancel, stats --
+
+/**
+ * "Block and cancel" a suspicious order: it is cancelled, its phone blocked
+ * from ordering and its IP from ordering and visiting. Needs orders.manage.
+ * 409 CARRIER_MANUAL_CANCEL_REQUIRED when its courier booking must be
+ * cancelled by hand first (send `acknowledgeManualCancel`), and the orders
+ * module's own refusals for an order that already shipped.
+ */
+export async function protectionBlockAndCancel(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  payload: { reason?: string; acknowledgeManualCancel?: boolean } = {}
+): Promise<{ entries: BlockedEntry[] }> {
+  return client.request<{ entries: BlockedEntry[] }>(`${fraudBase(workspaceId)}/flagged-orders/${orderId}/block`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+/** What the protection layer did in a period (GET /fraud/stats; default: the last 30 days). */
+export interface ProtectionStats {
+  from: string;
+  to: string;
+  /** Orders placed in the period. */
+  orders: number;
+  /** Checkouts refused by a rule, the blocklist or bot protection. */
+  prevented: number;
+  /** Refusals per reason (a risk flag, or `bot_…`). One refusal can carry several. */
+  preventedByReason: Record<string, number>;
+  blockedCancelled: number;
+  flagged: number;
+  highRisk: number;
+  blockedEntries: number;
+  /** Minor units. The store's average shipping fee over the last 90 days. */
+  averageShippingAmount: string;
+  /** Minor units: (prevented + blockedCancelled) × a round trip at the average fee. */
+  estimatedSavedAmount: string;
+  currency: string;
+}
+
+export async function protectionStats(
+  client: ApiClient,
+  workspaceId: string,
+  params: { from?: string; to?: string } = {}
+): Promise<ProtectionStats> {
+  return client.request<ProtectionStats>(`${fraudBase(workspaceId)}/stats${query(params)}`);
+}

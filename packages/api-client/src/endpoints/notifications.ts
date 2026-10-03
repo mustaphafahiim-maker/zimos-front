@@ -19,7 +19,8 @@ export type MerchantNotificationType =
   | "stock.low"
   | "integration.failed"
   | "export.ready"
-  | "announcement";
+  | "announcement"
+  | "automation";
 
 export type MerchantNotificationChannel = "inApp" | "email";
 

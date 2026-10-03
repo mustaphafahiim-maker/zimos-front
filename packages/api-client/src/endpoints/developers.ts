@@ -69,7 +69,9 @@ export interface ApiKeyCreated {
   secret: string;
 }
 
-export type WebhookEventName = "order.created" | "order.status_changed";
+// The server's catalogue (GET …/webhooks → events) is the list to show; the
+// two below are the ones the order change detector has always sent.
+export type WebhookEventName = "order.created" | "order.status_changed" | (string & {});
 
 export interface WebhookEventInfo {
   name: WebhookEventName;
