@@ -51,6 +51,8 @@ export * from "./endpoints/catalog";
 export * from "./endpoints/protection";
 // Dashboard home overview, attribution, profit and ad spend.
 export * from "./endpoints/insights";
+// Analytics reports: sales, products, delivery, customers, insights, CSV export.
+export * from "./endpoints/reports";
 export * from "./endpoints/profit";
 export * from "./endpoints/settlementStatements";
 export * from "./endpoints/manualTransfers";

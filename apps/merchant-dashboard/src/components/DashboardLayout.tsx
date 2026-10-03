@@ -10,7 +10,6 @@ import {
   findNavItem,
   isNavItemVisible,
 } from "@/lib/navigation";
-import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -152,13 +151,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     to={item.to}
                     end={item.to === "/" || item.to === "/analytics"}
                     onClick={onNavigate}
-                    // Start the analytics fetch while the pointer is still on
-                    // the link, so the page opens with its numbers loading.
-                    onMouseEnter={
-                      item.key === "analytics" && currentWorkspace
-                        ? () => prefetchAnalyticsSummary(currentWorkspace.id, "30d")
-                        : undefined
-                    }
                     className={({ isActive }) =>
                       cn(
                         "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white",

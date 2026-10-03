@@ -76,6 +76,9 @@ const WebsiteEditorPage = lazy(() =>
   import("@/pages/website/editor/WebsiteEditorPage").then((m) => ({ default: m.WebsiteEditorPage }))
 );
 const AnalyticsPage = lazy(() => import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
+const ReportsPage = lazy(() =>
+  import("@/pages/analytics/reports/ReportsPage").then((m) => ({ default: m.ReportsPage }))
+);
 const WebAnalyticsPage = lazy(() =>
   import("@/pages/analytics/WebAnalyticsPage").then((m) => ({ default: m.WebAnalyticsPage }))
 );
@@ -173,7 +176,8 @@ export default function App() {
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
-                      <Route path="/analytics" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
+                      <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
+                      <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/attribution" element={<LazyRoute><AttributionPage /></LazyRoute>} />
                       <Route path="/analytics/realtime" element={<LazyRoute><RealtimePage /></LazyRoute>} />
