@@ -9,7 +9,7 @@ import { Panel, Td, Th } from "@/components/Panel";
 import { Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
-import { formatDateTime, formatMinorMoney, formatRelative } from "@/lib/format";
+import { formatDateTime, formatMinorMoneyExact, formatRelative } from "@/lib/format";
 import { Pager } from "@/pages/BlocklistPage";
 import { PROOF_STATUS_LABEL } from "@/lib/paymentProofs";
 
@@ -79,7 +79,7 @@ export function PaymentProofsPage() {
                     <Td className="font-mono text-sm">
                       <span dir="ltr">{p.senderPhone}</span>
                     </Td>
-                    <Td className="tabular text-end text-sm">{formatMinorMoney(p.requestedAmount, p.currency)}</Td>
+                    <Td className="tabular text-end text-sm">{formatMinorMoneyExact(p.requestedAmount, p.currency)}</Td>
                     <Td className="whitespace-nowrap text-sm">
                       <span title={formatDateTime(p.createdAt)}>{formatRelative(p.createdAt)}</span>
                     </Td>

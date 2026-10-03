@@ -11,7 +11,7 @@ import { TextAreaField, TextField } from "@/components/forms";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { formatDate, formatDateTime, formatMinorMoney, minorUnitDigits } from "@/lib/format";
+import { formatDate, formatDateTime, formatMinorMoneyExact, minorUnitDigits } from "@/lib/format";
 import * as adminApi from "@/lib/adminApi";
 import { PROOF_STATUS_LABEL } from "@/lib/paymentProofs";
 
@@ -66,14 +66,14 @@ function Review({
             <Item label="For">{proof.purpose === "invoice" ? "Subscription invoice" : "Balance top-up"}</Item>
             {invoice && (
               <Item label="Invoice">
-                {formatMinorMoney(invoice.amountDue, invoice.currency)} · {formatDate(invoice.periodStart)} – {formatDate(invoice.periodEnd)}
+                {formatMinorMoneyExact(invoice.amountDue, invoice.currency)} · {formatDate(invoice.periodStart)} – {formatDate(invoice.periodEnd)}
                 <span className="block">
                   <Status value={invoice.status === "paid" ? "active" : invoice.status} label={invoice.status === "pending" ? "Due" : invoice.status === "paid" ? "Paid" : "Failed"} />
                 </span>
               </Item>
             )}
             <Item label="Amount asked">
-              <span className="tabular text-base font-semibold text-ink">{formatMinorMoney(proof.requestedAmount, proof.currency)}</span>
+              <span className="tabular text-base font-semibold text-ink">{formatMinorMoneyExact(proof.requestedAmount, proof.currency)}</span>
             </Item>
             <Item label="Method">{methodName}</Item>
             <Item label="Sent to">
@@ -103,7 +103,7 @@ function Review({
         ) : (
           <Panel title="Review">
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              {proof.receivedAmount != null && <Item label="Amount received">{formatMinorMoney(proof.receivedAmount, proof.currency)}</Item>}
+              {proof.receivedAmount != null && <Item label="Amount received">{formatMinorMoneyExact(proof.receivedAmount, proof.currency)}</Item>}
               {proof.reviewNote && <Item label="Note to the merchant">{proof.reviewNote}</Item>}
               <Item label="By">{proof.reviewedBy?.fullName ?? "—"}</Item>
               <Item label="At">{formatDateTime(proof.reviewedAt)}</Item>
@@ -186,7 +186,7 @@ function Decide({
         <div role="alert" className="flex gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-ink">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
           <span>
-            Before approving, open your {methodName} app and check that {formatMinorMoney(proof.requestedAmount, proof.currency)} arrived from{" "}
+            Before approving, open your {methodName} app and check that {formatMinorMoneyExact(proof.requestedAmount, proof.currency)} arrived from{" "}
             <span dir="ltr" className="font-mono">
               {proof.senderPhone}
             </span>
@@ -215,11 +215,11 @@ function Decide({
             <div className={cn("grid grid-cols-2 gap-2 rounded-md border px-3 py-2 text-sm", differs ? "border-danger/40 bg-danger-soft" : "border-line")}>
               <div>
                 <p className="text-xs text-ink-soft">Asked</p>
-                <p className="tabular font-semibold text-ink">{formatMinorMoney(proof.requestedAmount, proof.currency)}</p>
+                <p className="tabular font-semibold text-ink">{formatMinorMoneyExact(proof.requestedAmount, proof.currency)}</p>
               </div>
               <div>
                 <p className="text-xs text-ink-soft">Received</p>
-                <p className="tabular font-semibold text-ink">{formatMinorMoney(received, proof.currency)}</p>
+                <p className="tabular font-semibold text-ink">{formatMinorMoneyExact(received, proof.currency)}</p>
               </div>
               {differs && proof.purpose === "invoice" && (
                 <p className="col-span-2 text-xs font-medium text-danger">
@@ -231,7 +231,7 @@ function Decide({
           {checking ? (
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => void approve()} disabled={!approvable || busy !== null}>
-                {busy === "approve" ? "Approving…" : `Yes, ${formatMinorMoney(received ?? 0, proof.currency)} arrived — approve`}
+                {busy === "approve" ? "Approving…" : `Yes, ${formatMinorMoneyExact(received ?? 0, proof.currency)} arrived — approve`}
               </Button>
               <Button variant="outline" onClick={() => setChecking(false)} disabled={busy !== null}>
                 Back
