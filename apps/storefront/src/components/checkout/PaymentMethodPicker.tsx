@@ -5,6 +5,7 @@ import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
 import { track } from "@/lib/track";
 import { asTransferMethod, useTransferCopy } from "./TransferDetails";
+import { PaymentAdjustmentNote } from "./PaymentAdjustmentNote";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -84,6 +85,7 @@ export function PaymentMethodPicker({
                 )}
               </span>
               <span className="block text-xs text-ink-soft">{hint}</span>
+              <PaymentAdjustmentNote method={m} />
             </span>
           </label>
         );

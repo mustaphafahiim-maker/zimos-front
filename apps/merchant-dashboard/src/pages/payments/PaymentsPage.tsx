@@ -16,6 +16,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { ManualTransferSettings } from "./ManualTransferSettings";
+import { PaymentRulesSettings } from "./PaymentRulesSettings";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -226,6 +227,7 @@ export function PaymentsPage() {
                   onSaved={(next) => methods.setData({ ...methods.data!, methods: next })}
                 />
               )}
+              {methods.data && <PaymentRulesSettings workspaceId={workspaceId} methods={methods.data.methods} canManage={canManage} />}
               <ManualTransferSettings workspaceId={workspaceId} currency={currentWorkspace?.defaultCurrency ?? "EGP"} canManage={canManage} />
             </div>
           )}

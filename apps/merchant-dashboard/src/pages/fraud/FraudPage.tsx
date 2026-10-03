@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { ProtectionRulesTab } from "./ProtectionRulesTab";
 import { FlaggedOrdersTab } from "./FlaggedOrdersTab";
 import { BlockedEntriesTab } from "./BlockedEntriesTab";
+import { ProtectionStatsTab } from "./ProtectionStatsTab";
 
-const TABS = ["rules", "flagged", "blocklist"] as const;
+const TABS = ["rules", "flagged", "blocklist", "stats"] as const;
 type FraudTab = (typeof TABS)[number];
 
 const STRINGS = {
@@ -17,7 +18,8 @@ const STRINGS = {
     tabsLabel: "Fraud sections",
     rules: "Rules",
     flagged: "Flagged",
-    blocklist: "Blocklist",
+    blocklist: "Blocked",
+    stats: "Statistics",
   },
   ar: {
     title: "الحماية من الاحتيال",
@@ -25,7 +27,8 @@ const STRINGS = {
     tabsLabel: "أقسام الحماية من الاحتيال",
     rules: "القواعد",
     flagged: "المشتبه بها",
-    blocklist: "قائمة الحظر",
+    blocklist: "المحظورون",
+    stats: "الإحصائيات",
   },
 } satisfies Messages;
 
@@ -82,6 +85,9 @@ export function FraudPage() {
         </TabsContent>
         <TabsContent value="blocklist" className="pt-4">
           <BlockedEntriesTab key={workspaceId} />
+        </TabsContent>
+        <TabsContent value="stats" className="pt-4">
+          <ProtectionStatsTab key={workspaceId} />
         </TabsContent>
       </Tabs>
     </div>
