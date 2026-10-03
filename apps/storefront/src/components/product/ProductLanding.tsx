@@ -59,6 +59,7 @@ import { CashIcon, CheckIcon } from "../Icons";
 import { storefrontProductBundle } from "@store-builder/api-client";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
+import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
 import { OfferCountdown } from "./OfferCountdown";
 import { OptionPicker } from "./OptionPicker";
 import { productPageText } from "./productPageText";
@@ -182,7 +183,15 @@ export function ProductLanding({
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
 
-  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0) + productBumpsAmount + shipping.amount;
+  // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
+  const linkCoupon = useStoredCoupon(workspaceId);
+  const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
+  const total =
+    pricing.total +
+    (bumpOn && bump ? bump.priceAmount : 0) +
+    productBumpsAmount +
+    shipping.amount -
+    discountOff(shipping.extras, coupon);
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -220,7 +229,8 @@ export function ProductLanding({
     const checkoutSessionId = await autosave.stop();
     // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: orderLine }),
+      // Only a coupon the server said applies is sent: a stale link must not fail the order.
+      ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -530,6 +540,7 @@ export function ProductLanding({
                 <dd className="shrink-0 text-ink">{money(b.priceAmount)}</dd>
               </div>
             ))}
+            <DiscountRows extras={shipping.extras} coupon={coupon} />
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
               <dd className="shrink-0 text-ink">
@@ -541,6 +552,8 @@ export function ProductLanding({
               <dd className="shrink-0">{money(total)}</dd>
             </div>
           </dl>
+
+          <MinimumOrderNotice extras={shipping.extras} />
 
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
           <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />

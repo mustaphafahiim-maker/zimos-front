@@ -380,3 +380,99 @@ export interface OrderGovernorate {
 export async function ordersManualOptions(client: ApiClient, workspaceId: string): Promise<{ governorates: OrderGovernorate[] }> {
   return client.request<{ governorates: OrderGovernorate[] }>(`${base(workspaceId)}/manual/options`);
 }
+
+// ------------------------------------- edit items, refund quote, fulfill --
+
+export interface OrderTotals {
+  subtotalAmount: string;
+  discountAmount: string;
+  shippingAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+}
+
+export interface OrderItemsPreview {
+  currency: string;
+  before: OrderTotals;
+  after: OrderTotals;
+  /** after.total − before.total, minor units; negative when the order got cheaper. */
+  differenceAmount: string;
+  items: Array<{
+    id: string;
+    variantId: string;
+    offerId: string | null;
+    name: string;
+    options: Record<string, string> | null;
+    offerName: string | null;
+    quantity: number;
+    unitPriceAmount: string;
+    lineTotalAmount: string;
+  }>;
+}
+
+/**
+ * What saving this list of lines would do to the order; nothing is saved.
+ * Codes: ORDER_ALREADY_SHIPPED, ORDER_ALREADY_PAID, ORDER_CANCELLED (409),
+ * INSUFFICIENT_STOCK (409).
+ */
+export async function ordersPreviewItems(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  items: OrderDraftItem[]
+): Promise<OrderItemsPreview> {
+  const { preview } = await client.request<{ preview: OrderItemsPreview }>(`${base(workspaceId, orderId)}/items/preview`, {
+    method: "POST",
+    body: { items },
+  });
+  return preview;
+}
+
+/** Replaces the order's lines (before it ships). Answers the order as GET one does. */
+export async function ordersUpdateItems(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  items: OrderDraftItem[]
+): Promise<OrderWithNextStages> {
+  const { order } = await client.request<{ order: OrderWithNextStages }>(`${base(workspaceId, orderId)}/items`, {
+    method: "PUT",
+    body: { items },
+  });
+  return order;
+}
+
+export interface OrderRefundQuote {
+  currency: string;
+  /** What these lines come to, less their share of the order's discount (minor units). */
+  amount: string;
+  refundableAmount: string;
+  lines: Array<{ orderItemId: string; name: string; quantity: number; amount: string }>;
+}
+
+export async function ordersRefundQuote(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  lines: Array<{ orderItemId: string; quantity: number }>
+): Promise<OrderRefundQuote> {
+  const { quote } = await client.request<{ quote: OrderRefundQuote }>(`${base(workspaceId, orderId)}/refund-quote`, {
+    method: "POST",
+    body: { lines },
+  });
+  return quote;
+}
+
+/** "Shipped" by hand: a manual shipment with the tracking number and link. */
+export async function ordersFulfill(
+  client: ApiClient,
+  workspaceId: string,
+  orderId: string,
+  payload: { carrierCode?: string; trackingNumber?: string; trackingUrl?: string }
+): Promise<OrderWithNextStages> {
+  const { order } = await client.request<{ order: OrderWithNextStages }>(`${base(workspaceId, orderId)}/fulfill`, {
+    method: "POST",
+    body: payload,
+  });
+  return order;
+}

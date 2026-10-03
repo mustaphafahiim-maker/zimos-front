@@ -54,6 +54,22 @@ import {
 } from "./builderElements";
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
+import { pageStyleSheet, styleKey } from "./elementStyle";
+
+/**
+ * An element with a style of its own (the editor's Style and Layout tabs) is
+ * wrapped in a box its rules target; any other element is rendered bare, the
+ * way it always was.
+ */
+function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+  const key = styleKey(element);
+  if (!key) return <ElementNode element={element} ctx={ctx} />;
+  return (
+    <div data-zs={key}>
+      <ElementNode element={element} ctx={ctx} />
+    </div>
+  );
+}
 
 /**
  * Renders a published page built in the merchant's website editor.
@@ -240,7 +256,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
       >
         {elements.map((element) => (
           <div key={element.id} data-zimos-el={element.id} data-zimos-type={element.type} className="contents">
-            <ElementNode element={element} ctx={ctx} />
+            <StyledElement element={element} ctx={ctx} />
           </div>
         ))}
       </div>
@@ -250,7 +266,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   return (
     <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span}>
       {elements.map((element) => (
-        <ElementNode key={element.id} element={element} ctx={ctx} />
+        <StyledElement key={element.id} element={element} ctx={ctx} />
       ))}
     </div>
   );
@@ -341,6 +357,7 @@ export function PageRenderer({
   locale,
   editable = false,
   funnel,
+  siteStyles,
 }: {
   tree: PageTree | null;
   workspaceId: string;
@@ -354,15 +371,20 @@ export function PageRenderer({
   editable?: boolean;
   /** A running funnel's step page — see PageRendererFunnel. */
   funnel?: PageRendererFunnel;
+  /** The website's global styles: its named styles apply on every page (elementStyle.ts). */
+  siteStyles?: unknown;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
   const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
   const hero = heroSectionIndex(sections);
+  const css = pageStyleSheet(tree, siteStyles);
 
   // `zt-sections` lets a store theme restyle the rules between sections.
   return (
     <div className="zt-sections divide-y divide-line">
+      {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
+      {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />

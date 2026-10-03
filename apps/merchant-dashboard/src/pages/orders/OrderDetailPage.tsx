@@ -19,6 +19,8 @@ import { PaymentsSection } from "./components/PaymentsSection";
 import { StatusChanger } from "./components/StatusChanger";
 import { OrderTimelineSection } from "./components/OrderTimelineSection";
 import { OrderNotesCard } from "./components/OrderNotesCard";
+import { EditItemsButton } from "./components/EditItemsDialog";
+import { FulfillButton } from "./components/FulfillAndRefundLines";
 import { OrderTagsCard } from "./components/OrderTagsCard";
 import { OrderMetaActions, OrderMetaBadges, OrderNeighborArrows, useMarkSeen } from "./components/OrderHeaderTools";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
@@ -105,6 +107,8 @@ export function OrderDetailPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <OrderActions order={data} onChanged={reload} />
+              <EditItemsButton order={data} onChanged={reload} />
+              <FulfillButton order={data} onChanged={reload} />
               <OrderMetaActions order={data} onChanged={reload} />
               <ResendToWebhookButton orderId={data.id} />
             </div>

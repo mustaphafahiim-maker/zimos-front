@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { RefundLinesPicker } from "./FulfillAndRefundLines";
 import { RefreshCw } from "lucide-react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, Payment, PaymentTimeline, Refund } from "@store-builder/api-client";
@@ -502,6 +503,14 @@ function RefundDialog({
             )}
           </Field>
         )}
+        {/* Lane 1: refund by items — fills the amount and the reason. */}
+        <RefundLinesPicker
+          order={order}
+          onQuote={(minor, lines) => {
+            setAmount(minorToMajorInput(Math.min(minor, max)));
+            setReason((prev) => prev || lines);
+          }}
+        />
         <MoneyInput
           label={t.amount}
           value={amount}
