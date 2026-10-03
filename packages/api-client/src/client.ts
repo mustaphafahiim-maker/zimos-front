@@ -503,6 +503,12 @@ export class ApiClient {
     return payload as T;
   }
 
+  /**
+   * Swaps the refresh token for a new pair. Only the server refusing it (401)
+   * ends the session. A refresh that fails any other way — rate limited, a
+   * server error, no network — keeps the session and throws that failure, so
+   * the request that needed it fails with it and can be tried again.
+   */
   private async tryRefresh(): Promise<boolean> {
     const { refreshToken } = this.tokenStorage.get();
     if (!refreshToken) return false;
@@ -518,7 +524,8 @@ export class ApiClient {
           });
           this.setTokens(result);
           return true;
-        } catch {
+        } catch (err) {
+          if (!(err instanceof ApiError && err.status === 401)) throw err;
           this.clearSession();
           this.onSessionExpired?.();
           return false;

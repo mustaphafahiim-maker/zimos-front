@@ -65,7 +65,7 @@ export const testWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store" })
 
 export interface AuthMock {
   user: AuthUser | null;
-  status: "loading" | "authenticated" | "guest";
+  status: "loading" | "authenticated" | "guest" | "unavailable";
   needsPlan: boolean;
   /** The account's email (or phone) is confirmed; false shows the banner. */
   confirmed: boolean;
@@ -73,6 +73,7 @@ export interface AuthMock {
   register: Mock<(payload: RegisterPayload) => Promise<VerificationChallenge | null>>;
   logout: Mock<() => Promise<void>>;
   refreshUser: Mock<() => Promise<void>>;
+  retry: Mock<() => Promise<void>>;
 }
 
 export interface WorkspaceMock {
@@ -99,6 +100,7 @@ export function resetMocks() {
     register: vi.fn(async () => null),
     logout: vi.fn(async () => undefined),
     refreshUser: vi.fn(async () => undefined),
+    retry: vi.fn(async () => undefined),
   } satisfies AuthMock);
   Object.assign(workspaceMock, {
     workspaces: [testWorkspace],
