@@ -76,6 +76,8 @@ export * from "./endpoints/ai";
 export * from "./endpoints/affiliates";
 // Customer subscriptions and installments (lane 8).
 export * from "./endpoints/customerSubscriptions";
+// Services marketplace: the providers directory and its admin (lane 8).
+export * from "./endpoints/serviceListings";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).

@@ -38,6 +38,7 @@ import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
 import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
+import { ServicesPage } from "@/pages/services/ServicesPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -150,6 +151,7 @@ export default function App() {
                       <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/affiliates" element={<AffiliatesPage />} />
                       <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                      <Route path="/services" element={<ServicesPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />

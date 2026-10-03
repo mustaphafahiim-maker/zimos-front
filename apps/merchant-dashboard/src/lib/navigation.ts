@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  Handshake,
   Repeat,
   UsersRound,
   Sparkles,
@@ -73,6 +74,7 @@ export type NavKey =
   | "ai"
   | "affiliates"
   | "subscriptions"
+  | "services"
   | "storeSettings"
   | "apps"
   | "activity";
@@ -184,6 +186,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "activity", to: "/activity", icon: History },
+      { key: "services", to: "/services", icon: Handshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -248,6 +251,7 @@ export const NAV_LABELS = {
     ai: "AI studio",
     affiliates: "Affiliates",
     subscriptions: "Subscriptions",
+    services: "Services",
     storeSettings: "Store settings",
   },
   ar: {
@@ -286,6 +290,7 @@ export const NAV_LABELS = {
     ai: "استوديو الذكاء الاصطناعي",
     affiliates: "المسوّقون بالعمولة",
     subscriptions: "الاشتراكات",
+    services: "الخدمات",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;

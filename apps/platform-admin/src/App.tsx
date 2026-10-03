@@ -22,6 +22,7 @@ import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
 import { TicketDetailPage } from "@/pages/TicketDetailPage";
 import { AnnouncementsPage } from "@/pages/AnnouncementsPage";
+import { ServiceListingsPage } from "@/pages/ServiceListingsPage";
 import { FeatureFlagsPage } from "@/pages/FeatureFlagsPage";
 import { AuditLogPage } from "@/pages/AuditLogPage";
 import { SystemHealthPage } from "@/pages/SystemHealthPage";
@@ -78,6 +79,7 @@ export default function App() {
                 <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
                 <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
                 <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
+                <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
                 <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
                 <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />
                 <Route path="/system-health" element={gated(P.SYSTEM_VIEW, <SystemHealthPage />)} />
