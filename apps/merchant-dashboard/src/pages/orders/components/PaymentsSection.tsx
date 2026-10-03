@@ -10,6 +10,7 @@ import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { ManualTransfersCard } from "./ManualTransfersCard";
+import { PaymentLinkButton } from "./PaymentLinkButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { providerName } from "@/lib/providers";
@@ -212,6 +213,9 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
                 {syncing ? t.syncing : t.sync}
               </Button>
             )}
+            {(order.paymentMethod === "card" || order.paymentMethod === "wallet") &&
+              order.financialState === "pending" &&
+              !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
             {data && data.refundable > 0 && (
               <Button variant="outline" className="min-h-11" onClick={() => setDialog({})}>
                 {t.refund}

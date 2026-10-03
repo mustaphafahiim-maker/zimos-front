@@ -11,6 +11,7 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
 import { OrderActions } from "./components/OrderActions";
+import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
 import { ReturnsSection } from "./components/ReturnsSection";
@@ -105,6 +106,7 @@ export function OrderDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <OrderActions order={data} onChanged={reload} />
               <OrderMetaActions order={data} onChanged={reload} />
+              <ResendToWebhookButton orderId={data.id} />
             </div>
 
             <ConfirmationPanel order={data} onChanged={reload} />

@@ -18,6 +18,7 @@ import {
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { ThankYouUpsell } from "@/components/offers/StoreOffers";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -106,6 +107,9 @@ function Confirmation() {
             <p className="mt-0.5 text-ink-soft">{t.upsell.acceptedHint}</p>
           </div>
         )}
+
+        {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
+        <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
