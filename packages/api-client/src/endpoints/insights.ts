@@ -109,3 +109,67 @@ export async function insightsGetOverview(
   );
   return overview;
 }
+
+// ------------------------------------------------------------ attribution --
+
+export type InsightsAttributionGroup = "source" | "medium" | "campaign" | "content";
+
+export interface InsightsAttributionRow {
+  /** The UTM value, lower-cased; "" for visits and orders that carry none. */
+  key: string;
+  visitors: number;
+  orders: number;
+  confirmed: number;
+  sales: number;
+  /** Orders the courier actually delivered, and their sales. */
+  delivered: number;
+  deliveredSales: number;
+  conversionRate: number | null;
+  averageOrderValue: number;
+  /** Null until ad spend is recorded for this key. */
+  spend: number | null;
+  /** Delivered sales ÷ spend. */
+  roas: number | null;
+  /** Spend ÷ delivered orders. */
+  costPerDelivered: number | null;
+}
+
+export interface InsightsAttribution {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  groupBy: InsightsAttributionGroup;
+  funnelId: string | null;
+  totals: {
+    visitors: number;
+    orders: number;
+    sales: number;
+    delivered: number;
+    deliveredSales: number;
+    spend: number | null;
+    roas: number | null;
+  };
+  rows: InsightsAttributionRow[];
+  series: { date: string; visitors: number; orders: number; sales: number }[];
+}
+
+export interface InsightsAttributionParams {
+  from?: string;
+  to?: string;
+  groupBy?: InsightsAttributionGroup;
+  funnelId?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+}
+
+export async function insightsGetAttribution(
+  client: ApiClient,
+  workspaceId: string,
+  params: InsightsAttributionParams = {}
+): Promise<InsightsAttribution> {
+  const { attribution } = await client.request<{ attribution: InsightsAttribution }>(
+    `${base(workspaceId)}/attribution${insightsQuery(params)}`
+  );
+  return attribution;
+}

@@ -17,6 +17,7 @@ import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
+  formOptionsOf,
   FIELD_ORDER,
   quickFormFields,
   toCheckoutPayload,
@@ -85,7 +86,13 @@ export function ProductLanding({
   const text = productPageText(locale);
   // The product page's settings (SPEC §7.3), defaults filled in.
   const page = useMemo(() => storefrontProductPage(product), [product]);
-  const ps = page.pageSettings;
+  // The store's purchase form layout (settings → purchase form) outranks the
+  // product's own switch: "one_step" keeps every product page free of the
+  // form and sends "Buy now" straight to the checkout.
+  const ps =
+    formOptionsOf(checkoutSettings).layout === "one_step"
+      ? { ...page.pageSettings, inline_checkout: false, skip_cart: true }
+      : page.pageSettings;
   const cart = useCart();
   const buyLabel = ps.buy_now_text || (ps.inline_checkout ? t.product.orderNow : text.buyNow);
   const quickFields = useMemo(() => quickFormFields(checkoutSettings), [checkoutSettings]);

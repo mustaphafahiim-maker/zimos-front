@@ -8,6 +8,7 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { SearchIcon } from "./Icons";
 import { StatusTimeline } from "./StatusTimeline";
+import { TrackOrderNotes } from "./TrackOrderNotes";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -186,6 +187,8 @@ export function TrackOrder() {
                   <dd>{money(result.totalAmount, currency)}</dd>
                 </div>
               </dl>
+
+              <TrackOrderNotes result={result} />
 
               {result.updatedAt && (
                 <p className="mt-5 text-xs text-ink-soft">
