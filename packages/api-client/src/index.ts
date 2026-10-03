@@ -80,6 +80,8 @@ export * from "./endpoints/customerSubscriptions";
 export * from "./endpoints/serviceListings";
 // Shoppable images: pictures with product hotspots (lane 8).
 export * from "./endpoints/shoppableImages";
+// Courses: outline, students, and the student portal (lane 8).
+export * from "./endpoints/courses";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).

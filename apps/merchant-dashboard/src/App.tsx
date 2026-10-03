@@ -40,6 +40,7 @@ import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
 import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 import { ShoppableImagesPage } from "@/pages/shoppable/ShoppableImagesPage";
+import { CoursesPage } from "@/pages/courses/CoursesPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -154,6 +155,7 @@ export default function App() {
                       <Route path="/subscriptions" element={<SubscriptionsPage />} />
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/shoppable-images" element={<ShoppableImagesPage />} />
+                      <Route path="/courses" element={<CoursesPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
