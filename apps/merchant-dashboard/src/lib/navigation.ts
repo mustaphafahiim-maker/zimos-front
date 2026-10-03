@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  BadgeDollarSign,
   BarChart3,
   Bot,
   ClipboardCheck,
@@ -57,6 +58,7 @@ export type NavKey =
   | "automations"
   | "marketing"
   | "profit"
+  | "ads"
   | "media"
   | "storeSettings";
 
@@ -143,6 +145,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
@@ -212,6 +215,7 @@ export const NAV_LABELS = {
     automations: "Automations",
     marketing: "Marketing",
     profit: "Profit",
+    ads: "Ad campaigns",
     media: "Media library",
     storeSettings: "Store settings",
   },
@@ -241,6 +245,7 @@ export const NAV_LABELS = {
     automations: "الأتمتة",
     marketing: "التسويق",
     profit: "الأرباح",
+    ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
     storeSettings: "إعدادات المتجر",
   },

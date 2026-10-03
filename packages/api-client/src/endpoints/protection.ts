@@ -156,6 +156,8 @@ export interface ProtectionRules {
   phone_validation: "strict" | "off";
   /** ISO2 codes for `block_outside_country`; empty = the store's own country. */
   allowed_countries: string[];
+  /** ISO2 codes whose visitors do not see the store at all. */
+  blocked_countries: string[];
   numbers: Record<ProtectionNumberRule, number | null>;
   switches: Record<ProtectionSwitchRule, boolean>;
   actions: Record<ProtectionRuleKey, ProtectionAction>;
@@ -196,6 +198,7 @@ export function protectionResolveRules(stored: unknown): ProtectionRules {
     block_blacklisted: s.block_blacklisted === true,
     phone_validation: s.phone_validation === "strict" ? "strict" : "off",
     allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
+    blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
     numbers,
     switches,
     actions,
@@ -215,6 +218,7 @@ export async function protectionSaveRules(
     block_blacklisted: rules.block_blacklisted,
     phone_validation: rules.phone_validation,
     allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
+    blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
   };
   for (const key of PROTECTION_NUMBER_RULES) {
     fraud_rules[key] = rules.numbers[key] == null ? null : { value: rules.numbers[key], action: rules.actions[key] };

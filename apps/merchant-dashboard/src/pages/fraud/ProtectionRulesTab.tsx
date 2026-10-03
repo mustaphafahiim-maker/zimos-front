@@ -83,6 +83,9 @@ const STRINGS = {
     allowedCountriesHint: "Two-letter country codes separated by commas, for example EG, SA. Leave empty for your store's country only.",
     allowedCountriesError: "Use two-letter country codes separated by commas.",
     rangeError: "Enter a whole number from {min} to {max}.",
+    visitorsHeading: "Visitors",
+    blockedCountries: "Countries that cannot see the store",
+    blockedCountriesHint: "Two-letter country codes separated by commas. Visitors from these countries see the store as unavailable. Block single addresses in the Blocklist tab.",
     alwaysHeading: "Always",
     strictPhone: "Only accept real mobile numbers",
     strictPhoneHint: "A number that is not a mobile number of your store's country is refused, and the shopper is asked to correct it.",
@@ -136,6 +139,9 @@ const STRINGS = {
     allowedCountriesHint: "أكواد الدول من حرفين مفصولة بفواصل، مثل EG, SA. اتركها فارغة لدولة متجرك فقط.",
     allowedCountriesError: "استخدم أكواد دول من حرفين مفصولة بفواصل.",
     rangeError: "أدخل رقمًا صحيحًا من {min} إلى {max}.",
+    visitorsHeading: "الزوار",
+    blockedCountries: "دول لا ترى المتجر",
+    blockedCountriesHint: "أكواد دول من حرفين مفصولة بفواصل. الزوار من هذه الدول يظهر لهم المتجر كغير متاح. احظر العناوين المفردة من تبويب قائمة الحظر.",
     alwaysHeading: "دائمًا",
     strictPhone: "قبول أرقام الموبايل الحقيقية فقط",
     strictPhoneHint: "الرقم الذي ليس رقم موبايل في دولة متجرك يُرفض، ويُطلب من المشتري تصحيحه.",
@@ -164,6 +170,7 @@ interface Draft {
   block_blacklisted: boolean;
   strictPhone: boolean;
   countries: string;
+  blockedCountries: string;
   on: Record<ProtectionRuleKey, boolean>;
   /** Raw input text of the number rules. */
   values: Record<ProtectionNumberRule, string>;
@@ -182,6 +189,7 @@ function toDraft(rules: ProtectionRules): Draft {
     block_blacklisted: rules.block_blacklisted,
     strictPhone: rules.phone_validation === "strict",
     countries: rules.allowed_countries.join(", "),
+    blockedCountries: rules.blocked_countries.join(", "),
     on,
     values,
     actions: { ...rules.actions },
@@ -206,6 +214,7 @@ function toRules(draft: Draft): ProtectionRules {
     block_blacklisted: draft.block_blacklisted,
     phone_validation: draft.strictPhone ? "strict" : "off",
     allowed_countries: parseCountries(draft.countries) ?? [],
+    blocked_countries: parseCountries(draft.blockedCountries) ?? [],
     numbers,
     switches,
     actions: { ...draft.actions },
@@ -246,7 +255,8 @@ export function ProtectionRulesTab() {
 
   const rangeProblems = PROTECTION_NUMBER_RULES.filter((key) => rangeProblem(key, draft));
   const countriesProblem = draft.on.block_outside_country && parseCountries(draft.countries) === null;
-  const invalid = rangeProblems.length > 0 || countriesProblem;
+  const blockedCountriesProblem = parseCountries(draft.blockedCountries) === null;
+  const invalid = rangeProblems.length > 0 || countriesProblem || blockedCountriesProblem;
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
 
   function patch(next: Partial<Draft>) {
@@ -328,6 +338,18 @@ export function ProtectionRulesTab() {
           </div>
         </Card>
       ))}
+
+      <Card className="space-y-3 p-5">
+        <h2 className="font-display text-lg font-medium text-ink">{t.visitorsHeading}</h2>
+        <CountriesField
+          value={draft.blockedCountries}
+          disabled={disabled}
+          label={t.blockedCountries}
+          hint={t.blockedCountriesHint}
+          error={showErrors && blockedCountriesProblem ? t.allowedCountriesError : undefined}
+          onChange={(blockedCountries) => patch({ blockedCountries })}
+        />
+      </Card>
 
       <Card className="space-y-3 p-5">
         <h2 className="font-display text-lg font-medium text-ink">{t.alwaysHeading}</h2>
