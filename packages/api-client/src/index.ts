@@ -38,3 +38,5 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Dashboard home overview, attribution, profit and ad spend.
+export * from "./endpoints/insights";
