@@ -48,6 +48,11 @@ import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 // with every dashboard page.
 // The funnel list shares the funnel starters (and so the block library's
 // element table) with the funnel editor, so it is split off with it.
+const AppsPage = lazy(() => import("@/pages/apps/AppsPage").then((m) => ({ default: m.AppsPage })));
+const InstallAppPage = lazy(() => import("@/pages/apps/InstallAppPage").then((m) => ({ default: m.InstallAppPage })));
+const DropshipProviderPage = lazy(() =>
+  import("@/pages/apps/DropshipProviderPage").then((m) => ({ default: m.DropshipProviderPage }))
+);
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
 const FunnelEditorPage = lazy(() =>
   import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
@@ -154,6 +159,9 @@ export default function App() {
                       <Route path="/store-settings" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/store-settings/:tab" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/apps" element={<LazyRoute><AppsPage /></LazyRoute>} />
+                      <Route path="/apps/dropship_sandbox" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
+                      <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />
                     </Route>
