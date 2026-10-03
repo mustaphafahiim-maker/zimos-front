@@ -1,3 +1,4 @@
+import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { resolveCheckoutForm, resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
@@ -131,6 +132,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1 pb-24 md:pb-0">
+      {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
+      <PixelScope productIds={[product.id]} />
       {/* A landing page without the store's menu: hidden only while this page is shown. */}
       {ps.hide_header && (
         <style

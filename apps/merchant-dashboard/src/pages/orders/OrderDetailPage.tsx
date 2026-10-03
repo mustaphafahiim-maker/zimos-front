@@ -16,6 +16,7 @@ import { PaymentsSection } from "./components/PaymentsSection";
 import { StatusChanger } from "./components/StatusChanger";
 import { StatusHistorySection } from "./components/StatusHistorySection";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
+import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
 
 const STRINGS = {
   en: {
@@ -85,6 +86,8 @@ export function OrderDetailPage() {
             <ConfirmationPanel order={data} onChanged={reload} />
 
             <OrderSummary order={data} />
+
+            <OrderProtectionSection order={data} />
 
             <PaymentsSection order={data} onChanged={reload} />
 

@@ -10,7 +10,7 @@ import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { hasPixels, pixelIdsOf } from "@/lib/adPixels";
+import { storePixelsOf } from "@/lib/adPixels";
 import { resolveCheckoutForm, resolveCheckoutSettings, resolveThankYouPage } from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
@@ -140,7 +140,7 @@ export default async function StoreLayout({
   const websiteId = (store as { websiteId?: unknown }).websiteId;
   const theme = storeThemeOf(store.themeSettings);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
-  const pixels = pixelIdsOf(store);
+  const pixels = storePixelsOf(store);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -152,10 +152,10 @@ export default async function StoreLayout({
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
           </Suspense>
-          {hasPixels(pixels) && (
+          {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels ids={pixels} />
+              <TrackingPixels pixels={pixels} />
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its
