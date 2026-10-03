@@ -743,3 +743,63 @@ export async function storeDesignDomainDnsCheck(
 export async function storeDesignDeleteDomain(client: ApiClient, workspaceId: string, domainId: string): Promise<void> {
   await client.request(domainsBase(workspaceId) + "/" + domainId, { method: "DELETE" });
 }
+
+// ------------------------------------------------------ saved sections ----
+// Backend: src/modules/savedSections — /workspaces/:workspaceId/saved-sections
+// (website.edit). A page section with `settings.savedSectionId` is a linked
+// copy: publishing the website fills it from the saved section.
+
+export const SAVED_SECTION_LINK_KEY = "savedSectionId";
+
+export interface SavedSectionDto {
+  id: string;
+  name: string;
+  type: string | null;
+  scope: "global" | "funnel";
+  funnelId: string | null;
+  /** One page-tree section node. */
+  tree: import("../types").PageSection;
+  updatedAt: string;
+}
+
+const savedSectionsBase = (workspaceId: string) => "/workspaces/" + workspaceId + "/saved-sections";
+
+export async function storeDesignListSavedSections(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId?: string
+): Promise<SavedSectionDto[]> {
+  const { savedSections } = await client.request<{ savedSections: SavedSectionDto[] }>(
+    savedSectionsBase(workspaceId) + (funnelId ? "?funnelId=" + encodeURIComponent(funnelId) : "")
+  );
+  return savedSections;
+}
+
+export async function storeDesignCreateSavedSection(
+  client: ApiClient,
+  workspaceId: string,
+  payload: { name: string; type?: string; scope?: "global" | "funnel"; funnelId?: string; section: import("../types").PageSection }
+): Promise<SavedSectionDto> {
+  const { savedSection } = await client.request<{ savedSection: SavedSectionDto }>(savedSectionsBase(workspaceId), {
+    method: "POST",
+    body: payload,
+  });
+  return savedSection;
+}
+
+export async function storeDesignUpdateSavedSection(
+  client: ApiClient,
+  workspaceId: string,
+  sectionId: string,
+  patch: { name?: string; type?: string; section?: import("../types").PageSection }
+): Promise<SavedSectionDto> {
+  const { savedSection } = await client.request<{ savedSection: SavedSectionDto }>(
+    savedSectionsBase(workspaceId) + "/" + sectionId,
+    { method: "PATCH", body: patch }
+  );
+  return savedSection;
+}
+
+export async function storeDesignDeleteSavedSection(client: ApiClient, workspaceId: string, sectionId: string): Promise<void> {
+  await client.request(savedSectionsBase(workspaceId) + "/" + sectionId, { method: "DELETE" });
+}

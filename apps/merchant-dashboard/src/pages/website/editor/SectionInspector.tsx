@@ -29,6 +29,7 @@ import {
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
 import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
+import { SaveSectionPanel } from "./SavedSections";
 import {
   editorUi,
   elementLabel,
@@ -1049,6 +1050,8 @@ export function SectionInspector({
           })
         )}
       </div>
+
+      <SaveSectionPanel section={section} onChange={onChange} />
 
       <div className="border-t border-line px-4 py-3">
         <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
