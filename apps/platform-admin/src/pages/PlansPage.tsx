@@ -13,9 +13,8 @@ import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import * as adminApi from "@/lib/adminApi";
 import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
-import { PLAN_FEATURES } from "@/lib/planFeatures";
 import { FeaturePicker } from "@/components/FeaturePicker";
-import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
+import type { AdminPlan as Plan, PlanFeatureCatalogEntry, PlanFeatureKey } from "@store-builder/api-client";
 import {
   PLATFORM_CURRENCY,
   formatBp,
@@ -117,7 +116,11 @@ function limitLabel(value: number | null | undefined, unit: string): string {
 
 export function PlansPage() {
   const toast = useToast();
-  const { data, loading, error, refresh } = useAsync(() => adminApi.listPlans(), []);
+  // The plans come in the pricing page's order (display order, then price,
+  // then name), with the backend's feature catalogue: names, and which
+  // features exist today.
+  const { data, loading, error, refresh } = useAsync(() => adminApi.listPlansWithCatalog(), []);
+  const catalog = data?.featureCatalog ?? [];
   const [editing, setEditing] = useState<PlanForm | null>(null);
   const [deleting, setDeleting] = useState<Plan | null>(null);
 
@@ -136,11 +139,11 @@ export function PlansPage() {
         loading={loading}
         error={error}
         onRetry={() => void refresh()}
-        empty={!!data && data.length === 0}
+        empty={!!data && data.plans.length === 0}
         emptyMessage="No plans yet. Create the first plan merchants can subscribe to."
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {(data ?? []).map((p) => (
+          {(data?.plans ?? []).map((p) => (
             <article key={p.id} className="flex flex-col rounded-[var(--radius-card)] border border-line bg-paper-raised">
               <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
                 <div>
@@ -187,12 +190,17 @@ export function PlansPage() {
                   )}
                 </dl>
                 <ul className="space-y-1">
-                  {PLAN_FEATURES.map((f) => {
+                  {catalog.map((f) => {
                     const on = p.features.includes(f.key);
                     return (
                       <li key={f.key} className={on ? "flex items-center gap-2 text-sm text-ink" : "flex items-center gap-2 text-sm text-ink-soft line-through"}>
                         <Check className={on ? "size-3.5 text-primary" : "size-3.5 opacity-30"} aria-hidden />
-                        {f.label}
+                        {f.label.en}
+                        {!f.available && (
+                          <span className="rounded-full border border-line px-1.5 py-px text-[11px] font-medium text-ink-soft no-underline">
+                            {on ? "Coming soon · hidden from merchants" : "Coming soon"}
+                          </span>
+                        )}
                       </li>
                     );
                   })}
@@ -217,6 +225,7 @@ export function PlansPage() {
       {editing && (
         <PlanEditor
           initial={editing}
+          catalog={catalog}
           onClose={() => setEditing(null)}
           onSaved={(p) => {
             toast.success(`Plan “${p.name}” saved.`);
@@ -245,7 +254,17 @@ export function PlansPage() {
   );
 }
 
-function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose: () => void; onSaved: (p: Plan) => void }) {
+function PlanEditor({
+  initial,
+  catalog,
+  onClose,
+  onSaved,
+}: {
+  initial: PlanForm;
+  catalog: readonly PlanFeatureCatalogEntry[];
+  onClose: () => void;
+  onSaved: (p: Plan) => void;
+}) {
   const [form, setForm] = useState<PlanForm>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -428,7 +447,7 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
           </p>
         </fieldset>
 
-        <FeaturePicker value={form.features} onChange={(next) => set("features", next)} />
+        <FeaturePicker catalog={catalog} lockUnavailable value={form.features} onChange={(next) => set("features", next)} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Toggle

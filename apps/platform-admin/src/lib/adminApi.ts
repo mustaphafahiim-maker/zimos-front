@@ -49,6 +49,7 @@ import type {
   AdminGrantResult,
   AdminOverview,
   AdminPlan,
+  AdminPlansWithCatalog,
   AdminPaymentGatewayRegistry,
   AdminPlanInput,
   AdminPlatformAdmin,
@@ -183,6 +184,11 @@ export function getUser(userId: string): Promise<AdminUserDetail> {
 
 export function listPlans(): Promise<AdminPlan[]> {
   return apiClient.adminListPlans();
+}
+
+/** The plans in the pricing page's order, with the backend's feature catalogue. */
+export function listPlansWithCatalog(): Promise<AdminPlansWithCatalog> {
+  return apiClient.adminListPlansWithCatalog();
 }
 
 export function savePlan(input: AdminPlanInput): Promise<AdminPlan> {
