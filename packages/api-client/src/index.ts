@@ -42,6 +42,7 @@ export * from "./endpoints/webhookExtras";
 export * from "./endpoints/apps";
 export * from "./endpoints/security";
 export * from "./endpoints/usage";
+export * from "./endpoints/adminExtras";
 // Store design and settings: purchase form builder, thank-you page (lane 5).
 export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).

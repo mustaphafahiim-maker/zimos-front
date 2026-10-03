@@ -9,6 +9,7 @@ import { Status, StatusBadge } from "@/components/StatusBadge";
 import { WorkspaceStatus } from "@/components/workspace";
 import { SubscriptionCharges } from "@/components/charges";
 import { StoreAccessPanel } from "@/components/storeAccess";
+import { SupportAccessPanel } from "@/components/supportAccess";
 import { FeatureOverridesPanel, ManualSubscriptionPanel, StoreAuditPanel } from "@/components/storeBilling";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
@@ -90,6 +91,9 @@ export function WorkspaceDetailPage() {
         <TabsContent value="overview" className="pt-5">
           <div className="mb-4">
             <StoreAccessPanel workspaceId={ws.id} onChanged={() => void refresh({ silent: true })} />
+          </div>
+          <div className="mb-4">
+            <SupportAccessPanel workspaceId={ws.id} />
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title="Workspace">
