@@ -35,6 +35,7 @@ import { ContactsPage } from "@/pages/customers/ContactsPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
+import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -42,6 +43,7 @@ import { BundlesPage } from "@/pages/offers/BundlesPage";
 import { OrderBumpsPage, UpsellsPage } from "@/pages/offers/OrderBumpsPage";
 import { CrossSellPage } from "@/pages/offers/CrossSellPage";
 import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
+import { OrderRulesPage } from "@/pages/offers/OrderRulesPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -139,6 +141,7 @@ export default function App() {
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/stores" element={<StoresPage />} />
                       <Route path="/digital" element={<DigitalProductsPage />} />
+                      <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
@@ -147,6 +150,7 @@ export default function App() {
                       <Route path="/offers/cross-sell" element={<CrossSellPage />} />
                       <Route path="/offers/upsells" element={<UpsellsPage />} />
                       <Route path="/offers/exit-popup" element={<ExitDownsellPage />} />
+                      <Route path="/offers/order-rules" element={<OrderRulesPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />

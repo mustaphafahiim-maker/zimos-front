@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
+import { CouponFromLink } from "@/components/offers/CouponBits";
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
@@ -219,6 +220,8 @@ export default async function StoreLayout({
               <CartDrawer />
               {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
               <ExitDownsell workspaceId={store.id} />
+              {/* Remembers a ?coupon=CODE link so checkout applies it. */}
+              <CouponFromLink workspaceId={workspaceId} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />

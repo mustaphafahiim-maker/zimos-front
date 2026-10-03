@@ -1,5 +1,6 @@
 "use client";
 
+import { DiscountRows, MinimumOrderNotice, clearStoredCoupon, useStoredCoupon } from "@/components/offers/CouponBits";
 import { takeRecoveryPrefill } from "@/lib/recoveryPrefill";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
@@ -87,6 +88,11 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
+  // A coupon that came with the link (?coupon=CODE) is applied without typing it.
+  const linkCoupon = useStoredCoupon(workspaceId);
+  useEffect(() => {
+    if (linkCoupon) setAppliedCode((current) => current || linkCoupon);
+  }, [linkCoupon]);
   const [bumpOn, setBumpOn] = useState(false);
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
@@ -133,7 +139,9 @@ export default function CheckoutPage() {
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
   if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines });
-  const total = subtotal + bumpInTotals + shipping.amount;
+  // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
+  const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
+  const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -356,7 +364,10 @@ export default function CheckoutPage() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setAppliedCode("")}
+                    onClick={() => {
+                      setAppliedCode("");
+                      clearStoredCoupon(workspaceId);
+                    }}
                     className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
                   >
                     {t.checkout.removeCode}
@@ -396,6 +407,7 @@ export default function CheckoutPage() {
                   <dd className="text-ink">{money(bump.priceAmount, currency)}</dd>
                 </div>
               )}
+              {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
                 <dd className="text-ink">
@@ -407,6 +419,7 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}
               line={shipping.line}
