@@ -38,6 +38,7 @@ import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { DevelopersSection } from "./DevelopersSection";
 import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { OrderEmailsSection } from "./OrderEmailsSection";
 
 /**
  * A link that names one of the user's stores (?workspace=<id>, as on the way
@@ -71,6 +72,8 @@ export function SettingsPage() {
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
       {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
       <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+      {/* The emails customers get about their orders. */}
+      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
       <BillingSection key={`billing-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
       <DevelopersSection key={`developers-${workspaceId}`} />
