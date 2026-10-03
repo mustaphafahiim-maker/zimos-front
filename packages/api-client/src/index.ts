@@ -40,3 +40,5 @@ export * from "./endpoints/funnelRuntime";
 export * from "./endpoints/developers";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
+// Orders: status changes, history, notes, tags, bulk actions (lane 1).
+export * from "./endpoints/orders";
