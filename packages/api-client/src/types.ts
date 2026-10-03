@@ -399,6 +399,19 @@ export const PAGE_ELEMENT_TYPES = [
   // Storefront sections (backend pageTree.js accepts these too).
   "marquee",
   "comparison",
+  // Builder elements of SPEC §9.3 (backend pageTree.js accepts these too).
+  "text_link",
+  "tabs",
+  "toggle",
+  "carousel",
+  "stars_display",
+  "price",
+  "reviews_list",
+  "cod_form",
+  "checkout_summary",
+  "order_summary",
+  "upsell_accept_button",
+  "upsell_decline_link",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */
