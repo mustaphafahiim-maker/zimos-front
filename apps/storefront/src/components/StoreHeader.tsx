@@ -11,6 +11,7 @@ import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { MobileMenu } from "./MobileMenu";
 import { SearchBox } from "./SearchBox";
+import { NavDropdown, menuChildren } from "./shell/NavDropdown";
 import { ShellLink } from "./ShellLink";
 import { StickyHeader } from "./StickyHeader";
 import { ThemeToggle } from "./ThemeToggle";
@@ -70,9 +71,16 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   // from `md` (it can be several links long) and phones in the menu sheet,
   // which therefore stays available up to `md` instead of `sm`.
   const menu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
-  const menuLinks = menu?.map((link) => (
-    <ShellLink key={link.key} link={link} className={`${NAV_LINK} md:inline-flex`} />
-  ));
+  // A menu link may open a list under it (shell/NavDropdown): `menu[i].children`.
+  const children = menuChildren(store.themeSettings, t.common);
+  const menuLinks = menu?.map((link) => {
+    const items = children.get(Number(link.key.split(":")[0]));
+    return items ? (
+      <NavDropdown key={link.key} link={link} items={items} className={`${NAV_LINK} md:inline-flex`} />
+    ) : (
+      <ShellLink key={link.key} link={link} className={`${NAV_LINK} md:inline-flex`} />
+    );
+  });
 
   // The sheet: the menu (or Home, as always), then the cart and order tracking.
   const sheetLinks: ResolvedShellLink[] = [

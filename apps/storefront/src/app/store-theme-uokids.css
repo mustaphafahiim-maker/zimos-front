@@ -370,3 +370,21 @@ html:not(.dark) [data-store-theme="uokids"] .zs-toolbar__icon b {
     font-size: 11px;
   }
 }
+
+/* The menu's dropdown hangs from the bottom of the tall masthead. */
+[data-store-theme="uokids"] .zs-drop__panel {
+  top: calc(50% + 55px);
+}
+[data-store-theme="uokids"] header[data-scrolled] .zs-drop__panel {
+  top: calc(50% + 42px);
+}
+/* Keeps the panel open while the pointer crosses from the link down to it. */
+[data-store-theme="uokids"] .zs-drop::after {
+  content: "";
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 40px;
+}
+[data-store-theme="uokids"] .zs-drop:hover {
+  background: transparent;
+}
