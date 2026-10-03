@@ -38,3 +38,5 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Protection against fake orders: blocklist, rules, risk (Fraud protection page).
+export * from "./endpoints/protection";
