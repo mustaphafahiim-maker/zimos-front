@@ -44,6 +44,41 @@ const STRINGS = {
     mobile: "Mobile",
     noPreview: "No preview yet",
     templatesTitle: "Page templates",
+    title: "Website",
+    description: "Pick a template to start your store's website. You can rename it now and customise it later.",
+    noTemplates: "No website templates are available right now. Check back soon.",
+    yourSites: "Your sites",
+    edit: "Edit",
+    deleteSite: "Delete {name}",
+    siteDeleted: "Site \"{name}\" deleted.",
+    deleteTitle: "Delete this site?",
+    deleteConfirm: "Delete site",
+    deleteBody:
+      "{name} and all of its pages, published revisions and any domain bound to it will be deleted permanently. This cannot be undone.",
+    deleteLive:
+      "This site is live right now. Deleting it takes it offline immediately — anyone visiting {subdomain} will stop seeing your store.",
+    cancel: "Cancel",
+    working: "Working…",
+    // A site's status and a template's category arrive as codes: see codeLabel.
+    "status.draft": "Draft",
+    "status.published": "Published",
+    "status.suspended": "Suspended",
+    "category.general": "General",
+    "category.ecommerce": "Ecommerce",
+    "category.fashion": "Fashion",
+    "category.modest_fashion": "Modest fashion",
+    "category.electronics": "Electronics",
+    "category.phone_accessories": "Phone accessories",
+    "category.food_beverage": "Food beverage",
+    "category.coffee": "Coffee",
+    "category.perfume": "Perfume",
+    "category.skincare": "Skincare",
+    "category.supplements": "Supplements",
+    "category.watches": "Watches",
+    "category.jewellery": "Jewellery",
+    "category.home_decor": "Home decor",
+    "category.kids_toys": "Kids toys",
+    "category.single_product": "Single product",
   },
   ar: {
     preview: "معاينة ←",
@@ -62,8 +97,50 @@ const STRINGS = {
     mobile: "الهاتف",
     noPreview: "لا توجد معاينة بعد",
     templatesTitle: "قوالب الصفحات",
+    title: "الموقع",
+    description: "اختر قالبًا تبدأ به موقع متجرك. يمكنك تسميته الآن وتخصيصه لاحقًا.",
+    noTemplates: "لا توجد قوالب مواقع متاحة الآن. عُد لاحقًا.",
+    yourSites: "مواقعك",
+    edit: "تعديل",
+    deleteSite: "حذف {name}",
+    siteDeleted: "تم حذف الموقع \"{name}\".",
+    deleteTitle: "حذف هذا الموقع؟",
+    deleteConfirm: "حذف الموقع",
+    deleteBody:
+      "سيُحذف {name} نهائيًا مع كل صفحاته ونسخه المنشورة وأي دومين مربوط به. لا يمكن التراجع عن ذلك.",
+    deleteLive: "هذا الموقع منشور الآن. حذفه يوقفه فورًا — ولن يرى متجرك أي شخص يزور {subdomain}.",
+    cancel: "إلغاء",
+    working: "جارٍ الحذف…",
+    "status.draft": "مسودة",
+    "status.published": "منشور",
+    "status.suspended": "موقوف",
+    "category.general": "عام",
+    "category.ecommerce": "متجر إلكتروني",
+    "category.fashion": "أزياء",
+    "category.modest_fashion": "أزياء محتشمة",
+    "category.electronics": "إلكترونيات",
+    "category.phone_accessories": "إكسسوارات موبايل",
+    "category.food_beverage": "أكل ومشروبات",
+    "category.coffee": "قهوة",
+    "category.perfume": "عطور",
+    "category.skincare": "العناية بالبشرة",
+    "category.supplements": "مكمّلات غذائية",
+    "category.watches": "ساعات",
+    "category.jewellery": "مجوهرات",
+    "category.home_decor": "ديكور المنزل",
+    "category.kids_toys": "ألعاب أطفال",
+    "category.single_product": "منتج واحد",
   },
 } satisfies Messages;
+
+/**
+ * The name of a code the API sends — a template's category, a site's status —
+ * in the dashboard's language. A code the table lacks keeps its humanised
+ * English, as before.
+ */
+function codeLabel(t: Record<string, string>, group: "category" | "status", code: string): string {
+  return t[`${group}.${code}`] ?? humanize(code);
+}
 
 /** The "use this template" modal: its description and the site-name form. */
 const USE_STRINGS = {
@@ -249,7 +326,7 @@ function TemplateCard({
       <div className="flex flex-1 flex-col gap-1 border-t border-line p-4">
         <span className="font-medium text-ink">{template.name}</span>
         {template.category && (
-          <span className="text-xs text-ink-soft">{humanize(template.category)}</span>
+          <span className="text-xs text-ink-soft">{codeLabel(t, "category", template.category)}</span>
         )}
         <button
           type="button"
@@ -463,6 +540,7 @@ function UseTemplateForm({
  * in the moments right after creating a site — a reload would strand it.
  */
 function ExistingSites() {
+  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const sites = useAsync(() => apiClient.listWebsites(workspaceId), [workspaceId]);
@@ -482,33 +560,37 @@ function ExistingSites() {
     if (!site) return;
     await apiClient.deleteWebsite(workspaceId, site.id);
     setPendingDelete(null);
-    toast.success(`Site "${site.name}" deleted.`);
+    toast.success(fmt(t.siteDeleted, { name: site.name }));
     await sites.refresh({ silent: true });
   }
 
+  // The site's name and address sit inside these sentences, each in its own span.
+  const deleteBody = t.deleteBody.split("{name}");
+  const deleteLive = t.deleteLive.split("{subdomain}");
+
   return (
     <div className="mb-8">
-      <h2 className="mb-2 font-display text-base font-medium text-ink">Your sites</h2>
+      <h2 className="mb-2 font-display text-base font-medium text-ink">{t.yourSites}</h2>
       <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised">
         {list.map((site) => (
           <li key={site.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-ink">{site.name}</p>
               <p className="truncate text-xs text-ink-soft">
-                {site.subdomain} · {humanize(site.status)}
+                {site.subdomain} · {codeLabel(t, "status", site.status)}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Button asChild size="sm" variant="outline">
                 <Link to={`/website/${site.id}/edit`}>
                   <Pencil className="size-4" aria-hidden />
-                  Edit
+                  {t.edit}
                 </Link>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label={`Delete ${site.name}`}
+                aria-label={fmt(t.deleteSite, { name: site.name })}
                 className="text-danger hover:bg-danger-soft hover:text-danger"
                 onClick={() => setPendingDelete(site)}
               >
@@ -521,23 +603,25 @@ function ExistingSites() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete this site?"
-        confirmLabel="Delete site"
+        title={t.deleteTitle}
+        confirmLabel={t.deleteConfirm}
+        cancelLabel={t.cancel}
+        busyLabel={t.working}
         destructive
         onCancel={() => setPendingDelete(null)}
         onConfirm={confirmDelete}
       >
         <div className="space-y-3 text-sm text-ink-soft">
           <p>
-            <span className="font-medium text-ink">{pendingDelete?.name}</span> and all of its
-            pages, published revisions and any domain bound to it will be deleted permanently.
-            This cannot be undone.
+            {deleteBody[0]}
+            <span className="font-medium text-ink">{pendingDelete?.name}</span>
+            {deleteBody[1]}
           </p>
           {pendingDelete?.status === "published" && (
             <Alert variant="danger">
-              This site is live right now. Deleting it takes it offline immediately — anyone
-              visiting <span className="font-medium">{pendingDelete.subdomain}</span> will stop
-              seeing your store.
+              {deleteLive[0]}
+              <span className="font-medium">{pendingDelete.subdomain}</span>
+              {deleteLive[1]}
             </Alert>
           )}
         </div>
@@ -561,17 +645,14 @@ export function WebsitePage() {
   const tabs = useMemo(
     () => [
       { value: ALL_CATEGORIES, label: t.all },
-      ...categories.map((c) => ({ value: c, label: humanize(c) })),
+      ...categories.map((c) => ({ value: c, label: codeLabel(t, "category", c) })),
     ],
-    [categories, t.all]
+    [categories, t]
   );
 
   return (
     <div className="max-w-4xl">
-      <PageHeader
-        title="Website"
-        description="Pick a template to start your store's website. You can rename it now and customise it later."
-      />
+      <PageHeader title={t.title} description={t.description} />
 
       <ExistingSites />
 
@@ -582,7 +663,7 @@ export function WebsitePage() {
         loading={templates.loading}
         error={templates.error}
         empty={list.length === 0}
-        emptyMessage="No website templates are available right now. Check back soon."
+        emptyMessage={t.noTemplates}
         onRetry={() => templates.refresh()}
       >
         <div className="mb-4 space-y-3">
