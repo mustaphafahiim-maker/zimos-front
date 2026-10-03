@@ -57,6 +57,8 @@ export * from "./endpoints/orders";
 export * from "./endpoints/contacts";
 // All my stores and duplicate store (lane 8).
 export * from "./endpoints/stores";
+// Global search, setup guide, sidebar shortcuts (lane 8).
+export * from "./endpoints/dashboard";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).

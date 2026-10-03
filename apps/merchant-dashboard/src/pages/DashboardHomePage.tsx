@@ -15,6 +15,7 @@ import { fetchAnalyticsPair, takePrefetchedAnalyticsSummary } from "@/lib/analyt
 import { canViewAnalytics } from "@/lib/analyticsAccess";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StoreOverview } from "@/pages/home/StoreOverview";
+import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -252,6 +253,7 @@ function AnalyticsOverview({
 
   return (
     <>
+      <SetupGuideCard />
       <div className="mb-8">
         <StoreOverview />
       </div>
