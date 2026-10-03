@@ -8,13 +8,15 @@ import { ThankYouTab } from "./ThankYouTab";
 import { StoreInfoTab } from "./StoreInfoTab";
 import { PoliciesTab } from "./PoliciesTab";
 import { PagesTab } from "./PagesTab";
+import { GeneralTab } from "./GeneralTab";
+import { SeoTab } from "./SeoTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["checkout-form", "thank-you", "store-info", "policies", "pages"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -27,6 +29,8 @@ const STRINGS = {
     "store-info": "Store information",
     policies: "Policies",
     pages: "Pages",
+    general: "General",
+    seo: "SEO",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -37,6 +41,8 @@ const STRINGS = {
     "store-info": "بيانات المتجر",
     policies: "السياسات",
     pages: "الصفحات",
+    general: "عام",
+    seo: "SEO",
   },
 } satisfies Messages;
 
@@ -45,7 +51,7 @@ export function StoreDesignPage() {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const { tab } = useParams<{ tab?: string }>();
-  const active: TabKey = TABS.includes(tab as TabKey) ? (tab as TabKey) : "checkout-form";
+  const active: TabKey = TABS.includes(tab as TabKey) ? (tab as TabKey) : "general";
 
   return (
     <div>
@@ -63,6 +69,8 @@ export function StoreDesignPage() {
       {active === "store-info" && <StoreInfoTab key={workspaceId} />}
       {active === "policies" && <PoliciesTab key={workspaceId} />}
       {active === "pages" && <PagesTab key={workspaceId} />}
+      {active === "general" && <GeneralTab key={workspaceId} />}
+      {active === "seo" && <SeoTab key={workspaceId} />}
     </div>
   );
 }

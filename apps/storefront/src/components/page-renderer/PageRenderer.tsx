@@ -124,7 +124,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "countdown":
       return <CountdownElement props={props} />;
     case "form":
-      return <FormElement props={props} t={t} />;
+      return <FormElement props={props} t={t} workspaceId={ctx.workspaceId} elementId={element.id} disabled={ctx.editable} />;
     case "map":
       return <MapElement props={props} t={t} />;
     case "social_icons":

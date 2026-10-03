@@ -52,5 +52,7 @@ export * from "./endpoints/settlementStatements";
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
+// Contacts, segments and form submissions (lane 8).
+export * from "./endpoints/contacts";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";

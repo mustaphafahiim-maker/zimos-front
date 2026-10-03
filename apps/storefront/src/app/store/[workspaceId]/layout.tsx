@@ -11,13 +11,15 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { storePixelsOf } from "@/lib/adPixels";
+import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
 import {
   resolveCheckoutForm,
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
+  storefrontGeneralMeta,
 } from "@store-builder/api-client";
+import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
@@ -61,19 +63,25 @@ export async function generateMetadata({
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const description = store.tagline || t.meta.storeDescription(store.name);
+  // Settings → SEO and general: the title template, description, share
+  // image, favicon and Google verification the merchant set, over the defaults.
+  const { seo, general } = storefrontGeneralMeta(store);
+  const description = seo.description || store.tagline || t.meta.storeDescription(store.name);
+  const ogImage = seo.ogImageUrl || store.logoUrl;
 
   return {
     metadataBase: new URL(storeOrigin(store.slug)),
-    title: { default: store.name, template: `%s — ${store.name}` },
+    title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
+    ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),
+    ...(seo.googleSiteVerification ? { verification: { google: seo.googleSiteVerification } } : {}),
     openGraph: {
       type: "website",
       siteName: store.name,
       title: store.name,
       description,
       locale: intlLocaleFor(locale).replace("-", "_"),
-      ...(store.logoUrl ? { images: [{ url: store.logoUrl, alt: store.name }] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, alt: store.name }] } : {}),
     },
   };
 }
@@ -148,6 +156,7 @@ export default async function StoreLayout({
   const theme = storeThemeOf(store.themeSettings);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
+  const { floatingWhatsapp } = storefrontGeneralMeta(store);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -163,7 +172,7 @@ export default async function StoreLayout({
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels pixels={pixels} />
+              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} />
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its
@@ -191,6 +200,7 @@ export default async function StoreLayout({
                   cart icon. Funnel pages have no cart, so it steps aside with
                   the rest of the store's chrome. */}
               <CartDrawer />
+              {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />
           </div>
