@@ -14,6 +14,13 @@ import { DataState } from "@/components/DataState";
 import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import {
+  AddReviewButton,
+  DeleteManualReviewButton,
+  ManualReviewBadge,
+  ReviewPhotos,
+  reviewAuthor,
+} from "./ManualReviewParts";
 
 /** "" is the All tab — the backend simply omits the status filter. */
 type StatusFilter = "" | ReviewStatus;
@@ -113,7 +120,11 @@ export function ReviewsPage() {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={<AddReviewButton onAdded={() => list.refresh({ silent: true })} />}
+      />
 
       <div className="mb-4">
         <FilterTabs tabs={tabs} value={status} onChange={setStatus} label={t.filterLabel} />
@@ -128,7 +139,12 @@ export function ReviewsPage() {
       >
         <div className="space-y-3">
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} onModerated={applyModeration} />
+            <ReviewCard
+              key={review.id}
+              review={review}
+              onModerated={applyModeration}
+              onDeleted={(id) => list.setData((prev) => (prev ?? []).filter((r) => r.id !== id))}
+            />
           ))}
         </div>
       </DataState>
@@ -139,9 +155,11 @@ export function ReviewsPage() {
 function ReviewCard({
   review,
   onModerated,
+  onDeleted,
 }: {
   review: Review;
   onModerated: (review: Review) => void;
+  onDeleted: (id: string) => void;
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -183,12 +201,13 @@ function ReviewCard({
             <span className="font-medium text-ink-soft">{t.unknownProduct}</span>
           )}
           <p className="mt-0.5 text-sm text-ink-soft">
-            {review.customer?.fullName || t.unknownCustomer} · {formatDate(review.createdAt)}
+            {reviewAuthor(review, t.unknownCustomer)} · {formatDate(review.createdAt)}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Stars rating={review.rating} label={fmt(t.ratingAria, { n: review.rating })} />
           <StatusBadge value={review.status} text={statusText} />
+          <ManualReviewBadge review={review} />
         </div>
       </div>
 
@@ -200,6 +219,8 @@ function ReviewCard({
       >
         {review.comment || t.noComment}
       </p>
+
+      <ReviewPhotos review={review} />
 
       {error && <Alert variant="danger">{error}</Alert>}
 
@@ -219,6 +240,7 @@ function ReviewCard({
         >
           {busy === "reject" ? t.saving : t.reject}
         </Button>
+        <DeleteManualReviewButton review={review} onDeleted={onDeleted} />
       </div>
     </Card>
   );
