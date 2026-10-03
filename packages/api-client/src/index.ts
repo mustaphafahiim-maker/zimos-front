@@ -110,3 +110,5 @@ export * from "./endpoints/orderTracking";
 export * from "./endpoints/funnelExtras";
 // Default courier, automatic booking, inspection and courier notes (shipping/carrierBooking.js).
 export * from "./endpoints/carrierBooking";
+// Where each governorate/city is on a courier's own list (shipping/carrierRegionMap.js).
+export * from "./endpoints/carrierRegions";
