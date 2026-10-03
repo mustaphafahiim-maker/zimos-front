@@ -125,7 +125,8 @@ export default async function ProductPage({ params }: { params: Params }) {
   ];
 
   return (
-    <main className="flex-1 pb-24 md:pb-0">
+    // Room at the end for the sticky order bar on a phone, home indicator included.
+    <main className="flex-1 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0">
       <div className={`${container} py-6 sm:py-8`}>
         <StoreLink
           href="/"
