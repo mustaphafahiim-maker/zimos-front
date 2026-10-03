@@ -158,6 +158,8 @@ export interface ProtectionRules {
   allowed_countries: string[];
   /** ISO2 codes whose visitors do not see the store at all. */
   blocked_countries: string[];
+  /** Checkout bot guard. null = the platform default (on in production). */
+  bot_protection: boolean | null;
   numbers: Record<ProtectionNumberRule, number | null>;
   switches: Record<ProtectionSwitchRule, boolean>;
   actions: Record<ProtectionRuleKey, ProtectionAction>;
@@ -199,6 +201,7 @@ export function protectionResolveRules(stored: unknown): ProtectionRules {
     phone_validation: s.phone_validation === "strict" ? "strict" : "off",
     allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
     blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
+    bot_protection: typeof s.bot_protection === "boolean" ? s.bot_protection : null,
     numbers,
     switches,
     actions,
@@ -219,6 +222,7 @@ export async function protectionSaveRules(
     phone_validation: rules.phone_validation,
     allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
     blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
+    bot_protection: rules.bot_protection,
   };
   for (const key of PROTECTION_NUMBER_RULES) {
     fraud_rules[key] = rules.numbers[key] == null ? null : { value: rules.numbers[key], action: rules.actions[key] };
@@ -232,4 +236,23 @@ export async function protectionSaveRules(
   );
   const settings = body.workspace?.settings ?? body.settings;
   return protectionResolveRules(settings?.fraud_rules);
+}
+
+// ------------------------------------------------------- storefront guard --
+
+/** What a checkout form needs to pass the bot guard (GET /store/:ws/checkout/guard, no auth). */
+export interface CheckoutGuard {
+  enabled: boolean;
+  /** Sent back as `botToken` with the order; null when the guard is off. */
+  token: string | null;
+  /** An order sent sooner than this after the token was issued is refused. */
+  minSeconds: number;
+  /** The hidden field that must stay empty, sent under this name. */
+  honeypotField: string;
+  /** Present when the store asks for an invisible challenge; its token goes in `captchaToken`. */
+  captcha: { provider: string; siteKey: string | null } | null;
+}
+
+export async function protectionCheckoutGuard(client: ApiClient, workspaceId: string): Promise<CheckoutGuard> {
+  return client.request<CheckoutGuard>(`/store/${workspaceId}/checkout/guard`, { auth: false });
 }
