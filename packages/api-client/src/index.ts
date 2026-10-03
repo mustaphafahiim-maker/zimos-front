@@ -36,3 +36,5 @@ export type { ApiErrorCode, ApiFieldProblem, ConfirmationLockDetails } from "./e
 // Funnels live in their own endpoint module (functions over the shared client).
 export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
+// API keys and outbound webhooks (Settings → Developers).
+export * from "./endpoints/developers";

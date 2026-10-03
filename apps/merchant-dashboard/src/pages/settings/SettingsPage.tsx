@@ -37,6 +37,7 @@ import { WhatsappSection } from "./WhatsappSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
+import { DevelopersSection } from "./DevelopersSection";
 
 /**
  * A link that names one of the user's stores (?workspace=<id>, as on the way
@@ -72,6 +73,7 @@ export function SettingsPage() {
       <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
       <BillingSection key={`billing-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
+      <DevelopersSection key={`developers-${workspaceId}`} />
     </div>
   );
 }
