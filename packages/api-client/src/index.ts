@@ -62,6 +62,8 @@ export * from "./endpoints/contacts";
 export * from "./endpoints/stores";
 // Global search, setup guide, sidebar shortcuts (lane 8).
 export * from "./endpoints/dashboard";
+// Digital products: file library, deliveries, licence codes, download grants (lane 8).
+export * from "./endpoints/digital";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
