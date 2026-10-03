@@ -8,6 +8,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { ProductBulkEditDialog } from "./ProductBulkEditDialog";
+import { ProductTransferDialog } from "./ProductTransferDialog";
 
 /**
  * The product list's multi-select pieces (SPEC §7.5): the selection itself,
@@ -22,6 +23,7 @@ const STRINGS = {
     clear: "Clear selection",
     selectAll: "Select all products on this page",
     selectRow: "Select {name}",
+    transfer: "Import / export",
     duplicate: "Duplicate",
     duplicating: "Duplicating…",
     duplicated: "“{name}” created as a draft.",
@@ -32,6 +34,7 @@ const STRINGS = {
     clear: "إلغاء التحديد",
     selectAll: "تحديد كل المنتجات في هذه الصفحة",
     selectRow: "تحديد {name}",
+    transfer: "استيراد / تصدير",
     duplicate: "نسخ",
     duplicating: "جارٍ النسخ…",
     duplicated: "تم إنشاء «{name}» كمسودة.",
@@ -123,6 +126,20 @@ export function ProductBulkBar({ selection, onDone }: { selection: ProductSelect
         />
       )}
     </div>
+  );
+}
+
+/** The header button that opens the import / export dialog. */
+export function ProductTransferButton({ onImported }: { onImported: () => void }) {
+  const t = useT(STRINGS);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        {t.transfer}
+      </Button>
+      {open && <ProductTransferDialog onClose={() => setOpen(false)} onImported={onImported} />}
+    </>
   );
 }
 

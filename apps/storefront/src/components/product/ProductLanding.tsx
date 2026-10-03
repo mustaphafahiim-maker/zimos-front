@@ -49,6 +49,7 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
+import { CodeSlot } from "../CustomCode";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
@@ -452,6 +453,8 @@ export function ProductLanding({
         </div>
       ) : null}
 
+      {ps.inline_checkout && <CodeSlot name="above_form" />}
+
       {/* Inline quick order form */}
       {ps.inline_checkout && (
       <section
@@ -539,6 +542,7 @@ export function ProductLanding({
         </form>
       </section>
       )}
+      {ps.inline_checkout && <CodeSlot name="below_form" />}
 
       {/* Sticky mobile bar */}
       {ps.sticky_buy_button && (

@@ -36,6 +36,8 @@ import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { PolicyLinks } from "@/components/PolicyLinks";
+import { CodeSlot } from "@/components/CustomCode";
 
 const FORM_PREFIX = "checkout";
 
@@ -60,7 +62,10 @@ export default function CheckoutPage() {
   const [adoptedShipTo, setAdoptedShipTo] = useState(false);
   if (!adoptedShipTo && shipTo) {
     setAdoptedShipTo(true);
-    if (!values.governorate) setValues((prev) => ({ ...prev, governorate: shipTo }));
+    // Settings → purchase form: "pre-select the shipping region" can be switched off.
+    if (!values.governorate && formOptionsOf(store?.checkout).auto_select_region) {
+      setValues((prev) => ({ ...prev, governorate: shipTo }));
+    }
   }
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -232,6 +237,7 @@ export default function CheckoutPage() {
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
               {t.checkout.shipping}
             </h2>
+            <CodeSlot name="above_form" />
             <div className="mt-4">
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
@@ -242,6 +248,7 @@ export default function CheckoutPage() {
                 showAltPhone
               />
             </div>
+            <CodeSlot name="below_form" />
           </section>
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
@@ -355,6 +362,7 @@ export default function CheckoutPage() {
               className="mt-3"
             />
             <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+            <PolicyLinks className="mt-2" />
           </section>
 
           {bump && items.length > 0 && (

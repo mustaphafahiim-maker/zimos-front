@@ -158,6 +158,8 @@ export interface ProtectionRules {
   allowed_countries: string[];
   /** ISO2 codes whose visitors do not see the store at all. */
   blocked_countries: string[];
+  /** Checkout bot guard. null = the platform default (on in production). */
+  bot_protection: boolean | null;
   numbers: Record<ProtectionNumberRule, number | null>;
   switches: Record<ProtectionSwitchRule, boolean>;
   actions: Record<ProtectionRuleKey, ProtectionAction>;
@@ -199,6 +201,7 @@ export function protectionResolveRules(stored: unknown): ProtectionRules {
     phone_validation: s.phone_validation === "strict" ? "strict" : "off",
     allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
     blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
+    bot_protection: typeof s.bot_protection === "boolean" ? s.bot_protection : null,
     numbers,
     switches,
     actions,
@@ -219,6 +222,7 @@ export async function protectionSaveRules(
     phone_validation: rules.phone_validation,
     allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
     blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
+    bot_protection: rules.bot_protection,
   };
   for (const key of PROTECTION_NUMBER_RULES) {
     fraud_rules[key] = rules.numbers[key] == null ? null : { value: rules.numbers[key], action: rules.actions[key] };
@@ -232,4 +236,78 @@ export async function protectionSaveRules(
   );
   const settings = body.workspace?.settings ?? body.settings;
   return protectionResolveRules(settings?.fraud_rules);
+}
+
+// ------------------------------------------------------- storefront guard --
+
+/** What a checkout form needs to pass the bot guard (GET /store/:ws/checkout/guard, no auth). */
+export interface CheckoutGuard {
+  enabled: boolean;
+  /** Sent back as `botToken` with the order; null when the guard is off. */
+  token: string | null;
+  /** An order sent sooner than this after the token was issued is refused. */
+  minSeconds: number;
+  /** The hidden field that must stay empty, sent under this name. */
+  honeypotField: string;
+  /** Present when the store asks for an invisible challenge; its token goes in `captchaToken`. */
+  captcha: { provider: string; siteKey: string | null } | null;
+}
+
+export async function protectionCheckoutGuard(client: ApiClient, workspaceId: string): Promise<CheckoutGuard> {
+  return client.request<CheckoutGuard>(`/store/${workspaceId}/checkout/guard`, { auth: false });
+}
+
+// ---------------------------------------------------- network delivery rate --
+
+/** A customer's delivery numbers across every store on the platform. Counters only. */
+export interface NetworkScore {
+  /** Delivered share of finished orders, 0–100; null for a customer with no finished order yet. */
+  rate: number | null;
+  isNew: boolean;
+  ordersTotal: number;
+  /** delivered + returned + cancelledAfterConfirm. */
+  finished: number;
+  delivered: number;
+  returned: number;
+  cancelledAfterConfirm: number;
+  rejected: number;
+  spamReports: number;
+  /** Filled segments of the 4-segment bar. */
+  segments: number;
+  /** Below 50%: suggest asking for a deposit or the shipping fee upfront. */
+  recommendDeposit: boolean;
+}
+
+/** `enabled: false` (and no score) while the feature is off for the store. */
+export async function protectionNetworkScore(
+  client: ApiClient,
+  workspaceId: string,
+  customerId: string
+): Promise<{ enabled: boolean; score: NetworkScore | null }> {
+  return client.request<{ enabled: boolean; score: NetworkScore | null }>(
+    `/workspaces/${workspaceId}/customers/${customerId}/network-score`
+  );
+}
+
+/** The scores of up to 200 customers at once, keyed by customer id (orders list). */
+export async function protectionNetworkScores(
+  client: ApiClient,
+  workspaceId: string,
+  customerIds: string[]
+): Promise<{ enabled: boolean; scores: Record<string, NetworkScore> }> {
+  return client.request<{ enabled: boolean; scores: Record<string, NetworkScore> }>(`${fraudBase(workspaceId)}/network-scores`, {
+    method: "POST",
+    body: { customerIds },
+  });
+}
+
+/** One report per store and customer; `reported: false` when this store already reported them. */
+export async function protectionReportSpam(
+  client: ApiClient,
+  workspaceId: string,
+  customerId: string
+): Promise<{ reported: boolean }> {
+  return client.request<{ reported: boolean }>(`/workspaces/${workspaceId}/customers/${customerId}/report-spam`, {
+    method: "POST",
+  });
 }

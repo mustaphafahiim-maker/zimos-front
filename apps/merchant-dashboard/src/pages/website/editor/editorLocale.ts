@@ -82,6 +82,8 @@ const FIELD_LABEL_AR: Record<string, string> = {
   rating: "التقييم",
   endsInHours: "ينتهي بعد (ساعات)",
   submitLabel: "نص زرار الإرسال",
+  successMessage: "الرسالة بعد الإرسال",
+  tags: "وسوم تُضاف لجهة الاتصال (افصل بفاصلة)",
   "map.address": "العنوان على الخريطة",
   zoom: "درجة التكبير",
   links: "الروابط",

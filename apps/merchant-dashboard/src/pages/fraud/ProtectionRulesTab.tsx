@@ -84,6 +84,8 @@ const STRINGS = {
     allowedCountriesError: "Use two-letter country codes separated by commas.",
     rangeError: "Enter a whole number from {min} to {max}.",
     visitorsHeading: "Visitors",
+    botProtection: "Bot protection",
+    botProtectionHint: "Refuses orders sent by scripts: a hidden field only a bot fills, and a check that the form was open for at least three seconds. Refused attempts go to lost orders.",
     blockedCountries: "Countries that cannot see the store",
     blockedCountriesHint: "Two-letter country codes separated by commas. Visitors from these countries see the store as unavailable. Block single addresses in the Blocklist tab.",
     alwaysHeading: "Always",
@@ -140,6 +142,8 @@ const STRINGS = {
     allowedCountriesError: "استخدم أكواد دول من حرفين مفصولة بفواصل.",
     rangeError: "أدخل رقمًا صحيحًا من {min} إلى {max}.",
     visitorsHeading: "الزوار",
+    botProtection: "الحماية من البوتات",
+    botProtectionHint: "ترفض الأوردرات المرسلة بسكربتات: حقل مخفي لا يملؤه إلا البوت، والتأكد أن الفورم كان مفتوحًا ثلاث ثوانٍ على الأقل. المحاولات المرفوضة تذهب إلى الطلبات المفقودة.",
     blockedCountries: "دول لا ترى المتجر",
     blockedCountriesHint: "أكواد دول من حرفين مفصولة بفواصل. الزوار من هذه الدول يظهر لهم المتجر كغير متاح. احظر العناوين المفردة من تبويب قائمة الحظر.",
     alwaysHeading: "دائمًا",
@@ -171,6 +175,7 @@ interface Draft {
   strictPhone: boolean;
   countries: string;
   blockedCountries: string;
+  botProtection: boolean;
   on: Record<ProtectionRuleKey, boolean>;
   /** Raw input text of the number rules. */
   values: Record<ProtectionNumberRule, string>;
@@ -190,6 +195,8 @@ function toDraft(rules: ProtectionRules): Draft {
     strictPhone: rules.phone_validation === "strict",
     countries: rules.allowed_countries.join(", "),
     blockedCountries: rules.blocked_countries.join(", "),
+    // Unset means the platform default, which is on for a live store.
+    botProtection: rules.bot_protection !== false,
     on,
     values,
     actions: { ...rules.actions },
@@ -215,6 +222,7 @@ function toRules(draft: Draft): ProtectionRules {
     phone_validation: draft.strictPhone ? "strict" : "off",
     allowed_countries: parseCountries(draft.countries) ?? [],
     blocked_countries: parseCountries(draft.blockedCountries) ?? [],
+    bot_protection: draft.botProtection,
     numbers,
     switches,
     actions: { ...draft.actions },
@@ -341,6 +349,13 @@ export function ProtectionRulesTab() {
 
       <Card className="space-y-3 p-5">
         <h2 className="font-display text-lg font-medium text-ink">{t.visitorsHeading}</h2>
+        <ChoiceRow
+          checked={draft.botProtection}
+          disabled={disabled}
+          onChange={(botProtection) => patch({ botProtection })}
+          label={t.botProtection}
+          hint={t.botProtectionHint}
+        />
         <CountriesField
           value={draft.blockedCountries}
           disabled={disabled}

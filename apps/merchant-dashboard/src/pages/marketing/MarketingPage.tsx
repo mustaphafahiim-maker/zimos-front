@@ -10,6 +10,7 @@ import { TextField } from "@/components/Field";
 import { CopyButton } from "@/components/CopyButton";
 import { TrackingPixelsSection } from "./TrackingPixelsSection";
 import { PixelEventLogSection } from "./PixelEventLogSection";
+import { PurchaseTimingSection } from "./PurchaseTimingSection";
 
 const STRINGS = {
   en: {
@@ -87,6 +88,7 @@ export function MarketingPage() {
       <PageHeader title={t.title} description={t.description} />
 
       <TrackingPixelsSection key={workspaceId} onEventsChanged={bumpLog} />
+      <PurchaseTimingSection key={`timing-${workspaceId}`} />
       <PixelEventLogSection key={`log-${workspaceId}`} reloadKey={logVersion} />
 
       <Card className="gap-0 p-4">

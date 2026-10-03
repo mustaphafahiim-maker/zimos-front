@@ -21,7 +21,28 @@ import type { ApiClient } from "../client";
 
 // ------------------------------------------------------------------ types --
 
-export type ApiKeyScope = "orders:read" | "orders:write";
+export type ApiKeyScope =
+  | "orders:read"
+  // Create + update + delete in one, from before the three were told apart.
+  | "orders:write"
+  | "orders:create"
+  | "orders:update"
+  | "orders:delete"
+  | "products:read"
+  | "products:create"
+  | "products:update"
+  | "products:delete"
+  | "categories:read"
+  | "categories:create"
+  | "categories:update"
+  | "categories:delete"
+  | "customers:read"
+  | "discounts:read"
+  | "discounts:write"
+  | "shipping_areas:read"
+  | "shipping_areas:write"
+  | "webhooks:write"
+  | "analytics:read";
 
 export interface ApiKeyDto {
   id: string;

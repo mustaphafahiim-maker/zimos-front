@@ -17,6 +17,7 @@ import { StatusChanger } from "./components/StatusChanger";
 import { StatusHistorySection } from "./components/StatusHistorySection";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
+import { OrderAttributionSection } from "@/pages/marketing/OrderAttributionSection";
 
 const STRINGS = {
   en: {
@@ -88,6 +89,9 @@ export function OrderDetailPage() {
             <OrderSummary order={data} />
 
             <OrderProtectionSection order={data} />
+
+            {/* Where the customer came from (first/last touch); nothing for an order without it. */}
+            <OrderAttributionSection order={data} />
 
             <PaymentsSection order={data} onChanged={reload} />
 

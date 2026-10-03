@@ -348,3 +348,109 @@ export async function catalogCreateManualReview<T = unknown>(
 export async function catalogDeleteManualReview(client: ApiClient, workspaceId: string, reviewId: string): Promise<void> {
   await client.request(`/workspaces/${workspaceId}/reviews/${reviewId}`, { method: "DELETE" });
 }
+
+// ------------------------------------------------------- import and export --
+
+export type CatalogImportKind = "json" | "sheet" | "shopify_link";
+export type CatalogImportStatus = "queued" | "running" | "done" | "failed";
+
+export interface CatalogImportError {
+  /** Line in the sheet (or position in the JSON file); null for a general failure. */
+  row: number | null;
+  name: string;
+  message: string;
+}
+
+export interface CatalogImport {
+  id: string;
+  kind: CatalogImportKind;
+  status: CatalogImportStatus;
+  sourceName: string | null;
+  total: number;
+  createdCount: number;
+  failedCount: number;
+  errors: CatalogImportError[];
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+/**
+ * `ApiClient.rawFetch` (token, refresh, ApiError) is what multipart uploads and
+ * non-JSON downloads go through; it is private to the class, and this module
+ * may not edit client.ts, so it is reached through this one typed cast.
+ */
+function rawFetch(client: ApiClient, path: string, init: RequestInit): Promise<Response> {
+  return (client as unknown as { rawFetch(path: string, init: RequestInit): Promise<Response> }).rawFetch(path, init);
+}
+
+/** Every product that is not archived, as the JSON document the import accepts. */
+export async function catalogExportProducts(client: ApiClient, workspaceId: string): Promise<Blob> {
+  const document = await client.request<unknown>(`${base(workspaceId)}/products/export.json`);
+  return new Blob([JSON.stringify(document, null, 2)], { type: "application/json" });
+}
+
+/** The sheet's columns with two example rows (CSV, opens in Excel). */
+export async function catalogImportTemplate(client: ApiClient, workspaceId: string): Promise<Blob> {
+  const res = await rawFetch(client, `${base(workspaceId)}/products/import-template.csv`, { headers: { Accept: "text/csv" } });
+  return res.blob();
+}
+
+/**
+ * Starts an import from a file: .json (a ZIMOS export), .csv or .xlsx. 422
+ * VALIDATION_ERROR when the file cannot be read at all; otherwise the import
+ * runs in the background — poll catalogGetImport for its report.
+ */
+export async function catalogImportFile(client: ApiClient, workspaceId: string, file: File): Promise<CatalogImport> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  const res = await rawFetch(client, `${base(workspaceId)}/products/import`, { method: "POST", body: form });
+  const body = (await res.json()) as { import: CatalogImport };
+  return body.import;
+}
+
+/** Starts an import of one product from its Shopify page link. 422 IMPORT_SOURCE_UNREACHABLE when it cannot be read. */
+export async function catalogImportFromLink(client: ApiClient, workspaceId: string, url: string): Promise<CatalogImport> {
+  const body = await client.request<{ import: CatalogImport }>(`${base(workspaceId)}/products/import`, {
+    method: "POST",
+    body: { url },
+  });
+  return body.import;
+}
+
+export async function catalogGetImport(client: ApiClient, workspaceId: string, importId: string): Promise<CatalogImport> {
+  const body = await client.request<{ import: CatalogImport }>(`${base(workspaceId)}/imports/${importId}`);
+  return body.import;
+}
+
+/** The last twenty imports, newest first. */
+export async function catalogListImports(client: ApiClient, workspaceId: string): Promise<CatalogImport[]> {
+  const body = await client.request<{ imports: CatalogImport[] }>(`${base(workspaceId)}/imports`);
+  return body.imports;
+}
+
+// ------------------------------------------------------------- collections --
+
+/** Where a collection shows up in the store; sent with the collection create/update body. */
+export interface CatalogCollectionFlags {
+  showInHeader: boolean;
+  /** Left out of every public list; its own link still opens. */
+  hidden: boolean;
+}
+
+/** Reads the flags off a staff collection, false on a response from before them. */
+export function catalogCollectionFlags(collection: unknown): CatalogCollectionFlags {
+  const raw = (collection ?? {}) as Partial<CatalogCollectionFlags>;
+  return { showInHeader: Boolean(raw.showInHeader), hidden: Boolean(raw.hidden) };
+}
+
+export interface StorefrontHeaderCollection {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+/** The collections the merchant put in the header menu, read off the public store. */
+export function storefrontHeaderCollections(store: unknown): StorefrontHeaderCollection[] {
+  const list = (store as { headerCollections?: unknown } | null)?.headerCollections;
+  return Array.isArray(list) ? (list as StorefrontHeaderCollection[]) : [];
+}

@@ -5,13 +5,19 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { CheckoutFormTab } from "./CheckoutFormTab";
 import { ThankYouTab } from "./ThankYouTab";
+import { StoreInfoTab } from "./StoreInfoTab";
+import { PoliciesTab } from "./PoliciesTab";
+import { PagesTab } from "./PagesTab";
+import { GeneralTab } from "./GeneralTab";
+import { SeoTab } from "./SeoTab";
+import { CustomCodeTab } from "./CustomCodeTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["checkout-form", "thank-you"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "custom-code"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -21,6 +27,12 @@ const STRINGS = {
     tabsLabel: "Store settings sections",
     "checkout-form": "Purchase form",
     "thank-you": "Thank-you page",
+    "store-info": "Store information",
+    policies: "Policies",
+    pages: "Pages",
+    general: "General",
+    seo: "SEO",
+    "custom-code": "Custom code",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -28,6 +40,12 @@ const STRINGS = {
     tabsLabel: "أقسام إعدادات المتجر",
     "checkout-form": "نموذج الشراء",
     "thank-you": "صفحة الشكر",
+    "store-info": "بيانات المتجر",
+    policies: "السياسات",
+    pages: "الصفحات",
+    general: "عام",
+    seo: "SEO",
+    "custom-code": "أكواد التخصيص",
   },
 } satisfies Messages;
 
@@ -36,7 +54,7 @@ export function StoreDesignPage() {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const { tab } = useParams<{ tab?: string }>();
-  const active: TabKey = TABS.includes(tab as TabKey) ? (tab as TabKey) : "checkout-form";
+  const active: TabKey = TABS.includes(tab as TabKey) ? (tab as TabKey) : "general";
 
   return (
     <div>
@@ -51,6 +69,12 @@ export function StoreDesignPage() {
       {/* Keyed by workspace so a store switch never shows the previous store's draft. */}
       {active === "checkout-form" && <CheckoutFormTab key={workspaceId} />}
       {active === "thank-you" && <ThankYouTab key={workspaceId} />}
+      {active === "store-info" && <StoreInfoTab key={workspaceId} />}
+      {active === "policies" && <PoliciesTab key={workspaceId} />}
+      {active === "pages" && <PagesTab key={workspaceId} />}
+      {active === "general" && <GeneralTab key={workspaceId} />}
+      {active === "seo" && <SeoTab key={workspaceId} />}
+      {active === "custom-code" && <CustomCodeTab key={workspaceId} />}
     </div>
   );
 }
