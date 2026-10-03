@@ -4,8 +4,33 @@ import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Reset your password",
+    intro: "Enter your email and we'll send you a link to set a new password.",
+    sent: "If this email is registered with us, a link to set a new password will arrive within minutes.",
+    email: "Email",
+    send: "Send reset link",
+    sending: "Sending…",
+    back: "← Back to sign in",
+    failed: "Something unexpected went wrong. Try again in a moment.",
+  },
+  ar: {
+    title: "إعادة تعيين كلمة المرور",
+    intro: "اكتب بريدك الإلكتروني وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.",
+    sent: "إذا كان هذا البريد الإلكتروني مسجّلًا لدينا، سيصلك رابط لتعيين كلمة مرور جديدة خلال دقائق.",
+    email: "البريد الإلكتروني",
+    send: "إرسال رابط إعادة التعيين",
+    sending: "جارٍ الإرسال…",
+    back: "← العودة لتسجيل الدخول",
+    failed: "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
+  },
+} satisfies Messages;
 
 export function ForgotPasswordPage() {
+  const t = useT(STRINGS);
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +49,7 @@ export function ForgotPasswordPage() {
       // Only a genuine server-side failure lands here (the endpoint never
       // rejects a merely-unknown email) — surface it and let them retry.
       setError(
-        err instanceof ApiError ? err.message : "حصل خطأ غير متوقع، حاول تاني بعد شوية."
+        err instanceof ApiError ? err.message : t.failed
       );
     } finally {
       setSubmitting(false);
@@ -36,31 +61,31 @@ export function ForgotPasswordPage() {
       <BrandPanel />
       <div className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Reset your password</h2>
+          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 
           {sent ? (
             <>
               <Alert variant="success" className="mt-6">
-                لو الإيميل ده مسجل عندنا، هيوصلك لينك تعيين باسورد جديد خلال دقايق.
+                {t.sent}
               </Alert>
               <Link
                 to="/login"
                 className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                ← Back to sign in
+                {t.back}
               </Link>
             </>
           ) : (
             <>
               <p className="mt-2 text-sm text-ink-soft">
-                اكتب إيميلك وهنبعتلك لينك تعيّن منه باسورد جديد.
+                {t.intro}
               </p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 {error && <Alert variant="danger">{error}</Alert>}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t.email}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -73,7 +98,7 @@ export function ForgotPasswordPage() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "جارٍ الإرسال…" : "Send reset link"}
+                  {submitting ? t.sending : t.send}
                 </Button>
               </form>
 
@@ -81,7 +106,7 @@ export function ForgotPasswordPage() {
                 to="/login"
                 className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                ← Back to sign in
+                {t.back}
               </Link>
             </>
           )}

@@ -1,8 +1,22 @@
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    headline: "Every shelf, every price, every order — one workspace.",
+    body: "Build your catalog, take orders by COD or online payment, and give your customers a store worth bookmarking.",
+  },
+  ar: {
+    headline: "كل منتج، كل سعر، كل طلب — في مكان واحد.",
+    body: "أنشئ كتالوج منتجاتك، واستقبل الطلبات بالدفع عند الاستلام أو الدفع الإلكتروني، وقدّم لعملائك متجرًا يعودون إليه.",
+  },
+} satisfies Messages;
+
 const FILLED_CELLS = new Set([
   "2-1", "2-2", "3-4", "4-1", "4-5", "5-3", "6-0", "6-4", "1-3", "0-5",
 ]);
 
 export function BrandPanel() {
+  const t = useT(STRINGS);
   const cols = 6;
   const rows = 7;
   const cellSize = 34;
@@ -35,11 +49,10 @@ export function BrandPanel() {
 
       <div className="relative z-10 max-w-sm">
         <h1 className="font-display text-4xl font-medium leading-[1.15]">
-          Every shelf, every price, every order — one workspace.
+          {t.headline}
         </h1>
         <p className="mt-5 text-[15px] leading-relaxed text-white/70">
-          Build your catalog, take orders by COD or online payment, and give
-          your customers a store worth bookmarking.
+          {t.body}
         </p>
       </div>
 

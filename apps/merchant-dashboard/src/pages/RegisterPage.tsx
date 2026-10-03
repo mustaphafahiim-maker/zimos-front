@@ -446,7 +446,7 @@ export function RegisterPage() {
                 {unmetRules.map((rule) => (
                   <li key={rule.id} className="flex items-center gap-1.5">
                     <span aria-hidden>•</span>
-                    {rule.label}
+                    {locale === "ar" ? rule.label : rule.labelEn}
                   </li>
                 ))}
               </ul>

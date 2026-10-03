@@ -15,16 +15,18 @@ export interface PasswordRule {
   id: string;
   /** Egyptian-Arabic helper text, shown while the requirement is unmet. */
   label: string;
+  /** The same requirement in English. */
+  labelEn: string;
   test: (value: string) => boolean;
 }
 
 export const MIN_PASSWORD_LENGTH = 8;
 
 export const PASSWORD_RULES: PasswordRule[] = [
-  { id: "length", label: "٨ حروف على الأقل", test: (v) => v.length >= MIN_PASSWORD_LENGTH },
-  { id: "lower", label: "حرف صغير واحد على الأقل (a–z)", test: (v) => /[a-z]/.test(v) },
-  { id: "upper", label: "حرف كبير واحد على الأقل (A–Z)", test: (v) => /[A-Z]/.test(v) },
-  { id: "special", label: "رمز خاص واحد على الأقل (‏!@#$%…)", test: (v) => /[^A-Za-z0-9]/.test(v) },
+  { id: "length", label: "٨ حروف على الأقل", labelEn: "At least 8 characters", test: (v) => v.length >= MIN_PASSWORD_LENGTH },
+  { id: "lower", label: "حرف صغير واحد على الأقل (a–z)", labelEn: "At least one lowercase letter (a–z)", test: (v) => /[a-z]/.test(v) },
+  { id: "upper", label: "حرف كبير واحد على الأقل (A–Z)", labelEn: "At least one uppercase letter (A–Z)", test: (v) => /[A-Z]/.test(v) },
+  { id: "special", label: "رمز خاص واحد على الأقل (‏!@#$%…)", labelEn: "At least one special character (!@#$%…)", test: (v) => /[^A-Za-z0-9]/.test(v) },
 ];
 
 /** The rules `value` does not yet satisfy. Empty array ⇒ password is strong enough. */

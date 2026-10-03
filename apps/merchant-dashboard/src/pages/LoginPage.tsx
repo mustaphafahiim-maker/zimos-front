@@ -1,14 +1,61 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
-import { useLocale } from "@/i18n/LocaleContext";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { TwoFactorRequiredError, type TwoFactorChallenge, type VerificationChallenge } from "@store-builder/api-client";
 import { TwoFactorStep } from "@/components/TwoFactorStep";
+
+const STRINGS = {
+  en: {
+    title: "Welcome back",
+    subtitle: "Sign in to manage your store.",
+    google: "Continue with Google",
+    or: "or",
+    email: "Email",
+    password: "Password",
+    forgot: "Forgot password?",
+    show: "Show password",
+    hide: "Hide password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    newHere: "New to Zimos?",
+    createAccount: "Create an account",
+    wrongCredentials: "Incorrect email or password.",
+    generic: "Something went wrong. Please try again.",
+    resendFailed: "Couldn't send the email. Try again.",
+    resentNotice: "If an account uses this email, a new verification email will arrive within minutes.",
+    noVerificationEmail: "Can't find the verification email?",
+    resend: "Resend the email",
+    resending: "Sending…",
+  },
+  ar: {
+    title: "مرحبًا بعودتك",
+    subtitle: "سجّل الدخول لإدارة متجرك.",
+    google: "المتابعة بحساب جوجل",
+    or: "أو",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    forgot: "نسيت كلمة المرور؟",
+    show: "إظهار كلمة المرور",
+    hide: "إخفاء كلمة المرور",
+    signIn: "تسجيل الدخول",
+    signingIn: "جارٍ تسجيل الدخول…",
+    newHere: "جديد على زيموس؟",
+    createAccount: "أنشئ حسابًا",
+    wrongCredentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    generic: "حدث خطأ ما. حاول مرة أخرى.",
+    resendFailed: "تعذّر إرسال الرسالة. حاول مرة أخرى.",
+    resentNotice: "إذا كان هناك حساب مسجّل بهذا البريد الإلكتروني، ستصلك رسالة تأكيد جديدة خلال دقائق.",
+    noVerificationEmail: "لم تجد رسالة التأكيد؟",
+    resend: "إعادة إرسال الرسالة",
+    resending: "جارٍ الإرسال…",
+  },
+} satisfies Messages;
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
 function GoogleIcon() {
@@ -35,8 +82,9 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
-  const { login, refreshUser } = useAuth();
+  const { login, refreshUser, status } = useAuth();
   const { locale } = useLocale();
+  const t = useT(STRINGS);
   // An account that still has to confirm its sign-up code gets the code
   // screen here instead of being signed in.
   const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
@@ -78,12 +126,12 @@ export function LoginPage() {
       if (err instanceof TwoFactorRequiredError) {
         setTwoFactor(err.challenge);
       } else if (err instanceof ApiError) {
-        setError(err.status === 401 ? "Incorrect email or password." : err.message);
+        setError(err.status === 401 ? t.wrongCredentials : err.message);
         // AuthContext.login() throws this exact code for a pending_verification
         // account — the only login error we offer a "resend link" affordance for.
         if (err.code === "ACCOUNT_INACTIVE") setNeedsVerification(true);
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t.generic);
       }
     } finally {
       setSubmitting(false);
@@ -102,11 +150,17 @@ export function LoginPage() {
     } catch (err) {
       // Only a genuine server failure reaches here; surface it so they can retry.
       setError(
-        err instanceof ApiError ? err.message : "تعذّر إرسال الرسالة، حاول تاني."
+        err instanceof ApiError ? err.message : t.resendFailed
       );
     } finally {
       setResending(false);
     }
+  }
+
+  // Someone already signed in has nothing to do here: back to where they were
+  // going, or home. The code and two-step screens below finish on their own.
+  if (status === "authenticated" && !challenge && !twoFactor) {
+    return <Navigate to={from} replace />;
   }
 
   if (twoFactor) {
@@ -156,9 +210,9 @@ export function LoginPage() {
       <BrandPanel />
       <div className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Welcome back</h2>
+          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
           <p className="mt-2 text-sm text-ink-soft">
-            Sign in to manage your store.
+            {t.subtitle}
           </p>
 
           <div className="mt-8">
@@ -169,12 +223,12 @@ export function LoginPage() {
               onClick={handleGoogleLogin}
             >
               <GoogleIcon />
-              المتابعة بحساب جوجل
+              {t.google}
             </Button>
 
             <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
               <span className="h-px flex-1 bg-line" />
-              أو
+              {t.or}
               <span className="h-px flex-1 bg-line" />
             </div>
           </div>
@@ -185,11 +239,11 @@ export function LoginPage() {
             {needsVerification &&
               (resent ? (
                 <Alert variant="success">
-                  لو في حساب مسجّل بالإيميل ده، هنبعتلك رسالة تأكيد جديدة خلال دقايق.
+                  {t.resentNotice}
                 </Alert>
               ) : (
                 <div className="text-sm text-ink-soft">
-                  مش لاقي رسالة التأكيد؟{" "}
+                  {t.noVerificationEmail}{" "}
                   <Button
                     type="button"
                     variant="link"
@@ -198,13 +252,13 @@ export function LoginPage() {
                     onClick={handleResendVerification}
                     disabled={resending || !email}
                   >
-                    {resending ? "جارٍ الإرسال…" : "إعادة إرسال الرسالة"}
+                    {resending ? t.resending : t.resend}
                   </Button>
                 </div>
               ))}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t.email}</Label>
               <Input
                 id="email"
                 type="email"
@@ -218,9 +272,9 @@ export function LoginPage() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t.password}</Label>
                 <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                  Forgot password?
+                  {t.forgot}
                 </Link>
               </div>
               <div className="relative">
@@ -237,7 +291,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                  aria-label={showPassword ? t.hide : t.show}
                   aria-pressed={showPassword}
                   className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
                 >
@@ -251,14 +305,14 @@ export function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Signing in…" : "Sign in"}
+              {submitting ? t.signingIn : t.signIn}
             </Button>
           </form>
 
           <p className="mt-8 text-center text-sm text-ink-soft">
-            New to Zimos?{" "}
+            {t.newHere}{" "}
             <Link to="/register" className="font-medium text-primary hover:underline">
-              Create an account
+              {t.createAccount}
             </Link>
           </p>
         </div>

@@ -6,8 +6,52 @@ import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
 import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Set a new password",
+    intro: "Choose a new password for your account.",
+    badLink: "This link isn't valid. It may be incomplete or copied wrongly.",
+    newLink: "Request a new link",
+    done: "Your password was changed. Taking you to sign in…",
+    signIn: "Sign in",
+    password: "New password",
+    passwordPlaceholder: "At least 8 characters",
+    confirm: "Confirm password",
+    show: "Show password",
+    hide: "Hide password",
+    passwordRules: "The password still misses some of the rules listed below it.",
+    mismatch: "The password and its confirmation don't match.",
+    save: "Save new password",
+    saving: "Saving…",
+    back: "← Back to sign in",
+    failed: "Couldn't change the password. Try again.",
+  },
+  ar: {
+    title: "تعيين كلمة مرور جديدة",
+    intro: "اختر كلمة مرور جديدة لحسابك.",
+    badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
+    newLink: "اطلب رابطًا جديدًا",
+    done: "تم تغيير كلمة المرور بنجاح. جارٍ تحويلك لتسجيل الدخول…",
+    signIn: "تسجيل الدخول",
+    password: "كلمة المرور الجديدة",
+    passwordPlaceholder: "8 أحرف على الأقل",
+    confirm: "تأكيد كلمة المرور",
+    show: "إظهار كلمة المرور",
+    hide: "إخفاء كلمة المرور",
+    passwordRules: "كلمة المرور لا تستوفي بعض الشروط المذكورة أسفلها.",
+    mismatch: "كلمة المرور وتأكيدها غير متطابقين.",
+    save: "حفظ كلمة المرور الجديدة",
+    saving: "جارٍ الحفظ…",
+    back: "← العودة لتسجيل الدخول",
+    failed: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
+  },
+} satisfies Messages;
 
 export function ResetPasswordPage() {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // The emailed link is /reset-password?token=xxx — the token rides in a query
@@ -38,11 +82,11 @@ export function ResetPasswordPage() {
     setError(null);
 
     if (!isPasswordStrong(password)) {
-      setError("الباسورد لسه ناقص شوية شروط، بصّ على القايمة اللي تحت.");
+      setError(t.passwordRules);
       return;
     }
     if (password !== confirm) {
-      setError("الباسورد وتأكيده مش زي بعض.");
+      setError(t.mismatch);
       return;
     }
 
@@ -53,7 +97,7 @@ export function ResetPasswordPage() {
     } catch (err) {
       // Keep the form mounted so they can fix a typo or go request a fresh link.
       setError(
-        err instanceof ApiError ? err.message : "تعذّر تغيير الباسورد، حاول تاني."
+        err instanceof ApiError ? err.message : t.failed
       );
     } finally {
       setSubmitting(false);
@@ -65,42 +109,42 @@ export function ResetPasswordPage() {
       <BrandPanel />
       <div className="flex flex-1 items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">Set a new password</h2>
+          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 
           {!token ? (
             <>
               <Alert variant="danger" className="mt-6">
-                الرابط غير صالح. يمكن يكون ناقص أو اتنسخ غلط.
+                {t.badLink}
               </Alert>
               <Link
                 to="/forgot-password"
                 className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                اطلب لينك جديد
+                {t.newLink}
               </Link>
             </>
           ) : done ? (
             <>
               <Alert variant="success" className="mt-6">
-                تم تغيير الباسورد بنجاح. هنحوّلك لتسجيل الدخول…
+                {t.done}
               </Alert>
               <Button
                 type="button"
                 className="mt-6 w-full"
                 onClick={() => navigate("/login", { replace: true })}
               >
-                تسجيل الدخول
+                {t.signIn}
               </Button>
             </>
           ) : (
             <>
-              <p className="mt-2 text-sm text-ink-soft">اختار باسورد جديد لحسابك.</p>
+              <p className="mt-2 text-sm text-ink-soft">{t.intro}</p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                 {error && <Alert variant="danger">{error}</Alert>}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">New password</Label>
+                  <Label htmlFor="password">{t.password}</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -110,14 +154,14 @@ export function ResetPasswordPage() {
                       minLength={MIN_PASSWORD_LENGTH}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder={t.passwordPlaceholder}
                       className="pe-10"
                       aria-describedby="password-rules"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      aria-label={showPassword ? t.hide : t.show}
                       aria-pressed={showPassword}
                       className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
                     >
@@ -133,7 +177,7 @@ export function ResetPasswordPage() {
                       {unmetRules.map((rule) => (
                         <li key={rule.id} className="flex items-center gap-1.5">
                           <span aria-hidden>•</span>
-                          {rule.label}
+                          {locale === "ar" ? rule.label : rule.labelEn}
                         </li>
                       ))}
                     </ul>
@@ -141,7 +185,7 @@ export function ResetPasswordPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirm">Confirm password</Label>
+                  <Label htmlFor="confirm">{t.confirm}</Label>
                   <div className="relative">
                     <Input
                       id="confirm"
@@ -156,7 +200,7 @@ export function ResetPasswordPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirm((v) => !v)}
-                      aria-label={showConfirm ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      aria-label={showConfirm ? t.hide : t.show}
                       aria-pressed={showConfirm}
                       className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
                     >
@@ -168,12 +212,12 @@ export function ResetPasswordPage() {
                     </button>
                   </div>
                   {confirm.length > 0 && password !== confirm && (
-                    <p className="mt-1 text-xs text-danger">الباسورد وتأكيده مش زي بعض.</p>
+                    <p className="mt-1 text-xs text-danger">{t.mismatch}</p>
                   )}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "جارٍ الحفظ…" : "Save new password"}
+                  {submitting ? t.saving : t.save}
                 </Button>
               </form>
 
@@ -181,7 +225,7 @@ export function ResetPasswordPage() {
                 to="/login"
                 className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                ← Back to sign in
+                {t.back}
               </Link>
             </>
           )}

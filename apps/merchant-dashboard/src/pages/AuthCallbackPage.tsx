@@ -4,6 +4,22 @@ import { Spinner } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    failedTitle: "Couldn't sign in with Google",
+    failedBody: "Something went wrong while signing in with your Google account. Please try again.",
+    back: "← Back to sign in",
+    signingIn: "Signing in…",
+  },
+  ar: {
+    failedTitle: "تعذّر تسجيل الدخول بجوجل",
+    failedBody: "حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.",
+    back: "← العودة لتسجيل الدخول",
+    signingIn: "جارٍ تسجيل الدخول…",
+  },
+} satisfies Messages;
 
 /**
  * Landing page for the Google OAuth flow. After Google approves, the backend
@@ -13,6 +29,7 @@ import { BrandPanel } from "@/components/BrandPanel";
  * auth context then picks up the session and we go to the workspace picker.
  */
 export function AuthCallbackPage() {
+  const t = useT(STRINGS);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
@@ -48,22 +65,22 @@ export function AuthCallbackPage() {
           {failed ? (
             <>
               <h2 className="font-display text-2xl font-medium text-ink">
-                تعذّر تسجيل الدخول بجوجل
+                {t.failedTitle}
               </h2>
               <p className="mt-3 text-sm text-ink-soft">
-                حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.
+                {t.failedBody}
               </p>
               <Link
                 to="/login"
                 className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
               >
-                ← Back to sign in
+                {t.back}
               </Link>
             </>
           ) : (
             <div className="flex items-center justify-center gap-3 text-sm text-ink-soft">
               <Spinner className="size-5" />
-              <span>جارٍ تسجيل الدخول…</span>
+              <span>{t.signingIn}</span>
             </div>
           )}
         </div>
