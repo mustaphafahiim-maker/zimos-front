@@ -58,3 +58,5 @@ export * from "./endpoints/contacts";
 export * from "./endpoints/stores";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
+// Quantity bundles (lane 3).
+export * from "./endpoints/bundles";
