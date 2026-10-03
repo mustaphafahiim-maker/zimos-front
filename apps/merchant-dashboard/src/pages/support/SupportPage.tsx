@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Button, Card, cn } from "@store-builder/ui";
+import { SocialLinks } from "@store-builder/ui/social-links";
 import type {
   SupportTicket,
   SupportTicketCategory,
@@ -12,7 +13,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime } from "@/lib/format";
-import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useT, useLocale, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Field, TextField } from "@/components/Field";
@@ -62,6 +63,7 @@ const STRINGS = {
     st_pending: "Waiting on you",
     st_resolved: "Resolved",
     st_closed: "Closed",
+    socialHeading: "Other ways to reach us",
   },
   ar: {
     title: "تواصل مع الدعم",
@@ -101,6 +103,7 @@ const STRINGS = {
     st_pending: "بانتظار ردك",
     st_resolved: "تم الحل",
     st_closed: "مغلق",
+    socialHeading: "طرق أخرى للتواصل معنا",
   },
 } satisfies Messages;
 
@@ -121,9 +124,13 @@ function categoryText(t: T, category: SupportTicketCategory): string {
   return t[`cat_${category}`];
 }
 
-/** /support — the workspace's requests and a form to open a new one. */
+/**
+ * /support — the workspace's requests, a form to open a new one, and ZIMOS's
+ * social accounts and email (packages/ui/src/social-links).
+ */
 export function SupportPage() {
   const t = useT(STRINGS);
+  const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const list = useAsync(() => apiClient.listSupportTickets(workspaceId), [workspaceId]);
   const tickets = list.data ?? [];
@@ -150,6 +157,8 @@ export function SupportPage() {
             </ul>
           </DataState>
         </section>
+
+        <SocialLinks locale={locale} heading={t.socialHeading} headingClassName="font-display text-lg font-medium text-ink" />
       </div>
     </div>
   );
