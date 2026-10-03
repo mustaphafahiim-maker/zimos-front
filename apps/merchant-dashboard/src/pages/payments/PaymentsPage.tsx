@@ -17,6 +17,7 @@ import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleCon
 import { PageHeader } from "@/components/PageHeader";
 import { ManualTransferSettings } from "./ManualTransferSettings";
 import { PaymentRulesSettings } from "./PaymentRulesSettings";
+import { CurrencySettings } from "./CurrencySettings";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -228,6 +229,7 @@ export function PaymentsPage() {
                 />
               )}
               {methods.data && <PaymentRulesSettings workspaceId={workspaceId} methods={methods.data.methods} canManage={canManage} />}
+              <CurrencySettings workspaceId={workspaceId} canManage={canManage} />
               <ManualTransferSettings workspaceId={workspaceId} currency={currentWorkspace?.defaultCurrency ?? "EGP"} canManage={canManage} />
             </div>
           )}
