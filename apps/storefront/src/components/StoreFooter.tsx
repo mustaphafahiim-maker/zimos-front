@@ -6,6 +6,7 @@ import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
 import { PoweredByZimos } from "./PoweredByZimos";
+import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { container } from "./ui";
 
@@ -37,6 +38,10 @@ const GRID_COLS: Record<number, string> = {
 export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; locale: Locale; year: number }) {
   const t = getDictionary(locale);
   const { footer } = useStoreShell(store);
+  // The fuller footer a store can ask for: logo, contact, social accounts (shell/RichFooter).
+  const layout = (store.themeSettings?.footer as { layout?: unknown } | undefined)?.layout;
+  if (layout === "rich") return <RichFooter store={store} locale={locale} year={year} footer={footer} />;
+
   const link =
     "inline-flex min-h-11 items-center text-sm text-ink-soft transition-colors hover:text-primary sm:min-h-9";
 

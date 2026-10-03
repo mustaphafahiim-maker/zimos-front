@@ -211,13 +211,33 @@ html:not(.dark) [data-store-theme="uokids"] .zs {
   }
   [data-store-theme="uokids"] .zt-logo-img,
   [data-store-theme="uokids"] header[data-scrolled] .zt-logo-img {
-    width: 150px;
-    height: 150px;
+    width: 104px;
+    height: 104px;
     max-width: none;
   }
   [data-store-theme="uokids"] .zt-search-toggle {
     display: flex;
     flex: 1 0 0;
     justify-content: flex-end;
+  }
+}
+
+/* The fuller footer keeps its own top edge off: the wave is the edge. */
+[data-store-theme="uokids"] .zs-footer {
+  border-top: 0;
+}
+html:not(.dark) [data-store-theme="uokids"] .zs-toolbar__icon b {
+  background: #f7d9e1;
+}
+
+/* The category chips under the phone header are not part of this look: the
+   home page opens with its own category tiles. */
+[data-store-theme="uokids"] header[data-zimos-shell="header"] + nav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  [data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
+    height: 62px;
   }
 }
