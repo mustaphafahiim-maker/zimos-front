@@ -803,3 +803,68 @@ export async function storeDesignUpdateSavedSection(
 export async function storeDesignDeleteSavedSection(client: ApiClient, workspaceId: string, sectionId: string): Promise<void> {
   await client.request(savedSectionsBase(workspaceId) + "/" + sectionId, { method: "DELETE" });
 }
+
+// --------------------------------------------- languages and translations ----
+// Backend: src/modules/translations — /workspaces/:workspaceId/translations
+// (website.edit). The store's extra languages are `settings.store_languages`
+// (PATCH /workspaces/:workspaceId). The storefront names the shopper's language
+// with the X-Store-Locale header and gets products and collections translated.
+
+export const STORE_LOCALES = ["ar", "en", "fr", "es", "it", "de"] as const;
+export type StoreLocale = (typeof STORE_LOCALES)[number];
+export type TranslatableEntity = "product" | "collection";
+
+export interface TranslationsOverview {
+  defaultLocale: StoreLocale;
+  available: StoreLocale[];
+  /** How many names and descriptions there are to translate. */
+  totalFields: number;
+  languages: Array<{ locale: StoreLocale; isDefault: boolean; translatedFields: number; percent: number }>;
+}
+
+export interface TranslationItem {
+  entityType: TranslatableEntity;
+  entityId: string;
+  /** The original text, in the store's own language. */
+  source: { name: string; description: string };
+  /** The translation in the requested language; "" where there is none. */
+  translation: { name: string; description: string };
+}
+
+export function translationsOverview(client: ApiClient, workspaceId: string): Promise<TranslationsOverview> {
+  return client.request<TranslationsOverview>("/workspaces/" + workspaceId + "/translations/overview");
+}
+
+export async function translationsList(
+  client: ApiClient,
+  workspaceId: string,
+  entityType: TranslatableEntity,
+  locale: StoreLocale
+): Promise<TranslationItem[]> {
+  const { items } = await client.request<{ items: TranslationItem[] }>(
+    "/workspaces/" + workspaceId + "/translations?entityType=" + entityType + "&locale=" + locale
+  );
+  return items;
+}
+
+/** Saves one item's fields in one language; an empty field goes back to the original. */
+export async function translationsSave(
+  client: ApiClient,
+  workspaceId: string,
+  payload: { entityType: TranslatableEntity; entityId: string; locale: StoreLocale; fields: Partial<Record<"name" | "description", string>> }
+): Promise<TranslationItem | null> {
+  const { item } = await client.request<{ item: TranslationItem | null }>("/workspaces/" + workspaceId + "/translations", {
+    method: "PUT",
+    body: payload,
+  });
+  return item;
+}
+
+/** Which languages the store offers besides its own (sent whole). */
+export async function storeDesignSaveLanguages(client: ApiClient, workspaceId: string, languages: StoreLocale[]): Promise<Workspace> {
+  const { workspace } = await client.request<{ workspace: Workspace }>("/workspaces/" + workspaceId, {
+    method: "PATCH",
+    body: { settings: { store_languages: languages } },
+  });
+  return workspace;
+}
