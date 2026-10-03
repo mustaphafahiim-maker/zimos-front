@@ -9,6 +9,7 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
 import { OrderActions } from "./components/OrderActions";
+import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
 import { ReturnsSection } from "./components/ReturnsSection";
@@ -83,6 +84,7 @@ export function OrderDetailPage() {
             </div>
 
             <OrderActions order={data} onChanged={reload} />
+            <ResendToWebhookButton orderId={data.id} />
 
             <ConfirmationPanel order={data} onChanged={reload} />
 
