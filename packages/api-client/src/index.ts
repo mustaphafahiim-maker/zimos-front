@@ -42,3 +42,5 @@ export * from "./endpoints/developers";
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
+// Tracking pixels (Marketing → Tracking tools).
+export * from "./endpoints/trackingPixels";
