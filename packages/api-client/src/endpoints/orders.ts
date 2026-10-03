@@ -300,3 +300,83 @@ export async function ordersBulk(
 ): Promise<OrderBulkResponse> {
   return client.request<OrderBulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body });
 }
+
+// ---------------------------------------------------------- manual order --
+
+export interface OrderDraftItem {
+  variantId: string;
+  offerId?: string;
+  quantity: number;
+}
+
+export interface OrderDraft {
+  items: OrderDraftItem[];
+  contact?: { fullName: string; phone: string; email?: string };
+  shippingAddress?: { country: string; province?: string; city?: string; addressLine?: string };
+  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  discountCode?: string;
+  /** Minor units. Set by staff to replace the calculated shipping. */
+  shippingAmount?: number;
+}
+
+export interface OrderDraftPreview {
+  currency: string;
+  subtotalAmount: string;
+  discountAmount: string;
+  shippingAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  items: Array<{
+    variantId: string;
+    offerId: string | null;
+    name: string;
+    options: Record<string, string> | null;
+    offerName: string | null;
+    quantity: number;
+    unitPriceAmount: string;
+    lineTotalAmount: string;
+  }>;
+}
+
+/** Prices a manual order exactly as creating it would, without saving anything. */
+export async function ordersPreviewDraft(client: ApiClient, workspaceId: string, draft: OrderDraft): Promise<OrderDraftPreview> {
+  const { preview } = await client.request<{ preview: OrderDraftPreview }>(`${base(workspaceId)}/manual/preview`, {
+    method: "POST",
+    body: draft,
+  });
+  return preview;
+}
+
+export interface OrderDraftCustomer {
+  id: string;
+  fullName: string | null;
+  phone: string;
+  email: string | null;
+  isBlacklisted: boolean;
+  totalOrders: number;
+  totalRejectedOrders: number;
+  lastAddress: { country?: string; province?: string | null; city?: string; addressLine?: string } | null;
+  lastOrder: { id: string; orderNumber: string; createdAt: string } | null;
+}
+
+/** The customer behind a phone number, or null when it is new to the store. */
+export async function ordersCustomerByPhone(
+  client: ApiClient,
+  workspaceId: string,
+  phone: string
+): Promise<OrderDraftCustomer | null> {
+  const { customer } = await client.request<{ customer: OrderDraftCustomer | null }>(
+    `${base(workspaceId)}/manual/customer?phone=${encodeURIComponent(phone)}`
+  );
+  return customer;
+}
+
+export interface OrderGovernorate {
+  code: string;
+  ar: string;
+  en: string;
+}
+
+export async function ordersManualOptions(client: ApiClient, workspaceId: string): Promise<{ governorates: OrderGovernorate[] }> {
+  return client.request<{ governorates: OrderGovernorate[] }>(`${base(workspaceId)}/manual/options`);
+}
