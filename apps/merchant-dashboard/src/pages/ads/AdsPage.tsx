@@ -37,7 +37,7 @@ import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
-    title: "Ad campaigns",
+    title: "Ad spend",
     description: "Your ad spend against the orders it really delivered: real cost per delivered order and real return on spend.",
     addSpend: "Add spend",
     importCsv: "Import CSV",
@@ -98,7 +98,7 @@ const STRINGS = {
     template: "Example",
   },
   ar: {
-    title: "الحملات الإعلانية",
+    title: "مصاريف الإعلانات",
     description: "إنفاقك الإعلاني مقابل الطلبات التي سُلّمت فعلًا: التكلفة الحقيقية لكل طلب مسلَّم والعائد الحقيقي على الإنفاق.",
     addSpend: "أضف إنفاقًا",
     importCsv: "استيراد CSV",

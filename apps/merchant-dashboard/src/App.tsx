@@ -98,7 +98,6 @@ const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
 const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
-const CampaignsPage = lazy(() => import("@/pages/campaigns/CampaignsPage").then((m) => ({ default: m.CampaignsPage })));
 const ProfitPage = lazy(() => import("@/pages/profit/RealProfitPage").then((m) => ({ default: m.RealProfitPage })));
 const ProfitCostsPage = lazy(() =>
   import("@/pages/profit/ProfitCostsPage").then((m) => ({ default: m.ProfitCostsPage }))
@@ -189,7 +188,6 @@ export default function App() {
                       <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
                       <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
-                      <Route path="/campaigns" element={<LazyRoute><CampaignsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
                       <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />
