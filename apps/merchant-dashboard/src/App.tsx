@@ -25,6 +25,7 @@ import { CollectionsPage } from "@/pages/catalog/CollectionsPage";
 import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
+import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
@@ -33,6 +34,7 @@ import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
+import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -51,6 +53,11 @@ import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 // with every dashboard page.
 // The funnel list shares the funnel starters (and so the block library's
 // element table) with the funnel editor, so it is split off with it.
+const AppsPage = lazy(() => import("@/pages/apps/AppsPage").then((m) => ({ default: m.AppsPage })));
+const InstallAppPage = lazy(() => import("@/pages/apps/InstallAppPage").then((m) => ({ default: m.InstallAppPage })));
+const DropshipProviderPage = lazy(() =>
+  import("@/pages/apps/DropshipProviderPage").then((m) => ({ default: m.DropshipProviderPage }))
+);
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
 const FunnelEditorPage = lazy(() =>
   import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
@@ -114,6 +121,7 @@ export default function App() {
                       <Route path="/" element={<DashboardHomePage />} />
 
                       <Route path="/orders" element={<OrdersListPage />} />
+                      <Route path="/orders/new" element={<ManualOrderPage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
@@ -130,6 +138,7 @@ export default function App() {
                       <Route path="/customers" element={<ContactsPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/stores" element={<StoresPage />} />
+                      <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
@@ -161,6 +170,9 @@ export default function App() {
                       <Route path="/store-settings" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/store-settings/:tab" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/apps" element={<LazyRoute><AppsPage /></LazyRoute>} />
+                      <Route path="/apps/dropship_sandbox" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
+                      <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />
                     </Route>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { OrderDigitalSection } from "@/pages/digital/OrderDigitalSection";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -118,6 +119,8 @@ export function OrderDetailPage() {
             <OrderAttributionSection order={data} />
 
             <PaymentsSection order={data} onChanged={reload} />
+
+            <OrderDigitalSection orderId={data.id} paid={data.financialState === "paid"} />
 
             <ShipmentsSection order={data} onChanged={reload} />
 
