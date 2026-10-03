@@ -62,10 +62,14 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   order_summary: "ملخص الطلب",
   upsell_accept_button: "زرار قبول العرض",
   upsell_decline_link: "رابط رفض العرض",
+  repeater: "مكرِّر",
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
 const FIELD_LABEL_AR: Record<string, string> = {
+  "repeater.source": "كرّر لكل",
+  "repeater.layout": "التخطيط",
+  "repeater.limit": "الحد الأقصى",
   "text_link.href": "الرابط",
   "text_link.newTab": "يفتح في تبويب جديد",
   "tabs.items": "التبويبات",
@@ -182,6 +186,7 @@ const OPTION_LABEL_AR: Record<string, string> = {
 
 /** Keyed by BlockPreset.key. */
 const PRESET_AR: Record<string, { label: string; description: string }> = {
+  repeater: { label: "مكرِّر", description: "كارت لكل ميزة أو رأي أو سؤال أو تقييم من منتج الصفحة." },
   "cod-form": { label: "نموذج الطلب", description: "اختيارات المنتج ونموذج الشراء — العميل يطلب من غير ما يسيب الصفحة." },
   "product-price": { label: "سعر المنتج", description: "السعر الحقيقي للمنتج ومعاه السعر قبل الخصم." },
   "reviews-list": { label: "تقييمات العملاء", description: "التقييمات المعتمدة للمنتج بنجومها." },
