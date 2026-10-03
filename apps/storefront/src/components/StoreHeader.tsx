@@ -1,5 +1,6 @@
 "use client";
 
+import { storefrontHeaderCollections } from "@store-builder/api-client";
 import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
@@ -73,6 +74,15 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   const headerPages: ResolvedShellLink[] = storefrontDesignMeta(store)
     .navPages.filter((p) => p.showInHeader)
     .map((p) => ({ key: `page:${p.path}`, label: p.title, href: p.path, external: false }));
+  // Collections flagged "show in header" (catalog → collections) join it too.
+  for (const c of storefrontHeaderCollections(store)) {
+    headerPages.push({
+      key: `collection:${c.id}`,
+      label: c.name,
+      href: `/products?collection=${encodeURIComponent(c.slug)}`,
+      external: false,
+    });
+  }
   const ownMenu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
   const menu: ResolvedShellLink[] | null =
     headerPages.length > 0

@@ -427,3 +427,30 @@ export async function catalogListImports(client: ApiClient, workspaceId: string)
   const body = await client.request<{ imports: CatalogImport[] }>(`${base(workspaceId)}/imports`);
   return body.imports;
 }
+
+// ------------------------------------------------------------- collections --
+
+/** Where a collection shows up in the store; sent with the collection create/update body. */
+export interface CatalogCollectionFlags {
+  showInHeader: boolean;
+  /** Left out of every public list; its own link still opens. */
+  hidden: boolean;
+}
+
+/** Reads the flags off a staff collection, false on a response from before them. */
+export function catalogCollectionFlags(collection: unknown): CatalogCollectionFlags {
+  const raw = (collection ?? {}) as Partial<CatalogCollectionFlags>;
+  return { showInHeader: Boolean(raw.showInHeader), hidden: Boolean(raw.hidden) };
+}
+
+export interface StorefrontHeaderCollection {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+/** The collections the merchant put in the header menu, read off the public store. */
+export function storefrontHeaderCollections(store: unknown): StorefrontHeaderCollection[] {
+  const list = (store as { headerCollections?: unknown } | null)?.headerCollections;
+  return Array.isArray(list) ? (list as StorefrontHeaderCollection[]) : [];
+}
