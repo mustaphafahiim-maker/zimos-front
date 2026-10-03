@@ -23,7 +23,9 @@ export type FunnelStepTypeDto =
   | "upsell"
   | "downsell"
   | "thank_you"
-  | "custom";
+  | "custom"
+  // An advertorial before the product page.
+  | "article";
 
 export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "landing",
@@ -34,6 +36,7 @@ export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "downsell",
   "thank_you",
   "custom",
+  "article",
 ];
 
 /** Step types that must reference an active offer before publishing. */

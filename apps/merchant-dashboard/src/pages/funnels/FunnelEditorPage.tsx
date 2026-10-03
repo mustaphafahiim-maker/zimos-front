@@ -21,6 +21,7 @@ import {
   CreditCard,
   ExternalLink,
   FilePlus2,
+  Newspaper,
   FileText,
   FlaskConical,
   GripVertical,
@@ -68,6 +69,8 @@ import { useAsync } from "@/lib/useAsync";
 import { formatDate, formatMoney } from "@/lib/format";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { FunnelDraftBanner, useFunnelDraft } from "./FunnelDraft";
+import { FunnelIssuesButton } from "./FunnelIssues";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OfferPicker } from "@/components/OfferPicker";
 import { Select } from "@/components/Select";
@@ -137,9 +140,10 @@ export const STEP_TYPES: Record<UiStepType, StepTypeMeta> = {
   downsell: { icon: ArrowDownRight, needsOffer: FUNNEL_OFFER_STEP_TYPES.includes("downsell") },
   thank_you: { icon: PartyPopper, needsOffer: false },
   custom: { icon: FilePlus2, needsOffer: false },
+  article: { icon: Newspaper, needsOffer: false },
 };
 
-const STEP_TYPE_ORDER: UiStepType[] = ["landing", "sales", "opt_in", "checkout", "upsell", "downsell", "thank_you", "custom"];
+const STEP_TYPE_ORDER: UiStepType[] = ["article", "landing", "sales", "opt_in", "checkout", "upsell", "downsell", "thank_you", "custom"];
 
 const CONDITION_ORDER: UiEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer"];
 
@@ -162,6 +166,7 @@ const STEP_TONE: Record<UiStepType, string> = {
   upsell: "bg-success-soft text-success",
   downsell: "bg-accent-soft text-accent-dark",
   thank_you: "bg-paper text-ink-soft ring-1 ring-line",
+  article: "bg-primary-soft text-primary-dark dark:text-primary",
 };
 
 /**
@@ -286,6 +291,20 @@ export function FunnelEditorPage() {
 
   const baselineJson = useMemo(() => (baseline ? JSON.stringify(baseline) : ""), [baseline]);
   const dirty = funnel !== null && JSON.stringify(funnel) !== baselineJson;
+
+  // Unsaved map work is auto-saved to the server and offered back next time.
+  const draft = useFunnelDraft<UiFunnel>({ workspaceId, funnelId, state: funnel, dirty, ready: !!loaded.data });
+  const hadChanges = useRef(false);
+  const discardDraft = draft.discard;
+  useEffect(() => {
+    if (dirty) hadChanges.current = true;
+    // Saved or reverted: there is no pending work left to keep.
+    else if (hadChanges.current && !saving) {
+      hadChanges.current = false;
+      discardDraft();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- discardDraft is recreated each render; dirty/saving are the triggers
+  }, [dirty, saving]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -509,6 +528,16 @@ export function FunnelEditorPage() {
         <DataState loading={loaded.loading} error={loaded.error} empty={!loaded.loading && !loaded.data} emptyMessage={t.notFound} onRetry={() => loaded.refresh()}>
           {funnel && (
             <>
+              {draft.offered && (
+                <FunnelDraftBanner
+                  at={draft.offered.at}
+                  onLoad={() => {
+                    setFunnel(draft.offered!.ui);
+                    draft.dismiss();
+                  }}
+                  onDiscard={draft.discard}
+                />
+              )}
               <Link to="/funnels" className="mb-1 inline-flex items-center gap-1 text-sm text-ink-soft transition-colors hover:text-primary">
                 <span aria-hidden className="inline-block rtl:rotate-180">
                   ←
@@ -548,6 +577,11 @@ export function FunnelEditorPage() {
                   {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <FunnelIssuesButton
+                    funnelId={funnelId}
+                    version={Number(!dirty)}
+                    stepNames={Object.fromEntries(funnel.steps.map((s) => [s.key, s.name]))}
+                  />
                   <div role="group" aria-label={t.views} className="inline-flex rounded-xl border border-line bg-paper p-0.5">
                     {(["flow", "page"] as const).map((v) => {
                       const Glyph = v === "flow" ? Workflow : PencilRuler;

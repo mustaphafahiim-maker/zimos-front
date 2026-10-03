@@ -135,7 +135,7 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
     }
   }
 
-  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string) {
+  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string, sourceElementId?: string) {
     if (busy.current) return;
     busy.current = true;
     setPending(type);
@@ -143,7 +143,7 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
     try {
       const res = await funnelRuntimeAdvance(createStorefrontApiClient(), workspaceId, funnelId, sessionId, {
         fromStepKey: stepKey,
-        outcome: { type, ...(orderId ? { orderId } : {}) },
+        outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}) },
       });
       if (res.followOnOrder) {
         rememberFollowOn(sessionId, res.followOnOrder);
@@ -310,6 +310,13 @@ export function FunnelStepActions({
   // endpoint, so opt_in moves on the same way.
   return (
     <section id={FUNNEL_ACTIONS_ID} className={`${island} flex flex-col items-center gap-3 pb-16 pt-6`}>
+      <PageLinkActions
+        pending={!!flow.pending}
+        onClick={(sourceElementId) => {
+          if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
+          void flow.advance("clicked_through", undefined, sourceElementId);
+        }}
+      />
       <div className="w-full max-w-md space-y-3">
         <ErrorBox message={flow.error} />
         <button
@@ -763,6 +770,27 @@ function PageOfferActions({
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, [canAccept, pending, onAction]);
+  return null;
+}
+
+/**
+ * The page's own "move on" buttons (a `button` element with no link, drawn by
+ * the page renderer with `data-funnel-action="clicked_through"`). A click is
+ * reported with the button's element id, so an edge drawn from that button on
+ * the funnel map decides where it leads; without such an edge it follows the
+ * step's ordinary next link.
+ */
+function PageLinkActions({ pending, onClick }: { pending: boolean; onClick: (sourceElementId: string | undefined) => void }) {
+  useEffect(() => {
+    function handle(event: MouseEvent) {
+      const target =
+        event.target instanceof Element ? event.target.closest('[data-funnel-action="clicked_through"]') : null;
+      if (!target || pending) return;
+      onClick(target.getAttribute("data-funnel-source") || undefined);
+    }
+    document.addEventListener("click", handle);
+    return () => document.removeEventListener("click", handle);
+  }, [pending, onClick]);
   return null;
 }
 

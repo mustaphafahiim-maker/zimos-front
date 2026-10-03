@@ -95,3 +95,5 @@ export * from "./endpoints/whatsappCampaigns";
 export * from "./endpoints/engagement";
 // The shopper's order tracking page: steps, courier, signed tracking link.
 export * from "./endpoints/orderTracking";
+// Funnel share codes, import, map draft and issues (lane 5).
+export * from "./endpoints/funnelExtras";
