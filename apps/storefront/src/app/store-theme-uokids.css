@@ -1,0 +1,390 @@
+/* ---------------------------------------------------------------- uokids *
+ * The Uokids look: white pages, navy ink and one coral-pink accent, a round
+ * friendly face for headings (Baloo Bhaijaan 2) over Tajawal, pill buttons,
+ * soft hairline cards, and a blush footer under a wave. Built with the
+ * showcase sections (store-sections.css), whose `--zs-*` colours it pins to
+ * the exact ones of the store it was drawn from.
+ *
+ * Same contract as the themes in store-themes.css: tokens on the wrapper,
+ * element rules on the `zt-*` hooks, the merchant's accent still wins.
+ * ---------------------------------------------------------------------- */
+.brand-theme[data-store-theme="uokids"] {
+  --color-ink: #235d90;
+  --color-ink-soft: #687985;
+  --color-paper: #ffffff;
+  --color-paper-raised: #ffffff;
+  --color-line: #e6e0d6;
+  --color-line-strong: #8a97a3;
+  --brand-primary-default: #e8415b;
+  --brand-secondary: #177966;
+
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1.125rem;
+  --radius-card: 1.125rem;
+  --zt-btn-radius: 0.75rem;
+  --zt-btn-weight: 700;
+  --zt-btn-tracking: 0;
+  --zt-btn-case: none;
+  --zt-card-radius: 1.125rem;
+  --zt-input-radius: 0.75rem;
+  --zt-chip-radius: 999px;
+  --zt-icon-radius: 999px;
+  --zt-img-radius: 1.125rem;
+  --zt-h-weight: 700;
+  --zt-h-tracking: 0;
+  --zt-h-leading: 1.2;
+  --zt-density: 1;
+  --zt-container: 82.5rem;
+  --zt-divider: 0px;
+  --zt-shadow: rgb(35 93 144 / 0.14);
+}
+
+.dark .brand-theme[data-store-theme="uokids"] {
+  --color-ink: #dbe9f6;
+  --color-ink-soft: #9fb0bf;
+  --color-paper: #0e1a26;
+  --color-paper-raised: #152433;
+  --color-line: #263a4d;
+  --color-line-strong: #5f7b94;
+  --brand-primary-default: #ff6b82;
+  --brand-secondary: #4fc7ae;
+  --zt-shadow: rgb(0 0 0 / 0.5);
+}
+
+body:has(.brand-theme[data-store-theme="uokids"]) { background-color: #ffffff; }
+.dark body:has(.brand-theme[data-store-theme="uokids"]) { background-color: #0e1a26; }
+
+/* The showcase bands, in the store's own measured colours (light mode). */
+html:not(.dark) [data-store-theme="uokids"] .zs {
+  --zs-ink-deep: #1b4a74;
+  --zs-ink-soft: #e4edf5;
+  --zs-body: #45413e;
+  --zs-accent-deep: #d93650;
+  --zs-badge-bg: #fdecef;
+  --zs-badge-fg: #c8253f;
+  --zs-blush: #f7d9e1;
+  --zs-good: #177966;
+  --zs-good-soft: #f1faf7;
+  --zs-well: #f7f9fb;
+  --zs-hairline: rgb(35 93 144 / 0.055);
+  --zs-tone-primary: #fff4f6;
+  --zs-tone-secondary: #f1faf7;
+  --zs-tone-cool: #eff9fc;
+}
+
+[data-store-theme="uokids"] .zt-btn-primary {
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+[data-store-theme="uokids"] .zt-btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+[data-store-theme="uokids"] .zt-card {
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--color-ink) 4.3%, transparent);
+}
+[data-store-theme="uokids"] .zt-product:hover {
+  border-color: color-mix(in srgb, var(--brand-secondary) 48%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+[data-store-theme="uokids"] .zt-brand-bar {
+  display: none;
+}
+
+/* Header: a plain white bar with a hairline shadow. */
+[data-store-theme="uokids"] header[data-zimos-shell="header"]:not([data-overlay]) {
+  border-bottom-color: transparent;
+  background-color: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+}
+
+/* Footer: blush, under a wave. */
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"] {
+  position: relative;
+  margin-top: 78px;
+  border-top: 0;
+  background-color: #f7d9e1;
+}
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"]::before {
+  content: "";
+  position: absolute;
+  inset: -82px 0 auto;
+  height: 84px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'%3E%3Cpath fill='%23F7D9E1' d='M0 72C214 111 420 111 646 91C880 70 1034 14 1212 7C1305 3 1380 12 1440 22V120H0Z'/%3E%3C/svg%3E") center bottom / 100% 100% no-repeat;
+  pointer-events: none;
+}
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"] > div {
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+.dark [data-store-theme="uokids"] footer[data-zimos-shell="footer"] {
+  background-color: var(--color-paper-raised);
+}
+.dark [data-store-theme="uokids"] footer[data-zimos-shell="footer"]::before {
+  display: none;
+}
+
+/* Masthead layout: the logo alone at the start, the menu centred, two plain
+   icons at the end — search opens from its icon at every width. */
+[data-store-theme="uokids"] .zt-header-bar {
+  height: 110px;
+  max-width: 1320px;
+  padding-inline: 28px;
+}
+[data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
+  height: 84px;
+}
+[data-store-theme="uokids"] .zt-logo-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+[data-store-theme="uokids"] .zt-logo-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 0;
+}
+[data-store-theme="uokids"] header[data-scrolled] .zt-logo-img {
+  width: 80px;
+  height: 80px;
+}
+[data-store-theme="uokids"] .zt-nav {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 4px;
+}
+[data-store-theme="uokids"] .zt-nav > .zt-nav-link:first-child {
+  margin-inline-start: auto;
+}
+[data-store-theme="uokids"] .zt-nav > .zt-nav-link + :not(.zt-nav-link) {
+  margin-inline-start: auto;
+}
+[data-store-theme="uokids"] .zt-nav-link {
+  padding-inline: 17px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+[data-store-theme="uokids"] .zt-nav-link:hover {
+  background: transparent;
+  color: var(--color-primary);
+}
+[data-store-theme="uokids"] .zt-search-inline {
+  display: none;
+}
+[data-store-theme="uokids"] .zt-search-toggle {
+  display: block;
+}
+[data-store-theme="uokids"] header[data-zimos-shell="header"] .zt-icon-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-ink);
+}
+[data-store-theme="uokids"] header[data-zimos-shell="header"] .zt-icon-btn:hover {
+  color: var(--color-primary);
+}
+@media (max-width: 767px) {
+  [data-store-theme="uokids"] .zt-header-bar {
+    height: 62px;
+    padding-inline: 8px;
+  }
+  [data-store-theme="uokids"] .zt-nav {
+    display: contents;
+  }
+  [data-store-theme="uokids"] .zt-menu-toggle {
+    order: -1;
+    flex: 1 0 0;
+  }
+  [data-store-theme="uokids"] .zt-logo {
+    position: relative;
+    inset-inline-start: 24px;
+    height: 62px;
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+  [data-store-theme="uokids"] .zt-logo-img,
+  [data-store-theme="uokids"] header[data-scrolled] .zt-logo-img {
+    width: 104px;
+    height: 104px;
+    max-width: none;
+  }
+  [data-store-theme="uokids"] .zt-search-toggle {
+    display: flex;
+    flex: 1 0 0;
+    justify-content: flex-end;
+  }
+}
+
+/* The fuller footer keeps its own top edge off: the wave is the edge. */
+[data-store-theme="uokids"] .zs-footer {
+  border-top: 0;
+}
+html:not(.dark) [data-store-theme="uokids"] .zs-toolbar__icon b {
+  background: #f7d9e1;
+}
+
+/* The category chips under the phone header are not part of this look: the
+   home page opens with its own category tiles. */
+[data-store-theme="uokids"] header[data-zimos-shell="header"] + nav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  [data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
+    height: 62px;
+  }
+}
+
+/* Product page: the measured type and controls of the store this was drawn
+   from — a navy title, the sale price in the accent, pill buttons and a pill
+   quantity stepper. */
+[data-store-theme="uokids"] .zt-pdp-title {
+  font-family: var(--font-sans);
+  font-size: clamp(1.5rem, 2.2vw, 1.98rem);
+  font-weight: 700;
+  line-height: 1.3;
+}
+[data-store-theme="uokids"] .zt-pdp-price > span:first-child {
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+[data-store-theme="uokids"] .zt-pdp-price > span[data-sale] {
+  color: var(--color-primary);
+}
+[data-store-theme="uokids"] .zt-pdp-price > span.line-through {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+[data-store-theme="uokids"] .zt-pdp .zt-btn {
+  min-height: 54px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+[data-store-theme="uokids"] .zt-qty {
+  min-height: 54px;
+  border-color: color-mix(in srgb, var(--color-ink) 55%, #111);
+  border-radius: 999px;
+  padding-inline: 6px;
+}
+[data-store-theme="uokids"] .zt-qty button {
+  border-radius: 999px;
+}
+
+/* Product photos: on a wide screen the thumbnails stand in a column beside
+   the main photo instead of in a row under it. */
+[data-store-theme="uokids"] .zt-gallery-frame {
+  border-color: transparent;
+  background: var(--color-paper-raised);
+}
+[data-store-theme="uokids"] .zt-gallery-thumbs button {
+  border-width: 1px;
+  border-radius: 10px;
+}
+@media (min-width: 64rem) {
+  [data-store-theme="uokids"] .zt-gallery[data-many] {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  [data-store-theme="uokids"] .zt-gallery[data-many] .zt-gallery-frame {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  [data-store-theme="uokids"] .zt-gallery[data-many] .zt-gallery-thumbs {
+    grid-column: 1;
+    grid-row: 1;
+    max-height: min(100%, 620px);
+    margin-top: 0;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden auto;
+    padding-bottom: 0;
+    scrollbar-width: none;
+  }
+  [data-store-theme="uokids"] .zt-gallery[data-many] .zt-gallery-thumbs button {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+/* The catalogue cards (ProductCard on listing, search and related rows), in
+   the same dress as the home page's product cards: the whole photo on a
+   faint tint, a small bold name, the sale price in the accent and a compact
+   cart button. */
+[data-store-theme="uokids"] .zt-product {
+  border-radius: 18px;
+}
+[data-store-theme="uokids"] .zt-product > div:first-child {
+  background-color: color-mix(in srgb, var(--brand-secondary) 4.3%, var(--color-paper-raised));
+}
+[data-store-theme="uokids"] .zt-product > div:first-child img {
+  padding: 12px;
+  object-fit: contain;
+}
+[data-store-theme="uokids"] .zt-product h3 {
+  min-height: 2.9em;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+[data-store-theme="uokids"] .zt-product h3 + p {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  font-size: 15px;
+}
+[data-store-theme="uokids"] .zt-product h3 + p:has(.line-through) > span:first-child {
+  color: var(--color-primary);
+}
+[data-store-theme="uokids"] .zt-product h3 + p > .line-through {
+  font-size: 12px;
+  font-weight: 600;
+}
+[data-store-theme="uokids"] .zt-product .zt-btn {
+  min-height: 43px;
+  margin-top: 11px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+@media (max-width: 749px) {
+  [data-store-theme="uokids"] .zt-product {
+    border-radius: 14px;
+  }
+  [data-store-theme="uokids"] .zt-product > div:first-child img {
+    padding: 7px;
+  }
+  [data-store-theme="uokids"] .zt-product h3 {
+    font-size: 12.5px;
+  }
+  [data-store-theme="uokids"] .zt-product .zt-btn {
+    min-height: 42px;
+    font-size: 11px;
+  }
+}
+
+/* The menu's dropdown hangs from the bottom of the tall masthead. */
+[data-store-theme="uokids"] .zs-drop__panel {
+  top: calc(50% + 55px);
+}
+[data-store-theme="uokids"] header[data-scrolled] .zs-drop__panel {
+  top: calc(50% + 42px);
+}
+/* Keeps the panel open while the pointer crosses from the link down to it. */
+[data-store-theme="uokids"] .zs-drop::after {
+  content: "";
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 40px;
+}
+[data-store-theme="uokids"] .zs-drop:hover {
+  background: transparent;
+}

@@ -13,6 +13,8 @@ export interface StoreAnnouncement {
    */
   messages?: string[];
   href: string | null;
+  /** Every message on one running line instead of one at a time (components/shell/PromoMarquee). */
+  marquee?: boolean;
   /** The merchant's own colours for the bar, when they set them. */
   background: string | null;
   color: string | null;
@@ -60,6 +62,7 @@ export function announcementOf(store: StorefrontMeta): StoreAnnouncement | null 
       text,
       messages: messages && messages.length > 1 ? messages : undefined,
       href,
+      marquee: a.marquee === true || undefined,
       background: hexOrNull(a.background),
       color: hexOrNull(a.color),
     };

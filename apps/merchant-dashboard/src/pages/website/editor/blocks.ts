@@ -74,6 +74,8 @@ import type {
 } from "@store-builder/api-client";
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
+import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import type { ItemSubField } from "./ItemListField";
 
 /**
  * The editor's model of the backend page tree (modules/pages/pageTree.js).
@@ -117,7 +119,19 @@ export type FieldSpec =
   | { key: string; label: string; kind: "qaList"; hint?: string }
   | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "compareRows"; hint?: string }
-  | { key: string; label: string; kind: "linkList"; hint?: string };
+  | { key: string; label: string; kind: "linkList"; hint?: string }
+  // A list of objects, each a small card of its own fields (ItemListField.tsx).
+  | {
+      key: string;
+      label: string;
+      kind: "itemList";
+      itemLabel: string;
+      itemLabelAr: string;
+      titleKey: string;
+      max: number;
+      fields: ItemSubField[];
+      hint?: string;
+    };
 
 interface ElementSpec {
   label: string;
@@ -704,6 +718,8 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { label: "" },
     fields: [{ key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
   },
+  // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
+  ...SHOWCASE_ELEMENT_SPECS,
 };
 
 // ---------------------------------------------------------------------------
@@ -3138,7 +3154,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

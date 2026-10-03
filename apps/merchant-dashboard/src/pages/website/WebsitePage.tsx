@@ -352,7 +352,15 @@ function UseTemplateForm({
       await saveThemeSettings((current) =>
         storeHasOwnLook(current)
           ? null
-          : { themeSettings: { ...current, primaryColor: colour, primaryColorSource: TEMPLATE_COLOR_SOURCE } }
+          : {
+              themeSettings: {
+                ...current,
+                // A template may bring its whole look — theme, header, footer (globalStyles.themeSettings).
+                ...(styles?.themeSettings && typeof styles.themeSettings === "object" ? (styles.themeSettings as Record<string, unknown>) : {}),
+                primaryColor: colour,
+                primaryColorSource: TEMPLATE_COLOR_SOURCE,
+              },
+            }
       );
     } catch {
       /* the site was created; the merchant can still pick a colour in the editor */

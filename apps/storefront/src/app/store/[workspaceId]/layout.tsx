@@ -37,6 +37,7 @@ import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore }
 import { storeThemeOf } from "@/lib/brandTheme";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { ThemeChrome } from "@/components/shell/ThemeChrome";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
 function localeSource(store: UnavailableStore) {
@@ -230,6 +231,8 @@ export default async function StoreLayout({
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />
+            {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
+            <ThemeChrome store={store} />
           </div>
           </CustomCodeProvider>
         </StoreShellProvider>

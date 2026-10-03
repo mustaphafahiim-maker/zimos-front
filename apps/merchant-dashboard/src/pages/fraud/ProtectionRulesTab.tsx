@@ -96,6 +96,8 @@ const STRINGS = {
     otpApply_risky_only: "Risky orders only",
     otpLength: "Code length",
     otpDigits: "{n} digits",
+    botCaptcha: "Add an invisible challenge",
+    botCaptchaHint: "A background check the shopper never sees (Cloudflare Turnstile). It only acts once the challenge provider is connected to the platform.",
     visitorsHeading: "Visitors",
     botProtection: "Bot protection",
     botProtectionHint: "Refuses orders sent by scripts: a hidden field only a bot fills, and a check that the form was open for at least three seconds. Refused attempts go to lost orders.",
@@ -166,6 +168,8 @@ const STRINGS = {
     otpApply_risky_only: "الأوردرات الخطرة فقط",
     otpLength: "طول الكود",
     otpDigits: "{n} أرقام",
+    botCaptcha: "إضافة تحدٍّ غير مرئي",
+    botCaptchaHint: "فحص في الخلفية لا يراه المشتري (Cloudflare Turnstile). لا يعمل إلا بعد ربط مزوّد التحدي بالمنصة.",
     visitorsHeading: "الزوار",
     botProtection: "الحماية من البوتات",
     botProtectionHint: "ترفض الأوردرات المرسلة بسكربتات: حقل مخفي لا يملؤه إلا البوت، والتأكد أن الفورم كان مفتوحًا ثلاث ثوانٍ على الأقل. المحاولات المرفوضة تذهب إلى الطلبات المفقودة.",
@@ -201,6 +205,7 @@ interface Draft {
   countries: string;
   blockedCountries: string;
   botProtection: boolean;
+  botCaptcha: boolean;
   otp: CheckoutOtpSettings;
   on: Record<ProtectionRuleKey, boolean>;
   /** Raw input text of the number rules. */
@@ -223,6 +228,7 @@ function toDraft(rules: ProtectionRules): Draft {
     blockedCountries: rules.blocked_countries.join(", "),
     // Unset means the platform default, which is on for a live store.
     botProtection: rules.bot_protection !== false,
+    botCaptcha: rules.bot_captcha,
     otp: { ...rules.checkout_otp },
     on,
     values,
@@ -250,6 +256,7 @@ function toRules(draft: Draft): ProtectionRules {
     allowed_countries: parseCountries(draft.countries) ?? [],
     blocked_countries: parseCountries(draft.blockedCountries) ?? [],
     bot_protection: draft.botProtection,
+    bot_captcha: draft.botCaptcha,
     checkout_otp: { ...draft.otp },
     numbers,
     switches,
@@ -439,6 +446,15 @@ export function ProtectionRulesTab() {
           label={t.botProtection}
           hint={t.botProtectionHint}
         />
+        {draft.botProtection && (
+          <ChoiceRow
+            checked={draft.botCaptcha}
+            disabled={disabled}
+            onChange={(botCaptcha) => patch({ botCaptcha })}
+            label={t.botCaptcha}
+            hint={t.botCaptchaHint}
+          />
+        )}
         <CountriesField
           value={draft.blockedCountries}
           disabled={disabled}

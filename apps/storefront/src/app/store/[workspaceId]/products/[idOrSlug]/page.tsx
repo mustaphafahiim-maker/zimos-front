@@ -167,7 +167,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           {t.product.back}
         </StoreLink>
 
-        <div className="mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
+        <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
             <CodeSlot name="above_gallery" />
             <ProductGallery images={productImages(product)} name={product.name} />

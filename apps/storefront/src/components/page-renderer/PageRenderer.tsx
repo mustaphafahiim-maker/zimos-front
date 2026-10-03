@@ -53,6 +53,7 @@ import {
   ToggleElement,
   UpsellActionElement,
 } from "./builderElements";
+import { ShowcaseElement } from "./showcase";
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
@@ -259,9 +260,16 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "repeater":
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
-      // Unreachable for the 29 allowed types, but a tree written before this
-      // renderer knew about a new type must not blank the page.
-      return null;
+      // The showcase sections (./showcase) draw their own types; anything
+      // else is a type this renderer does not know, and a tree written for a
+      // newer one must not blank the page — so it draws nothing.
+      return (
+        <ShowcaseElement
+          type={element.type}
+          props={props}
+          ctx={{ workspaceId: ctx.workspaceId, currency: ctx.currency, locale: ctx.locale, editable: ctx.editable === true }}
+        />
+      );
   }
 }
 

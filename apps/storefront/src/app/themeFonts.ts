@@ -95,6 +95,8 @@ export const THEME_FONT_STACKS: Record<StoreThemeKey, { display: string; sans: s
   classic: { display: fontStack([lora, naskh], SERIF), sans: fontStack([sourceSans, almarai], SANS) },
   warm: { display: fontStack([baloo], SANS), sans: fontStack([nunito, rubik], SANS) },
   glass: { display: fontStack([spaceGrotesk, readex], SANS), sans: fontStack([readex], SANS) },
+  // Tajawal is the root layout's own face (Arabic and Latin), so it is named, not loaded again.
+  uokids: { display: fontStack([baloo], `"Tajawal", ${SANS}`), sans: `"Tajawal", ${SANS}` },
 };
 
 /**
