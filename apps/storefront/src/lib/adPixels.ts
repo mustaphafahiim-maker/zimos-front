@@ -1,4 +1,4 @@
-import { getTrackingContext } from "./analyticsEvents";
+import { getTrackingContext, setPixelInfoProvider } from "./analyticsEvents";
 import type { TrackData, TrackEvent } from "./track";
 
 /**
@@ -42,21 +42,27 @@ const TIKTOK: Record<TrackEvent, string> = {
   ViewContent: "ViewContent",
   AddToCart: "AddToCart",
   InitiateCheckout: "InitiateCheckout",
+  AddPaymentInfo: "AddPaymentInfo",
   Purchase: "CompletePayment",
+  Lead: "SubmitForm",
 };
 const SNAP: Record<TrackEvent, string> = {
   PageView: "PAGE_VIEW",
   ViewContent: "VIEW_CONTENT",
   AddToCart: "ADD_CART",
   InitiateCheckout: "START_CHECKOUT",
+  AddPaymentInfo: "ADD_BILLING",
   Purchase: "PURCHASE",
+  Lead: "SIGN_UP",
 };
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
   ViewContent: "view_item",
   AddToCart: "add_to_cart",
   InitiateCheckout: "begin_checkout",
+  AddPaymentInfo: "add_payment_info",
   Purchase: "purchase",
+  Lead: "generate_lead",
 };
 
 // ---------------------------------------------------------------- registry --
@@ -80,6 +86,45 @@ function viewedProducts(): string[] {
 /** components/TrackingPixels calls this with the store's pixels before any event is sent. */
 export function registerPixels(pixels: StorePixel[]): void {
   registry = pixels;
+  setPixelInfoProvider(pixels.length ? pixelInfo : null);
+}
+
+function cookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]).slice(0, 400) : undefined;
+}
+
+/** A click id from the landing URL, remembered for the visit. */
+function clickId(param: string): string | undefined {
+  try {
+    const key = "zimos_click_" + param;
+    const fromUrl = new URLSearchParams(window.location.search).get(param);
+    if (fromUrl) window.sessionStorage.setItem(key, fromUrl.slice(0, 400));
+    return window.sessionStorage.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * What the API needs to send the same event server-side and have the platform
+ * match it: the platforms' own browser ids (set by their scripts) and the
+ * products viewed this visit, for product-scoped pixels. No personal data.
+ */
+function pixelInfo(): Record<string, unknown> | undefined {
+  if (typeof window === "undefined" || registry.length === 0) return undefined;
+  const fbclid = clickId("fbclid");
+  const info: Record<string, unknown> = {
+    fbp: cookie("_fbp"),
+    fbc: cookie("_fbc") ?? (fbclid ? "fb.1." + Date.now() + "." + fbclid : undefined),
+    ttp: cookie("_ttp"),
+    ttclid: clickId("ttclid"),
+    scCid: clickId("ScCid"),
+  };
+  const products = viewedProducts().filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  if (products.length) info.productIds = products;
+  for (const key of Object.keys(info)) if (info[key] === undefined) delete info[key];
+  return info;
 }
 
 function inScope(pixel: StorePixel): boolean {
@@ -142,6 +187,10 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
   const w = window as PixelWindow;
   const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
   const common = { value, currency: data.currency };
+  // The order id for a Purchase, a per-event UUID otherwise — the same id the
+  // API sends with its server-side copy (backend marketing/pixelEvents.js and
+  // browserEventRelay.js), so the two dedup into one event.
+  const dedupeId = data.orderId ?? data.eventId;
 
   try {
     const meta = active("meta");
@@ -164,7 +213,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
             // (backend marketing/pixelEvents.js sends order.id verbatim as
             // event_id), so browser and server events dedup into one
             // conversion — on every Meta pixel the event goes to.
-            data.orderId ? { eventID: data.orderId } : undefined
+            dedupeId ? { eventID: dedupeId } : undefined
           );
       }
     }
@@ -180,7 +229,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
           ttq.track(
             TIKTOK[event],
             { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems },
-            data.orderId ? { event_id: data.orderId } : undefined
+            dedupeId ? { event_id: dedupeId } : undefined
           );
       }
     }
@@ -195,7 +244,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         item_ids: data.contentIds,
         number_items: data.numItems,
         transaction_id: data.orderId,
-        event_id: data.orderId,
+        event_id: dedupeId,
       });
     }
 

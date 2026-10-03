@@ -3,6 +3,7 @@
 import type { StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -61,7 +62,11 @@ export function PaymentMethodPicker({
               name={`${idPrefix}-payment`}
               value={m.id}
               checked={checked}
-              onChange={() => onChange(m.id)}
+              onChange={() => {
+                // Choosing an online method is the ad platforms' AddPaymentInfo.
+                if (m.method !== "cod") track("AddPaymentInfo");
+                onChange(m.id);
+              }}
               className="size-4 shrink-0 accent-primary"
             />
             <Icon className="shrink-0 text-primary" />
