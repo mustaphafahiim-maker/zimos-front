@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Card, cn } from "@store-builder/ui";
 import {
+  currenciesGet,
   funnelsList,
   insightsGetOverview,
   type InsightsDay,
@@ -24,6 +25,7 @@ const STRINGS = {
   en: {
     allStore: "Whole store",
     funnelFilter: "Store or funnel",
+    currencyFilter: "Currency",
     vsPrevious: "vs previous period",
     visits: "Visits",
     orders: "Orders",
@@ -84,6 +86,7 @@ const STRINGS = {
   ar: {
     allStore: "المتجر كله",
     funnelFilter: "المتجر أو مسار البيع",
+    currencyFilter: "العملة",
     vsPrevious: "مقارنة بالفترة السابقة",
     visits: "الزيارات",
     orders: "الطلبات",
@@ -185,6 +188,9 @@ export function StoreOverview({ actions }: { actions?: ReactNode }) {
   const workspaceId = useWorkspaceId();
   const [range, setRange] = useState<AnalyticsRange>("7d");
   const [funnelId, setFunnelId] = useState("");
+  const [currency, setCurrency] = useState("");
+  const currencies = useAsync(() => currenciesGet(apiClient, workspaceId).catch(() => null), [workspaceId]);
+  const currencyChoices = currencies.data ? Object.keys(currencies.data.rates) : [];
 
   const funnels = useAsync(() => funnelsList(apiClient, workspaceId).catch(() => []), [workspaceId]);
   const overview = useAsync<InsightsOverview>(
@@ -193,8 +199,9 @@ export function StoreOverview({ actions }: { actions?: ReactNode }) {
         ...rangeWindows(range).current,
         compare: "previous",
         funnelId: funnelId || undefined,
+        currency: currency || undefined,
       }),
-    [workspaceId, range, funnelId]
+    [workspaceId, range, funnelId, currency]
   );
   const data = overview.data;
 
@@ -213,6 +220,21 @@ export function StoreOverview({ actions }: { actions?: ReactNode }) {
             {funnels.data?.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
+              </option>
+            ))}
+          </Select>
+        )}
+        {currencies.data && currencyChoices.length > 0 && (
+          <Select
+            aria-label={t.currencyFilter}
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="h-9 w-auto font-medium"
+          >
+            <option value="">{currencies.data.baseCurrency}</option>
+            {currencyChoices.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </Select>

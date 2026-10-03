@@ -1,5 +1,6 @@
 "use client";
 
+import { CrossSellStrip } from "@/components/offers/StoreOffers";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { BoxIcon, CartGlyph } from "@/components/Icons";
@@ -170,6 +171,15 @@ export default function CartPage() {
             <TrustStrip t={t} compact />
           </aside>
         </div>
+      )}
+
+      {/* What goes with the cart: the merchant's cross-sell rule, or what was bought together. */}
+      {!isEmpty && cart && (
+        <CrossSellStrip
+          workspaceId={workspaceId}
+          placement="cart"
+          productIds={[...new Set(cart.items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
+        />
       )}
     </main>
   );

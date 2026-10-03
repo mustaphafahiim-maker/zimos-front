@@ -9,6 +9,7 @@ import { useStore } from "@/lib/StoreContext";
 import { SearchIcon } from "./Icons";
 import { StatusTimeline } from "./StatusTimeline";
 import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -192,6 +193,8 @@ export function TrackOrder() {
                   <dd>{money(result.totalAmount, currency)}</dd>
                 </div>
               </dl>
+
+              <TrackOrderDownloads result={result} />
 
               <TrackOrderNotes result={result} />
 

@@ -19,6 +19,7 @@ import type {
   WhatsappMessage,
   WhatsappTemplatePayload,
 } from "@store-builder/api-client";
+import { inboxListConversations, type InboxConversation, type InboxCounts } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -28,6 +29,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
+import { useInboxLive } from "./useInboxLive";
+import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, QuickRepliesMenu, type InboxScope } from "./InboxExtras";
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
@@ -218,6 +221,12 @@ function InboxView() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const [status, setStatus] = useState<WhatsappConversationStatus>("open");
+  // All / assigned to me / unread — and how many open conversations wait in each.
+  const [scope, setScope] = useState<InboxScope>("all");
+  const [counts, setCounts] = useState<InboxCounts | null>(null);
+  const scopeParams = { assigned: scope === "mine" ? ("me" as const) : undefined, unread: scope === "unread" };
+  // Bumped on any activity so the customer panel re-reads the orders.
+  const [activity, setActivity] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [conversations, setConversations] = useState<WhatsappConversation[]>([]);
@@ -245,12 +254,14 @@ function InboxView() {
         setError(null);
       }
       try {
-        const res = await apiClient.listWhatsappConversations(workspaceId, {
+        const res = await inboxListConversations(apiClient, workspaceId, {
+          ...scopeParams,
           status,
           search: search || undefined,
           limit: LIST_LIMIT,
         });
         if (id !== reqId.current) return;
+        setCounts(res.counts);
         if (silent) {
           setConversations((prev) => {
             const fresh = new Set(res.conversations.map((c) => c.id));
@@ -270,7 +281,8 @@ function InboxView() {
         if (id === reqId.current && !silent) setLoading(false);
       }
     },
-    [workspaceId, status, search]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workspaceId, status, search, scope]
   );
 
   useEffect(() => {
@@ -278,12 +290,18 @@ function InboxView() {
   }, [loadFirstPage]);
 
   usePolling(() => void loadFirstPage(true));
+  // The live stream makes a new message show at once; the poll above stays as the safety net.
+  useInboxLive(workspaceId, () => {
+    void loadFirstPage(true);
+    setActivity((n) => n + 1);
+  });
 
   async function loadMore() {
     if (!nextCursor) return;
     setLoadingMore(true);
     try {
-      const res = await apiClient.listWhatsappConversations(workspaceId, {
+      const res = await inboxListConversations(apiClient, workspaceId, {
+          ...scopeParams,
         status,
         search: search || undefined,
         limit: LIST_LIMIT,
@@ -324,7 +342,12 @@ function InboxView() {
         </Button>
       </div>
 
-      <div className="grid h-[calc(100dvh-14rem)] min-h-[480px] overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 md:grid-cols-[320px_1fr]">
+      <div
+        className={cn(
+          "grid h-[calc(100dvh-14rem)] min-h-[480px] overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 md:grid-cols-[320px_1fr]",
+          threadConversation && "xl:grid-cols-[320px_1fr_300px]"
+        )}
+      >
         {/* Conversation list */}
         <aside
           className={cn("flex min-h-0 flex-col border-line md:border-e", threadConversation && "hidden md:flex")}
@@ -361,6 +384,7 @@ function InboxView() {
                 </button>
               ))}
             </div>
+            <InboxScopeTabs value={scope} onChange={setScope} counts={counts} />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {loading ? (
@@ -416,6 +440,16 @@ function InboxView() {
             </div>
           )}
         </section>
+
+        {/* Customer panel: its own column on wide screens; a dialog from the thread header otherwise. */}
+        {threadConversation && (
+          <CustomerPanel
+            key={`panel-${threadConversation.id}`}
+            className="hidden border-line xl:flex xl:border-s"
+            conversation={threadConversation}
+            refreshKey={activity}
+          />
+        )}
       </div>
 
       <Modal
@@ -552,6 +586,10 @@ function Thread({
   }, [loadLatest]);
 
   usePolling(() => void loadLatest(true));
+  useInboxLive(workspaceId, (event) => {
+    if (!event.conversationId || event.conversationId === conversation.id) void loadLatest(true);
+  });
+  const [panelOpen, setPanelOpen] = useState(false);
 
   // Keep the view pinned to the newest message unless the user scrolled up.
   useEffect(() => {
@@ -630,6 +668,14 @@ function Thread({
             {t.viewCustomer}
           </Link>
         )}
+        <CustomerPanelButton className="xl:hidden" onClick={() => setPanelOpen(true)} />
+        <AssigneeSelect
+          conversation={conversation as InboxConversation}
+          onAssigned={(assignedTo) => {
+            onPatch({ assignedTo } as Partial<WhatsappConversation>);
+            onActivity();
+          }}
+        />
         <Button size="sm" variant="outline" onClick={toggleStatus} disabled={statusBusy}>
           {conversation.status === "open" ? t.closeConversation : t.reopenConversation}
         </Button>
@@ -673,6 +719,17 @@ function Thread({
       </div>
 
       <Composer conversation={conversation} onSent={afterSend} />
+
+      {panelOpen && (
+        <div className="fixed inset-0 z-50 bg-primary-dark/40 xl:hidden dark:bg-black/60" onMouseDown={() => setPanelOpen(false)}>
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute inset-y-0 end-0 flex w-full max-w-sm flex-col border-s border-line bg-paper-raised shadow-xl"
+          >
+            <CustomerPanel className="flex-1" conversation={conversation} onClose={() => setPanelOpen(false)} />
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -788,6 +845,7 @@ function Composer({
 
   return (
     <form onSubmit={sendText} className="flex items-end gap-2 border-t border-line p-3">
+      <QuickRepliesMenu onPick={setText} draft={text} />
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
