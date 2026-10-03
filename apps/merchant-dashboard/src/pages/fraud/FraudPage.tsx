@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { PageHeader } from "@/components/PageHeader";
-import { FraudRulesTab } from "./FraudRulesTab";
+import { ProtectionRulesTab } from "./ProtectionRulesTab";
 import { FlaggedOrdersTab } from "./FlaggedOrdersTab";
 import { BlockedEntriesTab } from "./BlockedEntriesTab";
 
@@ -75,7 +75,7 @@ export function FraudPage() {
 
         {/* Keyed on the workspace so switching stores resets every tab's local state. */}
         <TabsContent value="rules" className="pt-4">
-          <FraudRulesTab key={workspaceId} />
+          <ProtectionRulesTab key={workspaceId} />
         </TabsContent>
         <TabsContent value="flagged" className="pt-4">
           <FlaggedOrdersTab key={workspaceId} />
