@@ -1,8 +1,15 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { NAV_GROUPS, NAV_GROUP_LABELS, NAV_LABELS, findNavItem, isNavItemVisible } from "@/lib/navigation";
+import {
+  NAV_GROUPS,
+  NAV_GROUP_LABELS,
+  NAV_LABELS,
+  findNavGroup,
+  findNavItem,
+  isNavItemVisible,
+} from "@/lib/navigation";
 import { prefetchAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
@@ -27,6 +34,7 @@ const STRINGS = {
     openNav: "Open navigation",
     closeNav: "Close navigation",
     navLabel: "Main navigation",
+    breadcrumb: "You are here",
     dashboardAria: "Zimos dashboard",
     dashboardAriaNamed: "{name} — Zimos dashboard",
     switchStore: "Switch store",
@@ -41,6 +49,7 @@ const STRINGS = {
     openNav: "فتح القائمة",
     closeNav: "إغلاق القائمة",
     navLabel: "القائمة الرئيسية",
+    breadcrumb: "مكانك الحالي",
     dashboardAria: "لوحة تحكم زيموس",
     dashboardAriaNamed: "{name} — لوحة تحكم زيموس",
     switchStore: "تبديل المتجر",
@@ -65,9 +74,12 @@ function readCollapsedGroups(): Record<string, boolean> {
  * Sidebar body — rendered twice: once in the desktop rail and once inside the
  * mobile drawer. `onNavigate` lets the drawer close itself when a link is
  * followed. Same approach as the platform-admin console.
+ *
+ * The sidebar is a dark surface in both themes: its container carries the
+ * `dark` class, so the shared controls inside it draw with the dark tokens.
  */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -88,25 +100,22 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // Collapsing a group hides everything in it except the page you are on, so
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
+  const userLabel = user?.fullName ?? user?.email ?? "";
 
   return (
     <>
-      <div className="px-5 py-5">
+      <div className="px-4 pt-5 pb-3">
         <Link
           to="/"
           onClick={onNavigate}
-          className="block transition-opacity hover:opacity-80"
+          className="block px-1 transition-opacity hover:opacity-80"
           aria-label={storeName ? fmt(t.dashboardAriaNamed, { name: storeName }) : t.dashboardAria}
         >
-          <ZimosLogo height={26} />
-          {storeName && (
-            <span className="mt-2 block truncate text-sm font-medium text-ink-soft">
-              {storeName}
-            </span>
-          )}
+          <ZimosLogo height={24} />
         </Link>
+        <StoreSwitcher onNavigate={onNavigate} />
       </div>
-      <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
+      <nav aria-label={t.navLabel} className="shell-scroll flex-1 overflow-y-auto px-3 pb-4">
         <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
@@ -117,18 +126,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
 
           return (
-            <div key={group.id} className={cn(index > 0 && "mt-4")}>
+            <div
+              key={group.id}
+              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-white/10 pt-4"))}
+            >
               {heading && (
                 <button
                   type="button"
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase transition-colors hover:text-ink rtl:tracking-normal"
+                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.16em] text-white/45 uppercase transition-colors hover:text-white/80 rtl:font-sans rtl:text-[11px] rtl:tracking-normal"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
-                    className={cn("size-3.5 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
+                    className={cn("size-3 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
                     aria-hidden
                   />
                 </button>
@@ -148,11 +160,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         : undefined
                     }
                     className={({ isActive }) =>
-                      // Dark primary-dark stays deep (white text sits on it elsewhere),
-                      // so on primary-soft it is ~3:1; the lifted primary holds 4.5:1.
                       cn(
-                        "relative flex items-center gap-2.5 rounded-[0.5rem] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary",
-                        isActive && "bg-primary-soft text-primary-dark dark:text-primary"
+                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white",
+                        isActive && "bg-white/[0.11] font-semibold text-white"
                       )
                     }
                   >
@@ -161,10 +171,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         {isActive && (
                           <span
                             aria-hidden
-                            className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-primary"
+                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-accent"
                           />
                         )}
-                        <item.icon className="size-[18px] shrink-0" aria-hidden />
+                        <item.icon
+                          className={cn(
+                            "size-[18px] shrink-0 text-white/55 group-hover:text-white/90",
+                            isActive && "text-white"
+                          )}
+                          strokeWidth={1.75}
+                          aria-hidden
+                        />
                         <span className="min-w-0 truncate">{navLabels[item.key]}</span>
                       </>
                     )}
@@ -175,26 +192,144 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="flex items-center gap-2 border-t border-line px-3 py-4">
+      <div className="flex items-center gap-3 border-t border-white/10 px-4 py-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+          {(userLabel || "?").charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-white">{userLabel}</p>
+          {user?.fullName && user.email && (
+            <p className="truncate text-xs text-white/50" dir="ltr">
+              {user.email}
+            </p>
+          )}
+        </div>
         <button
+          type="button"
           onClick={() => logout()}
-          className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
+          aria-label={t.signOut}
+          title={t.signOut}
+          className="shrink-0 cursor-pointer rounded-md p-2 text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
         >
-          {t.signOut}
+          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
         </button>
-        <ThemeToggle />
       </div>
     </>
   );
 }
 
-export function DashboardLayout() {
-  const { user } = useAuth();
+/**
+ * The store being worked on, at the top of the sidebar: its name on a glass
+ * card, and behind it the list of the merchant's other stores.
+ */
+function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   const { currentWorkspace, workspaces, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
+  const t = useT(STRINGS);
+  const [open, setOpen] = useState(false);
+  const name = currentWorkspace?.name ?? t.selectStore;
+
+  function go(to: string) {
+    setOpen(false);
+    onNavigate?.();
+    navigate(to);
+  }
+
+  return (
+    <div className="relative mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={t.switchStore}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.08] px-2.5 py-2 text-start transition-colors hover:bg-white/[0.12]"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#2563eb] text-sm font-semibold text-white">
+          {name.charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{name}</span>
+        <ChevronsUpDown className="size-4 shrink-0 text-white/50" aria-hidden />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onMouseDown={() => setOpen(false)} aria-hidden />
+          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-line bg-paper-raised py-1 shadow-xl">
+            {workspaces.map((workspace) => (
+              <button
+                key={workspace.id}
+                onClick={() => {
+                  selectWorkspace(workspace.id);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink",
+                  workspace.id === currentWorkspace?.id && "font-semibold text-ink"
+                )}
+              >
+                <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+                {workspace.id === currentWorkspace?.id && (
+                  <Check className="size-4 shrink-0 text-accent" aria-hidden />
+                )}
+              </button>
+            ))}
+            <div className="my-1 border-t border-line" />
+            <button
+              onClick={() => go("/stores")}
+              className="block w-full cursor-pointer px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
+            >
+              {t.allStores}
+            </button>
+            <button
+              onClick={() => go("/workspaces")}
+              className="block w-full cursor-pointer px-3 py-2 text-start text-sm font-medium text-ink hover:bg-primary-soft"
+            >
+              {t.newStore}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Where the page sits: its sidebar group, then the page. */
+function Breadcrumbs() {
   const location = useLocation();
   const t = useT(STRINGS);
-  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const navLabels = useT(NAV_LABELS);
+  const groupLabels = useT(NAV_GROUP_LABELS);
+  const item = findNavItem(location.pathname);
+  if (!item) return <span />;
+  const group = findNavGroup(item);
+  const groupLabel = group?.labelKey ? groupLabels[group.labelKey] : null;
+  const label = navLabels[item.key];
+  return (
+    <nav aria-label={t.breadcrumb} className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink-soft">
+      {groupLabel && groupLabel !== label && (
+        <>
+          <span className="truncate">{groupLabel}</span>
+          <span aria-hidden className="text-ink-soft/50">
+            /
+          </span>
+        </>
+      )}
+      {location.pathname === item.to ? (
+        <span className="truncate font-semibold text-ink" aria-current="page">
+          {label}
+        </span>
+      ) : (
+        <Link to={item.to} className="truncate font-semibold text-ink hover:text-primary">
+          {label}
+        </Link>
+      )}
+    </nav>
+  );
+}
+
+export function DashboardLayout() {
+  const { currentWorkspace } = useWorkspace();
+  const location = useLocation();
+  const t = useT(STRINGS);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // The tab names the store being worked on, not the product — a merchant with
@@ -220,30 +355,27 @@ export function DashboardLayout() {
   }, [mobileOpen]);
 
   return (
-    <div className="flex min-h-screen bg-paper">
-      <aside className="hidden w-60 shrink-0 border-e border-line bg-paper-raised md:flex md:flex-col">
+    <div className="shell-bar flex min-h-screen">
+      <aside className="dark shell-surface sticky top-0 hidden h-dvh w-[264px] shrink-0 md:flex md:flex-col">
         <SidebarContent />
       </aside>
 
       {/* Mobile drawer — below `md` the rail above is hidden, so without this
           the dashboard has no navigation at all on a phone. */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-primary-dark/40 md:hidden dark:bg-black/60"
-          onMouseDown={() => setMobileOpen(false)}
-        >
+        <div className="fixed inset-0 z-50 bg-black/50 md:hidden" onMouseDown={() => setMobileOpen(false)}>
           <aside
             role="dialog"
             aria-modal="true"
             aria-label={t.navLabel}
             onMouseDown={(e) => e.stopPropagation()}
-            className="animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-e border-line bg-paper-raised shadow-lg"
+            className="dark shell-surface animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-lg"
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label={t.closeNav}
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
+              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-white/70 hover:bg-white/10 hover:text-white"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -253,101 +385,49 @@ export function DashboardLayout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-2 border-b border-line bg-paper-raised px-4 sm:gap-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-1">
+        <header className="dark shell-bar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label={t.openNav}
               aria-expanded={mobileOpen}
-              className="-ms-1 shrink-0 cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink md:hidden"
+              className="shrink-0 cursor-pointer rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white md:hidden"
             >
               <Menu className="size-5" aria-hidden />
             </button>
-
-            <div className="relative max-w-[40vw] shrink-0 sm:max-w-none">
-              <button
-                onClick={() => setSwitcherOpen((v) => !v)}
-                aria-label={t.switchStore}
-                aria-expanded={switcherOpen}
-                className="cursor-pointer flex items-center gap-2 rounded-[0.5rem] px-2 py-1.5 text-sm font-medium text-ink hover:bg-paper"
-              >
-                <span className="truncate">{currentWorkspace?.name ?? t.selectStore}</span>
-                <span className="text-ink-soft" aria-hidden>
-                  ▾
-                </span>
-              </button>
-              {switcherOpen && (
-                <div className="absolute start-0 top-full z-20 mt-1 w-64 rounded-[0.5rem] border border-line bg-paper-raised py-1 shadow-lg">
-                  {workspaces.map((workspace) => (
-                    <button
-                      key={workspace.id}
-                      onClick={() => {
-                        selectWorkspace(workspace.id);
-                        setSwitcherOpen(false);
-                      }}
-                      className={cn(
-                        "block w-full cursor-pointer px-3 py-2 text-start text-sm hover:bg-primary-soft",
-                        workspace.id === currentWorkspace?.id &&
-                          "font-medium text-primary-dark dark:text-primary"
-                      )}
-                    >
-                      {workspace.name}
-                    </button>
-                  ))}
-                  <div className="my-1 border-t border-line" />
-                  <button
-                    onClick={() => {
-                      setSwitcherOpen(false);
-                      navigate("/stores");
-                    }}
-                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-ink hover:bg-primary-soft"
-                  >
-                    {t.allStores}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSwitcherOpen(false);
-                      navigate("/workspaces");
-                    }}
-                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-primary hover:bg-primary-soft"
-                  >
-                    {t.newStore}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* The store's public link, beside the store it belongs to: on every
-                page, and it changes with the switcher above. */}
-            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
+            <span className="truncate text-sm font-semibold text-white md:hidden">{storeName}</span>
+            <CommandPalette />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 text-sm text-ink-soft sm:gap-3">
-            {/* Dashboard-wide locale switch. Lives in the header (not the
-                sidebar footer beside ThemeToggle) so it stays reachable on
-                mobile, where the sidebar collapses into the drawer. */}
-            <CommandPalette />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* Dashboard-wide locale switch. Lives in the header so it stays
+                reachable on mobile, where the sidebar collapses into the drawer. */}
             <NotificationsBell />
             <LanguageSwitch className="hidden sm:inline-flex" />
             <LanguageSwitch compact className="sm:hidden" />
-            <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary-soft font-medium text-primary-dark dark:text-primary">
-              {(user?.fullName ?? user?.email ?? "?").charAt(0).toUpperCase()}
-            </div>
+            <ThemeToggle />
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6">
-          {/* Subscription expiring / expired, or the store suspended. */}
-          <AccessBanner />
-          <InstallAppPrompt />
-          {/* One crashing page shows an error here; the sidebar and header
-              stay up so the merchant can move on. */}
-          <RouteErrorBoundary resetKey={location.pathname}>
-            <Outlet />
-          </RouteErrorBoundary>
-        </main>
+        {/* The page: an inset panel in the frame, with the breadcrumb strip on top. */}
+        <div className="flex min-w-0 flex-1 flex-col bg-paper md:rounded-ss-2xl">
+          <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line bg-paper-raised px-4 py-1.5 sm:px-6 md:rounded-ss-2xl">
+            <Breadcrumbs />
+            {/* The store's public link: on every page, and it follows the store switcher. */}
+            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
+          </div>
+          <main className="flex-1 p-4 pb-14 sm:p-6 sm:pb-16">
+            {/* Subscription expiring / expired, or the store suspended. */}
+            <AccessBanner />
+            <InstallAppPrompt />
+            {/* One crashing page shows an error here; the sidebar and header
+                stay up so the merchant can move on. */}
+            <RouteErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </RouteErrorBoundary>
+          </main>
+        </div>
       </div>
     </div>
   );

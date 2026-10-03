@@ -28,17 +28,17 @@
 :root {
   color-scheme: light;
 
-  --color-ink: #16211f;
-  --color-ink-soft: #3c4a46;
-  --color-paper: #f5f4ef;
+  --color-ink: #131a2b;
+  --color-ink-soft: #4b5468;
+  --color-paper: #f5f6fa;
   --color-paper-raised: #ffffff;
-  --color-line: #dcdace;
+  --color-line: #e3e6ee;
   /* Border for interactive controls (inputs, selects, textareas, checkboxes).
      WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
      --color-line is a decorative hairline (~1.3:1) and fails that, so controls
      use this darker step while cards/dividers keep the softer line. Same hue
      ramp, so the palette identity is unchanged. */
-  --color-line-strong: #8d8c84;
+  --color-line-strong: #868b98;
 
   --color-primary: #2563EB;
   --color-primary-dark: #1E3A8A;
@@ -58,10 +58,18 @@
   /* Tajawal follows each Latin family so Arabic copy (the funnel builder's
      Arabic mode) draws in it; Latin text is unaffected. Same approach as the
      storefront — see packages/ui/DESIGN_SYSTEM.md §2. */
-  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
+  --font-display: "Inter Variable", "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 0.625rem;
+  --radius-card: 0.75rem;
+
+  /* The dashboard frame: the sidebar and the top bar share one deep navy
+     surface and the page sits in it as an inset panel. Set on <html> (not
+     `.dark`) because the frame itself carries the `.dark` class so the
+     controls inside it draw with the dark tokens in both themes. */
+  --shell-from: #111c38;
+  --shell-to: #0a1226;
+  --shadow-card: 0 1px 3px rgb(16 24 40 / 0.05), 0 1px 2px rgb(16 24 40 / 0.03);
 
   /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
      `@store-builder/ui` are built against these. They point at the brand
@@ -77,7 +85,7 @@
   --primary-foreground: #ffffff;
   --secondary: var(--color-primary-soft);
   --secondary-foreground: var(--color-primary-dark);
-  --muted: #ecebe3;
+  --muted: #eceef4;
   --muted-foreground: var(--color-ink-soft);
   /* `bg-accent` resolves to the brand amber, so its foreground is dark ink. */
   --accent: var(--color-accent);
@@ -100,6 +108,12 @@
   --sidebar-accent-foreground: var(--color-primary-dark);
   --sidebar-border: var(--color-line);
   --sidebar-ring: var(--color-primary);
+}
+
+html.dark {
+  --shell-from: #080d1b;
+  --shell-to: #05080f;
+  --shadow-card: none;
 }
 
 .dark {
@@ -282,7 +296,7 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
   :focus-visible {
     outline: 2px solid var(--color-primary);
@@ -400,4 +414,34 @@
   .animate-slide-in-start {
     animation: none;
   }
+}
+
+/* The dashboard frame (sidebar + top bar). */
+.shell-surface {
+  background: linear-gradient(180deg, var(--shell-from) 0%, var(--shell-to) 100%);
+}
+
+.shell-bar {
+  background: var(--shell-from);
+}
+
+/* Inside the frame the dark tokens apply; lift the raised surface a little so
+   menus opened from the frame read as panels on it. */
+.shell-surface.dark,
+.shell-bar.dark {
+  --color-paper: #0d1730;
+  --color-paper-raised: #17233f;
+  --color-line: rgb(255 255 255 / 0.12);
+  --color-primary-soft: rgb(255 255 255 / 0.09);
+  --color-ink-soft: rgb(255 255 255 / 0.74);
+  color: var(--color-ink);
+}
+
+/* Thin scrollbar that only shows while the sidebar is hovered. */
+.shell-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.shell-scroll:hover {
+  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
 }

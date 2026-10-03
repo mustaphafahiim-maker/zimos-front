@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { CornerDownLeft, Package, Plus, Search, ShoppingBag, Users, Workflow, type LucideIcon } from "lucide-react";
 import { cn } from "@store-builder/ui";
@@ -241,7 +242,8 @@ export function CommandPalette() {
         </kbd>
       </button>
 
-      {open && (
+      {/* Mounted on <body>: the trigger sits in the dark top bar, the palette follows the page theme. */}
+      {open && createPortal(
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/40 p-4 pt-[12vh]" onMouseDown={() => setOpen(false)}>
           <div
             role="dialog"
@@ -316,7 +318,7 @@ export function CommandPalette() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

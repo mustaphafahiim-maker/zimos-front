@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
@@ -169,13 +170,16 @@ export function NotificationsBell() {
           </span>
         )}
       </button>
-      {open && (
-        <NotificationsDrawer
-          workspaceId={workspaceId}
-          onClose={() => setOpen(false)}
-          onUnreadCount={setUnreadCount}
-        />
-      )}
+      {/* Mounted on <body>: the bell sits in the dark top bar, the drawer follows the page theme. */}
+      {open &&
+        createPortal(
+          <NotificationsDrawer
+            workspaceId={workspaceId}
+            onClose={() => setOpen(false)}
+            onUnreadCount={setUnreadCount}
+          />,
+          document.body
+        )}
     </>
   );
 }
