@@ -9,9 +9,15 @@ import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
+import { BotGuard } from "@/components/BotGuard";
 import { TrackingPixels } from "@/components/TrackingPixels";
 import { storePixelsOf } from "@/lib/adPixels";
-import { resolveCheckoutForm, resolveCheckoutSettings, resolveThankYouPage } from "@store-builder/api-client";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  resolveThankYouPage,
+  storefrontDesignMeta,
+} from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
@@ -133,6 +139,7 @@ export default async function StoreLayout({
     // still give the forms the defaults.
     checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
+    legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
@@ -151,6 +158,7 @@ export default async function StoreLayout({
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+            <BotGuard workspaceId={workspaceId} />
           </Suspense>
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.

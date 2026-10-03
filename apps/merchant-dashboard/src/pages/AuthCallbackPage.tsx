@@ -7,9 +7,10 @@ import { BrandPanel } from "@/components/BrandPanel";
 
 /**
  * Landing page for the Google OAuth flow. After Google approves, the backend
- * redirects here with `?accessToken=...&refreshToken=...` on success or
- * `?error=...` on failure. We persist the tokens, let the auth context pick up
- * the session, then send the merchant to the workspace picker.
+ * sets the httpOnly refresh cookie and redirects here with `?status=ok`, or
+ * with `?error=...` on failure — no token ever travels in the URL. (A backend
+ * with cookie mode off still sends `?accessToken=...&refreshToken=...`.) The
+ * auth context then picks up the session and we go to the workspace picker.
  */
 export function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -20,20 +21,22 @@ export function AuthCallbackPage() {
   const refreshToken = searchParams.get("refreshToken");
   // No tokens means the backend sent `?error=...` (or the page was opened
   // directly) — either way the sign-in didn't go through.
-  const hasTokens = Boolean(accessToken && refreshToken);
+  const cookieSession = searchParams.get("status") === "ok";
+  const hasTokens = Boolean(accessToken && refreshToken) || cookieSession;
 
   const [refreshFailed, setRefreshFailed] = useState(false);
   const handled = useRef(false);
 
   useEffect(() => {
-    if (!accessToken || !refreshToken || handled.current) return;
+    if (!hasTokens || handled.current) return;
     handled.current = true;
 
-    apiClient.setTokens({ accessToken, refreshToken });
+    if (accessToken && refreshToken) apiClient.setTokens({ accessToken, refreshToken });
+    else apiClient.adoptCookieSession();
     refreshUser()
       .then(() => navigate("/workspaces", { replace: true }))
       .catch(() => setRefreshFailed(true));
-  }, [accessToken, refreshToken, navigate, refreshUser]);
+  }, [accessToken, refreshToken, hasTokens, navigate, refreshUser]);
 
   const failed = !hasTokens || refreshFailed;
 

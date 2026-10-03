@@ -5,13 +5,16 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { CheckoutFormTab } from "./CheckoutFormTab";
 import { ThankYouTab } from "./ThankYouTab";
+import { StoreInfoTab } from "./StoreInfoTab";
+import { PoliciesTab } from "./PoliciesTab";
+import { PagesTab } from "./PagesTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["checkout-form", "thank-you"] as const;
+const TABS = ["checkout-form", "thank-you", "store-info", "policies", "pages"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -21,6 +24,9 @@ const STRINGS = {
     tabsLabel: "Store settings sections",
     "checkout-form": "Purchase form",
     "thank-you": "Thank-you page",
+    "store-info": "Store information",
+    policies: "Policies",
+    pages: "Pages",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -28,6 +34,9 @@ const STRINGS = {
     tabsLabel: "أقسام إعدادات المتجر",
     "checkout-form": "نموذج الشراء",
     "thank-you": "صفحة الشكر",
+    "store-info": "بيانات المتجر",
+    policies: "السياسات",
+    pages: "الصفحات",
   },
 } satisfies Messages;
 
@@ -51,6 +60,9 @@ export function StoreDesignPage() {
       {/* Keyed by workspace so a store switch never shows the previous store's draft. */}
       {active === "checkout-form" && <CheckoutFormTab key={workspaceId} />}
       {active === "thank-you" && <ThankYouTab key={workspaceId} />}
+      {active === "store-info" && <StoreInfoTab key={workspaceId} />}
+      {active === "policies" && <PoliciesTab key={workspaceId} />}
+      {active === "pages" && <PagesTab key={workspaceId} />}
     </div>
   );
 }

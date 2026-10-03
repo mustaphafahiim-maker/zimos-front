@@ -420,8 +420,16 @@ const en = {
       failed: "Something went wrong looking up your order. Please try again.",
     },
   },
+  policies: {
+    title: "Policies",
+    refund_policy: "Refund policy",
+    privacy_policy: "Privacy policy",
+    terms_of_service: "Terms of service",
+    agree: "By placing your order you agree to our",
+  },
   footer: {
     links: "Store",
+    pages: "Pages",
     help: "Help",
     poweredBy: "Powered by",
     rights: (store: string, year: number) => `© ${year} ${store}. All rights reserved.`,
@@ -927,8 +935,16 @@ const ar: Dictionary = {
       failed: "حصلت مشكلة وإحنا بندور على طلبك. جرّب تاني.",
     },
   },
+  policies: {
+    title: "السياسات",
+    refund_policy: "سياسة الاسترجاع",
+    privacy_policy: "سياسة الخصوصية",
+    terms_of_service: "شروط الخدمة",
+    agree: "بتأكيد الطلب أنت موافق على",
+  },
   footer: {
     links: "المتجر",
+    pages: "صفحات",
     help: "المساعدة",
     poweredBy: "مدعوم من",
     rights: (store, year) => `© ${year} ${store}. جميع الحقوق محفوظة.`,
