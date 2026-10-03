@@ -1,4 +1,5 @@
 import { RiskBadge, RiskFilter, useRiskParam } from "@/pages/fraud/RiskBadge";
+import { NetworkScoresProvider, OrderNetworkRate } from "@/pages/fraud/NetworkRate";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -30,6 +31,7 @@ import { useNow } from "@/pages/confirmation/confirmationRoles";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
+import { rememberOrdersListQuery } from "./orderListQuery";
 
 const STRINGS = {
   en: {
@@ -195,6 +197,13 @@ export function OrdersListPage() {
     { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
 
+  // The order page's previous / next arrows follow this list.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries({ stage, sort, ...query })) if (value) params.set(key, String(value));
+    rememberOrdersListQuery(params.toString());
+  }, [stage, sort, query.q, query.from, query.to]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const emptyMessage = filters.hasSearchFilters
     ? t.emptyFiltered
     : stage
@@ -237,7 +246,9 @@ export function OrdersListPage() {
         emptyMessage={emptyMessage}
         onRetry={list.reload}
       >
-        <OrdersTable orders={list.items} />
+        <NetworkScoresProvider orders={list.items}>
+          <OrdersTable orders={list.items} />
+        </NetworkScoresProvider>
         {list.error != null && list.items.length > 0 && (
           <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <span>
@@ -547,6 +558,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                 )}
                 {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
                 <RiskBadge order={order} />
+                <OrderNetworkRate order={order} />
                 <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
               </div>
               <OrderTimelineLines order={order} now={now} className="mt-2" />
@@ -609,6 +621,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                     )}
                     {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
                 <RiskBadge order={order} />
+                <OrderNetworkRate order={order} />
                   </div>
                 </td>
                 <td className="px-4 py-3">

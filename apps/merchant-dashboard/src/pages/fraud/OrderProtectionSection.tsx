@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Ban } from "lucide-react";
 import { Button } from "@store-builder/ui";
-import { protectionAddBlocked, type Order } from "@store-builder/api-client";
+import { protectionAddBlocked, protectionNetworkScore, protectionReportSpam, type Order } from "@store-builder/api-client";
+import { useAsync } from "@/lib/useAsync";
+import { NetworkRateAdvice, NetworkRateBar } from "./NetworkRate";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -28,6 +30,13 @@ const STRINGS = {
     cancel: "Cancel",
     blocked: "{ip} is now blocked.",
     blockReason: "Blocked from order {number}",
+    deliveryRate: "Delivery rate across all stores",
+    reportSpam: "Report as spam",
+    reportTitle: "Report this customer as spam?",
+    reportDescription: "Other stores will see that this customer was reported. Your store can report a customer once.",
+    reporting: "Reporting…",
+    reported: "Customer reported as spam.",
+    alreadyReported: "Your store already reported this customer.",
   },
   ar: {
     title: "الخطورة والمصدر",
@@ -45,6 +54,13 @@ const STRINGS = {
     cancel: "إلغاء",
     blocked: "تم حظر {ip}.",
     blockReason: "حُظر من الأوردر {number}",
+    deliveryRate: "نسبة الاستلام على مستوى كل المتاجر",
+    reportSpam: "تبليغ كسبام",
+    reportTitle: "تبليغ عن هذا العميل كسبام؟",
+    reportDescription: "ستعرف المتاجر الأخرى أن هذا العميل تم التبليغ عنه. متجرك يبلّغ عن العميل مرة واحدة.",
+    reporting: "جارٍ التبليغ…",
+    reported: "تم التبليغ عن العميل كسبام.",
+    alreadyReported: "متجرك بلّغ عن هذا العميل من قبل.",
   },
 } satisfies Messages;
 
@@ -75,10 +91,17 @@ export function OrderProtectionSection({ order }: { order: Order }) {
   const errorMessage = useErrorMessage();
   const reasonLabel = useRiskReasonLabel();
   const [confirming, setConfirming] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  // Null while the feature is off for the store, or for an order with no customer.
+  const network = useAsync(
+    () => (order.customerId ? protectionNetworkScore(apiClient, workspaceId, order.customerId) : Promise.resolve(null)),
+    [workspaceId, order.customerId]
+  );
+  const score = network.data?.enabled ? network.data.score : null;
   const extra = order as Order & OrderVisitorFields & OrderRiskFields;
   const ip: string = extra.ipAddress ?? "";
   const scored = Boolean(extra.riskLevel);
-  if (!ip && !scored) return null;
+  if (!ip && !scored && !score) return null;
   const locale = typeof document !== "undefined" && document.documentElement.lang ? document.documentElement.lang : "en";
   const reasons = extra.riskReasons ?? [];
 
@@ -98,6 +121,17 @@ export function OrderProtectionSection({ order }: { order: Order }) {
     setConfirming(false);
   }
 
+  async function report() {
+    try {
+      const { reported } = await protectionReportSpam(apiClient, workspaceId, order.customerId);
+      toast.success(reported ? t.reported : t.alreadyReported);
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
+    setReporting(false);
+    void network.refresh({ silent: true });
+  }
+
   return (
     <Section
       title={t.title}
@@ -111,6 +145,20 @@ export function OrderProtectionSection({ order }: { order: Order }) {
       }
     >
       <div className="space-y-4">
+        {score && (
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-xs text-ink-soft">{t.deliveryRate}</span>
+                <NetworkRateBar score={score} showText />
+              </div>
+              <Button variant="outline" size="sm" className="min-h-9" onClick={() => setReporting(true)}>
+                {t.reportSpam}
+              </Button>
+            </div>
+            <NetworkRateAdvice score={score} />
+          </div>
+        )}
         {scored && (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -150,6 +198,16 @@ export function OrderProtectionSection({ order }: { order: Order }) {
           </dl>
         )}
       </div>
+      <ConfirmDialog
+        open={reporting}
+        title={t.reportTitle}
+        description={t.reportDescription}
+        confirmLabel={t.reportSpam}
+        busyLabel={t.reporting}
+        cancelLabel={t.cancel}
+        onCancel={() => setReporting(false)}
+        onConfirm={report}
+      />
       <ConfirmDialog
         open={confirming}
         title={fmt(t.blockTitle, { ip })}

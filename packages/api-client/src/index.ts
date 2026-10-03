@@ -48,13 +48,18 @@ export * from "./endpoints/protection";
 export * from "./endpoints/insights";
 export * from "./endpoints/profit";
 export * from "./endpoints/settlementStatements";
+export * from "./endpoints/manualTransfers";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
 // Contacts, segments and form submissions (lane 8).
 export * from "./endpoints/contacts";
+// All my stores and duplicate store (lane 8).
+export * from "./endpoints/stores";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
 export * from "./endpoints/automations";
+// Quantity bundles (lane 3).
+export * from "./endpoints/bundles";

@@ -32,8 +32,11 @@ import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
+import { StoresPage } from "@/pages/stores/StoresPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
+import { OffersPage } from "@/pages/offers/OffersPage";
+import { BundlesPage } from "@/pages/offers/BundlesPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -123,8 +126,11 @@ export default function App() {
                       <Route path="/reviews" element={<ReviewsPage />} />
                       <Route path="/customers" element={<ContactsPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
+                      <Route path="/stores" element={<StoresPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
+                      <Route path="/offers" element={<OffersPage />} />
+                      <Route path="/offers/bundles" element={<BundlesPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
