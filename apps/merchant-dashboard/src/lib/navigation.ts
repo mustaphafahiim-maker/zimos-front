@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  FileDown,
   Activity,
   BadgeDollarSign,
   BarChart3,
@@ -62,6 +63,7 @@ export type NavKey =
   | "profit"
   | "ads"
   | "media"
+  | "digital"
   | "storeSettings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
@@ -125,6 +127,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "reviews", to: "/reviews", icon: Star },
       { key: "customers", to: "/customers", icon: Users },
       { key: "media", to: "/media", icon: Images },
+      { key: "digital", to: "/digital", icon: FileDown },
     ],
   },
   {
@@ -221,6 +224,7 @@ export const NAV_LABELS = {
     profit: "Profit",
     ads: "Ad campaigns",
     media: "Media library",
+    digital: "Digital products",
     storeSettings: "Store settings",
   },
   ar: {
@@ -252,6 +256,7 @@ export const NAV_LABELS = {
     profit: "الأرباح",
     ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
+    digital: "المنتجات الرقمية",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
