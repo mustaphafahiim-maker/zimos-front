@@ -99,6 +99,10 @@ function secondsUntil(iso: string | null): number {
  * describes where the code goes and whether one is on its way. An account
  * confirmed meanwhile (another tab) counts as verified, with no user.
  * `compact` leaves the title to the surrounding dialog.
+ *
+ * `custom`: a code for something else than confirming the account — a new
+ * email or phone from the account settings. How to send another and how to
+ * check one come from the caller; everything else is the same.
  */
 export function VerifyCodePanel({
   challenge,
@@ -106,12 +110,17 @@ export function VerifyCodePanel({
   session = false,
   onSent,
   compact = false,
+  custom,
 }: {
   challenge: VerificationChallenge;
   onVerified: (user: AuthUser | null) => void | Promise<void>;
   session?: boolean;
   onSent?: (sent: VerificationSent) => void;
   compact?: boolean;
+  custom?: {
+    send: (locale: "ar" | "en") => Promise<VerificationSent>;
+    confirm: (code: string) => Promise<AuthUser | null>;
+  };
 }) {
   const t = useT(STRINGS);
   const { locale } = useLocale();
@@ -177,10 +186,13 @@ export function VerifyCodePanel({
     setError(null);
     setInfo(null);
     try {
-      const result = session
-        ? await apiClient.confirmAccountCode(code)
-        : await apiClient.confirmVerificationCode(challenge.verificationToken, code);
-      await onVerified(result.user);
+      const user = custom
+        ? await custom.confirm(code)
+        : (session
+            ? await apiClient.confirmAccountCode(code)
+            : await apiClient.confirmVerificationCode(challenge.verificationToken, code)
+          ).user;
+      await onVerified(user);
     } catch (err) {
       if (session && err instanceof ApiError && err.code === "ALREADY_VERIFIED") {
         await onVerified(null);
@@ -201,9 +213,11 @@ export function VerifyCodePanel({
     setError(null);
     setInfo(null);
     try {
-      const sent = session
-        ? await apiClient.sendAccountCode(locale)
-        : await apiClient.sendVerificationCode(challenge.verificationToken, next, locale);
+      const sent = custom
+        ? await custom.send(locale)
+        : session
+          ? await apiClient.sendAccountCode(locale)
+          : await apiClient.sendVerificationCode(challenge.verificationToken, next, locale);
       onSent?.(sent);
       setTargets((current) => ({ ...current, [sent.channel]: sent.target }));
       setResendAt(sent.resendAvailableAt);
