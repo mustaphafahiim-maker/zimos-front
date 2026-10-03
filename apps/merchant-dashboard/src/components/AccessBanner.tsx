@@ -195,7 +195,10 @@ export function AccessBanner() {
         {notice.billing && canSeeBilling && (
           <>
             {" "}
-            <Link to={notice.key.startsWith("wallet_") ? "/subscription?tab=usage" : "/subscription"} className="font-medium underline underline-offset-2">
+            <Link
+              to={notice.key.startsWith("wallet_") ? "/subscription?tab=usage" : "/subscription?tab=invoices"}
+              className="font-medium underline underline-offset-2"
+            >
               {t.billingLink}
             </Link>
           </>

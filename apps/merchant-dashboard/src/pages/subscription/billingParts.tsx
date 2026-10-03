@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Alert, cn } from "@store-builder/ui";
 import type { OnlinePaymentResult, OnlinePaymentStatus, WorkspaceBilling } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -113,7 +114,7 @@ function returnMessage(
   }
 }
 
-/** The plan, its status and period, and the next charge priced with the store's code. */
+/** The plan, its status and period, and the next charge priced with the store's code, with the way to pay it. */
 export function SubscriptionSummary({ billing }: { billing: WorkspaceBilling }) {
   const t = useT(BILLING_STRINGS);
   const { subscription, nextCharge } = billing;
@@ -149,6 +150,12 @@ export function SubscriptionSummary({ billing }: { billing: WorkspaceBilling }) 
                   discount: formatMoney(nextCharge.discountAmount, nextCharge.currency),
                 })
               : formatMoney(nextCharge.amount, nextCharge.currency)}
+            <Link
+              to="/subscription?tab=invoices"
+              className="flex min-h-11 w-fit items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {t.paymentLink}
+            </Link>
           </dd>
         </div>
       )}

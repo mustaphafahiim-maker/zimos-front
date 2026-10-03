@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { Alert, Button, Input, Label, Spinner, cn } from "@store-builder/ui";
-import type { MerchantInvoice, BillingPaymentMethod, BillingPaymentProof } from "@store-builder/api-client";
+import type { BillingPaymentMethod, BillingPaymentProof, OpenBillingInvoiceResult } from "@store-builder/api-client";
+import { apiErrorCode } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -16,8 +17,10 @@ const MAX_BYTES = 8 * 1024 * 1024;
 /**
  * Paying a subscription invoice: the methods the store is offered, then
  * either a gateway's hosted page or a transfer with its proof. The amount is
- * the server's: opening the dialog asks for the charge to pay now
- * (`openBillingInvoice`), which is also what a proof is held to.
+ * the server's: opening the dialog asks what paying now comes to
+ * (`openBillingInvoice`, which writes nothing, so the plan can still change).
+ * The charge is written when the proof is sent, held to the amount shown
+ * here; if it has changed meanwhile the new amount is shown instead.
  */
 export function PayDialog({
   open,
@@ -52,9 +55,11 @@ function PayBody({
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
   const groupId = useId();
-  const [invoice, setInvoice] = useState<MerchantInvoice | null>(null);
+  const [invoice, setInvoice] = useState<OpenBillingInvoiceResult["invoice"] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [code, setCode] = useState<string>(methods[0]?.code ?? "");
+  // Bumped when a proof is refused because the amount changed: asks again, keeping the form.
+  const [asked, setAsked] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -65,7 +70,7 @@ function PayBody({
     return () => {
       live = false;
     };
-  }, [workspaceId, errorMessage, t]);
+  }, [workspaceId, errorMessage, t, asked]);
 
   if (loadError) return <Alert variant="danger">{loadError}</Alert>;
   if (!invoice) {
@@ -113,7 +118,21 @@ function PayBody({
           key={chosen.code}
           method={chosen}
           amount={amount}
-          submit={(fields) => apiClient.submitBillingPaymentProof(workspaceId, invoice.id, fields)}
+          submit={async (fields) => {
+            try {
+              return await apiClient.submitBillingPaymentProof(workspaceId, invoice.id, { ...fields, expectedAmount: invoice.amountDue });
+            } catch (err) {
+              if (apiErrorCode(err) === "CHARGE_AMOUNT_CHANGED") setAsked((n) => n + 1);
+              throw err;
+            }
+          }}
+          errorOverrides={{
+            CHARGE_AMOUNT_CHANGED: t.amountChanged,
+            MANUAL_PAYMENT_CURRENCY_UNSUPPORTED: t.transferCurrency,
+            NOTHING_TO_PAY: t.nothingDue,
+            PLAN_IS_FREE: t.nothingDue,
+            NO_PLAN: t.nothingDue,
+          }}
           onCancel={onClose}
           onSent={(proof) => {
             onProofSent(proof);

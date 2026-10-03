@@ -34,6 +34,7 @@ function useStoreFromLink() {
 /**
  * The Subscription section (owner and accountant: billing.manage): the
  * subscription in brief, then Plans, Usage and Invoices. ?tab= picks one;
+ * ?tab=invoices&pay=1 also opens the Pay dialog (the Plans tab's "Pay now");
  * coming back from Fawaterak (?payment=…&workspace=…) opens Invoices.
  */
 export function SubscriptionPage() {
@@ -87,6 +88,14 @@ function SubscriptionView() {
     setParams(query, { replace: true });
   }
 
+  // ?pay=1 is dropped once handled, so a reload doesn't open the dialog again.
+  const payRequested = tab === "invoices" && params.get("pay") === "1";
+  function clearPayRequest() {
+    const query = new URLSearchParams(params);
+    query.delete("pay");
+    setParams(query, { replace: true });
+  }
+
   const refreshAll = () => {
     void billing.refresh({ silent: true });
     void plans.refresh({ silent: true });
@@ -120,7 +129,14 @@ function SubscriptionView() {
         )}
         {tab === "usage" && billing.data?.limits && <UsageTab limits={billing.data.limits} />}
         {tab === "invoices" && (
-          <InvoicesTab billing={billing.data} returned={returned} onReturnDone={clearReturn} onPaid={refreshAll} />
+          <InvoicesTab
+            billing={billing.data}
+            returned={returned}
+            onReturnDone={clearReturn}
+            onPaid={refreshAll}
+            payRequested={payRequested}
+            onPayRequestDone={clearPayRequest}
+          />
         )}
       </div>
     </div>
