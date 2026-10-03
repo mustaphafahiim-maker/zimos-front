@@ -1,6 +1,6 @@
 export { ApiClient, ApiError } from "./client";
 export type { ApiClientOptions } from "./client";
-export { createLocalStorageTokenStorage, createMemoryTokenStorage } from "./tokenStorage";
+export { createLocalStorageTokenStorage, createMemoryTokenStorage, createBrowserSessionTokenStorage } from "./tokenStorage";
 export type { TokenStorage, TokenPair } from "./tokenStorage";
 export type * from "./types";
 // Value exports: `export type *` above only carries the types, not these consts.
@@ -47,9 +47,12 @@ export * from "./endpoints/protection";
 // Dashboard home overview, attribution, profit and ad spend.
 export * from "./endpoints/insights";
 export * from "./endpoints/profit";
+export * from "./endpoints/settlementStatements";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
+// Contacts, segments and form submissions (lane 8).
+export * from "./endpoints/contacts";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";

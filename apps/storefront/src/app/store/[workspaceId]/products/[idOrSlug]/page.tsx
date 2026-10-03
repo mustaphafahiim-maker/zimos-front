@@ -1,7 +1,15 @@
 import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { resolveCheckoutForm, resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  storefrontDesignMeta,
+  storefrontProductPage,
+} from "@store-builder/api-client";
+import { StoreInfoCards } from "@/components/StoreInfoCards";
+import { ProductJsonLd } from "@/components/product/ProductJsonLd";
+import { storeOrigin } from "@/lib/domains";
 import { ProductContent } from "@/components/product/ProductContent";
 import { storefrontProductReviews } from "@store-builder/api-client";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -134,6 +142,13 @@ export default async function ProductPage({ params }: { params: Params }) {
     <main className="flex-1 pb-24 md:pb-0">
       {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
       <PixelScope productIds={[product.id]} />
+      {/* schema.org Product for search engines and Google Merchant. */}
+      <ProductJsonLd
+        product={product}
+        url={`${storeOrigin(store.slug)}/products/${product.slug}`}
+        currency={store.currency}
+        storeName={store.name}
+      />
       {/* A landing page without the store's menu: hidden only while this page is shown. */}
       {ps.hide_header && (
         <style
@@ -173,7 +188,13 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            {resolveCheckoutForm(store.checkout).show_trust_badges && <TrustStrip t={t} inAside />}
+            {/* The merchant's own shipping / returns / COD cards when written; the generic row otherwise. */}
+            {resolveCheckoutForm(store.checkout).show_trust_badges &&
+              (storefrontDesignMeta(store).storeInfo?.cards.length ? (
+                <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
+              ) : (
+                <TrustStrip t={t} inAside />
+              ))}
           </aside>
         </div>
       </div>
