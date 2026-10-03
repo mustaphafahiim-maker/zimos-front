@@ -8,6 +8,7 @@ import {
   storefrontProductPage,
 } from "@store-builder/api-client";
 import { StoreInfoCards } from "@/components/StoreInfoCards";
+import { CodeSlot } from "@/components/CustomCode";
 import { ProductJsonLd } from "@/components/product/ProductJsonLd";
 import { storeOrigin } from "@/lib/domains";
 import { ProductContent } from "@/components/product/ProductContent";
@@ -168,7 +169,9 @@ export default async function ProductPage({ params }: { params: Params }) {
 
         <div className="mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
+            <CodeSlot name="above_gallery" />
             <ProductGallery images={productImages(product)} name={product.name} />
+            <CodeSlot name="below_gallery" />
           </div>
           <ProductLanding
             workspaceId={workspaceId}

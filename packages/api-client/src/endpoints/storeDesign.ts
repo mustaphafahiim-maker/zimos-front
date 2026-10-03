@@ -584,3 +584,61 @@ export async function storefrontSitemap(
   );
   return entries;
 }
+
+// --------------------------------------------------- custom code slots ----
+// Backend: src/modules/customCode. /workspaces/:workspaceId/custom-code
+// (website.publish, every edit audited) and the public /store/:ws/custom-code.
+
+export const CUSTOM_CODE_SLOTS = [
+  "above_header",
+  "below_header",
+  "above_gallery",
+  "below_gallery",
+  "above_form",
+  "below_form",
+  "above_footer",
+  "below_footer",
+  "head",
+  "css",
+  "js",
+] as const;
+export type CustomCodeSlotKey = (typeof CUSTOM_CODE_SLOTS)[number];
+export const CUSTOM_CODE_MAX_LENGTH = 50000;
+
+export interface CustomCodeSlot {
+  slot: CustomCodeSlotKey;
+  html: string;
+  isActive: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export async function storeDesignListCustomCode(client: ApiClient, workspaceId: string): Promise<CustomCodeSlot[]> {
+  const { slots } = await client.request<{ slots: CustomCodeSlot[] }>("/workspaces/" + workspaceId + "/custom-code");
+  return slots;
+}
+
+export async function storeDesignSaveCustomCode(
+  client: ApiClient,
+  workspaceId: string,
+  slot: CustomCodeSlotKey,
+  payload: { html: string; isActive: boolean }
+): Promise<CustomCodeSlot> {
+  const { slot: saved } = await client.request<{ slot: CustomCodeSlot }>(
+    "/workspaces/" + workspaceId + "/custom-code/" + slot,
+    { method: "PUT", body: payload }
+  );
+  return saved;
+}
+
+/** The live store's active slots as { slot: code }; empty for a staff preview. */
+export async function storefrontCustomCode(
+  client: ApiClient,
+  workspaceId: string
+): Promise<Partial<Record<CustomCodeSlotKey, string>>> {
+  const { slots } = await client.request<{ slots: Partial<Record<CustomCodeSlotKey, string>> }>(
+    "/store/" + workspaceId + "/custom-code",
+    { auth: false }
+  );
+  return slots ?? {};
+}
