@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { resolveCheckoutForm, resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
 import { ProductContent } from "@/components/product/ProductContent";
+import { storefrontProductReviews } from "@store-builder/api-client";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -160,6 +162,10 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <ProductContent cms={page.cms} locale={locale} />
+
+        {ps.reviews_enabled && (
+          <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
+        )}
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
