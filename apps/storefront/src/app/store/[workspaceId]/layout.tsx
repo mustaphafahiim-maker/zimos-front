@@ -10,13 +10,8 @@ import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { TrackingPixels } from "@/components/TrackingPixels";
-<<<<<<< HEAD
 import { storePixelsOf } from "@/lib/adPixels";
-import { resolveCheckoutSettings } from "@store-builder/api-client";
-=======
-import { hasPixels, pixelIdsOf } from "@/lib/adPixels";
 import { resolveCheckoutForm, resolveCheckoutSettings, resolveThankYouPage } from "@store-builder/api-client";
->>>>>>> origin/zimos-additions
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
