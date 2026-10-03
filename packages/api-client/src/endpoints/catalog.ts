@@ -174,3 +174,77 @@ export async function catalogUpdateProduct(
   });
   return product;
 }
+
+// ------------------------------------------------- bulk edit and duplicate --
+
+export type CatalogBulkPrice =
+  | { mode: "set"; value: number }
+  | { mode: "increase_percent" | "decrease_percent"; value: number };
+
+export interface CatalogBulkChanges {
+  status?: "draft" | "active" | "archived";
+  /** "extra_fee" needs an amount per product, so it is not a bulk choice. */
+  shippingMode?: "standard" | "free";
+  collection?: { id: string; action: "add" | "remove" };
+  /** Applied to every active variant of the selected products (minor units for "set"). */
+  price?: CatalogBulkPrice;
+}
+
+export interface CatalogBulkResult {
+  updated: number;
+  variantsRepriced: number;
+}
+
+/** One row of the variant table: the variant and only the fields that changed. */
+export interface CatalogVariantRowPatch {
+  id: string;
+  sku?: string | null;
+  barcode?: string | null;
+  priceAmount?: number;
+  compareAtAmount?: number | null;
+  costAmount?: number | null;
+  /** The count on hand; the server records the difference as an adjustment. */
+  stockOnHand?: number;
+  allowOverselling?: boolean;
+  status?: "active" | "archived";
+}
+
+/** 422 PRODUCT_NOT_FOUND when an id is not in this store — nothing is changed then. */
+export async function catalogBulkEditProducts(
+  client: ApiClient,
+  workspaceId: string,
+  productIds: string[],
+  changes: CatalogBulkChanges
+): Promise<CatalogBulkResult> {
+  return client.request<CatalogBulkResult>(`${base(workspaceId)}/products/bulk`, {
+    method: "POST",
+    body: { productIds, changes },
+  });
+}
+
+/** A draft copy with the variants (no stock, no SKU), offers and collections. */
+export async function catalogDuplicateProduct(
+  client: ApiClient,
+  workspaceId: string,
+  productId: string,
+  name?: string
+): Promise<CatalogProduct> {
+  const { product } = await client.request<{ product: CatalogProduct }>(
+    `${base(workspaceId)}/products/${productId}/duplicate`,
+    { method: "POST", body: name ? { name } : {} }
+  );
+  return product;
+}
+
+/** 409 DUPLICATE_RESOURCE when a SKU is already used by another variant. */
+export async function catalogBulkUpdateVariants(
+  client: ApiClient,
+  workspaceId: string,
+  productId: string,
+  variants: CatalogVariantRowPatch[]
+): Promise<{ updated: number }> {
+  return client.request<{ updated: number }>(`${base(workspaceId)}/products/${productId}/variants/bulk`, {
+    method: "PATCH",
+    body: { variants },
+  });
+}
