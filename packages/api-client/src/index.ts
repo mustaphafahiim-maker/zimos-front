@@ -85,3 +85,5 @@ export * from "./endpoints/orderEmails";
 export * from "./endpoints/coupons";
 // Lost orders: refused and unfinished checkouts, recovery (lane 2).
 export * from "./endpoints/lostOrders";
+// Social proof, newsletter sign-up, referral results (lane 3).
+export * from "./endpoints/engagement";
