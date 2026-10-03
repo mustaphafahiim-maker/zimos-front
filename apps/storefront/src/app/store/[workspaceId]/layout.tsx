@@ -10,6 +10,7 @@ import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
+import { OtpGate } from "@/components/OtpGate";
 import { TrackingPixels } from "@/components/TrackingPixels";
 import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
 import {
@@ -17,8 +18,11 @@ import {
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
+  storefrontCustomCode,
   storefrontGeneralMeta,
 } from "@store-builder/api-client";
+import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
+import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
@@ -157,6 +161,11 @@ export default async function StoreLayout({
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
+  // The merchant's own code slots. The API returns none to a staff preview,
+  // and components/CustomCode.tsx decides where the rest may run.
+  const customCode = await storefrontCustomCode(await createServerStorefrontApiClient(), workspaceId).catch(
+    () => ({})
+  );
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -164,10 +173,13 @@ export default async function StoreLayout({
         {/* Holds the editor preview's unsaved header/footer settings; empty,
             and so invisible, on every page a shopper sees. */}
         <StoreShellProvider>
+          <CustomCodeProvider slots={customCode}>
+          <CustomCodeHead />
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
             <BotGuard workspaceId={workspaceId} />
+            <OtpGate />
           </Suspense>
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
@@ -190,12 +202,16 @@ export default async function StoreLayout({
             <DocumentLocale locale={locale} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             <HideInFunnel>
+              <CodeSlot name="above_header" />
               <StoreHeader store={store} locale={locale} />
               <MobileCategoryStrip collections={collections} t={t} />
+              <CodeSlot name="below_header" />
             </HideInFunnel>
             <div className="flex flex-1 flex-col">{children}</div>
             <HideInFunnel>
+              <CodeSlot name="above_footer" />
               <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+              <CodeSlot name="below_footer" />
               {/* The slide-over cart: opened by "add to cart" and the header's
                   cart icon. Funnel pages have no cart, so it steps aside with
                   the rest of the store's chrome. */}
@@ -204,6 +220,7 @@ export default async function StoreLayout({
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />
           </div>
+          </CustomCodeProvider>
         </StoreShellProvider>
       </StoreContextProvider>
     </StoreRouteProvider>

@@ -9,6 +9,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
+import { ManualTransfersCard } from "./ManualTransfersCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { providerName } from "@/lib/providers";
@@ -220,6 +221,15 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
+
+        <ManualTransfersCard
+          workspaceId={workspaceId}
+          orderId={order.id}
+          onChanged={() => {
+            void timeline.refresh({ silent: true });
+            onChanged();
+          }}
+        />
 
         {timeline.loading && !data ? (
           <p className="flex items-center gap-2 text-sm text-ink-soft">

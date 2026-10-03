@@ -7,6 +7,15 @@ import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/Check
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import {
+  TransferDetails,
+  asTransferMethod,
+  transferProblem,
+  useDepositQuote,
+  useTransferCopy,
+  type TransferState,
+} from "@/components/checkout/TransferDetails";
+import type { CheckoutPayload, ManualTransferStoreMethod } from "@store-builder/api-client";
 import { FreeShippingHint, ShippingFee } from "@/components/checkout/ShippingFee";
 import { ArrowIcon } from "@/components/Icons";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
@@ -37,6 +46,7 @@ import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { PolicyLinks } from "@/components/PolicyLinks";
+import { CodeSlot } from "@/components/CustomCode";
 
 const FORM_PREFIX = "checkout";
 
@@ -78,6 +88,12 @@ export default function CheckoutPage() {
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
+  // Manual transfer: the whole order, or the deposit a cash-on-delivery order needs.
+  const transferCopy = useTransferCopy();
+  const transferMethod = asTransferMethod(method);
+  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
+  const needsTransfer = Boolean(transferMethod || deposit);
 
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
@@ -150,6 +166,14 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (needsTransfer) {
+      const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
+      if (problem) {
+        setFormError(problem);
+        return;
+      }
+    }
+
     const systemNotes: string[] = [];
 
     setSubmitting(true);
@@ -161,7 +185,7 @@ export default function CheckoutPage() {
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
-      if (method.method !== "cod") {
+      if (method.method !== "cod" && !transferMethod) {
         const { next, external } = await placeOnlineOrder({
           client,
           workspaceId,
@@ -183,7 +207,10 @@ export default function CheckoutPage() {
       const order = await placeCodOrder({
         client,
         workspaceId,
-        payload,
+        // A transfer rides along: the whole order ("bank_transfer"), or a COD deposit.
+        payload: (needsTransfer && transfer
+          ? { ...payload, ...(transferMethod ? { paymentMethod: "bank_transfer" } : {}), transfer: transfer.state.details }
+          : payload) as CheckoutPayload,
         cartToken: cart.guestToken,
         visitorId: getVisitorId(workspaceId),
       });
@@ -236,6 +263,7 @@ export default function CheckoutPage() {
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
               {t.checkout.shipping}
             </h2>
+            <CodeSlot name="above_form" />
             <div className="mt-4">
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
@@ -246,6 +274,7 @@ export default function CheckoutPage() {
                 showAltPhone
               />
             </div>
+            <CodeSlot name="below_form" />
           </section>
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
@@ -258,6 +287,26 @@ export default function CheckoutPage() {
               onChange={setMethodId}
               idPrefix={FORM_PREFIX}
             />
+            {(transferMethod || deposit) && (
+              <TransferDetails
+                key={transferMethod ? transferMethod.id : "deposit"}
+                client={client}
+                workspaceId={workspaceId}
+                methods={transferMethod ? [transferMethod] : deposit!.methods}
+                deposit={transferMethod ? undefined : (deposit!.amountType ?? "shipping")}
+                amountLabel={
+                  transferMethod
+                    ? money(total, currency)
+                    : deposit!.amountType === "fixed"
+                      ? money(deposit!.fixedAmount ?? 0, currency)
+                      : shipping.amount > 0
+                        ? money(shipping.amount, currency)
+                        : null
+                }
+                idPrefix={FORM_PREFIX}
+                onChange={(m, state) => setTransfer({ method: m, state })}
+              />
+            )}
           </section>
         </div>
 

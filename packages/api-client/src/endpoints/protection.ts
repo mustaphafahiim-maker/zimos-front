@@ -160,6 +160,8 @@ export interface ProtectionRules {
   blocked_countries: string[];
   /** Checkout bot guard. null = the platform default (on in production). */
   bot_protection: boolean | null;
+  /** Phone verification at checkout. */
+  checkout_otp: CheckoutOtpSettings;
   numbers: Record<ProtectionNumberRule, number | null>;
   switches: Record<ProtectionSwitchRule, boolean>;
   actions: Record<ProtectionRuleKey, ProtectionAction>;
@@ -202,6 +204,7 @@ export function protectionResolveRules(stored: unknown): ProtectionRules {
     allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
     blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
     bot_protection: typeof s.bot_protection === "boolean" ? s.bot_protection : null,
+    checkout_otp: protectionResolveCheckoutOtp(s),
     numbers,
     switches,
     actions,
@@ -223,6 +226,7 @@ export async function protectionSaveRules(
     allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
     blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
     bot_protection: rules.bot_protection,
+    checkout_otp: rules.checkout_otp,
   };
   for (const key of PROTECTION_NUMBER_RULES) {
     fraud_rules[key] = rules.numbers[key] == null ? null : { value: rules.numbers[key], action: rules.actions[key] };
@@ -255,4 +259,111 @@ export interface CheckoutGuard {
 
 export async function protectionCheckoutGuard(client: ApiClient, workspaceId: string): Promise<CheckoutGuard> {
   return client.request<CheckoutGuard>(`/store/${workspaceId}/checkout/guard`, { auth: false });
+}
+
+// ---------------------------------------------------- network delivery rate --
+
+/** A customer's delivery numbers across every store on the platform. Counters only. */
+export interface NetworkScore {
+  /** Delivered share of finished orders, 0–100; null for a customer with no finished order yet. */
+  rate: number | null;
+  isNew: boolean;
+  ordersTotal: number;
+  /** delivered + returned + cancelledAfterConfirm. */
+  finished: number;
+  delivered: number;
+  returned: number;
+  cancelledAfterConfirm: number;
+  rejected: number;
+  spamReports: number;
+  /** Filled segments of the 4-segment bar. */
+  segments: number;
+  /** Below 50%: suggest asking for a deposit or the shipping fee upfront. */
+  recommendDeposit: boolean;
+}
+
+/** `enabled: false` (and no score) while the feature is off for the store. */
+export async function protectionNetworkScore(
+  client: ApiClient,
+  workspaceId: string,
+  customerId: string
+): Promise<{ enabled: boolean; score: NetworkScore | null }> {
+  return client.request<{ enabled: boolean; score: NetworkScore | null }>(
+    `/workspaces/${workspaceId}/customers/${customerId}/network-score`
+  );
+}
+
+/** The scores of up to 200 customers at once, keyed by customer id (orders list). */
+export async function protectionNetworkScores(
+  client: ApiClient,
+  workspaceId: string,
+  customerIds: string[]
+): Promise<{ enabled: boolean; scores: Record<string, NetworkScore> }> {
+  return client.request<{ enabled: boolean; scores: Record<string, NetworkScore> }>(`${fraudBase(workspaceId)}/network-scores`, {
+    method: "POST",
+    body: { customerIds },
+  });
+}
+
+/** One report per store and customer; `reported: false` when this store already reported them. */
+export async function protectionReportSpam(
+  client: ApiClient,
+  workspaceId: string,
+  customerId: string
+): Promise<{ reported: boolean }> {
+  return client.request<{ reported: boolean }>(`/workspaces/${workspaceId}/customers/${customerId}/report-spam`, {
+    method: "POST",
+  });
+}
+
+// ------------------------------------------------------------ checkout OTP --
+
+/** `details` of the 428 OTP_REQUIRED a checkout answers while the phone is unverified. */
+export interface CheckoutOtpChallenge {
+  channel: "whatsapp" | "sms";
+  codeLength: number;
+  resendAfterSeconds: number;
+  /** The phone with all but its last four digits masked. */
+  phoneHint: string;
+}
+
+/** Phone verification at checkout, stored under `settings.fraud_rules.checkout_otp`. */
+export interface CheckoutOtpSettings {
+  enabled: boolean;
+  channel: "whatsapp" | "sms";
+  apply_to: "all" | "cod_only" | "risky_only";
+  code_length: number;
+}
+
+export function protectionResolveCheckoutOtp(fraudRules: unknown): CheckoutOtpSettings {
+  const rules = (fraudRules && typeof fraudRules === "object" ? fraudRules : {}) as { checkout_otp?: Partial<CheckoutOtpSettings> };
+  const s = rules.checkout_otp ?? {};
+  return {
+    enabled: s.enabled === true,
+    channel: s.channel === "sms" ? "sms" : "whatsapp",
+    apply_to: s.apply_to === "cod_only" || s.apply_to === "risky_only" ? s.apply_to : "all",
+    code_length: s.code_length === 5 || s.code_length === 6 ? s.code_length : 4,
+  };
+}
+
+/**
+ * Storefront, no auth. 422 INVALID_CODE / EXPIRED, 429 TOO_MANY_ATTEMPTS.
+ * The token goes back with the same checkout as `otpToken`.
+ */
+export async function protectionVerifyCheckoutOtp(
+  client: ApiClient,
+  workspaceId: string,
+  payload: { phone: string; code: string }
+): Promise<string> {
+  const { otpToken } = await client.request<{ otpToken: string }>(`/store/${workspaceId}/checkout/otp/verify`, {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
+  return otpToken;
+}
+
+/** Storefront, no auth. 429 OTP_RESEND_TOO_SOON inside the first minute, 429 OTP_RATE_LIMITED after three codes. */
+export async function protectionResendCheckoutOtp(client: ApiClient, workspaceId: string, phone: string): Promise<void> {
+  await client.request<unknown>(`/store/${workspaceId}/checkout/otp/resend`, { method: "POST", body: { phone }, auth: false });
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -15,7 +16,10 @@ import { ShipmentsSection } from "./components/ShipmentsSection";
 import { ReturnsSection } from "./components/ReturnsSection";
 import { PaymentsSection } from "./components/PaymentsSection";
 import { StatusChanger } from "./components/StatusChanger";
-import { StatusHistorySection } from "./components/StatusHistorySection";
+import { OrderTimelineSection } from "./components/OrderTimelineSection";
+import { OrderNotesCard } from "./components/OrderNotesCard";
+import { OrderTagsCard } from "./components/OrderTagsCard";
+import { OrderMetaActions, OrderMetaBadges, OrderNeighborArrows, useMarkSeen } from "./components/OrderHeaderTools";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
 import { OrderAttributionSection } from "@/pages/marketing/OrderAttributionSection";
@@ -50,7 +54,14 @@ export function OrderDetailPage() {
     [workspaceId, orderId]
   );
   const data = order.data;
-  const reload = () => order.refresh({ silent: true });
+  // Bumped on every reload: notes and seen do not move the order's updatedAt.
+  const [refreshCount, setRefreshCount] = useState(0);
+  const reload = () => {
+    setRefreshCount((n) => n + 1);
+    return order.refresh({ silent: true });
+  };
+  // Opening the page is what "seen" means.
+  useMarkSeen(data, reload);
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -63,7 +74,14 @@ export function OrderDetailPage() {
             <StatusBadge value={data.stage} tone={STAGE_TONE[data.stage]} text={labels.stage(data.stage)} />
           ) : undefined
         }
-        actions={data ? <StatusChanger order={data} onChanged={reload} /> : undefined}
+        actions={
+          data ? (
+            <>
+              <OrderNeighborArrows order={data} />
+              <StatusChanger order={data} onChanged={reload} />
+            </>
+          ) : undefined
+        }
       />
 
       <DataState loading={order.loading} error={order.error} onRetry={() => order.refresh()}>
@@ -81,10 +99,14 @@ export function OrderDetailPage() {
                 value={data.fulfillmentState}
                 text={labels.fulfillment(data.fulfillmentState)}
               />
+              <OrderMetaBadges order={data} />
             </div>
 
-            <OrderActions order={data} onChanged={reload} />
-            <ResendToWebhookButton orderId={data.id} />
+            <div className="flex flex-wrap items-center gap-2">
+              <OrderActions order={data} onChanged={reload} />
+              <OrderMetaActions order={data} onChanged={reload} />
+              <ResendToWebhookButton orderId={data.id} />
+            </div>
 
             <ConfirmationPanel order={data} onChanged={reload} />
 
@@ -101,7 +123,12 @@ export function OrderDetailPage() {
 
             <ReturnsSection order={data} onOrderMaybeChanged={reload} />
 
-            <StatusHistorySection order={data} refreshKey={`${data.stage}:${data.updatedAt}`} />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <OrderNotesCard order={data} onChanged={reload} />
+              <OrderTagsCard order={data} onChanged={reload} />
+            </div>
+
+            <OrderTimelineSection order={data} refreshKey={`${data.stage}:${data.updatedAt}:${refreshCount}`} />
           </div>
         )}
       </DataState>
