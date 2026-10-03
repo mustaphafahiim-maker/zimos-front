@@ -58,6 +58,7 @@ import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
 import { storefrontProductBundle } from "@store-builder/api-client";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
+import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { OfferCountdown } from "./OfferCountdown";
 import { OptionPicker } from "./OptionPicker";
 import { productPageText } from "./productPageText";
@@ -166,6 +167,9 @@ export function ProductLanding({
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
   const bump = bumpGone ? null : bumpOffer;
+  // The product's own order bumps (Offers → Order bumps), beside the store-wide one.
+  const productBumps = useProductBumps(client, workspaceId, product.id, bumpOffer?.offerId);
+  const productBumpsAmount = productBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
@@ -174,10 +178,11 @@ export function ProductLanding({
   // The hook keys on the lines' content, so a fresh array each render is fine.
   const autosaveLines: OrderLine[] = mainLine ? [mainLine, ...bundleExtraLines] : [];
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
 
-  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0) + shipping.amount;
+  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0) + productBumpsAmount + shipping.amount;
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -218,6 +223,9 @@ export function ProductLanding({
       ...toCheckoutPayload(values, fields, { item: orderLine }),
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+      ...(productBumps.selected.length > 0
+        ? { orderBumps: productBumps.selected.map((b) => ({ offerId: b.offerId })) }
+        : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
@@ -256,6 +264,7 @@ export function ProductLanding({
         // The totals above drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
         setBumpGone(true);
+        productBumps.reset();
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
@@ -515,6 +524,12 @@ export function ProductLanding({
                 <dd className="shrink-0 text-ink">{money(bump.priceAmount)}</dd>
               </div>
             )}
+            {productBumps.selected.map((b) => (
+              <div key={b.offerId} className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{b.name}</dt>
+                <dd className="shrink-0 text-ink">{money(b.priceAmount)}</dd>
+              </div>
+            ))}
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
               <dd className="shrink-0 text-ink">
@@ -528,6 +543,7 @@ export function ProductLanding({
           </dl>
 
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
+          <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
           {payment.methods.length > 1 && (
             <PaymentMethodPicker
