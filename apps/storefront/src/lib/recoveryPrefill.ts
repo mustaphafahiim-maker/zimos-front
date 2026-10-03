@@ -1,4 +1,5 @@
 import type { LostOrderRecovery } from "@store-builder/api-client";
+import { GOVERNORATES } from "./egypt";
 import type { OrderFormValues } from "./orderForm";
 
 /**
@@ -7,15 +8,28 @@ import type { OrderFormValues } from "./orderForm";
  * link to the checkout page, and taken (removed) when the form reads it.
  */
 
+/**
+ * The form's governorate value is a code; an order stores the name ("الجيزة (Giza)"),
+ * and a recovered checkout may carry either that, a bare name or the code itself.
+ */
+function governorateCode(province: string): string | null {
+  const text = province.trim().toLowerCase();
+  const match = GOVERNORATES.find(
+    (gov) => gov.code.toLowerCase() === text || text.includes(gov.en.toLowerCase()) || province.includes(gov.ar)
+  );
+  return match ? match.code : null;
+}
+
 const key = (workspaceId: string) => `zimos.recovery.${workspaceId}`;
 
 export function saveRecoveryPrefill(workspaceId: string, recovery: LostOrderRecovery) {
   const address = recovery.shippingAddress;
+  const governorate = address?.province ? governorateCode(address.province) : null;
   const values: Partial<OrderFormValues> = {
     ...(recovery.contact.fullName ? { fullName: recovery.contact.fullName } : {}),
     ...(recovery.contact.phone ? { phone: recovery.contact.phone } : {}),
     ...(recovery.contact.email ? { email: recovery.contact.email } : {}),
-    ...(address?.province ? { governorate: address.province } : {}),
+    ...(governorate ? { governorate } : {}),
     ...(address?.city ? { city: address.city } : {}),
     ...(address?.addressLine ? { address: address.addressLine } : {}),
     ...(address?.postalCode ? { postalCode: address.postalCode } : {}),

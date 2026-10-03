@@ -492,6 +492,12 @@ function documentBlob(answer: OrderDocumentAnswer): Blob {
   return new Blob([bytes], { type: answer.contentType });
 }
 
+/** The order's invoice as a PDF. 409 INVOICE_NOT_ISSUED while an online order is still unpaid. */
+export async function ordersInvoicePdf(client: ApiClient, workspaceId: string, orderId: string): Promise<Blob> {
+  const answer = await client.request<OrderDocumentAnswer>(`${base(workspaceId, orderId)}/invoice.pdf?as=base64`);
+  return documentBlob(answer);
+}
+
 export type OrderWaybillFormat = "a4x4" | "10x15";
 
 /** One PDF of labels for the given orders: four to an A4 page, or one per 10×15 cm label. Up to 200 orders. */

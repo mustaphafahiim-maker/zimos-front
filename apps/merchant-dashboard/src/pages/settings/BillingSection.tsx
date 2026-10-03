@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { UsageBlock } from "./UsageBlock";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
 import type { OnlinePaymentResult, OnlinePaymentStatus, WorkspaceBilling } from "@store-builder/api-client";
@@ -195,6 +196,7 @@ function BillingCard() {
           {billing.data && <BillingDetails billing={billing.data} onChange={(next) => billing.setData(next)} />}
         </DataState>
       </div>
+      <UsageBlock />
     </section>
   );
 }
