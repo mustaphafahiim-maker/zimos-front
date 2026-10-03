@@ -75,3 +75,5 @@ export * from "./endpoints/bundles";
 export * from "./endpoints/inbox";
 // Offer rules: product order bumps, cross-sell, thank-you upsell, exit popup (lane 3).
 export * from "./endpoints/offers";
+// Order emails to customers (Settings → Order emails).
+export * from "./endpoints/orderEmails";
