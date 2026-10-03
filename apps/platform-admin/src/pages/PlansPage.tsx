@@ -25,6 +25,7 @@ import {
   minorUnitDigits,
   toMajorAmount,
   toMinorAmount,
+  formatMinorMoneyExact,
 } from "@/lib/format";
 
 interface PlanForm {
@@ -181,7 +182,7 @@ export function PlansPage() {
                   {(p.perOrderFee ?? 0) > 0 && (
                     <>
                       <dt className="text-ink-soft">Fee per order</dt>
-                      <dd className="text-end text-ink">{formatMinorMoney(p.perOrderFee ?? 0, p.currency)}</dd>
+                      <dd className="text-end text-ink">{formatMinorMoneyExact(p.perOrderFee ?? 0, p.currency)}</dd>
                     </>
                   )}
                 </dl>

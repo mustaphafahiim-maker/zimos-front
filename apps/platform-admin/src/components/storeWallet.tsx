@@ -6,7 +6,7 @@ import { DataState } from "@/components/DataState";
 import { Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
-import { formatDateTime, formatMinorMoney } from "@/lib/format";
+import { formatDateTime, formatMinorMoneyExact } from "@/lib/format";
 
 const PAGE_SIZE = 10;
 
@@ -49,11 +49,11 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
             <dl className="grid gap-4 px-5 py-4 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-xs text-ink-soft">Balance</dt>
-                <dd className={cn("tabular text-lg font-semibold", w.balance < 0 ? "text-danger" : "text-ink")}>{formatMinorMoney(w.balance, w.currency)}</dd>
+                <dd className={cn("tabular text-lg font-semibold", w.balance < 0 ? "text-danger" : "text-ink")}>{formatMinorMoneyExact(w.balance, w.currency)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-ink-soft">Fee per order</dt>
-                <dd className="tabular text-ink">{w.onFeePlan && w.fee !== null ? formatMinorMoney(w.fee, w.currency) : "Not on pay per order"}</dd>
+                <dd className="tabular text-ink">{w.onFeePlan && w.fee !== null ? formatMinorMoneyExact(w.fee, w.currency) : "Not on pay per order"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-ink-soft">Orders left</dt>
@@ -65,12 +65,12 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
               </div>
               <div>
                 <dt className="text-xs text-ink-soft">Topped up in total</dt>
-                <dd className="tabular text-ink">{formatMinorMoney(w.totalToppedUp, w.currency)}</dd>
+                <dd className="tabular text-ink">{formatMinorMoneyExact(w.totalToppedUp, w.currency)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-ink-soft">This month (Cairo)</dt>
                 <dd className="tabular text-ink">
-                  {formatMinorMoney(w.month.fees, w.currency)} · {w.month.orders} orders
+                  {formatMinorMoneyExact(w.month.fees, w.currency)} · {w.month.orders} orders
                 </dd>
               </div>
             </dl>
@@ -106,10 +106,10 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
                       <Td className={cn("tabular text-end text-sm", e.amount > 0 ? "text-success" : "text-ink")}>
                         <span dir="ltr">
                           {e.amount > 0 ? "+" : ""}
-                          {formatMinorMoney(e.amount, e.currency)}
+                          {formatMinorMoneyExact(e.amount, e.currency)}
                         </span>
                       </Td>
-                      <Td className="tabular text-end text-sm">{formatMinorMoney(e.balanceAfter, e.currency)}</Td>
+                      <Td className="tabular text-end text-sm">{formatMinorMoneyExact(e.balanceAfter, e.currency)}</Td>
                     </TableRow>
                   ))}
                 </TableBody>
