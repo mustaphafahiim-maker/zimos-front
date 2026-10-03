@@ -237,6 +237,8 @@ import type {
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceRole,
+  AccountChangeRequest,
+  AccountSettingsInfo,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -741,16 +743,65 @@ export class ApiClient {
    * and publishing answer 403 EMAIL_NOT_VERIFIED.
    */
   async meDetails() {
-    const body = await this.request<{ user: AuthUser; needsPlan?: boolean; confirmed?: boolean; suggestedUsername?: string }>(
-      "/auth/me"
-    );
+    const body = await this.request<{
+      user: AuthUser;
+      needsPlan?: boolean;
+      confirmed?: boolean;
+      suggestedUsername?: string;
+      account?: AccountSettingsInfo;
+    }>("/auth/me");
     return {
       user: body.user,
       needsPlan: Boolean(body.needsPlan),
       // An API from before this field: the user's own dates say the same.
       confirmed: body.confirmed ?? Boolean(body.user.emailVerifiedAt || body.user.phoneVerifiedAt),
       suggestedUsername: body.suggestedUsername ?? null,
+      // An API from before account settings: a password account, no phone change.
+      account: body.account ?? { hasPassword: true, phoneChange: false },
     };
+  }
+
+  // --- Account settings: the signed-in account's own name, email and phone
+
+  async changeName(fullName: string) {
+    const { user } = await this.request<{ user: AuthUser }>("/auth/me/name", { method: "PATCH", body: { fullName } });
+    return user;
+  }
+
+  /** A code to the current email, for an account without a password (409 PASSWORD_REQUIRED otherwise). */
+  async sendReauthCode(locale?: "ar" | "en") {
+    return this.request<VerificationSent>("/auth/me/reauth-code", { method: "POST", body: locale ? { locale } : {} });
+  }
+
+  /**
+   * A code to the new email. 422 INVALID_PASSWORD / REAUTH_CODE_REQUIRED /
+   * INVALID_CODE / SAME_EMAIL, 429 RESEND_TOO_SOON. An email another account
+   * holds gets the same answer.
+   */
+  async requestEmailChange(payload: AccountChangeRequest & { newEmail: string }) {
+    return this.request<VerificationSent>("/auth/me/email-change", { method: "POST", body: payload });
+  }
+
+  /**
+   * The code from the new email: the email changes, every other session ends,
+   * and this client continues on the new session it gets back. 409 EMAIL_TAKEN.
+   */
+  async confirmEmailChange(code: string) {
+    const body = await this.request<{ user: AuthUser; accessToken: string; refreshToken: string }>("/auth/me/email-change/confirm", {
+      method: "POST",
+      body: { code },
+    });
+    this.setTokens({ accessToken: body.accessToken, refreshToken: body.refreshToken });
+    return body.user;
+  }
+
+  async requestPhoneChange(payload: AccountChangeRequest & { newPhone: string }) {
+    return this.request<VerificationSent>("/auth/me/phone-change", { method: "POST", body: payload });
+  }
+
+  async confirmPhoneChange(code: string) {
+    const { user } = await this.request<{ user: AuthUser }>("/auth/me/phone-change/confirm", { method: "POST", body: { code } });
+    return user;
   }
 
   /** A free username to offer an account that has none yet (made through Google); null when it has one. */
