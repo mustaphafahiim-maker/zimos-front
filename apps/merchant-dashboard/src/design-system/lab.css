@@ -1,0 +1,51 @@
+.ui-lab {
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      color-mix(in srgb, var(--color-primary) 10%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 100% 30%,
+      color-mix(in srgb, var(--color-accent) 6%, transparent),
+      transparent 45%
+    ),
+    var(--color-paper);
+}
+.ui-lab section[id] {
+  scroll-margin-top: 6rem;
+}
+.ui-lab .lab-swatch {
+  background: var(--swatch);
+}
+.ui-lab .lab-glass-stage {
+  background:
+    radial-gradient(
+      ellipse at 15% 20%,
+      color-mix(in srgb, var(--color-primary) 25%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 85% 80%,
+      color-mix(in srgb, var(--color-accent) 20%, transparent),
+      transparent 60%
+    ),
+    var(--color-paper);
+}
+.ui-lab .lab-skeleton {
+  animation: lab-pulse 1.5s ease-in-out infinite;
+}
+@keyframes lab-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-lab *,
+  .ui-lab *::before,
+  .ui-lab *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
