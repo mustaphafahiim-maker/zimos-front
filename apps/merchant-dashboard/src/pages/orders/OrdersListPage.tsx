@@ -32,6 +32,7 @@ import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
+import { OrderBulkBar } from "./components/OrderBulkBar";
 import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
@@ -77,6 +78,8 @@ const STRINGS = {
     loadMoreFailed: "Couldn't load more orders.",
     phoneLabel: "Phone",
     unseen: "Not seen yet",
+    selectAll: "Select all orders shown",
+    selectOrder: "Select order {number}",
     test: "Test",
   },
   ar: {
@@ -113,6 +116,8 @@ const STRINGS = {
     loadMoreFailed: "تعذّر تحميل المزيد من الأوردرات.",
     phoneLabel: "الهاتف",
     unseen: "لم يُشاهد بعد",
+    selectAll: "تحديد كل الأوردرات المعروضة",
+    selectOrder: "تحديد الأوردر {number}",
     test: "تجريبي",
   },
 } satisfies Messages;
@@ -226,6 +231,21 @@ export function OrdersListPage() {
     rememberOrdersListQuery(params.toString());
   }, [stage, sort, query.q, query.from, query.to, extra.key, risk.risk]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Orders ticked for a bulk action; a different list starts a fresh selection.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setSelected(new Set());
+  }, [workspaceId, stage, sort, query.q, query.from, query.to, extra.key, risk.risk]);
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allSelected = list.items.length > 0 && list.items.every((o) => selected.has(o.id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(list.items.map((o) => o.id)));
+
   const emptyMessage = filters.hasSearchFilters || extra.active.length > 0
     ? t.emptyFiltered
     : stage
@@ -263,6 +283,17 @@ export function OrdersListPage() {
         </p>
       )}
 
+      {/* Outside DataState: its result dialog must survive the list reloading. */}
+      <OrderBulkBar
+        selectedIds={[...selected]}
+        onClear={() => setSelected(new Set())}
+        onDone={() => {
+          setSelected(new Set());
+          list.reload();
+          pipeline.refresh({ silent: true });
+        }}
+      />
+
       <DataState
         loading={list.loading}
         error={list.items.length ? null : list.error}
@@ -271,7 +302,14 @@ export function OrdersListPage() {
         onRetry={list.reload}
       >
         <NetworkScoresProvider orders={list.items}>
-          <OrdersTable orders={list.items} columns={prefs.columns} />
+          <OrdersTable
+            orders={list.items}
+            columns={prefs.columns}
+            selected={selected}
+            onToggle={toggleSelected}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+          />
         </NetworkScoresProvider>
         {list.error != null && list.items.length > 0 && (
           <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -534,7 +572,21 @@ function StageTabs({
 
 // ---------------------------------------------------------------------------
 
-function OrdersTable({ orders, columns }: { orders: Order[]; columns: OrderColumn[] }) {
+function OrdersTable({
+  orders,
+  columns,
+  selected,
+  onToggle,
+  allSelected,
+  onToggleAll,
+}: {
+  orders: Order[];
+  columns: OrderColumn[];
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  allSelected: boolean;
+  onToggleAll: () => void;
+}) {
   const t = useT(STRINGS);
   const columnLabel = useColumnLabel();
   const sourceLabel = useSourceLabel();
@@ -605,6 +657,15 @@ function OrdersTable({ orders, columns }: { orders: Order[]; columns: OrderColum
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+              <th scope="col" className="w-10 ps-4 py-3">
+                <input
+                  type="checkbox"
+                  className="size-4 cursor-pointer accent-primary"
+                  checked={allSelected}
+                  onChange={onToggleAll}
+                  aria-label={t.selectAll}
+                />
+              </th>
               <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colOrder}
               </th>
@@ -642,7 +703,22 @@ function OrdersTable({ orders, columns }: { orders: Order[]; columns: OrderColum
           </thead>
           <tbody>
             {rows.map(({ order, stageLabel, flagged, meta }) => (
-              <tr key={order.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+              <tr
+                key={order.id}
+                className={cn(
+                  "border-b border-line last:border-0 hover:bg-paper-raised",
+                  selected.has(order.id) && "bg-primary-soft/50"
+                )}
+              >
+                <td className="w-10 ps-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="size-4 cursor-pointer accent-primary"
+                    checked={selected.has(order.id)}
+                    onChange={() => onToggle(order.id)}
+                    aria-label={fmt(t.selectOrder, { number: order.orderNumber })}
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <Link
                     to={`/orders/${order.id}`}

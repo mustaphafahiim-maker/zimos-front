@@ -31,6 +31,12 @@ interface PageFormProps {
   /** The editor's preview: the form is drawn but does not send. */
   disabled?: boolean;
   labels: PageFormLabels;
+  /**
+   * The merchant's extra inputs (SPEC §9.3 form inputs): text fields, one
+   * choice list and one checkbox. Their answers travel inside `message`, one
+   * "label: answer" line each, so the forms API needs nothing new.
+   */
+  extra?: { fields: string[]; choiceLabel: string; choices: string[]; checkboxLabel: string };
 }
 
 /** The page path as the API knows it: without the `/store/<ref>` prefix. */
@@ -45,7 +51,17 @@ function pagePathOf(pathname: string, workspaceId: string): string {
  * reads the element's own tags from the published page, so nothing the
  * shopper's browser sends decides how they are tagged.
  */
-export function PageForm({ workspaceId, elementId, title, submitLabel, successMessage, askConsent, disabled, labels }: PageFormProps) {
+export function PageForm({ workspaceId, elementId, title, submitLabel, successMessage, askConsent, disabled, labels, extra }: PageFormProps) {
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [ticked, setTicked] = useState(false);
+  const extraLines = () => {
+    if (!extra) return [];
+    const lines = extra.fields.map((field, i) => [field, (answers[`f${i}`] ?? "").trim()] as const);
+    if (extra.choiceLabel && extra.choices.length > 0) lines.push([extra.choiceLabel, (answers.choice ?? "").trim()]);
+    const out = lines.filter(([, value]) => value).map(([name, value]) => `${name}: ${value}`);
+    if (extra.checkboxLabel && ticked) out.push(`${extra.checkboxLabel}: ✓`);
+    return out;
+  };
   const id = useId();
   const pathname = usePathname() ?? "/";
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "", consent: false, website: "" });
@@ -69,7 +85,7 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
         name: form.name.trim() || undefined,
         phone: form.phone.trim() || undefined,
         email: form.email.trim() || undefined,
-        message: form.message.trim() || undefined,
+        message: [form.message.trim(), ...extraLines()].filter(Boolean).join("\n").slice(0, 4000) || undefined,
         marketingConsent: form.consent,
         website: form.website || undefined,
       });
@@ -150,6 +166,47 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
               onChange={(e) => setForm({ ...form, message: e.target.value })}
             />
           </div>
+          {extra?.fields.map((field, i) => (
+            <div key={i}>
+              <label className={label} htmlFor={`${id}-x${i}`}>
+                {field}
+              </label>
+              <input
+                id={`${id}-x${i}`}
+                type="text"
+                maxLength={300}
+                className={input}
+                value={answers[`f${i}`] ?? ""}
+                onChange={(e) => setAnswers({ ...answers, [`f${i}`]: e.target.value })}
+              />
+            </div>
+          ))}
+          {extra && extra.choiceLabel && extra.choices.length > 0 && (
+            <div>
+              <label className={label} htmlFor={`${id}-choice`}>
+                {extra.choiceLabel}
+              </label>
+              <select
+                id={`${id}-choice`}
+                className={input}
+                value={answers.choice ?? ""}
+                onChange={(e) => setAnswers({ ...answers, choice: e.target.value })}
+              >
+                <option value="" />
+                {extra.choices.map((choice) => (
+                  <option key={choice} value={choice}>
+                    {choice}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {extra?.checkboxLabel && (
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={ticked} onChange={(e) => setTicked(e.target.checked)} />
+              {extra.checkboxLabel}
+            </label>
+          )}
           {/* Honeypot: hidden from people, filled by bots. */}
           <input
             type="text"

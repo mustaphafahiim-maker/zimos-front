@@ -701,6 +701,7 @@ function FunnelOfferCard({
             </h2>
           )}
 
+          <PageOfferActions canAccept={!!offer && canAccept} pending={!!flow.pending} onAction={(type) => void flow.advance(type)} />
           <div className="mt-6 space-y-2">
             {offer && !canAccept && (
               <p role="status" className="rounded-xl bg-paper px-4 py-3 text-sm text-ink-soft">
@@ -733,6 +734,36 @@ function FunnelOfferCard({
       </div>
     </section>
   );
+}
+
+/**
+ * The page's own offer buttons (the builder's `upsell_accept_button` and
+ * `upsell_decline_link` elements, drawn by the page renderer with
+ * `data-funnel-action`). They carry no logic of their own: a click anywhere on
+ * one is reported here, to the same `advance` the built-in buttons use. An
+ * accept is ignored while the offer cannot be accepted.
+ */
+function PageOfferActions({
+  canAccept,
+  pending,
+  onAction,
+}: {
+  canAccept: boolean;
+  pending: boolean;
+  onAction: (type: "accepted_offer" | "declined_offer") => void;
+}) {
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      const target = event.target instanceof Element ? event.target.closest("[data-funnel-action]") : null;
+      const action = target?.getAttribute("data-funnel-action");
+      if (pending) return;
+      if (action === "accepted_offer" && canAccept) onAction("accepted_offer");
+      if (action === "declined_offer") onAction("declined_offer");
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, [canAccept, pending, onAction]);
+  return null;
 }
 
 // --- thank you -------------------------------------------------------------------
