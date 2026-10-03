@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { parseMoney, type CheckoutSettings, type StorefrontProductDetail } from "@store-builder/api-client";
+import {
+  parseMoney,
+  storefrontProductPage,
+  type CheckoutSettings,
+  type StorefrontProductDetail,
+} from "@store-builder/api-client";
+import { useCart } from "@/lib/CartProvider";
+import { storeHref } from "@/lib/storeHref";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { ShippingFee } from "@/components/checkout/ShippingFee";
@@ -42,15 +49,15 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
-import { useCart } from "@/lib/CartProvider";
-import { storeHref } from "@/lib/storeHref";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
-import { Countdown } from "../page-renderer/Countdown";
+import { OfferCountdown } from "./OfferCountdown";
+import { OptionPicker } from "./OptionPicker";
+import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
 const FORM_PREFIX = "quick";
@@ -64,17 +71,30 @@ export function ProductLanding({
   workspaceId,
   product,
   bump: bumpOffer,
-  countdownHours,
+  description,
   checkoutSettings,
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
   bump: OrderBumpOffer | null;
-  countdownHours: number | null;
+  /** Shown above the order form when the product puts its description first. */
+  description?: string | null;
   /** From this page's own render, not the layout's — see useFreshCheckoutSettings. */
   checkoutSettings: CheckoutSettings;
 }) {
-  const { t, money } = useStore();
+  const { t, money, locale } = useStore();
+  const text = productPageText(locale);
+  // The product page's settings (SPEC §7.3), defaults filled in.
+  const page = useMemo(() => storefrontProductPage(product), [product]);
+  // The store's purchase form layout (settings → purchase form) outranks the
+  // product's own switch: "one_step" keeps every product page free of the
+  // form and sends "Buy now" straight to the checkout.
+  const ps =
+    formOptionsOf(checkoutSettings).layout === "one_step"
+      ? { ...page.pageSettings, inline_checkout: false, skip_cart: true }
+      : page.pageSettings;
+  const cart = useCart();
+  const buyLabel = ps.buy_now_text || (ps.inline_checkout ? t.product.orderNow : text.buyNow);
   const quickFields = useMemo(() => quickFormFields(checkoutSettings), [checkoutSettings]);
   const { fields, reveal } = useOrderFormFields(quickFields);
   const basePath = useStoreBasePath();
@@ -256,35 +276,32 @@ export function ProductLanding({
     return () => io.disconnect();
   }, []);
 
-  // settings → purchase form → layout: "one_step" keeps the product page
-  // free of the form, and "Order now" takes the shopper to checkout instead.
-  const inlineForm = formOptionsOf(checkoutSettings).layout !== "one_step";
-  const { addItem } = useCart();
-  const [goingToCheckout, setGoingToCheckout] = useState(false);
-
-  async function goToCheckout() {
-    if (!mainLine || goingToCheckout) return;
+  // --- buy now without the inline form --------------------------------------
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  async function buyNow() {
+    if (!mainLine || !available || buying) return;
     if (custom.fields.length > 0 && !custom.check()) return;
-    setGoingToCheckout(true);
+    setBuying(true);
+    setBuyError(null);
     try {
-      await addItem(
+      await cart.addItem(
         mainLine.variantId,
         mainLine.offerId,
         mainLine.quantity,
         custom.fields.length > 0 ? custom.toInput() : undefined
       );
-      router.push(storeHref(basePath, "/checkout"));
+      // skip_cart: straight to the checkout; otherwise the cart, to review first.
+      router.push(storeHref(basePath, ps.skip_cart ? "/checkout" : "/cart"));
     } catch (err) {
-      if (!(custom.fields.length > 0 && custom.showServerProblems(err))) setFormError(t.product.addFailed);
-      setGoingToCheckout(false);
+      if (!custom.showServerProblems(err)) {
+        setBuyError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+      }
+      setBuying(false);
     }
   }
 
   function scrollToForm() {
-    if (!inlineForm) {
-      void goToCheckout();
-      return;
-    }
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => {
       document.getElementById(fieldId(FORM_PREFIX, "fullName"))?.focus({ preventScroll: true });
@@ -320,37 +337,18 @@ export function ProductLanding({
         </p>
       </div>
 
-      {countdownHours ? <Countdown label={t.product.offerEnds} endsInHours={countdownHours} /> : null}
+      {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
 
       {/* Variant options */}
       {groups.map((group) => (
-        <fieldset key={group.name}>
-          <legend className="mb-2 text-sm font-semibold text-ink">
-            {group.name}
-            {selection[group.name] && <span className="ms-2 font-normal text-ink-soft">{selection[group.name]}</span>}
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {group.values.map((value) => {
-              const selected = selection[group.name] === value;
-              const ok = isValueAvailable(group.name, value);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setSelection((prev) => ({ ...prev, [group.name]: value }))}
-                  className={`min-h-11 min-w-11 cursor-pointer rounded-xl border-2 px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                    selected
-                      ? "border-primary bg-primary-soft text-primary"
-                      : "border-line bg-paper-raised text-ink hover:border-primary"
-                  } ${ok ? "" : "text-ink-soft line-through decoration-1"}`}
-                >
-                  {value}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+        <OptionPicker
+          key={group.name}
+          group={group}
+          display={page.options.find((o) => o.name === group.name)}
+          selected={selection[group.name]}
+          isAvailable={(value) => isValueAvailable(group.name, value)}
+          onSelect={(value) => setSelection((prev) => ({ ...prev, [group.name]: value }))}
+        />
       ))}
 
       {/* Bundle / quantity offer */}
@@ -406,7 +404,7 @@ export function ProductLanding({
         </fieldset>
       )}
 
-      {tiers.length === 0 && (
+      {tiers.length === 0 && !ps.hide_quantity_selector && (
         <div className="flex items-center justify-between gap-4">
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
@@ -420,9 +418,19 @@ export function ProductLanding({
       <CustomFieldInputs state={custom} />
 
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
+      {page.specialOfferText && (
+        <p className="rounded-xl border border-primary/25 bg-primary-soft px-4 py-2.5 text-center text-sm font-semibold text-primary">
+          {page.specialOfferText}
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <button type="button" onClick={scrollToForm} disabled={!available} className={`${btnPrimary} w-full`}>
-          {t.product.orderNow}
+        <button
+          type="button"
+          onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
+          disabled={!available || buying}
+          className={`${btnPrimary} w-full`}
+        >
+          {buying ? text.buying : buyLabel}
         </button>
         <AddToCartButton
           variant="secondary"
@@ -436,14 +444,16 @@ export function ProductLanding({
         />
       </div>
 
-      {!inlineForm && formError && (
-        <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
-          {formError}
-        </p>
-      )}
+      <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
+
+      {ps.inline_checkout && !ps.checkout_before_description && description ? (
+        <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+          {description}
+        </div>
+      ) : null}
 
       {/* Inline quick order form */}
-      {inlineForm && (
+      {ps.inline_checkout && (
       <section
         ref={formRef}
         id="order-form"
@@ -531,6 +541,7 @@ export function ProductLanding({
       )}
 
       {/* Sticky mobile bar */}
+      {ps.sticky_buy_button && (
       <div
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 py-3 shadow-lg backdrop-blur transition-transform duration-200 md:hidden ${
           formVisible ? "translate-y-full" : "translate-y-0"
@@ -544,15 +555,16 @@ export function ProductLanding({
           </div>
           <button
             type="button"
-            onClick={scrollToForm}
-            disabled={!available}
+            onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
+            disabled={!available || buying}
             tabIndex={formVisible ? -1 : 0}
             className={`${btnPrimary} flex-1`}
           >
-            {t.product.stickyOrder}
+            {ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow)}
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }
