@@ -5,6 +5,7 @@ import { Spinner, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SignOutDialog } from "@/components/SignOutDialog";
 import { Status } from "@/components/StatusBadge";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminWorkspaceRow } from "@/lib/adminApi";
@@ -193,9 +194,11 @@ function GlobalSearch() {
 }
 
 function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const name = user?.fullName || user?.email || "Admin";
 
   useEffect(() => {
@@ -217,6 +220,7 @@ function UserMenu() {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={toggleRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
@@ -241,12 +245,24 @@ function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            onClick={() => void logout()}
+            aria-haspopup="dialog"
+            onClick={() => {
+              setOpen(false);
+              setConfirmSignOut(true);
+            }}
             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-danger-soft hover:text-danger"
           >
             <LogOut className="size-4" aria-hidden /> Sign out
           </button>
         </div>
+      )}
+      {confirmSignOut && (
+        <SignOutDialog
+          onClose={() => {
+            setConfirmSignOut(false);
+            toggleRef.current?.focus();
+          }}
+        />
       )}
     </div>
   );

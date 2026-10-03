@@ -14,6 +14,7 @@ import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { SignOutButton } from "@/components/SignOutButton";
 
 const STRINGS = {
   en: {
@@ -62,7 +63,6 @@ function readCollapsedGroups(): Record<string, boolean> {
  * followed. Same approach as the platform-admin console.
  */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { logout } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -170,12 +170,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="flex items-center gap-2 border-t border-line px-3 py-4">
-        <button
-          onClick={() => logout()}
-          className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger"
-        >
+        <SignOutButton className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger">
           {t.signOut}
-        </button>
+        </SignOutButton>
         <ThemeToggle />
       </div>
     </>

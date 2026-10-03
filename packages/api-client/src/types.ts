@@ -2645,13 +2645,15 @@ export interface AdminPlan {
   /** On the marketing site and at sign-up. */
   isPublic: boolean;
   displayOrder: number;
+  /** The pay-per-order fee for one order, minor units; 0 = none. An API from before it sends nothing. */
+  perOrderFee?: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export type AdminPlanInput = Omit<
   AdminPlan,
-  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder"
+  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder" | "perOrderFee"
 > & {
   id?: string;
   currency?: string;
@@ -2659,6 +2661,8 @@ export type AdminPlanInput = Omit<
   maxFunnelsPerMonth?: number | null;
   isPublic?: boolean;
   displayOrder?: number;
+  /** Only on a plan priced 0 a month, in EGP (422 PER_ORDER_FEE_NOT_ALLOWED). */
+  perOrderFee?: number;
 };
 
 export type SubscriptionStatus =
@@ -3313,8 +3317,11 @@ export interface PlanLimits {
 export interface WorkspaceAccess {
   /** Storefront unavailable and new products/funnels blocked. */
   restricted: boolean;
-  /** Why: a manual suspension, an unpaid subscription past its grace day, or both. */
-  reasons: Array<"suspended" | "billing">;
+  /**
+   * Why: a manual suspension, an unpaid subscription past its grace day, or
+   * (pay-per-order) a balance that can't pay the next order's fee.
+   */
+  reasons: Array<"suspended" | "billing" | "balance">;
   billing: {
     phase: BillingPhase;
     status: SubscriptionStatus | null;
@@ -3330,6 +3337,54 @@ export interface WorkspaceAccess {
   draft?: boolean;
   /** Only on a draft. */
   draftPlan?: DraftPlan;
+  /** The pay-per-order balance; null (or absent, from an older API) when the store pays no order fee. */
+  wallet?: WalletState | null;
+}
+
+/** Where a pay-per-order balance stands against the fee. Amounts in minor units. */
+export interface WalletState {
+  /** low: fewer than 20 orders before the overdraft; overdraft: at or below zero; exhausted: the next order is refused. */
+  phase: "ok" | "low" | "overdraft" | "exhausted";
+  balance: number;
+  fee: number | null;
+  ordersLeft: number | null;
+  ordersBeforeOverdraft: number | null;
+  overdraft: number;
+  currency: string;
+}
+
+/** `GET /workspaces/:id/billing/wallet` — the Usage tab's balance. */
+export interface WalletSummary extends WalletState {
+  /** WALLET_ENABLED: off, there is no balance to top up or spend. */
+  enabled: boolean;
+  onFeePlan: boolean;
+  totalToppedUp: number;
+  /** This calendar month in Cairo: fees net of those given back, and the orders behind them. */
+  month: { fees: number; orders: number; timeZone: string };
+  limits: { minTopup: number; maxTopup: number; maxOpenTopups: number; lowOrders: number };
+}
+
+export type WalletEntryType = "topup" | "order_fee" | "order_fee_reversal" | "order_fee_recharge";
+
+export interface WalletLedgerEntry {
+  id: string;
+  type: WalletEntryType;
+  /** Signed: a fee is negative. */
+  amount: number;
+  balanceAfter: number;
+  currency: string;
+  orderId: string | null;
+  orderNumber?: string | null;
+  paymentProofId: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface WalletLedgerPage {
+  entries: WalletLedgerEntry[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 /**
@@ -3428,6 +3483,8 @@ export interface SubscriptionPlans {
   planChange: "immediate" | "support";
   referralCode: MerchantReferralCode | null;
   plans: SubscriptionPlan[];
+  /** The pay-per-order card: `available` while it can be chosen; `current` when the store is on it. Absent from an older API. */
+  payPerOrder?: { available: boolean; current: boolean; plan: { id: string; name: string; fee: number; currency: string } | null };
 }
 
 /** `POST /workspaces/:id/billing/code-preview` — what a code would take off each listed plan. */
@@ -3501,6 +3558,126 @@ export interface OnlinePayment {
 export interface OnlinePaymentResult {
   payment: OnlinePayment;
   chargeStatus: "pending" | "paid" | "failed";
+}
+
+/**
+ * A way to pay Zimos (`GET /workspaces/:id/billing/payment-methods`):
+ *   manual   a transfer to `accountNumber`, then a proof with a screenshot
+ *   gateway  a hosted checkout (`startOnlinePayment` with its `code`)
+ */
+export interface BillingPaymentMethod {
+  code: string;
+  kind: "manual" | "gateway";
+  label: { ar: string; en: string };
+  /** Manual only: where the money goes, and how to send it. */
+  accountNumber?: string;
+  note?: { ar: string | null; en: string | null };
+}
+
+export interface BillingPaymentMethodList {
+  methods: BillingPaymentMethod[];
+  currency: string;
+  /** No method is offered: the merchant contacts support. */
+  contactSupport: boolean;
+}
+
+/** `POST /workspaces/:id/billing/invoices/open` — the charge to pay now (201 when written). */
+export interface OpenBillingInvoiceResult {
+  invoice: MerchantInvoice;
+  created: boolean;
+}
+
+export type BillingPaymentProofStatus = "pending" | "approved" | "rejected";
+
+/** A transfer's proof, as its store sees it. The amount is the server's. */
+export interface BillingPaymentProof {
+  id: string;
+  purpose: "invoice" | "topup";
+  invoiceId: string | null;
+  method: { code: string; label: { ar: string; en: string } | null };
+  senderPhone: string;
+  amount: number;
+  currency: string;
+  status: BillingPaymentProofStatus;
+  /** A rejection's reason; null otherwise. */
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+/** A payment method as the console sees it (`GET /admin/payment-methods`). */
+export interface AdminPaymentMethod {
+  id: string;
+  code: string;
+  kind: "manual" | "gateway";
+  labelAr: string;
+  labelEn: string;
+  sortOrder: number;
+  enabled: boolean;
+  /** Manual only. */
+  accountNumber?: string | null;
+  noteAr?: string | null;
+  noteEn?: string | null;
+  /** Gateway only: its adapter and environment, by variable names (never a value). */
+  gateway?: { name: string | null; adapterInstalled: boolean; configured: boolean; missing: string[]; currencies: string[] };
+  /** Whether merchants are offered it right now. */
+  offered: boolean;
+  updatedAt: string;
+}
+
+export interface AdminPaymentMethods {
+  methods: AdminPaymentMethod[];
+  /** Gateways this server has an adapter for, with no row yet. */
+  gatewaysNotAdded: Array<{ code: string; name: string; configured: boolean; missing: string[]; currencies: string[] }>;
+}
+
+/** A transfer's proof as the console sees it. Amounts in minor units. */
+export interface AdminPaymentProof {
+  id: string;
+  purpose: "invoice" | "topup";
+  workspace: { id: string; name?: string; slug?: string };
+  invoiceId: string | null;
+  method: { code: string; labelAr: string | null; labelEn: string | null };
+  /** The number the money was sent to, as it was when the proof was sent. */
+  receivingNumber: string;
+  senderPhone: string;
+  requestedAmount: number;
+  receivedAmount: number | null;
+  currency: string;
+  status: BillingPaymentProofStatus;
+  reviewNote: string | null;
+  reviewedBy: { id: string; fullName: string } | null;
+  reviewedAt: string | null;
+  submittedBy: { id: string; fullName: string; email: string } | null;
+  createdAt: string;
+}
+
+export interface AdminPaymentProofPage {
+  proofs: AdminPaymentProof[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** `GET /admin/payment-proofs/:id` — with the image behind a five-minute signed link. */
+export interface AdminPaymentProofReview {
+  proof: AdminPaymentProof;
+  invoice: {
+    id: string;
+    status: "pending" | "paid" | "failed";
+    amountDue: number;
+    currency: string;
+    periodStart: string;
+    periodEnd: string;
+    paidAt: string | null;
+  } | null;
+  /** Why an approval would be refused now (e.g. CHARGE_ALREADY_PAID); empty when it can go through. */
+  approvalBlockers: string[];
+  /** A top-up: the store's balance now. */
+  wallet?: { balance: number; currency: string } | null;
+  image: { url: string; expiresAt: string; mime: string };
+  alreadyApproved?: boolean;
+  alreadyRejected?: boolean;
 }
 
 /** POST /workspaces/:id/start-trial and /activate-free-plan. */

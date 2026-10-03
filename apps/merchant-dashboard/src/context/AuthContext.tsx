@@ -11,7 +11,12 @@ import { listenForConfirmation, noteCodeSent } from "@/lib/emailConfirm";
 
 interface AuthContextValue {
   user: AuthUser | null;
-  status: "loading" | "authenticated" | "guest";
+  /**
+   * "unavailable": signed in, but the account couldn't be read when the page
+   * loaded (rate limited, a server error, no network). The session is kept
+   * and `retry` reads it again; only a 401 makes the user a guest.
+   */
+  status: "loading" | "authenticated" | "guest" | "unavailable";
   /**
    * An account made through Google while a plan is required, still to choose
    * one: the dashboard asks for it before anything else (ChoosePlanPage).
@@ -29,6 +34,8 @@ interface AuthContextValue {
   register: (payload: RegisterPayload) => Promise<VerificationChallenge | null>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** Reads the account again after "unavailable". */
+  retry: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,13 +64,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setNeedsPlan(me.needsPlan);
       setConfirmed(me.confirmed);
       setStatus("authenticated");
-    } catch {
-      setUser(null);
-      setNeedsPlan(false);
-      setConfirmed(true);
-      setStatus("guest");
+    } catch (err) {
+      // Only the server refusing the session signs out: a 401 from /auth/me,
+      // or from /auth/refresh behind it (the client has cleared the tokens
+      // then). Anything else — 429, a 5xx, no network — keeps the session:
+      // a page already showing goes on as it is, and a page load offers to
+      // try again.
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+        setNeedsPlan(false);
+        setConfirmed(true);
+        setStatus("guest");
+        return;
+      }
+      setStatus((current) => (current === "authenticated" ? current : "unavailable"));
     }
   };
+
+  const retry = useCallback(async () => {
+    setStatus("loading");
+    await loadUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A quiet re-read for the banner: a failure (offline, a blip) changes nothing.
   const recheck = useCallback(async () => {
@@ -81,6 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Back online after a failed page load: try again by itself.
+  useEffect(() => {
+    if (status !== "unavailable") return;
+    const onOnline = () => void retry();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [status, retry]);
 
   // While unconfirmed: re-read on coming back to the tab, every minute while
   // it is in view, and at once when another tab confirms.
@@ -150,16 +180,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       },
       async logout() {
-        await apiClient.logout();
-        setUser(null);
-        setNeedsPlan(false);
-        setConfirmed(true);
-        setStatus("guest");
+        // Signed out here even when the server can't be told: the client has
+        // already dropped the tokens (ApiClient.logout).
+        try {
+          await apiClient.logout();
+        } finally {
+          setUser(null);
+          setNeedsPlan(false);
+          setConfirmed(true);
+          setStatus("guest");
+        }
       },
       refreshUser: loadUser,
+      retry,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, status, needsPlan, confirmed]);
+  }, [user, status, needsPlan, confirmed, retry]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
