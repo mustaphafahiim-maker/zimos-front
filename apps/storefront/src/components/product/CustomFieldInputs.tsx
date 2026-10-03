@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, apiErrorCode, apiErrorDetails, type CustomField, type CustomizationInput } from "@store-builder/api-client";
 import { compressImageIfNeeded } from "@store-builder/image-tools";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { focusField } from "@/lib/focusField";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import {
@@ -141,7 +142,7 @@ export function useCustomFieldAnswers(workspaceId: string, productId: string, fi
     setProblems(found);
     const first = list.find((f) => found[f.id]);
     if (first) {
-      document.getElementById(idFor(first.id))?.focus();
+      focusField(idFor(first.id));
       return false;
     }
     return true;
@@ -154,7 +155,7 @@ export function useCustomFieldAnswers(workspaceId: string, productId: string, fi
     for (const [fieldId, problem] of Object.entries(found)) if (problem === "expired") removePhoto(fieldId);
     setProblems(found);
     const first = list.find((f) => found[f.id]);
-    if (first) document.getElementById(idFor(first.id))?.focus();
+    if (first) focusField(idFor(first.id));
     return Object.keys(found).length > 0;
   };
 

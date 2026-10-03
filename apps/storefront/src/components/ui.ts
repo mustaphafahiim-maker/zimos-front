@@ -3,7 +3,8 @@
  * paper surfaces, rounded-2xl cards, hairline borders, generous spacing. Every
  * colour is a semantic token from globals.css, so merchant branding
  * (.brand-theme) flows through and light/dark flips without `dark:` variants.
- * Tap targets are ≥ 44px (min-h-11).
+ * Tap targets are ≥ 44px (min-h-11), and an icon button never shrinks below
+ * that in a crowded row (shrink-0) — a long store name gives way instead.
  *
  * The `zt-*` names are hooks, not styles: they do nothing on their own, and a
  * store on one of the themes (Store look → Theme) restyles them in
@@ -33,12 +34,17 @@ export const btnSecondary = `zt-btn zt-btn-secondary inline-flex min-h-11 cursor
 
 export const btnGhost = `zt-btn zt-btn-ghost inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary-soft ${focus}`;
 
-export const iconBtn = `zt-icon-btn relative inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-line bg-paper-raised text-ink transition-colors hover:border-primary hover:text-primary ${focus}`;
+export const iconBtn = `zt-icon-btn relative inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-line bg-paper-raised text-ink transition-colors hover:border-primary hover:text-primary ${focus}`;
 
 export const card = "zt-card rounded-2xl border border-line bg-paper-raised";
 
+/**
+ * A form field: 16px text (smaller makes iOS zoom in on focus), 44px tall, and
+ * scroll margins so a field reached by focus or by the keyboard's next arrow
+ * clears the sticky header above and a sticky action bar below.
+ */
 export const input =
-  "zt-input block w-full min-h-11 rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-base text-ink placeholder:text-ink-soft outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/10";
+  "zt-input block w-full min-h-11 scroll-mt-32 scroll-mb-28 rounded-xl border border-line-strong bg-paper-raised px-3.5 py-2.5 text-base text-ink placeholder:text-ink-soft outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/10";
 
 export const label = "mb-1.5 block text-sm font-medium text-ink";
 

@@ -31,6 +31,7 @@ import {
   type OrderBumpOffer,
 } from "@/lib/commerce";
 import { funnelErrorKind, isOutOfStock } from "@/lib/funnelErrors";
+import { focusField } from "@/lib/focusField";
 import {
   rememberFollowOn,
   rememberPlacedOrder,
@@ -422,7 +423,7 @@ function FunnelCheckout({
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
       setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+      focusField(fieldId(FORM_PREFIX, invalid[0]));
       return;
     }
     if (!product || !variant || !variant.inStock || !line) {
@@ -461,7 +462,7 @@ function FunnelCheckout({
           setFormError(t.form.errors.summary(invalidFromServer.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalidFromServer[0]))?.focus();
+        focusField(fieldId(FORM_PREFIX, invalidFromServer[0]));
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);

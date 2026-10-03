@@ -38,7 +38,7 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
   const t = getDictionary(locale);
   const { footer } = useStoreShell(store);
   const link =
-    "inline-flex min-h-11 items-center text-sm text-ink-soft transition-colors hover:text-primary sm:min-h-9";
+    "inline-flex min-h-11 min-w-11 items-center text-sm text-ink-soft transition-colors hover:text-primary lg:min-h-9";
 
   const builtIn: ResolvedShellLink[] = [
     { key: "home", label: t.common.home, href: "/", external: false },

@@ -54,11 +54,15 @@ function Field({
           {hint}
         </p>
       )}
-      {error && (
-        <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
-          {error}
-        </p>
-      )}
+      {/* Always in the page, so a screen reader reads a message the moment it
+          appears under its field, not only when the field takes focus. */}
+      <div aria-live="polite">
+        {error && (
+          <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -124,10 +128,13 @@ export function OrderFormFields({
           {...a11y("phone", true)}
           type="tel"
           inputMode="tel"
-          autoComplete="tel-national"
+          // "tel": the saved number as the browser keeps it (often +20 …);
+          // normalizePhone turns any of those spellings into 01xxxxxxxxx, and
+          // the room in maxLength lets a spaced-out "+20 (10) 1234-5678" in whole.
+          autoComplete="tel"
           dir="ltr"
           required
-          maxLength={16}
+          maxLength={20}
           placeholder={t.form.phonePlaceholder}
           value={values.phone}
           onChange={(e) => onChange("phone", e.target.value)}
@@ -143,7 +150,7 @@ export function OrderFormFields({
             inputMode="tel"
             autoComplete="off"
             dir="ltr"
-            maxLength={16}
+            maxLength={20}
             placeholder={t.form.phonePlaceholder}
             value={values.altPhone}
             onChange={(e) => onChange("altPhone", e.target.value)}
@@ -223,7 +230,8 @@ export function OrderFormFields({
         <input
           {...a11y("address")}
           type="text"
-          autoComplete="street-address"
+          // One line, so address-line1 (street-address is for a multi-line box).
+          autoComplete="address-line1"
           required
           placeholder={t.form.addressPlaceholder}
           value={values.address}
