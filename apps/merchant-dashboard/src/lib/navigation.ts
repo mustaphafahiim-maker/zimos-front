@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  Sparkles,
   Activity,
   BadgeDollarSign,
   BarChart3,
@@ -9,6 +10,7 @@ import {
   CreditCard,
   Gift,
   Globe,
+  History,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -66,8 +68,10 @@ export type NavKey =
   | "ads"
   | "media"
   | "digital"
+  | "ai"
   | "storeSettings"
-  | "apps";
+  | "apps"
+  | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -138,6 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "grow",
     items: [
       { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "ai", to: "/ai", icon: Sparkles },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
@@ -172,6 +177,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
+      { key: "activity", to: "/activity", icon: History },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -221,6 +227,7 @@ export const NAV_LABELS = {
     attribution: "Sales attribution",
     realtime: "Realtime",
     apps: "Apps",
+    activity: "Activity log",
     settings: "Settings",
     support: "Contact support",
     settlements: "COD settlements",
@@ -232,6 +239,7 @@ export const NAV_LABELS = {
     ads: "Ad campaigns",
     media: "Media library",
     digital: "Digital products",
+    ai: "AI studio",
     storeSettings: "Store settings",
   },
   ar: {
@@ -255,6 +263,7 @@ export const NAV_LABELS = {
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
     apps: "التطبيقات",
+    activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
     settlements: "تحصيل الشحن",
@@ -266,6 +275,7 @@ export const NAV_LABELS = {
     ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
+    ai: "استوديو الذكاء الاصطناعي",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
