@@ -21,6 +21,7 @@ import { useCatalogLabels } from "./catalogLabels";
 import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
 import {
   DuplicateProductButton,
+  ProductTransferButton,
   ProductBulkBar,
   SelectAllCheckbox,
   SelectRowCheckbox,
@@ -277,9 +278,12 @@ export function CatalogProductsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button asChild>
-            <Link to="/catalog/new">{t.newProduct}</Link>
-          </Button>
+          <>
+            <ProductTransferButton onImported={list.reload} />
+            <Button asChild>
+              <Link to="/catalog/new">{t.newProduct}</Link>
+            </Button>
+          </>
         }
       />
 
