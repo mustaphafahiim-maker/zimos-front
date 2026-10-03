@@ -25,6 +25,7 @@ import { CollectionsPage } from "@/pages/catalog/CollectionsPage";
 import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
+import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { AbandonedCartsPage } from "@/pages/abandoned/AbandonedCartsPage";
@@ -111,6 +112,7 @@ export default function App() {
                       <Route path="/" element={<DashboardHomePage />} />
 
                       <Route path="/orders" element={<OrdersListPage />} />
+                      <Route path="/orders/new" element={<ManualOrderPage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
