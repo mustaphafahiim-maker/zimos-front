@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { resolveCheckoutForm, resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  storefrontDesignMeta,
+  storefrontProductPage,
+} from "@store-builder/api-client";
+import { StoreInfoCards } from "@/components/StoreInfoCards";
 import { ProductContent } from "@/components/product/ProductContent";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
@@ -164,7 +170,13 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            {resolveCheckoutForm(store.checkout).show_trust_badges && <TrustStrip t={t} inAside />}
+            {/* The merchant's own shipping / returns / COD cards when written; the generic row otherwise. */}
+            {resolveCheckoutForm(store.checkout).show_trust_badges &&
+              (storefrontDesignMeta(store).storeInfo?.cards.length ? (
+                <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
+              ) : (
+                <TrustStrip t={t} inAside />
+              ))}
           </aside>
         </div>
       </div>

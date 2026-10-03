@@ -1,7 +1,12 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
-import type { CheckoutSettings, StorefrontOrderBump, ThankYouPageSettings } from "@store-builder/api-client";
+import type {
+  CheckoutSettings,
+  LegalPolicyKey,
+  StorefrontOrderBump,
+  ThankYouPageSettings,
+} from "@store-builder/api-client";
 import {
   DEFAULT_LOCALE,
   dirFor,
@@ -27,6 +32,8 @@ export interface StoreInfo {
   checkout: CheckoutSettings;
   /** The thank-you page settings (GET /store/:ws `thankYou`); absent means the built-in page. */
   thankYou?: ThankYouPageSettings;
+  /** Which legal policies the store has written (GET /store/:ws `legal`). */
+  legal?: LegalPolicyKey[];
   /** The checkout's order bump (GET /store/:ws `orderBump`); null when none can be offered. */
   orderBump: StorefrontOrderBump | null;
 }

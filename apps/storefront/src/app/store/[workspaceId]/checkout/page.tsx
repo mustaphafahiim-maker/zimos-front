@@ -36,6 +36,7 @@ import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { PolicyLinks } from "@/components/PolicyLinks";
 
 const FORM_PREFIX = "checkout";
 
@@ -355,6 +356,7 @@ export default function CheckoutPage() {
               className="mt-3"
             />
             <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+            <PolicyLinks className="mt-2" />
           </section>
 
           {bump && items.length > 0 && (

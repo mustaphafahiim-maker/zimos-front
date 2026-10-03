@@ -11,7 +11,12 @@ import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { TrackingPixels } from "@/components/TrackingPixels";
 import { hasPixels, pixelIdsOf } from "@/lib/adPixels";
-import { resolveCheckoutForm, resolveCheckoutSettings, resolveThankYouPage } from "@store-builder/api-client";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  resolveThankYouPage,
+  storefrontDesignMeta,
+} from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
@@ -133,6 +138,7 @@ export default async function StoreLayout({
     // still give the forms the defaults.
     checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
+    legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively

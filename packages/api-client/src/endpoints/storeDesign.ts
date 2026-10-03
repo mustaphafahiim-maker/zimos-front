@@ -255,3 +255,190 @@ export function fillThankYouContent(content: string, vars: { orderNumber?: strin
     .replace(/\{\{\s*order_number\s*\}\}/g, vars.orderNumber ?? "")
     .replace(/\{\{\s*customer_name\s*\}\}/g, vars.customerName ?? "");
 }
+
+// ------------------------------------------- store info and policies ----
+// Backend: src/modules/storefront/storeInfo.js. `settings.store_info` and
+// `settings.legal`, both sent whole through PATCH /workspaces/:workspaceId.
+
+export const STORE_INFO_CARD_KEYS = ["shipping_policy", "return_policy", "cod_policy"] as const;
+export type StoreInfoCardKey = (typeof STORE_INFO_CARD_KEYS)[number];
+
+export interface StoreInfoCard {
+  enabled: boolean;
+  title: string;
+  /** Short bullet points, e.g. "Delivery within 2-5 business days". */
+  points: string[];
+}
+
+export interface StoreInfoSettings {
+  enabled: boolean;
+  email: string;
+  phone: string;
+  address: string;
+  shipping_policy: StoreInfoCard;
+  return_policy: StoreInfoCard;
+  cod_policy: StoreInfoCard;
+}
+
+function resolveStoreInfoCard(raw: unknown): StoreInfoCard {
+  const c = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    enabled: c.enabled !== false,
+    title: text(c.title),
+    points: Array.isArray(c.points) ? (c.points as unknown[]).map((p) => (typeof p === "string" ? p : "")) : [],
+  };
+}
+
+export function resolveStoreInfo(stored: unknown): StoreInfoSettings {
+  const s = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  return {
+    enabled: s.enabled === true,
+    email: text(s.email),
+    phone: text(s.phone),
+    address: text(s.address),
+    shipping_policy: resolveStoreInfoCard(s.shipping_policy),
+    return_policy: resolveStoreInfoCard(s.return_policy),
+    cod_policy: resolveStoreInfoCard(s.cod_policy),
+  };
+}
+
+export async function storeDesignSaveStoreInfo(
+  client: ApiClient,
+  workspaceId: string,
+  info: StoreInfoSettings
+): Promise<Workspace> {
+  const card = (c: StoreInfoCard) => ({
+    enabled: c.enabled,
+    title: c.title.trim(),
+    points: c.points.map((p) => p.trim()).filter(Boolean).slice(0, 8),
+  });
+  const { workspace } = await client.request<{ workspace: Workspace }>("/workspaces/" + workspaceId, {
+    method: "PATCH",
+    body: {
+      settings: {
+        store_info: {
+          enabled: info.enabled,
+          email: info.email.trim() || null,
+          phone: info.phone.trim() || null,
+          address: info.address.trim() || null,
+          shipping_policy: card(info.shipping_policy),
+          return_policy: card(info.return_policy),
+          cod_policy: card(info.cod_policy),
+        },
+      },
+    },
+  });
+  return workspace;
+}
+
+export const LEGAL_POLICY_KEYS = ["refund_policy", "privacy_policy", "terms_of_service"] as const;
+export type LegalPolicyKey = (typeof LEGAL_POLICY_KEYS)[number];
+/** Plain text; {{store.name}}, {{store.address}}, {{store.email}}, {{store.phone}} are filled in when served. */
+export type LegalSettings = Record<LegalPolicyKey, string>;
+
+export function resolveLegal(stored: unknown): LegalSettings {
+  const s = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  return {
+    refund_policy: typeof s.refund_policy === "string" ? s.refund_policy : "",
+    privacy_policy: typeof s.privacy_policy === "string" ? s.privacy_policy : "",
+    terms_of_service: typeof s.terms_of_service === "string" ? s.terms_of_service : "",
+  };
+}
+
+export async function storeDesignSaveLegal(
+  client: ApiClient,
+  workspaceId: string,
+  legal: LegalSettings
+): Promise<Workspace> {
+  const { workspace } = await client.request<{ workspace: Workspace }>("/workspaces/" + workspaceId, {
+    method: "PATCH",
+    body: { settings: { legal } },
+  });
+  return workspace;
+}
+
+/** GET /store/:workspaceId `storeInfo` — null while the merchant has it off. */
+export interface StorefrontStoreInfo {
+  email: string;
+  phone: string;
+  address: string;
+  cards: Array<{ key: StoreInfoCardKey; title: string; points: string[] }>;
+}
+
+/** GET /store/:workspaceId `navPages` — published, active pages flagged for the header or footer. */
+export interface StorefrontNavPage {
+  path: string;
+  title: string;
+  showInHeader: boolean;
+  showInFooter: boolean;
+}
+
+/** The lane-5 additions to GET /store/:workspaceId, read defensively from the meta object. */
+export function storefrontDesignMeta(store: unknown): {
+  storeInfo: StorefrontStoreInfo | null;
+  legal: LegalPolicyKey[];
+  navPages: StorefrontNavPage[];
+} {
+  const s = (store && typeof store === "object" ? store : {}) as Record<string, unknown>;
+  const info = s.storeInfo && typeof s.storeInfo === "object" ? (s.storeInfo as StorefrontStoreInfo) : null;
+  return {
+    storeInfo: info && Array.isArray(info.cards) ? info : null,
+    legal: Array.isArray(s.legal)
+      ? (s.legal as unknown[]).filter((k): k is LegalPolicyKey => LEGAL_POLICY_KEYS.includes(k as LegalPolicyKey))
+      : [],
+    navPages: Array.isArray(s.navPages) ? (s.navPages as StorefrontNavPage[]) : [],
+  };
+}
+
+/** One legal policy as the shopper reads it (public; 404 when the store has not written it). */
+export async function storefrontPolicy(
+  client: ApiClient,
+  workspaceId: string,
+  key: string
+): Promise<{ key: LegalPolicyKey; content: string }> {
+  const { policy } = await client.request<{ policy: { key: LegalPolicyKey; content: string } }>(
+    "/store/" + workspaceId + "/policies/" + encodeURIComponent(key),
+    { auth: false }
+  );
+  return policy;
+}
+
+// ---------------------------------------------------------- page flags ----
+// Backend: src/modules/pages/pageFlags.js — live switches on a website page.
+
+export interface StoreDesignPageRow {
+  id: string;
+  websiteId: string;
+  path: string;
+  title: string;
+  pageType: string;
+  isLive: boolean;
+  showInHeader: boolean;
+  showInFooter: boolean;
+  isActive: boolean;
+}
+
+export async function storeDesignListPages(
+  client: ApiClient,
+  workspaceId: string,
+  websiteId: string
+): Promise<StoreDesignPageRow[]> {
+  const { pages } = await client.request<{ pages: StoreDesignPageRow[] }>(
+    "/workspaces/" + workspaceId + "/websites/" + websiteId + "/pages"
+  );
+  return pages;
+}
+
+export async function storeDesignUpdatePageFlags(
+  client: ApiClient,
+  workspaceId: string,
+  websiteId: string,
+  pageId: string,
+  flags: Partial<Pick<StoreDesignPageRow, "showInHeader" | "showInFooter" | "isActive">>
+): Promise<StoreDesignPageRow> {
+  const { page } = await client.request<{ page: StoreDesignPageRow }>(
+    "/workspaces/" + workspaceId + "/websites/" + websiteId + "/pages/" + pageId,
+    { method: "PATCH", body: flags }
+  );
+  return page;
+}
