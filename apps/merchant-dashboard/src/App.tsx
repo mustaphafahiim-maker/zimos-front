@@ -30,7 +30,8 @@ import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { AbandonedCartsPage } from "@/pages/abandoned/AbandonedCartsPage";
 import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
-import { CustomersPage } from "@/pages/customers/CustomersPage";
+import { ContactsPage } from "@/pages/customers/ContactsPage";
+import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
@@ -110,7 +111,8 @@ export default function App() {
                       <Route path="/catalog/:productId" element={<ProductEditPage />} />
 
                       <Route path="/reviews" element={<ReviewsPage />} />
-                      <Route path="/customers" element={<CustomersPage />} />
+                      <Route path="/customers" element={<ContactsPage />} />
+                      <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />

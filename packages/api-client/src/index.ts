@@ -46,3 +46,5 @@ export * from "./endpoints/insights";
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
+// Contacts, segments and form submissions (lane 8).
+export * from "./endpoints/contacts";
