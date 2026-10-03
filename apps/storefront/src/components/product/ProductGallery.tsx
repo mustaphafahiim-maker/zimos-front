@@ -12,6 +12,7 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { swipeStep, SWIPE_PX } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon, CrossIcon, ZoomIcon } from "../Icons";
+import { StoreImage } from "../StoreImage";
 import { iconBtn, skeleton } from "../ui";
 
 /**
@@ -82,6 +83,18 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   const markLoaded = useCallback((src: string) => {
     setLoaded((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
   }, []);
+
+  // The thumbnails wait for the first photo to arrive (or fail): on a slow
+  // connection they would otherwise share its bandwidth and hold back the
+  // one photo the shopper is looking at. Their frames and skeletons show
+  // from the start, so nothing moves when they fill in.
+  const [firstSettled, setFirstSettled] = useState(false);
+  const settleFirst = useCallback(() => setFirstSettled(true), []);
+  // A photo that finished before the page hydrated fires no load event to hear.
+  useEffect(() => {
+    const img = frameRef.current?.querySelector("img");
+    if (!img || img.complete) settleFirst();
+  }, [settleFirst]);
 
   function onPointerDown(e: ReactPointerEvent) {
     swipe.current = { x: e.clientX, y: e.clientY, moved: false };
@@ -219,16 +232,20 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
             className="block h-full w-full cursor-zoom-in touch-pan-y select-none"
           >
             {!loaded.has(current) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
-            {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* The page's largest image: fetched first, never lazily. */}
+            <StoreImage
               src={current}
               alt={name}
               width={900}
               height={900}
+              sizes="(min-width: 768px) 50vw, 100vw"
               fetchPriority="high"
               draggable={false}
-              onLoad={() => markLoaded(current)}
+              onLoad={() => {
+                markLoaded(current);
+                settleFirst();
+              }}
+              onError={settleFirst}
               style={
                 zoom
                   ? { transform: "scale(1.9)", transformOrigin: `${zoom.x}% ${zoom.y}%` }
@@ -267,16 +284,19 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
                 }`}
               >
                 {!loaded.has(src) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt=""
-                  width={80}
-                  height={80}
-                  loading="lazy"
-                  onLoad={() => markLoaded(src)}
-                  className="h-full w-full object-cover"
-                />
+                {firstSettled && (
+                  <StoreImage
+                    src={src}
+                    alt=""
+                    width={80}
+                    height={80}
+                    sizes="80px"
+                    loading="lazy"
+                    decoding="async"
+                    onLoad={() => markLoaded(src)}
+                    className="h-full w-full object-cover"
+                  />
+                )}
               </button>
             </li>
           ))}
@@ -320,12 +340,12 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               </button>
             )}
 
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <StoreImage
               src={current}
               alt={name}
               width={1600}
               height={1600}
+              sizes="100vw"
               onClick={(e) => e.stopPropagation()}
               className="max-h-full min-h-0 w-auto max-w-full rounded-2xl object-contain"
             />

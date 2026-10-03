@@ -13,6 +13,7 @@ import { MobileMenu } from "./MobileMenu";
 import { SearchBox } from "./SearchBox";
 import { ShellLink } from "./ShellLink";
 import { StickyHeader } from "./StickyHeader";
+import { StoreImage } from "./StoreImage";
 import { ThemeToggle } from "./ThemeToggle";
 import { container } from "./ui";
 
@@ -94,15 +95,14 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
       className={`flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85${centred ? " justify-self-center" : ""}`}
     >
       {store.logoUrl ? (
-        // Merchant logos are arbitrary remote URLs (no next/image allowlist).
         // A small light chip keeps an arbitrary-coloured logo legible while
         // overlaid; it disappears the moment the bar solidifies.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <StoreImage
           src={store.logoUrl}
           alt=""
           width={LOGO_IMG_PX[size]}
           height={LOGO_IMG_PX[size]}
+          sizes={`${LOGO_IMG_PX[size]}px`}
           className={`${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
         />
       ) : (

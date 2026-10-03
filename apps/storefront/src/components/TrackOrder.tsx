@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { ApiError, type TrackResult } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
+import { focusField } from "@/lib/focusField";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { SearchIcon } from "./Icons";
@@ -41,8 +42,8 @@ export function TrackOrder() {
     if (!isEgyptianMobile(phone)) next.phone = t.form.errors.phone;
     if (!number.trim()) next.number = t.track.errors.orderNumber;
     setErrors(next);
-    if (next.phone) return document.getElementById("track-phone")?.focus();
-    if (next.number) return document.getElementById("track-number")?.focus();
+    if (next.phone) return focusField("track-phone");
+    if (next.number) return focusField("track-number");
 
     setStatus("loading");
     setFailure(null);
@@ -112,6 +113,9 @@ export function TrackOrder() {
               type="text"
               inputMode="text"
               autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
               dir="ltr"
               placeholder={t.track.orderNumberPlaceholder}
               value={number}

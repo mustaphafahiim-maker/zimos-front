@@ -104,7 +104,7 @@ export function MobileMenu({
 
         {/* The controls the narrow header leaves out; each labels itself. */}
         {(showTheme || showLanguage) && (
-          <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+          <div className="flex items-center justify-end gap-2 border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             {showLanguage && <LanguageSwitch />}
             {showTheme && <ThemeToggle />}
           </div>

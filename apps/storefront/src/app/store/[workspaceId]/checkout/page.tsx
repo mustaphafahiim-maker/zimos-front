@@ -9,11 +9,13 @@ import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields"
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { FreeShippingHint, ShippingFee } from "@/components/checkout/ShippingFee";
 import { ArrowIcon } from "@/components/Icons";
+import { StickyActionBar } from "@/components/StickyActionBar";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
-import { btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
+import { btnPrimary, btnPrimaryLg, btnSecondary, card, container, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { orderBumpOf } from "@/lib/commerce";
+import { focusField } from "@/lib/focusField";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
@@ -73,6 +75,24 @@ export default function CheckoutPage() {
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
+
+  // --- the phone's sticky confirm bar ---------------------------------------
+  // The total and the confirm button stay at hand on a phone, where the
+  // summary sits below the whole form. The bar shows only while the real
+  // button is still below the screen: once it is in view, or scrolled past
+  // (the footer), the bar steps aside and covers nothing.
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const [submitAhead, setSubmitAhead] = useState(true);
+  useEffect(() => {
+    const el = submitRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => setSubmitAhead(!entry.isIntersecting && entry.boundingClientRect.top > 0),
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
@@ -136,7 +156,7 @@ export default function CheckoutPage() {
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
       setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+      focusField(fieldId(FORM_PREFIX, invalid[0]));
       return;
     }
     if (!cart || items.length === 0) {
@@ -200,7 +220,7 @@ export default function CheckoutPage() {
           setFormError(t.form.errors.summary(invalid.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+        focusField(fieldId(FORM_PREFIX, invalid[0]));
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
@@ -208,6 +228,15 @@ export default function CheckoutPage() {
       autosave.resume();
     }
   }
+
+  const submitLabel = redirecting
+    ? t.payment.redirecting
+    : submitting
+      ? t.checkout.placing
+      : method.method === "cod"
+        ? t.checkout.place
+        : t.payment.payNow;
+  const submitDisabled = submitting || items.length === 0;
 
   return (
     <main className={`${container} flex-1 py-8 sm:py-10`}>
@@ -224,7 +253,13 @@ export default function CheckoutPage() {
         <CheckoutProgress done={progressDone} current={progressCurrent} />
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem]">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        aria-busy={submitting}
+        // minmax(0, …): long text or a wide row must not widen the column past the screen.
+        className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]"
+      >
         <div className="space-y-6">
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="shipping-title">
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
@@ -306,15 +341,26 @@ export default function CheckoutPage() {
                     id="discount-code"
                     type="text"
                     autoComplete="off"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="done"
                     dir="ltr"
                     value={codeInput}
                     onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                    // Enter here (a phone keyboard's Go) applies the code; it must
+                    // not submit the whole checkout form and place the order.
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      if (codeInput.trim()) setAppliedCode(codeInput.trim());
+                    }}
                     className={`${input} uppercase`}
                   />
                   <button
                     type="button"
                     onClick={() => codeInput.trim() && setAppliedCode(codeInput.trim())}
-                    className={btnSecondary}
+                    className={`${btnSecondary} shrink-0`}
                   >
                     {t.checkout.apply}
                   </button>
@@ -361,16 +407,23 @@ export default function CheckoutPage() {
             {formError && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>}
           </div>
 
-          <button type="submit" disabled={submitting || items.length === 0} className={btnPrimaryLg}>
-            {redirecting
-              ? t.payment.redirecting
-              : submitting
-                ? t.checkout.placing
-                : method.method === "cod"
-                  ? t.checkout.place
-                  : t.payment.payNow}
+          <button ref={submitRef} type="submit" disabled={submitDisabled} className={btnPrimaryLg}>
+            {submitLabel}
           </button>
         </aside>
+
+        {/* Inside the form, so its button submits the same way the one above does. */}
+        <StickyActionBar hidden={!submitAhead || items.length === 0} until="lg">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-ink-soft">{t.checkout.totalEstimate}</p>
+              <p className="truncate text-base font-bold text-ink">{money(total, currency)}</p>
+            </div>
+            <button type="submit" disabled={submitDisabled} className={`${btnPrimary} flex-1`}>
+              {submitLabel}
+            </button>
+          </div>
+        </StickyActionBar>
       </form>
     </main>
   );

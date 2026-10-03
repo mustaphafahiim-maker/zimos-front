@@ -11,6 +11,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { BoxIcon, CartGlyph, CrossIcon } from "./Icons";
 import { QuantityStepper } from "./QuantityStepper";
+import { StoreImage } from "./StoreImage";
 import { backdrop, btnPrimaryLg, btnSecondary, focusRing, iconBtn, modalLayer, sheet, skeleton } from "./ui";
 import { LineCustomizations } from "@/components/LineCustomizations";
 
@@ -156,9 +157,7 @@ export function CartDrawer() {
                     {/* A fixed box, so the row keeps its height whether the photo has arrived or not. */}
                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-paper">
                       {image ? (
-                        // Merchant media are arbitrary remote URLs (no next/image allowlist).
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={image} alt="" width={80} height={80} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                        <StoreImage src={image} alt="" width={80} height={80} sizes="80px" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : loaded ? (
                         <div className="flex h-full w-full items-center justify-center text-primary/40">
                           <BoxIcon size={28} />
@@ -216,7 +215,8 @@ export function CartDrawer() {
         </div>
 
         {!isEmpty && cart && (
-          <div className="shrink-0 border-t border-line bg-paper-raised px-4 py-4 sm:px-5">
+          // The checkout button clears the home indicator (0 where there is none).
+          <div className="shrink-0 border-t border-line bg-paper-raised px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5">
             <CartShippingSummary workspaceId={workspaceId} cart={cart} enabled={isDrawerOpen} />
             <div className="mt-4 grid gap-2">
               <StoreLink href="/checkout" className={btnPrimaryLg} data-autofocus="">

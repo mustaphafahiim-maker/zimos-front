@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 8080",
     "lint": "eslint",
-    "test": "node --test \"src/**/*.test.mjs\""
+    "test": "node --test \"src/**/*.test.mjs\"",
+    "test:components": "npm exec --workspace=merchant-dashboard -- vitest run --root ../storefront"
   },
   "dependencies": {
     "@store-builder/api-client": "^0.1.0",

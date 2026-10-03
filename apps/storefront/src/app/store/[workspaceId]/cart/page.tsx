@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { BoxIcon, CartGlyph } from "@/components/Icons";
 import { QuantityStepper } from "@/components/QuantityStepper";
+import { StoreImage } from "@/components/StoreImage";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
@@ -78,7 +79,9 @@ export default function CartPage() {
           </StoreLink>
         </div>
       ) : (
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
+        // minmax(0, …): a long name or a wide price row must not widen the
+        // column past the screen (a bare `1fr` grows to its content).
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div>
             <div aria-live="polite" className="empty:hidden">
               {error && <p className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
@@ -94,8 +97,7 @@ export default function CartPage() {
                   <li key={line.id} className={`flex gap-4 p-4 sm:p-5 ${rowBusy ? "opacity-60" : ""}`}>
                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-paper">
                       {image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={image} alt="" width={80} height={80} loading="lazy" className="h-full w-full object-cover" />
+                        <StoreImage src={image} alt="" width={80} height={80} sizes="80px" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-primary/40">
                           <BoxIcon size={28} />
@@ -123,7 +125,7 @@ export default function CartPage() {
                           type="button"
                           onClick={() => run(line.id, () => removeItem(line.id), t.cart.removeFailed)}
                           disabled={rowBusy}
-                          className="-me-2 -mt-2 inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-lg px-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
+                          className="-me-2 -mt-2 inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
                         >
                           {t.cart.remove}
                         </button>
@@ -132,7 +134,7 @@ export default function CartPage() {
                       <span className="text-xs text-ink-soft">{t.cart.perUnit(money(line.currentUnitPrice, currency))}</span>
                       {line.priceChanged && <span className="mt-1 text-xs text-accent-dark">{t.cart.priceChanged}</span>}
 
-                      <div className="mt-3 flex items-center justify-between gap-3">
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                         {/* The same stepper the drawer and the product page use. */}
                         <QuantityStepper
                           size="sm"

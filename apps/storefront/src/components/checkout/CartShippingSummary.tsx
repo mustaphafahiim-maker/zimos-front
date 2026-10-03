@@ -56,7 +56,8 @@ export function CartShippingSummary({
             id={selectId}
             value={shipTo}
             onChange={(e) => setShipTo(e.target.value)}
-            className={`${input} min-h-10 cursor-pointer py-1.5 text-sm`}
+            // 16px like every other field: anything smaller makes iOS zoom in on focus.
+            className={`${input} min-w-0 cursor-pointer py-1.5`}
           >
             <option value="">{t.cart.shipToPlaceholder}</option>
             {GOVERNORATES.map((g) => (

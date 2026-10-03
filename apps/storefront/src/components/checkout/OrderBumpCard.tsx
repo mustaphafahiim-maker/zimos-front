@@ -3,6 +3,7 @@
 import type { OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { GiftIcon } from "../Icons";
+import { StoreImage } from "../StoreImage";
 
 /**
  * "Add to your order" checkbox card, shown right above the submit button: the
@@ -37,12 +38,12 @@ export function OrderBumpCard({
         className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-primary"
       />
       {bump.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <StoreImage
           src={bump.imageUrl}
           alt=""
           width={64}
           height={64}
+          sizes="64px"
           loading="lazy"
           className="h-16 w-16 shrink-0 rounded-xl border border-line object-cover"
         />

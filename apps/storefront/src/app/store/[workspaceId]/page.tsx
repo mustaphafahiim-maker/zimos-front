@@ -4,6 +4,7 @@ import type { StorefrontCollection } from "@store-builder/api-client";
 import { ArrowIcon } from "@/components/Icons";
 import { PageRenderer } from "@/components/page-renderer";
 import { ProductCard } from "@/components/ProductCard";
+import { StoreImage } from "@/components/StoreImage";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { btnPrimary, btnSecondary, container } from "@/components/ui";
@@ -96,12 +97,12 @@ export default async function StoreHomePage({
       <section className="border-b border-line bg-paper-raised">
         <div className={`${container} flex flex-col items-center py-12 text-center sm:py-16`}>
           {store.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <StoreImage
               src={store.logoUrl}
               alt=""
               width={72}
               height={72}
+              sizes="72px"
               className="mb-5 h-18 w-18 rounded-2xl border border-line object-contain"
             />
           )}

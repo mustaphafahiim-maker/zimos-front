@@ -40,7 +40,9 @@ import {
 } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
+import { focusField } from "@/lib/focusField";
 import { useStoreBasePath } from "../StoreRoute";
+import { StickyActionBar } from "../StickyActionBar";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
@@ -159,7 +161,7 @@ export function ProductLanding({
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
       setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+      focusField(fieldId(FORM_PREFIX, invalid[0]));
       return;
     }
     if (!variant || !available || !mainLine) {
@@ -233,7 +235,7 @@ export function ProductLanding({
           setFormError(t.form.errors.summary(invalid.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+        focusField(fieldId(FORM_PREFIX, invalid[0]));
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
@@ -254,7 +256,8 @@ export function ProductLanding({
   }, []);
 
   function scrollToForm() {
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    formRef.current?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
     window.setTimeout(() => {
       document.getElementById(fieldId(FORM_PREFIX, "fullName"))?.focus({ preventScroll: true });
     }, 450);
@@ -491,13 +494,8 @@ export function ProductLanding({
         </form>
       </section>
 
-      {/* Sticky mobile bar */}
-      <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 py-3 shadow-lg backdrop-blur transition-transform duration-200 md:hidden ${
-          formVisible ? "translate-y-full" : "translate-y-0"
-        }`}
-        aria-hidden={formVisible}
-      >
+      {/* Sticky mobile bar: clears the home indicator, and steps aside while the form is on screen. */}
+      <StickyActionBar hidden={formVisible}>
         <div className="flex items-center gap-3">
           <div className="min-w-0">
             <p className="text-xs text-ink-soft">{t.form.total}</p>
@@ -513,7 +511,7 @@ export function ProductLanding({
             {t.product.stickyOrder}
           </button>
         </div>
-      </div>
+      </StickyActionBar>
     </div>
   );
 }
