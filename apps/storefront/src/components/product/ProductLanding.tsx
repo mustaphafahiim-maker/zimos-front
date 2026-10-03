@@ -10,6 +10,7 @@ import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
+  formOptionsOf,
   FIELD_ORDER,
   quickFormFields,
   toCheckoutPayload,
@@ -41,6 +42,8 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
+import { useCart } from "@/lib/CartProvider";
+import { storeHref } from "@/lib/storeHref";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
@@ -253,7 +256,35 @@ export function ProductLanding({
     return () => io.disconnect();
   }, []);
 
+  // settings → purchase form → layout: "one_step" keeps the product page
+  // free of the form, and "Order now" takes the shopper to checkout instead.
+  const inlineForm = formOptionsOf(checkoutSettings).layout !== "one_step";
+  const { addItem } = useCart();
+  const [goingToCheckout, setGoingToCheckout] = useState(false);
+
+  async function goToCheckout() {
+    if (!mainLine || goingToCheckout) return;
+    if (custom.fields.length > 0 && !custom.check()) return;
+    setGoingToCheckout(true);
+    try {
+      await addItem(
+        mainLine.variantId,
+        mainLine.offerId,
+        mainLine.quantity,
+        custom.fields.length > 0 ? custom.toInput() : undefined
+      );
+      router.push(storeHref(basePath, "/checkout"));
+    } catch (err) {
+      if (!(custom.fields.length > 0 && custom.showServerProblems(err))) setFormError(t.product.addFailed);
+      setGoingToCheckout(false);
+    }
+  }
+
   function scrollToForm() {
+    if (!inlineForm) {
+      void goToCheckout();
+      return;
+    }
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => {
       document.getElementById(fieldId(FORM_PREFIX, "fullName"))?.focus({ preventScroll: true });
@@ -405,7 +436,14 @@ export function ProductLanding({
         />
       </div>
 
+      {!inlineForm && formError && (
+        <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
+          {formError}
+        </p>
+      )}
+
       {/* Inline quick order form */}
+      {inlineForm && (
       <section
         ref={formRef}
         id="order-form"
@@ -490,6 +528,7 @@ export function ProductLanding({
           )}
         </form>
       </section>
+      )}
 
       {/* Sticky mobile bar */}
       <div
