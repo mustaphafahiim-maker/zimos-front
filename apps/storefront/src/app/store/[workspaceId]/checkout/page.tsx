@@ -37,6 +37,7 @@ import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { PolicyLinks } from "@/components/PolicyLinks";
+import { CodeSlot } from "@/components/CustomCode";
 
 const FORM_PREFIX = "checkout";
 
@@ -236,6 +237,7 @@ export default function CheckoutPage() {
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
               {t.checkout.shipping}
             </h2>
+            <CodeSlot name="above_form" />
             <div className="mt-4">
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
@@ -246,6 +248,7 @@ export default function CheckoutPage() {
                 showAltPhone
               />
             </div>
+            <CodeSlot name="below_form" />
           </section>
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
