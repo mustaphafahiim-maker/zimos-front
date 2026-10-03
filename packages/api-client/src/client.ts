@@ -244,6 +244,8 @@ import type {
   AdminPaymentMethods,
   AdminPaymentProofPage,
   AdminPaymentProofReview,
+  WalletLedgerPage,
+  WalletSummary,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -913,6 +915,41 @@ export class ApiClient {
       body: form,
     });
     return res.json() as Promise<{ proof: BillingPaymentProof }>;
+  }
+
+  // --- the prepaid balance (pay-per-order, WALLET_ENABLED)
+
+  async getWallet(workspaceId: string): Promise<WalletSummary> {
+    const { wallet } = await this.request<{ wallet: WalletSummary }>(`/workspaces/${workspaceId}/billing/wallet`);
+    return wallet;
+  }
+
+  async getWalletLedger(workspaceId: string, { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {}): Promise<WalletLedgerPage> {
+    return this.request<WalletLedgerPage>(`/workspaces/${workspaceId}/billing/wallet/ledger?page=${page}&pageSize=${pageSize}`);
+  }
+
+  /**
+   * A top-up transfer's proof: the amount sent (minor units, within the
+   * summary's limits), the method, the sender and the screenshot. 404
+   * WALLET_DISABLED, 422 TOPUP_AMOUNT_OUT_OF_RANGE, 409 TOO_MANY_OPEN_TOPUPS, and
+   * the proof codes of submitBillingPaymentProof.
+   */
+  async submitWalletTopup(
+    workspaceId: string,
+    { requestedAmount, methodCode, senderPhone, file }: { requestedAmount: number; methodCode: string; senderPhone: string; file: File | Blob }
+  ): Promise<{ proof: BillingPaymentProof }> {
+    const form = new FormData();
+    form.append("requestedAmount", String(requestedAmount));
+    form.append("methodCode", methodCode);
+    form.append("senderPhone", senderPhone);
+    form.append("file", file, file instanceof File ? file.name : "transfer");
+    const res = await this.rawFetch(`/workspaces/${workspaceId}/billing/wallet/topups`, { method: "POST", body: form });
+    return res.json() as Promise<{ proof: BillingPaymentProof }>;
+  }
+
+  /** Moves a draft or a trial to the pay-per-order plan. 409 PLAN_CHANGE_NEEDS_SUPPORT / OPEN_CHARGE_EXISTS, 404 WALLET_DISABLED. */
+  async choosePayPerOrder(workspaceId: string): Promise<{ changed: boolean }> {
+    return this.request<{ changed: boolean }>(`/workspaces/${workspaceId}/billing/pay-per-order`, { method: "POST", body: {} });
   }
 
   /** The store's latest transfer proofs, newest first. */
@@ -1800,6 +1837,16 @@ export class ApiClient {
    * the gateway webhook. 409 CHARGE_ALREADY_PAID.
    */
   // --- payment methods and transfer proofs (billing/paymentAdminRoutes)
+
+  /** A store's prepaid balance and its ledger (subscriptions.view). */
+  async adminGetWorkspaceWallet(
+    workspaceId: string,
+    { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {}
+  ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
+    return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage }>(
+      `/admin/workspaces/${workspaceId}/wallet?page=${page}&pageSize=${pageSize}`
+    );
+  }
 
   /** Every payment method, and the gateways with an adapter but no row yet (payments.record). */
   async adminListPaymentMethods(): Promise<AdminPaymentMethods> {

@@ -5,117 +5,10 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMinorMoney } from "@/lib/format";
-import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
+import { PAY_STRINGS } from "./payStrings";
 import { Modal } from "@/components/Modal";
 import { CopyButton } from "@/components/CopyButton";
-
-export const PAY_STRINGS = {
-  en: {
-    title: "Pay your invoice",
-    loading: "Preparing your invoice…",
-    amountDue: "Amount due",
-    amountFixed: "Set by Zimos for this invoice. Send exactly this amount.",
-    chooseMethod: "How would you like to pay?",
-    payOnline: "Continue to the payment page",
-    opening: "Opening the payment page…",
-    gatewayHint: "You'll pay on {name}'s secure page, then come back here.",
-    sendTo: "Send exactly {amount} to this number:",
-    copyNumber: "Copy",
-    steps: "After sending, fill in the number you sent from and attach a screenshot of the transfer. The Zimos team checks it, usually within a working day.",
-    senderPhone: "The mobile number you sent from",
-    senderPhoneHint: "An Egyptian mobile number, e.g. 01012345678",
-    screenshot: "Screenshot of the transfer",
-    screenshotHint: "JPEG, PNG or WebP, up to 8 MB.",
-    send: "Send for review",
-    sending: "Sending…",
-    cancel: "Cancel",
-    sent: "Sent. We'll review your transfer and update this invoice.",
-    phoneRequired: "Enter the number you sent from.",
-    fileRequired: "Attach the screenshot of the transfer.",
-    fileType: "The screenshot must be a JPEG, PNG or WebP image.",
-    fileTooLarge: "The screenshot is larger than 8 MB.",
-    duplicate: "This screenshot was already sent. Attach the screenshot of this transfer.",
-    alreadyOpen: "A transfer for this invoice is already under review.",
-    tooMany: "You have 3 transfers under review. Wait until one is reviewed.",
-    notPending: "This invoice isn't waiting for payment any more. Reload the page.",
-    invalidPhone: "Enter the Egyptian mobile number you sent from, e.g. 01012345678.",
-    methodGone: "This payment method isn't available any more. Choose another.",
-    unreadable: "The screenshot couldn't be read. Try another image.",
-    noMethod: "There's no way to pay online or by transfer right now. Contact Zimos support.",
-    nothingDue: "Nothing is due right now.",
-    payDisabled: "Online payment isn't available right now.",
-    payCurrency: "Online payment is only available for plans priced in Egyptian pounds.",
-    payStartFailed: "The payment page couldn't be opened. Try again in a few minutes.",
-    payStarting: "A payment is already being opened. Wait a moment and try again.",
-    // The Invoices tab
-    payPanelTitle: "Pay",
-    payPanelBody: "Amount due: {amount}",
-    payButton: "Pay",
-    payInvoice: "Pay this invoice",
-    contactSupport: "To pay this, contact Zimos support.",
-    contactLink: "Contact support",
-    proofsTitle: "Your transfers",
-    proofPending: "Under review",
-    proofApproved: "Done",
-    proofRejected: "Rejected",
-    proofReason: "Reason: {note}",
-    proofLine: "{method} · {amount} · {date}",
-    transferUnderReview: "Transfer under review",
-    transferRejected: "Your last transfer for this invoice was rejected. Reason: {note}",
-  },
-  ar: {
-    title: "ادفع فاتورتك",
-    loading: "جارٍ تجهيز فاتورتك…",
-    amountDue: "المبلغ المستحق",
-    amountFixed: "حدّدته Zimos لهذه الفاتورة. حوّل هذا المبلغ بالضبط.",
-    chooseMethod: "كيف تريد أن تدفع؟",
-    payOnline: "المتابعة إلى صفحة الدفع",
-    opening: "جارٍ فتح صفحة الدفع…",
-    gatewayHint: "ستدفع عبر صفحة {name} الآمنة، ثم تعود إلى هنا.",
-    sendTo: "حوّل {amount} بالضبط إلى هذا الرقم:",
-    copyNumber: "نسخ",
-    steps: "بعد التحويل، أدخل الرقم الذي حوّلت منه وأرفق صورة من عملية التحويل. يراجعها فريق Zimos، عادةً خلال يوم عمل.",
-    senderPhone: "رقم الموبايل الذي حوّلت منه",
-    senderPhoneHint: "رقم موبايل مصري، مثل 01012345678",
-    screenshot: "صورة عملية التحويل",
-    screenshotHint: "JPEG أو PNG أو WebP، حتى 8 ميجابايت.",
-    send: "أرسل للمراجعة",
-    sending: "جارٍ الإرسال…",
-    cancel: "إلغاء",
-    sent: "تم الإرسال. سنراجع تحويلك ونحدّث هذه الفاتورة.",
-    phoneRequired: "أدخل الرقم الذي حوّلت منه.",
-    fileRequired: "أرفق صورة عملية التحويل.",
-    fileType: "يجب أن تكون الصورة بصيغة JPEG أو PNG أو WebP.",
-    fileTooLarge: "حجم الصورة أكبر من 8 ميجابايت.",
-    duplicate: "أُرسلت هذه الصورة من قبل. أرفق صورة هذا التحويل.",
-    alreadyOpen: "هناك تحويل لهذه الفاتورة قيد المراجعة بالفعل.",
-    tooMany: "لديك 3 تحويلات قيد المراجعة. انتظر حتى تُراجَع إحداها.",
-    notPending: "لم تعد هذه الفاتورة بانتظار الدفع. أعد تحميل الصفحة.",
-    invalidPhone: "أدخل رقم الموبايل المصري الذي حوّلت منه، مثل 01012345678.",
-    methodGone: "لم تعد طريقة الدفع هذه متاحة. اختر طريقة أخرى.",
-    unreadable: "تعذّرت قراءة الصورة. جرّب صورة أخرى.",
-    noMethod: "لا تتوفر حاليًا طريقة للدفع الإلكتروني أو بالتحويل. تواصل مع دعم Zimos.",
-    nothingDue: "لا يوجد مبلغ مستحق الآن.",
-    payDisabled: "الدفع الإلكتروني غير متاح حاليًا.",
-    payCurrency: "الدفع الإلكتروني متاح فقط للخطط المسعّرة بالجنيه المصري.",
-    payStartFailed: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد دقائق.",
-    payStarting: "يجري فتح دفعة بالفعل. انتظر لحظة ثم حاول مرة أخرى.",
-    payPanelTitle: "الدفع",
-    payPanelBody: "المبلغ المستحق: {amount}",
-    payButton: "ادفع",
-    payInvoice: "ادفع هذه الفاتورة",
-    contactSupport: "للدفع، تواصل مع دعم Zimos.",
-    contactLink: "تواصل مع الدعم",
-    proofsTitle: "تحويلاتك",
-    proofPending: "قيد المراجعة",
-    proofApproved: "تم",
-    proofRejected: "مرفوض",
-    proofReason: "السبب: {note}",
-    proofLine: "{method} · {amount} · {date}",
-    transferUnderReview: "التحويل قيد المراجعة",
-    transferRejected: "رُفض آخر تحويل لهذه الفاتورة. السبب: {note}",
-  },
-} satisfies Messages;
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -219,8 +112,8 @@ function PayBody({
         <TransferPay
           key={chosen.code}
           method={chosen}
-          invoice={invoice}
           amount={amount}
+          submit={(fields) => apiClient.submitBillingPaymentProof(workspaceId, invoice.id, fields)}
           onCancel={onClose}
           onSent={(proof) => {
             onProofSent(proof);
@@ -276,22 +169,28 @@ function GatewayPay({ method }: { method: BillingPaymentMethod }) {
   );
 }
 
-function TransferPay({
+/**
+ * A manual method: where to send `amount` (with a copy button and the
+ * method's note), then the number it was sent from and the screenshot, sent
+ * through `submit` — an invoice's proof or a top-up's.
+ */
+export function TransferPay({
   method,
-  invoice,
   amount,
+  submit,
   onCancel,
   onSent,
+  errorOverrides = {},
 }: {
   method: BillingPaymentMethod;
-  invoice: MerchantInvoice;
   amount: string;
+  submit: (fields: { methodCode: string; senderPhone: string; file: File }) => Promise<{ proof: BillingPaymentProof }>;
   onCancel: () => void;
   onSent: (proof: BillingPaymentProof) => void;
+  errorOverrides?: Record<string, string>;
 }) {
   const t = useT(PAY_STRINGS);
   const { locale } = useLocale();
-  const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
   const phoneId = useId();
   const fileId = useId();
@@ -312,13 +211,13 @@ function TransferPay({
     return Object.keys(next).length === 0;
   }
 
-  async function submit(e: FormEvent) {
+  async function send(e: FormEvent) {
     e.preventDefault();
     if (busy || !check() || !file) return;
     setBusy(true);
     setError(null);
     try {
-      const { proof } = await apiClient.submitBillingPaymentProof(workspaceId, invoice.id, { methodCode: method.code, senderPhone: phone.trim(), file });
+      const { proof } = await submit({ methodCode: method.code, senderPhone: phone.trim(), file });
       onSent(proof);
     } catch (err) {
       setError(
@@ -333,6 +232,7 @@ function TransferPay({
           INVALID_SENDER_PHONE: t.invalidPhone,
           PAYMENT_METHOD_NOT_AVAILABLE: t.methodGone,
           NO_FILE: t.fileRequired,
+          ...errorOverrides,
         })
       );
       setBusy(false);
@@ -340,7 +240,7 @@ function TransferPay({
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
+    <form onSubmit={(e) => void send(e)} noValidate className="space-y-4">
       <div className="space-y-2 rounded-[10px] border border-line bg-paper px-4 py-3">
         <p className="text-sm text-ink">{fmt(t.sendTo, { amount })}</p>
         <div className="flex flex-wrap items-center gap-2">

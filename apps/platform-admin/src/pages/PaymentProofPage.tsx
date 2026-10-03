@@ -64,6 +64,7 @@ function Review({
               </Link>
             </Item>
             <Item label="For">{proof.purpose === "invoice" ? "Subscription invoice" : "Balance top-up"}</Item>
+            {review.wallet && <Item label="Balance now">{formatMinorMoneyExact(review.wallet.balance, review.wallet.currency)}</Item>}
             {invoice && (
               <Item label="Invoice">
                 {formatMinorMoneyExact(invoice.amountDue, invoice.currency)} · {formatDate(invoice.periodStart)} – {formatDate(invoice.periodEnd)}
@@ -153,7 +154,8 @@ function Decide({
   const received = amount.trim() && Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 10 ** digits) : null;
   const differs = received != null && received !== proof.requestedAmount;
   // An invoice is settled only by exactly its amount.
-  const approvable = received != null && blockers.length === 0 && !(differs && proof.purpose === "invoice");
+  const approvable =
+    received != null && (proof.purpose === "topup" ? received > 0 : true) && blockers.length === 0 && !(differs && proof.purpose === "invoice");
 
   async function approve() {
     if (received == null) return;
@@ -161,7 +163,7 @@ function Decide({
     setError(null);
     try {
       onChange(await adminApi.approvePaymentProof(proof.id, received));
-      toast.success("Approved. The invoice is paid.");
+      toast.success(proof.purpose === "topup" ? "Approved. The store's balance is credited." : "Approved. The invoice is paid.");
     } catch (err) {
       setError(getErrorMessage(err));
       setBusy(null);
@@ -224,6 +226,11 @@ function Decide({
               {differs && proof.purpose === "invoice" && (
                 <p className="col-span-2 text-xs font-medium text-danger">
                   An invoice is settled only by exactly its amount. Reject this proof with a note instead.
+                </p>
+              )}
+              {differs && proof.purpose === "topup" && (
+                <p className="col-span-2 text-xs font-medium text-danger">
+                  This is not what the merchant asked for. The balance goes up by the amount received only, {formatMinorMoneyExact(received ?? 0, proof.currency)}.
                 </p>
               )}
             </div>

@@ -10,7 +10,8 @@ import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";
 import { PaymentReturn } from "./billingParts";
-import { PayDialog, PAY_STRINGS } from "./PayDialog";
+import { PayDialog } from "./PayDialog";
+import { PAY_STRINGS } from "./payStrings";
 import { BILLING_STRINGS, type ReturnHint } from "./billingText";
 import { SUBSCRIPTION_STRINGS, type SubscriptionText } from "./subscriptionStrings";
 

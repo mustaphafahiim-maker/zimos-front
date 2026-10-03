@@ -8,6 +8,8 @@
  * `<ComingLater />` and show no data at all.
  */
 import type {
+  WalletLedgerPage,
+  WalletSummary,
   AdminPaymentMethod,
   AdminPaymentMethods,
   AdminPaymentProofPage,
@@ -434,6 +436,13 @@ export function markCommissionPaid(commissionId: string, note?: string): Promise
 }
 
 // ------------------------------------------- payment methods and transfer proofs
+
+export function getWorkspaceWallet(
+  workspaceId: string,
+  params: { page?: number; pageSize?: number } = {}
+): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
+  return apiClient.adminGetWorkspaceWallet(workspaceId, params);
+}
 
 export function listPaymentMethods(): Promise<AdminPaymentMethods> {
   return apiClient.adminListPaymentMethods();
