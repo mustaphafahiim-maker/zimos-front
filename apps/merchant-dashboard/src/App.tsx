@@ -70,7 +70,11 @@ const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
 const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
-const ProfitPage = lazy(() => import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage })));
+const ProfitPage = lazy(() => import("@/pages/profit/RealProfitPage").then((m) => ({ default: m.RealProfitPage })));
+const ProfitCostsPage = lazy(() =>
+  import("@/pages/profit/ProfitCostsPage").then((m) => ({ default: m.ProfitCostsPage }))
+);
+const AdsPage = lazy(() => import("@/pages/ads/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -133,6 +137,8 @@ export default function App() {
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
+                      <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />
+                      <Route path="/ads" element={<LazyRoute><AdsPage /></LazyRoute>} />
                       <Route path="/media" element={<LazyRoute><MediaLibraryPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/support" element={<SupportPage />} />
