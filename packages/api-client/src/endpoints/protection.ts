@@ -125,3 +125,111 @@ export async function protectionImportBlocked(
     body: payload,
   });
 }
+
+// ------------------------------------------------------------------ rules --
+
+/** What a rule does when it fires. `require_otp` asks for a verified phone; `to_lost` refuses and keeps a lost order. */
+export const PROTECTION_ACTIONS = ["flag", "block", "require_otp", "to_lost"] as const;
+export type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+
+/** Rules with a number: off when null. */
+export const PROTECTION_NUMBER_RULES = [
+  "duplicate_window_minutes",
+  "max_orders_per_phone_per_day",
+  "high_rejection_threshold",
+  "max_items_per_order",
+  "min_minutes_between_cod_orders_per_ip",
+  "min_network_delivery_rate",
+] as const;
+export type ProtectionNumberRule = (typeof PROTECTION_NUMBER_RULES)[number];
+
+/** Rules that are only on or off. */
+export const PROTECTION_SWITCH_RULES = ["block_outside_country", "block_vpn", "high_risk"] as const;
+export type ProtectionSwitchRule = (typeof PROTECTION_SWITCH_RULES)[number];
+
+export type ProtectionRuleKey = ProtectionNumberRule | ProtectionSwitchRule;
+
+export interface ProtectionRules {
+  /** Refuse blocked customers and blocked entries whatever the actions say. */
+  block_blacklisted: boolean;
+  /** `strict`: refuse a phone that is not a mobile number of the store's country. */
+  phone_validation: "strict" | "off";
+  /** ISO2 codes for `block_outside_country`; empty = the store's own country. */
+  allowed_countries: string[];
+  /** ISO2 codes whose visitors do not see the store at all. */
+  blocked_countries: string[];
+  numbers: Record<ProtectionNumberRule, number | null>;
+  switches: Record<ProtectionSwitchRule, boolean>;
+  actions: Record<ProtectionRuleKey, ProtectionAction>;
+}
+
+function isAction(value: unknown): value is ProtectionAction {
+  return typeof value === "string" && (PROTECTION_ACTIONS as readonly string[]).includes(value);
+}
+
+/**
+ * The effective rules for `workspace.settings.fraud_rules` — mirrors the
+ * backend's fraudRules.resolveFraudRules. A rule is stored as its bare value
+ * (the older shape) or as `{ value, action }`; a rule without its own action
+ * uses the store-wide `action`.
+ */
+export function protectionResolveRules(stored: unknown): ProtectionRules {
+  const s = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const fallback: ProtectionAction = isAction(s.action) ? s.action : "flag";
+  const valueOf = (key: string): unknown => {
+    const raw = s[key];
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as { value?: unknown }).value : raw;
+  };
+  const actionOf = (key: string): ProtectionAction => {
+    const raw = s[key];
+    const own = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as { action?: unknown }).action : null;
+    return isAction(own) ? own : fallback;
+  };
+  const numbers = {} as Record<ProtectionNumberRule, number | null>;
+  for (const key of PROTECTION_NUMBER_RULES) {
+    const value = valueOf(key);
+    numbers[key] = typeof value === "number" && value > 0 ? value : null;
+  }
+  const switches = {} as Record<ProtectionSwitchRule, boolean>;
+  for (const key of PROTECTION_SWITCH_RULES) switches[key] = valueOf(key) === true;
+  const actions = {} as Record<ProtectionRuleKey, ProtectionAction>;
+  for (const key of [...PROTECTION_NUMBER_RULES, ...PROTECTION_SWITCH_RULES]) actions[key] = actionOf(key);
+  return {
+    block_blacklisted: s.block_blacklisted === true,
+    phone_validation: s.phone_validation === "strict" ? "strict" : "off",
+    allowed_countries: Array.isArray(s.allowed_countries) ? s.allowed_countries.map(String) : [],
+    blocked_countries: Array.isArray(s.blocked_countries) ? s.blocked_countries.map(String) : [],
+    numbers,
+    switches,
+    actions,
+  };
+}
+
+/**
+ * Saves the whole rule set (needs workspace.manage; 403 otherwise) and
+ * returns it as the server now holds it. An off rule is sent as null.
+ */
+export async function protectionSaveRules(
+  client: ApiClient,
+  workspaceId: string,
+  rules: ProtectionRules
+): Promise<ProtectionRules> {
+  const fraud_rules: Record<string, unknown> = {
+    block_blacklisted: rules.block_blacklisted,
+    phone_validation: rules.phone_validation,
+    allowed_countries: rules.allowed_countries.length ? rules.allowed_countries : null,
+    blocked_countries: rules.blocked_countries.length ? rules.blocked_countries : null,
+  };
+  for (const key of PROTECTION_NUMBER_RULES) {
+    fraud_rules[key] = rules.numbers[key] == null ? null : { value: rules.numbers[key], action: rules.actions[key] };
+  }
+  for (const key of PROTECTION_SWITCH_RULES) {
+    fraud_rules[key] = rules.switches[key] ? { value: true, action: rules.actions[key] } : null;
+  }
+  const body = await client.request<{ workspace?: { settings?: { fraud_rules?: unknown } }; settings?: { fraud_rules?: unknown } }>(
+    `/workspaces/${workspaceId}`,
+    { method: "PATCH", body: { settings: { fraud_rules } } }
+  );
+  const settings = body.workspace?.settings ?? body.settings;
+  return protectionResolveRules(settings?.fraud_rules);
+}

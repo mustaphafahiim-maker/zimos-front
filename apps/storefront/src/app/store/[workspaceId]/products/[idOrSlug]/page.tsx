@@ -1,3 +1,4 @@
+import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
@@ -8,6 +9,8 @@ import {
 } from "@store-builder/api-client";
 import { StoreInfoCards } from "@/components/StoreInfoCards";
 import { ProductContent } from "@/components/product/ProductContent";
+import { storefrontProductReviews } from "@store-builder/api-client";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
@@ -135,6 +138,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1 pb-24 md:pb-0">
+      {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
+      <PixelScope productIds={[product.id]} />
       {/* A landing page without the store's menu: hidden only while this page is shown. */}
       {ps.hide_header && (
         <style
@@ -166,6 +171,10 @@ export default async function ProductPage({ params }: { params: Params }) {
         </div>
 
         <ProductContent cms={page.cms} locale={locale} />
+
+        {ps.reviews_enabled && (
+          <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
+        )}
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
