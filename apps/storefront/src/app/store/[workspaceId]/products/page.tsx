@@ -11,6 +11,7 @@ import { FilterDrawer } from "@/components/catalog/FilterDrawer";
 import { SortSelect } from "@/components/catalog/SortSelect";
 import { ChevronIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
+import { StoreImage } from "@/components/StoreImage";
 import { StoreLink } from "@/components/StoreRoute";
 import { btnSecondary, container, focusRing } from "@/components/ui";
 import { activeFilterCount, catalogHref, readCatalogState, toListingParams, type CatalogState } from "@/lib/catalogQuery";
@@ -109,13 +110,12 @@ export default async function ProductsPage({ params, searchParams }: { params: P
         <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             {listing.collection?.imageUrl && (
-              // Merchant media are arbitrary remote URLs (no next/image allowlist).
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <StoreImage
                 src={listing.collection.imageUrl}
                 alt=""
                 width={72}
                 height={72}
+                sizes="72px"
                 className="size-16 shrink-0 rounded-2xl border border-line object-cover sm:size-18"
               />
             )}
@@ -189,8 +189,10 @@ export default async function ProductsPage({ params, searchParams }: { params: P
 function ProductGrid({ products, currency, locale }: { products: StorefrontProduct[]; currency: string; locale: Locale }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} currency={currency} locale={locale} />
+      {/* The first row is on screen as the page opens (two columns on a phone):
+          those photos load at once, the rest as they scroll near. */}
+      {products.map((product, i) => (
+        <ProductCard key={product.id} product={product} currency={currency} locale={locale} priority={i < 2} />
       ))}
     </div>
   );

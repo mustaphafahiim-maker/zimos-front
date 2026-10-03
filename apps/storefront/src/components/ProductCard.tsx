@@ -8,16 +8,20 @@ import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, 
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
+import { StoreImage } from "./StoreImage";
 import { skeleton } from "./ui";
 
 export function ProductCard({
   product,
   currency,
   locale,
+  priority = false,
 }: {
   product: StorefrontProduct;
   currency: string;
   locale: Locale;
+  /** One of the first cards of a listing, likely on screen at once: loaded eagerly. */
+  priority?: boolean;
 }) {
   const t = getDictionary(locale);
   const price = priceOf(product);
@@ -101,14 +105,14 @@ export function ProductCard({
             className="absolute inset-0 block touch-pan-y select-none"
           >
             {!loaded.has(current) && <span aria-hidden className={`absolute inset-0 ${skeleton}`} />}
-            {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <StoreImage
               src={current}
               alt=""
               width={600}
               height={600}
-              loading="lazy"
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? "high" : undefined}
               decoding="async"
               onLoad={() => markLoaded(current)}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
