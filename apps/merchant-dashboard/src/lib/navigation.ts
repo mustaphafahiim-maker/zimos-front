@@ -60,6 +60,7 @@ export type NavKey =
   | "settlements"
   | "inbox"
   | "automations"
+  | "campaigns"
   | "marketing"
   | "profit"
   | "ads"
@@ -141,6 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "automations", to: "/automations", icon: Bot },
+      { key: "campaigns", to: "/campaigns", icon: Megaphone },
       { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
@@ -224,6 +226,7 @@ export const NAV_LABELS = {
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
+    campaigns: "WhatsApp campaigns",
     marketing: "Marketing",
     profit: "Profit",
     ads: "Ad campaigns",
@@ -257,6 +260,7 @@ export const NAV_LABELS = {
     settlements: "تحصيل الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
+    campaigns: "حملات واتساب",
     marketing: "التسويق",
     profit: "الأرباح",
     ads: "الحملات الإعلانية",

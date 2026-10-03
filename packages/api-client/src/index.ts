@@ -83,3 +83,5 @@ export * from "./endpoints/orderEmails";
 export * from "./endpoints/coupons";
 // Lost orders: refused and unfinished checkouts, recovery (lane 2).
 export * from "./endpoints/lostOrders";
+// WhatsApp campaigns to consenting contacts.
+export * from "./endpoints/whatsappCampaigns";
