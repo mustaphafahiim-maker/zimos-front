@@ -939,28 +939,40 @@ export class ApiClient {
   }
 
   /**
-   * The charge to pay now: the open one, or the next period's written by the
-   * server. 409 NO_PAYMENT_METHOD (contact support), PLAN_IS_FREE, NO_PLAN.
+   * The charge to pay now: the open one, or the next period's as the server
+   * would write it (id "next"), and the ways to pay it. Writes nothing,
+   * so the plan can still change. 409 NO_PAYMENT_METHOD (contact support),
+   * PLAN_IS_FREE, NO_PLAN.
    */
   async openBillingInvoice(workspaceId: string): Promise<OpenBillingInvoiceResult> {
     return this.request<OpenBillingInvoiceResult>(`/workspaces/${workspaceId}/billing/invoices/open`, { method: "POST", body: {} });
   }
 
   /**
-   * A transfer's proof for a charge: the method, the sender's mobile number
-   * and the screenshot. No amount: the server takes the charge's. 409
+   * A transfer's proof for a charge (`invoiceId` an open charge's id, or
+   * "next": the server writes the charge with the proof): the method,
+   * the sender's mobile number and the screenshot. No amount: the server
+   * takes the charge's. `expectedAmount`, the amount the merchant was shown,
+   * is only compared with it (an API from before ignores it). 409
    * PROOF_IMAGE_DUPLICATE / PROOF_ALREADY_OPEN / TOO_MANY_OPEN_PROOFS /
-   * CHARGE_NOT_PENDING, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422
-   * INVALID_SENDER_PHONE / PAYMENT_METHOD_NOT_AVAILABLE.
+   * CHARGE_NOT_PENDING / CHARGE_AMOUNT_CHANGED / MANUAL_PAYMENT_CURRENCY_UNSUPPORTED
+   * / PLAN_IS_FREE / NO_PLAN, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE,
+   * 422 INVALID_SENDER_PHONE / PAYMENT_METHOD_NOT_AVAILABLE.
    */
   async submitBillingPaymentProof(
     workspaceId: string,
     invoiceId: string,
-    { methodCode, senderPhone, file }: { methodCode: string; senderPhone: string; file: File | Blob }
+    {
+      methodCode,
+      senderPhone,
+      file,
+      expectedAmount,
+    }: { methodCode: string; senderPhone: string; file: File | Blob; expectedAmount?: number }
   ): Promise<{ proof: BillingPaymentProof }> {
     const form = new FormData();
     form.append("methodCode", methodCode);
     form.append("senderPhone", senderPhone);
+    if (expectedAmount != null) form.append("expectedAmount", String(expectedAmount));
     form.append("file", file, file instanceof File ? file.name : "transfer");
     const res = await this.rawFetch(`/workspaces/${workspaceId}/billing/invoices/${invoiceId}/payment-proofs`, {
       method: "POST",
