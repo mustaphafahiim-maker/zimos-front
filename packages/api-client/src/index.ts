@@ -54,6 +54,7 @@ export * from "./endpoints/manualTransfers";
 export * from "./endpoints/paymentRules";
 export * from "./endpoints/currencies";
 export * from "./endpoints/savedPaymentMethods";
+export * from "./endpoints/live";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
@@ -78,3 +79,5 @@ export * from "./endpoints/inbox";
 export * from "./endpoints/offers";
 // Coupons: bulk codes, minimum order, coupon preview (lane 3).
 export * from "./endpoints/coupons";
+// Lost orders: refused and unfinished checkouts, recovery (lane 2).
+export * from "./endpoints/lostOrders";
