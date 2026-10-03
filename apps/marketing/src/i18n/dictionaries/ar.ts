@@ -316,6 +316,7 @@ export const ar: Dictionary = {
     legalName: "الاسم",
     registration: "السجل التجاري",
     relatedHeading: "صفحات ذات صلة",
+    socialHeading: "تابعنا وتواصل معنا",
   },
 
   faq: {
