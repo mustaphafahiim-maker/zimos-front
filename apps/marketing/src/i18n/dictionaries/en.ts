@@ -317,6 +317,7 @@ export const en: Dictionary = {
     legalName: "Name",
     registration: "Commercial registration",
     relatedHeading: "Related pages",
+    socialHeading: "Follow us and get in touch",
   },
 
   faq: {

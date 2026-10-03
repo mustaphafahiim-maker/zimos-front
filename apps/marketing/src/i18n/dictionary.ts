@@ -176,6 +176,8 @@ export interface Dictionary {
     legalName: string;
     registration: string;
     relatedHeading: string;
+    /** Above the social accounts on the contact page. */
+    socialHeading: string;
   };
 
   faq: {

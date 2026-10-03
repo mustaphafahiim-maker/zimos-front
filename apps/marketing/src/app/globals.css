@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* The shared social links (footer, contact page) live in packages/ui; only
+   that folder is scanned, not the rest of the package. */
+@source "../../../../packages/ui/src/social-links";
+
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */
 @custom-variant dark (&:where(.dark, .dark *));

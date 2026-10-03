@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SocialLinks } from "@store-builder/ui/social-links";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { formatLongDate } from "@/lib/format";
@@ -27,7 +28,8 @@ export function policyMetadata(slug: PolicySlug, locale: string): Metadata {
 /**
  * A policy page (refund policy, terms, privacy) or the contact page: its
  * title, the "last updated" date, the text from src/content/policies.json,
- * and — on the contact page — the contact and entity details.
+ * and — on the contact page — the contact details, ZIMOS's social accounts
+ * and the entity details.
  */
 export async function PolicyPage({ slug, params }: { slug: PolicySlug; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -128,6 +130,7 @@ function ContactDetails({ locale }: { locale: Locale }) {
           {row(legal.hours, company.hours)}
         </dl>
       </section>
+      <SocialLinks locale={locale} heading={legal.socialHeading} headingClassName="text-xl font-bold text-ink" />
       <section aria-labelledby="entity-heading">
         <h2 id="entity-heading" className="text-xl font-bold text-ink">
           {legal.entityHeading}

@@ -1,3 +1,4 @@
+import { SocialLinks } from "@store-builder/ui/social-links";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionary";
 import { companyDetails } from "@/lib/policies";
@@ -6,8 +7,9 @@ import { container } from "./ui";
 import { ZimosLogo } from "./zimos-logo";
 
 /**
- * Logo, tagline, the link columns — pricing, contact and the refund, terms
- * and privacy pages among them — the language switch, and the legal entity
+ * Logo, tagline, ZIMOS's social accounts (packages/ui/src/social-links), the
+ * link columns — pricing, contact and the refund, terms and privacy pages
+ * among them — the language switch, and the legal entity
  * (name and commercial registration, from src/content/policies.json). Every
  * link is prefixed with the active locale; `#section` links go to the home
  * page's sections. The © year is computed at render.
@@ -31,6 +33,7 @@ export function SiteFooter({
           <div className="max-w-xs">
             <ZimosLogo height={32} />
             <p className="mt-6 text-sm leading-relaxed text-ink-soft">{brand.tomorrow}</p>
+            <SocialLinks locale={locale} className="mt-6" />
             <div className="mt-6 flex items-center gap-3">
               <span className="text-sm text-ink-soft">{copy.languageLabel}</span>
               <LocaleSwitcher />
