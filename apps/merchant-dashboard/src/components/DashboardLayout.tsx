@@ -20,6 +20,7 @@ const STRINGS = {
     signOut: "Sign out",
     selectStore: "Select a store",
     newStore: "+ New store",
+    allStores: "All my stores",
     openNav: "Open navigation",
     closeNav: "Close navigation",
     navLabel: "Main navigation",
@@ -33,6 +34,7 @@ const STRINGS = {
     signOut: "تسجيل الخروج",
     selectStore: "اختر متجرًا",
     newStore: "+ متجر جديد",
+    allStores: "كل متاجري",
     openNav: "فتح القائمة",
     closeNav: "إغلاق القائمة",
     navLabel: "القائمة الرئيسية",
@@ -290,6 +292,15 @@ export function DashboardLayout() {
                     </button>
                   ))}
                   <div className="my-1 border-t border-line" />
+                  <button
+                    onClick={() => {
+                      setSwitcherOpen(false);
+                      navigate("/stores");
+                    }}
+                    className="cursor-pointer block w-full px-3 py-2 text-start text-sm text-ink hover:bg-primary-soft"
+                  >
+                    {t.allStores}
+                  </button>
                   <button
                     onClick={() => {
                       setSwitcherOpen(false);
