@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  Sparkles,
   Activity,
   BadgeDollarSign,
   BarChart3,
@@ -64,6 +65,7 @@ export type NavKey =
   | "ads"
   | "media"
   | "digital"
+  | "ai"
   | "storeSettings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
@@ -135,6 +137,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "grow",
     items: [
       { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "ai", to: "/ai", icon: Sparkles },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
@@ -225,6 +228,7 @@ export const NAV_LABELS = {
     ads: "Ad campaigns",
     media: "Media library",
     digital: "Digital products",
+    ai: "AI studio",
     storeSettings: "Store settings",
   },
   ar: {
@@ -257,6 +261,7 @@ export const NAV_LABELS = {
     ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
+    ai: "استوديو الذكاء الاصطناعي",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;

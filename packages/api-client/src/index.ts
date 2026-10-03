@@ -65,6 +65,8 @@ export * from "./endpoints/stores";
 export * from "./endpoints/dashboard";
 // Digital products: file library, deliveries, licence codes, download grants (lane 8).
 export * from "./endpoints/digital";
+// AI module: generation jobs, usage, apply as draft (lane 8).
+export * from "./endpoints/ai";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
