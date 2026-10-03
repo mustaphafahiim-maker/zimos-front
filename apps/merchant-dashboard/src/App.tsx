@@ -25,6 +25,7 @@ import { CollectionsPage } from "@/pages/catalog/CollectionsPage";
 import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
+import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { AbandonedCartsPage } from "@/pages/abandoned/AbandonedCartsPage";
@@ -33,10 +34,14 @@ import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
+import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
 import { BundlesPage } from "@/pages/offers/BundlesPage";
+import { OrderBumpsPage, UpsellsPage } from "@/pages/offers/OrderBumpsPage";
+import { CrossSellPage } from "@/pages/offers/CrossSellPage";
+import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -116,6 +121,7 @@ export default function App() {
                       <Route path="/" element={<DashboardHomePage />} />
 
                       <Route path="/orders" element={<OrdersListPage />} />
+                      <Route path="/orders/new" element={<ManualOrderPage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
@@ -132,10 +138,15 @@ export default function App() {
                       <Route path="/customers" element={<ContactsPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/stores" element={<StoresPage />} />
+                      <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
                       <Route path="/offers/bundles" element={<BundlesPage />} />
+                      <Route path="/offers/order-bumps" element={<OrderBumpsPage />} />
+                      <Route path="/offers/cross-sell" element={<CrossSellPage />} />
+                      <Route path="/offers/upsells" element={<UpsellsPage />} />
+                      <Route path="/offers/exit-popup" element={<ExitDownsellPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />

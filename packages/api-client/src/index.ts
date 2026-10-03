@@ -51,6 +51,9 @@ export * from "./endpoints/insights";
 export * from "./endpoints/profit";
 export * from "./endpoints/settlementStatements";
 export * from "./endpoints/manualTransfers";
+export * from "./endpoints/paymentRules";
+export * from "./endpoints/currencies";
+export * from "./endpoints/savedPaymentMethods";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
@@ -61,9 +64,15 @@ export * from "./endpoints/contacts";
 export * from "./endpoints/stores";
 // Global search, setup guide, sidebar shortcuts (lane 8).
 export * from "./endpoints/dashboard";
+// Digital products: file library, deliveries, licence codes, download grants (lane 8).
+export * from "./endpoints/digital";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
 export * from "./endpoints/automations";
 // Quantity bundles (lane 3).
 export * from "./endpoints/bundles";
+// The WhatsApp inbox: filters, assignment, customer panel, quick replies, live stream.
+export * from "./endpoints/inbox";
+// Offer rules: product order bumps, cross-sell, thank-you upsell, exit popup (lane 3).
+export * from "./endpoints/offers";

@@ -245,3 +245,138 @@ export async function ordersNeighbors(
 ): Promise<OrderNeighbors> {
   return client.request<OrderNeighbors>(`${base(workspaceId, orderId)}/neighbors${listQuery ? `?${listQuery}` : ""}`);
 }
+
+// ------------------------------------------------------------------ bulk --
+
+export type OrderBulkAction =
+  | "set_status"
+  | "add_tag"
+  | "remove_tag"
+  | "archive"
+  | "unarchive"
+  | "mark_seen"
+  | "mark_unseen"
+  | "ship";
+
+export interface OrderBulkPayload {
+  status?: OrderStage;
+  reason?: string;
+  followUp?: "unreachable" | "postponed";
+  tags?: string[];
+  /** ship: a connected courier's code, or a name for a manual shipment. */
+  carrierCode?: string;
+  notes?: string;
+}
+
+export interface OrderBulkResult {
+  orderId: string;
+  orderNumber: string | null;
+  ok: boolean;
+  /** Set when `ok` is false: the code the single-order endpoint would have answered. */
+  code?: string;
+  message?: string;
+}
+
+export interface OrderBulkResponse {
+  action: OrderBulkAction;
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: OrderBulkResult[];
+}
+
+/**
+ * One action over many orders: named (`orderIds`) or everything the list
+ * shows for `filter` (up to 500). Always 200 when the request is valid —
+ * read `results` for what happened to each order.
+ */
+export async function ordersBulk(
+  client: ApiClient,
+  workspaceId: string,
+  body: { action: OrderBulkAction; payload?: OrderBulkPayload } & (
+    | { orderIds: string[]; filter?: undefined }
+    | { filter: Record<string, unknown>; orderIds?: undefined }
+  )
+): Promise<OrderBulkResponse> {
+  return client.request<OrderBulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body });
+}
+
+// ---------------------------------------------------------- manual order --
+
+export interface OrderDraftItem {
+  variantId: string;
+  offerId?: string;
+  quantity: number;
+}
+
+export interface OrderDraft {
+  items: OrderDraftItem[];
+  contact?: { fullName: string; phone: string; email?: string };
+  shippingAddress?: { country: string; province?: string; city?: string; addressLine?: string };
+  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  discountCode?: string;
+  /** Minor units. Set by staff to replace the calculated shipping. */
+  shippingAmount?: number;
+}
+
+export interface OrderDraftPreview {
+  currency: string;
+  subtotalAmount: string;
+  discountAmount: string;
+  shippingAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  items: Array<{
+    variantId: string;
+    offerId: string | null;
+    name: string;
+    options: Record<string, string> | null;
+    offerName: string | null;
+    quantity: number;
+    unitPriceAmount: string;
+    lineTotalAmount: string;
+  }>;
+}
+
+/** Prices a manual order exactly as creating it would, without saving anything. */
+export async function ordersPreviewDraft(client: ApiClient, workspaceId: string, draft: OrderDraft): Promise<OrderDraftPreview> {
+  const { preview } = await client.request<{ preview: OrderDraftPreview }>(`${base(workspaceId)}/manual/preview`, {
+    method: "POST",
+    body: draft,
+  });
+  return preview;
+}
+
+export interface OrderDraftCustomer {
+  id: string;
+  fullName: string | null;
+  phone: string;
+  email: string | null;
+  isBlacklisted: boolean;
+  totalOrders: number;
+  totalRejectedOrders: number;
+  lastAddress: { country?: string; province?: string | null; city?: string; addressLine?: string } | null;
+  lastOrder: { id: string; orderNumber: string; createdAt: string } | null;
+}
+
+/** The customer behind a phone number, or null when it is new to the store. */
+export async function ordersCustomerByPhone(
+  client: ApiClient,
+  workspaceId: string,
+  phone: string
+): Promise<OrderDraftCustomer | null> {
+  const { customer } = await client.request<{ customer: OrderDraftCustomer | null }>(
+    `${base(workspaceId)}/manual/customer?phone=${encodeURIComponent(phone)}`
+  );
+  return customer;
+}
+
+export interface OrderGovernorate {
+  code: string;
+  ar: string;
+  en: string;
+}
+
+export async function ordersManualOptions(client: ApiClient, workspaceId: string): Promise<{ governorates: OrderGovernorate[] }> {
+  return client.request<{ governorates: OrderGovernorate[] }>(`${base(workspaceId)}/manual/options`);
+}

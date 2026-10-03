@@ -262,6 +262,12 @@ export function saveOrderSnapshot(workspaceId: string, snapshot: OrderSnapshot) 
   writeJson(ordersKey(workspaceId), next);
 }
 
+/** The order this device placed last in this store, if any (newest is kept first). */
+export function latestOrderSnapshot(workspaceId: string): OrderSnapshot | null {
+  const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];
+  return list[0] ?? null;
+}
+
 export function getOrderSnapshot(workspaceId: string, orderId: string): OrderSnapshot | null {
   const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];
   return list.find((o) => o.id === orderId) ?? null;

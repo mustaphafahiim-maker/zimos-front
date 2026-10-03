@@ -416,6 +416,12 @@ export function FormElement({
       submitLabel={str(props, "submitLabel", t.renderer.formSend)}
       successMessage={str(props, "successMessage")}
       askConsent={props.askConsent !== false}
+      extra={{
+        fields: strList(props, "extraFields").slice(0, 8),
+        choiceLabel: str(props, "choiceLabel"),
+        choices: strList(props, "choices").slice(0, 20),
+        checkboxLabel: str(props, "checkboxLabel"),
+      }}
       labels={{
         name: t.renderer.formName,
         phone: t.renderer.formPhone,
