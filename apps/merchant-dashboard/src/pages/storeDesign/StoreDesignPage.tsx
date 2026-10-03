@@ -11,13 +11,14 @@ import { PagesTab } from "./PagesTab";
 import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
 import { CustomCodeTab } from "./CustomCodeTab";
+import { DomainsTab } from "./DomainsTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "custom-code"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "domains", "custom-code"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -33,6 +34,7 @@ const STRINGS = {
     general: "General",
     seo: "SEO",
     "custom-code": "Custom code",
+    domains: "Domains",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -46,6 +48,7 @@ const STRINGS = {
     general: "عام",
     seo: "SEO",
     "custom-code": "أكواد التخصيص",
+    domains: "الدومينات",
   },
 } satisfies Messages;
 
@@ -75,6 +78,7 @@ export function StoreDesignPage() {
       {active === "general" && <GeneralTab key={workspaceId} />}
       {active === "seo" && <SeoTab key={workspaceId} />}
       {active === "custom-code" && <CustomCodeTab key={workspaceId} />}
+      {active === "domains" && <DomainsTab key={workspaceId} />}
     </div>
   );
 }

@@ -72,6 +72,7 @@ const ICONS: Record<string, LucideIcon> = {
   "integration.failed": PlugZap,
   "export.ready": Download,
   announcement: Megaphone,
+  automation: Megaphone,
 };
 
 /**
