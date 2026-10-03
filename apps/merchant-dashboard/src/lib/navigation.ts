@@ -11,6 +11,7 @@ import {
   Globe,
   Images,
   LayoutDashboard,
+  LayoutGrid,
   LineChart,
   LifeBuoy,
   Megaphone,
@@ -64,7 +65,8 @@ export type NavKey =
   | "ads"
   | "media"
   | "digital"
-  | "storeSettings";
+  | "storeSettings"
+  | "apps";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -166,6 +168,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "config",
     labelKey: null,
     items: [
+      { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
@@ -201,7 +204,7 @@ export const NAV_LABELS = {
     confirmationQueue: "Confirmation queue",
     fraud: "Fraud protection",
     returns: "Returns",
-    abandonedCarts: "Abandoned carts",
+    abandonedCarts: "Lost orders",
     catalog: "Catalog",
     reviews: "Reviews",
     customers: "Contacts",
@@ -215,6 +218,7 @@ export const NAV_LABELS = {
     webAnalytics: "Web analytics",
     attribution: "Sales attribution",
     realtime: "Realtime",
+    apps: "Apps",
     settings: "Settings",
     support: "Contact support",
     settlements: "COD settlements",
@@ -233,7 +237,7 @@ export const NAV_LABELS = {
     confirmationQueue: "قائمة التأكيد",
     fraud: "الحماية من الاحتيال",
     returns: "المرتجعات",
-    abandonedCarts: "السلات المتروكة",
+    abandonedCarts: "الطلبات المفقودة",
     catalog: "الكتالوج",
     reviews: "التقييمات",
     customers: "جهات الاتصال",
@@ -247,6 +251,7 @@ export const NAV_LABELS = {
     webAnalytics: "زيارات الموقع",
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
+    apps: "التطبيقات",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
     settlements: "تحصيل الشحن",
