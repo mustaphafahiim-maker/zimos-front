@@ -245,3 +245,58 @@ export async function ordersNeighbors(
 ): Promise<OrderNeighbors> {
   return client.request<OrderNeighbors>(`${base(workspaceId, orderId)}/neighbors${listQuery ? `?${listQuery}` : ""}`);
 }
+
+// ------------------------------------------------------------------ bulk --
+
+export type OrderBulkAction =
+  | "set_status"
+  | "add_tag"
+  | "remove_tag"
+  | "archive"
+  | "unarchive"
+  | "mark_seen"
+  | "mark_unseen"
+  | "ship";
+
+export interface OrderBulkPayload {
+  status?: OrderStage;
+  reason?: string;
+  followUp?: "unreachable" | "postponed";
+  tags?: string[];
+  /** ship: a connected courier's code, or a name for a manual shipment. */
+  carrierCode?: string;
+  notes?: string;
+}
+
+export interface OrderBulkResult {
+  orderId: string;
+  orderNumber: string | null;
+  ok: boolean;
+  /** Set when `ok` is false: the code the single-order endpoint would have answered. */
+  code?: string;
+  message?: string;
+}
+
+export interface OrderBulkResponse {
+  action: OrderBulkAction;
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: OrderBulkResult[];
+}
+
+/**
+ * One action over many orders: named (`orderIds`) or everything the list
+ * shows for `filter` (up to 500). Always 200 when the request is valid —
+ * read `results` for what happened to each order.
+ */
+export async function ordersBulk(
+  client: ApiClient,
+  workspaceId: string,
+  body: { action: OrderBulkAction; payload?: OrderBulkPayload } & (
+    | { orderIds: string[]; filter?: undefined }
+    | { filter: Record<string, unknown>; orderIds?: undefined }
+  )
+): Promise<OrderBulkResponse> {
+  return client.request<OrderBulkResponse>(`${base(workspaceId)}/bulk`, { method: "POST", body });
+}
