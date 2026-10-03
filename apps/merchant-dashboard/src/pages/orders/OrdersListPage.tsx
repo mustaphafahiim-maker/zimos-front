@@ -33,6 +33,7 @@ import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
+import { OrderListDocuments } from "./components/OrderDocuments";
 import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
@@ -260,7 +261,13 @@ export function OrdersListPage() {
         title={t.title}
         description={t.description}
         actions={
-          <>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <OrderListDocuments
+              onImported={() => {
+                list.reload();
+                pipeline.refresh({ silent: true });
+              }}
+            />
             <ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />
             <Link
               to="/orders/new"
@@ -268,7 +275,7 @@ export function OrdersListPage() {
             >
               {t.createOrder}
             </Link>
-          </>
+          </div>
         }
       />
 
