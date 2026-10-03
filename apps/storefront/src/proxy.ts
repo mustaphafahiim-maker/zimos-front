@@ -14,6 +14,7 @@ import {
   isTokenShaped,
   storePreviewCookieOptions,
 } from "@/lib/storePreview";
+import { resolveCustomHost } from "@/lib/customDomains";
 
 /**
  * Paths that are served as they are, whatever the host: Next's own internals,
@@ -45,9 +46,12 @@ function isPassThrough(pathname: string): boolean {
  * so the merchant's own subdomain is what stays in the address bar. The slug
  * goes through as the workspace id because the storefront API accepts either.
  *
- * Three kinds of host reach this app:
+ * Four kinds of host reach this app:
  *
  *   • a store — `<slug>.zimos.co`, or `<slug>.localhost:3000` in development;
+ *   • a merchant's own domain connected to a store (lib/customDomains.ts asks
+ *     the API which store). Its root can open a funnel instead of the store
+ *     home — the domain's "home funnel";
  *   • the root domain with no store in it (`zimos.co`, `www.zimos.co`,
  *     `store.zimos.co`), which has nothing of its own to show and so goes to
  *     the marketing site;
@@ -57,11 +61,12 @@ function isPassThrough(pathname: string): boolean {
 /** Metadata files every store answers for itself, from its own settings. */
 const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml"]);
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // On a store's own host these two are the store's (app/store/[workspaceId]/…/route.ts).
   if (STORE_FILES.has(pathname)) {
-    const storeSlug = storeSlugFromHost(request.headers.get("host"));
+    const fileHost = request.headers.get("host");
+    const storeSlug = storeSlugFromHost(fileHost) ?? (await resolveCustomHost(fileHost))?.slug;
     if (storeSlug) {
       const url = request.nextUrl.clone();
       url.pathname = `/store/${storeSlug}${pathname}`;
@@ -88,7 +93,8 @@ export function proxy(request: NextRequest) {
   const next = () => keep(NextResponse.next({ request: { headers } }));
 
   const host = request.headers.get("host");
-  const slug = storeSlugFromHost(host);
+  const custom = storeSlugFromHost(host) ? null : await resolveCustomHost(host);
+  const slug = storeSlugFromHost(host) ?? custom?.slug ?? null;
 
   // The internal shape, reached directly: deep links that predate subdomains,
   // the dashboard's preview route, and local development.
@@ -110,7 +116,11 @@ export function proxy(request: NextRequest) {
     }
 
     const url = request.nextUrl.clone();
-    url.pathname = `/store/${slug}${pathname === "/" ? "" : pathname}`;
+    // A merchant domain with a home funnel opens that funnel on its root.
+    url.pathname =
+      pathname === "/" && custom?.homeFunnelRef
+        ? `/store/${slug}/f/${encodeURIComponent(custom.homeFunnelRef)}`
+        : `/store/${slug}${pathname === "/" ? "" : pathname}`;
     headers.set(STORE_SLUG_HEADER, slug);
     return keep(NextResponse.rewrite(url, { request: { headers } }));
   }

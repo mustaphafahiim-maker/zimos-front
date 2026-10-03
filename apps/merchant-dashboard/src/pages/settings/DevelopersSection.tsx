@@ -17,6 +17,8 @@ import {
   type ApiKeyScope,
   type WebhookDeliveryDto,
   type WebhookEndpointDto,
+  type WebhookFilter,
+  webhooksCreateFiltered,
 } from "@store-builder/api-client";
 import { apiClient, apiBaseUrl } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -28,6 +30,7 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
 import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -559,6 +562,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                     {endpoint.secretHint}
                   </code>
                 </p>
+                <WebhookEndpointNotes endpoint={endpoint} />
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
                     {testing === endpoint.id ? t.testing : t.sendTest}
@@ -581,6 +585,8 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
           </ul>
         </DataState>
       </div>
+
+      {endpoints.length > 0 && <WebhookDeliveryLog />}
 
       <NewEndpointModal
         t={t}
@@ -666,6 +672,7 @@ function NewEndpointModal({
   const [url, setUrl] = useState("");
   const [all, setAll] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
+  const [filter, setFilter] = useState<WebhookFilter | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -674,6 +681,7 @@ function NewEndpointModal({
     setUrl("");
     setAll(true);
     setPicked([]);
+    setFilter(null);
     setError(null);
     setSecret(null);
     onClose();
@@ -684,10 +692,10 @@ function NewEndpointModal({
     setBusy(true);
     setError(null);
     try {
-      const created = await developersCreateWebhook(apiClient, workspaceId, {
-        url: url.trim(),
-        events: all ? ["*"] : picked,
-      });
+      const body = { url: url.trim(), events: all ? ["*"] : picked };
+      const created = filter
+        ? await webhooksCreateFiltered(apiClient, workspaceId, { ...body, filter })
+        : await developersCreateWebhook(apiClient, workspaceId, body);
       setSecret(created.signingSecret);
       onCreated();
     } catch (err) {
@@ -755,6 +763,7 @@ function NewEndpointModal({
             </div>
           )}
         </fieldset>
+        <WebhookFilterField value={filter} onChange={setFilter} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={busy}>

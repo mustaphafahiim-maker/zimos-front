@@ -133,7 +133,8 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
       <div className="border-t border-line">
         <div className={`${container} flex flex-col items-center justify-between gap-2 py-4 sm:flex-row`}>
           <p className="text-xs text-ink-soft">{t.footer.rights(store.name, year)}</p>
-          <PoweredByZimos label={t.footer.poweredBy} />
+          {/* Removed for stores whose plan includes it (Plan.features.remove_branding). */}
+          {(store as { removeBranding?: unknown }).removeBranding !== true && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>
       </div>
     </footer>
