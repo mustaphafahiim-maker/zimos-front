@@ -71,6 +71,8 @@ export * from "./endpoints/dashboard";
 export * from "./endpoints/digital";
 // AI module: generation jobs, usage, apply as draft (lane 8).
 export * from "./endpoints/ai";
+// Affiliates: marketers, commissions, payouts and the portal (lane 8).
+export * from "./endpoints/affiliates";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
@@ -91,3 +93,7 @@ export * from "./endpoints/lostOrders";
 export * from "./endpoints/whatsappCampaigns";
 // Social proof, newsletter sign-up, referral results (lane 3).
 export * from "./endpoints/engagement";
+// Product feed, Google Merchant checklist, offers summary (lane 3).
+export * from "./endpoints/feeds";
+// The shopper's order tracking page: steps, courier, signed tracking link.
+export * from "./endpoints/orderTracking";

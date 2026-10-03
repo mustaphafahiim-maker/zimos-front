@@ -114,6 +114,8 @@ function elementSummary(element: PageElement): string {
     case "upsell_accept_button":
     case "upsell_decline_link":
       return truncate(str("label"));
+    case "repeater":
+      return truncate([str("title"), str("source").split(".").pop()].filter(Boolean).join(" · "));
     case "toggle":
     case "price":
     case "reviews_list":

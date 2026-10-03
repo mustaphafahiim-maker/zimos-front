@@ -36,6 +36,7 @@ import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
+import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -45,6 +46,7 @@ import { CrossSellPage } from "@/pages/offers/CrossSellPage";
 import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
 import { OrderRulesPage } from "@/pages/offers/OrderRulesPage";
 import { NewsletterPage, ReferralLinksPage, SocialProofPage } from "@/pages/offers/EngagementPages";
+import { ProductFeedPage } from "@/pages/offers/ProductFeedPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -145,6 +147,7 @@ export default function App() {
                       <Route path="/stores" element={<StoresPage />} />
                       <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/ai" element={<AiStudioPage />} />
+                      <Route path="/affiliates" element={<AffiliatesPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
@@ -157,6 +160,7 @@ export default function App() {
                       <Route path="/offers/social-proof" element={<SocialProofPage />} />
                       <Route path="/offers/newsletter" element={<NewsletterPage />} />
                       <Route path="/offers/referrals" element={<ReferralLinksPage />} />
+                      <Route path="/offers/feed" element={<ProductFeedPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
