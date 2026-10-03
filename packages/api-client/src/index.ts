@@ -108,3 +108,5 @@ export * from "./endpoints/feeds";
 export * from "./endpoints/orderTracking";
 // Funnel share codes, import, map draft and issues (lane 5).
 export * from "./endpoints/funnelExtras";
+// Default courier, automatic booking, inspection and courier notes (shipping/carrierBooking.js).
+export * from "./endpoints/carrierBooking";
