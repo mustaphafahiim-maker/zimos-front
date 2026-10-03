@@ -2,6 +2,9 @@
 /* The six store themes (Store look → Theme). Inert unless the store wrapper
    carries `data-store-theme`; see the file for how a theme is put together. */
 @import "./store-themes.css";
+/* The showcase sections (page-renderer/showcase) and the Uokids store theme. */
+@import "./store-sections.css";
+@import "./store-theme-uokids.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */

@@ -16,7 +16,7 @@ import { mixHex, type AccentGrounds } from "@/lib/contrast";
  * which the merchant still picks font and corners themselves.
  */
 
-export const STORE_THEMES = ["elegant", "bold", "minimal", "classic", "warm", "glass"] as const;
+export const STORE_THEMES = ["elegant", "bold", "minimal", "classic", "warm", "glass", "uokids"] as const;
 export type StoreThemeKey = (typeof STORE_THEMES)[number];
 
 export const ORIGINAL_LOOK = "original";
@@ -168,6 +168,20 @@ export const THEME_SPECS: Record<ThemeChoice, ThemeSpec> = {
     glass: { light: { alpha: 0.58, tint: 0.08 }, dark: { alpha: 0.55, tint: 0.1 } },
     fonts: { display: '"Space Grotesk", "Readex Pro", ui-sans-serif, system-ui, sans-serif', displayWeight: 600 },
     sketch: { buttonRadius: "999px", cardRadius: "0.7em", imageRadius: "0.7em", card: "glass", hero: "panel", upper: false },
+  },
+  uokids: {
+    key: "uokids",
+    name: { en: "Uokids", ar: "يوكيدز" },
+    description: {
+      en: "White pages, navy ink and a coral accent, round headings and soft cards under a wave.",
+      ar: "صفحات بيضاء وحبر كحلي ولمسة وردية، عناوين مستديرة وبطاقات ناعمة فوق موجة.",
+    },
+    palette: {
+      light: { paper: "#FFFFFF", raised: "#FFFFFF", ink: "#235D90", inkSoft: "#687985", line: "#E6E0D6", accent: "#E8415B", secondary: "#177966" },
+      dark: { paper: "#0E1A26", raised: "#152433", ink: "#DBE9F6", inkSoft: "#9FB0BF", line: "#263A4D", accent: "#FF6B82", secondary: "#4FC7AE" },
+    },
+    fonts: { display: '"Baloo Bhaijaan 2", "Tajawal", ui-sans-serif, system-ui, sans-serif', displayWeight: 600 },
+    sketch: { buttonRadius: "999px", cardRadius: "0.9em", imageRadius: "0.9em", card: "shadow", hero: "band", upper: false },
   },
 };
 

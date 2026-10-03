@@ -193,10 +193,10 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   return (
     // Arrow keys work wherever the focus sits in the gallery — the main photo
     // or any thumbnail — because the handler catches them on the way up.
-    <div onKeyDown={onKeyDown}>
+    <div onKeyDown={onKeyDown} className="zt-gallery" data-many={many ? "" : undefined}>
       <div
         ref={frameRef}
-        className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-paper"
+        className="zt-gallery-frame relative aspect-square overflow-hidden rounded-2xl border border-line bg-paper"
       >
         {current ? (
           <button
@@ -251,7 +251,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
       </div>
 
       {many && (
-        <ul className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <ul className="zt-gallery-thumbs mt-3 flex gap-2 overflow-x-auto pb-1">
           {images.map((src, i) => (
             <li key={`${src}-${i}`} className="shrink-0">
               <button

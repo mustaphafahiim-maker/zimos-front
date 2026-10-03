@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { StoreAnnouncement } from "@/lib/storeAnnouncement";
 import { StoreLink } from "@/components/StoreRoute";
 import { ArrowIcon } from "./Icons";
+import { PromoMarquee } from "./shell/PromoMarquee";
 import { container } from "./ui";
 
 /** How long each message sits before the next one fades in. */
@@ -57,6 +58,8 @@ export function AnnouncementBar({ announcement, label }: { announcement: StoreAn
       {shown}
     </span>
   );
+
+  if (announcement.marquee) return <PromoMarquee messages={messages} label={label} style={style} />;
 
   return (
     <div

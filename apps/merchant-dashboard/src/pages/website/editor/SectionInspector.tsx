@@ -43,6 +43,7 @@ import {
   type EditorUi,
 } from "./editorLocale";
 import { ImageField, ImageListField } from "./ImageField";
+import { ItemListField } from "./ItemListField";
 import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
 import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
 
@@ -626,6 +627,21 @@ function ElementField({
           hint={hint}
           value={asCompareRows(raw)}
           ui={ui}
+          onChange={(next) => onChange(spec.key, next)}
+        />
+      );
+
+    case "itemList":
+      return (
+        <ItemListField
+          label={label}
+          hint={hint}
+          value={raw}
+          itemLabel={spec.itemLabel}
+          itemLabelAr={spec.itemLabelAr}
+          titleKey={spec.titleKey}
+          fields={spec.fields}
+          max={spec.max}
           onChange={(next) => onChange(spec.key, next)}
         />
       );

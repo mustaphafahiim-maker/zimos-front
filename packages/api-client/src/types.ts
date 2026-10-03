@@ -415,6 +415,17 @@ export const PAGE_ELEMENT_TYPES = [
   "upsell_decline_link",
   // SPEC §9.4: one block per item of a product list.
   "repeater",
+  // Showcase sections — full-width storefront bands (backend showcaseElements.js).
+  "hero_slider",
+  "category_tiles",
+  "trust_strip",
+  "bundle_cards",
+  "need_picker",
+  "product_rail",
+  "video_reels",
+  "product_shelf",
+  "product_cards",
+  "image_banner",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */

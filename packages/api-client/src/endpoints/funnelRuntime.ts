@@ -125,6 +125,8 @@ export interface FunnelRuntimeAdvancePayload {
     type: FunnelRuntimeOutcomeType;
     /** completed_checkout: the order just placed on this step. */
     orderId?: string;
+    /** clicked_through: the page button that was pressed, for links drawn from one button. */
+    sourceElementId?: string;
   };
 }
 

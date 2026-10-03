@@ -71,6 +71,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  * catalogue returns. Null when the step has no product card.
  */
 async function checkoutProduct(workspaceId: string, tree: PageTree | null): Promise<StorefrontProduct | null> {
+  // The page's own product (the funnel wizard and the editor's "Page product" set it) comes first.
+  const pageProduct = (tree as { productId?: unknown } | null)?.productId;
+  if (typeof pageProduct === "string" && pageProduct.trim()) {
+    const product = await getStorefrontProduct(workspaceId, pageProduct.trim());
+    if (product) return product;
+  }
   for (const section of tree?.sections ?? []) {
     for (const row of section.rows ?? []) {
       for (const column of row.columns ?? []) {

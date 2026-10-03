@@ -473,8 +473,15 @@ export function starterPlan(templateId: StarterTemplateId, locale: Locale): Star
 }
 
 /** Create a funnel, then its starter steps and edges (sequential). If a later call fails it throws with `partialFunnelId` attached. */
-export async function createFunnelFromStarter(workspaceId: string, name: string, templateId: StarterTemplateId, locale: Locale): Promise<FunnelDto> {
-  const funnel = await funnelsCreate(apiClient, workspaceId, { name });
+export async function createFunnelFromStarter(
+  workspaceId: string,
+  name: string,
+  templateId: StarterTemplateId,
+  locale: Locale,
+  /** The funnel's link, when the merchant chose one (otherwise made from the name). */
+  subdomain?: string
+): Promise<FunnelDto> {
+  const funnel = await funnelsCreate(apiClient, workspaceId, subdomain ? { name, subdomain } : { name });
   const plan = starterPlan(templateId, locale);
   try {
     for (const [i, s] of plan.steps.entries()) {

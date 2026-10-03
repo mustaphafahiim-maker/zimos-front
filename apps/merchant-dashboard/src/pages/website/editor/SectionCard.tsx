@@ -5,6 +5,7 @@ import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, useEditorLocale } from "./editorLocale";
+import { showcaseSummary } from "./showcaseBlocks";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -125,6 +126,9 @@ function elementSummary(element: PageElement): string {
     case "checkout_summary":
     case "order_summary":
       return truncate(str("title"));
+    default:
+      // The showcase sections (showcaseBlocks.ts).
+      return truncate(showcaseSummary(element.type, props) ?? "");
   }
 }
 
