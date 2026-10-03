@@ -1,11 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Pencil, Plus, Radio, Trash2 } from "lucide-react";
+import { Pencil, Plus, Radio, Send, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
   funnelsList,
   trackingPixelsCreate,
   trackingPixelsDelete,
   trackingPixelsList,
+  trackingPixelsSendTest,
   trackingPixelsUpdate,
   type TrackingPixelDto,
   type TrackingPixelPlatform,
@@ -103,6 +104,10 @@ const STRINGS = {
     deleteTitle: "Remove this pixel?",
     deleteBody: "{name} {id} will stop receiving events from your store.",
     deleting: "Removing…",
+    test: "Send test event",
+    testOk: "Test event accepted by {name}.",
+    testOkCode: "Test event accepted — look under Test events in {name}.",
+    testFailed: "{name} refused the test event: {error}",
   },
   ar: {
     title: "البيكسلات والأكواد",
@@ -163,6 +168,10 @@ const STRINGS = {
     deleteTitle: "حذف هذا البيكسل؟",
     deleteBody: "سيتوقف {name} {id} عن استقبال الأحداث من متجرك.",
     deleting: "جارٍ الحذف…",
+    test: "إرسال حدث تجريبي",
+    testOk: "{name} قبل الحدث التجريبي.",
+    testOkCode: "تم قبول الحدث التجريبي — ستجده في Test events داخل {name}.",
+    testFailed: "{name} رفض الحدث التجريبي: {error}",
   },
 } satisfies Messages;
 
@@ -205,7 +214,7 @@ const formOf = (p: TrackingPixelDto): FormState => ({
 });
 
 /** Marketing → Tracking tools: the store's pixels and tags. */
-export function TrackingPixelsSection() {
+export function TrackingPixelsSection({ onEventsChanged }: { onEventsChanged?: () => void } = {}) {
   const t = useT(STRINGS);
   const toast = useToast();
   const workspaceId = useWorkspaceId();
@@ -220,6 +229,24 @@ export function TrackingPixelsSection() {
       await refresh({ silent: true });
     } catch (err) {
       toast.error(errorMessage(err));
+    }
+  }
+
+  const [testing, setTesting] = useState<string | null>(null);
+
+  async function sendTest(pixel: TrackingPixelDto) {
+    const name = PLATFORM_META[pixel.platform]?.name ?? pixel.platform;
+    setTesting(pixel.id);
+    try {
+      const result = await trackingPixelsSendTest(apiClient, workspaceId, pixel.id);
+      if (result.ok) toast.success(fmt(result.usedTestCode ? t.testOkCode : t.testOk, { name }));
+      else toast.error(fmt(t.testFailed, { name, error: result.error ?? "" }));
+      await refresh({ silent: true });
+      onEventsChanged?.();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setTesting(null);
     }
   }
 
@@ -280,6 +307,11 @@ export function TrackingPixelsSection() {
       align: "end",
       cell: (p) => (
         <div className="flex items-center justify-end gap-1">
+          {p.capiEnabled && p.capiSupported && (
+            <Button size="sm" variant="ghost" aria-label={t.test} title={t.test} disabled={testing === p.id} onClick={() => void sendTest(p)}>
+              <Send className="size-4" aria-hidden />
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => void toggleActive(p)}>
             {p.isActive ? t.pause : t.resume}
           </Button>

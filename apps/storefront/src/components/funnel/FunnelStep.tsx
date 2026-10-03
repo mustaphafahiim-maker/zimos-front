@@ -314,7 +314,11 @@ export function FunnelStepActions({
         <ErrorBox message={flow.error} />
         <button
           type="button"
-          onClick={() => void flow.advance("clicked_through")}
+          onClick={() => {
+            // An opt-in step moving on is the ad platforms' Lead.
+            if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
+            void flow.advance("clicked_through");
+          }}
           disabled={!!flow.pending}
           aria-busy={!!flow.pending}
           className={btnPrimaryLg}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link2 } from "lucide-react";
 import { Card } from "@store-builder/ui";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/Field";
 import { CopyButton } from "@/components/CopyButton";
 import { TrackingPixelsSection } from "./TrackingPixelsSection";
+import { PixelEventLogSection } from "./PixelEventLogSection";
 
 const STRINGS = {
   en: {
@@ -51,6 +52,9 @@ export function MarketingPage() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
+  // A test event sent from the pixels table shows up in the log below.
+  const [logVersion, setLogVersion] = useState(0);
+  const bumpLog = useCallback(() => setLogVersion((n) => n + 1), []);
 
   // Pure client-side tool; nothing here is stored or sent anywhere.
   const [utm, setUtm] = useState({
@@ -82,7 +86,8 @@ export function MarketingPage() {
     <div className="min-w-0 max-w-4xl">
       <PageHeader title={t.title} description={t.description} />
 
-      <TrackingPixelsSection key={workspaceId} />
+      <TrackingPixelsSection key={workspaceId} onEventsChanged={bumpLog} />
+      <PixelEventLogSection key={`log-${workspaceId}`} reloadKey={logVersion} />
 
       <Card className="gap-0 p-4">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">

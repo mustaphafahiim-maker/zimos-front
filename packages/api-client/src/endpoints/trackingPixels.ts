@@ -109,3 +109,65 @@ export async function trackingPixelsUpdate(
 export async function trackingPixelsDelete(client: ApiClient, workspaceId: string, pixelId: string): Promise<void> {
   await client.request(`${base(workspaceId)}/${pixelId}`, { method: "DELETE" });
 }
+
+// ------------------------------------------------------------- event log --
+
+export type TrackingPixelEventStatus = "sent" | "failed";
+
+/** One server-side event sent to one pixel. The store keeps its latest 500. */
+export interface TrackingPixelEventDto {
+  id: string;
+  /** Null once the pixel has been deleted; `platform` and `pixelId` still say which it was. */
+  trackingPixelId: string | null;
+  platform: TrackingPixelPlatform;
+  pixelId: string;
+  /** purchase, view_content, add_to_cart, begin_checkout, add_payment_info, lead, page_view (tests). */
+  eventName: string;
+  eventId: string | null;
+  orderId: string | null;
+  status: TrackingPixelEventStatus;
+  error: string | null;
+  isTest: boolean;
+  createdAt: string;
+}
+
+export interface TrackingPixelEventList {
+  events: TrackingPixelEventDto[];
+  nextCursor: string | null;
+  keep: number;
+}
+
+export async function trackingPixelsListEvents(
+  client: ApiClient,
+  workspaceId: string,
+  params: { limit?: number; cursor?: string | null; status?: TrackingPixelEventStatus; trackingPixelId?: string } = {}
+): Promise<TrackingPixelEventList> {
+  const query = new URLSearchParams();
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.cursor) query.set("cursor", params.cursor);
+  if (params.status) query.set("status", params.status);
+  if (params.trackingPixelId) query.set("trackingPixelId", params.trackingPixelId);
+  const qs = query.toString();
+  return client.request<TrackingPixelEventList>(`${base(workspaceId)}/events${qs ? `?${qs}` : ""}`);
+}
+
+export interface TrackingPixelTestResult {
+  ok: boolean;
+  /** The platform's own words when it refused the event. */
+  error: string | null;
+  eventId: string;
+  /** True when a Meta test event code was used: look under Test events. */
+  usedTestCode: boolean;
+}
+
+/**
+ * Sends one page view (never a conversion) to the pixel's server API now.
+ * 422 TRACKING_PIXEL_NO_SERVER_API when the pixel has no Conversions API token.
+ */
+export async function trackingPixelsSendTest(
+  client: ApiClient,
+  workspaceId: string,
+  pixelId: string
+): Promise<TrackingPixelTestResult> {
+  return client.request<TrackingPixelTestResult>(`${base(workspaceId)}/${pixelId}/test`, { method: "POST" });
+}
