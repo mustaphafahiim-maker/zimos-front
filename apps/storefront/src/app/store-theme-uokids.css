@@ -241,3 +241,39 @@ html:not(.dark) [data-store-theme="uokids"] .zs-toolbar__icon b {
     height: 62px;
   }
 }
+
+/* Product page: the measured type and controls of the store this was drawn
+   from — a navy title, the sale price in the accent, pill buttons and a pill
+   quantity stepper. */
+[data-store-theme="uokids"] .zt-pdp-title {
+  font-family: var(--font-sans);
+  font-size: clamp(1.5rem, 2.2vw, 1.98rem);
+  font-weight: 700;
+  line-height: 1.3;
+}
+[data-store-theme="uokids"] .zt-pdp-price > span:first-child {
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+[data-store-theme="uokids"] .zt-pdp-price > span[data-sale] {
+  color: var(--color-primary);
+}
+[data-store-theme="uokids"] .zt-pdp-price > span.line-through {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+[data-store-theme="uokids"] .zt-pdp .zt-btn {
+  min-height: 54px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+[data-store-theme="uokids"] .zt-qty {
+  min-height: 54px;
+  border-color: color-mix(in srgb, var(--color-ink) 55%, #111);
+  border-radius: 999px;
+  padding-inline: 6px;
+}
+[data-store-theme="uokids"] .zt-qty button {
+  border-radius: 999px;
+}

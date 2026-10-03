@@ -35,7 +35,7 @@ export function QuantityStepper({
       role="group"
       aria-labelledby={labelledBy}
       aria-label={labelledBy ? undefined : t.product.quantity}
-      className="inline-flex items-center rounded-xl border border-line bg-paper-raised"
+      className="zt-qty inline-flex items-center rounded-xl border border-line bg-paper-raised"
     >
       <button
         type="button"
