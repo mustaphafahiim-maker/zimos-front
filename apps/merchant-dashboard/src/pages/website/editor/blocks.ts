@@ -75,6 +75,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import type { ItemSubField } from "./ItemListField";
 
 /**
  * The editor's model of the backend page tree (modules/pages/pageTree.js).
@@ -118,7 +119,19 @@ export type FieldSpec =
   | { key: string; label: string; kind: "qaList"; hint?: string }
   | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "compareRows"; hint?: string }
-  | { key: string; label: string; kind: "linkList"; hint?: string };
+  | { key: string; label: string; kind: "linkList"; hint?: string }
+  // A list of objects, each a small card of its own fields (ItemListField.tsx).
+  | {
+      key: string;
+      label: string;
+      kind: "itemList";
+      itemLabel: string;
+      itemLabelAr: string;
+      titleKey: string;
+      max: number;
+      fields: ItemSubField[];
+      hint?: string;
+    };
 
 interface ElementSpec {
   label: string;

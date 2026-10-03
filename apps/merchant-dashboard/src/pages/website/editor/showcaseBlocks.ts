@@ -21,8 +21,7 @@ import type { BlockPreset, FieldSpec } from "./blocks";
  *
  * Kept beside blocks.ts rather than in it so that file only gains the spreads
  * that register these. The lists inside a band — slides, tiles, trust cards,
- * needs, videos — keep whatever a template gave them: the inspector has no
- * editor for a list of objects yet, so only the band's own fields are here.
+ * needs, videos — are edited as cards (the "itemList" field, ItemListField.tsx).
  */
 
 export const SHOWCASE_TYPES = [
@@ -86,6 +85,43 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     icon: GalleryHorizontalEnd,
     defaultProps: { slides: [], autoplay: true, seconds: 5, startDelay: 5, arrows: true, dots: true, wave: true, height: 620, heightTablet: 520 },
     fields: [
+      {
+        key: "slides",
+        label: "Slides",
+        kind: "itemList",
+        itemLabel: "Slide",
+        itemLabelAr: "شريحة",
+        titleKey: "alt",
+        max: 8,
+        fields: [
+          { key: "image", label: "Picture", labelAr: "الصورة", kind: "image" },
+          { key: "mobileImage", label: "Picture on a phone", labelAr: "الصورة على الموبايل", kind: "image" },
+          { key: "imageEn", label: "Picture (English store)", labelAr: "الصورة (النسخة الإنجليزية)", kind: "image" },
+          { key: "mobileImageEn", label: "Phone picture (English store)", labelAr: "صورة الموبايل (النسخة الإنجليزية)", kind: "image" },
+          { key: "alt", label: "Describes the picture", labelAr: "وصف الصورة", kind: "text" },
+          { key: "heading", label: "Heading", labelAr: "العنوان", kind: "text" },
+          { key: "subheading", label: "Line under it", labelAr: "السطر تحته", kind: "text" },
+          { key: "buttonLabel", label: "Button text", labelAr: "نص الزرار", kind: "text" },
+          { key: "buttonLabelEn", label: "Button text (English)", labelAr: "نص الزرار (إنجليزي)", kind: "text" },
+          { key: "buttonHref", label: "Button links to", labelAr: "رابط الزرار", kind: "text", ltr: true },
+          { key: "side", label: "Text sits at", labelAr: "مكان النص", kind: "select", options: [
+          { value: "start", label: "Start", labelAr: "البداية" },
+          { value: "center", label: "Centre", labelAr: "الوسط" },
+          { value: "end", label: "End", labelAr: "النهاية" },
+        ] },
+          {
+            key: "vertical",
+            label: "Text height",
+            labelAr: "ارتفاع النص",
+            kind: "select",
+            options: [
+              { value: "top", label: "Top", labelAr: "فوق" },
+              { value: "middle", label: "Middle", labelAr: "النص" },
+              { value: "bottom", label: "Bottom", labelAr: "تحت" },
+            ],
+          },
+        ],
+      },
       { key: "autoplay", label: "Play by itself", kind: "boolean" },
       { key: "seconds", label: "Seconds per slide", kind: "number", min: 2, max: 30 },
       { key: "startDelay", label: "Wait before the first move (seconds)", kind: "number", min: 0, max: 120 },
@@ -102,6 +138,21 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     defaultProps: { heading: "", items: [], columns: 3, columnsMobile: 3, tone: "plain" },
     fields: [
       { key: "heading", label: "Heading", kind: "text" },
+      {
+        key: "items",
+        label: "Categories",
+        kind: "itemList",
+        itemLabel: "Category",
+        itemLabelAr: "قسم",
+        titleKey: "title",
+        max: 24,
+        fields: [
+          { key: "image", label: "Picture", labelAr: "الصورة", kind: "image" },
+          { key: "title", label: "Name", labelAr: "الاسم", kind: "text" },
+          { key: "titleEn", label: "Name (English)", labelAr: "الاسم (إنجليزي)", kind: "text" },
+          { key: "href", label: "Links to", labelAr: "الرابط", kind: "text", ltr: true },
+        ],
+      },
       { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 },
       { key: "columnsMobile", label: "Columns on a phone", kind: "number", min: 2, max: 4 },
       TONE,
@@ -111,7 +162,25 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     label: "Trust cards",
     icon: ShieldCheck,
     defaultProps: { items: [], tone: "plain" },
-    fields: [TONE],
+    fields: [
+      {
+        key: "items",
+        label: "Cards",
+        kind: "itemList",
+        itemLabel: "Card",
+        itemLabelAr: "كارت",
+        titleKey: "title",
+        max: 8,
+        fields: [
+          { key: "icon", label: "Icon", labelAr: "الأيقونة", kind: "select", options: [{ value: "box", label: "Box", labelAr: "صندوق" }, { value: "cash", label: "Cash", labelAr: "كاش" }, { value: "truck", label: "Truck", labelAr: "شحن" }, { value: "shield", label: "Shield", labelAr: "حماية" }, { value: "support", label: "Support", labelAr: "دعم" }, { value: "return", label: "Return", labelAr: "استرجاع" }, { value: "gift", label: "Gift", labelAr: "هدية" }, { value: "clock", label: "Clock", labelAr: "ساعة" }, { value: "heart", label: "Heart", labelAr: "قلب" }, { value: "star", label: "Star", labelAr: "نجمة" }] },
+          { key: "title", label: "Title", labelAr: "العنوان", kind: "text" },
+          { key: "titleEn", label: "Title (English)", labelAr: "العنوان (إنجليزي)", kind: "text" },
+          { key: "text", label: "Line", labelAr: "السطر", kind: "text" },
+          { key: "textEn", label: "Line (English)", labelAr: "السطر (إنجليزي)", kind: "text" },
+        ],
+      },
+      TONE,
+    ],
   },
   bundle_cards: {
     label: "Bundle cards",
@@ -134,6 +203,29 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
       { key: "ctaLabel", label: "Button text", kind: "text" },
       { key: "moreLabel", label: "\"Also in this set\" wording", kind: "text" },
       { key: "saveLabel", label: "Saving wording", kind: "text", hint: "Write [amount] where the saving goes." },
+      {
+        key: "stages",
+        label: "Needs",
+        kind: "itemList",
+        itemLabel: "Need",
+        itemLabelAr: "احتياج",
+        titleKey: "name",
+        max: 8,
+        fields: [
+          { key: "icon", label: "Icon", labelAr: "الأيقونة", kind: "select", options: [{ value: "moon", label: "Moon", labelAr: "هلال" }, { value: "bottle", label: "Bottle", labelAr: "ببرونة" }, { value: "bag", label: "Bag", labelAr: "شنطة" }, { value: "clock", label: "Clock", labelAr: "ساعة" }, { value: "box", label: "Box", labelAr: "صندوق" }, { value: "heart", label: "Heart", labelAr: "قلب" }, { value: "star", label: "Star", labelAr: "نجمة" }, { value: "gift", label: "Gift", labelAr: "هدية" }, { value: "home", label: "Home", labelAr: "بيت" }, { value: "sun", label: "Sun", labelAr: "شمس" }] },
+          { key: "name", label: "Name", labelAr: "الاسم", kind: "text" },
+          { key: "nameEn", label: "Name (English)", labelAr: "الاسم (إنجليزي)", kind: "text" },
+          { key: "pain", label: "Question on the tab", labelAr: "السؤال على التاب", kind: "text" },
+          { key: "painEn", label: "Question (English)", labelAr: "السؤال (إنجليزي)", kind: "text" },
+          { key: "desc", label: "Description", labelAr: "الوصف", kind: "textarea" },
+          { key: "descEn", label: "Description (English)", labelAr: "الوصف (إنجليزي)", kind: "textarea" },
+          { key: "items", label: "Points, one per line", labelAr: "النقاط، كل نقطة في سطر", kind: "lines" },
+          { key: "itemsEn", label: "Points (English)", labelAr: "النقاط (إنجليزي)", kind: "lines" },
+          { key: "productId", label: "Product (address name)", labelAr: "المنتج (اسم الرابط)", kind: "text", ltr: true },
+          { key: "altProductId", label: "Second product", labelAr: "منتج تاني", kind: "text", ltr: true },
+          { key: "image", label: "Picture instead of the product's", labelAr: "صورة بدل صورة المنتج", kind: "image" },
+        ],
+      },
       TONE,
     ],
   },
@@ -163,6 +255,20 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     fields: [
       { key: "heading", label: "Heading", kind: "text" },
       { key: "subheading", label: "Line under the heading", kind: "text" },
+      {
+        key: "items",
+        label: "Videos",
+        kind: "itemList",
+        itemLabel: "Video",
+        itemLabelAr: "فيديو",
+        titleKey: "productId",
+        max: 12,
+        fields: [
+          { key: "video", label: "Video address (mp4)", labelAr: "رابط الفيديو (mp4)", kind: "text", ltr: true },
+          { key: "poster", label: "Still picture", labelAr: "صورة الغلاف", kind: "image" },
+          { key: "productId", label: "Product (address name)", labelAr: "المنتج (اسم الرابط)", kind: "text", ltr: true },
+        ],
+      },
       TONE,
     ],
   },
