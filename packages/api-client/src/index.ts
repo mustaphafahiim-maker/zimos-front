@@ -52,6 +52,7 @@ export * from "./endpoints/settlementStatements";
 export * from "./endpoints/manualTransfers";
 export * from "./endpoints/paymentRules";
 export * from "./endpoints/currencies";
+export * from "./endpoints/savedPaymentMethods";
 // Merchant notifications (the header bell and its preferences).
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
