@@ -388,6 +388,7 @@ export const PAGE_ELEMENT_TYPES = [
   "map",
   "social_icons",
   "product_card",
+  "shoppable_image",
   "product_list",
   "collection_list",
   "cart",

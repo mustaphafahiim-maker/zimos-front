@@ -42,6 +42,7 @@ export * from "./endpoints/webhookExtras";
 export * from "./endpoints/apps";
 export * from "./endpoints/security";
 export * from "./endpoints/usage";
+export * from "./endpoints/adminExtras";
 // Store design and settings: purchase form builder, thank-you page (lane 5).
 export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).
@@ -73,6 +74,14 @@ export * from "./endpoints/digital";
 export * from "./endpoints/ai";
 // Affiliates: marketers, commissions, payouts and the portal (lane 8).
 export * from "./endpoints/affiliates";
+// Customer subscriptions and installments (lane 8).
+export * from "./endpoints/customerSubscriptions";
+// Services marketplace: the providers directory and its admin (lane 8).
+export * from "./endpoints/serviceListings";
+// Shoppable images: pictures with product hotspots (lane 8).
+export * from "./endpoints/shoppableImages";
+// Courses: outline, students, and the student portal (lane 8).
+export * from "./endpoints/courses";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
@@ -93,6 +102,8 @@ export * from "./endpoints/lostOrders";
 export * from "./endpoints/whatsappCampaigns";
 // Social proof, newsletter sign-up, referral results (lane 3).
 export * from "./endpoints/engagement";
+// Product feed, Google Merchant checklist, offers summary (lane 3).
+export * from "./endpoints/feeds";
 // The shopper's order tracking page: steps, courier, signed tracking link.
 export * from "./endpoints/orderTracking";
 // Funnel share codes, import, map draft and issues (lane 5).

@@ -57,6 +57,8 @@ function elementSummary(element: PageElement): string {
       return truncate([str("title"), props.limit && `${props.limit} collections`].filter(Boolean).join(" · "));
     case "product_card":
       return truncate(str("title") || "One product");
+    case "shoppable_image":
+      return truncate(str("title") || "Shoppable image");
     case "countdown":
       return truncate([str("label"), props.endsInHours && `${props.endsInHours}h`].filter(Boolean).join(" · "));
     case "video":

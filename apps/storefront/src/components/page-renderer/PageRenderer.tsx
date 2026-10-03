@@ -10,6 +10,7 @@ import {
   CartElement,
   CollectionListElement,
   ProductCardElement,
+  ShoppableImageElement,
   ProductListElement,
 } from "./commerce";
 import {
@@ -199,6 +200,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
           funnel={ctx.funnel}
         />
       );
+    case "shoppable_image":
+      return <ShoppableImageElement props={props} workspaceId={ctx.workspaceId} />;
     case "product_list":
       return (
         <ProductListElement

@@ -37,6 +37,10 @@ import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
+import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
+import { ServicesPage } from "@/pages/services/ServicesPage";
+import { ShoppableImagesPage } from "@/pages/shoppable/ShoppableImagesPage";
+import { CoursesPage } from "@/pages/courses/CoursesPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
@@ -46,6 +50,7 @@ import { CrossSellPage } from "@/pages/offers/CrossSellPage";
 import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
 import { OrderRulesPage } from "@/pages/offers/OrderRulesPage";
 import { NewsletterPage, ReferralLinksPage, SocialProofPage } from "@/pages/offers/EngagementPages";
+import { ProductFeedPage } from "@/pages/offers/ProductFeedPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -147,6 +152,10 @@ export default function App() {
                       <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/affiliates" element={<AffiliatesPage />} />
+                      <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                      <Route path="/services" element={<ServicesPage />} />
+                      <Route path="/shoppable-images" element={<ShoppableImagesPage />} />
+                      <Route path="/courses" element={<CoursesPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
@@ -159,6 +168,7 @@ export default function App() {
                       <Route path="/offers/social-proof" element={<SocialProofPage />} />
                       <Route path="/offers/newsletter" element={<NewsletterPage />} />
                       <Route path="/offers/referrals" element={<ReferralLinksPage />} />
+                      <Route path="/offers/feed" element={<ProductFeedPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />

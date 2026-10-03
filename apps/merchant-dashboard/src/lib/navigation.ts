@@ -1,6 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  GraduationCap,
+  MousePointerClick,
+  Handshake,
+  Repeat,
   UsersRound,
   Sparkles,
   Activity,
@@ -71,6 +75,10 @@ export type NavKey =
   | "digital"
   | "ai"
   | "affiliates"
+  | "subscriptions"
+  | "services"
+  | "shoppableImages"
+  | "courses"
   | "storeSettings"
   | "apps"
   | "activity";
@@ -126,6 +134,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "payments", to: "/payments", icon: CreditCard },
       { key: "returns", to: "/returns", icon: Undo2 },
       { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
     ],
   },
   {
@@ -137,6 +146,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "customers", to: "/customers", icon: Users },
       { key: "media", to: "/media", icon: Images },
       { key: "digital", to: "/digital", icon: FileDown },
+      { key: "courses", to: "/courses", icon: GraduationCap },
+      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
     ],
   },
   {
@@ -181,6 +192,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "activity", to: "/activity", icon: History },
+      { key: "services", to: "/services", icon: Handshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -244,6 +256,10 @@ export const NAV_LABELS = {
     digital: "Digital products",
     ai: "AI studio",
     affiliates: "Affiliates",
+    subscriptions: "Subscriptions",
+    services: "Services",
+    shoppableImages: "Shoppable images",
+    courses: "Courses",
     storeSettings: "Store settings",
   },
   ar: {
@@ -281,6 +297,10 @@ export const NAV_LABELS = {
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",
     affiliates: "المسوّقون بالعمولة",
+    subscriptions: "الاشتراكات",
+    services: "الخدمات",
+    shoppableImages: "الصور التفاعلية",
+    courses: "الكورسات",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
