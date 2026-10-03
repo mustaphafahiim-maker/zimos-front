@@ -38,3 +38,5 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Orders: status changes, history, notes, tags, bulk actions (lane 1).
+export * from "./endpoints/orders";
