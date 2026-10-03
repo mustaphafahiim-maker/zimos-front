@@ -1,326 +1,250 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Pencil, Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
-import type {
-  AutomationPaymentMethod,
-  AutomationRule,
-  AutomationRulePayload,
-  AutomationTrigger,
+import { Bot, Check, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Alert, Button, Card, cn } from "@store-builder/ui";
+import {
+  automationFlowsDelete,
+  automationFlowsEnableTemplate,
+  automationFlowsList,
+  automationFlowsListRuns,
+  automationFlowsListTemplates,
+  automationFlowsUpdate,
+  type AutomationFlowRule,
+  type AutomationFlowRun,
+  type AutomationFlowRunStatus,
+  type AutomationFlowTemplate,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
-import { getErrorMessage } from "@/lib/errors";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { formatDateTime } from "@/lib/format";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { DataTable } from "@/components/DataTable";
-import { Section } from "@/components/Section";
 import { EmptyState } from "@/components/EmptyState";
-import { StatusBadge } from "@/components/StatusBadge";
+import { FilterTabs } from "@/components/FilterTabs";
+import { LoadMore } from "@/components/LoadMore";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Field, TextField } from "@/components/Field";
-import { MoneyInput } from "@/components/MoneyInput";
+import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
+import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { AUTOMATION_STRINGS, stepSummary, stepTypeLabel, triggerLabel } from "./automationText";
+import { RuleEditorDialog } from "./RuleEditorDialog";
+
+/**
+ * Automations (SPEC §14.2): rules that run an ordered sequence of steps when
+ * something happens to an order — messages, waits, a webhook, a tag, a status
+ * change, a note to the team. Ready-made templates switch on with one click;
+ * every step of every run is in the log below.
+ */
 
 const STRINGS = {
   en: {
     title: "Automations",
-    description: "Send WhatsApp template messages to customers automatically when an order changes.",
+    description: "Run a sequence of steps by itself when something happens to an order: messages, waits, tags, status changes.",
     newRule: "New automation",
-    notConnected: "WhatsApp isn't connected, so automations can't send messages.",
+    notConnected: "WhatsApp isn't connected, so WhatsApp steps will fail until it is.",
     connect: "Connect WhatsApp",
+    templatesTitle: "Ready-made automations",
+    templatesDesc: "Switch one on with a click, then adjust it like any other automation.",
+    enable: "Switch on",
+    enabled: "Switched on",
+    viewMessages: "Messages to approve",
+    messagesTitle: "WhatsApp templates for “{name}”",
+    messagesDesc:
+      "WhatsApp only sends templates approved in your own Meta account. Create each of these there under exactly this name; until Meta approves it, that step fails and says so in the log.",
+    templateName: "Template name",
+    buttons: "Quick-reply buttons",
+    close: "Close",
+    templateEnabled: "“{name}” is on. Review its steps below.",
+    rulesTitle: "Your automations",
     noRules: "No automations yet",
-    noRulesDesc: "Create one to message customers when their order is confirmed, shipped or delivered.",
+    noRulesDesc: "Switch on a ready-made one above, or build your own sequence.",
     active: "Active",
-    stats: "{sent} sent · {skipped} skipped · {failed} failed",
+    whenTrigger: "When",
+    stats: "{sent} done · {skipped} skipped · {failed} failed",
     lastRun: "Last run {date}",
     never: "Never ran",
-    whenTrigger: "When",
-    sendTemplate: "Send template {template} ({language})",
-    condPayment: "Payment: {method}",
-    condMin: "Order total ≥ {amount}",
     edit: "Edit",
     delete: "Delete",
-    createTitle: "New automation",
-    editTitle: "Edit automation",
-    name: "Name",
-    trigger: "Trigger",
-    templateName: "WhatsApp template name",
-    templateHint: "Exactly as approved in Meta: lowercase letters, numbers and underscores.",
-    language: "Template language",
-    languageHint: "e.g. ar, en or en_US",
-    variables: "Template variables",
-    variablesHint: "In order: the first box fills the template's first placeholder. Click a token to insert it.",
-    variable: "Variable {n}",
-    addVariable: "Add variable",
-    removeVariable: "Remove variable {n}",
-    tokens: "Tokens",
-    conditions: "Only when (optional)",
-    paymentMethod: "Payment method",
-    anyMethod: "Any payment method",
-    minTotal: "Minimum order total",
-    save: "Save",
-    saving: "Saving…",
-    cancel: "Cancel",
-    saved: "Automation saved",
-    errName: "Name must be at least 2 characters.",
-    errTemplate: "Use lowercase letters, numbers and underscores only.",
-    errLanguage: "Use a language code like ar or en_US.",
-    errMin: "Enter a valid amount.",
+    saved: "Automation saved.",
+    created: "Automation created.",
     deleteTitle: "Delete this automation?",
-    deleteDesc: "It stops sending messages. Its past runs stay in the log.",
-    deleted: "Automation deleted",
-    runsTitle: "Runs log",
-    noRuns: "No runs yet",
-    noRunsDesc: "Every time an automation fires, the result shows up here.",
+    deleteDesc: "“{name}” will stop running. Sequences that are waiting stop too. Its past runs stay in the log.",
+    deleting: "Deleting…",
+    cancel: "Cancel",
+    deleted: "Automation deleted.",
+    runsTitle: "Run log",
+    filter: "Filter runs by result",
+    allRules: "All automations",
+    all: "All",
+    sent: "Done",
+    skipped: "Skipped",
+    failed: "Failed",
+    noRuns: "Nothing has run yet",
+    noRunsDesc: "Each step an automation runs, skips or fails on shows up here.",
     colTime: "Time",
     colRule: "Automation",
-    colTrigger: "Trigger",
+    colStep: "Step",
     colOrder: "Order",
-    colStatus: "Status",
+    colStatus: "Result",
     colDetail: "Detail",
     deletedRule: "Deleted automation",
-    "order.created": "Order created",
-    "order.confirmed": "Order confirmed",
-    "order.rejected": "Order rejected",
-    "order.cancelled": "Order cancelled",
-    "order.shipped": "Order shipped",
-    "order.out_for_delivery": "Out for delivery",
-    "order.delivered": "Order delivered",
-    cod: "Cash on delivery",
-    card: "Card",
-    wallet: "Wallet",
-    bank_transfer: "Bank transfer",
+    wholeRule: "Whole automation",
   },
   ar: {
     title: "الأتمتة",
-    description: "ابعت رسايل واتساب جاهزة للعملاء أوتوماتيك لما حالة الطلب تتغيّر.",
+    description: "نفّذ سلسلة خطوات تلقائيًا عندما يحدث شيء للطلب: رسائل، انتظار، وسوم، تغيير حالة.",
     newRule: "أتمتة جديدة",
-    notConnected: "واتساب مش متوصّل، فالأتمتة مش هتقدر تبعت رسايل.",
-    connect: "وصّل واتساب",
-    noRules: "مفيش أتمتة لسه",
-    noRulesDesc: "اعمل واحدة تبعت للعميل لما طلبه يتأكد أو يتشحن أو يتسلّم.",
-    active: "شغّالة",
-    stats: "{sent} اتبعتت · {skipped} اتخطّت · {failed} فشلت",
+    notConnected: "واتساب غير مربوط، لذلك ستفشل خطوات واتساب حتى يتم ربطه.",
+    connect: "ربط واتساب",
+    templatesTitle: "أتمتة جاهزة",
+    templatesDesc: "فعّل أيًّا منها بضغطة، ثم عدّلها مثل أي أتمتة أخرى.",
+    enable: "تفعيل",
+    enabled: "مفعّلة",
+    viewMessages: "الرسائل المطلوب اعتمادها",
+    messagesTitle: "قوالب واتساب لـ «{name}»",
+    messagesDesc:
+      "واتساب يرسل فقط القوالب المعتمدة في حسابك على Meta. أنشئ كل قالب هناك بنفس الاسم تمامًا؛ وحتى تعتمده Meta ستفشل هذه الخطوة ويظهر السبب في السجل.",
+    templateName: "اسم القالب",
+    buttons: "أزرار الرد السريع",
+    close: "إغلاق",
+    templateEnabled: "تم تفعيل «{name}». راجع خطواتها بالأسفل.",
+    rulesTitle: "الأتمتة الخاصة بك",
+    noRules: "لا توجد أتمتة بعد",
+    noRulesDesc: "فعّل واحدة جاهزة من الأعلى، أو ابنِ سلسلتك الخاصة.",
+    active: "مفعّلة",
+    whenTrigger: "عند",
+    stats: "{sent} تمت · {skipped} تخطّت · {failed} فشلت",
     lastRun: "آخر تشغيل {date}",
-    never: "لسه مشتغلتش",
-    whenTrigger: "لما",
-    sendTemplate: "ابعت القالب {template} ({language})",
-    condPayment: "الدفع: {method}",
-    condMin: "إجمالي الطلب ≥ {amount}",
+    never: "لم تعمل بعد",
     edit: "تعديل",
-    delete: "مسح",
-    createTitle: "أتمتة جديدة",
-    editTitle: "تعديل الأتمتة",
-    name: "الاسم",
-    trigger: "الحدث",
-    templateName: "اسم قالب واتساب",
-    templateHint: "زي ما هو متوافق عليه في ميتا بالظبط: حروف إنجليزي صغيرة وأرقام و _ بس.",
-    language: "لغة القالب",
-    languageHint: "مثلاً ar أو en أو en_US",
-    variables: "متغيّرات القالب",
-    variablesHint: "بالترتيب: أول خانة بتملى أول خانة فاضية في القالب. دوس على أي رمز عشان تحطّه.",
-    variable: "متغيّر {n}",
-    addVariable: "ضيف متغيّر",
-    removeVariable: "شيل المتغيّر {n}",
-    tokens: "الرموز",
-    conditions: "بس لما (اختياري)",
-    paymentMethod: "طريقة الدفع",
-    anyMethod: "أي طريقة دفع",
-    minTotal: "أقل إجمالي للطلب",
-    save: "حفظ",
-    saving: "بنحفظ…",
+    delete: "حذف",
+    saved: "تم حفظ الأتمتة.",
+    created: "تم إنشاء الأتمتة.",
+    deleteTitle: "حذف هذه الأتمتة؟",
+    deleteDesc: "ستتوقف «{name}» عن العمل، وتتوقف السلاسل المنتظرة أيضًا. سجل تشغيلها السابق يبقى.",
+    deleting: "جارٍ الحذف…",
     cancel: "إلغاء",
-    saved: "الأتمتة اتحفظت",
-    errName: "الاسم لازم يكون حرفين على الأقل.",
-    errTemplate: "استخدم حروف إنجليزي صغيرة وأرقام و _ بس.",
-    errLanguage: "اكتب كود لغة زي ar أو en_US.",
-    errMin: "اكتب مبلغ صحيح.",
-    deleteTitle: "مسح الأتمتة دي؟",
-    deleteDesc: "هتبطّل تبعت رسايل، والتشغيلات القديمة هتفضل في السجل.",
-    deleted: "الأتمتة اتمسحت",
+    deleted: "تم حذف الأتمتة.",
     runsTitle: "سجل التشغيل",
-    noRuns: "مفيش تشغيلات لسه",
-    noRunsDesc: "كل مرة أتمتة تشتغل، النتيجة هتظهر هنا.",
+    filter: "تصفية السجل حسب النتيجة",
+    allRules: "كل الأتمتة",
+    all: "الكل",
+    sent: "تمت",
+    skipped: "تخطّت",
+    failed: "فشلت",
+    noRuns: "لم يعمل شيء بعد",
+    noRunsDesc: "كل خطوة تنفّذها الأتمتة أو تتخطاها أو تفشل فيها تظهر هنا.",
     colTime: "الوقت",
     colRule: "الأتمتة",
-    colTrigger: "الحدث",
+    colStep: "الخطوة",
     colOrder: "الطلب",
-    colStatus: "الحالة",
+    colStatus: "النتيجة",
     colDetail: "التفاصيل",
-    deletedRule: "أتمتة اتمسحت",
-    "order.created": "طلب جديد",
-    "order.confirmed": "الطلب اتأكد",
-    "order.rejected": "الطلب اترفض",
-    "order.cancelled": "الطلب اتلغى",
-    "order.shipped": "الطلب اتشحن",
-    "order.out_for_delivery": "خرج للتوصيل",
-    "order.delivered": "الطلب اتسلّم",
-    cod: "الدفع عند الاستلام",
-    card: "كارت",
-    wallet: "محفظة",
-    bank_transfer: "تحويل بنكي",
+    deletedRule: "أتمتة محذوفة",
+    wholeRule: "الأتمتة كلها",
   },
 } satisfies Messages;
 
-/**
- * Used only until the first `GET /automations` lands — the server sends its
- * own `triggers` / `tokens` and those always win, so a trigger the backend
- * adds needs no release here.
- */
-const FALLBACK_TRIGGERS: AutomationTrigger[] = [
-  "order.created",
-  "order.confirmed",
-  "order.rejected",
-  "order.cancelled",
-  "order.shipped",
-  "order.out_for_delivery",
-  "order.delivered",
-];
-const FALLBACK_TOKENS = [
-  "customer_name",
-  "order_number",
-  "order_total",
-  "store_name",
-  "tracking_url",
-  "city",
-];
-const PAYMENT_METHODS: AutomationPaymentMethod[] = ["cod", "card", "wallet", "bank_transfer"];
 const RUN_TONE = { sent: "success", skipped: "neutral", failed: "danger" } as const;
-
-interface FormState {
-  name: string;
-  trigger: AutomationTrigger;
-  template: string;
-  language: string;
-  params: string[];
-  paymentMethod: "" | AutomationPaymentMethod;
-  /** Major-unit text, as typed. */
-  minTotal: string;
-}
-
-function formFromRule(rule: AutomationRule | null): FormState {
-  // The API allows up to five actions; the editor writes one, which is what
-  // every rule the backend can send today actually carries.
-  const action = rule?.actions[0];
-  return {
-    name: rule?.name ?? "",
-    trigger: rule?.trigger ?? "order.confirmed",
-    template: action?.template ?? "",
-    language: action?.language ?? "ar",
-    params: action?.params.length ? [...action.params] : [""],
-    paymentMethod: rule?.conditions.paymentMethod ?? "",
-    minTotal:
-      rule?.conditions.minTotalAmount != null ? minorToMajorInput(rule.conditions.minTotalAmount) : "",
-  };
-}
+const RUNS_PAGE = 50;
+type RunFilter = "all" | AutomationFlowRunStatus;
 
 export function AutomationsPage() {
   const t = useT(STRINGS);
+  const at = useT(AUTOMATION_STRINGS);
+  const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const errorMessage = useErrorMessage();
 
   const integration = useAsync(() => apiClient.getWhatsappIntegration(workspaceId), [workspaceId]);
-  const rules = useAsync(() => apiClient.listAutomations(workspaceId), [workspaceId]);
-  const runs = useAsync(() => apiClient.listAutomationRuns(workspaceId, { limit: 50 }), [workspaceId]);
+  const rules = useAsync(() => automationFlowsList(apiClient, workspaceId), [workspaceId]);
+  const templates = useAsync(() => automationFlowsListTemplates(apiClient, workspaceId), [workspaceId]);
 
-  const [editing, setEditing] = useState<AutomationRule | "new" | null>(null);
-  const [form, setForm] = useState<FormState>(formFromRule(null));
-  const [errors, setErrors] = useState<
-    Partial<Record<"name" | "template" | "language" | "minTotal", string>>
-  >({});
-  const [saving, setSaving] = useState(false);
-  const [toDelete, setToDelete] = useState<AutomationRule | null>(null);
+  const [editing, setEditing] = useState<AutomationFlowRule | "new" | null>(null);
+  const [toDelete, setToDelete] = useState<AutomationFlowRule | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
-  const paramRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [activeParam, setActiveParam] = useState(0);
+  const [enabling, setEnabling] = useState<string | null>(null);
+  const [messagesOf, setMessagesOf] = useState<AutomationFlowTemplate | null>(null);
 
-  const triggers = rules.data?.triggers?.length ? rules.data.triggers : FALLBACK_TRIGGERS;
-  const tokens = rules.data?.tokens?.length ? rules.data.tokens : FALLBACK_TOKENS;
+  // --- run log (own paging + filters) ---
+  const [runFilter, setRunFilter] = useState<RunFilter>("all");
+  const [runRule, setRunRule] = useState("");
+  const [runs, setRuns] = useState<AutomationFlowRun[]>([]);
+  const [runsCursor, setRunsCursor] = useState<string | null>(null);
+  const [runsLoading, setRunsLoading] = useState(true);
+  const [runsMore, setRunsMore] = useState(false);
+  const [runsError, setRunsError] = useState<unknown>(null);
+  const runsCall = useRef(0);
+
+  const loadRuns = useCallback(
+    async (before: string | null, silent = false) => {
+      const id = ++runsCall.current;
+      if (before) setRunsMore(true);
+      else if (!silent) setRunsLoading(true);
+      setRunsError(null);
+      try {
+        const page = await automationFlowsListRuns(apiClient, workspaceId, {
+          limit: RUNS_PAGE,
+          before,
+          status: runFilter === "all" ? undefined : runFilter,
+          ruleId: runRule || undefined,
+        });
+        if (id !== runsCall.current) return;
+        setRuns((prev) => (before ? [...prev, ...page.runs] : page.runs));
+        setRunsCursor(page.nextCursor);
+      } catch (err) {
+        if (id === runsCall.current) setRunsError(err);
+      } finally {
+        if (id === runsCall.current) {
+          setRunsLoading(false);
+          setRunsMore(false);
+        }
+      }
+    },
+    [workspaceId, runFilter, runRule]
+  );
+
+  useEffect(() => {
+    void loadRuns(null);
+  }, [loadRuns]);
+
   const list = rules.data?.rules ?? [];
   const ruleNames = new Map(list.map((r) => [r.id, r.name]));
-  const runList = runs.data?.runs ?? [];
 
-  /** Translates a trigger or payment-method key, falling back to the raw value. */
-  const label = (v: string) => (t as Record<string, string>)[v] ?? v;
-
-  function openEditor(rule: AutomationRule | null) {
-    setForm(formFromRule(rule));
-    setErrors({});
-    setActiveParam(0);
-    setEditing(rule ?? "new");
-  }
-
-  /** Inserts `{{token}}` at the caret of the variable box the user last touched. */
-  function insertToken(token: string) {
-    const text = `{{${token}}}`;
-    const idx = Math.min(activeParam, form.params.length - 1);
-    const input = paramRefs.current[idx];
-    const current = form.params[idx] ?? "";
-    const start = input?.selectionStart ?? current.length;
-    const end = input?.selectionEnd ?? current.length;
-    const next = current.slice(0, start) + text + current.slice(end);
-    setForm((f) => ({ ...f, params: f.params.map((p, i) => (i === idx ? next : p)) }));
-    requestAnimationFrame(() => {
-      input?.focus();
-      input?.setSelectionRange(start + text.length, start + text.length);
-    });
-  }
-
-  async function save() {
-    // Mirrors the route's Joi schema so a typo is caught before the round trip.
-    const errs: typeof errors = {};
-    if (form.name.trim().length < 2) errs.name = t.errName;
-    if (!/^[a-z0-9_]{1,512}$/.test(form.template.trim())) errs.template = t.errTemplate;
-    if (!/^[a-z]{2,3}(_[A-Z]{2})?$/.test(form.language.trim())) errs.language = t.errLanguage;
-    const min = form.minTotal.trim() === "" ? null : majorToMinor(form.minTotal);
-    if (min !== null && (!Number.isFinite(min) || min < 0)) errs.minTotal = t.errMin;
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    const payload: AutomationRulePayload = {
-      name: form.name.trim(),
-      trigger: form.trigger,
-      conditions: { paymentMethod: form.paymentMethod || null, minTotalAmount: min },
-      actions: [
-        {
-          type: "whatsapp_template",
-          template: form.template.trim(),
-          language: form.language.trim(),
-          params: form.params.map((p) => p.trim()).filter((p) => p !== ""),
-        },
-      ],
-    };
-    setSaving(true);
-    try {
-      if (editing === "new") await apiClient.createAutomation(workspaceId, { ...payload, isActive: true });
-      else if (editing) await apiClient.updateAutomation(workspaceId, editing.id, payload);
-      toast.success(t.saved);
-      setEditing(null);
-      rules.refresh({ silent: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function toggle(rule: AutomationRule, next: boolean) {
+  async function toggle(rule: AutomationFlowRule, next: boolean) {
     setToggling(rule.id);
     try {
-      await apiClient.updateAutomation(workspaceId, rule.id, { isActive: next });
-      rules.refresh({ silent: true });
+      await automationFlowsUpdate(apiClient, workspaceId, rule.id, { isActive: next });
+      await rules.refresh({ silent: true });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast.error(errorMessage(err));
     } finally {
       setToggling(null);
     }
   }
+
+  async function enableTemplate(template: AutomationFlowTemplate) {
+    setEnabling(template.key);
+    try {
+      await automationFlowsEnableTemplate(apiClient, workspaceId, template.key, locale === "en" ? "en" : "ar");
+      toast.success(fmt(t.templateEnabled, { name: template.name[locale === "en" ? "en" : "ar"] }));
+      await Promise.all([rules.refresh({ silent: true }), templates.refresh({ silent: true })]);
+      if (template.whatsappTemplates.length > 0) setMessagesOf(template);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setEnabling(null);
+    }
+  }
+
+  const lang = locale === "en" ? "en" : "ar";
 
   return (
     <div className="min-w-0 max-w-6xl">
@@ -328,7 +252,7 @@ export function AutomationsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button onClick={() => openEditor(null)}>
+          <Button onClick={() => setEditing("new")} disabled={!rules.data}>
             <Plus className="size-4" />
             {t.newRule}
           </Button>
@@ -336,10 +260,7 @@ export function AutomationsPage() {
       />
 
       {integration.data && !integration.data.connected && (
-        <Alert
-          variant="default"
-          className="mb-6 border-accent/40 bg-accent-soft text-accent-dark dark:text-accent"
-        >
+        <Alert variant="default" className="mb-6 border-accent/40 bg-accent-soft text-accent-dark dark:text-accent">
           <p>
             {t.notConnected}{" "}
             <Link to="/settings#whatsapp" className="font-medium underline">
@@ -349,155 +270,182 @@ export function AutomationsPage() {
         </Alert>
       )}
 
+      <Section title={t.templatesTitle} description={t.templatesDesc} className="mb-8">
+        <DataState loading={templates.loading && !templates.data} error={templates.error} onRetry={() => templates.refresh()}>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(templates.data ?? []).map((template) => (
+              <div key={template.key} className="flex flex-col rounded-[0.5rem] border border-line p-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium text-ink">{template.name[lang]}</h3>
+                    <p className="mt-0.5 text-xs text-ink-soft">{template.description[lang]}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1">
+                  {template.whatsappTemplates.length > 0 ? (
+                    <button type="button" onClick={() => setMessagesOf(template)} className="cursor-pointer text-xs text-primary hover:underline">
+                      {t.viewMessages}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                  {template.ruleId ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                      <Check className="size-4" aria-hidden />
+                      {t.enabled}
+                    </span>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled={enabling === template.key} onClick={() => void enableTemplate(template)}>
+                      {t.enable}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DataState>
+      </Section>
+
       <section className="mb-8">
-        <DataState
-          loading={rules.loading && !rules.data}
-          error={rules.error}
-          onRetry={() => rules.refresh()}
-        >
+        <h2 className="mb-3 text-sm font-semibold text-ink">{t.rulesTitle}</h2>
+        <DataState loading={rules.loading && !rules.data} error={rules.error} onRetry={() => rules.refresh()}>
           {list.length === 0 ? (
-            <EmptyState
-              icon={<Bot />}
-              title={t.noRules}
-              description={t.noRulesDesc}
-              action={<Button onClick={() => openEditor(null)}>{t.newRule}</Button>}
-            />
+            <EmptyState icon={<Bot />} title={t.noRules} description={t.noRulesDesc} action={<Button onClick={() => setEditing("new")}>{t.newRule}</Button>} />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {list.map((rule) => {
-                const action = rule.actions[0];
-                return (
-                  <Card key={rule.id} className="gap-0 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-medium text-ink" dir="auto">
-                          {rule.name}
-                        </h3>
-                        <p className="text-sm text-ink-soft">
-                          {t.whenTrigger}: {label(rule.trigger)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={rule.isActive}
-                        aria-label={`${t.active}: ${rule.name}`}
-                        disabled={toggling === rule.id}
-                        onClick={() => toggle(rule, !rule.isActive)}
+              {list.map((rule) => (
+                <Card key={rule.id} className="gap-0 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-medium text-ink" dir="auto">
+                        {rule.name}
+                      </h3>
+                      <p className="text-sm text-ink-soft">
+                        {t.whenTrigger}: {triggerLabel(at, rule.trigger)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={rule.isActive}
+                      aria-label={`${t.active}: ${rule.name}`}
+                      disabled={toggling === rule.id}
+                      onClick={() => void toggle(rule, !rule.isActive)}
+                      className={cn(
+                        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        rule.isActive ? "border-primary bg-primary" : "border-line-strong bg-paper"
+                      )}
+                    >
+                      <span
                         className={cn(
-                          "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                          rule.isActive ? "border-primary bg-primary" : "border-line-strong bg-paper"
+                          "absolute top-0.5 size-4.5 rounded-full bg-paper-raised shadow-sm transition-[inset-inline-start]",
+                          rule.isActive ? "start-[1.375rem]" : "start-0.5"
                         )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 size-4.5 rounded-full bg-paper-raised shadow-sm transition-[inset-inline-start]",
-                            rule.isActive ? "start-[1.375rem]" : "start-0.5"
-                          )}
-                        />
-                      </button>
+                      />
+                    </button>
+                  </div>
+
+                  <ol className="mt-3 space-y-1.5">
+                    {rule.actions.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-paper text-xs font-medium text-ink-soft" aria-hidden>
+                          {i + 1}
+                        </span>
+                        <span className={cn("min-w-0 break-words", step.type === "wait" ? "text-ink-soft" : "text-ink")} dir="auto">
+                          {stepSummary(at, step)}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                    <p className="text-xs text-ink-soft">
+                      {fmt(t.stats, { sent: rule.stats.sent, skipped: rule.stats.skipped, failed: rule.stats.failed })}
+                      {" · "}
+                      {rule.stats.lastRunAt ? fmt(t.lastRun, { date: formatDateTime(rule.stats.lastRunAt) }) : t.never}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(rule)}>
+                        <Pencil className="size-4" />
+                        {t.edit}
+                      </Button>
+                      <Button size="icon-sm" variant="ghost" onClick={() => setToDelete(rule)} aria-label={`${t.delete} ${rule.name}`}>
+                        <Trash2 className="size-4" />
+                      </Button>
                     </div>
-                    {action && (
-                      <p className="mt-2 text-sm text-ink">
-                        {fmt(t.sendTemplate, { template: action.template, language: action.language })}
-                      </p>
-                    )}
-                    {(rule.conditions.paymentMethod || rule.conditions.minTotalAmount != null) && (
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        {rule.conditions.paymentMethod && (
-                          <span className="rounded-full bg-paper px-2 py-0.5 text-ink-soft">
-                            {fmt(t.condPayment, { method: label(rule.conditions.paymentMethod) })}
-                          </span>
-                        )}
-                        {rule.conditions.minTotalAmount != null && (
-                          <span className="rounded-full bg-paper px-2 py-0.5 text-ink-soft">
-                            {fmt(t.condMin, { amount: formatMoney(rule.conditions.minTotalAmount) })}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                      <p className="text-xs text-ink-soft">
-                        {fmt(t.stats, {
-                          sent: rule.stats.sent,
-                          skipped: rule.stats.skipped,
-                          failed: rule.stats.failed,
-                        })}{" "}
-                        ·{" "}
-                        {rule.stats.lastRunAt
-                          ? fmt(t.lastRun, { date: formatDateTime(rule.stats.lastRunAt) })
-                          : t.never}
-                      </p>
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          onClick={() => openEditor(rule)}
-                          aria-label={`${t.edit} ${rule.name}`}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          onClick={() => setToDelete(rule)}
-                          aria-label={`${t.delete} ${rule.name}`}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
         </DataState>
       </section>
 
-      <Section title={t.runsTitle} flush>
-        <DataState loading={runs.loading && !runs.data} error={runs.error} onRetry={() => runs.refresh()}>
-          {runList.length === 0 ? (
+      <Section
+        title={t.runsTitle}
+        flush
+        actions={
+          <Select aria-label={t.colRule} value={runRule} onChange={(e) => setRunRule(e.target.value)} className="h-9 max-w-52">
+            <option value="">{t.allRules}</option>
+            {list.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </Select>
+        }
+      >
+        <div className="px-4 pb-3">
+          <FilterTabs
+            label={t.filter}
+            value={runFilter}
+            onChange={setRunFilter}
+            tabs={[
+              { value: "all", label: t.all },
+              { value: "sent", label: t.sent },
+              { value: "skipped", label: t.skipped },
+              { value: "failed", label: t.failed },
+            ]}
+          />
+        </div>
+        <DataState loading={runsLoading} error={runsError} onRetry={() => void loadRuns(null)}>
+          {runs.length === 0 ? (
             <div className="px-4 pb-4">
               <EmptyState title={t.noRuns} description={t.noRunsDesc} />
             </div>
           ) : (
             <DataTable
-              rows={runList}
+              rows={runs}
               rowKey={(run) => run.id}
-              minWidth="47.5rem"
+              minWidth="50rem"
               columns={[
-                {
-                  key: "time",
-                  header: t.colTime,
-                  cell: (run) => (
-                    <span className="text-ink-soft">{formatDateTime(run.createdAt)}</span>
-                  ),
-                },
+                { key: "time", header: t.colTime, cell: (run) => <span className="text-ink-soft">{formatDateTime(run.createdAt)}</span> },
                 {
                   key: "rule",
                   header: t.colRule,
                   cell: (run) => (
                     <span className="text-ink" dir="auto">
-                      {ruleNames.get(run.ruleId) ?? t.deletedRule}
+                      {(run.ruleId && ruleNames.get(run.ruleId)) ?? t.deletedRule}
                     </span>
                   ),
                 },
                 {
-                  key: "trigger",
-                  header: t.colTrigger,
-                  cell: (run) => <span className="text-ink-soft">{label(run.trigger)}</span>,
+                  key: "step",
+                  header: t.colStep,
+                  cell: (run) => (
+                    <span className="text-ink-soft">
+                      {run.stepType ? `${run.stepIndex !== null ? `${run.stepIndex + 1}. ` : ""}${stepTypeLabel(at, run.stepType)}` : t.wholeRule}
+                    </span>
+                  ),
                 },
                 {
                   key: "order",
                   header: t.colOrder,
                   cell: (run) =>
                     run.order ? (
-                      <Link
-                        to={`/orders/${run.order.id}`}
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
+                      <Link to={`/orders/${run.order.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
                         <bdi dir="ltr">{run.order.orderNumber ?? "—"}</bdi>
                       </Link>
                     ) : (
@@ -507,16 +455,13 @@ export function AutomationsPage() {
                 {
                   key: "status",
                   header: t.colStatus,
-                  cell: (run) => <StatusBadge value={run.status} tone={RUN_TONE[run.status]} />,
+                  cell: (run) => <StatusBadge value={run.status} tone={RUN_TONE[run.status]} text={t[run.status]} />,
                 },
                 {
                   key: "detail",
                   header: t.colDetail,
                   cell: (run) => (
-                    <span
-                      className={cn(run.status === "failed" ? "text-danger" : "text-ink-soft")}
-                      dir="auto"
-                    >
+                    <span className={cn(run.status === "failed" ? "text-danger" : "text-ink-soft")} dir="auto">
                       {run.detail ?? "—"}
                     </span>
                   ),
@@ -524,189 +469,78 @@ export function AutomationsPage() {
               ]}
             />
           )}
+          <div className="pb-4">
+            <LoadMore hasMore={Boolean(runsCursor)} loading={runsMore} onClick={() => void loadRuns(runsCursor)} />
+          </div>
         </DataState>
       </Section>
 
-      <Modal
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        title={editing === "new" ? t.createTitle : t.editTitle}
-        className="max-w-2xl"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditing(null)}>
-              {t.cancel}
-            </Button>
-            <Button onClick={save} disabled={saving}>
-              {saving ? t.saving : t.save}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <TextField
-            label={t.name}
-            required
-            dir="auto"
-            value={form.name}
-            error={errors.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-          <Field label={t.trigger}>
-            {(props) => (
-              <Select
-                {...props}
-                value={form.trigger}
-                onChange={(e) => setForm((f) => ({ ...f, trigger: e.target.value as AutomationTrigger }))}
-              >
-                {triggers.map((tr) => (
-                  <option key={tr} value={tr}>
-                    {label(tr)}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label={t.templateName}
-              required
-              dir="ltr"
-              hint={t.templateHint}
-              value={form.template}
-              error={errors.template}
-              onChange={(e) => setForm((f) => ({ ...f, template: e.target.value }))}
-            />
-            <TextField
-              label={t.language}
-              required
-              dir="ltr"
-              hint={t.languageHint}
-              value={form.language}
-              error={errors.language}
-              onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
-            />
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-ink">{t.variables}</p>
-            <p className="mb-2 text-xs text-ink-soft">{t.variablesHint}</p>
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-ink-soft">{t.tokens}:</span>
-              {tokens.map((token) => (
-                <button
-                  key={token}
-                  type="button"
-                  // Keeps the caret in the variable box so the token lands there.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertToken(token)}
-                  className="cursor-pointer rounded-md bg-paper px-2 py-0.5 text-xs text-ink ring-1 ring-foreground/10 hover:text-primary hover:ring-primary"
-                  dir="ltr"
-                >
-                  {token}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-2">
-              {form.params.map((p, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-10 shrink-0 text-xs text-ink-soft" dir="ltr">{`{{${i + 1}}}`}</span>
-                  <Input
-                    ref={(el) => {
-                      paramRefs.current[i] = el;
-                    }}
-                    value={p}
-                    dir="auto"
-                    aria-label={fmt(t.variable, { n: i + 1 })}
-                    onFocus={() => setActiveParam(i)}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        params: f.params.map((x, j) => (j === i ? e.target.value : x)),
-                      }))
-                    }
-                  />
-                  {form.params.length > 1 && (
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={fmt(t.removeVariable, { n: i + 1 })}
-                      onClick={() => {
-                        setForm((f) => ({ ...f, params: f.params.filter((_, j) => j !== i) }));
-                        setActiveParam(0);
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {/* The route caps a template at 20 params. */}
-            {form.params.length < 20 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={() => {
-                  setForm((f) => ({ ...f, params: [...f.params, ""] }));
-                  setActiveParam(form.params.length);
-                }}
-              >
-                <Plus className="size-4" />
-                {t.addVariable}
-              </Button>
-            )}
-          </div>
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-ink">{t.conditions}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t.paymentMethod}>
-                {(props) => (
-                  <Select
-                    {...props}
-                    value={form.paymentMethod}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, paymentMethod: e.target.value as FormState["paymentMethod"] }))
-                    }
-                  >
-                    <option value="">{t.anyMethod}</option>
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m} value={m}>
-                        {t[m]}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <MoneyInput
-                label={t.minTotal}
-                value={form.minTotal}
-                error={errors.minTotal}
-                onChange={(v) => setForm((f) => ({ ...f, minTotal: v }))}
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {editing && rules.data && (
+        <RuleEditorDialog
+          key={editing === "new" ? "new" : editing.id}
+          rule={editing === "new" ? null : editing}
+          triggers={rules.data.triggers}
+          tokens={rules.data.tokens}
+          stepTypes={rules.data.stepTypes}
+          onClose={() => setEditing(null)}
+          onSaved={(_, created) => {
+            setEditing(null);
+            toast.success(created ? t.created : t.saved);
+            void rules.refresh({ silent: true });
+          }}
+        />
+      )}
 
       <ConfirmDialog
-        open={toDelete !== null}
+        open={Boolean(toDelete)}
         title={t.deleteTitle}
-        description={t.deleteDesc}
+        description={toDelete ? fmt(t.deleteDesc, { name: toDelete.name }) : undefined}
         confirmLabel={t.delete}
+        cancelLabel={t.cancel}
+        busyLabel={t.deleting}
         destructive
         onCancel={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return;
-          await apiClient.deleteAutomation(workspaceId, toDelete.id);
-          toast.success(t.deleted);
+          await automationFlowsDelete(apiClient, workspaceId, toDelete.id);
           setToDelete(null);
-          rules.refresh({ silent: true });
-          runs.refresh({ silent: true });
+          toast.success(t.deleted);
+          await Promise.all([rules.refresh({ silent: true }), templates.refresh({ silent: true })]);
+          void loadRuns(null, true);
         }}
       />
+
+      <Modal
+        open={Boolean(messagesOf)}
+        onClose={() => setMessagesOf(null)}
+        title={messagesOf ? fmt(t.messagesTitle, { name: messagesOf.name[lang] }) : ""}
+        description={t.messagesDesc}
+        footer={<Button onClick={() => setMessagesOf(null)}>{t.close}</Button>}
+      >
+        <div className="space-y-4">
+          {(messagesOf?.whatsappTemplates ?? []).map((m) => (
+            <div key={m.name} className="rounded-[0.5rem] border border-line p-3">
+              <p className="text-xs text-ink-soft">{t.templateName}</p>
+              <code dir="ltr" className="block select-all font-mono text-sm text-ink text-start">
+                {m.name}
+              </code>
+              <p dir="rtl" className="mt-2 select-all whitespace-pre-wrap rounded bg-paper p-2 text-sm text-ink">
+                {m.body}
+              </p>
+              {m.buttons && m.buttons.length > 0 && (
+                <p className="mt-2 text-xs text-ink-soft">
+                  {t.buttons}:{" "}
+                  {m.buttons.map((b) => (
+                    <span key={b} dir="rtl" className="me-1 inline-block rounded-full border border-line px-2 py-0.5 text-ink">
+                      {b}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

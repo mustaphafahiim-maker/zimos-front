@@ -14,6 +14,8 @@ import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { CommandPalette } from "@/components/CommandPalette";
+import { SidebarShortcuts } from "@/components/SidebarShortcuts";
 
 const STRINGS = {
   en: {
@@ -104,6 +106,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
       <nav aria-label={t.navLabel} className="flex-1 overflow-y-auto px-3 pb-4">
+        <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
           const isClosed = Boolean(collapsed[group.id]);
@@ -323,6 +326,7 @@ export function DashboardLayout() {
             {/* Dashboard-wide locale switch. Lives in the header (not the
                 sidebar footer beside ThemeToggle) so it stays reachable on
                 mobile, where the sidebar collapses into the drawer. */}
+            <CommandPalette />
             <NotificationsBell />
             <LanguageSwitch className="hidden sm:inline-flex" />
             <LanguageSwitch compact className="sm:hidden" />
