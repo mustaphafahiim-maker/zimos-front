@@ -59,6 +59,9 @@ const RealtimePage = lazy(() => import("@/pages/analytics/RealtimePage").then((m
 const FunnelAnalyticsPage = lazy(() =>
   import("@/pages/analytics/FunnelAnalyticsPage").then((m) => ({ default: m.FunnelAnalyticsPage }))
 );
+const AttributionPage = lazy(() =>
+  import("@/pages/analytics/AttributionPage").then((m) => ({ default: m.AttributionPage }))
+);
 const SettlementsPage = lazy(() =>
   import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
@@ -68,6 +71,9 @@ const AutomationsPage = lazy(() =>
 );
 const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
 const ProfitPage = lazy(() => import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage })));
+const StoreDesignPage = lazy(() =>
+  import("@/pages/storeDesign/StoreDesignPage").then((m) => ({ default: m.StoreDesignPage }))
+);
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -119,6 +125,7 @@ export default function App() {
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
+                      <Route path="/analytics/attribution" element={<LazyRoute><AttributionPage /></LazyRoute>} />
                       <Route path="/analytics/realtime" element={<LazyRoute><RealtimePage /></LazyRoute>} />
                       <Route
                         path="/analytics/funnels/:funnelId"
@@ -130,6 +137,8 @@ export default function App() {
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
                       <Route path="/media" element={<LazyRoute><MediaLibraryPage /></LazyRoute>} />
+                      <Route path="/store-settings" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
+                      <Route path="/store-settings/:tab" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />

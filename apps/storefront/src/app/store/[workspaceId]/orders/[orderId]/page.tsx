@@ -5,6 +5,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
+import { ThankYouMessage, ThankYouProducts } from "@/components/ThankYouExtras";
+import { formOptionsOf } from "@/lib/orderForm";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
@@ -63,6 +65,11 @@ function Confirmation() {
   const currency = snapshot?.currency ?? store?.currency;
   const wa = store?.phone ? whatsappNumber(store.phone) : null;
   const storeName = store?.name ?? "";
+  // The merchant's thank-you settings: their message, the back-home button
+  // and a few products from a collection of their choosing.
+  const thanks = store?.thankYou;
+  const shortMessage = formOptionsOf(store?.checkout).thank_you_message;
+  const showBackHome = !thanks?.enabled || thanks.show_back_home_button;
 
   async function copyLink() {
     try {
@@ -86,6 +93,10 @@ function Confirmation() {
     <main className={`${container} flex-1 py-10 sm:py-14`}>
       <div className="mx-auto max-w-2xl">
         <ConfirmationHeading orderNumber={orderNumber} phone={snapshot?.phone} />
+        {shortMessage && <p className="mt-4 text-center text-sm font-medium text-ink">{shortMessage}</p>}
+        {thanks && (
+          <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />
+        )}
 
         {upsell && (
           <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
@@ -130,10 +141,16 @@ function Confirmation() {
           <StoreLink href="/track" className={btnSecondary}>
             {t.thankYou.track}
           </StoreLink>
-          <StoreLink href="/" className={btnSecondary}>
-            {t.thankYou.backToStore}
-          </StoreLink>
+          {showBackHome && (
+            <StoreLink href="/" className={btnSecondary}>
+              {t.thankYou.backToStore}
+            </StoreLink>
+          )}
         </div>
+
+        {thanks?.enabled && thanks.show_products_from_collection_id && (
+          <ThankYouProducts workspaceId={workspaceId} collectionId={thanks.show_products_from_collection_id} />
+        )}
 
         {storeUrl && (
           <section className="mt-8 text-center" aria-labelledby="share-title">
