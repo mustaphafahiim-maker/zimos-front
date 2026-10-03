@@ -81,8 +81,10 @@ function declarations(style: Style | undefined): string[] {
     const align = ALIGN[style.align];
     out.push(`text-align:${align}`);
     // A narrowed element is placed inside its column the same way its text is.
+    // Each choice sets both margins, so a device override undoes the one before it.
     if (align === "center") out.push("margin-inline:auto");
-    if (align === "end") out.push("margin-inline-start:auto");
+    else if (align === "end") out.push("margin-inline:auto 0");
+    else out.push("margin-inline:0 auto");
   }
   px("paddingTop", "padding-top", 0, 300);
   px("paddingBottom", "padding-bottom", 0, 300);
