@@ -3,7 +3,9 @@ import {
   type Order,
   type OrderStage,
   type OrderTimelineEvent,
+  type ShipmentStatus,
 } from "@store-builder/api-client";
+import { providerName } from "@/lib/providers";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -17,7 +19,7 @@ import { STAGE_TONE, useOrderLabels } from "../orderLabels";
 const STRINGS = {
   en: {
     title: "Timeline",
-    description: "Everything that happened to this order: status changes, edits, notes, messages and webhooks.",
+    description: "Everything that happened to this order: status changes, edits, notes, messages, webhooks and courier updates.",
     empty: "Nothing recorded yet.",
     placed: "Order placed",
     by_user: "by {name}",
@@ -41,6 +43,7 @@ const STRINGS = {
     webhook_pending: "waiting to be sent",
     webhook_failed: "failed, will retry",
     webhook_exhausted: "failed",
+    courier_update: "{carrier} update",
     "a_order.update": "Address or notes edited",
     "a_order.meta_update": "Tags or flags changed",
     "a_order.archive": "Order archived",
@@ -60,7 +63,7 @@ const STRINGS = {
   },
   ar: {
     title: "السجل الزمني",
-    description: "كل ما حدث لهذا الأوردر: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks.",
+    description: "كل ما حدث لهذا الأوردر: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks وتحديثات شركة الشحن.",
     empty: "لا يوجد شيء مسجّل بعد.",
     placed: "تم إنشاء الأوردر",
     by_user: "بواسطة {name}",
@@ -84,6 +87,7 @@ const STRINGS = {
     webhook_pending: "في انتظار الإرسال",
     webhook_failed: "فشل وسيُعاد",
     webhook_exhausted: "فشل",
+    courier_update: "تحديث من {carrier}",
     "a_order.update": "تعديل العنوان أو الملاحظات",
     "a_order.meta_update": "تغيير التاجز أو العلامات",
     "a_order.archive": "تمت أرشفة الأوردر",
@@ -177,6 +181,22 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
             {fmt(t.automation, { trigger: String(d.trigger) })} — {status}
           </p>
           {typeof d.detail === "string" && d.detail && <p className="mt-1 text-sm text-ink-soft">{d.detail}</p>}
+        </>
+      );
+    }
+    if (event.type === "courier") {
+      const status = typeof d.status === "string" ? (d.status as ShipmentStatus) : null;
+      return (
+        <>
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span className="font-medium text-ink">{fmt(t.courier_update, { carrier: providerName(String(d.carrierCode ?? "")) })}</span>
+            {status && <StatusBadge value={status} tone="neutral" text={labels.shipment(status)} />}
+          </div>
+          {typeof d.description === "string" && d.description && (
+            <p className="mt-1 text-sm text-ink-soft">
+              <bdi>{d.description}</bdi>
+            </p>
+          )}
         </>
       );
     }

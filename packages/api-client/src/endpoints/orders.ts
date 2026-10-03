@@ -206,7 +206,7 @@ export interface OrderListFilters {
 
 // -------------------------------------------------- timeline, neighbours --
 
-export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook";
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier";
 
 export interface OrderTimelineEvent {
   id: string;
@@ -216,7 +216,8 @@ export interface OrderTimelineEvent {
   /**
    * status: { from, to, reason } · audit: { action, entity, before, after } ·
    * note: { body, visibility } · automation: { trigger, status, detail } ·
-   * webhook: { eventType, status, attempts, responseStatus }
+   * webhook: { eventType, status, attempts, responseStatus } ·
+   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId }
    */
   data: Record<string, unknown>;
 }
