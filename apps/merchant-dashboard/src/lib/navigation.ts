@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  UsersRound,
   Sparkles,
   Activity,
   BadgeDollarSign,
@@ -62,12 +63,14 @@ export type NavKey =
   | "settlements"
   | "inbox"
   | "automations"
+  | "campaigns"
   | "marketing"
   | "profit"
   | "ads"
   | "media"
   | "digital"
   | "ai"
+  | "affiliates"
   | "storeSettings"
   | "apps"
   | "activity";
@@ -142,10 +145,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "ai", to: "/ai", icon: Sparkles },
+      { key: "affiliates", to: "/affiliates", icon: UsersRound },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "automations", to: "/automations", icon: Bot },
+      { key: "campaigns", to: "/campaigns", icon: Megaphone },
       { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
@@ -231,12 +236,14 @@ export const NAV_LABELS = {
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
+    campaigns: "WhatsApp campaigns",
     marketing: "Marketing",
     profit: "Profit",
     ads: "Ad campaigns",
     media: "Media library",
     digital: "Digital products",
     ai: "AI studio",
+    affiliates: "Affiliates",
     storeSettings: "Store settings",
   },
   ar: {
@@ -266,12 +273,14 @@ export const NAV_LABELS = {
     settlements: "تحصيل الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
+    campaigns: "حملات واتساب",
     marketing: "التسويق",
     profit: "الأرباح",
     ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",
+    affiliates: "المسوّقون بالعمولة",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;

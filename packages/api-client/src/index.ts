@@ -41,6 +41,7 @@ export * from "./endpoints/developers";
 export * from "./endpoints/webhookExtras";
 export * from "./endpoints/apps";
 export * from "./endpoints/security";
+export * from "./endpoints/usage";
 // Store design and settings: purchase form builder, thank-you page (lane 5).
 export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).
@@ -70,6 +71,8 @@ export * from "./endpoints/dashboard";
 export * from "./endpoints/digital";
 // AI module: generation jobs, usage, apply as draft (lane 8).
 export * from "./endpoints/ai";
+// Affiliates: marketers, commissions, payouts and the portal (lane 8).
+export * from "./endpoints/affiliates";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
@@ -86,5 +89,9 @@ export * from "./endpoints/orderEmails";
 export * from "./endpoints/coupons";
 // Lost orders: refused and unfinished checkouts, recovery (lane 2).
 export * from "./endpoints/lostOrders";
+// WhatsApp campaigns to consenting contacts.
+export * from "./endpoints/whatsappCampaigns";
 // Social proof, newsletter sign-up, referral results (lane 3).
 export * from "./endpoints/engagement";
+// The shopper's order tracking page: steps, courier, signed tracking link.
+export * from "./endpoints/orderTracking";
