@@ -5368,3 +5368,36 @@ export interface MediaListResponse {
   media: MediaAsset[];
   nextCursor: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Orders export — GET /workspaces/:ws/orders/export(.columns)
+// ---------------------------------------------------------------------------
+
+export interface OrderExportColumn {
+  key: string;
+  label: { en: string; ar: string };
+  /** Only meaningful on a one-row-per-item file. */
+  perItem: boolean;
+}
+
+export interface OrderExportCatalogue {
+  columns: OrderExportColumn[];
+  /** The columns a file gets when none are named, per row mode. */
+  defaults: { order: string[]; item: string[] };
+  /** A file stops after this many orders; narrow the dates to get the rest. */
+  maxOrders: number;
+}
+
+/** The orders list's own filters, plus what the file should look like. */
+export interface OrderExportParams extends OrderSearchParams {
+  sort?: OrderSort;
+  stage?: OrderStage;
+  confirmationState?: ConfirmationState;
+  financialState?: FinancialState;
+  fulfillmentState?: FulfillmentState;
+  columns?: string[];
+  /** One row per order (default) or one per order line. */
+  rowPer?: "order" | "item";
+  /** Language of the header row and the status words. */
+  lang?: "en" | "ar";
+}

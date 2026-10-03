@@ -28,6 +28,7 @@ import { Select } from "@/components/Select";
 import { useNow } from "@/pages/confirmation/confirmationRoles";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
+import { ExportOrders } from "./components/ExportOrders";
 
 const STRINGS = {
   en: {
@@ -199,7 +200,11 @@ export function OrdersListPage() {
 
   return (
     <div className="max-w-6xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={<ExportOrders filters={{ ...query, stage: stage ?? undefined, sort }} />}
+      />
 
       <SearchAndDates filters={filters} />
 

@@ -1,0 +1,228 @@
+import { useEffect, useMemo, useState } from "react";
+import { Download } from "lucide-react";
+import { Alert, Button, Spinner } from "@store-builder/ui";
+import type { OrderExportCatalogue, OrderExportParams } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { Modal } from "@/components/Modal";
+import { useToast } from "@/components/Toast";
+
+const STRINGS = {
+  en: {
+    open: "Export",
+    title: "Export orders",
+    description: "A CSV file you can open in Excel or Google Sheets.",
+    scopeFiltered: "Exports the orders matching your current search, dates and tab.",
+    scopeAll: "Exports every order in the store. Pick a tab or dates first to narrow it.",
+    rowPer: "Rows",
+    rowPerOrder: "One row per order",
+    rowPerItem: "One row per product",
+    columns: "Columns",
+    selectAll: "Select all",
+    reset: "Reset to default",
+    perItemGroup: "Per product",
+    none: "Pick at least one column.",
+    limit: "A file holds up to {max} orders.",
+    cancel: "Cancel",
+    download: "Download CSV",
+    downloading: "Preparing…",
+    done: "Your orders file was downloaded.",
+  },
+  ar: {
+    open: "تصدير",
+    title: "تصدير الطلبات",
+    description: "ملف CSV يفتح في Excel أو Google Sheets.",
+    scopeFiltered: "يصدّر الطلبات المطابقة للبحث والتواريخ والتبويب الحالي.",
+    scopeAll: "يصدّر كل طلبات المتجر. اختر تبويبًا أو تواريخ أولًا لتحديد جزء منها.",
+    rowPer: "الصفوف",
+    rowPerOrder: "صف لكل طلب",
+    rowPerItem: "صف لكل منتج",
+    columns: "الأعمدة",
+    selectAll: "تحديد الكل",
+    reset: "الرجوع للافتراضي",
+    perItemGroup: "لكل منتج",
+    none: "اختر عمودًا واحدًا على الأقل.",
+    limit: "الملف يحمل حتى {max} طلب.",
+    cancel: "إلغاء",
+    download: "تنزيل CSV",
+    downloading: "جارٍ التجهيز…",
+    done: "تم تنزيل ملف الطلبات.",
+  },
+} satisfies Messages;
+
+type RowPer = "order" | "item";
+
+/** The orders list's current filters, passed straight to the export. */
+export type ExportOrdersFilters = Pick<OrderExportParams, "q" | "from" | "to" | "stage" | "sort">;
+
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * The "Export" button of the orders list and its dialog: one row per order or
+ * per product, and which columns. The file is the list as it is filtered now.
+ */
+export function ExportOrders({ filters }: { filters: ExportOrdersFilters }) {
+  const t = useT(STRINGS);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        <Download className="size-4" aria-hidden />
+        {t.open}
+      </Button>
+      {open && <ExportOrdersDialog filters={filters} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters; onClose: () => void }) {
+  const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+
+  const [catalogue, setCatalogue] = useState<OrderExportCatalogue | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [rowPer, setRowPer] = useState<RowPer>("order");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .getOrderExportColumns(workspaceId)
+      .then((res) => {
+        if (cancelled) return;
+        setCatalogue(res);
+        setSelected(res.defaults.order);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(errorMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+    // errorMessage is stable per locale; the catalogue is loaded once per open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  // Per-product columns only make sense on a row-per-product file.
+  const visible = useMemo(
+    () => (catalogue ? catalogue.columns.filter((c) => rowPer === "item" || !c.perItem) : []),
+    [catalogue, rowPer]
+  );
+
+  function changeRowPer(next: RowPer) {
+    setRowPer(next);
+    if (catalogue) setSelected(catalogue.defaults[next]);
+  }
+
+  function toggle(key: string) {
+    setSelected((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
+  }
+
+  async function download() {
+    if (!catalogue) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // In the catalogue's order, whatever order the boxes were ticked in.
+      const columns = visible.filter((c) => selected.includes(c.key)).map((c) => c.key);
+      const blob = await apiClient.exportOrdersCsv(workspaceId, { ...filters, columns, rowPer, lang: locale === "ar" ? "ar" : "en" });
+      saveBlob(blob, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast.success(t.done);
+      onClose();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const filtered = Boolean(filters.q || filters.from || filters.to || filters.stage);
+  const chosen = visible.filter((c) => selected.includes(c.key)).length;
+
+  return (
+    <Modal
+      open
+      onClose={busy ? () => undefined : onClose}
+      title={t.title}
+      description={t.description}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            {t.cancel}
+          </Button>
+          <Button onClick={download} disabled={busy || !catalogue || chosen === 0}>
+            {busy ? t.downloading : t.download}
+          </Button>
+        </>
+      }
+    >
+      {loadError ? (
+        <Alert variant="destructive">{loadError}</Alert>
+      ) : !catalogue ? (
+        <div className="flex justify-center py-8">
+          <Spinner />
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <p className="text-sm text-ink-soft">
+            {filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
+          </p>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-ink">{t.rowPer}</legend>
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {(["order", "item"] as const).map((mode) => (
+                <label key={mode} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                  <input type="radio" name="export-row-per" checked={rowPer === mode} onChange={() => changeRowPer(mode)} />
+                  {mode === "order" ? t.rowPerOrder : t.rowPerItem}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <legend className="text-sm font-medium text-ink">{t.columns}</legend>
+              <div className="flex gap-3 text-xs">
+                <button type="button" className="text-primary hover:underline" onClick={() => setSelected(visible.map((c) => c.key))}>
+                  {t.selectAll}
+                </button>
+                <button type="button" className="text-primary hover:underline" onClick={() => setSelected(catalogue.defaults[rowPer])}>
+                  {t.reset}
+                </button>
+              </div>
+            </div>
+            <div className="grid max-h-64 grid-cols-1 gap-x-6 gap-y-1.5 overflow-y-auto rounded-lg border border-line p-3 sm:grid-cols-2">
+              {visible.map((column) => (
+                <label key={column.key} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                  <input type="checkbox" checked={selected.includes(column.key)} onChange={() => toggle(column.key)} />
+                  <span>{locale === "ar" ? column.label.ar : column.label.en}</span>
+                  {column.perItem && <span className="text-xs text-ink-soft">· {t.perItemGroup}</span>}
+                </label>
+              ))}
+            </div>
+            {chosen === 0 && <p className="mt-2 text-xs text-danger">{t.none}</p>}
+          </fieldset>
+
+          {error && <Alert variant="destructive">{error}</Alert>}
+        </div>
+      )}
+    </Modal>
+  );
+}

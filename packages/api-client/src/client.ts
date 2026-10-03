@@ -243,6 +243,8 @@ import type {
   CreateSettlementPayload,
   MediaListParams,
   MediaListResponse,
+  OrderExportCatalogue,
+  OrderExportParams,
   SendWhatsappPayload,
   SentWhatsappMessage,
   SettlementDetail,
@@ -3528,5 +3530,25 @@ export class ApiClient {
       `/workspaces/${workspaceId}/media/${mediaId}`,
       { method: "DELETE" }
     );
+  }
+
+  // ---------------------------------------------------------------------
+  // Orders export — /workspaces/:ws/orders/export
+  // The orders list as a CSV file, under the same filters as the list.
+  // ---------------------------------------------------------------------
+
+  /** The columns a file can carry, and the default set for each row mode. */
+  async getOrderExportColumns(workspaceId: string) {
+    return this.request<OrderExportCatalogue>(`${this.ordersBase(workspaceId)}/export/columns`);
+  }
+
+  /** The file itself (UTF-8 with a BOM, so Excel reads Arabic). */
+  async exportOrdersCsv(workspaceId: string, params: OrderExportParams = {}): Promise<Blob> {
+    const { columns, ...rest } = params;
+    const query = buildQuery({ ...rest, columns: columns && columns.length > 0 ? columns.join(",") : undefined });
+    const res = await this.rawFetch(`${this.ordersBase(workspaceId)}/export${query}`, {
+      headers: { Accept: "text/csv" },
+    });
+    return res.blob();
   }
 }
