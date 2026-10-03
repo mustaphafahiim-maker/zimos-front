@@ -38,6 +38,8 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Store design and settings: purchase form builder, thank-you page (lane 5).
+export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).
 export * from "./endpoints/catalog";
 // Protection against fake orders: blocklist, rules, risk (Fraud protection page).
@@ -49,3 +51,5 @@ export * from "./endpoints/profit";
 export * from "./endpoints/notifications";
 // Orders: status changes, history, notes, tags, bulk actions (lane 1).
 export * from "./endpoints/orders";
+// Tracking pixels (Marketing → Tracking tools).
+export * from "./endpoints/trackingPixels";

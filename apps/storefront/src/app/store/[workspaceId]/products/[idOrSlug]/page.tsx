@@ -1,6 +1,7 @@
+import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
+import { resolveCheckoutForm, resolveCheckoutSettings, storefrontProductPage } from "@store-builder/api-client";
 import { ProductContent } from "@/components/product/ProductContent";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
@@ -129,6 +130,8 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1 pb-24 md:pb-0">
+      {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
+      <PixelScope productIds={[product.id]} />
       {/* A landing page without the store's menu: hidden only while this page is shown. */}
       {ps.hide_header && (
         <style
@@ -155,7 +158,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             product={product}
             bump={bump}
             description={descriptionInBuyBox ? product.description : null}
-            checkoutSettings={resolveCheckoutSettings(store.checkout)}
+            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
           />
         </div>
 
@@ -164,7 +167,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            <TrustStrip t={t} inAside />
+            {resolveCheckoutForm(store.checkout).show_trust_badges && <TrustStrip t={t} inAside />}
           </aside>
         </div>
       </div>

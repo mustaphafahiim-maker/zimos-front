@@ -18,6 +18,7 @@ import type { CatalogProduct } from "@store-builder/api-client";
 import { ProductPageSettingsSection } from "./components/ProductPageSettingsSection";
 import { ProductOptionsDisplaySection } from "./components/ProductOptionsDisplaySection";
 import { ProductCmsSection } from "./components/ProductCmsSection";
+import { VariantBulkEditor } from "./components/VariantBulkEditor";
 
 const STRINGS = {
   en: {
@@ -107,6 +108,7 @@ export function ProductEditPage() {
               variants={data.variants ?? []}
               onChanged={reload}
             />
+            <VariantBulkEditor productId={data.id} variants={data.variants ?? []} onChanged={reload} />
             <OffersSection
               productId={data.id}
               offers={data.offers ?? []}

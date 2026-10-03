@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Star,
+  Store,
   Tag,
   Target,
   Truck,
@@ -58,7 +59,8 @@ export type NavKey =
   | "marketing"
   | "profit"
   | "ads"
-  | "media";
+  | "media"
+  | "storeSettings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -149,7 +151,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "storefront",
     labelKey: "storefront",
-    items: [{ key: "website", to: "/website", icon: Globe }],
+    items: [
+      { key: "website", to: "/website", icon: Globe },
+      { key: "storeSettings", to: "/store-settings", icon: Store },
+    ],
   },
   {
     id: "config",
@@ -212,6 +217,7 @@ export const NAV_LABELS = {
     profit: "Profit",
     ads: "Ad campaigns",
     media: "Media library",
+    storeSettings: "Store settings",
   },
   ar: {
     overview: "نظرة عامة",
@@ -241,6 +247,7 @@ export const NAV_LABELS = {
     profit: "الأرباح",
     ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
+    storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
 

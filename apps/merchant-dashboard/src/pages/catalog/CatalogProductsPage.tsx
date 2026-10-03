@@ -19,6 +19,14 @@ import { LoadMore } from "@/components/LoadMore";
 import { useToast } from "@/components/Toast";
 import { useCatalogLabels } from "./catalogLabels";
 import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
+import {
+  DuplicateProductButton,
+  ProductBulkBar,
+  SelectAllCheckbox,
+  SelectRowCheckbox,
+  useProductSelection,
+  type ProductSelection,
+} from "./components/ProductListBulk";
 
 const STRINGS = {
   en: {
@@ -153,6 +161,8 @@ export function CatalogProductsPage() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<CatalogView>(readView);
   const [toRemove, setToRemove] = useState<Product | null>(null);
+  // Rows ticked for bulk edit (list view).
+  const selection = useProductSelection();
   // Rows with a restore in flight, so a second click can't send it twice.
   const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
 
@@ -223,6 +233,7 @@ export function CatalogProductsPage() {
         <Button asChild size="sm" variant="ghost">
           <Link to={`/catalog/${product.id}`}>{t.edit}</Link>
         </Button>
+        <DuplicateProductButton product={product} />
         {product.status === "archived" ? (
           <>
             <Button
@@ -258,7 +269,7 @@ export function CatalogProductsPage() {
     );
   }
 
-  const rowProps = { products: filtered, t, statusLabel: labels.status, renderActions };
+  const rowProps = { products: filtered, t, statusLabel: labels.status, renderActions, selection };
 
   return (
     <div className="max-w-6xl">
@@ -312,6 +323,8 @@ export function CatalogProductsPage() {
         </div>
       </div>
 
+      <ProductBulkBar selection={selection} onDone={list.reload} />
+
       <DataState
         loading={list.loading}
         error={list.items.length ? null : list.error}
@@ -347,14 +360,18 @@ interface RowsProps {
   t: Strings;
   statusLabel: (status: ProductStatus) => string;
   renderActions: (product: Product) => ReactNode;
+  selection: ProductSelection;
 }
 
-function ProductTable({ products, t, statusLabel, renderActions }: RowsProps) {
+function ProductTable({ products, t, statusLabel, renderActions, selection }: RowsProps) {
   return (
     <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[820px] text-sm">
         <thead>
           <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+            <th className="w-10 py-3 ps-4">
+              <SelectAllCheckbox selection={selection} products={products} />
+            </th>
             <th className="w-14 px-4 py-3 font-medium" />
             <th className="px-4 py-3 text-start font-medium">{t.colProduct}</th>
             <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
@@ -368,6 +385,9 @@ function ProductTable({ products, t, statusLabel, renderActions }: RowsProps) {
         <tbody>
           {products.map((product) => (
             <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+              <td className="py-2 ps-4">
+                <SelectRowCheckbox selection={selection} product={product} />
+              </td>
               <td className="py-2 ps-4">
                 <ProductImage
                   media={primaryImage(product)}
