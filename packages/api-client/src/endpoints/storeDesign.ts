@@ -642,3 +642,104 @@ export async function storefrontCustomCode(
   );
   return slots ?? {};
 }
+
+// ------------------------------------------------------------- domains ----
+// Backend: src/modules/domains (domainsService.js + domainSettings.js),
+// under /workspaces/:workspaceId/domains — permission domain.manage.
+// Codes: DOMAIN_TAKEN (409), STORE_NOT_SET_UP (409), DOMAIN_NOT_VERIFIED
+// (400 on verify, 409 on primary / certificate), FUNNEL_NOT_PUBLISHED (409),
+// CERTIFICATE_PROVIDER_ERROR (502).
+
+export type StoreDomainStatus = "pending_verification" | "verified" | "active" | "failed";
+export type StoreDomainSslStatus = "none" | "pending" | "issued" | "failed";
+
+export interface StoreDomainRecord {
+  type: "TXT" | "CNAME";
+  name: string;
+  value: string;
+  ttl: number;
+  purpose: "verification" | "routing";
+}
+
+export interface StoreDomain {
+  id: string;
+  hostname: string;
+  status: StoreDomainStatus;
+  verifiedAt: string | null;
+  isPrimary: boolean;
+  sslStatus: StoreDomainSslStatus;
+  sslProvider: string | null;
+  sslCheckedAt: string | null;
+  homeFunnel: { id: string; name: string; status: string } | null;
+  records: StoreDomainRecord[];
+}
+
+export interface StoreDomainsOverview {
+  domains: StoreDomain[];
+  /** What a merchant's CNAME points at. */
+  cnameTarget: string;
+  /** The certificate provider in use ("sandbox" until a real one is configured), or null. */
+  certificateProvider: string | null;
+}
+
+export interface StoreDomainDnsCheck {
+  hostname: string;
+  txt: { expected: string; found: boolean; values: string[] };
+  cname: { expected: string; found: boolean; values: string[] };
+  checkedAt: string;
+}
+
+const domainsBase = (workspaceId: string) => "/workspaces/" + workspaceId + "/domains";
+
+export function storeDesignDomainsOverview(client: ApiClient, workspaceId: string): Promise<StoreDomainsOverview> {
+  return client.request<StoreDomainsOverview>(domainsBase(workspaceId) + "/overview");
+}
+
+export async function storeDesignAddDomain(client: ApiClient, workspaceId: string, hostname: string): Promise<void> {
+  await client.request(domainsBase(workspaceId), { method: "POST", body: { hostname } });
+}
+
+/** Looks for the TXT record now; rejects with DOMAIN_NOT_VERIFIED when it is not there yet. */
+export async function storeDesignVerifyDomain(client: ApiClient, workspaceId: string, domainId: string): Promise<void> {
+  await client.request(domainsBase(workspaceId) + "/" + domainId + "/verify", { method: "POST" });
+}
+
+/** Requests the certificate (first call) or asks the provider where it stands. */
+export function storeDesignCheckDomainSsl(
+  client: ApiClient,
+  workspaceId: string,
+  domainId: string
+): Promise<{ domain: StoreDomain; detail: string | null }> {
+  return client.request<{ domain: StoreDomain; detail: string | null }>(
+    domainsBase(workspaceId) + "/" + domainId + "/ssl/check",
+    { method: "POST" }
+  );
+}
+
+export async function storeDesignUpdateDomain(
+  client: ApiClient,
+  workspaceId: string,
+  domainId: string,
+  patch: { isPrimary?: boolean; homeFunnelId?: string | null }
+): Promise<StoreDomain> {
+  const { domain } = await client.request<{ domain: StoreDomain }>(domainsBase(workspaceId) + "/" + domainId, {
+    method: "PATCH",
+    body: patch,
+  });
+  return domain;
+}
+
+export async function storeDesignDomainDnsCheck(
+  client: ApiClient,
+  workspaceId: string,
+  domainId: string
+): Promise<StoreDomainDnsCheck> {
+  const { dns } = await client.request<{ dns: StoreDomainDnsCheck }>(
+    domainsBase(workspaceId) + "/" + domainId + "/dns-check"
+  );
+  return dns;
+}
+
+export async function storeDesignDeleteDomain(client: ApiClient, workspaceId: string, domainId: string): Promise<void> {
+  await client.request(domainsBase(workspaceId) + "/" + domainId, { method: "DELETE" });
+}
