@@ -1,75 +1,84 @@
 "use client";
 
-import type { CheckoutPayload } from "@store-builder/api-client";
-import type { OnlinePaymentOptions } from "@/lib/usePaymentOptions";
+import type { StorefrontPaymentMethod } from "@store-builder/api-client";
+import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
-import { CardIcon, CashIcon, WalletIcon } from "../Icons";
-
-export type PaymentChoice = Extract<CheckoutPayload["paymentMethod"], "cod" | "card" | "wallet">;
 
 /**
- * How the shopper pays. Cash on delivery is always there and always first;
- * card and mobile wallet appear only when the store has Paymob connected
- * (lib/usePaymentOptions) — with `online` null this is a single, pre-chosen
- * row and nothing about paying online is mentioned anywhere.
- *
- * An online choice changes what happens after the order is placed: the
- * shopper is sent to Paymob's hosted page (see lib/placeOrder.onlinePaymentUrl).
+ * The checkout's payment section. With cash on delivery as the only method
+ * (every store until it connects a gateway) it is the same static block the
+ * checkout always showed; with more, a radio list in the merchant's order.
  */
 export function PaymentMethodPicker({
-  online,
+  methods,
   value,
   onChange,
   idPrefix,
-  disabled = false,
 }: {
-  online: OnlinePaymentOptions | null;
-  value: PaymentChoice;
-  onChange: (next: PaymentChoice) => void;
+  methods: StorefrontPaymentMethod[];
+  value: string;
+  onChange: (id: string) => void;
   idPrefix: string;
-  disabled?: boolean;
 }) {
   const { t } = useStore();
-  const choices: { id: PaymentChoice; Icon: typeof CashIcon; title: string; hint: string }[] = [
-    { id: "cod", Icon: CashIcon, title: t.checkout.cod, hint: t.checkout.codHint },
-    ...(online?.card ? [{ id: "card" as const, Icon: CardIcon, title: t.shop.payCard, hint: t.shop.payCardHint }] : []),
-    ...(online?.wallet
-      ? [{ id: "wallet" as const, Icon: WalletIcon, title: t.shop.payWallet, hint: t.shop.payWalletHint }]
-      : []),
-  ];
+
+  const copy = (m: StorefrontPaymentMethod) =>
+    m.method === "card"
+      ? { title: t.payment.card, hint: t.payment.cardHint, Icon: CardIcon }
+      : m.method === "wallet"
+        ? { title: t.payment.wallet, hint: t.payment.walletHint, Icon: WalletIcon }
+        : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
+
+  if (methods.length === 1 && methods[0].method === "cod") {
+    const { title, hint, Icon } = copy(methods[0]);
+    return (
+      <div className="mt-4 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+        <Icon className="shrink-0 text-primary" />
+        <p>
+          <span className="block text-sm font-semibold text-ink">{title}</span>
+          <span className="block text-xs text-ink-soft">{hint}</span>
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <fieldset disabled={disabled} className="space-y-2">
-      <legend className={online ? "mb-2 text-sm font-semibold text-ink" : "sr-only"}>
-        {online ? t.shop.paymentChoose : t.checkout.payment}
-      </legend>
-      {choices.map(({ id, Icon, title, hint }) => {
-        const selected = value === id;
+    <div role="radiogroup" aria-label={t.checkout.payment} className="mt-4 space-y-2">
+      {methods.map((m) => {
+        const { title, hint, Icon } = copy(m);
+        const checked = value === m.id;
         return (
           <label
-            key={id}
-            htmlFor={`${idPrefix}-pay-${id}`}
+            key={m.id}
+            htmlFor={`${idPrefix}-pay-${m.id}`}
             className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
-              selected ? "border-primary bg-primary-soft" : "border-line bg-paper-raised hover:border-primary"
+              checked ? "border-primary bg-primary-soft" : "border-line bg-paper-raised hover:border-primary/50"
             }`}
           >
             <input
-              id={`${idPrefix}-pay-${id}`}
+              id={`${idPrefix}-pay-${m.id}`}
               type="radio"
-              name={`${idPrefix}-paymentMethod`}
-              value={id}
-              checked={selected}
-              onChange={() => onChange(id)}
-              className="h-5 w-5 shrink-0 cursor-pointer accent-primary"
+              name={`${idPrefix}-payment`}
+              value={m.id}
+              checked={checked}
+              onChange={() => onChange(m.id)}
+              className="size-4 shrink-0 accent-primary"
             />
             <Icon className="shrink-0 text-primary" />
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-ink">{title}</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                {title}
+                {m.mode === "test" && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
+                    {t.payment.testTag}
+                  </span>
+                )}
+              </span>
               <span className="block text-xs text-ink-soft">{hint}</span>
             </span>
           </label>
         );
       })}
-    </fieldset>
+    </div>
   );
 }

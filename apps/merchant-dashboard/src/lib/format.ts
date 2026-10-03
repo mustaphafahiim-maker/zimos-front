@@ -1,29 +1,55 @@
-import {
-  formatMoney as formatMoneyIn,
-  formatMoneyRange as formatMoneyRangeIn,
-  parseMoney,
-} from "@store-builder/api-client";
+import { formatMoney as formatMoneyIn, formatMoneyRange, parseMoney } from "@store-builder/api-client";
 import type { OrderAddressSnapshot, Variant } from "@store-builder/api-client";
-import { getIntlLocale } from "@/i18n/LocaleContext";
+import { getIntlLocale, getLocale } from "@/i18n/LocaleContext";
 
-export { parseMoney };
+export { formatMoneyRange, parseMoney };
 
-/** Money in the dashboard's active language: "EGP 1,250.00" in English, Arabic digits in Arabic. */
+/**
+ * Integer minor units -> display string, in the app's language: Arabic
+ * digits under "ar", Latin digits under "en". Both use the Egyptian region
+ * (ar-EG / en-EG). An explicit `locale` still wins.
+ */
 export function formatMoney(
   amountMinorUnits: number | string | null | undefined,
   currency = "EGP",
-  locale = getIntlLocale()
+  locale: string = getLocale() === "ar" ? "ar-EG" : "en-EG"
 ): string {
   return formatMoneyIn(amountMinorUnits, currency, locale);
 }
 
-export function formatMoneyRange(
-  lowMinorUnits: number | string | null | undefined,
-  highMinorUnits: number | string | null | undefined,
-  currency = "EGP",
-  locale = getIntlLocale()
-): string {
-  return formatMoneyRangeIn(lowMinorUnits, highMinorUnits, currency, locale);
+const minorDigits = new Map<string, number>();
+
+/** Decimal places of a currency's minor unit (EGP/USD 2, JPY 0, KWD 3), from Intl. */
+function minorUnitDigits(currency: string): number {
+  let digits = minorDigits.get(currency);
+  if (digits === undefined) {
+    try {
+      digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    } catch {
+      digits = 2;
+    }
+    minorDigits.set(currency, digits);
+  }
+  return digits;
+}
+
+/**
+ * A plan price (minor units of its own currency, as the API sends every
+ * amount) for display, divided by that currency's own unit rather than by a
+ * fixed 100: "799 ج.م." / "EGP 799". Whole amounts show no decimals.
+ */
+export function formatMinorMoney(minor: number | string | null | undefined, currency: string): string {
+  const value = parseMoney(minor) / 10 ** minorUnitDigits(currency);
+  const locale = getLocale() === "ar" ? "ar-EG" : "en-EG";
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: Number.isInteger(value) ? 0 : minorUnitDigits(currency),
+    }).format(value);
+  } catch {
+    return `${value} ${currency}`;
+  }
 }
 
 /**
@@ -42,14 +68,14 @@ export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString(getIntlLocale(), { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString(getIntlLocale(), {
     year: "numeric",
     month: "short",
     day: "numeric",

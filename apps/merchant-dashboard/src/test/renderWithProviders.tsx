@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { LocaleProvider, type Locale } from "@/i18n/LocaleContext";
 import { ToastProvider } from "@/components/Toast";
+import { LocationProbe } from "./LocationProbe";
 import { authMock, workspaceMock, type AuthMock, type WorkspaceMock } from "./mocks";
 
 export interface RenderOptions {
@@ -15,17 +16,6 @@ export interface RenderOptions {
   locale?: Locale;
   auth?: Partial<AuthMock>;
   workspace?: Partial<WorkspaceMock>;
-}
-
-/** Renders the current pathname + search so tests can assert navigation. */
-function LocationProbe() {
-  const { pathname, search } = useLocation();
-  return (
-    <output data-testid="location" hidden>
-      {pathname}
-      {search}
-    </output>
-  );
 }
 
 export function currentPath(): string {

@@ -38,6 +38,8 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { draftRefusal } from "@/lib/goLive";
 import { useT, type Locale, type Messages } from "@/i18n/LocaleContext";
 import { normalizeTree } from "../website/editor/blocks";
 import { layoutFlow } from "./funnelFlow";
@@ -57,6 +59,8 @@ export interface UiStep {
   name: string;
   type: UiStepType;
   offerId: string | null;
+  /** Checkout steps: the order bump offered on the step's form. */
+  bumpOfferId: string | null;
   experimentId: string | null;
   /** Server seo object minus our canvas metadata. Round-tripped untouched. */
   seo: Record<string, unknown>;
@@ -154,6 +158,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
           name: s.name,
           type: s.stepType,
           offerId: s.offerId,
+          bumpOfferId: s.bumpOfferId ?? null,
           experimentId: s.abTestExperimentId,
           seo: stripCanvas(s.seo),
           tree: normalizeTree(s.builderData),
@@ -256,6 +261,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           name: s.name.trim() || s.key,
           builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
+          ...(s.type === "checkout" && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
           seo: withCanvas(s, order),
         })
       );
@@ -267,6 +273,10 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
+    // A step that stops being a checkout loses its bump on the server by itself.
+    if (s.bumpOfferId !== before.bumpOfferId && (s.type === "checkout" || s.bumpOfferId === null)) {
+      patch.bumpOfferId = s.bumpOfferId;
+    }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
     if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
     if (Object.keys(patch).length > 0) {
@@ -359,7 +369,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "landing", type: "landing", name: N("Landing page", "صفحة الهبوط") },
       { key: "checkout", type: "checkout", name: N("Checkout", "الدفع") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "landing", to: "checkout", condition: "always" },
@@ -370,7 +380,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "sales", type: "sales", name: N("Sales page", "صفحة البيع") },
       { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "sales", to: "checkout", condition: "always" },
@@ -384,8 +394,8 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "product", type: "landing", name: N("Product page", "صفحة المنتج") },
       { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
-      { key: "upsell", type: "upsell", name: N("One-click extra offer", "عرض إضافي بضغطة") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "upsell", type: "upsell", name: N("One-click extra offer", "عرض إضافي بنقرة") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "product", to: "checkout", condition: "always" },
@@ -400,7 +410,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "bundle", type: "landing", name: N("Bundle page", "صفحة الباقة"), page: "bundle" },
       { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "bundle", to: "checkout", condition: "always" },
@@ -413,7 +423,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
       { key: "checkout", type: "checkout", name: N("Checkout", "الدفع") },
       { key: "upsell", type: "upsell", name: N("Upsell", "عرض بعد الشراء") },
       { key: "downsell", type: "downsell", name: N("Downsell", "عرض بديل") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "landing", to: "checkout", condition: "always" },
@@ -501,10 +511,14 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
   try {
     for (const s of src.steps) {
       const payload = { key: s.key, stepType: s.stepType, name: s.name, builderData: s.builderData, seo: s.seo ?? {} };
+      const offers = {
+        ...(s.offerId ? { offerId: s.offerId } : {}),
+        ...(s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
+      };
       try {
-        await funnelsCreateStep(apiClient, workspaceId, copy.id, s.offerId ? { ...payload, offerId: s.offerId } : payload);
+        await funnelsCreateStep(apiClient, workspaceId, copy.id, { ...payload, ...offers });
       } catch (err) {
-        if (s.offerId && err instanceof ApiError && err.status === 422) {
+        if ((s.offerId || s.bumpOfferId) && err instanceof ApiError && err.status === 422) {
           await funnelsCreateStep(apiClient, workspaceId, copy.id, payload);
         } else {
           throw err;
@@ -531,13 +545,17 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
 const ERROR_STRINGS = {
   en: {
     permission: "You don't have permission to manage or publish funnels. Ask a workspace owner to update your role.",
-    subscription: "This workspace needs an active subscription to create or publish funnels. Update your plan in Billing.",
+    subscription:
+      "Your subscription has expired, so new funnels can't be created until it's renewed. Existing funnels keep working — see Settings → Plan and referral code.",
+    suspended: "This store has been suspended by Zimos, so new funnels can't be created. Contact Zimos support.",
     notPublished: "Publish this funnel before pausing or resuming it.",
     keyTaken: "A step with this key already exists in the funnel. Reload and try again.",
   },
   ar: {
     permission: "ليست لديك صلاحية لإدارة مسارات البيع أو نشرها. اطلب من مالك مساحة العمل تحديث دورك.",
-    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإنشاء مسارات البيع أو نشرها. حدّث خطتك من صفحة الفواتير.",
+    subscription:
+      "انتهى اشتراكك، لذلك لا يمكن إنشاء مسارات بيع جديدة حتى يُجدَّد. مسارات البيع الحالية تعمل كالمعتاد — راجع الإعدادات ← الخطة وكود الإحالة.",
+    suspended: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء مسارات بيع جديدة. تواصل مع دعم Zimos.",
     notPublished: "انشر مسار البيع أولًا قبل إيقافه مؤقتًا أو استئنافه.",
     keyTaken: "توجد خطوة بنفس المعرّف في مسار البيع. أعد التحميل وحاول مرة أخرى.",
   },
@@ -547,12 +565,18 @@ export function isSubscriptionError(err: unknown): boolean {
   return err instanceof ApiError && (err.code === "SUBSCRIPTION_REQUIRED" || err.status === 402);
 }
 
-/** Bilingual message for funnel API errors (403 permission, 402 subscription, known 409s). */
+/** Bilingual message for funnel API errors (403 permission or suspension, 402 subscription, known 409s). */
 export function useFunnelErrorMessage(): (err: unknown) => string {
   const t = useT(ERROR_STRINGS);
+  const shared = useErrorMessage();
   return (err: unknown) => {
+    // A draft store's refusal and the plan's monthly funnel limit have their
+    // own sentences (lib/errorMessages); neither is an expired subscription
+    // or a missing permission.
+    if (draftRefusal(err) || (err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED")) return shared(err);
     if (isSubscriptionError(err)) return t.subscription;
     if (err instanceof ApiError) {
+      if (err.code === "STORE_SUSPENDED") return t.suspended;
       if (err.status === 403) return t.permission;
       if (err.code === "FUNNEL_NOT_PUBLISHED") return t.notPublished;
       if (err.code === "FUNNEL_STEP_KEY_TAKEN") return t.keyTaken;

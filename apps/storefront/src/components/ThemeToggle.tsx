@@ -29,6 +29,18 @@ function apply(theme: Theme) {
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((fn) => fn());
 
+/**
+ * Switches the page to light or dark from outside the toggle — the website
+ * editor's own preview switch (PreviewBridge). Not remembered: the editor
+ * sends its choice with every preview it posts, and a merchant checking dark
+ * mode there shouldn't find their own storefront visits switched too. The
+ * toggle's icon follows either way.
+ */
+export function setColorMode(theme: Theme) {
+  apply(theme);
+  emit();
+}
+
 function subscribe(onStoreChange: () => void): () => void {
   listeners.add(onStoreChange);
 
@@ -114,6 +126,10 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       aria-label={label}
       title={label}
       suppressHydrationWarning
+      // In the website editor's preview a click in the header selects the
+      // header; this one only switches the preview between light and dark
+      // (PreviewBridge lets it through and tells the editor).
+      data-zimos-passthrough=""
       className={`${iconBtn} ${className}`}
     >
       <span suppressHydrationWarning>

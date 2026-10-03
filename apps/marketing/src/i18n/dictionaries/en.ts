@@ -41,7 +41,7 @@ export const en: Dictionary = {
       "Launch your store and funnels, confirm every cash-on-delivery order, ship with local carriers, and see what each delivered order really earns — in one platform built for Egypt and the Arab world.",
     primaryCta: "Start free",
     secondaryCta: "See how it works",
-    ctaNote: "Free during early access. No card required.",
+    ctaNote: "No card required to start.",
     visual: {
       aria: "Illustration of the ZIMOS dashboard: a funnel from landing page to checkout, upsell and thank-you page, an order pipeline, and an order confirmed on WhatsApp.",
       storeLabel: "Your store",
@@ -250,51 +250,73 @@ export const en: Dictionary = {
 
   pricing: {
     kicker: "Pricing",
-    heading: "Plans that grow with your brand",
-    intro:
-      "Start free while ZIMOS is in early access. We'll announce public pricing well before it takes effect.",
-    badge: "Early access",
-    plans: [
-      {
-        id: "starter",
-        name: "Starter",
-        description: "For merchants launching their first store.",
-        features: [
-          "Store builder & templates",
-          "Checkout built for cash on delivery",
-          "WhatsApp order confirmation",
-          "Arabic and English storefronts",
-        ],
-        cta: "Start free",
-      },
-      {
-        id: "growth",
-        name: "Growth",
-        description: "For brands running paid campaigns every day.",
-        features: [
-          "Everything in Starter",
-          "Funnels, order bumps & upsells",
-          "Call-center confirmation queue",
-          "Media buying & profit analytics",
-          "Fraud & fake-order protection",
-        ],
-        cta: "Start free",
-      },
-      {
-        id: "scale",
-        name: "Scale",
-        description: "For teams running several stores and carriers.",
-        features: [
-          "Everything in Growth",
-          "Multiple stores in one account",
-          "Team roles & permissions",
-          "Automations",
-          "Help with onboarding and migration",
-        ],
-        cta: "Contact sales",
-      },
+    heading: "Simple plans for your store",
+    intro: "A monthly or yearly subscription to the ZIMOS platform. Every price includes everything listed under the plan.",
+    pageTitle: "Pricing — ZIMOS",
+    pageDescription:
+      "ZIMOS plans and prices: a monthly or yearly subscription to the platform for building and running your online store, with the free trial, limits and features of each plan.",
+    pageHeading: "Plans and prices",
+    pageIntro:
+      "ZIMOS is a SaaS platform for building online stores. You subscribe to the platform monthly or yearly, on the plan that fits your store.",
+    billingCycle: "Billing cycle",
+    monthly: "Monthly",
+    yearly: "Yearly",
+    yearlyNote: "2 months free",
+    perMonth: "/ month",
+    perYear: "/ year",
+    yearlyEquivalent: "or {price} / year",
+    free: "Free",
+    trial: "{days}-day free trial",
+    noTrial: "No free trial",
+    stores: "Stores",
+    funnels: "Funnels a month",
+    orders: "Orders a month",
+    unlimited: "Unlimited",
+    cta: "Subscribe",
+    ctaYearly: "Subscribe yearly",
+    seeAll: "See all plans and prices",
+    comingSoon: "Prices will be available soon.",
+    comingSoonBody: "Our plans are being finalised. Create your account now and we'll show you the plans as soon as they're published.",
+    comingSoonCta: "Create your account",
+    paymentNote: "Payment is currently by manual transfer, and refunds follow our",
+    refundLink: "refund policy",
+    features: {
+      custom_domain: "Custom domain",
+      funnels: "Sales funnels",
+      whatsapp_confirmation: "WhatsApp order confirmation",
+      abandoned_cart: "Abandoned cart recovery",
+      multi_warehouse: "Multiple warehouses",
+      api_access: "API access",
+      staff_accounts: "Staff accounts",
+      advanced_analytics: "Advanced analytics",
+      remove_branding: "Remove platform branding",
+      priority_support: "Priority support",
+    },
+  },
+
+  service: {
+    kicker: "What ZIMOS is",
+    heading: "A SaaS platform for building online stores",
+    body:
+      "ZIMOS is software you use online: you build and run your store on it, and pay a monthly or yearly subscription for the platform. We don't sell products or take part in your sales — you sell to your customers, and ZIMOS gives you the store, the funnels, order confirmation, shipping and reports to do it.",
+    points: [
+      "What you buy: a subscription to the ZIMOS platform, monthly or yearly.",
+      "What it includes: your store and website, funnels, order management and the features of your plan.",
+      "How you pay: currently by manual transfer, activated once the payment is confirmed.",
     ],
-    note: "No card required.",
+  },
+
+  legal: {
+    lastUpdated: "Last updated: {date}",
+    contactHeading: "Contact details",
+    email: "Email",
+    phone: "Phone",
+    address: "Address",
+    hours: "Working hours",
+    entityHeading: "Legal entity",
+    legalName: "Name",
+    registration: "Commercial registration",
+    relatedHeading: "Related pages",
   },
 
   faq: {
@@ -359,29 +381,18 @@ export const en: Dictionary = {
         links: [
           { label: "Platform", href: "#product" },
           { label: "Solutions", href: "#solutions" },
-          { label: "Pricing", href: "#pricing" },
+          { label: "Pricing", href: "/pricing" },
           { label: "FAQ", href: "#faq" },
         ],
       },
       {
         title: "Company",
-        links: [
-          { label: "About", href: "/about" },
-          { label: "Careers", href: "/careers" },
-          { label: "Contact", href: "/contact" },
-        ],
-      },
-      {
-        title: "Resources",
-        links: [
-          { label: "Help center", href: "/help" },
-          { label: "Guides", href: "/guides" },
-          { label: "Blog", href: "/blog" },
-        ],
+        links: [{ label: "Contact us", href: "/contact" }],
       },
       {
         title: "Legal",
         links: [
+          { label: "Refund policy", href: "/refund-policy" },
           { label: "Terms of service", href: "/terms" },
           { label: "Privacy policy", href: "/privacy" },
         ],
@@ -389,5 +400,6 @@ export const en: Dictionary = {
     ],
     rights: "All rights reserved.",
     languageLabel: "Language",
+    registration: "Commercial registration",
   },
 };

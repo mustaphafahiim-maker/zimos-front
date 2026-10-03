@@ -1,1 +1,2 @@
-export { PageRenderer, type PageRendererFunnel } from "./PageRenderer";
+export { PageRenderer } from "./PageRenderer";
+export type { PageRendererFunnel } from "./PageRenderer";

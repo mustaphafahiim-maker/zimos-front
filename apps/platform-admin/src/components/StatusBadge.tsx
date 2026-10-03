@@ -55,6 +55,8 @@ export function humanize(value: string): string {
 const STATUS_TONES: Record<string, Tone> = {
   // subscriptions
   trialing: "info",
+  // A store made while subscriptions are required, not subscribed yet.
+  draft: "info",
   active: "success",
   past_due: "warning",
   canceled: "neutral",
@@ -95,6 +97,17 @@ const STATUS_TONES: Record<string, Tone> = {
   // admin users
   invited: "warning",
   disabled: "neutral",
+  // subscription charges (`pending` is shared with moderation above)
+  paid: "success",
+  failed: "danger",
+  // online payments of a charge (`open`, `pending`, `expired`, `paid` and
+  // `failed` are shared above). paid_duplicate is money to refund by hand;
+  // mismatch is a payment that settled nothing.
+  created: "info",
+  paid_duplicate: "danger",
+  mismatch: "danger",
+  superseded: "neutral",
+  error: "neutral",
 };
 
 /** Status pill with the tone looked up from a shared status vocabulary. */

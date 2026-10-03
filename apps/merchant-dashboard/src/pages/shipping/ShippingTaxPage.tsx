@@ -1,11 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
+import { Alert, Button, Input, cn } from "@store-builder/ui";
 import type {
   ShippingRate,
   ShippingRateType,
   ShippingZone,
   TaxRate,
-  Workspace,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -22,8 +21,6 @@ import {
 } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { DataTable } from "@/components/DataTable";
-import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -31,6 +28,9 @@ import { TextField, Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
+import { ShippingSettingsSection } from "./ShippingSettingsSection";
+import { WeightTiersSection } from "./WeightTiersSection";
 
 const RATE_TYPE_LABEL: Record<ShippingRateType, string> = {
   flat: "Flat",
@@ -162,22 +162,32 @@ function ShippingTaxBody() {
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="max-w-5xl space-y-12">
       <PageHeader
         title="Shipping & Tax"
         description="Shipping zones and their rates, plus the tax rates applied at checkout."
       />
 
+      <ShippingSettingsSection onSaved={refreshWorkspace} />
+
+      <CarrierConnectionsSection />
+
       <StoreShippingTaxSettings
-        workspace={currentWorkspace}
         taxEnabled={taxEnabled}
         onTaxEnabledChange={setTaxEnabled}
         onSaved={refreshWorkspace}
       />
 
+      <WeightTiersSection
+        zones={zoneList}
+        workspace={currentWorkspace}
+        currency="EGP"
+        onWorkspaceChanged={refreshWorkspace}
+      />
+
       <section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-ink">Shipping zones</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-medium text-ink">Shipping zones</h2>
           <Button onClick={() => setZoneForm("new")}>Add zone</Button>
         </div>
 
@@ -206,16 +216,20 @@ function ShippingTaxBody() {
         </DataState>
       </section>
 
-      <Section
-        className={cn("transition-opacity", !taxEnabled && "opacity-60")}
-        title="Tax rates"
-        description={
-          taxEnabled
-            ? undefined
-            : "Tax is turned off for this store — these rates aren’t applied at checkout. Turn it on above to use them."
-        }
-        actions={<Button onClick={() => setTaxForm("new")}>Add tax rate</Button>}
-      >
+      <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-medium text-ink">Tax rates</h2>
+            {!taxEnabled && (
+              <p className="mt-1 text-xs text-ink-soft">
+                Tax is turned off for this store — these rates aren&rsquo;t applied at checkout.
+                Turn it on above to use them.
+              </p>
+            )}
+          </div>
+          <Button onClick={() => setTaxForm("new")}>Add tax rate</Button>
+        </div>
+
         <DataState
           loading={taxRates.loading}
           error={taxRates.error}
@@ -223,63 +237,46 @@ function ShippingTaxBody() {
           emptyMessage="No tax rates yet. Add your first one."
           onRetry={() => taxRates.refresh()}
         >
-          <DataTable
-            rows={taxList}
-            rowKey={(t) => t.id}
-            minWidth="40rem"
-            columns={[
-              {
-                key: "name",
-                header: "Name",
-                cell: (t) => <span className="font-medium text-ink">{t.name}</span>,
-              },
-              {
-                key: "country",
-                header: "Country",
-                cell: (t) => <span className="text-ink-soft">{t.country || "—"}</span>,
-              },
-              {
-                key: "rate",
-                header: "Rate",
-                cell: (t) => (
-                  <span className="text-ink-soft">{formatPercent(t.rateBasisPoints)}</span>
-                ),
-              },
-              {
-                key: "appliesToShipping",
-                header: "Applies to shipping",
-                cell: (t) => <span className="text-ink-soft">{t.appliesToShipping ? "✓" : "—"}</span>,
-              },
-              {
-                key: "pricesIncludeTax",
-                header: "Prices include tax",
-                cell: (t) => <span className="text-ink-soft">{t.pricesIncludeTax ? "✓" : "—"}</span>,
-              },
-              {
-                key: "actions",
-                header: "",
-                align: "end",
-                className: "whitespace-nowrap",
-                cell: (t) => (
-                  <>
-                    <Button size="sm" variant="ghost" onClick={() => setTaxForm(t)}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger hover:bg-danger-soft"
-                      onClick={() => setDeletingTax(t)}
-                    >
-                      Delete
-                    </Button>
-                  </>
-                ),
-              },
-            ]}
-          />
+          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Country</th>
+                  <th className="px-4 py-3 font-medium">Rate</th>
+                  <th className="px-4 py-3 font-medium">Applies to shipping</th>
+                  <th className="px-4 py-3 font-medium">Prices include tax</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {taxList.map((t) => (
+                  <tr key={t.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+                    <td className="px-4 py-3 font-medium text-ink">{t.name}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.country || "—"}</td>
+                    <td className="px-4 py-3 text-ink-soft">{formatPercent(t.rateBasisPoints)}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.appliesToShipping ? "✓" : "—"}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.pricesIncludeTax ? "✓" : "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-end">
+                      <Button size="sm" variant="ghost" onClick={() => setTaxForm(t)}>
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger-soft"
+                        onClick={() => setDeletingTax(t)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </DataState>
-      </Section>
+      </section>
 
       <Modal
         open={zoneForm !== null}
@@ -390,7 +387,12 @@ function ZoneCard({
 }) {
   const rates = zone.rates ?? [];
   return (
-    <Card className={cn("gap-0 p-4", !zone.isActive && "opacity-60")}>
+    <div
+      className={cn(
+        "rounded-[var(--radius-card)] border border-line p-4",
+        !zone.isActive && "opacity-60"
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -423,69 +425,37 @@ function ZoneCard({
         {rates.length === 0 ? (
           <p className="text-sm text-ink-soft">No rates in this zone yet.</p>
         ) : (
-          <div className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
-            <DataTable
-              rows={rates}
-              rowKey={(rate) => rate.id}
-              minWidth="40rem"
-              columns={[
-                {
-                  key: "name",
-                  header: "Rate",
-                  cell: (rate) => (
-                    <span className={cn("text-ink", !rate.isActive && "opacity-60")}>
-                      {rate.name}
-                    </span>
-                  ),
-                },
-                {
-                  key: "type",
-                  header: "Type",
-                  cell: (rate) => (
-                    <span className={cn("text-ink-soft", !rate.isActive && "opacity-60")}>
-                      {RATE_TYPE_LABEL[rate.rateType]}
-                    </span>
-                  ),
-                },
-                {
-                  key: "detail",
-                  header: "Detail",
-                  cell: (rate) => (
-                    <span className={cn("text-ink-soft", !rate.isActive && "opacity-60")}>
-                      {rateSummary(rate)}
-                    </span>
-                  ),
-                },
-                {
-                  key: "delivery",
-                  header: "Delivery",
-                  cell: (rate) => (
-                    <span className={cn("text-ink-soft", !rate.isActive && "opacity-60")}>
-                      {rateDeliveryLabel(rate)}
-                    </span>
-                  ),
-                },
-                {
-                  key: "carrier",
-                  header: "Carrier",
-                  cell: (rate) => (
-                    <span className={cn("text-ink-soft", !rate.isActive && "opacity-60")}>
-                      {rate.carrierCode || "—"}
-                    </span>
-                  ),
-                },
-                {
-                  key: "status",
-                  header: "Status",
-                  cell: (rate) => <StatusBadge value={rate.isActive ? "active" : "inactive"} />,
-                },
-                {
-                  key: "actions",
-                  header: "",
-                  align: "end",
-                  className: "whitespace-nowrap",
-                  cell: (rate) => (
-                    <>
+          <div className="overflow-x-auto rounded-[0.5rem] border border-line">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-3 py-2 font-medium">Rate</th>
+                  <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">Detail</th>
+                  <th className="px-3 py-2 font-medium">Delivery</th>
+                  <th className="px-3 py-2 font-medium">Carrier</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {rates.map((rate) => (
+                  <tr
+                    key={rate.id}
+                    className={cn(
+                      "border-b border-line last:border-0",
+                      !rate.isActive && "opacity-60"
+                    )}
+                  >
+                    <td className="px-3 py-2 text-ink">{rate.name}</td>
+                    <td className="px-3 py-2 text-ink-soft">{RATE_TYPE_LABEL[rate.rateType]}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rateSummary(rate)}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rateDeliveryLabel(rate)}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rate.carrierCode || "—"}</td>
+                    <td className="px-3 py-2">
+                      <StatusBadge value={rate.isActive ? "active" : "inactive"} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-end">
                       <Button size="sm" variant="ghost" onClick={() => onToggleRate(rate)}>
                         {rate.isActive ? "Deactivate" : "Activate"}
                       </Button>
@@ -500,11 +470,11 @@ function ZoneCard({
                       >
                         Delete
                       </Button>
-                    </>
-                  ),
-                },
-              ]}
-            />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
         <div className="mt-2">
@@ -513,7 +483,7 @@ function ZoneCard({
           </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -826,7 +796,7 @@ function RateForm({
             <p className="text-xs font-medium text-danger">{fieldErrors.tiers}</p>
           )}
           {tiers.map((tier, i) => (
-            <div key={i} className="rounded-lg p-3 ring-1 ring-foreground/10">
+            <div key={i} className="rounded-[0.5rem] border border-line p-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 {thresholdIsMoney ? (
                   <MoneyInput
@@ -1091,105 +1061,51 @@ function TaxRateForm({
 }
 
 /**
- * Storewide shipping/tax knobs kept in `workspace.settings` and saved through
- * the same `PATCH /workspaces/:id` used elsewhere. A blank money field is sent
- * as `null` (clear the key), never 0 — matching the backend's merge, where a
- * missing key is left untouched and `null` resets it to "not configured".
- * `taxEnabled` is owned by the page so the tax section below can react to it
- * before a save lands.
+ * The storewide tax switch, kept in `workspace.settings` and saved through the
+ * same `PATCH /workspaces/:id` used elsewhere. The free-shipping threshold and
+ * the default shipping rate used to live here too; they moved to
+ * ShippingSettingsSection with the governorate prices, so two forms never
+ * write the same keys. `taxEnabled` is owned by the page so the tax section
+ * below can react to it before a save lands.
  */
 function StoreShippingTaxSettings({
-  workspace,
   taxEnabled,
   onTaxEnabledChange,
   onSaved,
 }: {
-  workspace: Workspace | null;
   taxEnabled: boolean;
   onTaxEnabledChange: (value: boolean) => void;
   onSaved: () => Promise<void> | void;
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const settings = workspace?.settings;
-
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState(
-    minorToMajorInput(settings?.free_shipping_threshold_amount)
-  );
-  const [defaultShippingRate, setDefaultShippingRate] = useState(
-    minorToMajorInput(settings?.default_shipping_rate_amount)
-  );
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  /** "" → null (clear the key); a valid ≥ 0 amount → minor units; else "invalid". */
-  function parseAmount(input: string): number | null | "invalid" {
-    if (input.trim() === "") return null;
-    const minor = majorToMinor(input);
-    if (!Number.isFinite(minor) || minor < 0) return "invalid";
-    return minor;
-  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setFieldErrors({});
-
-    const threshold = parseAmount(freeShippingThreshold);
-    const fallback = parseAmount(defaultShippingRate);
-    const errs: Record<string, string> = {};
-    if (threshold === "invalid") errs.free_shipping_threshold_amount = "Enter a valid amount.";
-    if (fallback === "invalid") errs.default_shipping_rate_amount = "Enter a valid amount.";
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
-    }
-
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        settings: {
-          free_shipping_threshold_amount: threshold === "invalid" ? null : threshold,
-          default_shipping_rate_amount: fallback === "invalid" ? null : fallback,
-          tax_enabled: taxEnabled,
-        },
-      });
-      toast.success("Store shipping & tax settings saved.");
+      await apiClient.updateWorkspace(workspaceId, { settings: { tax_enabled: taxEnabled } });
+      toast.success("Tax setting saved.");
       await onSaved();
     } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      setFormError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Section
-      title="Store shipping & tax"
-      description="Storewide rules applied at checkout, before any individual zone or rate."
-    >
-      <form onSubmit={submit} className="space-y-4">
-        {formError && <Alert variant="danger">{formError}</Alert>}
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Tax at checkout</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        Whether the tax rates below are added to orders.
+      </p>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <MoneyInput
-            label="Free shipping threshold"
-            value={freeShippingThreshold}
-            onChange={setFreeShippingThreshold}
-            error={fieldErrors.free_shipping_threshold_amount}
-            hint="Orders at or above this subtotal ship free. Leave blank to disable."
-          />
-          <MoneyInput
-            label="Default shipping rate"
-            value={defaultShippingRate}
-            onChange={setDefaultShippingRate}
-            error={fieldErrors.default_shipping_rate_amount}
-            hint="Charged when no active zone or rate matches. Leave blank to fall back to free."
-          />
-        </div>
+      <form onSubmit={submit} className="mt-4 space-y-4">
+        {formError && <Alert variant="danger">{formError}</Alert>}
 
         <label className="flex items-center gap-2 text-sm text-ink">
           <input
@@ -1202,10 +1118,10 @@ function StoreShippingTaxSettings({
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save settings"}
+            {saving ? "Saving…" : "Save tax setting"}
           </Button>
         </div>
       </form>
-    </Section>
+    </section>
   );
 }

@@ -51,7 +51,7 @@ export function QuickAddButton({
       onClick={handleClick}
       disabled={status === "loading"}
       aria-busy={status === "loading"}
-      className={`relative z-10 mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70 ${focusRing}`}
+      className={`zt-btn zt-btn-primary relative z-10 mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70 ${focusRing}`}
     >
       {status === "added" ? <CheckIcon size={18} /> : <CartGlyph size={18} />}
       <span aria-live="polite">

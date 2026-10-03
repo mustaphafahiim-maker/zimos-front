@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { track, type PixelIds } from "@/lib/track";
+import { track } from "@/lib/track";
+import type { PixelIds } from "@/lib/adPixels";
 
 // IDs are validated by the backend (digits / uppercase alphanumerics / hex),
 // and re-checked here before being placed in an inline script.
@@ -14,7 +15,8 @@ const SAFE = /^[A-Za-z0-9-]{4,40}$/;
  * a PageView on every client-side navigation. Nothing loads when no ID is set.
  *
  * The IDs are the public `tracking` block of GET /store/:workspaceId (read by
- * pixelIdsOf in lib/track.ts). Mounted by the funnel layout (app/store/[workspaceId]/f).
+ * pixelIdsOf in lib/adPixels.ts). Mounted by the store layout, so funnel pages
+ * (nested inside it) load them too.
  */
 export function TrackingPixels({ ids }: { ids: PixelIds }) {
   const meta = ids.meta && SAFE.test(ids.meta) ? ids.meta : null;

@@ -2,11 +2,30 @@ export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  /**
+   * Public handle, lower-case. Null only for an account made through Google
+   * until its owner picks one (the dashboard asks before anything else).
+   */
+  username?: string | null;
+  /** The owner's last change (null until they change it once; the first choice doesn't count). */
+  usernameChangedAt?: string | null;
   phone: string | null;
   status: "pending_verification" | "active" | string;
+  /** May sign in to the platform console: true for any platform role. */
   platformAdmin: boolean;
+  /** Platform-console role, null for everyone else. */
+  platformRole?: string | null;
+  /** Platform-console permission keys (`*` = all). */
+  platformPermissions?: string[];
   emailVerifiedAt?: string | null;
   phoneVerifiedAt?: string | null;
+  /** The plan chosen at sign-up, applied to the first store. */
+  selectedPlanId?: string | null;
+  selectedBillingCycle?: BillingCycle | null;
+  /** A Google account made while a plan was required, still to choose one. */
+  requiresPlanSelection?: boolean;
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
 }
 
 export interface AuthTokens {
@@ -17,6 +36,8 @@ export interface AuthTokens {
 export interface LoginPayload {
   email: string;
   password: string;
+  /** The language of a sign-up code sent to an account not confirmed yet. */
+  locale?: "ar" | "en";
 }
 
 export interface RegisterPayload {
@@ -24,6 +45,74 @@ export interface RegisterPayload {
   password: string;
   fullName: string;
   phone?: string;
+  /** 3–30 of a–z 0–9 _ . — 409 USERNAME_TAKEN, 422 when invalid or reserved. */
+  username?: string;
+  /** A public plan (GET /plans/public); required while the server asks for one (signup options). */
+  planId?: string;
+  billingCycle?: BillingCycle;
+  /** "I accept the terms, the refund policy and the privacy policy." */
+  acceptTerms?: boolean;
+  /** The language of the sign-up code email/SMS. */
+  locale?: "ar" | "en";
+}
+
+export type VerificationChannel = "email" | "sms";
+
+/**
+ * The answer to a sign-up, or a sign-in to an account not confirmed yet,
+ * while sign-up codes are on: no tokens, a code on its way (`codeSent`), and a
+ * short-lived token that only the two /auth/verify endpoints accept.
+ */
+export interface VerificationChallenge {
+  verificationRequired: true;
+  verificationToken: string;
+  channels: VerificationChannel[];
+  /** Masked: { email: "a***@gmail.com", sms?: "01******234" }. */
+  targets: { email: string; sms?: string };
+  codeSent: boolean;
+  channel: VerificationChannel | null;
+  expiresAt: string | null;
+  resendAvailableAt: string | null;
+}
+
+/** POST /auth/verify/send */
+export interface VerificationSent {
+  sent: true;
+  channel: VerificationChannel;
+  /** Masked. */
+  target: string;
+  expiresAt: string;
+  resendAvailableAt: string;
+}
+
+/** GET /auth/signup-options — what the sign-up form must ask for right now. */
+export interface SignupOptions {
+  planRequired: boolean;
+  termsRequired: boolean;
+  termsVersion: string;
+  verificationRequired: boolean;
+}
+
+/** One plan on offer (GET /plans/public). Prices in minor units; null limits are unlimited. */
+export interface PublicPlan {
+  id: string;
+  name: string;
+  currency: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  trialDays: number;
+  maxStores: number | null;
+  maxFunnelsPerMonth: number | null;
+  softOrderQuota: number | null;
+  features: PlanFeatureKey[];
+}
+
+/** Why a username can't be had (GET /auth/username-available). */
+export type UsernameUnavailableReason = "invalid" | "reserved" | "taken";
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason?: UsernameUnavailableReason;
 }
 
 /**
@@ -40,6 +129,40 @@ export interface WorkspaceSettings {
   default_shipping_rate_amount?: number | null;
   /** Whether tax rates are applied at checkout. Defaults to false. */
   tax_enabled?: boolean;
+  /** Which optional storefront checkout fields are shown/required. Absent keys use the defaults. */
+  checkout_settings?: Partial<CheckoutSettings>;
+  /** Storefront fraud rules as stored. Absent keys are "off" — see `resolveFraudRules`. */
+  fraud_rules?: Partial<FraudRules>;
+  /**
+   * Grams standing in for a product with no weight (tier pricing, courier
+   * parcel weight). Required while `shipping_pricing_mode` is "weight_tiers";
+   * clearing it then is refused with 422 DEFAULT_ITEM_WEIGHT_REQUIRED.
+   */
+  default_item_weight_grams?: number | null;
+  /** Read-only here — changed through POST /shipping/pricing-mode. Absent = "rates". */
+  shipping_pricing_mode?: ShippingPricingMode;
+  /**
+   * Read-only here — changed through PATCH /shipping/settings. The merchant's
+   * price per governorate code (rate pricing only); absent = the default rate.
+   */
+  shipping_governorate_rates?: Record<string, number>;
+  /** Read-only here — PATCH /shipping/settings. "manual" or a courier code, preselected when booking. */
+  default_carrier_code?: string;
+  /**
+   * The text the confirmation queue's WhatsApp button opens with. Absent uses
+   * the dashboard's built-in message. Placeholders: {store} {orderNumber}
+   * {items} {total} {customerName}.
+   */
+  confirmation_whatsapp_template?: string;
+  /**
+   * Funnel upsells join the checkout order while it waits in its offer
+   * window, instead of becoming orders of their own. Off unless true.
+   */
+  funnel_upsell_merge?: boolean;
+  /** How long a funnel order waits for its offers at most. Absent = 15. */
+  funnel_offer_window_minutes?: number;
+  /** The store checkout's order bump as stored — see OrderBumpSettings. */
+  order_bump?: OrderBumpSettings;
   [key: string]: unknown;
 }
 
@@ -107,6 +230,33 @@ export interface UpdateWorkspacePayload {
     free_shipping_threshold_amount?: number | null;
     default_shipping_rate_amount?: number | null;
     tax_enabled?: boolean;
+    /** Grams; null clears it (refused with 422 while tier pricing is on). */
+    default_item_weight_grams?: number | null;
+    /**
+     * Sub-keys merge; `null` on a sub-key restores its default, `null` on the
+     * whole object restores every default.
+     */
+    checkout_settings?: { [K in keyof CheckoutSettings]?: CheckoutSettings[K] | null } | null;
+    /**
+     * Needs workspace.manage on top of website.edit — any mention of the key,
+     * `null` included, is refused with 403 otherwise. Same merge rules as
+     * `checkout_settings`; a `null` rule is "off".
+     */
+    fraud_rules?: { [K in keyof FraudRules]?: FraudRules[K] | null } | null;
+    /** Sent whole; `null` goes back to the defaults. */
+    storefront_catalog?: StorefrontCatalogSettings | null;
+    /**
+     * Sent whole; `null` removes it. Switching it on with an offer that cannot
+     * be a bump (archived, unpriced, a product with custom fields, another
+     * store's) is refused with 422.
+     */
+    order_bump?: OrderBumpSettings | null;
+    /** Needs orders.manage on top of website.edit. */
+    funnel_upsell_merge?: boolean | null;
+    /** 1–120; needs orders.manage. `null` goes back to 15. */
+    funnel_offer_window_minutes?: number | null;
+    /** Needs orders.manage on top of website.edit. `null` goes back to the built-in message. */
+    confirmation_whatsapp_template?: string | null;
   };
 }
 
@@ -176,6 +326,8 @@ export interface WebsiteTemplateSummary {
   category: string | null;
   thumbnailUrl: string | null;
   templateVersionId: string;
+  /** The template's accent (its column, else its current version's globalStyles). */
+  primaryColor?: string | null;
 }
 
 export interface WebsiteTemplateDetail extends WebsiteTemplateSummary {
@@ -381,6 +533,133 @@ export interface StorefrontMeta {
   /** Opaque per-theme blob — the frontend owns its shape, backend just stores it. */
   themeSettings: Record<string, unknown>;
   currency: string;
+  /** Always fully populated — an unconfigured store gets the defaults. */
+  checkout: CheckoutSettings;
+  /** The product listing's sidebar and default sort; always populated. */
+  catalog?: StorefrontCatalogSettings;
+  /** The store checkout's order bump; null when none is set or it can't be sold right now. */
+  orderBump?: StorefrontOrderBump | null;
+}
+
+/**
+ * settings.order_bump: the offer the store's checkout (product page and cart
+ * checkout) offers as an "add to your order" tick box. The offer id is kept
+ * while it is switched off.
+ */
+export interface OrderBumpSettings {
+  enabled: boolean;
+  offer_id: string | null;
+  /** Replaces the card's "Add to your order" heading. */
+  title?: string | null;
+  description?: string | null;
+}
+
+/**
+ * An order bump as the storefront shows it (store.orderBump, or a funnel
+ * checkout step's `bump`). Ticking it sends `orderBump: { offerId }` with the
+ * checkout; the server builds the line from the offer itself.
+ */
+export interface StorefrontOrderBump {
+  offerId: string;
+  /** The offer's first line — what the order line is filed under (and what a shipping quote needs). */
+  variantId: string;
+  productId: string;
+  productSlug: string | null;
+  /** The merchant's heading, or null for the default one. */
+  title: string | null;
+  /** The offer's name. */
+  name: string;
+  productName: string;
+  description: string | null;
+  imageUrl: string | null;
+  priceAmount: number;
+  /** What the offer's contents cost one by one, when that is more than its price. */
+  compareAtAmount: number | null;
+  currency: string;
+  lines: Array<{ variantId: string; quantity: number }>;
+}
+
+/** How a product listing may be sorted. "relevance" only means something with a search. */
+export type StorefrontSort = "relevance" | "newest" | "price_asc" | "price_desc" | "name" | "position";
+export type CatalogDefaultSort = Exclude<StorefrontSort, "relevance">;
+
+/**
+ * One sidebar filter, in order: the collection tree, a price range, tags,
+ * every product option ("options"), or one option by name.
+ */
+export type CatalogFilter =
+  | { key: "collections" }
+  | { key: "price" }
+  | { key: "tags" }
+  | { key: "options" }
+  | { key: "option"; name: string };
+
+/** settings.storefront_catalog — sent whole on save; the storefront reads it as store.catalog. */
+export interface StorefrontCatalogSettings {
+  sidebar_enabled: boolean;
+  default_sort: CatalogDefaultSort;
+  filters: CatalogFilter[];
+}
+
+export const DEFAULT_CATALOG_SETTINGS: StorefrontCatalogSettings = {
+  sidebar_enabled: true,
+  default_sort: "newest",
+  filters: [{ key: "collections" }, { key: "price" }, { key: "options" }, { key: "tags" }],
+};
+
+/** Query for the searchable, filterable listing (GET /store/:id/products). */
+export interface StorefrontListingParams {
+  search?: string;
+  /** A collection id or slug; its sub-collections are included. */
+  collection?: string;
+  tags?: string[];
+  /** Minor units. */
+  minPrice?: number;
+  maxPrice?: number;
+  /** Option name → accepted values, e.g. { Size: ["M", "L"] }. */
+  options?: Record<string, string[]>;
+  sort?: StorefrontSort;
+  page?: number;
+  limit?: number;
+  facets?: boolean;
+}
+
+export interface StorefrontFacets {
+  collections: Array<{ id: string; name: string; slug: string; parentId: string | null; count: number }>;
+  tags: Array<{ value: string; count: number }>;
+  options: Array<{ name: string; values: Array<{ value: string; count: number }> }>;
+  price: { min: number | null; max: number | null };
+}
+
+export interface StorefrontListing extends StorefrontProductList {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  sort: StorefrontSort;
+  /** Set when filtering by a collection. */
+  collection?: StorefrontCollection & { parentId: string | null; imageUrl: string | null };
+  /** From the top level down to the collection, inclusive. */
+  breadcrumbs?: Array<{ id: string; name: string; slug: string }>;
+  /** With a search: the same as `products`. */
+  matches?: StorefrontProduct[];
+  /** With a search, first page only: close products that did not match, never repeating one. */
+  related?: StorefrontProduct[];
+  facets?: StorefrontFacets;
+}
+
+/** GET /store/:id/products/suggest — at most eight rows, collections first. */
+export interface StorefrontSuggestions {
+  query: string;
+  collections: Array<{ id: string; name: string; slug: string; imageUrl: string | null }>;
+  products: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl: string | null;
+    priceAmount: string | null;
+    currency: string | null;
+  }>;
 }
 
 export interface StorefrontVariant {
@@ -421,6 +700,8 @@ export interface StorefrontProduct {
   seo: Record<string, unknown> | null;
   variants: StorefrontVariant[];
   offers: StorefrontOffer[];
+  /** Fields the shopper fills in when ordering; absent on older responses. */
+  customFields?: CustomField[];
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -473,6 +754,10 @@ export interface StorefrontCollection {
   slug: string;
   description: string | null;
   seo: Record<string, unknown> | null;
+  /** Null for a top-level collection. */
+  parentId?: string | null;
+  position?: number;
+  imageUrl?: string | null;
 }
 
 /**
@@ -527,6 +812,64 @@ export interface CartLine {
   lineTotal: number;
   variant: StorefrontVariant | null;
   isOrderBump: boolean;
+  /** The shopper's answers to the product's custom fields; null when none. */
+  customizations?: Customization[] | null;
+}
+
+// ---------------------------------------------------------------------
+// Product custom fields — what the shopper fills in when ordering.
+// ---------------------------------------------------------------------
+
+export type CustomFieldType = "text" | "textarea" | "image";
+
+/** A merchant's field definition; at most five per product. */
+export interface CustomField {
+  /** Stable key the answers are stored under: lowercase letters, digits, - and _. */
+  id: string;
+  type: CustomFieldType;
+  /** At least one of the two is set. */
+  label: { ar?: string; en?: string };
+  placeholder?: { ar?: string; en?: string };
+  required?: boolean;
+  /** Text and textarea only: text ≤ 200, textarea ≤ 2000 (defaults 100 / 500). */
+  maxLength?: number;
+}
+
+export const CUSTOM_FIELD_LIMITS = {
+  maxFields: 5,
+  text: { default: 100, max: 200 },
+  textarea: { default: 500, max: 2000 },
+} as const;
+
+/** One answer as stored on a cart or order line, with the field's label as it was then. */
+export interface Customization {
+  fieldId: string;
+  type: CustomFieldType;
+  label: { ar: string; en: string };
+  /** Text answers. */
+  value?: string;
+  /** Photo answers: the customer upload. */
+  uploadId?: string;
+  /** Staff responses only: a signed link that works for a few minutes. */
+  url?: string | null;
+  urlExpiresAt?: string;
+  width?: number | null;
+  height?: number | null;
+  /** The photo is gone from storage. */
+  missing?: boolean;
+}
+
+/** What the shopper sends: field id → text, or the id of an uploaded photo. */
+export type CustomizationInput = Record<string, string>;
+
+/** POST /store/:id/uploads — a shopper's photo, processed and waiting for an order. */
+export interface CustomerUpload {
+  uploadId: string;
+  mime: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  expiresAt: string;
 }
 
 export interface Cart {
@@ -557,13 +900,34 @@ export interface CheckoutAddress {
 export interface CheckoutPayload {
   contact: CheckoutContact;
   shippingAddress?: CheckoutAddress;
-  paymentMethod: "cod" | "card" | "wallet" | "bank_transfer";
+  /**
+   * 'card' / 'wallet' only when the store offers them (getStorefrontPaymentMethods);
+   * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
+   * payments are switched off platform-wide.
+   */
+  paymentMethod: "cod" | "card" | "wallet";
+  /** Which gateway, when more than one offers the method. */
+  paymentProvider?: string;
+  /** Online methods: where the gateway sends the shopper back to. */
+  returnUrl?: string;
   discountCode?: string;
   funnelId?: string;
   websiteId?: string;
   notes?: string;
+  /**
+   * The autosaved checkout session (`captureCheckoutSession`) this checkout
+   * came from. A hint only — the server ignores anything it can't use and
+   * never fails the order over it.
+   */
+  checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
-  item?: { variantId: string; offerId?: string; quantity?: number };
+  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
+  /**
+   * The shopper ticked the order bump. Accepted only when it is the bump this
+   * checkout offers (422 ORDER_BUMP_INVALID otherwise); 409
+   * ORDER_BUMP_UNAVAILABLE when it has just sold out or been withdrawn.
+   */
+  orderBump?: { offerId: string };
 }
 
 // ---------------------------------------------------------------------
@@ -591,6 +955,11 @@ export interface ProductOption {
  * shape; the first entry is treated as the primary image.
  */
 export interface ProductMedia {
+  /**
+   * The media-library row id. Set on everything uploaded since the library
+   * existed; older entries in a product's `media` array may not have it.
+   */
+  id?: string;
   /** Absolute URL (APP_URL + path). */
   url: string;
   /** Host-relative path, e.g. "/uploads/<workspaceId>/<uuid>.png". */
@@ -600,7 +969,7 @@ export interface ProductMedia {
 }
 
 /** Response of POST /workspaces/:workspaceId/media (same shape as one media entry). */
-export type MediaUploadResponse = ProductMedia;
+export type MediaUploadResponse = ProductMedia & { id: string };
 
 export interface Variant {
   id: string;
@@ -616,9 +985,15 @@ export interface Variant {
   stockOnHand: number;
   reservedStock: number;
   allowOverselling: boolean;
+  /** Shipping weight in grams; null = not set ("No weight"). 0 is a real weight. */
   weightGrams: number | null;
-  dimensions: Record<string, unknown> | null;
+  dimensions: VariantDimensions | null;
   status: CatalogEntityStatus;
+  /**
+   * True when archiving the product took this variant down; restoring the
+   * product revives only these. A status set by hand clears it.
+   */
+  archivedWithProduct?: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -643,9 +1018,29 @@ export interface Offer {
   isDefault: boolean;
   shippingOverride: Record<string, unknown> | null;
   status: CatalogEntityStatus;
+  /** See Variant.archivedWithProduct. */
+  archivedWithProduct?: boolean;
   lines: OfferLine[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** Why an offer can't be an order bump (GET /catalog/offers → bumpProblem). */
+export type OrderBumpProblem = "not_found" | "inactive" | "no_price" | "no_lines" | "custom_fields";
+
+/** One active offer of the store, for pickers (GET /catalog/offers). */
+export interface WorkspaceOfferOption {
+  id: string;
+  name: string;
+  priceAmount: string | null;
+  currency: string;
+  isDefault: boolean;
+  productId: string;
+  productName: string;
+  imageUrl: string | null;
+  lines: Array<{ variantId: string; quantity: number }>;
+  /** null when it can be an order bump. */
+  bumpProblem: OrderBumpProblem | null;
 }
 
 export interface CollectionSummary {
@@ -656,9 +1051,18 @@ export interface CollectionSummary {
   description: string | null;
   rules: Record<string, unknown> | null;
   seo: Record<string, unknown>;
+  /** The tree: null is a top-level collection (at most three levels). */
+  parentId: string | null;
+  /** Order among siblings, lowest first. */
+  position: number;
+  imageUrl: string | null;
+  /** Products directly in it (list only). */
+  productCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type ProductShippingMode = "standard" | "free" | "extra_fee";
 
 export interface Product {
   id: string;
@@ -679,6 +1083,16 @@ export interface Product {
   media: ProductMedia[];
   tags: string[];
   seo: Record<string, unknown>;
+  /**
+   * How the product ships: the store's rates ("standard"), free, or the
+   * store's rate plus `shippingExtraAmount` per unit ("extra_fee"). Optional
+   * so a response from before the field reads as "standard".
+   */
+  shippingMode?: ProductShippingMode;
+  /** Minor units, per unit shipped; set exactly when shippingMode is "extra_fee". */
+  shippingExtraAmount?: string | number | null;
+  /** Fields the shopper fills in when ordering; [] (or absent on older responses) for none. */
+  customFields?: CustomField[];
   createdAt: string;
   updatedAt: string;
   /** Present on list + detail. */
@@ -693,6 +1107,9 @@ export interface CollectionProductRef {
   name: string;
   slug: string;
   status: ProductStatus;
+  media?: ProductMedia[];
+  /** The product's place in this collection, lowest first. */
+  collectionPosition?: number;
 }
 
 export interface CollectionDetail extends CollectionSummary {
@@ -705,7 +1122,8 @@ export interface ProductListResponse {
 }
 
 export interface ProductListParams {
-  status?: ProductStatus;
+  /** One status, or several (sent comma-separated, e.g. "draft,active"). */
+  status?: ProductStatus | ProductStatus[];
   collectionId?: string;
   limit?: number;
   cursor?: string;
@@ -721,9 +1139,47 @@ export interface CreateProductPayload {
   options?: ProductOption[];
   media?: ProductMedia[];
   seo?: Record<string, unknown>;
+  /** See Product.shippingMode. An extra fee needs "extra_fee"; other modes clear it. */
+  shippingMode?: ProductShippingMode;
+  shippingExtraAmount?: number | null;
+  /** Sent whole; [] removes them all. A malformed or sixth field is refused (422). */
+  customFields?: CustomField[];
+  /**
+   * Optional first variant, created with the product in one transaction so a
+   * simple product is priced and stocked straight away. Money is integer
+   * minor units; initial stock is recorded as a restock movement.
+   */
+  variant?: CreateProductVariantPayload;
 }
 
-export type UpdateProductPayload = Partial<CreateProductPayload>;
+/** Package dimensions in centimetres — all three or none. */
+export interface VariantDimensions {
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+}
+
+/** Largest weight the API accepts, in grams (1 tonne). */
+export const MAX_WEIGHT_GRAMS = 1_000_000;
+
+export interface CreateProductVariantPayload {
+  priceAmount: number;
+  compareAtAmount?: number | null;
+  sku?: string | null;
+  stockOnHand?: number;
+  allowOverselling?: boolean;
+  weightGrams?: number | null;
+  dimensions?: VariantDimensions | null;
+}
+
+/** POST product — `variant` is present only when the request created one. */
+export interface CreateProductResponse {
+  product: Product;
+  variant?: Variant;
+}
+
+/** Variants are edited through their own endpoints, never via PATCH product. */
+export type UpdateProductPayload = Partial<Omit<CreateProductPayload, "variant">>;
 
 export interface CreateVariantPayload {
   sku?: string | null;
@@ -735,6 +1191,7 @@ export interface CreateVariantPayload {
   currency?: string;
   allowOverselling?: boolean;
   weightGrams?: number | null;
+  dimensions?: VariantDimensions | null;
   /** Initial stock — only settable at creation; later changes go through inventory. */
   stockOnHand?: number;
 }
@@ -746,6 +1203,9 @@ export interface UpdateVariantPayload {
   compareAtAmount?: number | null;
   costAmount?: number | null;
   allowOverselling?: boolean;
+  /** null clears the weight. */
+  weightGrams?: number | null;
+  dimensions?: VariantDimensions | null;
   status?: CatalogEntityStatus;
 }
 
@@ -778,6 +1238,24 @@ export interface CreateCollectionPayload {
   description?: string;
   rules?: Record<string, unknown> | null;
   seo?: Record<string, unknown>;
+  /** Null or absent: a top-level collection. A cycle or a fourth level is refused (422). */
+  parentId?: string | null;
+  /** Absent: after its siblings. */
+  position?: number;
+  imageUrl?: string | null;
+}
+
+/** POST /collections/reorder — each listed collection's parent and position. */
+export interface CollectionReorderItem {
+  id: string;
+  parentId?: string | null;
+  position?: number;
+}
+
+/** GET /catalog/option-names — option names in use, most used first. */
+export interface CatalogOptionName {
+  name: string;
+  productCount: number;
 }
 
 export type UpdateCollectionPayload = Partial<CreateCollectionPayload>;
@@ -846,6 +1324,10 @@ export interface OrderItem {
   lineTotalAmount: string;
   isOrderBump: boolean;
   isUpsell: boolean;
+  /** One unit of the line (one bundle for an offer); null when unknown or placed before weights were stored. */
+  unitWeightGrams?: number | null;
+  /** The shopper's answers to the product's custom fields; photos carry a short-lived `url` for staff. */
+  customizations?: Customization[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -856,8 +1338,13 @@ export type PaymentStatus =
   | "captured"
   | "failed"
   | "refunded"
-  | "partially_refunded";
+  | "partially_refunded"
+  /** Online attempt: the order's payment window closed first. */
+  | "expired"
+  /** Online attempt: replaced by a retry, or the shopper switched to COD. */
+  | "cancelled";
 
+/** One payment attempt (online) or payment record (COD / manual). */
 export interface Payment {
   id: string;
   orderId: string;
@@ -869,6 +1356,42 @@ export interface Payment {
   providerReference: string | null;
   maskedDisplay: string | null;
   failureReason: string | null;
+  /** Gateway attempts only. */
+  method?: "card" | "wallet" | null;
+  mode?: GatewayMode | null;
+  providerOrderId?: string | null;
+  providerTransactionId?: string | null;
+  expiresAt?: string | null;
+  paidAt?: string | null;
+  lastInquiredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RefundStatus = "pending" | "processed" | "failed";
+
+export interface Refund {
+  id: string;
+  orderId: string;
+  workspaceId: string;
+  paymentId: string | null;
+  amount: string;
+  reason: string | null;
+  /** pending: sent to the gateway, the answer is not final yet. */
+  status: RefundStatus;
+  /** 'gateway': made in the gateway's own dashboard, reported by webhook. */
+  source: "merchant" | "gateway";
+  providerRefundReference: string | null;
+  failureReason: string | null;
+  /**
+   * A stable reason for a failed gateway refund, when there is one:
+   * REFUND_INSUFFICIENT_GATEWAY_BALANCE — the gateway pays refunds from the
+   * merchant's available balance there (Kashier) and it could not cover this.
+   */
+  failureCode: string | null;
+  processedAt: string | null;
+  creditNoteId: string | null;
+  processedByUserId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -892,10 +1415,58 @@ export interface Shipment {
   waybillNumber: string | null;
   status: ShipmentStatus;
   trackingUrl: string | null;
+  /**
+   * Set only on shipments booked through a connected courier (then
+   * `waybillNumber` is the courier's tracking number). Null for manual ones.
+   */
+  carrierResponse: ShipmentCarrierResponse | null;
   shippedAt: string | null;
   deliveredAt: string | null;
+  /**
+   * The merchant's courier account a booking went through. Null for manual
+   * shipments and once that account is disconnected.
+   */
+  carrierAccountId?: string | null;
+  /**
+   * How a courier-booked shipment was cancelled: "api" (the courier's cancel
+   * call), "manual_ack" (the courier has no cancel API; the merchant
+   * cancelled it in the courier's dashboard and said so). Null otherwise.
+   */
+  cancelMode?: ShipmentCancelMode | null;
+  /** manual_ack only: the user id that made the statement, and when. */
+  cancelAcknowledgedBy?: string | null;
+  cancelAcknowledgedAt?: string | null;
+  /** When the status job next reads it from the courier; null: never. */
+  nextPollAt?: string | null;
+  /** The last successful scheduled read from the courier. */
+  lastPolledAt?: string | null;
+  /** Consecutive failed scheduled reads. */
+  pollFailures?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ShipmentCancelMode = "api" | "manual_ack";
+
+/** The courier's own view of a shipment, as the backend stores it. */
+export interface ShipmentCarrierResponse {
+  /** Present on every courier-booked shipment — its presence is what marks one. */
+  carrierShipmentId?: string;
+  trackingNumber?: string | null;
+  labelUrl?: string | null;
+  /**
+   * The drop-off address as the courier's ids: city/district couriers keep
+   * `{ cityId, districtId, zoneId }`, any other courier `{ path }`, one id
+   * per address level, top first. `{ names }` when the merchant typed the
+   * courier's names (the courier has no address list for this account).
+   */
+  address?:
+    | { cityId: string; districtId: string; zoneId: string | null }
+    | { path: string[] }
+    | { names: string[] };
+  /** The last state the courier reported (sync / webhook). */
+  lastCarrierStatus?: CarrierShipmentStatus | null;
+  [key: string]: unknown;
 }
 
 export type ReturnStatus = "requested" | "approved" | "rejected" | "received" | "refunded";
@@ -952,14 +1523,75 @@ export interface Order {
   cancelledAt: string | null;
   cancellationReason: string | null;
   linkedFromOrderId: string | null;
+  /** Weight at checkout. null on older orders, or when an item had no weight and no default applied. */
+  totalWeightGrams?: number | null;
+  /** The weight tier at checkout; null when the store had no tiers. */
+  weightTierSnapshot?: OrderWeightTier | null;
+  /** True when some item's weight came from the store's default item weight. */
+  weightEstimated?: boolean;
+  /** How shippingAmount was reached; null on orders placed before it was recorded. */
+  shippingSnapshot?: OrderShippingSnapshot | null;
+  /** When the current confirmation happened; null while not confirmed (and on unconfirmed older orders). */
+  confirmedAt?: string | null;
+  /**
+   * The gateway an online (card / wallet) order is paid through — its latest
+   * attempt's provider. null for cash on delivery. On the list and on GET one.
+   */
+  paymentProvider?: string | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
-  /** The funnel the order was placed in, when it was; absent on older responses. */
-  funnel?: { id: string; name: string; subdomain: string } | null;
-  /** Present on detail (GET one) only. */
+  /**
+   * Derived pipeline stage. Present on the list and on GET one; absent on
+   * create/cancel/update responses.
+   */
+  stage?: OrderStage;
+  /** When the order became a sale (invoice, discount, customer count). null while an online order is unpaid. */
+  completedAt?: string | null;
+  /** Unpaid online order: when it stops holding stock. */
+  paymentExpiresAt?: string | null;
+  /** Present on detail (GET one) only, oldest first. */
   payments?: Payment[];
+  refunds?: Refund[];
   shipments?: Shipment[];
+  /** Present on detail (GET one) only; null for an order that never had a task (prepaid). */
+  confirmationTask?: OrderConfirmationTaskSummary | null;
+  /** Detail only: funnel offers taken after this order's offer window closed, placed as their own orders. */
+  linkedOrders?: LinkedOrderSummary[];
+  /** Detail only: the order this one is a late funnel offer of. */
+  linkedFromOrder?: { id: string; orderNumber: string } | null;
+}
+
+export interface LinkedOrderSummary {
+  id: string;
+  orderNumber: string;
+  totalAmount: string;
+  currency: string;
+  createdAt: string;
+}
+
+/** Which shipping rule priced an order or a quote (backend shipping/shippingRules.js). */
+export type ShippingRule =
+  | "no_destination"
+  | "offer_override"
+  | "all_items_free"
+  | "free_threshold"
+  | "governorate_rate"
+  | "zone_rate"
+  | "zone_tier_price"
+  | "default_rate"
+  | "no_rate";
+
+export interface OrderShippingSnapshot {
+  rule: ShippingRule;
+  pricingMode: ShippingPricingMode;
+  /** The destination's rate, before extra fees. */
+  baseAmount: number;
+  /** The sum of the order's "extra fee" products. */
+  extraFeesAmount: number;
+  /** The governorate code a governorate price matched, else null. */
+  governorate: string | null;
+  freeShippingThresholdAmount: number | null;
 }
 
 export interface OrderListResponse {
@@ -967,44 +1599,63 @@ export interface OrderListResponse {
   nextCursor: string | null;
 }
 
-export type OrderListSort = "newest" | "oldest" | "total_desc" | "total_asc";
+/**
+ * The tab an order sits under — derived server-side (orders/orderStage.js),
+ * never stored. Listed in the backend's order.
+ */
+export const ORDER_STAGES = [
+  "awaiting_payment",
+  "pending_confirmation",
+  "needs_follow_up",
+  "ready_to_ship",
+  "shipped",
+  "out_for_delivery",
+  "delivery_failed",
+  "delivered",
+  "returned",
+  "cancelled",
+] as const;
 
-export interface OrderListFilters {
+export type OrderStage = (typeof ORDER_STAGES)[number];
+
+/**
+ * Search + date range, shared by the list and the tab counts.
+ *
+ * `q` (2–100 chars after trimming) matches the order number (with or without
+ * '#'), the customer's name or email (Arabic letter variants folded), or —
+ * only when it holds 10+ digits — the phone, compared on its last 10 digits.
+ * `from`/`to` are ISO dates on created_at, in UTC; `to` includes its whole day.
+ */
+export interface OrderSearchParams {
+  q?: string;
+  from?: string;
+  to?: string;
+}
+
+/** Server-side sorts for the orders list (and, with "default", the queue). */
+export const ORDER_SORTS = ["newest", "oldest", "total_desc", "total_asc"] as const;
+export type OrderSort = (typeof ORDER_SORTS)[number];
+
+export interface OrderListParams extends OrderSearchParams {
+  /** 1–200, default 50. */
+  limit?: number;
+  /** Default "newest". A cursor only pages the sort it came from. */
+  sort?: OrderSort;
+  /**
+   * The previous page's `nextCursor` (an order id). An unknown one is a 422
+   * VALIDATION_ERROR with `details[].field === "cursor"`.
+   */
+  cursor?: string;
+  stage?: OrderStage;
   confirmationState?: ConfirmationState;
   financialState?: FinancialState;
   fulfillmentState?: FulfillmentState;
-  /** Matches the order number, the customer's name or their phone. */
-  q?: string;
-  /** ISO dates on createdAt; `to` is exclusive. */
-  from?: string;
-  to?: string;
-  /** Orders placed on the online store vs. inside any funnel. */
-  source?: "store" | "funnel";
-  funnelId?: string;
-  paymentMethod?: PaymentMethod;
-  cancelled?: boolean;
 }
 
-export interface OrderListParams extends OrderListFilters {
-  limit?: number;
-  /** Opaque; returned as `nextCursor` by the previous page. */
-  cursor?: string;
-  sort?: OrderListSort;
-}
-
-/** Per-status totals for the list's tabs, under the same filters minus the status itself. */
-export interface OrderCounts {
-  all: number;
-  pending: number;
-  confirmed: number;
-  unreachable: number;
-  postponed: number;
-  rejected: number;
-  cancelled: number;
-  unfulfilled: number;
-  fulfilled: number;
-  returned: number;
-  unpaid: number;
+/** GET /orders/pipeline — every stage is present, zero-filled. */
+export interface OrderPipeline {
+  stages: Record<OrderStage, number>;
+  total: number;
 }
 
 export interface OrderAddressInput {
@@ -1037,44 +1688,61 @@ export interface UpdateOrderPayload {
 }
 
 export interface CreateShipmentPayload {
+  /**
+   * "manual", or a connected courier's code ("bosta") to book it with that
+   * courier. A courier code the store has NOT connected is stored as a manual
+   * shipment, exactly as before.
+   */
   carrierCode: string;
+  /** Manual shipments only — a courier assigns its own. */
   waybillNumber?: string;
   trackingUrl?: string;
   /**
-   * Bosta district staff picked for this one shipment (via listBostaCities +
-   * listBostaDistricts) — only read by the API when carrierCode is "bosta";
-   * ignored otherwise. Optional: omitting it books exactly as before.
+   * Courier bookings only: the courier's ids for the drop-off address, sent
+   * after a 422 CARRIER_ADDRESS_UNMATCHED (or when the merchant picks it);
+   * or the courier's names as typed, after a 422
+   * CARRIER_ADDRESS_NAMES_REQUIRED.
    */
-  bostaDistrictId?: string;
+  carrierAddress?: CarrierAddressInput;
+  notes?: string;
+  /** Courier bookings only: book as this weight tier instead of the order's. */
+  tierId?: string;
 }
+
+/**
+ * The drop-off address in the courier's own ids. `{ cityId, districtId }`
+ * for a city/district courier; `{ path }` — one id per address level, top
+ * first, exactly `addressLevels.length` of them — for any courier.
+ * `{ names }` — the courier's own names as the merchant typed them, one per
+ * level, top first — only for a courier with `typedAddressNames` whose
+ * connection has `verification.locationList: "unavailable"` (anywhere else
+ * it is 422 VALIDATION_ERROR). Sent as typed; the courier checks them.
+ */
+export type CarrierAddressInput =
+  | { cityId: string; districtId: string }
+  | { path: string[] }
+  | { names: string[] };
 
 export interface UpdateShipmentPayload {
   status?: ShipmentStatus;
   waybillNumber?: string;
   trackingUrl?: string;
+  /**
+   * With status "cancelled" on a booking whose courier has no cancel API:
+   * the merchant cancelled it in the courier's dashboard. Without it that
+   * PATCH is refused with 409 CARRIER_MANUAL_CANCEL_REQUIRED.
+   */
+  acknowledgeManualCancel?: boolean;
 }
 
-/**
- * One entry from GET /workspaces/:workspaceId/bosta/cities. Shape confirmed
- * against Bosta's own OpenAPI spec (data.list[] on GET /cities) — only the
- * fields the district picker uses are declared here.
- */
-export interface BostaCity {
-  _id: string;
-  name: string;
-  nameAr?: string;
-}
-
-/**
- * One entry from GET /workspaces/:workspaceId/bosta/cities/:cityId/districts.
- * Shape confirmed against Bosta's own OpenAPI spec (plain data[] array on
- * GET /cities/{cityId}/districts, unlike /cities' `{ list: [...] }`).
- */
-export interface BostaDistrict {
-  districtId: string;
-  districtName: string;
-  districtOtherName?: string;
-  zoneName?: string;
+/** Options shared by the requests that may cancel a courier booking. */
+export interface ManualCancelAcknowledgement {
+  /**
+   * The merchant cancelled the order's booking(s) in the courier's own
+   * dashboard (couriers without a cancel API). Send only after a 409
+   * CARRIER_MANUAL_CANCEL_REQUIRED and the merchant's explicit confirmation.
+   */
+  acknowledgeManualCancel?: boolean;
 }
 
 export interface CreateReturnPayload {
@@ -1130,14 +1798,63 @@ export interface ReviewListParams {
 
 // ---------------------------------------------------------------------
 // Confirmation queue (auth, /workspaces/:workspaceId/confirmation-tasks/...)
-// A work queue for phone-confirming orders before fulfilment. A `queued`
-// task is claimed (locked to the caller) and then closed by recording an
-// outcome; `attemptCount` / `nextRetryAt` track call-backs after an
-// unreachable/postponed result. Each task carries its full `order`.
+// A work queue for phone-confirming COD orders before fulfilment.
+//
+//   queued ─claim─▶ in_progress ─outcome─▶ done      (confirmed / rejected)
+//                        └──────outcome─▶ queued    (unreachable / postponed,
+//                                                    `nextRetryAt` set)
+//
+// A claim locks the task to one agent until `lockExpiresAt`
+// (CONFIRMATION_LOCK_TTL_MINUTES on the server, 15 by default). An expired
+// lock returns the task to Pending on the next read; the holder or a manager
+// can also release it. A done task can be corrected (confirmed ⇄ rejected)
+// by a manager while the order hasn't shipped — `correctable` says whether
+// that will succeed. Each task carries its `order` with the order's `items`:
+// the bare order row, no `stage`, `payments` or `shipments`.
 // ---------------------------------------------------------------------
 
 export type ConfirmationOutcome = "confirmed" | "rejected" | "unreachable" | "postponed";
 export type ConfirmationTaskStatus = "queued" | "in_progress" | "done";
+/** The queue's tabs. `pending` lists `queued` tasks, due callbacks first. */
+export type ConfirmationQueueTab = "pending" | "in_progress" | "done";
+/** "default" is each tab's own order; the rest sort the tab by its orders. */
+export type ConfirmationQueueSort = "default" | OrderSort;
+
+/** The queue's assignment filter: tasks assigned to me, to nobody, or to one member (a user id). */
+export type ConfirmationAssigneeFilter = "me" | "unassigned" | (string & {});
+
+export interface ConfirmationQueueParams {
+  status?: ConfirmationQueueTab;
+  mine?: boolean;
+  assignedTo?: ConfirmationAssigneeFilter;
+  cursor?: string;
+  limit?: number;
+  sort?: ConfirmationQueueSort;
+}
+/** Where an outcome was recorded. */
+export type ConfirmationAttemptSource = "queue" | "order_page" | "correction";
+/** How the customer was reached on an attempt. */
+export type ConfirmationChannel = "call" | "whatsapp" | "other";
+
+export interface ConfirmationUser {
+  id: string;
+  fullName: string;
+}
+
+export interface ConfirmationAttempt {
+  id: string;
+  taskId: string;
+  agentUserId: string;
+  agent: ConfirmationUser | null;
+  outcome: ConfirmationOutcome;
+  notes: string | null;
+  source: ConfirmationAttemptSource;
+  /** On a correction, the outcome it replaced. */
+  previousOutcome: ConfirmationOutcome | null;
+  /** Null on attempts recorded before channels existed, or when none was picked. */
+  channel: ConfirmationChannel | null;
+  createdAt: string;
+}
 
 export interface ConfirmationTask {
   id: string;
@@ -1146,17 +1863,123 @@ export interface ConfirmationTask {
   status: ConfirmationTaskStatus;
   lockedByUserId: string | null;
   lockedAt: string | null;
+  /** Who holds the lock; set while the task is in progress. */
+  lockedBy: ConfirmationUser | null;
+  /** When the lock lapses; null unless in progress. May be in the past until the next read. */
+  lockExpiresAt: string | null;
+  /** The agent a manager handed the task to; only they (or a manager) may claim it. Null is open to all. */
+  assignedToUserId: string | null;
+  assignedTo: ConfirmationUser | null;
+  assignedAt: string | null;
   attemptCount: number;
   nextRetryAt: string | null;
+  /**
+   * A funnel order's task waits until its offer window closes (the shopper may
+   * still add to the order); null is available at once.
+   */
+  availableAt?: string | null;
+  /** True while availableAt lies ahead: listed, but nobody can claim it yet. */
+  waitingForOffers?: boolean;
   outcome: ConfirmationOutcome | null;
   rejectionReason: string | null;
-  order: Order;
+  /** When the task reached `done`. */
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Oldest first. */
+  attempts: ConfirmationAttempt[];
+  /** A done task whose outcome a manager may still correct. */
+  correctable: boolean;
+  order: ConfirmationTaskOrder;
+}
+
+/** The order on a confirmation task: the order row plus its items. */
+export type ConfirmationTaskOrder = Omit<Order, "stage" | "payments" | "shipments" | "confirmationTask">;
+
+export interface ConfirmationQueuePage {
+  tasks: ConfirmationTask[];
+  /** Pass back as `cursor` for the next page; null on the last one. */
+  nextCursor: string | null;
+}
+
+export interface ConfirmationQueueCounts {
+  pending: number;
+  /** Pending tasks with no callback scheduled, or one that is due. */
+  pendingDue: number;
+  /** Pending funnel orders still in their offer window. */
+  waitingForOffers?: number;
+  inProgress: number;
+  inProgressMine: number;
+  done: number;
+  /** Open tasks (pending or in progress) assigned to the viewer. */
+  assignedToMe: number;
+  /** Open tasks nobody is assigned to. */
+  unassigned: number;
+}
+
+/** A member a confirmation task may be assigned to (their role can confirm orders). */
+export interface ConfirmationAssignee {
+  id: string;
+  fullName: string;
+  email: string;
+  role: { key: string; name: string };
+}
+
+/** POST /confirmation-tasks/assign — the tasks now carrying the assignment, and the ones left alone. */
+export interface AssignConfirmationTasksResult {
+  assignedTo: ConfirmationUser | null;
+  tasks: ConfirmationTask[];
+  skipped: Array<{ taskId: string; code: "NOT_FOUND" | "TASK_ALREADY_DONE" }>;
+}
+
+/** One attempt as the order page lists it. */
+export interface OrderConfirmationAttempt {
+  id: string;
+  outcome: ConfirmationOutcome;
+  channel: ConfirmationChannel | null;
+  source: ConfirmationAttemptSource;
+  notes: string | null;
+  createdAt: string;
+  agent: ConfirmationUser | null;
+}
+
+/** GET order detail: the order's current confirmation task, if it has one. */
+export interface OrderConfirmationTaskSummary {
+  id: string;
+  status: ConfirmationTaskStatus;
+  outcome: ConfirmationOutcome | null;
+  attemptCount: number;
+  nextRetryAt: string | null;
+  availableAt?: string | null;
+  waitingForOffers?: boolean;
+  completedAt: string | null;
+  /** Set only while another claim is live. */
+  lockedBy: ConfirmationUser | null;
+  lockedAt: string | null;
+  lockExpiresAt: string | null;
+  assignedTo?: ConfirmationUser | null;
+  assignedAt?: string | null;
+  /** Oldest first. */
+  attempts?: OrderConfirmationAttempt[];
 }
 
 export interface RecordConfirmationOutcomePayload {
   outcome: ConfirmationOutcome;
   notes?: string;
   rejectionReason?: string;
+  channel?: ConfirmationChannel;
+}
+
+export interface CorrectConfirmationOutcomePayload {
+  outcome: "confirmed" | "rejected";
+  /** Why the outcome changed; also the rejection reason when correcting to rejected. */
+  reason: string;
+  notes?: string;
+  /**
+   * Correcting to rejected cancels the order's courier booking; for a courier
+   * without a cancel API the merchant confirms they cancelled it there.
+   */
+  acknowledgeManualCancel?: boolean;
 }
 
 // ---------------------------------------------------------------------
@@ -1290,6 +2113,145 @@ export interface CreateShippingZonePayload {
 }
 
 export type UpdateShippingZonePayload = Partial<CreateShippingZonePayload>;
+
+// ---------------------------------------------------------------------
+// Weight tiers + tier pricing (auth, /workspaces/:workspaceId/shipping/...)
+// Grams everywhere. A tier covers (fromGrams, upToGrams]; the first starts
+// at 0; only the last may be open-ended (upToGrams null).
+// ---------------------------------------------------------------------
+
+export type ShippingPricingMode = "rates" | "weight_tiers";
+
+export interface WeightTier {
+  id: string;
+  position: number;
+  fromGrams: number;
+  upToGrams: number | null;
+}
+
+/** Stored on an order at checkout. */
+export interface OrderWeightTier extends WeightTier {
+  /** "weight_over_last_tier" when the weight was above a closed last tier (charged as that tier). */
+  flags: string[];
+}
+
+export interface ZoneTierPrice {
+  zoneId: string;
+  tierId: string;
+  amount: number;
+}
+
+/** GET /shipping/weight-tiers */
+export interface WeightTierSettings {
+  pricingMode: ShippingPricingMode;
+  defaultItemWeightGrams: number | null;
+  tiers: WeightTier[];
+  prices: ZoneTierPrice[];
+  /** Active variants of live physical products with no weight set. */
+  variantsWithoutWeight: number;
+}
+
+/** PUT /shipping/weight-tiers — the whole set, in order. Keep `id` to keep a tier. */
+export interface ReplaceWeightTiersPayload {
+  tiers: Array<{ id?: string; upToGrams: number | null }>;
+}
+
+export interface TierPriceProposal extends ZoneTierPrice {
+  /** "rates": from the zone's current rates; "default_rate": the store's default rate. */
+  basis: "rates" | "default_rate";
+}
+
+export interface SetPricingModePayload {
+  mode: ShippingPricingMode;
+  defaultItemWeightGrams?: number;
+  /** Fill empty zone × tier cells from the current rates (default true). */
+  prefill?: boolean;
+  /** Only return the proposals; nothing is written. */
+  dryRun?: boolean;
+}
+
+export interface SetPricingModeResult {
+  pricingMode: ShippingPricingMode;
+  defaultItemWeightGrams: number | null;
+  dryRun: boolean;
+  /** dryRun only. */
+  proposals?: TierPriceProposal[];
+  /** Cells actually filled by the switch. */
+  prefilled?: TierPriceProposal[];
+}
+
+/** POST /store/:ws/shipping-quote — `items`, or the cart named by X-Cart-Token. */
+export interface ShippingQuotePayload {
+  /** Defaults to "EG". */
+  country?: string;
+  /** The same province string the checkout sends in shippingAddress.province. */
+  governorate?: string | null;
+  items?: Array<{ variantId: string; offerId?: string; quantity?: number }>;
+}
+
+export interface FreeShippingProgress {
+  thresholdAmount: number;
+  /** How much more subtotal ships free; 0 once qualified. */
+  remainingAmount: number;
+  qualified: boolean;
+}
+
+export interface ShippingQuote {
+  pricingMode: ShippingPricingMode;
+  amount: number;
+  currency: string;
+  subtotal: number;
+  weightGrams: number | null;
+  weightEstimated: boolean;
+  tier: OrderWeightTier | null;
+  /*
+   * The fields below are newer than the quote itself; optional so a
+   * storefront deployed before the backend still reads an older answer.
+   */
+  /** Which rule priced it. */
+  rule?: ShippingRule;
+  baseAmount?: number;
+  extraFeesAmount?: number;
+  governorate?: string | null;
+  /** null when the store has no free-shipping threshold. */
+  freeShipping?: FreeShippingProgress | null;
+  /** The amount depends on the governorate — say so until one is chosen. */
+  destinationRequired?: boolean;
+  /** false: the store prices no shipping (every order is charged 0). */
+  configured?: boolean;
+}
+
+/** GET/PATCH /shipping/settings — the store's prices and default courier. */
+export interface ShippingSettings {
+  pricingMode: ShippingPricingMode;
+  defaultRateAmount: number | null;
+  freeShippingThresholdAmount: number | null;
+  /** Governorate code -> price. Rate pricing only. */
+  governorateRates: Record<string, number>;
+  /** "manual" or a courier code; null = no preference. */
+  defaultCarrierCode: string | null;
+}
+
+export interface ShippingGovernorate {
+  code: string;
+  ar: string;
+  en: string;
+}
+
+export interface ShippingSettingsResponse {
+  settings: ShippingSettings;
+  governorates: ShippingGovernorate[];
+  /** Couriers this store may choose, and whether each is connected. */
+  carriers: Array<{ code: string; name: string; connected: boolean }>;
+}
+
+/** Every field optional; null clears; `governorateRates` replaces the whole map. */
+export type UpdateShippingSettingsPayload = Partial<{
+  defaultRateAmount: number | null;
+  freeShippingThresholdAmount: number | null;
+  governorateRates: Record<string, number>;
+  defaultCarrierCode: string | null;
+}>;
 
 export interface CreateShippingRatePayload {
   name: string;
@@ -1475,10 +2437,164 @@ export interface AdminWorkspaceOverview {
   billingCycle: BillingCycle | null;
   /** "none" when the workspace has never subscribed. */
   subscriptionStatus: SubscriptionStatus | "none";
+  /** Not subscribed yet, while subscriptions are required to go live. */
+  draft?: boolean;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   /** Lifetime orders placed in this workspace. */
   orderCount: number;
+  /** Suspended by a platform admin (independent of billing). */
+  suspended?: boolean;
+  suspendedAt?: string | null;
+  billingPhase?: BillingPhase;
+  /** Storefront unavailable and new products/funnels blocked, for either reason. */
+  restricted?: boolean;
+  /** Who owns it. */
+  owner?: { id: string; username: string | null; fullName: string; email: string } | null;
+}
+
+/** What set a store's current subscription period. */
+export type AdminPeriodSource = "manual_admin" | "payment" | "special_terms" | "trial" | "other" | "draft";
+
+export type AdminManualAction = "activate" | "change_plan" | "extend" | "end_now";
+
+export interface AdminManualChange {
+  id: string;
+  action: AdminManualAction;
+  source: "manual_admin";
+  planBefore: { id: string; name: string | null } | null;
+  planAfter: { id: string; name: string | null } | null;
+  statusBefore: string | null;
+  statusAfter: string | null;
+  periodStartBefore: string | null;
+  periodEndBefore: string | null;
+  periodStartAfter: string | null;
+  periodEndAfter: string | null;
+  note: string;
+  actor: { id: string; fullName: string } | null;
+  createdAt: string;
+}
+
+/** GET /admin/workspaces/:id/subscription */
+export interface AdminManualSubscription {
+  subscription: {
+    id: string;
+    plan: { id: string; name: string; code: string } | null;
+    /** As the lifecycle sees it (a lapsed period counts as past_due). */
+    status: string;
+    storedStatus: string;
+    phase: BillingPhase | string;
+    billingCycle: BillingCycle;
+    trialEndsAt: string | null;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    restrictsAt: string | null;
+    source: AdminPeriodSource;
+    /** Not subscribed yet: Activate takes it live. */
+    draft?: boolean;
+  };
+  /** The owner's stores and this store's funnels this month, against the plan. */
+  limits?: PlanLimits;
+  /** A charge already open — manual actions leave it alone. */
+  openCharge: { id: string; amount: string | number; currency: string; periodStart: string; periodEnd: string } | null;
+  history: AdminManualChange[];
+}
+
+/** POST …/subscription/{activate|change-plan|extend|end} */
+export interface AdminManualActionResult extends AdminManualSubscription {
+  change: AdminManualChange;
+  /** True when an Idempotency-Key replayed an earlier identical request. */
+  replayed: boolean;
+}
+
+export type AdminDuration = { months: number } | { days: number };
+
+export interface AdminActivateSubscriptionInput {
+  planId: string;
+  startsAt?: string;
+  duration?: AdminDuration;
+  endsAt?: string;
+  billingCycle?: BillingCycle;
+  note: string;
+}
+
+export interface AdminFeatureOverride {
+  id: string;
+  featureKey: PlanFeatureKey;
+  mode: "grant" | "deny";
+  value: unknown;
+  expiresAt: string | null;
+  reason: string;
+  grantedBy: { id: string; fullName: string } | null;
+  createdAt: string;
+  revokedAt: string | null;
+  revokedBy: { id: string; fullName: string } | null;
+  revokeReason: string | null;
+  state: "active" | "expired" | "revoked";
+}
+
+/** One catalogue feature for a store: enabled or not, and why. */
+export interface AdminWorkspaceFeature {
+  key: PlanFeatureKey;
+  type: "boolean";
+  inPlan: boolean;
+  enabled: boolean;
+  source: "plan" | "override" | "none";
+  override: AdminFeatureOverride | null;
+  expiredOverride: AdminFeatureOverride | null;
+}
+
+export interface AdminWorkspaceFeatures {
+  features: AdminWorkspaceFeature[];
+  /** Every override the store has had, newest first. */
+  overrides: AdminFeatureOverride[];
+}
+
+/** A store in a user search row: theirs, or one they belong to. */
+export interface AdminUserStore {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  /** "owner", or the member's role key. */
+  role: string;
+  /** This store is what matched the search. */
+  matched: boolean;
+  subscription: {
+    status: string;
+    phase: BillingPhase | string;
+    plan: string | null;
+    planId: string | null;
+    currentPeriodEnd: string | null;
+  } | null;
+}
+
+/** One account in GET /admin/users. */
+export interface AdminUserRow {
+  id: string;
+  username: string | null;
+  fullName: string;
+  email: string;
+  status: string;
+  platformRole: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  emailVerified: boolean;
+  workspaces: AdminUserStore[];
+}
+
+export interface AdminUserSearchPage {
+  users: AdminUserRow[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+/** GET /admin/users/:id */
+export interface AdminUserDetail extends AdminUserRow {
+  phone: string | null;
+  usernameChangedAt: string | null;
 }
 
 export interface AdminPlan {
@@ -1496,13 +2612,27 @@ export interface AdminPlan {
   codFeeBp: number;
   features: PlanFeatureKey[];
   active: boolean;
+  /** Stores one owner may have; null = unlimited. */
+  maxStores: number | null;
+  /** Funnels one store may make a month (Cairo time); null = unlimited. */
+  maxFunnelsPerMonth: number | null;
+  /** On the marketing site and at sign-up. */
+  isPublic: boolean;
+  displayOrder: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type AdminPlanInput = Omit<AdminPlan, "id" | "currency" | "createdAt" | "updatedAt"> & {
+export type AdminPlanInput = Omit<
+  AdminPlan,
+  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder"
+> & {
   id?: string;
   currency?: string;
+  maxStores?: number | null;
+  maxFunnelsPerMonth?: number | null;
+  isPublic?: boolean;
+  displayOrder?: number;
 };
 
 export type SubscriptionStatus =
@@ -1511,7 +2641,8 @@ export type SubscriptionStatus =
   | "past_due"
   | "canceled"
   | "expired"
-  | "paused";
+  | "paused"
+  | "draft";
 
 export type BillingCycle = "monthly" | "yearly";
 
@@ -1851,6 +2982,2036 @@ export interface AdminOverview {
 }
 
 // ---------------------------------------------------------------------------
+// Platform admin — risk (/admin/risk/*)
+// ---------------------------------------------------------------------------
+
+/** An identifier kind the platform blocklist and the risk signals know. */
+export type AdminRiskIdentifierType = "phone" | "email" | "address";
+
+/** The address an address block is fingerprinted from. */
+export interface AdminRiskAddress {
+  country: string;
+  province?: string | null;
+  city: string;
+  addressLine: string;
+}
+
+/**
+ * One platform blocklist entry. `value` is the normalized identifier order
+ * creation compares against (digits for a phone, lowercase for an email, a
+ * 32-hex fingerprint for an address); `label` is the human-readable form.
+ */
+export interface AdminBlocklistEntry {
+  id: string;
+  type: AdminRiskIdentifierType;
+  value: string;
+  label: string;
+  reason: string;
+  /** Null = never expires. */
+  expiresAt: string | null;
+  /** Derived from `expiresAt` on the server. An expired entry no longer matches. */
+  status: "active" | "expired";
+  createdById: string | null;
+  /** The author's name (or email), null when the user has since been deleted. */
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminBlocklistParams {
+  type?: AdminRiskIdentifierType;
+  status?: "active" | "expired" | "all";
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminBlocklistPage {
+  entries: AdminBlocklistEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * `POST /admin/risk/blocklist`. A phone or an email goes in `value`, an
+ * address in `address`. Blocking an identifier that is already listed
+ * updates its reason and expiry (the response then has `created: false`).
+ */
+export interface AdminBlockPayload {
+  type: AdminRiskIdentifierType;
+  value?: string;
+  address?: AdminRiskAddress;
+  reason: string;
+  expiresAt?: string | null;
+  source?: "manual" | "signal";
+}
+
+export interface AdminBlockResult {
+  entry: AdminBlocklistEntry;
+  created: boolean;
+}
+
+export interface AdminBlocklistUpdate {
+  reason?: string;
+  expiresAt?: string | null;
+}
+
+export type AdminRiskSignalReason = "multi_store" | "high_refusal";
+
+export interface AdminRiskSignal {
+  type: AdminRiskIdentifierType;
+  /** The normalized identifier (same form as a blocklist entry's `value`). */
+  value: string;
+  /** A phone as last typed, an email, or an address in words. */
+  label: string;
+  /** Exactly what to POST (plus a reason) to block this identifier. */
+  block: { type: AdminRiskIdentifierType; value?: string; address?: AdminRiskAddress };
+  workspaceCount: number;
+  orderCount: number;
+  cancelledCount: number;
+  returnedCount: number;
+  refusedCount: number;
+  /** refusedCount / orderCount, 0..1. */
+  refusalRate: number | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  reasons: AdminRiskSignalReason[];
+  /** Up to ten of the workspaces it ordered in. `name` is null for a deleted workspace. */
+  workspaces: Array<{ id: string; name: string | null }>;
+  blocked: boolean;
+  blocklistEntryId: string | null;
+}
+
+export interface AdminRiskSignalParams {
+  type?: AdminRiskIdentifierType;
+  windowDays?: number;
+  minWorkspaces?: number;
+  minRefused?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminRiskSignalPage {
+  signals: AdminRiskSignal[];
+  total: number;
+  limit: number;
+  offset: number;
+  thresholds: {
+    type: AdminRiskIdentifierType;
+    windowDays: number;
+    minWorkspaces: number;
+    minRefused: number;
+    /** A fraction, 0..1. */
+    minRefusalRate: number;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — carrier and payment gateway registry (read-only)
+// ---------------------------------------------------------------------------
+
+/** 'present' | 'missing' | 'invalid' (set, but not 32 bytes of base64). Never the key. */
+export type AdminCredentialsKeyState = "present" | "missing" | "invalid";
+
+export interface AdminProviderConnections {
+  /** Distinct workspaces with an account for this provider. */
+  workspaces: number;
+  active: number;
+  invalid: number;
+}
+
+export interface AdminProviderHealthTarget {
+  /** False when no API host is known — the check would answer `not_checkable`. */
+  checkable: boolean;
+  /** The host a check would reach, e.g. "app.bosta.co". */
+  target: string | null;
+}
+
+export interface AdminCarrier {
+  code: string;
+  name: string;
+  /** False for accounts whose adapter is no longer in the code. */
+  registered: boolean;
+  /** As CARRIERS_ENABLED / CARRIERS_BETA decide it on this server. */
+  rollout: "enabled" | "beta" | "off";
+  rolloutDetail: string;
+  /** The adapter contract's capabilities; null for an unregistered code. */
+  capabilities: {
+    cancel: "api" | "manual";
+    label: boolean;
+    webhook: "per_shipment" | "account" | "none";
+    webhookRefetch: boolean;
+    polling: boolean;
+    bulkStatus: boolean;
+    addressLevels: string[];
+    reserveNameWhenUnconnected: boolean;
+    typedAddressNames: boolean;
+    sandbox: boolean;
+  } | null;
+  connections: AdminProviderConnections;
+  healthCheck: AdminProviderHealthTarget;
+}
+
+export interface AdminCarrierRegistry {
+  carriers: AdminCarrier[];
+  environment: {
+    enabled: string[];
+    beta: string[];
+    betaWorkspaces: string[];
+    /** Problems in the rollout variables, as the boot log reports them. */
+    warnings: string[];
+    credentialsKey: AdminCredentialsKeyState;
+  };
+}
+
+export interface AdminPaymentGateway {
+  code: string;
+  name: string;
+  registered: boolean;
+  /**
+   * Server-wide — there is no per-gateway switch:
+   *   enabled       PAYMENTS_ONLINE_ENABLED on and the credentials key present
+   *   connect_only  key present, online payments off (merchants may connect)
+   *   off           no usable GATEWAY_CREDENTIALS_KEY
+   */
+  availability: "enabled" | "connect_only" | "off";
+  availabilityDetail: string;
+  capabilities: {
+    methods: string[];
+    currencies: string[];
+    refunds: boolean;
+    statusInquiry: boolean;
+    webhook: { automatic: boolean } | null;
+    methodsFromAccount: boolean;
+  } | null;
+  connections: AdminProviderConnections & { live: number; test: number };
+  healthCheck: AdminProviderHealthTarget;
+}
+
+export interface AdminPaymentGatewayRegistry {
+  gateways: AdminPaymentGateway[];
+  environment: {
+    onlineEnabled: boolean;
+    credentialsKey: AdminCredentialsKeyState;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — admin users (/admin/admins)
+// ---------------------------------------------------------------------------
+
+/**
+ * A platform-console permission key (`overview.view`, `admins.manage`, …), or
+ * `*` — every key, held by the creator role only. The full list comes from
+ * `GET /admin/roles`; the backend's canonical list is
+ * `core/security/platformPermissions.js`.
+ */
+export type PlatformPermission = string;
+
+/** A platform role (`platform_roles`): data, not a fixed set. */
+export interface AdminPlatformRole {
+  key: string;
+  name: string;
+  description: string | null;
+  /** Copied onto an account when the role is assigned. */
+  defaultPermissions: PlatformPermission[];
+}
+
+export interface AdminRolesResponse {
+  roles: AdminPlatformRole[];
+  /** Every permission key, `*` excluded. */
+  permissions: PlatformPermission[];
+}
+
+/** An account with a platform role. */
+export interface AdminPlatformAdmin {
+  id: string;
+  email: string;
+  fullName: string;
+  status: "active" | "suspended" | "pending_verification";
+  lastLoginAt: string | null;
+  createdAt: string;
+  role: string;
+  roleName: string;
+  /** What the account can actually do; checks never look at the role. */
+  permissions: PlatformPermission[];
+  /** The signed-in viewer — who cannot edit or revoke themselves. */
+  isYou: boolean;
+}
+
+export interface AdminGrantPayload {
+  email: string;
+  role: string;
+  /** Omit for the role's default set. */
+  permissions?: PlatformPermission[];
+}
+
+export interface AdminGrantResult {
+  admin: AdminPlatformAdmin;
+  /** False when the account already had that role (nothing changed). */
+  granted: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — agents, referral codes, commissions (/admin/agents, ...)
+// ---------------------------------------------------------------------------
+
+export type ReferralDiscountType = "none" | "percentage" | "fixed";
+
+/**
+ * Where a subscription stands against its period end
+ * (workspaces/workspaceAccessService):
+ *   ok           more than 3 days left
+ *   expiring     3 days or less left
+ *   payment_due  past due while the period still runs
+ *   grace        the period ended unpaid, less than a day ago
+ *   restricted   more than a day past the period end, unpaid
+ */
+export type BillingPhase = "ok" | "expiring" | "payment_due" | "grace" | "restricted" | "draft";
+
+/** A draft store's plan, and whether its owner can still take that plan's trial. */
+export interface DraftPlan {
+  planId: string | null;
+  planName: string | null;
+  trial: { eligible: boolean; days: number };
+}
+
+/** A plan's limits against what is used (null max = unlimited). */
+export interface PlanLimits {
+  stores: { used: number; max: number | null };
+  funnelsThisMonth: { used: number; max: number | null; resetsAt: string };
+}
+
+/** `GET /workspaces/:id/access` — any member. */
+export interface WorkspaceAccess {
+  /** Storefront unavailable and new products/funnels blocked. */
+  restricted: boolean;
+  /** Why: a manual suspension, an unpaid subscription past its grace day, or both. */
+  reasons: Array<"suspended" | "billing">;
+  billing: {
+    phase: BillingPhase;
+    status: SubscriptionStatus | null;
+    trialing: boolean;
+    periodEnd: string | null;
+    /** periodEnd + 1 day: when an unpaid store becomes restricted. */
+    restrictsAt: string | null;
+    /** False when billing restrictions only warn (BILLING_RESTRICTIONS=warn). */
+    enforced: boolean;
+  };
+  suspension: { suspended: boolean; since: string | null };
+  /** Made while subscriptions are required to go live, and not subscribed yet. */
+  draft?: boolean;
+  /** Only on a draft. */
+  draftPlan?: DraftPlan;
+}
+
+/**
+ * `GET /workspaces/:id/billing` — the merchant's own subscription summary. The
+ * referral code shows its discount only, never the agent or its label.
+ */
+export interface WorkspaceBilling {
+  subscription: {
+    status: SubscriptionStatus;
+    billingCycle: "monthly" | "yearly";
+    trialEndsAt: string | null;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    plan: {
+      id: string;
+      name: string;
+      currency: string;
+      monthlyPrice: number;
+      yearlyPrice: number;
+      trialDays?: number;
+      maxStores?: number | null;
+      maxFunnelsPerMonth?: number | null;
+      softOrderQuota?: number | null;
+      features?: PlanFeatureKey[];
+    } | null;
+  };
+  referralCode: {
+    code: string;
+    discountType: ReferralDiscountType;
+    discountValue: number | null;
+    discountCurrency: string | null;
+    active: boolean;
+    attachedAt: string;
+  } | null;
+  /** What the next charge would be, in minor units; null on a free plan. */
+  nextCharge: { grossAmount: number; discountAmount: number; amount: number; currency: string } | null;
+  features?: PlanFeatureKey[];
+  trialEndsAt?: string | null;
+  limits?: PlanLimits;
+  draft?: boolean;
+  /** Only on a draft: its trial, whether its plan is free, and how to pay by hand. */
+  goLive?: {
+    trial: { eligible: boolean; days: number };
+    free: boolean;
+    paymentInstructions: { ar: string | null; en: string | null } | null;
+  } | null;
+  /**
+   * Paying the charge online (Fawaterak). `enabled` is false while the
+   * platform has it off, or the plan isn't priced in `currency`.
+   */
+  onlinePayment?: {
+    enabled: boolean;
+    currency: string;
+    latest: OnlinePayment | null;
+  };
+}
+
+/**
+ * An online checkout's state:
+ *   created / open / pending  in progress (pending: an async method such as a
+ *                             Fawry reference, awaiting the payment)
+ *   paid                      confirmed, and the charge settled
+ *   paid_duplicate            paid on a charge already paid: refunded by hand
+ *   mismatch                  paid with an unexpected amount: under review
+ *   failed / expired / superseded / error   not paid
+ */
+export type OnlinePaymentStatus =
+  | "created"
+  | "open"
+  | "pending"
+  | "paid"
+  | "paid_duplicate"
+  | "mismatch"
+  | "failed"
+  | "expired"
+  | "superseded"
+  | "error";
+
+/** One online checkout of the merchant's subscription charge. Amounts in minor units. */
+export interface OnlinePayment {
+  id: string;
+  status: OnlinePaymentStatus;
+  amount: number;
+  currency: string;
+  /** Fawaterak's hosted page; only while the payment is in progress. */
+  checkoutUrl: string | null;
+  paymentMethod: string | null;
+  /** An async method's reference (a Fawry code). */
+  referenceNumber: string | null;
+  createdAt: string;
+  expiresAt: string | null;
+  paidAt: string | null;
+}
+
+/** `GET /workspaces/:id/billing/payments/:paymentId`. */
+export interface OnlinePaymentResult {
+  payment: OnlinePayment;
+  chargeStatus: "pending" | "paid" | "failed";
+}
+
+/** POST /workspaces/:id/start-trial and /activate-free-plan. */
+export interface GoLiveResult {
+  billing: WorkspaceBilling;
+  access: WorkspaceAccess;
+  /** False when it had already happened (a repeated click). */
+  started: boolean;
+}
+
+export interface AdminReferralCode {
+  id: string;
+  agentId: string;
+  /** Uppercase; what merchants type. Never changes once created. */
+  code: string;
+  label: string | null;
+  discountType: ReferralDiscountType;
+  /** Basis points for a percentage, minor units for a fixed amount. */
+  discountValue: number | null;
+  /** Only for a fixed amount. */
+  discountCurrency: string | null;
+  /** The code's own override, or null for the platform default. */
+  commissionRateBp: number | null;
+  effectiveCommissionRateBp: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminReferralCodeInput {
+  code?: string;
+  label?: string | null;
+  discountType?: ReferralDiscountType;
+  discountValue?: number | null;
+  discountCurrency?: string | null;
+  commissionRateBp?: number | null;
+  active?: boolean;
+}
+
+/** Suggested commission for one currency. Currencies are never added together. */
+export interface AdminCommissionTotals {
+  currency: string;
+  pending: number;
+  markedPaid: number;
+  amountPaid: number;
+  payments: number;
+}
+
+export interface AdminReferralCodeWithStats extends AdminReferralCode {
+  /** Subscriptions this code is attached to. */
+  merchantsReferred: number;
+  commission: AdminCommissionTotals[];
+}
+
+export interface AdminAgent {
+  id: string;
+  email: string;
+  fullName: string;
+  status: "active" | "suspended" | "pending_verification";
+  /** False once the role was changed or revoked; codes and ledger remain. */
+  isAgent: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  codes: AdminReferralCodeWithStats[];
+  merchantsReferred: number;
+  commission: AdminCommissionTotals[];
+}
+
+export interface AdminAgentList {
+  agents: AdminAgent[];
+  defaultCommissionRateBp: number;
+}
+
+export interface AdminReferredMerchant {
+  workspace: { id: string; name: string | null };
+  code: { id: string; code: string };
+  attachedAt: string;
+  subscriptionStatus: SubscriptionStatus;
+  planName: string | null;
+  billingCycle: "monthly" | "yearly";
+}
+
+export interface AdminAgentDetail {
+  agent: AdminAgent;
+  merchants: AdminReferredMerchant[];
+  defaultCommissionRateBp: number;
+}
+
+export interface AdminCreateAgentResult {
+  agent: Omit<AdminAgent, "codes" | "merchantsReferred" | "commission">;
+  code: AdminReferralCode | null;
+}
+
+export type CommissionPayoutStatus = "pending" | "marked_paid";
+
+// ---------------------------------------------------------------------------
+// Platform admin — subscription charges (/admin/workspaces/:id/charges)
+// ---------------------------------------------------------------------------
+
+export type AdminChargeStatus = "pending" | "paid" | "failed";
+
+/**
+ * One subscription charge (a billing invoice). Amounts in minor units of
+ * `currency`. `amountDue` is re-priced when the charge is paid, because the
+ * referral code is re-checked then.
+ */
+export interface AdminCharge {
+  id: string;
+  status: AdminChargeStatus;
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: number;
+  discountAmount: number;
+  amountDue: number;
+  /** What was actually received; null until paid. */
+  amountPaid: number | null;
+  currency: string;
+  referralCode: { id: string; code: string } | null;
+  /** When the money arrived: the gateway's time, or the date entered by hand. */
+  paidAt: string | null;
+  /** Only a "manual" payment can be reversed. */
+  paymentSource: "gateway" | "manual" | null;
+  /** When a manual payment was recorded; may be later than paidAt. */
+  paymentRecordedAt: string | null;
+  /** Priced with this special-terms price override. */
+  specialTermsId: string | null;
+  failureReason: string | null;
+  externalReference: string | null;
+  paymentNote: string | null;
+  /** Who recorded the payment by hand; null for a gateway payment. */
+  recordedBy: { id: string; fullName: string } | null;
+  commission: { id: string; suggestedCommission: number; payoutStatus: CommissionPayoutStatus } | null;
+  /** For an unpaid charge: what it comes to if paid now (the code re-checked). */
+  payableNow: {
+    discountAmount: number;
+    amountDue: number;
+    referralCodeApplies: boolean;
+    /** It was priced with a code that is no longer active. */
+    codeLapsed: boolean;
+  } | null;
+  /** The merchant's online checkouts of this charge, newest first. */
+  onlinePayments?: AdminOnlinePayment[];
+  /** The merchant may be paying online right now: recording by hand supersedes it. */
+  onlinePaymentInProgress?: boolean;
+  createdAt: string;
+}
+
+/** An online checkout (Fawaterak) of a charge, as the console sees it. */
+export interface AdminOnlinePayment {
+  id: string;
+  provider: string;
+  status: OnlinePaymentStatus;
+  /** The price frozen when the merchant pressed Pay, in minor units. */
+  amount: number;
+  currency: string;
+  /** What Fawaterak reported as paid. */
+  verifiedAmount: number | null;
+  verifiedCurrency: string | null;
+  providerTransactionId: number | null;
+  paymentMethod: string | null;
+  referenceNumber: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  expiresAt: string | null;
+  /** Refunds Fawaterak reported as approved; nothing was changed for them. */
+  refundsReported: Array<{ amount: string | null; currency: string | null; approvedAt: string | null; reportedAt: string }>;
+}
+
+export interface AdminWorkspaceCharges {
+  subscription: {
+    id: string;
+    status: SubscriptionStatus;
+    billingCycle: "monthly" | "yearly";
+    planName: string | null;
+    currentPeriodEnd: string;
+    referralCode: {
+      id: string;
+      code: string;
+      active: boolean;
+      discountType: ReferralDiscountType;
+      discountValue: number | null;
+      discountCurrency: string | null;
+      agent: { id: string; fullName: string } | null;
+      attachedAt: string;
+    } | null;
+    /** One period's price on each cycle; annual is always 10 × monthly. */
+    planPrices: { monthly: number; yearly: number; currency: string } | null;
+  };
+  /** The next charge's price; null while one is open or the plan is free. */
+  nextCharge: { grossAmount: number; discountAmount: number; amount: number; currency: string } | null;
+  /** Newest first. */
+  charges: AdminCharge[];
+  /** Every special-terms grant, newest first; `active` marks those in effect. */
+  specialTerms: AdminSpecialTerm[];
+}
+
+export type SpecialTermsKind = "free_months" | "price_override";
+
+/** A grant of non-standard terms (a comp, a bundle price). */
+export interface AdminSpecialTerm {
+  id: string;
+  kind: SpecialTermsKind;
+  active: boolean;
+  /** free_months: the comped window. */
+  months: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  /** price_override: the price, in minor units of `currency`, for the next N charges. */
+  priceAmount: number | null;
+  currency: string | null;
+  chargesTotal: number | null;
+  chargesUsed: number;
+  chargesLeft: number | null;
+  /** What was agreed and why. */
+  note: string;
+  createdBy: { id: string; fullName: string } | null;
+  createdAt: string;
+}
+
+export type AdminSpecialTermsInput =
+  | { kind: "free_months"; months: number; note: string }
+  | { kind: "price_override"; priceAmount: number; charges: number; note: string };
+
+/** The console's view of a store's access: manual suspension and billing side by side. */
+export interface AdminStoreAccess extends Omit<WorkspaceAccess, "suspension"> {
+  suspension: {
+    status: "active" | "suspended" | "closed";
+    suspended: boolean;
+    suspendedAt: string | null;
+    /** The admin's note; never shown to the merchant. */
+    suspensionReason: string | null;
+    suspendedBy: { id: string; fullName: string } | null;
+  };
+}
+
+export interface AdminRecordPaymentResult {
+  charge: AdminCharge;
+  /** The charge was priced with a code that had lapsed by the time it was paid. */
+  referralCodeLapsed: boolean;
+}
+
+export interface AdminReversePaymentResult {
+  /** Back to pending. */
+  charge: AdminCharge;
+  /** The ledger row voided by the reversal; payoutStatus "marked_paid" means the agent was already paid for it. */
+  voidedCommission: { id: string; suggestedCommission: number; payoutStatus: CommissionPayoutStatus } | null;
+  /** `to` is past_due when this payment is what had made the subscription active. */
+  subscriptionStatus: { from: SubscriptionStatus; to: SubscriptionStatus };
+}
+
+/** One ledger row: one paid subscription charge that carried a code. */
+export interface AdminCommission {
+  id: string;
+  agentId: string;
+  /** Absent in the agent's own view. */
+  agentName?: string;
+  code: { id: string; code?: string; label?: string | null };
+  workspace: { id: string; name?: string };
+  billingInvoiceId: string;
+  amountPaid: number;
+  currency: string;
+  paidAt: string;
+  commissionRateBp: number;
+  suggestedCommission: number;
+  /** The subscription's first paid charge (false = a renewal). */
+  isFirstPayment: boolean;
+  payoutStatus: CommissionPayoutStatus;
+  payoutNote: string | null;
+  markedPaidAt: string | null;
+  /** Null in the agent's own view. */
+  markedPaidBy: { id: string; fullName: string } | null;
+  /**
+   * Set when the payment behind the row was reversed. A voided row never
+   * counts in totals and can't be marked paid; its payoutStatus is kept, so
+   * "marked_paid" here means the agent was paid for a reversed payment.
+   */
+  voidedAt: string | null;
+  voidReason: string | null;
+  /** Null in the agent's own view. */
+  voidedBy: { id: string; fullName: string } | null;
+}
+
+/** The ledger filter: the two payout states count live rows only. */
+export type CommissionListStatus = CommissionPayoutStatus | "voided";
+
+export interface AdminCommissionParams {
+  agentId?: string;
+  codeId?: string;
+  workspaceId?: string;
+  status?: CommissionListStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminCommissionPage {
+  commissions: AdminCommission[];
+  total: number;
+  limit: number;
+  offset: number;
+  /** Over every row the filter matches, not just this page. */
+  totals: AdminCommissionTotals[];
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin — templates (/admin/templates)
+// ---------------------------------------------------------------------------
+
+export type AdminTemplateKind = "store" | "funnel" | "landing";
+
+/** One row of the admin template library — drafts and version-less ones included. */
+export interface AdminTemplate {
+  id: string;
+  /** Exactly what the public gallery shows: published AND an active version. */
+  inGallery: boolean;
+  name: string;
+  category: string | null;
+  thumbnailUrl: string | null;
+  isPublished: boolean;
+  kind: AdminTemplateKind;
+  /** Minor units. */
+  priceAmount: number;
+  isFree: boolean;
+  /** The raw column — no fallback to the version's styles. */
+  primaryColor: string | null;
+  tags: string[];
+  rtl: boolean;
+  versionCount: number;
+  /** The version number the gallery offers, or null when none is active. */
+  activeVersion: number | null;
+  templateVersionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Create (no `id`) or partial update (with `id`). */
+export type AdminTemplateInput = Partial<
+  Pick<
+    AdminTemplate,
+    "name" | "category" | "thumbnailUrl" | "isPublished" | "kind" | "priceAmount" | "isFree" | "primaryColor" | "tags" | "rtl"
+  >
+> & { id?: string };
+
+export interface AdminTemplateVersionSummary {
+  id: string;
+  version: number;
+  isActive: boolean;
+  pageCount: number;
+  pagePaths: string[];
+  sectionCount: number;
+  primaryColor: string | null;
+  /** Merchant websites created from this version. */
+  websiteCount: number;
+  createdAt: string;
+}
+
+export interface AdminTemplateVersionPage {
+  path: string;
+  title?: string;
+  pageType?: string;
+  builderData?: Record<string, unknown>;
+  seo?: Record<string, unknown>;
+}
+
+export interface AdminTemplateVersion extends AdminTemplateVersionSummary {
+  globalStyles: Record<string, unknown>;
+  pages: AdminTemplateVersionPage[];
+  sections: Array<Record<string, unknown>>;
+}
+
+export interface AdminTemplateDetail {
+  template: AdminTemplate;
+  /** Newest first. */
+  versions: AdminTemplateVersionSummary[];
+}
+
+export interface AdminTemplateVersionInput {
+  globalStyles?: Record<string, unknown>;
+  pages: AdminTemplateVersionPage[];
+  sections?: Array<Record<string, unknown>>;
+  /** Default true: becomes the version the gallery offers. */
+  activate?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Support tickets — merchant (/workspaces/:id/support) and admin (/admin/support)
+// ---------------------------------------------------------------------------
+
+/**
+ *   open      waiting on the platform team
+ *   pending   waiting on the merchant (the platform replied)
+ *   resolved  answered; a merchant reply re-opens it
+ *   closed    finished; nobody can reply
+ */
+export type SupportTicketStatus = "open" | "pending" | "resolved" | "closed";
+export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";
+export type SupportTicketCategory =
+  | "general"
+  | "billing"
+  | "orders"
+  | "shipping"
+  | "payments"
+  | "technical"
+  | "account";
+
+export interface SupportTicket {
+  id: string;
+  workspaceId: string;
+  subject: string;
+  category: SupportTicketCategory;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  /** Who opened it (name or email); null if that account is gone. */
+  createdBy: string | null;
+  lastMessageAt: string;
+  lastMessageBy: "merchant" | "admin";
+  messageCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  authorType: "merchant" | "admin";
+  /** For the merchant, platform replies are always signed "Zimos support". */
+  authorName: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface SupportTicketThread {
+  ticket: SupportTicket;
+  messages: SupportTicketMessage[];
+}
+
+export interface OpenSupportTicketPayload {
+  subject: string;
+  body: string;
+  category?: SupportTicketCategory;
+}
+
+/** The admin view adds the workspace and the real author behind each reply. */
+export interface AdminSupportTicket extends SupportTicket {
+  workspaceName: string | null;
+  workspaceSlug: string | null;
+  createdByEmail?: string;
+}
+
+export interface AdminSupportTicketMessage extends SupportTicketMessage {
+  authorEmail?: string;
+}
+
+export interface AdminSupportTicketThread {
+  ticket: AdminSupportTicket;
+  messages: AdminSupportTicketMessage[];
+}
+
+export interface AdminSupportTicketParams {
+  status?: SupportTicketStatus;
+  priority?: SupportTicketPriority;
+  workspaceId?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminSupportTicketPage {
+  tickets: AdminSupportTicket[];
+  total: number;
+  limit: number;
+  offset: number;
+  /** Per status, under the same non-status filters — for the tab badges. */
+  counts: Record<SupportTicketStatus, number>;
+}
+
+/** A reachability probe: one unauthenticated GET, no merchant credentials. */
+export interface AdminProviderCheck {
+  code: string;
+  status: "operational" | "degraded" | "down" | "not_checkable";
+  httpStatus: number | null;
+  latencyMs: number | null;
+  target: string | null;
+  detail: string;
+  checkedAt: string;
+}
+
+// ---------------------------------------------------------------------
+// Storefront checkout settings (workspace.settings.checkout_settings, read
+// back publicly as StorefrontMeta.checkout). Backend:
+// src/modules/checkout/checkoutSettings.js
+// ---------------------------------------------------------------------
+
+export type CheckoutFieldMode = "hidden" | "optional" | "required";
+/** A note the shopper never sees can't be demanded of them — no "required". */
+export type CheckoutNotesMode = "hidden" | "optional";
+
+/**
+ * Keys are named after the request fields they govern on the backend:
+ *   email       -> contact.email
+ *   postal_code -> shippingAddress.postalCode
+ *   notes       -> the order note
+ * "required" is enforced server-side (422 VALIDATION_ERROR on that field).
+ */
+export interface CheckoutSettings {
+  email: CheckoutFieldMode;
+  postal_code: CheckoutFieldMode;
+  notes: CheckoutNotesMode;
+}
+
+export const CHECKOUT_SETTINGS_DEFAULTS: CheckoutSettings = {
+  email: "optional",
+  postal_code: "optional",
+  notes: "optional",
+};
+
+/** The effective checkout settings for a stored blob — mirrors resolveCheckoutSettings. */
+export function resolveCheckoutSettings(
+  stored: Partial<CheckoutSettings> | null | undefined
+): CheckoutSettings {
+  const s = stored ?? {};
+  const modes: CheckoutFieldMode[] = ["hidden", "optional", "required"];
+  return {
+    email: s.email && modes.includes(s.email) ? s.email : CHECKOUT_SETTINGS_DEFAULTS.email,
+    postal_code:
+      s.postal_code && modes.includes(s.postal_code)
+        ? s.postal_code
+        : CHECKOUT_SETTINGS_DEFAULTS.postal_code,
+    notes: s.notes === "hidden" || s.notes === "optional" ? s.notes : CHECKOUT_SETTINGS_DEFAULTS.notes,
+  };
+}
+
+// ---------------------------------------------------------------------
+// Fraud (auth, /workspaces/:workspaceId/fraud/...). Backend: src/modules/fraud
+// Rules live in workspace.settings.fraud_rules (read via GET /workspaces,
+// written via PATCH /workspaces/:id — needs workspace.manage).
+// ---------------------------------------------------------------------
+
+export type FraudAction = "flag" | "block";
+
+export interface FraudRules {
+  /** What a triggered counting rule does. Default "flag". */
+  action: FraudAction;
+  /** Refuse blacklisted customers whatever `action` says. Default false. */
+  block_blacklisted: boolean;
+  /** Same customer + any same variant within N minutes (1–10080). null = off. */
+  duplicate_window_minutes: number | null;
+  /** Customer already has N orders in the last 24h (1–100). null = off. */
+  max_orders_per_phone_per_day: number | null;
+  /** customer.totalRejectedOrders >= N (1–100). null = off. */
+  high_rejection_threshold: number | null;
+}
+
+/** The effective rules for a stored blob — mirrors fraudRules.resolveFraudRules. */
+export function resolveFraudRules(stored: Partial<FraudRules> | null | undefined): FraudRules {
+  const s = stored ?? {};
+  return {
+    action: s.action === "block" ? "block" : "flag",
+    block_blacklisted: s.block_blacklisted === true,
+    duplicate_window_minutes: s.duplicate_window_minutes ?? null,
+    max_orders_per_phone_per_day: s.max_orders_per_phone_per_day ?? null,
+    high_rejection_threshold: s.high_rejection_threshold ?? null,
+  };
+}
+
+/**
+ * Flags an order can carry. `blacklisted_customer` is set on any order from a
+ * blacklisted customer; the other three come from the fraud rules.
+ */
+export type RiskFlag =
+  | "blacklisted_customer"
+  | "duplicate_order"
+  | "phone_daily_limit"
+  | "high_rejection_customer"
+  // online payments (payments/onlinePaymentService.js)
+  | "test_payment"
+  | "duplicate_payment"
+  | "paid_after_expiry"
+  | "paid_after_cancel"
+  | "paid_after_cod_switch"
+  | "payment_amount_mismatch"
+  // couriers (shipping/carrierShipmentService.js): a booking the merchant
+  // said they cancelled in the courier's dashboard still shows as moving there
+  | "carrier_cancel_unconfirmed";
+
+/** One row of GET /fraud/flagged-orders — a slim projection, not a full Order. */
+export interface FlaggedOrder {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  /** Usually RiskFlag values; typed open so an unknown future flag still renders. */
+  riskFlags: string[];
+  customerName: string | null;
+  phone: string | null;
+  /** Integer minor units, already a number here. */
+  totalAmount: number;
+  currency: string;
+  confirmationState: ConfirmationState;
+  cancelled: boolean;
+}
+
+export interface FlaggedOrderListParams {
+  /** 1–100, default 30. */
+  limit?: number;
+  /** The previous page's `nextCursor` (an order id). */
+  before?: string;
+  /** Default false: only orders still waiting on the COD call. */
+  includeResolved?: boolean;
+}
+
+export interface FlaggedOrderListResponse {
+  orders: FlaggedOrder[];
+  nextCursor: string | null;
+}
+
+export interface BlocklistEntry {
+  customerId: string;
+  fullName: string | null;
+  phone: string;
+  reason: string | null;
+  totalOrders: number;
+  totalRejectedOrders: number;
+  blockedAt: string | null;
+}
+
+export interface BlockPhonePayload {
+  phone: string;
+  /** 2–300 chars. */
+  reason: string;
+  fullName?: string;
+}
+
+/** POST /fraud/blocklist. `created` is false when the phone was already blocked (200, reason updated). */
+export interface BlockPhoneResult {
+  created: boolean;
+  entry: { customerId: string; phone: string; reason: string | null };
+}
+
+// ---------------------------------------------------------------------
+// Abandoned checkouts. Public autosave: POST /store/:workspaceId/checkout-sessions.
+// Merchant: /workspaces/:workspaceId/checkout-sessions.
+// Backend: src/modules/checkoutSessions. "abandoned" = no autosave for 60
+// minutes, derived server-side at read time.
+// ---------------------------------------------------------------------
+
+export interface CaptureCheckoutSessionPayload {
+  contact: { phone: string; fullName?: string; email?: string };
+  /** 1–20 lines, quantity 1–100. Priced server-side. */
+  items: Array<{ variantId: string; offerId?: string; quantity: number }>;
+  source?: "store" | "funnel";
+  /** 8–64 chars; the upsert key — one open session per visitor. */
+  visitorId: string;
+}
+
+export type CheckoutSessionStatus = "in_progress" | "abandoned" | "converted";
+export type CheckoutRecoveryStatus = "not_contacted" | "contacted" | "recovered" | "lost";
+
+export interface CheckoutSessionItem {
+  productId: string;
+  variantId: string;
+  productName: string;
+  options: Record<string, string> | null;
+  offerName: string | null;
+  quantity: number;
+  lineTotalAmount: number;
+}
+
+export interface CheckoutSession {
+  id: string;
+  status: CheckoutSessionStatus;
+  recoveryStatus: CheckoutRecoveryStatus;
+  customerName: string | null;
+  phone: string | null;
+  email: string | null;
+  items: CheckoutSessionItem[];
+  /** Integer minor units, already a number here. */
+  subtotalAmount: number;
+  currency: string;
+  source: "store" | "funnel";
+  lastActivityAt: string;
+  contactedAt: string | null;
+  createdAt: string;
+  convertedOrder: { id: string; orderNumber: string } | null;
+}
+
+export interface CheckoutSessionListParams {
+  /** Default "abandoned". In-progress sessions only show under "all". */
+  view?: "abandoned" | "converted" | "all";
+  recoveryStatus?: CheckoutRecoveryStatus;
+  /** 1–100, default 30. */
+  limit?: number;
+  /** The previous page's `nextCursor` (a session id). */
+  before?: string;
+}
+
+export interface CheckoutSessionListResponse {
+  sessions: CheckoutSession[];
+  nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------
+// Courier integrations (auth, /workspaces/:workspaceId/carriers).
+// Backend: src/modules/shipping. Credentials are write-only — no response
+// ever carries them.
+// ---------------------------------------------------------------------
+
+export interface CarrierFieldDescriptor {
+  key: string;
+  label: string;
+  secret?: boolean;
+  options?: string[];
+  /** "tier_map": not a plain field — edited as a tier → package mapping. */
+  kind?: "tier_map";
+  packageTypes?: string[];
+  parcelSizes?: string[];
+}
+
+export interface CarrierConnection {
+  /** "invalid" once the courier rejected the stored key — reconnect needed. */
+  status: "active" | "invalid";
+  settings: Record<string, unknown>;
+  lastVerifiedAt: string | null;
+  connectedAt: string;
+  updatedAt: string;
+  webhookUrl: string;
+  /**
+   * Which of the courier's systems the stored credentials point at, for a
+   * courier with an `environment` credential field (J&T). NOT sent by the
+   * backend yet: credentials are write-only and describeConnection leaves it
+   * out, so the dashboard falls back to what it last connected with.
+   */
+  environment?: "production" | "sandbox";
+  /**
+   * Present only when the last connect (or a later booking) could not check
+   * everything; each mark is dropped once it no longer holds.
+   * `customerCredentials: "unverified"`: J&T let us check the API account
+   * but not the customer code and password; the first booking does.
+   * `locationList: "unavailable"`: the courier refuses this account its
+   * address list, so the pickup address was saved unchecked and bookings
+   * send typed names (`carrierAddress.names`, see `typedAddressNames`).
+   */
+  verification?: CarrierConnectionVerification;
+}
+
+export interface CarrierConnectionVerification {
+  customerCredentials?: "unverified";
+  locationList?: "unavailable";
+}
+
+/**
+ * How the courier's status webhook is set up: sent with every booking
+ * ("per_shipment", nothing to paste), pasted once into the courier's
+ * dashboard ("account"), or not offered ("none").
+ */
+export type CarrierWebhookSetup = "per_shipment" | "account" | "none";
+
+/**
+ * What a courier adapter can do (Backend carriers/adapterContract.js). The
+ * backend fills in defaults, so every field is present on GET /carriers —
+ * except `bulkStatus`, which the adapter declares but the list does not
+ * send (it only affects the server's status job).
+ */
+export interface CarrierCapabilities {
+  /** "api": cancelled through the courier. "manual": the merchant cancels it in the courier's dashboard. */
+  cancel: "api" | "manual";
+  /** Printable AWB via GET .../shipments/:id/label. */
+  label: boolean;
+  webhook: CarrierWebhookSetup;
+  /** The server's status job reads open shipments on a schedule. */
+  polling: boolean;
+  bulkStatus?: boolean;
+  /**
+   * The courier's address levels, top first (1–3 of them). Exactly
+   * ["city", "district"] keeps the city/district API; anything else is a
+   * tree picked level by level and booked with `carrierAddress.path`.
+   */
+  addressLevels: string[];
+  /**
+   * When the courier refuses the account its address list
+   * (`connection.verification.locationList: "unavailable"`), a booking takes
+   * the courier's names as typed (`carrierAddress.names`). Absent on servers
+   * older than it: treat as false.
+   */
+  typedAddressNames?: boolean;
+}
+
+/**
+ * The two-level city/district model the original carrier API is built on
+ * (Backend adapterContract.isCityDistrict). Such a courier keeps the
+ * `{ cityId, districtId }` payload and the city/district unmatched body.
+ */
+export function isCityDistrictLevels(levels: readonly string[] | undefined): boolean {
+  // A server older than the generic layer sends no levels: that was Bosta's model.
+  if (!levels) return true;
+  return levels.length === 2 && levels[0] === "city" && levels[1] === "district";
+}
+
+export interface CarrierInfo {
+  code: string;
+  name: string;
+  webhookSetup: CarrierWebhookSetup;
+  supportsLabel: boolean;
+  credentialFields: CarrierFieldDescriptor[];
+  settingFields: CarrierFieldDescriptor[];
+  /** Absent only on a server older than the generic carrier layer. */
+  capabilities?: CarrierCapabilities;
+  /** null when this workspace hasn't connected it. */
+  connection: CarrierConnection | null;
+}
+
+/**
+ * GET /carriers. Always 200: `configured: false` means the server has no
+ * credentials key, and every other carrier call answers 503
+ * CARRIERS_NOT_CONFIGURED.
+ */
+export interface CarrierList {
+  configured: boolean;
+  carriers: CarrierInfo[];
+}
+
+export const BOSTA_PACKAGE_TYPES = ["Parcel", "Document", "Light Bulky", "Heavy Bulky"] as const;
+export type BostaPackageType = (typeof BOSTA_PACKAGE_TYPES)[number];
+
+export const BOSTA_PARCEL_SIZES = ["SMALL", "MEDIUM", "LARGE"] as const;
+export type BostaParcelSize = (typeof BOSTA_PARCEL_SIZES)[number];
+
+/** A Parcel needs a size; other package types take none. */
+export interface BostaTierPackage {
+  packageType: BostaPackageType;
+  size?: BostaParcelSize;
+}
+
+export interface BostaSettings {
+  /** A pickup location id from the verification; Bosta's default when empty. */
+  businessLocationId?: string | null;
+  /** Used when there is no tierMap, and for orders placed before the store had tiers. */
+  packageType?: BostaPackageType;
+  /**
+   * Weight tier id -> package. With a map, booking an unmapped tier is
+   * refused with 422 CARRIER_TIER_UNMAPPED ({ tierId }).
+   */
+  tierMap?: Record<string, BostaTierPackage>;
+  awbType?: "A4" | "A6";
+  awbLang?: "ar" | "en";
+}
+
+/**
+ * PUT /carriers/:code. `credentials` may be omitted to change only the
+ * settings of an existing connection (the stored key is re-verified).
+ */
+export interface ConnectCarrierPayload {
+  credentials?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+}
+
+export interface CarrierPickupLocation {
+  id: string;
+  name: string | null;
+  isDefault: boolean;
+}
+
+export interface ConnectCarrierResult {
+  carrier: CarrierInfo;
+  /** `manualSetupRequired`: paste `url` into the courier's dashboard (setup "account"). */
+  webhook: { url: string; setup: CarrierWebhookSetup; manualSetupRequired: boolean };
+  /**
+   * Bosta: the account's pickup locations — only obtainable from this call.
+   * J&T: `customerCredentials: "unverified"` when the account can't call the
+   * credential check; the connection is saved and the customer code and
+   * password are first checked on a booking. Absent means checked (or n/a).
+   */
+  verification: {
+    pickupLocations?: CarrierPickupLocation[];
+  } & CarrierConnectionVerification &
+    Record<string, unknown>;
+}
+
+export interface CarrierDistrict {
+  id: string;
+  name: string | null;
+  nameAr: string | null;
+  zoneId: string | null;
+  zoneName: string | null;
+  zoneNameAr: string | null;
+  dropOffAvailable: boolean;
+}
+
+export interface CarrierCity {
+  id: string;
+  name: string | null;
+  nameAr: string | null;
+  dropOffAvailable: boolean;
+  districts: CarrierDistrict[];
+}
+
+/**
+ * One node of a courier's address tree (couriers whose levels are not
+ * city/district). Depth = `addressLevels.length`; leaves are bookable.
+ */
+export interface CarrierAreaNode {
+  id: string;
+  name: string | null;
+  nameAr: string | null;
+  /** false: the courier doesn't deliver there. Absent means it does. */
+  dropOffAvailable?: boolean;
+  aliases?: string[];
+  meta?: Record<string, unknown>;
+  children?: CarrierAreaNode[];
+}
+
+/**
+ * GET /carriers/:code/cities for a courier whose levels are not
+ * city/district: the whole tree, each node with its `children`.
+ */
+export interface CarrierAddressTree {
+  levels: string[];
+  nodes: CarrierAreaNode[];
+}
+
+/** A node as the address errors name it. */
+export interface CarrierPlaceRef {
+  id: string;
+  name: string | null;
+  nameAr: string | null;
+}
+
+/** One option in `details.candidates` of a 422 CARRIER_ADDRESS_UNMATCHED (city/district couriers). */
+export interface CarrierAddressCandidate {
+  cityId: string;
+  cityName: string | null;
+  cityNameAr: string | null;
+  /** null at level "city": the candidates are cities, pick a district next. */
+  districtId: string | null;
+  districtName: string | null;
+  districtNameAr: string | null;
+  zoneId: string | null;
+  zoneName: string | null;
+  /** Sorted first; the matcher's best guesses. */
+  suggested: boolean;
+}
+
+/**
+ * `details` of 422 CARRIER_ADDRESS_UNMATCHED from a city/district courier
+ * (Bosta) — the original body, unchanged.
+ */
+export interface CarrierAddressUnmatchedDetails {
+  carrierCode: string;
+  level: "city" | "district";
+  orderAddress: { province: string | null; city: string | null };
+  /** Set at level "district": the city that did match. */
+  matchedCity: CarrierPlaceRef | null;
+  candidates: CarrierAddressCandidate[];
+}
+
+/** One option in `details.candidates` of a 422 CARRIER_ADDRESS_UNMATCHED (level-tree couriers). */
+export interface CarrierAreaCandidate extends CarrierPlaceRef {
+  /** Root first, ending with this node. */
+  path: CarrierPlaceRef[];
+  /** No levels below it. */
+  leaf: boolean;
+  /** Sorted first; the matcher's best guesses. */
+  suggested: boolean;
+}
+
+/**
+ * `details` of 422 CARRIER_ADDRESS_UNMATCHED from a courier whose levels
+ * are not city/district. The candidates are nodes of level `levelIndex`;
+ * `matchedPath` is what already matched above it. Resend with
+ * `carrierAddress.path`, one id per level.
+ */
+export interface CarrierAreaUnmatchedDetails {
+  carrierCode: string;
+  level: string;
+  levelIndex: number;
+  levels: string[];
+  orderAddress: { province: string | null; city: string | null };
+  /** The top-level node that matched, or null. */
+  matchedCity: CarrierPlaceRef | null;
+  matchedPath: CarrierPlaceRef[];
+  candidates: CarrierAreaCandidate[];
+}
+
+/** Either body of a 422 CARRIER_ADDRESS_UNMATCHED; `levels` tells them apart. */
+export type AnyCarrierAddressUnmatchedDetails = CarrierAddressUnmatchedDetails | CarrierAreaUnmatchedDetails;
+
+export function isAreaUnmatchedDetails(
+  details: AnyCarrierAddressUnmatchedDetails
+): details is CarrierAreaUnmatchedDetails {
+  return Array.isArray((details as CarrierAreaUnmatchedDetails).levels);
+}
+
+/** One shipment in `details.shipments` of a 409 CARRIER_MANUAL_CANCEL_REQUIRED. */
+export interface ManualCancelShipment {
+  shipmentId: string;
+  carrierCode: string;
+  carrierName: string;
+  waybillNumber: string | null;
+}
+
+/**
+ * `details` of 409 CARRIER_MANUAL_CANCEL_REQUIRED (order cancel, correction
+ * to rejected, PATCH shipment to cancelled). Nothing was changed; repeat the
+ * same request with `acknowledgeManualCancel: true` once the merchant has
+ * cancelled these in the courier's dashboard.
+ */
+export interface ManualCancelRequiredDetails {
+  shipments: ManualCancelShipment[];
+}
+
+/**
+ * `details` of CARRIER_BOOKING_NOT_SAVED (424; 502 on older servers): the
+ * courier created the booking but we could not record it, and the courier
+ * has no cancel API —
+ * the merchant must cancel `trackingNumber` in the courier's dashboard.
+ */
+export interface CarrierBookingNotSavedDetails {
+  carrierCode: string;
+  trackingNumber: string;
+  manualCancelRequired: boolean;
+}
+
+/**
+ * `details[0]` of 422 CARRIER_ADDRESS_NAMES_REQUIRED: the courier refuses
+ * this account its address list. Resend with `carrierAddress: { names }`,
+ * one name per entry of `levels`, top first.
+ */
+export interface CarrierAddressNamesRequiredDetail {
+  field: "carrierAddress.names";
+  message: string;
+  levels: string[];
+}
+
+/**
+ * `details[0]` of 422 CARRIER_ADDRESS_REJECTED: the courier refused one
+ * level of the drop-off address (`field` "carrierAddress.names.1",
+ * `level` "city") or the whole of it (`field` "carrierAddress.names",
+ * `level` null). `carrierAddress.path…` when the address was picked.
+ * The error message names it; with the pickup address unchecked it also
+ * says the courier may mean that one.
+ */
+export interface CarrierAddressRejectedDetail {
+  field: string;
+  message: string;
+  level: string | null;
+  carrierErrorCode: string;
+}
+
+/**
+ * `details` of CARRIER_ERROR (424): the courier's own code, its message
+ * (credential values cut out, at most 300 characters) and HTTP status,
+ * when the courier sent them.
+ */
+export interface CarrierErrorDetails {
+  carrierErrorCode?: string | null;
+  carrierMessage?: string | null;
+  httpStatus?: number;
+  [key: string]: unknown;
+}
+
+/** `details` of 409 CARRIER_CANCEL_FAILED. */
+export interface CarrierCancelFailedDetails {
+  shipmentId: string;
+  carrierCode: string;
+  /** The courier-side failure, e.g. "CARRIER_PERMISSION_DENIED". */
+  carrierErrorCode: string | null;
+}
+
+export interface CarrierShipmentStatus {
+  code: number | null;
+  value: string | null;
+  type: string | null;
+}
+
+/** POST .../shipments/:shipmentId/sync */
+export interface ShipmentSyncResult {
+  shipment: Shipment;
+  /** Whether our shipment status moved. */
+  changed: boolean;
+  carrierStatus: CarrierShipmentStatus | null;
+}
+
+// ---------------------------------------------------------------------
+// Online payments (merchant's own gateway account: Paymob, Kashier)
+// ---------------------------------------------------------------------
+
+export type GatewayMode = "test" | "live";
+export type LocalizedText = { en: string; ar: string };
+
+export interface GatewayFieldDescriptor {
+  key: string;
+  label: LocalizedText;
+  /** Credentials: typed into a password field, never shown again. */
+  secret?: boolean;
+  placeholder?: string;
+  /** Settings: the payment method this field turns on. */
+  method?: "card" | "wallet";
+  type?: "integer";
+}
+
+export interface PaymentGatewayConnection {
+  /** "invalid" once the gateway refused the stored keys. */
+  status: "active" | "invalid";
+  /** From the keys (Kashier: which host accepts them): test-mode methods only show in the store preview. */
+  mode: GatewayMode;
+  settings: Record<string, unknown>;
+  /** The methods these settings can take. */
+  methods: Array<"card" | "wallet">;
+  /** Paste into each gateway integration (see webhookSetup). */
+  webhookUrl: string;
+  lastVerifiedAt: string | null;
+  /** The last signed callback received; null until the first one. */
+  lastWebhookAt: string | null;
+  connectedAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentGatewayInfo {
+  code: string;
+  name: string;
+  methods: Array<"card" | "wallet">;
+  currencies: string[];
+  credentialFields: GatewayFieldDescriptor[];
+  settingFields: GatewayFieldDescriptor[];
+  setupSteps: { en: string[]; ar: string[] };
+  helpLinks: Array<{ label: LocalizedText; url: string }>;
+  /**
+   * Where the merchant pastes our webhook URL. `automatic`: the gateway is
+   * given the URL with every payment (Kashier), so pasting it is optional —
+   * it only adds refunds made in the gateway's own dashboard.
+   */
+  webhookSetup: { field: string; perIntegration: boolean; automatic?: boolean };
+  /**
+   * true: the gateway's methods come from its own account (Kashier) —
+   * settingFields is empty and the connect form is just the keys.
+   */
+  methodsFromAccount: boolean;
+  connection: PaymentGatewayConnection | null;
+}
+
+/**
+ * GET /payments/gateways. `configured: false`: the server has no
+ * GATEWAY_CREDENTIALS_KEY and every gateway call answers 503
+ * GATEWAYS_NOT_CONFIGURED. `onlineEnabled: false`: shoppers only see cash on
+ * delivery for now, whatever is connected here.
+ */
+export interface PaymentGatewayList {
+  configured: boolean;
+  onlineEnabled: boolean;
+  gateways: PaymentGatewayInfo[];
+}
+
+export interface ConnectPaymentGatewayPayload {
+  /** Required on first connect; omit to keep (and re-verify) the stored keys. */
+  credentials?: Record<string, string>;
+  settings?: Record<string, unknown>;
+}
+
+/**
+ * 'cod' or '<gateway>:<method>', e.g. 'paymob:card'. At most one gateway per
+ * method may be enabled (PUT /payments/methods answers 422 otherwise); a
+ * gateway connected later is added switched off for a method already taken.
+ */
+export interface PaymentMethodEntry {
+  id: string;
+  provider: string | null;
+  method: "cod" | "card" | "wallet";
+  enabled: boolean;
+  /** false: its gateway is not connected (or cannot take it). Kept in the list, never offered. */
+  available: boolean;
+  mode: GatewayMode | null;
+}
+
+export interface PaymentMethodList {
+  onlineEnabled: boolean;
+  methods: PaymentMethodEntry[];
+}
+
+/** What a shopper is offered at checkout, in the merchant's order. */
+export interface StorefrontPaymentMethod {
+  id: string;
+  provider: string | null;
+  method: "cod" | "card" | "wallet";
+  mode: GatewayMode;
+}
+
+/** POST /store/:id/checkout with an online method. */
+export interface CheckoutResult {
+  order: Order;
+  payment?: {
+    id: string;
+    status: PaymentStatus;
+    provider: string;
+    method: "card" | "wallet";
+    mode: GatewayMode;
+    /** Send the shopper here. null when the gateway could not start the payment. */
+    redirectUrl: string | null;
+    failureReason: string | null;
+    expiresAt: string | null;
+  };
+  /** Shown once: the shopper's key to the payment status / retry / switch-to-COD endpoints. */
+  paymentToken?: string;
+}
+
+export type ShopperPaymentState = "awaiting_payment" | "paid" | "expired" | "cancelled" | "cod";
+
+export interface ShopperPaymentStatus {
+  orderId: string;
+  orderNumber: string;
+  status: ShopperPaymentState;
+  financialState: FinancialState;
+  paymentMethod: PaymentMethod;
+  totalAmount: number;
+  amountPaid: number;
+  currency: string;
+  expiresAt: string | null;
+  testMode: boolean;
+  attempt: {
+    id: string;
+    status: PaymentStatus;
+    provider: string;
+    method: "card" | "wallet" | null;
+    mode: GatewayMode | null;
+    redirectUrl: string | null;
+    failureReason: string | null;
+    createdAt: string;
+  } | null;
+  canRetry: boolean;
+  retriesLeft: number;
+  canSwitchToCod: boolean;
+  /** Online methods a retry may use. */
+  methods: StorefrontPaymentMethod[];
+}
+
+/** One gateway callback / redirect / inquiry answer recorded against the order. */
+export interface PaymentEventEntry {
+  id: string;
+  source: "webhook" | "redirect" | "inquiry";
+  kind: "payment" | "refund" | "void" | null;
+  providerCode: string;
+  providerTransactionId: string | null;
+  paymentId: string | null;
+  /** e.g. paid, failed, pending, duplicate, refund_processed, gateway_refund_recorded, error */
+  outcome: string | null;
+  error: string | null;
+  processedAt: string | null;
+  createdAt: string;
+}
+
+/** GET /orders/:id/payment-timeline (and POST .../payments/sync). Amounts are numbers, minor units. */
+export interface PaymentTimeline {
+  orderId: string;
+  currency: string;
+  totalAmount: number;
+  amountPaid: number;
+  amountRefunded: number;
+  pendingRefunds: number;
+  /** What a new refund may be, at most (the server enforces the same rule). */
+  refundable: number;
+  /** 'gateway': refunds go back through the gateway; 'manual': recorded only (COD / manual). */
+  refundVia: "gateway" | "manual";
+  /** Gateway payments that can still give money back. A refund draws on exactly one. */
+  perPayment: Array<{ paymentId: string; refundable: number }>;
+  /** Payment risk flags needing the merchant: duplicate_payment, paid_after_expiry, test_payment, ... */
+  alerts: string[];
+  paymentExpiresAt: string | null;
+  attempts: Payment[];
+  events: PaymentEventEntry[];
+  refunds: Refund[];
+  /** Sync only: true when the gateway could not be reached for an open attempt. */
+  unreachable?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Store analytics — /workspaces/:ws/analytics/summary (analytics.view)
+// Orders, revenue and profit are computed from real orders in the range;
+// `traffic` from the events the storefront's own tracker sends
+// (POST /store/:ws/events). Money is integer minor units, rates are
+// percentages (12.5 = 12.5%) and are `null` when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsSummaryParams {
+  /** ISO date. Defaults to 30 days back; a range over 366 days is clamped. */
+  from?: string;
+  /** ISO date, exclusive. Defaults to now. */
+  to?: string;
+}
+
+export interface AnalyticsOrderCounts {
+  placed: number;
+  pending: number;
+  confirmed: number;
+  rejected: number;
+  unreachable: number;
+  postponed: number;
+  cancelled: number;
+  /** Orders whose fulfilment state is `fulfilled`. */
+  delivered: number;
+  returned: number;
+}
+
+export interface AnalyticsRates {
+  /** Confirmed / decided (confirmed + rejected + unreachable). */
+  confirmation: number | null;
+  /** Delivered / confirmed. */
+  delivery: number | null;
+  /** Returned / (delivered + returned). */
+  return: number | null;
+}
+
+export interface AnalyticsRevenue {
+  /** Total of non-cancelled, non-rejected orders. */
+  gross: number;
+  /** Total of delivered orders. */
+  delivered: number;
+  collected: number;
+  refunded: number;
+  /** Shipping charged to customers on delivered orders (courier cost is unknown). */
+  shippingCharged: number;
+  /** Discounts given on delivered orders. */
+  discounts: number;
+  averageOrderValue: number;
+}
+
+export interface AnalyticsProfit {
+  deliveredItemsRevenue: number;
+  discounts: number;
+  /** From the cost snapshot on each order item. */
+  productCost: number;
+  refunded: number;
+  /** deliveredItemsRevenue - discounts - productCost - refunded. */
+  grossProfit: number;
+  /**
+   * Share of delivered quantity that had a cost recorded, as a percentage.
+   * Anything under 100 means `productCost` — and so `grossProfit` — is partial.
+   */
+  costCoverage: number | null;
+}
+
+/** One day of the range. Every day is present, zero-filled. */
+export interface AnalyticsSeriesPoint {
+  /** YYYY-MM-DD in the workspace's timezone. */
+  date: string;
+  orders: number;
+  revenue: number;
+  delivered: number;
+  /** Distinct storefront sessions that started that day; absent on older backends. */
+  sessions?: number;
+}
+
+/**
+ * Storefront visits, from the events the store's own tracker sends
+ * (page views, product views, add to cart, checkout, purchase).
+ */
+export interface AnalyticsTraffic {
+  sessions: number;
+  visitors: number;
+  pageViews: number;
+  productViews: number;
+  /** Distinct sessions that added to cart / reached checkout. */
+  addToCart: number;
+  checkouts: number;
+  purchases: number;
+  /** Sessions that placed an order ÷ sessions, as a percentage; null when there were no sessions. */
+  conversionRate: number | null;
+  addToCartRate: number | null;
+  checkoutRate: number | null;
+  byDevice: Array<{ device: "mobile" | "desktop" | "tablet" | "unknown"; sessions: number }>;
+  bySource: Array<{ source: string; medium: string | null; sessions: number; orders: number }>;
+  topPages: Array<{ path: string; views: number }>;
+}
+
+export interface AnalyticsTopProduct {
+  productId: string | null;
+  name: string | null;
+  quantity: number;
+  revenue: number;
+}
+
+export interface AnalyticsSummary {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  orders: AnalyticsOrderCounts;
+  rates: AnalyticsRates;
+  revenue: AnalyticsRevenue;
+  profit: AnalyticsProfit;
+  series: AnalyticsSeriesPoint[];
+  /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
+  topProducts: AnalyticsTopProduct[];
+  newCustomers: number;
+  /** Absent on a backend without the storefront events endpoint. */
+  traffic?: AnalyticsTraffic;
+}
+
+// ---------------------------------------------------------------------------
+// Web analytics — /workspaces/:ws/analytics/web/*
+// Umami-style page analytics over the storefront's own events: views are
+// page_view events, visitors are distinct sessions, visits are 30-minute
+// slices of a session, a bounce is a visit with one view and no event.
+// ---------------------------------------------------------------------------
+
+export type WebAnalyticsUnit = "minute" | "hour" | "day" | "month";
+export type WebAnalyticsCompare = "prev" | "yoy";
+
+export type WebAnalyticsFilterKey =
+  | "url"
+  | "referrer"
+  | "title"
+  | "browser"
+  | "os"
+  | "device"
+  | "country"
+  | "region"
+  | "city"
+  | "language"
+  | "screen"
+  | "event"
+  | "hostname"
+  | "tag"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term";
+
+export type WebAnalyticsFilters = Partial<Record<WebAnalyticsFilterKey, string>>;
+
+export interface WebAnalyticsRangeParams extends WebAnalyticsFilters {
+  from?: string;
+  to?: string;
+  compare?: WebAnalyticsCompare;
+  unit?: WebAnalyticsUnit;
+  tz?: string;
+}
+
+export interface WebAnalyticsStatsValues {
+  pageviews: number;
+  visitors: number;
+  visits: number;
+  bounces: number;
+  /** Seconds, summed across visits. */
+  totaltime: number;
+  bounceRate: number | null;
+  /** Seconds. */
+  avgVisitTime: number | null;
+}
+
+export interface WebAnalyticsStats extends WebAnalyticsStatsValues {
+  comparison?: WebAnalyticsStatsValues;
+}
+
+export interface WebAnalyticsSeriesPoint {
+  /** Bucket start, ISO. */
+  t: string;
+  pageviews: number;
+  visitors: number;
+}
+
+export interface WebAnalyticsSeries {
+  unit: WebAnalyticsUnit;
+  series: WebAnalyticsSeriesPoint[];
+  comparison?: WebAnalyticsSeriesPoint[];
+}
+
+export type WebAnalyticsMetricType =
+  | "path"
+  | "fullPath"
+  | "entry"
+  | "exit"
+  | "title"
+  | "query"
+  | "referrer"
+  | "channel"
+  | "hostname"
+  | "tag"
+  | "browser"
+  | "os"
+  | "device"
+  | "screen"
+  | "language"
+  | "country"
+  | "region"
+  | "city"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term"
+  | "event";
+
+export interface WebAnalyticsMetricRow {
+  x: string;
+  y: number;
+}
+
+export interface WebAnalyticsMetrics {
+  type: WebAnalyticsMetricType;
+  rows: WebAnalyticsMetricRow[];
+}
+
+export interface WebAnalyticsWeekly {
+  rows: Array<{ dow: number; hour: number; visitors: number }>;
+}
+
+export interface WebAnalyticsRealtimeActivity {
+  sessionId: string;
+  visitId: string | null;
+  type: "pageview" | "event";
+  eventName: string | null;
+  urlPath: string | null;
+  referrerDomain: string | null;
+  browser: string | null;
+  os: string | null;
+  device: string | null;
+  country: string | null;
+  createdAt: string;
+}
+
+export interface WebAnalyticsRealtime {
+  totals: { views: number; visitors: number; events: number; countries: number };
+  series: WebAnalyticsSeriesPoint[];
+  activity: WebAnalyticsRealtimeActivity[];
+  urls: WebAnalyticsMetricRow[];
+  referrers: WebAnalyticsMetricRow[];
+  countries: WebAnalyticsMetricRow[];
+  activeVisitors: number;
+  /** Server time the snapshot was taken, ISO. */
+  timestamp?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Funnel analytics — /workspaces/:ws/analytics/funnels[/:funnelId]
+// Sessions come from the funnel session log the storefront writes as a
+// visitor moves through a funnel; orders are the real orders placed inside
+// it. Rates are percentages, null when the denominator is zero.
+// ---------------------------------------------------------------------------
+
+export interface FunnelAnalyticsTotals {
+  /** Funnel sessions started in the range. */
+  sessions: number;
+  /** Sessions in which a checkout was completed. */
+  completed: number;
+  /** Non-cancelled, non-rejected orders placed inside the funnel. */
+  orders: number;
+  revenue: number;
+  /** Follow-on orders from accepted upsells/downsells, and their revenue. */
+  upsellOrders: number;
+  upsellRevenue: number;
+  /** completed ÷ sessions. */
+  conversionRate: number | null;
+}
+
+export interface FunnelAnalyticsRow extends FunnelAnalyticsTotals {
+  id: string;
+  name: string;
+  subdomain: string | null;
+  status: string;
+}
+
+export interface FunnelAnalyticsOverview {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  totals: FunnelAnalyticsTotals;
+  funnels: FunnelAnalyticsRow[];
+}
+
+export interface FunnelAnalyticsStep {
+  key: string;
+  name: string;
+  stepType: string;
+  /** Sessions that got to this step. */
+  reached: number;
+  /** Sessions still sitting on this step that never moved on. */
+  dropped: number;
+  /** reached ÷ sessions. */
+  reachRate: number | null;
+}
+
+export interface FunnelAnalyticsSource {
+  source: string;
+  medium: string | null;
+  campaign: string | null;
+  sessions: number;
+  completed: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsSeriesPoint {
+  date: string;
+  sessions: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface FunnelAnalyticsDetail extends FunnelAnalyticsTotals {
+  range: { from: string; to: string; timeZone: string };
+  currency: string;
+  funnel: { id: string; name: string; subdomain: string | null; status: string };
+  steps: FunnelAnalyticsStep[];
+  sources: FunnelAnalyticsSource[];
+  series: FunnelAnalyticsSeriesPoint[];
+}
+
+// ===========================================================================
+// Merchant operations added on top of upstream: COD settlements, WhatsApp
+// Cloud API, order automations, browser ad pixels and the media library list.
+// Backend: src/modules/{settlements,whatsapp,automations,media} and the
+// `tracking_pixels` key of PATCH /workspaces/:id.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
 // COD settlements — /workspaces/:ws/settlements
 //
 // Every amount here is an integer in MINOR units (piastres), like the rest of
@@ -2153,72 +5314,7 @@ export interface AutomationRunListResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Abandoned checkouts — /workspaces/:ws/checkout-sessions
-// The storefront upserts a session while the shopper is still typing, so a row
-// exists as soon as there is a phone or an email to follow up with. The server
-// derives `abandoned` from inactivity (30 minutes) rather than storing it, so
-// an `in_progress` row can come back as `abandoned` on the next read.
-// ---------------------------------------------------------------------------
-
-/** How far the merchant has got with winning the shopper back. */
-export type CheckoutRecoveryStatus = "not_contacted" | "contacted" | "recovered" | "lost";
-
-/** Which slice of the sessions table to read. */
-export type CheckoutSessionView = "abandoned" | "converted" | "all";
-
-export type CheckoutSessionStatus = "in_progress" | "abandoned" | "converted";
-
-/** A priced line, snapshotted from the catalogue — never prices sent by the client. */
-export interface CheckoutSessionItem {
-  productId: string;
-  variantId: string;
-  productName: string | null;
-  options: Record<string, string> | null;
-  offerName: string | null;
-  quantity: number;
-  /** Integer minor units. */
-  lineTotalAmount: number;
-}
-
-export interface CheckoutSession {
-  id: string;
-  status: CheckoutSessionStatus;
-  recoveryStatus: CheckoutRecoveryStatus;
-  customerName: string | null;
-  phone: string | null;
-  email: string | null;
-  items: CheckoutSessionItem[];
-  /** Integer minor units. */
-  subtotalAmount: number;
-  currency: string;
-  source: "store" | "funnel";
-  lastActivityAt: string;
-  contactedAt: string | null;
-  createdAt: string;
-  /** Set once the shopper came back and ordered. */
-  convertedOrder: { id: string; orderNumber: string } | null;
-}
-
-export interface CheckoutSessionListParams {
-  view?: CheckoutSessionView;
-  recoveryStatus?: CheckoutRecoveryStatus;
-  limit?: number;
-  /** `lastActivityAt` of the last row of the previous page. */
-  before?: string;
-}
-
-export interface CheckoutSessionListResponse {
-  sessions: CheckoutSession[];
-  nextCursor: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Marketing & fraud settings — stored in the workspace's `settings` JSONB and
-// read/written through `PATCH /workspaces/:id`.
-//
-// `WorkspaceSettings` above carries an open index signature, so these blobs
-// arrive typed as `unknown`; the shapes below name them. No money is involved:
-// pixels are IDs, rules are counts and minutes.
+// Browser ad pixels — the `tracking_pixels` key of workspace settings
 // ---------------------------------------------------------------------------
 
 /**
@@ -2239,426 +5335,21 @@ export interface TrackingPixels {
 }
 
 /**
- * Evaluated on storefront orders only, so staff-created orders are never
- * blocked. `flag` records the reasons on the order's `riskFlags`; `block`
- * refuses the order outright with 422 ORDER_BLOCKED.
- */
-export interface FraudRules {
-  action?: "flag" | "block";
-  /** Refuse orders from a blacklisted phone outright. */
-  block_blacklisted?: boolean;
-  /** Same customer, same variant, inside this many minutes. 1–10080. */
-  duplicate_window_minutes?: number | null;
-  /** Orders from one phone in 24h before it is flagged. 1–100. */
-  max_orders_per_phone_per_day?: number | null;
-  /** Lifetime rejected orders before the customer is flagged. 1–100. */
-  high_rejection_threshold?: number | null;
-}
-
-/**
- * The settings keys this branch adds. Sent as a partial merge: an omitted key
- * keeps its stored value, `null` clears it back to "not configured".
+ * Settings keys written by updateWorkspaceSettings. Sent as a partial merge:
+ * an omitted key keeps its stored value, `null` clears it.
  */
 export interface UpdateWorkspaceSettingsPayload {
   tracking_pixels?: TrackingPixels | null;
-  fraud_rules?: FraudRules | null;
 }
 
 // ---------------------------------------------------------------------------
-// Fraud protection — /workspaces/:ws/fraud
-// Flagged orders are ordinary orders carrying `riskFlags`; the blocklist is
-// the set of blacklisted customers, keyed by phone.
-// ---------------------------------------------------------------------------
-
-/** Reasons the rule engine can attach to an order. Treat as an open set. */
-export type RiskFlag =
-  | "duplicate_order"
-  | "phone_daily_limit"
-  | "high_rejection_customer"
-  | (string & {});
-
-export interface FlaggedOrder {
-  id: string;
-  orderNumber: string;
-  createdAt: string;
-  riskFlags: RiskFlag[];
-  customerName: string | null;
-  phone: string | null;
-  /** Integer minor units. */
-  totalAmount: number;
-  currency: string;
-  confirmationState: string;
-  cancelled: boolean;
-}
-
-export interface FlaggedOrderListParams {
-  limit?: number;
-  /** `createdAt` of the last row of the previous page. */
-  before?: string;
-  /** Also list orders already cancelled or past the pending stage. */
-  includeResolved?: boolean;
-}
-
-export interface FlaggedOrderListResponse {
-  orders: FlaggedOrder[];
-  nextCursor: string | null;
-}
-
-export interface BlocklistEntry {
-  customerId: string;
-  fullName: string | null;
-  phone: string | null;
-  reason: string | null;
-  totalOrders: number;
-  totalRejectedOrders: number;
-  blockedAt: string;
-}
-
-export interface AddToBlocklistPayload {
-  phone: string;
-  /** Required, 2–300 characters — the merchant has to say why. */
-  reason: string;
-  fullName?: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Store analytics — /workspaces/:ws/analytics/summary
-// Everything is computed from real orders in the range; there is no events
-// pipeline behind it. Money is integer minor units, rates are percentages
-// (12.5 = 12.5%) and are `null` when the denominator is zero.
-// ---------------------------------------------------------------------------
-
-export interface AnalyticsSummaryParams {
-  /** ISO date. Defaults to 30 days back; a range over 366 days is clamped. */
-  from?: string;
-  /** ISO date, exclusive. Defaults to now. */
-  to?: string;
-}
-
-export interface AnalyticsOrderCounts {
-  placed: number;
-  pending: number;
-  confirmed: number;
-  rejected: number;
-  unreachable: number;
-  postponed: number;
-  cancelled: number;
-  /** Orders whose fulfilment state is `fulfilled`. */
-  delivered: number;
-  returned: number;
-}
-
-export interface AnalyticsRates {
-  /** Confirmed / decided (confirmed + rejected + unreachable). */
-  confirmation: number | null;
-  /** Delivered / confirmed. */
-  delivery: number | null;
-  /** Returned / (delivered + returned). */
-  return: number | null;
-}
-
-export interface AnalyticsRevenue {
-  /** Total of non-cancelled, non-rejected orders. */
-  gross: number;
-  /** Total of delivered orders. */
-  delivered: number;
-  collected: number;
-  refunded: number;
-  /** Shipping charged to customers on delivered orders (courier cost is unknown). */
-  shippingCharged: number;
-  /** Discounts given on delivered orders. */
-  discounts: number;
-  averageOrderValue: number;
-}
-
-export interface AnalyticsProfit {
-  deliveredItemsRevenue: number;
-  discounts: number;
-  /** From the cost snapshot on each order item. */
-  productCost: number;
-  refunded: number;
-  /** deliveredItemsRevenue - discounts - productCost - refunded. */
-  grossProfit: number;
-  /**
-   * Share of delivered quantity that had a cost recorded, as a percentage.
-   * Anything under 100 means `productCost` — and so `grossProfit` — is partial.
-   */
-  costCoverage: number | null;
-}
-
-/** One day of the range. Every day is present, zero-filled. */
-export interface AnalyticsSeriesPoint {
-  /** YYYY-MM-DD in the workspace's timezone. */
-  date: string;
-  orders: number;
-  revenue: number;
-  delivered: number;
-  /** Distinct storefront sessions that started that day; absent on older backends. */
-  sessions?: number;
-}
-
-/**
- * Storefront visits, from the events the store's own tracker sends
- * (page views, product views, add to cart, checkout, purchase).
- */
-export interface AnalyticsTraffic {
-  sessions: number;
-  visitors: number;
-  pageViews: number;
-  productViews: number;
-  /** Distinct sessions that added to cart / reached checkout. */
-  addToCart: number;
-  checkouts: number;
-  purchases: number;
-  /** Sessions that placed an order ÷ sessions, as a percentage; null when there were no sessions. */
-  conversionRate: number | null;
-  addToCartRate: number | null;
-  checkoutRate: number | null;
-  byDevice: Array<{ device: "mobile" | "desktop" | "tablet" | "unknown"; sessions: number }>;
-  bySource: Array<{ source: string; medium: string | null; sessions: number; orders: number }>;
-  topPages: Array<{ path: string; views: number }>;
-}
-
-export interface AnalyticsTopProduct {
-  productId: string | null;
-  name: string | null;
-  quantity: number;
-  revenue: number;
-}
-
-export interface AnalyticsSummary {
-  range: { from: string; to: string; timeZone: string };
-  currency: string;
-  orders: AnalyticsOrderCounts;
-  rates: AnalyticsRates;
-  revenue: AnalyticsRevenue;
-  profit: AnalyticsProfit;
-  series: AnalyticsSeriesPoint[];
-  /** Top 5 by quantity, from non-cancelled, non-rejected orders. */
-  topProducts: AnalyticsTopProduct[];
-  newCustomers: number;
-  /** Absent on a backend without the storefront events endpoint. */
-  traffic?: AnalyticsTraffic;
-}
-
-// ---------------------------------------------------------------------------
-// Web analytics — /workspaces/:ws/analytics/web/*
-// Umami-style page analytics over the storefront's own events: views are
-// page_view events, visitors are distinct sessions, visits are 30-minute
-// slices of a session, a bounce is a visit with one view and no event.
-// ---------------------------------------------------------------------------
-
-export type WebAnalyticsUnit = "minute" | "hour" | "day" | "month";
-export type WebAnalyticsCompare = "prev" | "yoy";
-
-export type WebAnalyticsFilterKey =
-  | "url"
-  | "referrer"
-  | "title"
-  | "browser"
-  | "os"
-  | "device"
-  | "country"
-  | "region"
-  | "city"
-  | "language"
-  | "screen"
-  | "event"
-  | "hostname"
-  | "tag"
-  | "utm_source"
-  | "utm_medium"
-  | "utm_campaign"
-  | "utm_content"
-  | "utm_term";
-
-export type WebAnalyticsFilters = Partial<Record<WebAnalyticsFilterKey, string>>;
-
-export interface WebAnalyticsRangeParams extends WebAnalyticsFilters {
-  from?: string;
-  to?: string;
-  compare?: WebAnalyticsCompare;
-  unit?: WebAnalyticsUnit;
-  tz?: string;
-}
-
-export interface WebAnalyticsStatsValues {
-  pageviews: number;
-  visitors: number;
-  visits: number;
-  bounces: number;
-  /** Seconds, summed across visits. */
-  totaltime: number;
-  bounceRate: number | null;
-  /** Seconds. */
-  avgVisitTime: number | null;
-}
-
-export interface WebAnalyticsStats extends WebAnalyticsStatsValues {
-  comparison?: WebAnalyticsStatsValues;
-}
-
-export interface WebAnalyticsSeriesPoint {
-  /** Bucket start, ISO. */
-  t: string;
-  pageviews: number;
-  visitors: number;
-}
-
-export interface WebAnalyticsSeries {
-  unit: WebAnalyticsUnit;
-  series: WebAnalyticsSeriesPoint[];
-  comparison?: WebAnalyticsSeriesPoint[];
-}
-
-export type WebAnalyticsMetricType =
-  | "path"
-  | "fullPath"
-  | "entry"
-  | "exit"
-  | "title"
-  | "query"
-  | "referrer"
-  | "channel"
-  | "hostname"
-  | "tag"
-  | "browser"
-  | "os"
-  | "device"
-  | "screen"
-  | "language"
-  | "country"
-  | "region"
-  | "city"
-  | "utm_source"
-  | "utm_medium"
-  | "utm_campaign"
-  | "utm_content"
-  | "utm_term"
-  | "event";
-
-export interface WebAnalyticsMetricRow {
-  x: string;
-  y: number;
-}
-
-export interface WebAnalyticsMetrics {
-  type: WebAnalyticsMetricType;
-  rows: WebAnalyticsMetricRow[];
-}
-
-export interface WebAnalyticsWeekly {
-  rows: Array<{ dow: number; hour: number; visitors: number }>;
-}
-
-export interface WebAnalyticsRealtimeActivity {
-  sessionId: string;
-  visitId: string | null;
-  type: "pageview" | "event";
-  eventName: string | null;
-  urlPath: string | null;
-  referrerDomain: string | null;
-  browser: string | null;
-  os: string | null;
-  device: string | null;
-  country: string | null;
-  createdAt: string;
-}
-
-export interface WebAnalyticsRealtime {
-  totals: { views: number; visitors: number; events: number; countries: number };
-  series: WebAnalyticsSeriesPoint[];
-  activity: WebAnalyticsRealtimeActivity[];
-  urls: WebAnalyticsMetricRow[];
-  referrers: WebAnalyticsMetricRow[];
-  countries: WebAnalyticsMetricRow[];
-  activeVisitors: number;
-}
-
-// ---------------------------------------------------------------------------
-// Funnel analytics — /workspaces/:ws/analytics/funnels[/:funnelId]
-// Sessions come from the funnel session log the storefront writes as a
-// visitor moves through a funnel; orders are the real orders placed inside
-// it. Rates are percentages, null when the denominator is zero.
-// ---------------------------------------------------------------------------
-
-export interface FunnelAnalyticsTotals {
-  /** Funnel sessions started in the range. */
-  sessions: number;
-  /** Sessions in which a checkout was completed. */
-  completed: number;
-  /** Non-cancelled, non-rejected orders placed inside the funnel. */
-  orders: number;
-  revenue: number;
-  /** Follow-on orders from accepted upsells/downsells, and their revenue. */
-  upsellOrders: number;
-  upsellRevenue: number;
-  /** completed ÷ sessions. */
-  conversionRate: number | null;
-}
-
-export interface FunnelAnalyticsRow extends FunnelAnalyticsTotals {
-  id: string;
-  name: string;
-  subdomain: string;
-  status: string;
-}
-
-export interface FunnelAnalyticsOverview {
-  range: { from: string; to: string; timeZone: string };
-  currency: string;
-  totals: FunnelAnalyticsTotals;
-  funnels: FunnelAnalyticsRow[];
-}
-
-export interface FunnelAnalyticsStep {
-  key: string;
-  name: string;
-  stepType: string;
-  /** Sessions that got to this step. */
-  reached: number;
-  /** Sessions still sitting on this step that never moved on. */
-  dropped: number;
-  /** reached ÷ sessions. */
-  reachRate: number | null;
-}
-
-export interface FunnelAnalyticsSource {
-  source: string;
-  medium: string | null;
-  campaign: string | null;
-  sessions: number;
-  completed: number;
-  orders: number;
-  revenue: number;
-}
-
-export interface FunnelAnalyticsSeriesPoint {
-  date: string;
-  sessions: number;
-  orders: number;
-  revenue: number;
-}
-
-export interface FunnelAnalyticsDetail extends FunnelAnalyticsTotals {
-  range: { from: string; to: string; timeZone: string };
-  currency: string;
-  funnel: { id: string; name: string; subdomain: string; status: string };
-  steps: FunnelAnalyticsStep[];
-  sources: FunnelAnalyticsSource[];
-  series: FunnelAnalyticsSeriesPoint[];
-}
-
-// ---------------------------------------------------------------------------
-// Media library — /workspaces/:ws/media
-// The list carries no `path` (unlike `ProductMedia`), so build a display src
-// from `url`. Deleting removes the library entry; the stored file stays, since
-// a product or a page may still reference it.
+// Media library — GET/DELETE /workspaces/:ws/media
+// `uploadMedia` adds to the same library. Deleting removes the library entry.
 // ---------------------------------------------------------------------------
 
 export interface MediaAsset {
   id: string;
-  /** Absolute URL (APP_URL + path). */
+  /** Absolute URL. */
   url: string;
   mimeType: string;
   /** Bytes. */
@@ -2667,80 +5358,13 @@ export interface MediaAsset {
 }
 
 export interface MediaListParams {
-  /** 1–200, default 60. */
+  /** 1–100. */
   limit?: number;
-  /** `createdAt` of the last row of the previous page. */
+  /** The `nextCursor` of the previous page (the id of its last asset). */
   before?: string;
 }
 
 export interface MediaListResponse {
   media: MediaAsset[];
   nextCursor: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Call centre history — /workspaces/:ws/confirmation-tasks/attempts | /agents
-// The queue itself is `listConfirmationQueue` above; these two are the call log
-// and the per-agent scoreboard behind it.
-// ---------------------------------------------------------------------------
-
-export interface ConfirmationAttemptAgent {
-  id: string;
-  fullName: string | null;
-  email: string | null;
-}
-
-export interface ConfirmationAttemptOrder {
-  id: string;
-  orderNumber: string;
-  customerName: string | null;
-  phone: string | null;
-  /** Integer minor units. */
-  totalAmount: number;
-  currency: string;
-}
-
-export interface ConfirmationAttempt {
-  id: string;
-  outcome: ConfirmationOutcome;
-  notes: string | null;
-  createdAt: string;
-  taskId: string;
-  /** Total attempts on the task, not this attempt's position in them. */
-  attemptNumber: number;
-  agent: ConfirmationAttemptAgent;
-  order: ConfirmationAttemptOrder | null;
-}
-
-export interface ConfirmationAttemptListParams {
-  limit?: number;
-  /** `createdAt` of the last row of the previous page. */
-  before?: string;
-  agentUserId?: string;
-  outcome?: ConfirmationOutcome;
-}
-
-export interface ConfirmationAttemptListResponse {
-  attempts: ConfirmationAttempt[];
-  nextCursor: string | null;
-}
-
-export interface ConfirmationAgent {
-  userId: string;
-  fullName: string | null;
-  email: string | null;
-  role: { key: string; name: string } | null;
-  attempts: number;
-  confirmed: number;
-  rejected: number;
-  unreachable: number;
-  postponed: number;
-  /** Confirmed / (confirmed + rejected), as a percentage. Null when neither. */
-  confirmationRate: number | null;
-  tasksInProgress: number;
-}
-
-export interface ConfirmationAgentListResponse {
-  range: { days: number; since: string };
-  agents: ConfirmationAgent[];
 }

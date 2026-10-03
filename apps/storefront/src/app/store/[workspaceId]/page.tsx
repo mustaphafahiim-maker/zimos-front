@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import type { StorefrontCollection } from "@store-builder/api-client";
 import { ArrowIcon } from "@/components/Icons";
 import { PageRenderer } from "@/components/page-renderer";
 import { ProductCard } from "@/components/ProductCard";
@@ -10,7 +11,7 @@ import { getDictionary } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
-import { getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
+import { getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
 
 export const revalidate = 60;
@@ -79,11 +80,11 @@ export default async function StoreHomePage({
   const activeCollection = typeof query.collection === "string" ? query.collection : undefined;
   const [productList, collections] = await Promise.all([
     client.listStorefrontProducts(workspaceId, { limit: 24, collectionId: activeCollection }),
-    getStoreCollections(workspaceId),
+    client.listStorefrontCollections(workspaceId).catch((): StorefrontCollection[] => []),
   ]);
 
   const chip = (active: boolean) =>
-    `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
+    `zt-chip inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
       active
         ? "border-primary bg-primary text-on-primary"
         : "border-line bg-paper-raised text-ink-soft hover:border-primary hover:text-primary"

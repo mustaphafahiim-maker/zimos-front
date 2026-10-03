@@ -10,7 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, parseMoney, type Cart } from "@store-builder/api-client";
+import { ApiError, parseMoney, type Cart, type CustomizationInput } from "@store-builder/api-client";
+import { getVisitorId } from "@/lib/visitorId";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { track } from "@/lib/track";
 
@@ -57,7 +58,8 @@ export interface CartContextValue {
   isLoading: boolean;
   /** Sum of every line's quantity. */
   itemCount: number;
-  addItem: (variantId: string, offerId?: string, quantity?: number) => Promise<void>;
+  /** `customizations` answers the product's custom fields (photos by upload id). */
+  addItem: (variantId: string, offerId?: string, quantity?: number, customizations?: CustomizationInput) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -147,14 +149,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [workspaceId, client]);
 
   const addItem = useCallback(
-    async (variantId: string, offerId?: string, quantity = 1) => {
+    async (variantId: string, offerId?: string, quantity = 1, customizations?: CustomizationInput) => {
       if (!workspaceId) return;
       const token = await ensureToken();
-      const next = await client.addCartItem(workspaceId, token, { variantId, offerId, quantity });
+      const next = await client.addCartItem(
+        workspaceId,
+        token,
+        { variantId, offerId, quantity, ...(customizations ? { customizations } : {}) },
+        // The visitor owns any photo among the answers.
+        { visitorId: getVisitorId(workspaceId) }
+      );
       setCart(next);
-      // AddToCart for the pixels and the store's own analytics: the line just
-      // added, valued at its unit price × the quantity added (not the whole
-      // line, which may have held the variant already).
+      // AddToCart for the store's own analytics: the line just added, valued at
+      // its unit price × the quantity added (not the whole line, which may have
+      // held the variant already).
       try {
         const line = next.items.find((l) => l.variantId === variantId && (l.offerId ?? undefined) === offerId);
         const unit = line ? parseMoney(line.unitPriceSnapshot) : 0;

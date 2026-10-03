@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
 import type { AdminAuditEntry, AdminAuditLogPage } from "@store-builder/api-client";
@@ -49,7 +50,13 @@ export function AuditLogPage() {
   const [actorUserId, setActorUserId] = useState("");
   const [action, setAction] = useState("all");
   const [entityType, setEntityType] = useState("all");
-  const [workspaceId, setWorkspaceId] = useState("");
+  // A store page links here with ?workspaceId=… (ignored unless it is a UUID,
+  // which is all the endpoint accepts).
+  const [params] = useSearchParams();
+  const [workspaceId, setWorkspaceId] = useState(() => {
+    const id = params.get("workspaceId") ?? "";
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : "";
+  });
   const [reveal, setReveal] = useState(PAGE);
   const [selected, setSelected] = useState<AdminAuditEntry | null>(null);
 
@@ -113,10 +120,13 @@ export function AuditLogPage() {
       ),
     [facetRows]
   );
-  const workspaces = useMemo(
-    () => optionsFrom(facetRows, (r) => r.workspaceId, (r) => r.workspaceName ?? r.workspaceId ?? ""),
-    [facetRows]
-  );
+  const workspaces = useMemo(() => {
+    const options = optionsFrom(facetRows, (r) => r.workspaceId, (r) => r.workspaceName ?? r.workspaceId ?? "");
+    // The store a link opened with may not be among the recent rows.
+    return workspaceId && !options.some((o) => o.value === workspaceId)
+      ? [...options, { value: workspaceId, label: workspaceId }]
+      : options;
+  }, [facetRows, workspaceId]);
 
   const resetPaging = () => setReveal(PAGE);
   const refreshAll = () => {

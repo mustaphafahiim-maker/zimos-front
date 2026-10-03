@@ -6,14 +6,19 @@ import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
+import { LazyRoute } from "@/routes/LazyRoute";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { ChooseUsernamePage } from "@/pages/ChooseUsernamePage";
+import { ChoosePlanPage } from "@/pages/ChoosePlanPage";
+import { GoLiveDialog } from "@/components/GoLiveDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { WorkspacePickerPage } from "@/pages/WorkspacePickerPage";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { EditorLayout } from "@/components/EditorLayout";
 import { DashboardHomePage } from "@/pages/DashboardHomePage";
 import { CatalogProductsPage } from "@/pages/catalog/CatalogProductsPage";
 import { CollectionsPage } from "@/pages/catalog/CollectionsPage";
@@ -22,57 +27,49 @@ import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
+import { AbandonedCartsPage } from "@/pages/abandoned/AbandonedCartsPage";
+import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { CustomersPage } from "@/pages/customers/CustomersPage";
 import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
+import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
-import { WebsiteEditorPage } from "@/pages/website/editor/WebsiteEditorPage";
-import { FunnelsPage } from "@/pages/funnels/FunnelsPage";
-import { FunnelEditorPage } from "@/pages/funnels/FunnelEditorPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
-import { LazyRoute } from "@/routes/LazyRoute";
+import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 
-// Code-split: each is a heavy screen a given merchant may never open.
-const SettlementsPage = lazy(() =>
-  import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
+// Analytics screens and the two editors are code-split: their charts, block
+// library and preview plumbing load only when a merchant opens them, not
+// with every dashboard page.
+// The funnel list shares the funnel starters (and so the block library's
+// element table) with the funnel editor, so it is split off with it.
+const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
+const FunnelEditorPage = lazy(() =>
+  import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
 );
-const AutomationsPage = lazy(() =>
-  import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
+const WebsiteEditorPage = lazy(() =>
+  import("@/pages/website/editor/WebsiteEditorPage").then((m) => ({ default: m.WebsiteEditorPage }))
 );
-const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
-const AbandonedCheckoutsPage = lazy(() =>
-  import("@/pages/checkouts/AbandonedCheckoutsPage").then((m) => ({
-    default: m.AbandonedCheckoutsPage,
-  }))
-);
-const MarketingPage = lazy(() =>
-  import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage }))
-);
-const FraudProtectionPage = lazy(() =>
-  import("@/pages/fraud/FraudProtectionPage").then((m) => ({ default: m.FraudProtectionPage }))
-);
-const AnalyticsPage = lazy(() =>
-  import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage }))
-);
+const AnalyticsPage = lazy(() => import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
 const WebAnalyticsPage = lazy(() =>
   import("@/pages/analytics/WebAnalyticsPage").then((m) => ({ default: m.WebAnalyticsPage }))
 );
-const RealtimePage = lazy(() =>
-  import("@/pages/analytics/RealtimePage").then((m) => ({ default: m.RealtimePage }))
-);
+const RealtimePage = lazy(() => import("@/pages/analytics/RealtimePage").then((m) => ({ default: m.RealtimePage })));
 const FunnelAnalyticsPage = lazy(() =>
   import("@/pages/analytics/FunnelAnalyticsPage").then((m) => ({ default: m.FunnelAnalyticsPage }))
 );
-const ProfitPage = lazy(() =>
-  import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage }))
+const SettlementsPage = lazy(() =>
+  import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
+const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const AutomationsPage = lazy(() =>
+  import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
+);
+const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
+const ProfitPage = lazy(() => import("@/pages/profit/ProfitPage").then((m) => ({ default: m.ProfitPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
-);
-const CallCenterPage = lazy(() =>
-  import("@/pages/callcenter/CallCenterPage").then((m) => ({ default: m.CallCenterPage }))
 );
 
 export default function App() {
@@ -91,6 +88,8 @@ export default function App() {
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
 
                 <Route element={<ProtectedRoute />}>
+                  <Route path="/choose-username" element={<ChooseUsernamePage />} />
+                  <Route path="/choose-plan" element={<ChoosePlanPage />} />
                   <Route path="/workspaces" element={<WorkspacePickerPage />} />
 
                   <Route element={<RequireWorkspace />}>
@@ -101,31 +100,9 @@ export default function App() {
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
-                      <Route
-                        path="/call-center"
-                        element={
-                          <LazyRoute>
-                            <CallCenterPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/abandoned-checkouts"
-                        element={
-                          <LazyRoute>
-                            <AbandonedCheckoutsPage />
-                          </LazyRoute>
-                        }
-                      />
+                      <Route path="/fraud" element={<FraudPage />} />
                       <Route path="/returns" element={<ReturnsPage />} />
-                      <Route
-                        path="/settlements"
-                        element={
-                          <LazyRoute>
-                            <SettlementsPage />
-                          </LazyRoute>
-                        }
-                      />
+                      <Route path="/abandoned-carts" element={<AbandonedCartsPage />} />
 
                       <Route path="/catalog" element={<CatalogProductsPage />} />
                       <Route path="/catalog/collections" element={<CollectionsPage />} />
@@ -137,101 +114,38 @@ export default function App() {
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
+                      <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
-                      <Route
-                        path="/inbox"
-                        element={
-                          <LazyRoute>
-                            <InboxPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/automations"
-                        element={
-                          <LazyRoute>
-                            <AutomationsPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/marketing"
-                        element={
-                          <LazyRoute>
-                            <MarketingPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/fraud"
-                        element={
-                          <LazyRoute>
-                            <FraudProtectionPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/analytics"
-                        element={
-                          <LazyRoute>
-                            <AnalyticsPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/analytics/web"
-                        element={
-                          <LazyRoute>
-                            <WebAnalyticsPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/analytics/realtime"
-                        element={
-                          <LazyRoute>
-                            <RealtimePage />
-                          </LazyRoute>
-                        }
-                      />
+                      <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
+                      <Route path="/analytics" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
+                      <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
+                      <Route path="/analytics/realtime" element={<LazyRoute><RealtimePage /></LazyRoute>} />
                       <Route
                         path="/analytics/funnels/:funnelId"
-                        element={
-                          <LazyRoute>
-                            <FunnelAnalyticsPage />
-                          </LazyRoute>
-                        }
+                        element={<LazyRoute><FunnelAnalyticsPage /></LazyRoute>}
                       />
-                      <Route
-                        path="/profit"
-                        element={
-                          <LazyRoute>
-                            <ProfitPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route
-                        path="/media"
-                        element={
-                          <LazyRoute>
-                            <MediaLibraryPage />
-                          </LazyRoute>
-                        }
-                      />
-                      <Route path="/funnels" element={<FunnelsPage />} />
+                      <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
+                      <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
+                      <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
+                      <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
+                      <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
+                      <Route path="/media" element={<LazyRoute><MediaLibraryPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/support" element={<SupportPage />} />
+                      <Route path="/support/:ticketId" element={<SupportTicketPage />} />
                     </Route>
 
-                    {/* The website and funnel editors are full-viewport canvases — no
-                        sidebar, no dashboard chrome eating the width a builder needs.
-                        Each page draws its own minimal header (back link, name,
-                        save/publish) in place of it. Still inside RequireWorkspace, so
-                        auth and the current workspace are unchanged. */}
-                    <Route path="/website/:websiteId/edit" element={<WebsiteEditorPage />} />
-                    <Route path="/funnels/:funnelId" element={<FunnelEditorPage />} />
+                    {/* Full-screen editors: their own bar instead of the sidebar,
+                        still under the access banner (EditorLayout). */}
+                    <Route element={<EditorLayout />}>
+                      <Route path="/website/:websiteId/edit" element={<LazyRoute><WebsiteEditorPage /></LazyRoute>} />
+                      <Route path="/funnels/:funnelId" element={<LazyRoute><FunnelEditorPage /></LazyRoute>} />
+                    </Route>
                   </Route>
                 </Route>
               </Routes>
+              {/* A draft store's subscribe dialog, opened from anywhere (lib/goLive). */}
+              <GoLiveDialog />
             </ToastProvider>
           </WorkspaceProvider>
         </AuthProvider>

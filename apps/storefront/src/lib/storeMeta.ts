@@ -9,21 +9,56 @@ import {
 import { brandVars } from "./brandTheme";
 import { createServerStorefrontApiClient } from "./serverApiClient";
 
+/** What the API tells an unavailable store's page: just enough to name it. */
+export interface UnavailableStore {
+  name: string;
+  slug: string;
+  defaultLocale?: string | null;
+  logoUrl?: string | null;
+}
+
+export type StoreState =
+  | { kind: "ok"; store: StorefrontMeta }
+  | { kind: "unavailable"; store: UnavailableStore }
+  | { kind: "missing" };
+
+/** The API's answer for every public route of a restricted store. */
+export function isStoreUnavailable(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 423 && err.code === "STORE_UNAVAILABLE";
+}
+
+/**
+ * The store, whether it is serving, and whether it exists — deduped per
+ * request. The layout reads this to draw either the store or the "currently
+ * unavailable" page (a store suspended by the platform, or one whose
+ * subscription has lapsed past its grace day answers 423 STORE_UNAVAILABLE on
+ * every route).
+ */
+export const getStoreState = cache(async (workspaceId: string): Promise<StoreState> => {
+  const client = await createServerStorefrontApiClient();
+  try {
+    return { kind: "ok", store: await client.getStorefrontMeta(workspaceId) };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return { kind: "missing" };
+    if (isStoreUnavailable(err)) {
+      const details = (err as ApiError).details as { store?: UnavailableStore } | undefined;
+      return { kind: "unavailable", store: details?.store ?? { name: "", slug: workspaceId } };
+    }
+    throw err;
+  }
+});
+
 /**
  * Store metadata, deduped per request. The layout needs it for the brand
  * colours and every page under it needs the name/currency, so `cache()` keeps
  * that to a single API call per render instead of one per component.
  *
- * Returns null for an unknown workspace so callers can `notFound()`.
+ * Returns null for an unknown workspace so callers can `notFound()` — and for
+ * an unavailable one, whose pages the layout never renders.
  */
 export const getStoreMeta = cache(async (workspaceId: string): Promise<StorefrontMeta | null> => {
-  const client = await createServerStorefrontApiClient();
-  try {
-    return await client.getStorefrontMeta(workspaceId);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null;
-    throw err;
-  }
+  const state = await getStoreState(workspaceId);
+  return state.kind === "ok" ? state.store : null;
 });
 
 /**
@@ -37,6 +72,8 @@ export const getStorefrontProduct = cache(
       return await client.getStorefrontProduct(workspaceId, idOrSlug);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return null;
+      // The layout shows the store as unavailable; metadata just stays empty.
+      if (isStoreUnavailable(err)) return null;
       throw err;
     }
   }

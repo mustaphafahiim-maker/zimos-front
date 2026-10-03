@@ -1,5 +1,11 @@
-import { parseMoney, type Order, type StorefrontProduct } from "@store-builder/api-client";
-import { defaultOfferOf, firstImage, offerAppliesTo, priceOf } from "./product";
+import {
+  parseMoney,
+  type FunnelRuntimeMergedOrder,
+  type Order,
+  type StorefrontOrderBump,
+  type StorefrontProduct,
+} from "@store-builder/api-client";
+import { firstImage, priceOf } from "./product";
 
 /**
  * ------------------------------------------------------------------------
@@ -71,49 +77,44 @@ export function bundlePricing(unitAmount: number, quantity: number, tier: Bundle
 // ---------------------------------------------------------------------------
 
 export interface OrderBumpOffer {
-  id: string;
+  offerId: string;
+  /** The offer's first line: what a shipping quote and the autosave need. */
+  variantId: string;
+  productId: string;
+  /** The merchant's heading for the card; null uses the default one. */
+  heading: string | null;
   name: string;
-  description: string;
+  /** The offer's own name, when it says more than the product's. */
+  detail: string | null;
+  description: string | null;
   imageUrl: string | null;
   priceAmount: number;
   compareAtAmount: number | null;
-  /** The cart line this bump adds. */
-  variantId: string;
-  offerId?: string;
 }
 
 /**
- * The cheapest other in-stock product becomes the bump — a real cart line at
- * its real price. Returns null when the store has nothing else to offer.
+ * The bump the merchant set (store.orderBump, or a funnel checkout step's
+ * `bump`) as the card shows it — or null when there is none, or when it is a
+ * product the shopper is already buying. The server decides what it costs.
  */
-export function getOrderBump(
-  products: StorefrontProduct[],
-  excludeProductIds: string[]
+export function orderBumpOf(
+  bump: StorefrontOrderBump | null | undefined,
+  excludeProductIds: string[] = []
 ): OrderBumpOffer | null {
-  const pick = products
-    .filter((p) => !excludeProductIds.includes(p.id))
-    .map((p) => {
-      const variant = p.variants.find((v) => v.inStock);
-      return { p, variant, price: priceOf(p) };
-    })
-    .filter(
-      (c): c is { p: StorefrontProduct; variant: NonNullable<typeof c.variant>; price: number } =>
-        !!c.variant && c.price !== undefined && c.price > 0
-    )
-    .sort((a, b) => a.price - b.price)[0];
-
-  if (!pick) return null;
-
-  const offer = defaultOfferOf(pick.p);
+  if (!bump || excludeProductIds.includes(bump.productId)) return null;
+  const price = parseMoney(bump.priceAmount);
+  const compareAt = bump.compareAtAmount === null ? null : parseMoney(bump.compareAtAmount);
   return {
-    id: pick.p.id,
-    name: pick.p.name,
-    description: pick.p.description?.slice(0, 120) ?? "",
-    imageUrl: firstImage(pick.p),
-    priceAmount: pick.price,
-    compareAtAmount: null,
-    variantId: pick.variant.id,
-    offerId: offer && offerAppliesTo(offer, pick.variant.id) ? offer.id : undefined,
+    offerId: bump.offerId,
+    variantId: bump.variantId,
+    productId: bump.productId,
+    heading: bump.title,
+    name: bump.productName,
+    detail: bump.name && bump.name !== bump.productName ? bump.name : null,
+    description: bump.description,
+    imageUrl: bump.imageUrl,
+    priceAmount: price,
+    compareAtAmount: compareAt !== null && compareAt > price ? compareAt : null,
   };
 }
 
@@ -227,6 +228,30 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
 }
 
 const ordersKey = (workspaceId: string) => `zimos_orders_${workspaceId}`;
+
+/**
+ * A funnel offer joined the order after it was placed (the store's
+ * funnel_upsell_merge): the saved copy takes its new totals and lines, so the
+ * thank-you page shows what the courier will collect.
+ */
+export function mergeIntoOrderSnapshot(workspaceId: string, merged: FunnelRuntimeMergedOrder) {
+  const saved = getOrderSnapshot(workspaceId, merged.id);
+  if (!saved) return;
+  saveOrderSnapshot(workspaceId, {
+    ...saved,
+    subtotalAmount: parseMoney(merged.subtotalAmount),
+    discountAmount: parseMoney(merged.discountAmount),
+    shippingAmount: parseMoney(merged.shippingAmount),
+    totalAmount: parseMoney(merged.totalAmount),
+    items: merged.items.map((item) => ({
+      name: item.productNameSnapshot,
+      options: Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "),
+      quantity: item.quantity,
+      lineTotal: parseMoney(item.lineTotalAmount),
+    })),
+    productIds: merged.items.map((i) => i.productId).filter((id): id is string => !!id),
+  });
+}
 
 export function saveOrderSnapshot(workspaceId: string, snapshot: OrderSnapshot) {
   const list = readJson<OrderSnapshot[]>(ordersKey(workspaceId)) ?? [];

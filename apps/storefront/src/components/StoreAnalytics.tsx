@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useSelectedLayoutSegment } from "next/navigation";
 import {
   configureTracker,
   flush,
@@ -9,6 +9,7 @@ import {
   sendContextEvent,
   sendPageView,
   setTrackingContext,
+  setTrackingPaused,
   type EventData,
   type TrackerOptions,
 } from "@/lib/analyticsEvents";
@@ -32,6 +33,9 @@ import { EVENT_ATTRIBUTE, collectEventData, isExternalClick } from "@/lib/tracke
  * layout (`/f/…`) is nested inside that one, so mounting it there too would
  * count every funnel page twice; the funnel side only adds its funnelId to
  * the tracking context (components/funnel/FunnelStep.tsx).
+ *
+ * A merchant's preview (`/preview/…`, opened from the editor) is not a visit:
+ * there the tracker is paused and sends nothing at all.
  */
 
 export interface ZimosTracker {
@@ -126,6 +130,7 @@ export function StoreAnalytics({
 }) {
   const pathname = usePathname();
   const search = useSearchParams();
+  const preview = useSelectedLayoutSegment() === "preview";
 
   // Set during render, not in an effect: effects run children-first, so a
   // page's own tracking (begin_checkout on mount, a funnel step's
@@ -133,6 +138,7 @@ export function StoreAnalytics({
   // had named the store. The call is idempotent and touches no React state.
   if (typeof window !== "undefined") {
     if (options) configureTracker(options);
+    setTrackingPaused(preview);
     setTrackingContext({ workspaceId, websiteId, tag });
   }
 
@@ -144,10 +150,12 @@ export function StoreAnalytics({
   // The first run seeds the referrer chain (document.referrer) and always
   // sends; later runs send only when recordNavigation sees a new url.
   useEffect(() => {
+    setTrackingPaused(preview);
+    if (preview) return;
     const first = !seeded;
     seeded = true;
     if (recordNavigation(window.location.href) || first) sendPageView(workspaceId);
-  }, [workspaceId, pathname, search]);
+  }, [workspaceId, pathname, search, preview]);
 
   useEffect(() => {
     installGlobal();

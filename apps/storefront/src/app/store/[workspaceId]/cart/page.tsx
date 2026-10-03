@@ -6,11 +6,13 @@ import { BoxIcon, CartGlyph } from "@/components/Icons";
 import { QuantityStepper } from "@/components/QuantityStepper";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
 import { firstImage, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
+import { LineCustomizations } from "@/components/LineCustomizations";
 
 export default function CartPage() {
   // Still needed for the catalogue lookup — the links go through StoreLink,
@@ -115,6 +117,7 @@ export default function CartPage() {
                             <span className="text-sm font-semibold text-ink">{options || t.cart.item}</span>
                           )}
                           {product && options && <p className="mt-0.5 text-xs text-ink-soft">{options}</p>}
+                          <LineCustomizations customizations={line.customizations} />
                         </div>
                         <button
                           type="button"
@@ -149,20 +152,11 @@ export default function CartPage() {
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className={`${card} p-5`}>
               <h2 className="text-base font-semibold text-ink">{t.cart.summary}</h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.cart.subtotal}</dt>
-                  <dd className="font-semibold text-ink">{money(cart.subtotal, currency)}</dd>
-                </div>
-                {/* The API has no shipping quote for a cart — shipping is
-                    priced server-side from the delivery address when the order
-                    is placed — so the cart says so rather than showing a total
-                    it cannot know. */}
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
-                  <dd className="text-ink-soft">{t.cart.shippingAtCheckout}</dd>
-                </div>
-              </dl>
+              {/* Shipping comes from the same quote the order is charged by,
+                  once the shopper picks a governorate here or at checkout. */}
+              <div className="mt-4">
+                <CartShippingSummary workspaceId={workspaceId} cart={cart} />
+              </div>
               <StoreLink href="/checkout" className={`${btnPrimaryLg} mt-5`}>
                 {t.cart.checkout}
               </StoreLink>

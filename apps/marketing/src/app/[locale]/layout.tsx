@@ -5,6 +5,7 @@ import { fontVariables } from "../fonts";
 import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { I18nProvider } from "@/i18n/provider";
+import { SITE_URL } from "@/lib/urls";
 
 type LocaleParams = { locale: string };
 
@@ -30,6 +31,8 @@ export async function generateMetadata({
   // Icons come from src/app/favicon.ico; the brand PNGs in public/brand are
   // rendered in-page by <ZimosLogo />.
   return {
+    // Resolves every page's relative canonical and language links.
+    metadataBase: new URL(SITE_URL),
     title: meta.title,
     description: meta.description,
     applicationName: "ZIMOS",

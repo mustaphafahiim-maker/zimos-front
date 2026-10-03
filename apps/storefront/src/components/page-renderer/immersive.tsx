@@ -1,15 +1,16 @@
 import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
 import { BoxIcon } from "@/components/Icons";
-import { OrbitStage } from "@/components/immersive/OrbitStage";
-import { Product3D } from "@/components/immersive/Product3D";
-import { ScrollStory, type StoryStep } from "@/components/immersive/ScrollStory";
-import { ShaderHero } from "@/components/immersive/ShaderHero";
+// Split into their own chunks (see immersive/lazy.tsx): pages without these
+// elements pay nothing for them.
+import { OrbitStage, Product3D, ScrollStory, ShaderHero } from "@/components/immersive/lazy";
+import type { StoryStep } from "@/components/immersive/ScrollStory";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
 import { btnPrimary } from "@/components/ui";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { EmptyBlock } from "./commerce";
 import { num, resolveHref, safeUrl, str, type Props } from "./props";
 
 /**
@@ -148,9 +149,8 @@ export async function OrbitGalleryElement({
   } catch {
     return null;
   }
-  if (products.length === 0) return null;
-
   const title = str(props, "title");
+  if (products.length === 0) return <EmptyBlock title={title} message={t.renderer.emptyProducts} />;
 
   return (
     <div>

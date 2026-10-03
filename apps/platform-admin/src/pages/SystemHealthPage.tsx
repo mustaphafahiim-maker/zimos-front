@@ -177,9 +177,7 @@ export function SystemHealthPage() {
                 </ul>
                 <p className="mt-3 text-xs text-ink-soft">
                   These are reachable only from the server, so their state is unknown here — treat
-                  the tiles above as a partial view, not an all-clear. Payments are not on this
-                  list: this platform settles orders in-process, so there is no external gateway
-                  for anything to check.
+                  the tiles above as a partial view, not an all-clear.
                 </p>
               </Panel>
             )}

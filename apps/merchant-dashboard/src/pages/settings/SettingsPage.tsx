@@ -1,5 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { ImageIcon } from "lucide-react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
@@ -12,8 +12,9 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, imageSrc, validateImageFile } from "@/lib/media";
+import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { ColorField } from "@/components/ColorField";
 import {
   DEFAULT_PRIMARY,
@@ -23,28 +24,54 @@ import {
 } from "@/lib/brandColors";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { DataTable } from "@/components/DataTable";
-import { Section } from "@/components/Section";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
+import { BillingSection } from "./BillingSection";
+import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { WhatsappSection } from "./WhatsappSection";
+import { CatalogSettingsSection } from "./CatalogSettingsSection";
+import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
+import { AccountSection } from "./AccountSection";
+
+/**
+ * A link that names one of the user's stores (?workspace=<id>, as on the way
+ * back from the subscription payment page) opens that store, since the
+ * current store is whichever was picked last in this browser.
+ */
+function useStoreFromLink() {
+  const [params] = useSearchParams();
+  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
+  const wanted = params.get("workspace");
+  useEffect(() => {
+    if (wanted && wanted !== currentWorkspace?.id && workspaces.some((w) => w.id === wanted)) selectWorkspace(wanted);
+  }, [wanted, currentWorkspace?.id, workspaces, selectWorkspace]);
+}
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
+  useStoreFromLink();
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-10">
       <PageHeader
         title="Settings"
         description="Your store profile and the people who can manage it."
       />
+      <AccountSection />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+      <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
+      <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
+      <CatalogSettingsSection key={`catalog-${workspaceId}`} />
+      <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
+      {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
+      <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+      <BillingSection key={`billing-${workspaceId}`} />
       <TeamSection key={`team-${workspaceId}`} />
-      <WhatsappSection key={`whatsapp-${workspaceId}`} />
     </div>
   );
 }
@@ -55,21 +82,24 @@ export function SettingsPage() {
 
 function WorkspaceProfileSection() {
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
 
   const [name, setName] = useState(currentWorkspace?.name ?? "");
   const [tagline, setTagline] = useState(currentWorkspace?.tagline ?? "");
   const [logoUrl, setLogoUrl] = useState<string | null>(currentWorkspace?.logoUrl ?? null);
   const [logoStage, setLogoStage] = useState<"preparing" | "uploading" | null>(null);
-  const [logoBroken, setLogoBroken] = useState(false);
   const uploading = logoStage !== null;
-  const [primaryColor, setPrimaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY)
-  );
-  const [secondaryColor, setSecondaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY)
-  );
+  // What the colour fields opened with: a colour is only written once the
+  // merchant changes it here, so saving the name or logo never pins the
+  // platform default over a store theme's own accent.
+  const [initialColors] = useState(() => ({
+    primary: readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY),
+    secondary: readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY),
+  }));
+  const [primaryColor, setPrimaryColor] = useState(initialColors.primary);
+  const [secondaryColor, setSecondaryColor] = useState(initialColors.secondary);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -92,7 +122,6 @@ function WorkspaceProfileSection() {
       }
       setLogoStage("uploading");
       const media = await apiClient.uploadMedia(workspaceId, prepared);
-      setLogoBroken(false);
       setLogoUrl(media.url);
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -107,21 +136,21 @@ function WorkspaceProfileSection() {
     setFieldErrors({});
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        name: name.trim(),
-        tagline: tagline.trim() || null,
-        logoUrl,
+      const primary = normalizeHex(primaryColor) ?? DEFAULT_PRIMARY;
+      const secondary = normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY;
+      await saveThemeSettings((current) => {
         // Merge, never replace: themeSettings is a shared blob and may already
         // carry keys owned by other parts of the product.
-        themeSettings: {
-          ...(currentWorkspace?.themeSettings ?? {}),
-          primaryColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY,
-          secondaryColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY,
-        },
+        const themeSettings: Record<string, unknown> = { ...current };
+        if (primary !== initialColors.primary) {
+          themeSettings.primaryColor = primary;
+          // The merchant's own colour now, no longer one a template carried over.
+          delete themeSettings.primaryColorSource;
+        }
+        if (secondary !== initialColors.secondary) themeSettings.secondaryColor = secondary;
+        return { name: name.trim(), tagline: tagline.trim() || null, logoUrl, themeSettings };
       });
       toast.success("Store profile saved.");
-      // Refresh the workspace list so the new name shows in the header switcher.
-      await refresh();
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
@@ -132,11 +161,13 @@ function WorkspaceProfileSection() {
   }
 
   return (
-    <Section
-      title="Store profile"
-      description="The name, logo, and tagline shown across your dashboard and storefront."
-    >
-      <form onSubmit={submit} className="space-y-4">
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Store profile</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        The name, logo, and tagline shown across your dashboard and storefront.
+      </p>
+
+      <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
         <TextField
@@ -150,23 +181,20 @@ function WorkspaceProfileSection() {
         <div className="space-y-1.5">
           <Label>Logo</Label>
           <div className="flex flex-wrap items-center gap-4">
-            {logoUrl && !logoBroken ? (
+            {logoUrl ? (
               <img
-                src={imageSrc(logoUrl) ?? logoUrl}
+                src={logoUrl}
                 alt="Store logo"
-                onError={() => setLogoBroken(true)}
-                className="size-16 rounded-lg bg-paper object-contain ring-1 ring-foreground/10"
+                className="size-16 rounded-[0.5rem] border border-line bg-paper object-contain"
               />
             ) : (
-              // Never a broken-image glyph: a plain box says "no logo" just as
-              // well, and a file that fails to load looks the same as none.
-              <div className="flex size-16 items-center justify-center rounded-lg border border-dashed border-line text-xs text-ink-soft">
-                {logoBroken ? <ImageIcon className="size-5 text-ink-soft/40" aria-hidden /> : "None"}
+              <div className="flex size-16 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-xs text-ink-soft">
+                None
               </div>
             )}
             <label
               className={cn(
-                "inline-flex cursor-pointer items-center rounded-lg bg-paper-raised px-3 py-2 text-sm font-medium text-ink ring-1 ring-foreground/10 transition-colors hover:bg-paper",
+                "inline-flex cursor-pointer items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-paper",
                 uploading && "pointer-events-none opacity-50"
               )}
             >
@@ -196,7 +224,7 @@ function WorkspaceProfileSection() {
           hint="Optional — a short line shown under your store name."
         />
 
-        <div className="space-y-4 rounded-lg p-4 ring-1 ring-foreground/10">
+        <div className="space-y-4 rounded-[0.5rem] border border-line p-4">
           <div>
             <h3 className="text-sm font-medium text-ink">Store colours</h3>
             <p className="mt-0.5 text-xs text-ink-soft">
@@ -222,11 +250,11 @@ function WorkspaceProfileSection() {
           <div className="space-y-1.5">
             <Label>Preview</Label>
             <div
-              className="flex flex-wrap items-center gap-3 rounded-lg p-3 ring-1 ring-foreground/10"
+              className="flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-line p-3"
               style={{ backgroundColor: `${normalizeHex(primaryColor) ?? DEFAULT_PRIMARY}14` }}
             >
               <span
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white"
+                className="rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-white"
                 style={{ backgroundColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
               >
                 Add to cart
@@ -253,7 +281,7 @@ function WorkspaceProfileSection() {
           </Button>
         </div>
       </form>
-    </Section>
+    </section>
   );
 }
 
@@ -312,121 +340,122 @@ function TeamSection() {
   }
 
   return (
-    <Section
-      title="Team members"
-      description="People who can sign in to this store, and the role that sets what they can do."
-      actions={
+    <section>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-medium text-ink">Team members</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            People who can sign in to this store, and the role that sets what they can do.
+          </p>
+        </div>
         <Button onClick={() => setInviting(true)} disabled={roles.length === 0}>
           Invite member
         </Button>
-      }
-    >
+      </div>
+
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
-        <div className="space-y-8">
-          <DataTable
-            rows={members}
-            rowKey={(member) => member.id}
-            minWidth="35rem"
-            columns={[
-              {
-                key: "member",
-                header: "Member",
-                cell: (member) => {
+        <div className="mt-4 space-y-8">
+          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-4 py-3 font-medium">Member</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((member) => {
                   const isSelf = Boolean(member.user && user && member.user.id === user.id);
                   return (
-                    <>
-                      <div className="font-medium text-ink">
-                        {member.user?.fullName || member.user?.email || "—"}
-                        {isSelf && (
-                          <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
+                    <tr key={member.id} className="border-b border-line last:border-0">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-ink">
+                          {member.user?.fullName || member.user?.email || "—"}
+                          {isSelf && (
+                            <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
+                          )}
+                        </div>
+                        {member.user?.email && (
+                          <div className="text-xs text-ink-soft">{member.user.email}</div>
                         )}
-                      </div>
-                      {member.user?.email && (
-                        <div className="text-xs text-ink-soft">{member.user.email}</div>
-                      )}
-                    </>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isSelf ? (
+                          <span className="text-ink-soft">{member.role.name}</span>
+                        ) : (
+                          <Select
+                            aria-label={`Role for ${member.user?.email ?? "member"}`}
+                            value={member.role.id}
+                            onChange={(e) => changeRole(member, e.target.value)}
+                            className="max-w-[220px]"
+                          >
+                            {roles.map((role) => (
+                              <option key={role.id} value={role.id}>
+                                {role.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-end">
+                        {isSelf ? (
+                          <span
+                            className="text-xs text-ink-soft"
+                            title="You can't remove yourself"
+                          >
+                            —
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger-soft"
+                            onClick={() => setRemoving(member)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
                   );
-                },
-              },
-              {
-                key: "role",
-                header: "Role",
-                cell: (member) =>
-                  member.user && user && member.user.id === user.id ? (
-                    <span className="text-ink-soft">{member.role.name}</span>
-                  ) : (
-                    <Select
-                      aria-label={`Role for ${member.user?.email ?? "member"}`}
-                      value={member.role.id}
-                      onChange={(e) => changeRole(member, e.target.value)}
-                      className="max-w-[220px]"
-                    >
-                      {roles.map((role) => (
-                        <option key={role.id} value={role.id}>
-                          {role.name}
-                        </option>
-                      ))}
-                    </Select>
-                  ),
-              },
-              {
-                key: "actions",
-                header: "",
-                align: "end",
-                cell: (member) =>
-                  member.user && user && member.user.id === user.id ? (
-                    <span className="text-xs text-ink-soft" title="You can't remove yourself">
-                      —
-                    </span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger hover:bg-danger-soft"
-                      onClick={() => setRemoving(member)}
-                    >
-                      Remove
-                    </Button>
-                  ),
-              },
-            ]}
-          />
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {invites.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-medium text-ink">Pending invites</h3>
-              <DataTable
-                rows={invites}
-                rowKey={(invite) => invite.id}
-                minWidth="35rem"
-                columns={[
-                  {
-                    key: "email",
-                    header: "Email",
-                    cell: (invite) => (
-                      <div className="flex items-center gap-2">
-                        <span className="text-ink">{invite.invitedEmail}</span>
-                        <StatusBadge value="invited" tone="warning" />
-                      </div>
-                    ),
-                  },
-                  {
-                    key: "role",
-                    header: "Role",
-                    cell: (invite) => <span className="text-ink-soft">{invite.role.name}</span>,
-                  },
-                  {
-                    key: "actions",
-                    header: "",
-                    align: "end",
-                    cell: (invite) => (
-                      <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
-                        Resend
-                      </Button>
-                    ),
-                  },
-                ]}
-              />
+              <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Role</th>
+                      <th className="px-4 py-3 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invites.map((invite) => (
+                      <tr key={invite.id} className="border-b border-line last:border-0">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-ink">{invite.invitedEmail}</span>
+                            <StatusBadge value="invited" tone="warning" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-ink-soft">{invite.role.name}</td>
+                        <td className="px-4 py-3 text-end">
+                          <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
+                            Resend
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -461,7 +490,7 @@ function TeamSection() {
         onCancel={() => setRemoving(null)}
         onConfirm={confirmRemove}
       />
-    </Section>
+    </section>
   );
 }
 

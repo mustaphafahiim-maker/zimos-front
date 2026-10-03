@@ -26,7 +26,7 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-ink">
+          <h1 className="font-display text-2xl font-medium text-ink">
             {title}
             {titleMeta && (
               <span className="ms-2 align-middle text-base font-normal text-ink-soft">

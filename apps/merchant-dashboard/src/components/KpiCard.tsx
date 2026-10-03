@@ -27,11 +27,11 @@ export function KpiCard({ label, value, deltaBasisPoints, deltaLabel, hint, to, 
   const up = delta !== null && delta > 0;
   const down = delta !== null && delta < 0;
   const body = (
-    <Card className={cn("h-full gap-0 p-4", to && "transition-shadow hover:shadow-md", className)}>
+    <Card className={cn("h-full gap-0 p-4", to && "transition-colors hover:border-primary/40", className)}>
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-ink-soft">{label}</p>
         {icon && (
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-primary-dark [&>svg]:size-4 dark:text-primary">
+          <span className="flex size-8 items-center justify-center rounded-[10px] bg-primary-soft text-primary [&>svg]:size-4">
             {icon}
           </span>
         )}
@@ -50,7 +50,7 @@ export function KpiCard({ label, value, deltaBasisPoints, deltaLabel, hint, to, 
     </Card>
   );
   return to ? (
-    <Link to={to} className="block rounded-xl">
+    <Link to={to} className="block rounded-2xl">
       {body}
     </Link>
   ) : (

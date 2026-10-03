@@ -39,7 +39,7 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
-import { columnClasses, rowClasses, sectionClasses } from "./layout";
+import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
 /**
@@ -61,12 +61,12 @@ import { SPAN_CLASS, propsOf } from "./props";
  */
 
 /**
- * Funnel mode. A funnel keeps the shopper on one path, so the commerce
- * blocks' outbound links — "order now" and "view details" on a product card,
- * every card in a product grid — go to the funnel's next step instead of the
- * product page. `nextHref` is resolved like any merchant link (props.ts
- * resolveHref), so a store-relative path and a full `/store/<id>/…` path both
- * work. Unset, nothing changes.
+ * Funnel mode. A funnel keeps the shopper on one path, so the commerce blocks'
+ * ways out — "order now" and "view details" on a product card, every card in
+ * a product grid — go to the funnel step's own actions instead of the product
+ * page, and the cart block is left out. `nextHref` is store-relative, like a
+ * merchant link, so StoreLink puts the right prefix on it for either host.
+ * Unset, nothing changes.
  */
 export interface PageRendererFunnel {
   nextHref: string;
@@ -78,6 +78,12 @@ interface Ctx {
   locale: Locale;
   t: Dictionary;
   funnel?: PageRendererFunnel;
+  /**
+   * The editor's preview: rows, columns and elements carry `data-zimos-*`
+   * markers so the canvas can drag and resize them (components/preview). The
+   * element marker is `display: contents`, so it adds no box of its own.
+   */
+  editable?: boolean;
 }
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
@@ -144,9 +150,10 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
         />
       );
     case "collection_list":
-      return <CollectionListElement props={props} workspaceId={ctx.workspaceId} />;
+      return <CollectionListElement props={props} workspaceId={ctx.workspaceId} locale={ctx.locale} />;
     case "cart":
-      return <CartElement props={props} />;
+      // The cart is a way out of a funnel.
+      return ctx.funnel ? null : <CartElement props={props} />;
     case "shader_hero":
       return <ShaderHeroElement props={props} locale={ctx.locale} />;
     case "product_3d":
@@ -162,7 +169,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "comparison":
       return <ComparisonElement props={props} t={t} />;
     default:
-      // Unreachable for the 23 allowed types, but a tree written before this
+      // Unreachable for the 29 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.
       return null;
   }
@@ -182,8 +189,28 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const span = Number.isInteger(column.span) ? Math.min(12, Math.max(1, column.span!)) : 12;
   const elements = Array.isArray(column.elements) ? column.elements : [];
 
+  // `data-zt-col` / `data-zt-span` are store-theme hooks (globals.css); they
+  // change nothing on a store without a theme.
+  if (ctx.editable) {
+    return (
+      <div
+        className={columnClasses(settingsOf(column), SPAN_CLASS[span])}
+        data-zimos-column={column.id}
+        data-zimos-span={span}
+        data-zt-col=""
+        data-zt-span={span}
+      >
+        {elements.map((element) => (
+          <div key={element.id} data-zimos-el={element.id} data-zimos-type={element.type} className="contents">
+            <ElementNode element={element} ctx={ctx} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])}>
+    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span}>
       {elements.map((element) => (
         <ElementNode key={element.id} element={element} ctx={ctx} />
       ))}
@@ -196,7 +223,7 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
   if (columns.length === 0) return null;
 
   return (
-    <div className={rowClasses(settingsOf(row))}>
+    <div className={rowClasses(settingsOf(row))} data-zimos-row={ctx.editable ? row.id : undefined}>
       {columns.map((column) => (
         <ColumnNode key={column.id} column={column} ctx={ctx} />
       ))}
@@ -210,14 +237,23 @@ function RowNode({ row, ctx }: { row: PageRow; ctx: Ctx }) {
  * class tables and their fallbacks live in layout.ts; a section without
  * settings gets exactly the classes it always had.
  */
-function SectionNode({ section, ctx }: { section: PageSection; ctx: Ctx }) {
+function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx: Ctx; hero?: boolean }) {
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
   const { outer, inner } = sectionClasses(section.settings);
+  const minHeight = sectionMinHeight(section.settings);
 
+  // The hooks a store theme lays the section out by — its spacing, width and,
+  // for the page's opening section, its own hero layout. Attributes only: a
+  // store without a theme renders exactly the classes it always did.
   return (
-    <section className={outer}>
+    <section
+      className={outer}
+      style={minHeight === null ? undefined : { minHeight }}
+      {...sectionHooks(section.settings)}
+      data-zimos-hero={hero ? "" : undefined}
+    >
       <div className={inner}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
@@ -239,16 +275,18 @@ function EditableSectionNode({
   section,
   index,
   ctx,
+  hero,
 }: {
   section: PageSection;
   index: number;
   ctx: Ctx;
+  hero: boolean;
 }) {
   const hasRows = Array.isArray(section.rows) && section.rows.length > 0;
   return (
     <div data-zimos-section={section.id} data-zimos-index={index}>
       {hasRows ? (
-        <SectionNode section={section} ctx={ctx} />
+        <SectionNode section={section} ctx={ctx} hero={hero} />
       ) : (
         <div className="px-4 py-6 sm:px-6">
           <div className="mx-auto h-24 max-w-6xl rounded-[var(--radius-card)] border-2 border-dashed border-line" />
@@ -276,20 +314,22 @@ export function PageRenderer({
    * shoppers see, which renders exactly as it did before this existed.
    */
   editable?: boolean;
-  /** A running funnel's step page: commerce links go to the next step. See PageRendererFunnel. */
+  /** A running funnel's step page — see PageRendererFunnel. */
   funnel?: PageRendererFunnel;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
-  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel };
+  const ctx: Ctx = { workspaceId, currency, locale, t: getDictionary(locale), funnel, editable };
+  const hero = heroSectionIndex(sections);
 
+  // `zt-sections` lets a store theme restyle the rules between sections.
   return (
-    <div className="divide-y divide-line">
+    <div className="zt-sections divide-y divide-line">
       {sections.map((section, index) =>
         editable ? (
-          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} />
+          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />
         ) : (
-          <SectionNode key={section.id} section={section} ctx={ctx} />
+          <SectionNode key={section.id} section={section} ctx={ctx} hero={index === hero} />
         )
       )}
     </div>

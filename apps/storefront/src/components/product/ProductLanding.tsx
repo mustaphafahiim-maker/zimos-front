@@ -1,22 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { parseMoney, type StorefrontProductDetail } from "@store-builder/api-client";
+import { parseMoney, type CheckoutSettings, type StorefrontProductDetail } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { useShippingQuote } from "@/lib/useShippingQuote";
+import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
+  quickFormFields,
   toCheckoutPayload,
   validateOrderForm,
   type OrderFormErrors,
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, onlinePaymentUrl, orderErrorMessage, placeCodOrder, type OrderLine } from "@/lib/placeOrder";
-import { storeHref } from "@/lib/storeHref";
-import { usePaymentOptions } from "@/lib/usePaymentOptions";
+import {
+  afterOrder,
+  isOrderBumpRefused,
+  orderErrorMessage,
+  placeCodOrder,
+  serverFieldErrors,
+  type OrderLine,
+} from "@/lib/placeOrder";
+import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
+import { useOrderFormFields } from "@/lib/useOrderFormFields";
 import {
   defaultOfferOf,
   discountPercent,
@@ -26,14 +39,15 @@ import {
   variantUnitPrice,
 } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
 import { useStoreBasePath } from "../StoreRoute";
+import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
+import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
-import { PaymentMethodPicker, type PaymentChoice } from "../checkout/PaymentMethodPicker";
 import { CashIcon, CheckIcon } from "../Icons";
 import { Countdown } from "../page-renderer/Countdown";
-import { QuantityStepper } from "../QuantityStepper";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
 const FORM_PREFIX = "quick";
@@ -46,15 +60,20 @@ const FORM_PREFIX = "quick";
 export function ProductLanding({
   workspaceId,
   product,
-  bump,
+  bump: bumpOffer,
   countdownHours,
+  checkoutSettings,
 }: {
   workspaceId: string;
   product: StorefrontProductDetail;
   bump: OrderBumpOffer | null;
   countdownHours: number | null;
+  /** From this page's own render, not the layout's — see useFreshCheckoutSettings. */
+  checkoutSettings: CheckoutSettings;
 }) {
   const { t, money } = useStore();
+  const quickFields = useMemo(() => quickFormFields(checkoutSettings), [checkoutSettings]);
+  const { fields, reveal } = useOrderFormFields(quickFields);
   const basePath = useStoreBasePath();
   const router = useRouter();
   const [client] = useState(() => createStorefrontApiClient());
@@ -90,6 +109,9 @@ export function ProductLanding({
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
 
+  // The product's custom fields: answered here, sent with the order line.
+  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
+
   const defaultOffer = defaultOfferOf(product);
   const mainLine: OrderLine | null = variant
     ? tier
@@ -105,13 +127,23 @@ export function ProductLanding({
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<"idle" | "placing" | "paying">("idle");
+  const [submitting, setSubmitting] = useState(false);
   const [bumpOn, setBumpOn] = useState(false);
-  // Card / wallet are offered only when the store has Paymob connected.
-  const online = usePaymentOptions(workspaceId);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentChoice>("cod");
+  // Refused by the server since this page loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
+  const bump = bumpGone ? null : bumpOffer;
+  const payment = usePaymentMethods(client, workspaceId);
+  const [methodId, setMethodId] = useState<string | null>(null);
+  const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  const [redirecting, setRedirecting] = useState(false);
 
-  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0);
+  // The hook keys on the lines' content, so a fresh array each render is fine.
+  const autosaveLines: OrderLine[] = mainLine ? [mainLine] : [];
+  if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
+  const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
+
+  const total = pricing.total + (bumpOn && bump ? bump.priceAmount : 0) + shipping.amount;
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -120,9 +152,9 @@ export function ProductLanding({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting !== "idle") return;
+    if (submitting) return;
 
-    const found = validateOrderForm(values, t);
+    const found = validateOrderForm(values, t, fields);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -134,43 +166,79 @@ export function ProductLanding({
       setFormError(t.form.errors.unavailable);
       return;
     }
+    if (!custom.check()) {
+      setFormError(t.custom.summary);
+      return;
+    }
+    // The answers ride on the line that places the order only: the shipping
+    // quote and the autosave above key on the lines and must not re-run per keystroke.
+    const customizations = custom.toInput();
+    const orderLine: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const visitorId = getVisitorId(workspaceId);
 
-    const bumpLine: OrderLine | null =
-      bumpOn && bump ? { variantId: bump.variantId, offerId: bump.offerId, quantity: 1 } : null;
-    // The picker never offers a method the store cannot take; this only guards a stale choice.
-    const method: PaymentChoice = paymentMethod !== "cod" && !online?.[paymentMethod] ? "cod" : paymentMethod;
-    const payload = toCheckoutPayload(values, {
-      item: bumpLine ? undefined : mainLine,
-      paymentMethod: method,
-    });
-
-    setSubmitting("placing");
+    setSubmitting(true);
     setFormError(null);
+    const checkoutSessionId = await autosave.stop();
+    // A ticked bump names its offer only; the server adds it to this order.
+    const payload = {
+      ...toCheckoutPayload(values, fields, { item: orderLine }),
+      ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+      ...(checkoutSessionId ? { checkoutSessionId } : {}),
+    };
     try {
+      if (method.method !== "cod") {
+        const { next, external } = await placeOnlineOrder({
+          client,
+          workspaceId,
+          basePath,
+          payload,
+          method,
+          visitorId,
+        });
+        if (external) {
+          setRedirecting(true);
+          window.location.assign(next);
+        } else {
+          router.push(next);
+        }
+        return;
+      }
       const order = await placeCodOrder({
         client,
         workspaceId,
         payload,
-        lines: bumpLine ? [mainLine, bumpLine] : undefined,
+        visitorId,
       });
-      const next = afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone });
-      if (method === "cod") {
-        router.push(next);
+      router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
+    } catch (err) {
+      if (custom.showServerProblems(err)) {
+        setFormError(t.custom.summary);
+        setSubmitting(false);
+        autosave.resume();
         return;
       }
-      // Online: the order exists; now open Paymob's page. If that fails the
-      // shopper still has their order and lands on its confirmation, which
-      // says the payment page could not be opened.
-      setSubmitting("paying");
-      try {
-        window.location.assign(await onlinePaymentUrl({ client, workspaceId, orderId: order.id }));
-      } catch {
-        const q = new URLSearchParams({ number: order.orderNumber, pay: "failed" });
-        router.push(storeHref(basePath, `/orders/${order.id}?${q.toString()}`));
+      if (isOrderBumpRefused(err)) {
+        // The totals above drop the add-on with it; the shopper confirms again.
+        setBumpOn(false);
+        setBumpGone(true);
       }
-    } catch (err) {
-      setFormError(orderErrorMessage(err, t.form.errors.generic));
-      setSubmitting("idle");
+      const fromServer = serverFieldErrors(err, t.form.errors);
+      const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
+      if (invalid.length > 0) {
+        // Commit first: a field the server named may be one this form was
+        // hiding, and it has to exist before it can take focus.
+        flushSync(() => {
+          reveal(fromServer);
+          setErrors(fromServer);
+          setFormError(t.form.errors.summary(invalid.length));
+          setSubmitting(false);
+        });
+        document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+      } else {
+        setFormError(orderErrorMessage(err, t.form.errors));
+        setSubmitting(false);
+      }
+      autosave.resume();
     }
   }
 
@@ -213,7 +281,11 @@ export function ProductLanding({
         </div>
         <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : "text-danger"}`}>
           {available && <CheckIcon size={16} />}
-          {available ? t.common.inStock : t.common.outOfStock}
+          {available
+            ? t.common.inStock
+            : product.variants.length === 0
+              ? t.common.unavailable
+              : t.common.outOfStock}
         </p>
       </div>
 
@@ -308,10 +380,13 @@ export function ProductLanding({
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
           </span>
-          {/* The same stepper the cart drawer and the cart page use. */}
+          {/* The same stepper the cart page and the cart drawer use. */}
           <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
         </div>
       )}
+
+      {/* What the shopper fills in for this product (engraving, a note, their photo). */}
+      <CustomFieldInputs state={custom} />
 
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -324,6 +399,9 @@ export function ProductLanding({
           offerId={mainLine?.offerId}
           defaultQuantity={mainLine?.quantity ?? 1}
           disabled={!available}
+          customizations={custom.fields.length > 0 ? custom.toInput() : undefined}
+          beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
+          onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
       </div>
 
@@ -341,7 +419,13 @@ export function ProductLanding({
         <p className="mt-1 text-sm text-ink-soft">{t.form.subtitle}</p>
 
         <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
-          <OrderFormFields idPrefix={FORM_PREFIX} values={values} errors={errors} onChange={onFieldChange} />
+          <OrderFormFields
+            idPrefix={FORM_PREFIX}
+            values={values}
+            errors={errors}
+            onChange={onFieldChange}
+            fields={fields}
+          />
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
@@ -364,7 +448,9 @@ export function ProductLanding({
             )}
             <div className="flex justify-between gap-3">
               <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
-              <dd className="shrink-0 text-ink">{t.checkout.shippingOnConfirmation}</dd>
+              <dd className="shrink-0 text-ink">
+                <ShippingFee line={shipping.line} />
+              </dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold text-ink">
               <dt>{t.form.total}</dt>
@@ -374,14 +460,12 @@ export function ProductLanding({
 
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
 
-          {/* Only with Paymob connected; otherwise the form stays cash on delivery and says nothing else. */}
-          {online && (
+          {payment.methods.length > 1 && (
             <PaymentMethodPicker
-              online={online}
-              value={paymentMethod}
-              onChange={setPaymentMethod}
+              methods={payment.methods}
+              value={method.id}
+              onChange={setMethodId}
               idPrefix={FORM_PREFIX}
-              disabled={submitting !== "idle"}
             />
           )}
 
@@ -391,19 +475,19 @@ export function ProductLanding({
             )}
           </div>
 
-          <button type="submit" disabled={submitting !== "idle" || !available} aria-busy={submitting !== "idle"} className={btnPrimaryLg}>
-            {submitting === "paying"
-              ? t.shop.redirectingToPayment
-              : submitting === "placing"
+          <button type="submit" disabled={submitting || !available} className={btnPrimaryLg}>
+            {redirecting
+              ? t.payment.redirecting
+              : submitting
                 ? t.form.submitting
-                : paymentMethod === "cod"
-                  ? `${t.form.submit} — ${money(total)}`
-                  : t.shop.payOnlineTotal(money(total))}
+                : `${method.method === "cod" ? t.form.submit : t.payment.payNow} — ${money(total)}`}
           </button>
-          <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
-            <CashIcon size={16} />
-            {paymentMethod === "cod" ? t.checkout.codHint : paymentMethod === "wallet" ? t.shop.payWalletHint : t.shop.payCardHint}
-          </p>
+          {method.method === "cod" && (
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
+              <CashIcon size={16} />
+              {t.checkout.codHint}
+            </p>
+          )}
         </form>
       </section>
 
@@ -424,10 +508,7 @@ export function ProductLanding({
             onClick={scrollToForm}
             disabled={!available}
             tabIndex={formVisible ? -1 : 0}
-            // A small, occasional nudge towards the one action this bar
-            // exists for — off entirely once the form itself is disabled or
-            // reduced motion is on (the animation utility below no-ops there).
-            className={`${btnPrimary} flex-1 ${available ? "zimos-wiggle" : ""}`}
+            className={`${btnPrimary} flex-1`}
           >
             {t.product.stickyOrder}
           </button>

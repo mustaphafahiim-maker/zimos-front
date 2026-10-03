@@ -1,11 +1,66 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
+  CustomerUpload,
+  CustomizationInput,
+  CatalogOptionName,
+  CollectionReorderItem,
+  StorefrontListing,
+  StorefrontListingParams,
+  StorefrontSuggestions,
   AddCustomerAddressPayload,
   AdminAnnouncement,
   AdminAnnouncementInput,
   AdminAuditEntry,
   AdminAuditLogPage,
   AdminAuditLogParams,
+  AdminBlocklistEntry,
+  AdminBlocklistPage,
+  AdminBlocklistParams,
+  AdminBlocklistUpdate,
+  AdminBlockPayload,
+  AdminBlockResult,
+  AdminCarrierRegistry,
+  AdminAgentDetail,
+  AdminAgentList,
+  AdminCharge,
+  AdminRecordPaymentResult,
+  AdminReversePaymentResult,
+  AdminSpecialTerm,
+  AdminSpecialTermsInput,
+  AdminStoreAccess,
+  WorkspaceAccess,
+  GoLiveResult,
+  PublicPlan,
+  SignupOptions,
+  VerificationChallenge,
+  VerificationChannel,
+  VerificationSent,
+  BillingCycle,
+  AdminWorkspaceCharges,
+  AdminCommission,
+  AdminCommissionPage,
+  AdminCommissionParams,
+  AdminCreateAgentResult,
+  AdminGrantPayload,
+  AdminGrantResult,
+  AdminPaymentGatewayRegistry,
+  AdminPlatformAdmin,
+  AdminReferralCode,
+  AdminReferralCodeInput,
+  AdminRolesResponse,
+  WorkspaceBilling,
+  OnlinePayment,
+  OnlinePaymentResult,
+  AdminProviderCheck,
+  AdminRiskSignalPage,
+  AdminRiskSignalParams,
+  AdminTemplate,
+  AdminTemplateDetail,
+  AdminTemplateInput,
+  AdminTemplateKind,
+  AdminTemplateVersion,
+  AdminTemplateVersionInput,
+  AdminTemplateVersionSummary,
   AdminFeatureFlag,
   AdminFeatureFlagInput,
   AdminOverview,
@@ -13,34 +68,98 @@ import type {
   AdminPlanInput,
   AdminServiceReport,
   AdminServiceTile,
+  AdminSupportTicket,
+  AdminSupportTicketMessage,
+  AdminSupportTicketPage,
+  AdminSupportTicketParams,
+  AdminSupportTicketThread,
+  OpenSupportTicketPayload,
+  SupportTicket,
+  SupportTicketMessage,
+  SupportTicketPriority,
+  SupportTicketStatus,
+  SupportTicketThread,
   AdminSubscription,
   AdminWorkspaceOverview,
+  AdminUserDetail,
+  AdminUserSearchPage,
+  AdminManualSubscription,
+  AdminManualActionResult,
+  AdminWorkspaceFeatures,
+  AdminFeatureOverride,
+  PlanFeatureKey,
+  AnalyticsSummary,
+  AnalyticsSummaryParams,
+  FunnelAnalyticsDetail,
+  FunnelAnalyticsOverview,
+  WebAnalyticsMetricType,
+  WebAnalyticsMetrics,
+  WebAnalyticsRangeParams,
+  WebAnalyticsRealtime,
+  WebAnalyticsSeries,
+  WebAnalyticsStats,
+  WebAnalyticsWeekly,
   ArchivedResponse,
   AuthTokens,
   AuthUser,
-  AutomationListResponse,
-  AutomationRule,
-  AutomationRulePayload,
-  AutomationRunListParams,
-  AutomationRunListResponse,
+  UsernameAvailability,
   BlacklistPayload,
-  BostaCity,
-  BostaDistrict,
+  BlocklistEntry,
+  BlockPhonePayload,
+  BlockPhoneResult,
+  CaptureCheckoutSessionPayload,
+  CarrierAddressTree,
+  CarrierAreaNode,
+  CarrierCity,
+  CarrierList,
+  CheckoutResult,
+  PaymentTimeline,
+  Refund,
+  ConnectPaymentGatewayPayload,
+  PaymentGatewayInfo,
+  PaymentGatewayList,
+  PaymentMethodList,
+  ShopperPaymentStatus,
+  StorefrontPaymentMethod,
   Cart,
+  CheckoutRecoveryStatus,
+  CheckoutSession,
+  CheckoutSessionListParams,
+  CheckoutSessionListResponse,
+  ConnectCarrierPayload,
+  ConnectCarrierResult,
+  FlaggedOrderListParams,
+  FlaggedOrderListResponse,
   CheckoutPayload,
   CollectionDetail,
   CollectionSummary,
+  AssignConfirmationTasksResult,
+  ConfirmationAssignee,
+  ConfirmationChannel,
+  ConfirmationQueueCounts,
+  ConfirmationQueuePage,
+  ConfirmationQueueParams,
   ConfirmationTask,
-  ConfirmationTaskStatus,
-  ConnectWhatsappPayload,
+  CorrectConfirmationOutcomePayload,
+  ManualCancelAcknowledgement,
   CreateCollectionPayload,
   CreateDiscountPayload,
   CreateOfferPayload,
   CreateOrderPayload,
   CreateProductPayload,
+  CreateProductResponse,
   CreateReturnPayload,
-  CreateSettlementPayload,
   CreateShipmentPayload,
+  ReplaceWeightTiersPayload,
+  SetPricingModePayload,
+  SetPricingModeResult,
+  ShippingQuote,
+  ShippingSettings,
+  ShippingSettingsResponse,
+  UpdateShippingSettingsPayload,
+  ShippingQuotePayload,
+  WeightTier,
+  WeightTierSettings,
   CreateShippingRatePayload,
   CreateShippingZonePayload,
   CreateTaxRatePayload,
@@ -60,9 +179,12 @@ import type {
   MediaUploadResponse,
   Membership,
   Offer,
+  WorkspaceOfferOption,
   Order,
   OrderListParams,
   OrderListResponse,
+  OrderPipeline,
+  OrderSearchParams,
   Product,
   ProductListParams,
   ProductListResponse,
@@ -73,13 +195,8 @@ import type {
   ReturnRequest,
   Review,
   ReviewListParams,
-  SendWhatsappPayload,
-  SentWhatsappMessage,
-  SettlementDetail,
-  SettlementListResponse,
-  SettlementStatus,
-  SettlementSummary,
   Shipment,
+  ShipmentSyncResult,
   ShippingRate,
   ShippingZone,
   StorefrontCollection,
@@ -91,7 +208,6 @@ import type {
   SuccessResponse,
   TaxRate,
   TrackResult,
-  UnsettledResponse,
   UpdateCollectionPayload,
   UpdateCustomerAddressPayload,
   UpdateCustomerPayload,
@@ -99,7 +215,6 @@ import type {
   UpdateOfferPayload,
   UpdateOrderPayload,
   UpdateProductPayload,
-  UpdateSettlementPayload,
   UpdateShipmentPayload,
   UpdateShippingRatePayload,
   UpdateShippingZonePayload,
@@ -114,47 +229,34 @@ import type {
   WebsitePage,
   WebsiteTemplateDetail,
   WebsiteTemplateSummary,
+  Workspace,
+  WorkspaceInvite,
+  WorkspaceMember,
+  WorkspaceRole,
+  // Merchant operations added on top of upstream (see the end of the class).
+  AutomationListResponse,
+  AutomationRule,
+  AutomationRulePayload,
+  AutomationRunListParams,
+  AutomationRunListResponse,
+  ConnectWhatsappPayload,
+  CreateSettlementPayload,
+  MediaListParams,
+  MediaListResponse,
+  SendWhatsappPayload,
+  SentWhatsappMessage,
+  SettlementDetail,
+  SettlementListResponse,
+  SettlementStatus,
+  SettlementSummary,
+  UnsettledResponse,
+  UpdateSettlementPayload,
+  UpdateWorkspaceSettingsPayload,
   WhatsappConversationListParams,
   WhatsappConversationListResponse,
   WhatsappConversationStatus,
   WhatsappIntegration,
   WhatsappMessageListResponse,
-  Workspace,
-  WorkspaceInvite,
-  WorkspaceMember,
-  WorkspaceRole,
-} from "./types";
-// Kept as its own block so the list above stays exactly as it was: these are
-// the shapes for the endpoints added at the bottom of the class.
-import type {
-  AddToBlocklistPayload,
-  AnalyticsSummary,
-  AnalyticsSummaryParams,
-  FunnelAnalyticsDetail,
-  FunnelAnalyticsOverview,
-  OrderCounts,
-  OrderListFilters,
-  WebAnalyticsMetricType,
-  WebAnalyticsMetrics,
-  WebAnalyticsRangeParams,
-  WebAnalyticsRealtime,
-  WebAnalyticsSeries,
-  WebAnalyticsStats,
-  WebAnalyticsWeekly,
-  BlocklistEntry,
-  CheckoutRecoveryStatus,
-  CheckoutSession,
-  CheckoutSessionListParams,
-  CheckoutSessionListResponse,
-  ConfirmationAgentListResponse,
-  ConfirmationAttemptListParams,
-  ConfirmationAttemptListResponse,
-  FlaggedOrderListParams,
-  FlaggedOrderListResponse,
-  MediaListParams,
-  MediaListResponse,
-  RiskFlag,
-  UpdateWorkspaceSettingsPayload,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -301,6 +403,18 @@ interface RequestOptions {
   redirect?: RequestRedirect;
 }
 
+/** How long a courier's address tree is reused before it is fetched again. */
+const ADDRESS_TREE_TTL_MS = 10 * 60 * 1000;
+
+function findAreaNode(nodes: CarrierAreaNode[], id: string): CarrierAreaNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const below = node.children ? findAreaNode(node.children, id) : null;
+    if (below) return below;
+  }
+  return null;
+}
+
 function randomKey(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -314,6 +428,7 @@ export class ApiClient {
   private onSessionExpired?: () => void;
   private defaultHeaders: Record<string, string>;
   private refreshPromise: Promise<boolean> | null = null;
+  private addressTrees = new Map<string, { at: number; value: Promise<CarrierAddressTree> }>();
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -439,22 +554,78 @@ export class ApiClient {
   // Auth
   // ---------------------------------------------------------------------
 
+  /**
+   * Creates the account. While sign-up codes are on, the answer is a
+   * `VerificationChallenge` (no tokens) instead: confirm it with
+   * `confirmVerificationCode`.
+   */
   async register(payload: RegisterPayload) {
-    return this.request<{ user: AuthUser }>("/auth/register", {
+    return this.request<({ user: AuthUser } & Partial<AuthTokens>) | VerificationChallenge>("/auth/register", {
       method: "POST",
       body: payload,
       auth: false,
     });
   }
 
+  /**
+   * Signs in and keeps the tokens — unless the account still has to confirm
+   * a code, when the answer is a `VerificationChallenge` and nothing is kept.
+   */
   async login(payload: LoginPayload) {
-    const result = await this.request<AuthTokens & { user: AuthUser }>("/auth/login", {
+    const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge>("/auth/login", {
       method: "POST",
       body: payload,
       auth: false,
     });
+    if ("verificationRequired" in result) return result;
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
+  }
+
+  /** `GET /auth/signup-options` — public: whether a plan, the terms and a code are required. */
+  async getSignupOptions() {
+    return this.request<SignupOptions>("/auth/signup-options", { auth: false });
+  }
+
+  /** `GET /plans/public` — the plans on offer, in order (prices in minor units). */
+  async listPublicPlans() {
+    const { plans } = await this.request<{ plans: PublicPlan[] }>("/plans/public", { auth: false });
+    return plans;
+  }
+
+  /**
+   * A new sign-up code by email or SMS. 429 RESEND_TOO_SOON (with
+   * details.retryAfterSeconds) / VERIFICATION_LIMIT_REACHED, 422
+   * CHANNEL_NOT_AVAILABLE.
+   */
+  async sendVerificationCode(verificationToken: string, channel: VerificationChannel, locale?: "ar" | "en") {
+    return this.request<VerificationSent>("/auth/verify/send", {
+      method: "POST",
+      body: locale ? { channel, locale } : { channel },
+      headers: { Authorization: `Bearer ${verificationToken}` },
+      auth: false,
+    });
+  }
+
+  /**
+   * The code from the email or SMS: signs in on success (the tokens are kept).
+   * 422 INVALID_CODE (details.attemptsLeft) / CODE_EXPIRED / NO_ACTIVE_CODE,
+   * 429 TOO_MANY_ATTEMPTS, 401 VERIFICATION_TOKEN_INVALID.
+   */
+  async confirmVerificationCode(verificationToken: string, code: string) {
+    const result = await this.request<AuthTokens & { user: AuthUser }>("/auth/verify/confirm", {
+      method: "POST",
+      body: { code },
+      headers: { Authorization: `Bearer ${verificationToken}` },
+      auth: false,
+    });
+    this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    return result;
+  }
+
+  /** The plan an account made through Google chooses (with the terms, when required). */
+  async choosePlan(payload: { planId: string; billingCycle?: BillingCycle; acceptTerms?: boolean }) {
+    return this.request<{ user: AuthUser; needsPlan: boolean }>("/auth/me/plan", { method: "POST", body: payload });
   }
 
   /**
@@ -546,6 +717,37 @@ export class ApiClient {
     return user;
   }
 
+  /** `/auth/me` whole: the user, and whether it must still choose a plan. */
+  async meDetails() {
+    const body = await this.request<{ user: AuthUser; needsPlan?: boolean; suggestedUsername?: string }>("/auth/me");
+    return { user: body.user, needsPlan: Boolean(body.needsPlan), suggestedUsername: body.suggestedUsername ?? null };
+  }
+
+  /** A free username to offer an account that has none yet (made through Google); null when it has one. */
+  async getUsernameSuggestion() {
+    const body = await this.request<{ user: AuthUser; suggestedUsername?: string }>("/auth/me");
+    return body.suggestedUsername ?? null;
+  }
+
+  /** Public, and tightly rate limited (429) — call it debounced. */
+  async checkUsernameAvailable(username: string) {
+    return this.request<UsernameAvailability>(`/auth/username-available?u=${encodeURIComponent(username)}`, {
+      auth: false,
+    });
+  }
+
+  /**
+   * Choose or change one's username. The first choice is free; after that one
+   * change per 30 days (409 USERNAME_CHANGE_TOO_SOON with nextChangeAt).
+   */
+  async changeUsername(username: string) {
+    const { user } = await this.request<{ user: AuthUser }>("/auth/me/username", {
+      method: "PATCH",
+      body: { username },
+    });
+    return user;
+  }
+
   // ---------------------------------------------------------------------
   // Workspaces
   // ---------------------------------------------------------------------
@@ -559,12 +761,87 @@ export class ApiClient {
     return workspaces.map((entry) => ({ ...entry.workspace, role: entry.role?.key }));
   }
 
-  async createWorkspace(name: string) {
+  /**
+   * `referralCode` is an agent's code; an unusable one is a 422
+   * REFERRAL_CODE_INVALID. `plan` is one of the public plans, read while the
+   * server requires plans (422 PLAN_NOT_AVAILABLE / PLAN_REQUIRED); 403
+   * PLAN_LIMIT_REACHED past the owner's store or draft limit.
+   */
+  async createWorkspace(name: string, referralCode?: string, plan?: { planId: string; billingCycle?: BillingCycle }) {
     const { workspace } = await this.request<{ workspace: Workspace }>("/workspaces", {
       method: "POST",
-      body: { name },
+      body: { name, ...(referralCode ? { referralCode } : {}), ...(plan ? plan : {}) },
     });
     return workspace;
+  }
+
+  /** A draft store's free trial, from now. 409 TRIAL_NOT_AVAILABLE (details.reason) / NOT_A_DRAFT. */
+  async startTrial(workspaceId: string) {
+    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/start-trial`, { method: "POST" });
+  }
+
+  /** A draft store on a plan that costs nothing goes live. 409 PLAN_NOT_FREE. */
+  async activateFreePlan(workspaceId: string) {
+    return this.request<GoLiveResult>(`/workspaces/${workspaceId}/activate-free-plan`, { method: "POST" });
+  }
+
+  /** A short-lived X-Store-Preview token: the store as shoppers will see it, even while a draft. */
+  async createStorePreviewToken(workspaceId: string) {
+    return this.request<{ token: string; expiresAt: string }>(`/workspaces/${workspaceId}/store-preview-token`, {
+      method: "POST",
+    });
+  }
+
+  /** `GET /workspaces/:id/access` — restriction state and billing phase; any member. */
+  async getWorkspaceAccess(workspaceId: string): Promise<WorkspaceAccess> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/access`);
+    return unwrapObject<WorkspaceAccess>(body, "access");
+  }
+
+  /** Monthly or annual, from the next charge. 409 OPEN_CHARGE_EXISTS. */
+  async setWorkspaceBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing`, {
+      method: "PATCH",
+      body: { billingCycle },
+    });
+    return unwrapObject<WorkspaceBilling>(body, "billing");
+  }
+
+  /** `GET /workspaces/:id/billing` — needs billing.manage. */
+  async getWorkspaceBilling(workspaceId: string): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing`);
+    return unwrapObject<WorkspaceBilling>(body, "billing");
+  }
+
+  /**
+   * The Pay button: opens an online checkout for the subscription charge,
+   * priced on the server (201; 200 with `reused` for a second press within a
+   * minute). 404 ONLINE_BILLING_DISABLED, 503 ONLINE_BILLING_UNAVAILABLE,
+   * 409 ONLINE_PAYMENT_CURRENCY_UNSUPPORTED / PAYMENT_STARTING / PLAN_IS_FREE,
+   * 502 ONLINE_PAYMENT_START_FAILED.
+   */
+  async startOnlinePayment(workspaceId: string, lang: "ar" | "en"): Promise<{ payment: OnlinePayment; reused: boolean }> {
+    return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/payments`, {
+      method: "POST",
+      body: { lang },
+    });
+  }
+
+  /** An online payment's state; the server asks the gateway while it is in progress. */
+  async getOnlinePayment(workspaceId: string, paymentId: string): Promise<OnlinePaymentResult> {
+    return this.request<OnlinePaymentResult>(`/workspaces/${workspaceId}/billing/payments/${paymentId}`);
+  }
+
+  /**
+   * Attaches an agent's referral code to the subscription (201; 200 when it
+   * already was). 422 REFERRAL_CODE_INVALID, 409 REFERRAL_CODE_ALREADY_SET.
+   */
+  async attachReferralCode(workspaceId: string, code: string): Promise<WorkspaceBilling> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/billing/referral-code`, {
+      method: "POST",
+      body: { code },
+    });
+    return unwrapObject<WorkspaceBilling>(body, "billing");
   }
 
   /**
@@ -768,8 +1045,125 @@ export class ApiClient {
   }
 
   // ---------------------------------------------------------------------
+  // Support tickets (/workspaces/:workspaceId/support) — needs workspace.manage
+  // ---------------------------------------------------------------------
+
+  async listSupportTickets(workspaceId: string): Promise<SupportTicket[]> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets`);
+    return unwrapList<SupportTicket>(body, "tickets");
+  }
+
+  async openSupportTicket(workspaceId: string, payload: OpenSupportTicketPayload): Promise<SupportTicketThread> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      messages: unwrapList<SupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  async getSupportTicket(workspaceId: string, ticketId: string): Promise<SupportTicketThread> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets/${ticketId}`);
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      messages: unwrapList<SupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  /** 409 TICKET_CLOSED once the platform has closed the ticket. */
+  async replySupportTicket(
+    workspaceId: string,
+    ticketId: string,
+    text: string
+  ): Promise<{ ticket: SupportTicket; message: SupportTicketMessage }> {
+    const body = await this.request<unknown>(`/workspaces/${workspaceId}/support/tickets/${ticketId}/messages`, {
+      method: "POST",
+      body: { body: text },
+    });
+    return {
+      ticket: unwrapObject<SupportTicket>(body, "ticket"),
+      message: unwrapObject<SupportTicketMessage>(body, "message"),
+    };
+  }
+
+  // ---------------------------------------------------------------------
   // Platform admin
   // ---------------------------------------------------------------------
+
+  // --- Manual subscription and feature overrides (one store) ---------------
+
+  async adminGetManualSubscription(workspaceId: string) {
+    return this.request<AdminManualSubscription>(`/admin/workspaces/${workspaceId}/subscription`);
+  }
+
+  /**
+   * One manual action. `idempotencyKey` should be made once per dialog, so a
+   * double click replays the first result (200, replayed) instead of acting twice.
+   */
+  async adminManualSubscriptionAction(
+    workspaceId: string,
+    action: "activate" | "change-plan" | "extend" | "end",
+    body: Record<string, unknown>,
+    idempotencyKey?: string
+  ) {
+    return this.request<AdminManualActionResult>(`/admin/workspaces/${workspaceId}/subscription/${action}`, {
+      method: "POST",
+      body,
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    });
+  }
+
+  async adminListWorkspaceFeatures(workspaceId: string) {
+    return this.request<AdminWorkspaceFeatures>(`/admin/workspaces/${workspaceId}/features`);
+  }
+
+  async adminAddFeatureOverride(
+    workspaceId: string,
+    body: { featureKey: PlanFeatureKey; mode: "grant" | "deny"; expiresAt?: string | null; reason: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides`,
+      { method: "POST", body }
+    );
+    return override;
+  }
+
+  async adminUpdateFeatureOverride(
+    workspaceId: string,
+    overrideId: string,
+    body: { mode?: "grant" | "deny"; expiresAt?: string | null; reason?: string }
+  ) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}`,
+      { method: "PATCH", body }
+    );
+    return override;
+  }
+
+  async adminRevokeFeatureOverride(workspaceId: string, overrideId: string, reason?: string) {
+    const { override } = await this.request<{ override: AdminFeatureOverride }>(
+      `/admin/workspaces/${workspaceId}/feature-overrides/${overrideId}/revoke`,
+      { method: "POST", body: { reason: reason ?? null } }
+    );
+    return override;
+  }
+
+  /** GET /admin/users — one search over name, username, email, id and the user's stores. */
+  async adminSearchUsers(params: { q?: string; page?: number; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.page) query.set("page", String(params.page));
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    return this.request<AdminUserSearchPage>(`/admin/users${qs ? `?${qs}` : ""}`);
+  }
+
+  async adminGetUser(userId: string) {
+    const { user } = await this.request<{ user: AdminUserDetail }>(`/admin/users/${userId}`);
+    return user;
+  }
 
   async adminListWorkspaces() {
     // The endpoint wraps the rows: { workspaces: [...] }. Unwrap here so every
@@ -997,6 +1391,375 @@ export class ApiClient {
     return unwrapObject<AdminOverview>(body, "overview");
   }
 
+  // --- Platform risk ---
+
+  /**
+   * `GET /admin/risk/blocklist` → `{ entries, total, limit, offset }`, newest
+   * first, filtered and paged server-side.
+   */
+  async adminListBlocklist(params: AdminBlocklistParams = {}): Promise<AdminBlocklistPage> {
+    const body = await this.request<unknown>(`/admin/risk/blocklist${buildQuery({ ...params })}`);
+    return {
+      entries: unwrapList<AdminBlocklistEntry>(body, "entries"),
+      total: numberField(body, "total") ?? 0,
+      limit: numberField(body, "limit") ?? params.limit ?? 50,
+      offset: numberField(body, "offset") ?? params.offset ?? 0,
+    };
+  }
+
+  /**
+   * `POST /admin/risk/blocklist` — 201 for a new entry, 200 when the
+   * identifier was already listed and only its reason/expiry changed.
+   */
+  async adminBlockIdentifier(payload: AdminBlockPayload): Promise<AdminBlockResult> {
+    const body = await this.request<unknown>("/admin/risk/blocklist", { method: "POST", body: payload });
+    return {
+      entry: unwrapObject<AdminBlocklistEntry>(body, "entry"),
+      created: readFlag(body, "created"),
+    };
+  }
+
+  async adminUpdateBlocklistEntry(entryId: string, payload: AdminBlocklistUpdate) {
+    const body = await this.request<unknown>(`/admin/risk/blocklist/${entryId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminBlocklistEntry>(body, "entry");
+  }
+
+  async adminDeleteBlocklistEntry(entryId: string) {
+    return this.request<SuccessResponse>(`/admin/risk/blocklist/${entryId}`, { method: "DELETE" });
+  }
+
+  // --- Carriers and payment gateways (read-only) ---
+
+  /** `GET /admin/carriers` → `{ carriers, environment }`. */
+  async adminListCarriers(): Promise<AdminCarrierRegistry> {
+    const body = await this.request<AdminCarrierRegistry>("/admin/carriers");
+    return { ...body, carriers: unwrapList(body, "carriers") };
+  }
+
+  /** `POST /admin/carriers/:code/health-check` — reachability only, no merchant account. */
+  async adminCheckCarrier(code: string): Promise<AdminProviderCheck> {
+    const body = await this.request<unknown>(`/admin/carriers/${encodeURIComponent(code)}/health-check`, {
+      method: "POST",
+    });
+    return unwrapObject<AdminProviderCheck>(body, "check");
+  }
+
+  /** `GET /admin/payment-gateways` → `{ gateways, environment }`. */
+  async adminListPaymentGateways(): Promise<AdminPaymentGatewayRegistry> {
+    const body = await this.request<AdminPaymentGatewayRegistry>("/admin/payment-gateways");
+    return { ...body, gateways: unwrapList(body, "gateways") };
+  }
+
+  async adminCheckPaymentGateway(code: string): Promise<AdminProviderCheck> {
+    const body = await this.request<unknown>(
+      `/admin/payment-gateways/${encodeURIComponent(code)}/health-check`,
+      { method: "POST" }
+    );
+    return unwrapObject<AdminProviderCheck>(body, "check");
+  }
+
+  // --- Templates ---
+
+  /** `GET /admin/templates` → `{ templates }`, newest first, drafts included. */
+  async adminListTemplates(params: { kind?: AdminTemplateKind } = {}): Promise<AdminTemplate[]> {
+    const body = await this.request<unknown>(`/admin/templates${buildQuery({ ...params })}`);
+    return unwrapList<AdminTemplate>(body, "templates");
+  }
+
+  /** `GET /admin/templates/:id` → `{ template, versions }`. */
+  async adminGetTemplate(templateId: string): Promise<AdminTemplateDetail> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}`);
+    return {
+      template: unwrapObject<AdminTemplate>(body, "template"),
+      versions: unwrapList<AdminTemplateVersionSummary>(body, "versions"),
+    };
+  }
+
+  /** Create (no `id`, POST) or partial update (`id`, PATCH). */
+  async adminSaveTemplate(payload: AdminTemplateInput): Promise<AdminTemplate> {
+    const { id, ...body } = payload;
+    const res = await this.request<unknown>(id ? `/admin/templates/${id}` : "/admin/templates", {
+      method: id ? "PATCH" : "POST",
+      body,
+    });
+    return unwrapObject<AdminTemplate>(res, "template");
+  }
+
+  async adminDeleteTemplate(templateId: string) {
+    return this.request<SuccessResponse>(`/admin/templates/${templateId}`, { method: "DELETE" });
+  }
+
+  /** `POST /admin/templates/:id/publish` | `/unpublish` — 409 TEMPLATE_HAS_NO_ACTIVE_VERSION. */
+  async adminSetTemplatePublished(templateId: string, published: boolean): Promise<AdminTemplate> {
+    const body = await this.request<unknown>(
+      `/admin/templates/${templateId}/${published ? "publish" : "unpublish"}`,
+      { method: "POST" }
+    );
+    return unwrapObject<AdminTemplate>(body, "template");
+  }
+
+  async adminGetTemplateVersion(templateId: string, versionId: string): Promise<AdminTemplateVersion> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions/${versionId}`);
+    return unwrapObject<AdminTemplateVersion>(body, "version");
+  }
+
+  /** `POST /admin/templates/:id/versions` — the next version number, validated like a website copy. */
+  async adminCreateTemplateVersion(
+    templateId: string,
+    payload: AdminTemplateVersionInput
+  ): Promise<AdminTemplateVersionSummary> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions`, {
+      method: "POST",
+      body: payload,
+    });
+    return unwrapObject<AdminTemplateVersionSummary>(body, "version");
+  }
+
+  /** 409 TEMPLATE_NEEDS_ACTIVE_VERSION for the last active version of a published template. */
+  async adminSetTemplateVersionActive(
+    templateId: string,
+    versionId: string,
+    isActive: boolean
+  ): Promise<AdminTemplateVersionSummary> {
+    const body = await this.request<unknown>(`/admin/templates/${templateId}/versions/${versionId}`, {
+      method: "PATCH",
+      body: { isActive },
+    });
+    return unwrapObject<AdminTemplateVersionSummary>(body, "version");
+  }
+
+  // --- Support tickets (platform side) ---
+
+  /** `GET /admin/support/tickets` → `{ tickets, total, limit, offset, counts }`. */
+  async adminListSupportTickets(params: AdminSupportTicketParams = {}): Promise<AdminSupportTicketPage> {
+    const body = await this.request<AdminSupportTicketPage>(`/admin/support/tickets${buildQuery({ ...params })}`);
+    return { ...body, tickets: unwrapList<AdminSupportTicket>(body, "tickets") };
+  }
+
+  async adminGetSupportTicket(ticketId: string): Promise<AdminSupportTicketThread> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}`);
+    return {
+      ticket: unwrapObject<AdminSupportTicket>(body, "ticket"),
+      messages: unwrapList<AdminSupportTicketMessage>(body, "messages"),
+    };
+  }
+
+  /** Default next status is `pending` (waiting on the merchant). 409 TICKET_CLOSED. */
+  async adminReplySupportTicket(
+    ticketId: string,
+    payload: { body: string; status?: Exclude<SupportTicketStatus, "closed"> }
+  ): Promise<{ ticket: AdminSupportTicket; message: AdminSupportTicketMessage }> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}/messages`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      ticket: unwrapObject<AdminSupportTicket>(body, "ticket"),
+      message: unwrapObject<AdminSupportTicketMessage>(body, "message"),
+    };
+  }
+
+  async adminUpdateSupportTicket(
+    ticketId: string,
+    payload: { status?: SupportTicketStatus; priority?: SupportTicketPriority }
+  ): Promise<AdminSupportTicket> {
+    const body = await this.request<unknown>(`/admin/support/tickets/${ticketId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminSupportTicket>(body, "ticket");
+  }
+
+  // --- Platform users (roles and permissions) ---
+
+  /** `GET /admin/roles` → the role templates and every permission key. */
+  async adminListRoles(): Promise<AdminRolesResponse> {
+    const body = await this.request<AdminRolesResponse>("/admin/roles");
+    return { roles: unwrapList(body, "roles"), permissions: unwrapList(body, "permissions") };
+  }
+
+  /** `GET /admin/admins` → `{ admins }`, oldest first. */
+  async adminListAdmins(): Promise<AdminPlatformAdmin[]> {
+    const body = await this.request<unknown>("/admin/admins");
+    return unwrapList<AdminPlatformAdmin>(body, "admins");
+  }
+
+  /**
+   * `POST /admin/admins` — gives an existing account a role (201; 200 if it
+   * already had that role). 403 CREATOR_REQUIRED / PERMISSION_NOT_HELD,
+   * 409 ALREADY_PLATFORM_USER / USER_NOT_ACTIVE, 404 USER_NOT_FOUND.
+   */
+  async adminGrantAdmin(payload: AdminGrantPayload): Promise<AdminGrantResult> {
+    const body = await this.request<unknown>("/admin/admins", { method: "POST", body: payload });
+    return { admin: unwrapObject<AdminPlatformAdmin>(body, "admin"), granted: readFlag(body, "granted") };
+  }
+
+  /**
+   * `PATCH /admin/admins/:userId` — a new role (its default set, unless
+   * `permissions` is given) and/or a new permission set.
+   * 409 CANNOT_EDIT_SELF / LAST_CREATOR, 403 CREATOR_REQUIRED.
+   */
+  async adminUpdateAdmin(
+    userId: string,
+    payload: { role?: string; permissions?: string[] }
+  ): Promise<AdminPlatformAdmin> {
+    const body = await this.request<unknown>(`/admin/admins/${userId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminPlatformAdmin>(body, "admin");
+  }
+
+  /** `DELETE /admin/admins/:userId` — 409 CANNOT_REVOKE_SELF / LAST_CREATOR. */
+  async adminRevokeAdmin(userId: string) {
+    return this.request<SuccessResponse>(`/admin/admins/${userId}`, { method: "DELETE" });
+  }
+
+  // --- Agents, referral codes, commission ledger ---
+
+  async adminListAgents(): Promise<AdminAgentList> {
+    const body = await this.request<AdminAgentList>("/admin/agents");
+    return { ...body, agents: unwrapList(body, "agents") };
+  }
+
+  async adminGetAgent(agentId: string): Promise<AdminAgentDetail> {
+    const body = await this.request<AdminAgentDetail>(`/admin/agents/${agentId}`);
+    return { ...body, agent: unwrapObject(body, "agent"), merchants: unwrapList(body, "merchants") };
+  }
+
+  /** Gives an existing account the agent role and, optionally, its first code. 409 ALREADY_AGENT. */
+  async adminCreateAgent(payload: {
+    email: string;
+    firstCode?: AdminReferralCodeInput & { code: string };
+  }): Promise<AdminCreateAgentResult> {
+    return this.request<AdminCreateAgentResult>("/admin/agents", { method: "POST", body: payload });
+  }
+
+  /** 409 REFERRAL_CODE_TAKEN / NOT_AN_AGENT. */
+  async adminCreateReferralCode(
+    agentId: string,
+    payload: AdminReferralCodeInput & { code: string }
+  ): Promise<AdminReferralCode> {
+    const body = await this.request<unknown>(`/admin/agents/${agentId}/codes`, { method: "POST", body: payload });
+    return unwrapObject<AdminReferralCode>(body, "code");
+  }
+
+  /** The code string itself cannot change. */
+  async adminUpdateReferralCode(codeId: string, payload: AdminReferralCodeInput): Promise<AdminReferralCode> {
+    const body = await this.request<unknown>(`/admin/referral-codes/${codeId}`, { method: "PATCH", body: payload });
+    return unwrapObject<AdminReferralCode>(body, "code");
+  }
+
+  async adminListCommissions(params: AdminCommissionParams = {}): Promise<AdminCommissionPage> {
+    const body = await this.request<AdminCommissionPage>(`/admin/commissions${buildQuery({ ...params })}`);
+    return { ...body, commissions: unwrapList(body, "commissions"), totals: unwrapList(body, "totals") };
+  }
+
+  /** The ledger's one write. 409 COMMISSION_ALREADY_MARKED_PAID. */
+  async adminMarkCommissionPaid(commissionId: string, note?: string): Promise<AdminCommission> {
+    const body = await this.request<unknown>(`/admin/commissions/${commissionId}/mark-paid`, {
+      method: "POST",
+      body: note ? { note } : {},
+    });
+    return unwrapObject<AdminCommission>(body, "commission");
+  }
+
+  // --- Subscription charges ---
+
+  /** `GET /admin/workspaces/:id/charges` — subscription, next-charge price and every charge. */
+  async adminListCharges(workspaceId: string): Promise<AdminWorkspaceCharges> {
+    const body = await this.request<AdminWorkspaceCharges>(`/admin/workspaces/${workspaceId}/charges`);
+    return { ...body, subscription: unwrapObject(body, "subscription"), charges: unwrapList(body, "charges") };
+  }
+
+  /** Prices the next charge (201), or returns the open one (200). 409 PLAN_IS_FREE / NO_PLAN. */
+  async adminCreateCharge(workspaceId: string): Promise<{ charge: AdminCharge; created: boolean }> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/charges`, { method: "POST" });
+    return { charge: unwrapObject<AdminCharge>(body, "charge"), created: readFlag(body, "created") };
+  }
+
+  /**
+   * Records a payment received outside any gateway, through the same path as
+   * the gateway webhook. 409 CHARGE_ALREADY_PAID.
+   */
+  async adminRecordPayment(
+    chargeId: string,
+    payload: { amountReceived: number; note?: string; paidAt?: string }
+  ): Promise<AdminRecordPaymentResult> {
+    const body = await this.request<unknown>(`/admin/charges/${chargeId}/record-payment`, {
+      method: "POST",
+      body: payload,
+    });
+    return { charge: unwrapObject<AdminCharge>(body, "charge"), referralCodeLapsed: readFlag(body, "referralCodeLapsed") };
+  }
+
+  /**
+   * Undoes a payment recorded by hand: back to pending, ledger row voided.
+   * 409 CHARGE_NOT_PAID / PAYMENT_CONFIRMED_BY_GATEWAY / OPEN_CHARGE_EXISTS.
+   */
+  async adminReversePayment(chargeId: string, payload: { reason?: string } = {}): Promise<AdminReversePaymentResult> {
+    const body = await this.request<AdminReversePaymentResult>(`/admin/charges/${chargeId}/reverse-payment`, {
+      method: "POST",
+      body: payload,
+    });
+    return {
+      charge: unwrapObject<AdminCharge>(body, "charge"),
+      voidedCommission: body.voidedCommission ?? null,
+      subscriptionStatus: body.subscriptionStatus,
+    };
+  }
+
+  /** Monthly or annual from the next charge (subscriptions.manage). 409 OPEN_CHARGE_EXISTS. */
+  async adminSetBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<AdminWorkspaceCharges> {
+    const body = await this.request<AdminWorkspaceCharges>(`/admin/workspaces/${workspaceId}/subscription`, {
+      method: "PATCH",
+      body: { billingCycle },
+    });
+    return { ...body, charges: unwrapList(body, "charges"), specialTerms: unwrapList(body, "specialTerms") };
+  }
+
+  /** Free months or a price override (subscriptions.manage). 409 SPECIAL_PRICE_ACTIVE / SUBSCRIPTION_CANCELLED. */
+  async adminGrantSpecialTerms(
+    workspaceId: string,
+    payload: AdminSpecialTermsInput
+  ): Promise<AdminWorkspaceCharges & { term: AdminSpecialTerm }> {
+    const body = await this.request<AdminWorkspaceCharges & { term: AdminSpecialTerm }>(
+      `/admin/workspaces/${workspaceId}/special-terms`,
+      { method: "POST", body: payload }
+    );
+    return { ...body, term: unwrapObject(body, "term"), charges: unwrapList(body, "charges"), specialTerms: unwrapList(body, "specialTerms") };
+  }
+
+  async adminGetStoreAccess(workspaceId: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/access`);
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** workspaces.manage; a reason is required. 409 WORKSPACE_ALREADY_SUSPENDED. */
+  async adminSuspendWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/suspend`, { method: "POST", body: { reason } });
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** workspaces.manage; a reason is required. 409 WORKSPACE_NOT_SUSPENDED. */
+  async adminReactivateWorkspace(workspaceId: string, reason: string): Promise<AdminStoreAccess> {
+    const body = await this.request<unknown>(`/admin/workspaces/${workspaceId}/reactivate`, { method: "POST", body: { reason } });
+    return unwrapObject<AdminStoreAccess>(body, "access");
+  }
+
+  /** An agent's own codes and referred merchants (referrals.view_own). */
+  async adminGetMyReferrals(): Promise<AdminAgentDetail> {
+    const body = await this.request<AdminAgentDetail>("/admin/my/referrals");
+    return { ...body, agent: unwrapObject(body, "agent"), merchants: unwrapList(body, "merchants") };
+  }
+
+  async adminListMyCommissions(
+    params: Omit<AdminCommissionParams, "agentId" | "workspaceId"> = {}
+  ): Promise<AdminCommissionPage> {
+    const body = await this.request<AdminCommissionPage>(`/admin/my/commissions${buildQuery({ ...params })}`);
+    return { ...body, commissions: unwrapList(body, "commissions"), totals: unwrapList(body, "totals") };
+  }
+
+  /** `GET /admin/risk/signals` — one identifier type per call, paged server-side. */
+  async adminListRiskSignals(params: AdminRiskSignalParams = {}): Promise<AdminRiskSignalPage> {
+    const body = await this.request<AdminRiskSignalPage>(`/admin/risk/signals${buildQuery({ ...params })}`);
+    return { ...body, signals: unwrapList(body, "signals") };
+  }
+
   // ---------------------------------------------------------------------
   // Catalog — products, variants, offers, collections
   // (/workspaces/:workspaceId/catalog/...)
@@ -1007,8 +1770,12 @@ export class ApiClient {
   }
 
   async listProducts(workspaceId: string, params: ProductListParams = {}) {
+    const { status, ...rest } = params;
     return this.request<ProductListResponse>(
-      `${this.catalogBase(workspaceId)}/products${buildQuery({ ...params })}`
+      `${this.catalogBase(workspaceId)}/products${buildQuery({
+        ...rest,
+        status: Array.isArray(status) ? status.join(",") || undefined : status,
+      })}`
     );
   }
 
@@ -1020,11 +1787,10 @@ export class ApiClient {
   }
 
   async createProduct(workspaceId: string, payload: CreateProductPayload) {
-    const { product } = await this.request<{ product: Product }>(
-      `${this.catalogBase(workspaceId)}/products`,
-      { method: "POST", body: payload }
-    );
-    return product;
+    return this.request<CreateProductResponse>(`${this.catalogBase(workspaceId)}/products`, {
+      method: "POST",
+      body: payload,
+    });
   }
 
   async updateProduct(workspaceId: string, productId: string, payload: UpdateProductPayload) {
@@ -1035,9 +1801,33 @@ export class ApiClient {
     return product;
   }
 
+  /** Archives the product (and cascades to its active variants/offers). */
   async deleteProduct(workspaceId: string, productId: string) {
     return this.request<ArchivedResponse>(
       `${this.catalogBase(workspaceId)}/products/${productId}`,
+      { method: "DELETE" }
+    );
+  }
+
+  /**
+   * Brings an archived product back as a DRAFT, reviving only the variants and
+   * offers its archive took down. 409 PRODUCT_NOT_ARCHIVED otherwise.
+   */
+  async restoreProduct(workspaceId: string, productId: string) {
+    const { product } = await this.request<{ product: Product }>(
+      `${this.catalogBase(workspaceId)}/products/${productId}/restore`,
+      { method: "POST" }
+    );
+    return product;
+  }
+
+  /**
+   * Hard delete. 409 PRODUCT_HAS_ORDERS (archive instead) or
+   * PRODUCT_IN_FUNNEL (details[0].funnelIds).
+   */
+  async deleteProductPermanently(workspaceId: string, productId: string) {
+    return this.request<DeletedResponse>(
+      `${this.catalogBase(workspaceId)}/products/${productId}/permanent`,
       { method: "DELETE" }
     );
   }
@@ -1075,6 +1865,18 @@ export class ApiClient {
   async listOffers(workspaceId: string, productId: string) {
     const { offers } = await this.request<{ offers: Offer[] }>(
       `${this.catalogBase(workspaceId)}/products/${productId}/offers`
+    );
+    return offers;
+  }
+
+  /** Active offers across the store (product name, then offer name) — for pickers. */
+  async listWorkspaceOffers(workspaceId: string, params: { q?: string; limit?: number } = {}) {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.limit) query.set("limit", String(params.limit));
+    const qs = query.toString();
+    const { offers } = await this.request<{ offers: WorkspaceOfferOption[] }>(
+      `${this.catalogBase(workspaceId)}/offers${qs ? `?${qs}` : ""}`
     );
     return offers;
   }
@@ -1143,6 +1945,30 @@ export class ApiClient {
     return collection;
   }
 
+  /** Rearranges the tree: each listed collection's parent and position, checked as a whole. */
+  async reorderCollections(workspaceId: string, items: CollectionReorderItem[]) {
+    return this.request<{ changed: number }>(`${this.catalogBase(workspaceId)}/collections/reorder`, {
+      method: "POST",
+      body: { items },
+    });
+  }
+
+  /** The products of one collection, first to last; any left out keep their order after these. */
+  async reorderCollectionProducts(workspaceId: string, collectionId: string, productIds: string[]) {
+    return this.request<{ productIds: string[] }>(
+      `${this.catalogBase(workspaceId)}/collections/${collectionId}/products/order`,
+      { method: "PUT", body: { productIds } }
+    );
+  }
+
+  /** Product option names the store's variants use ("Size", "Color"). */
+  async listCatalogOptionNames(workspaceId: string) {
+    const { options } = await this.request<{ options: CatalogOptionName[] }>(
+      `${this.catalogBase(workspaceId)}/option-names`
+    );
+    return options;
+  }
+
   async deleteCollection(workspaceId: string, collectionId: string) {
     return this.request<DeletedResponse>(
       `${this.catalogBase(workspaceId)}/collections/${collectionId}`,
@@ -1179,11 +2005,15 @@ export class ApiClient {
     );
   }
 
-  async getOrderCounts(workspaceId: string, params: OrderListFilters = {}) {
-    const { counts } = await this.request<{ counts: OrderCounts }>(
-      `${this.ordersBase(workspaceId)}/counts${buildQuery({ ...params })}`
+  /**
+   * Tab counts for the orders screen. Takes the same q/from/to as the list
+   * (never `stage` — this is the answer for every stage at once).
+   */
+  async getOrderPipeline(workspaceId: string, params: OrderSearchParams = {}, signal?: AbortSignal) {
+    return this.request<OrderPipeline>(
+      `${this.ordersBase(workspaceId)}/pipeline${buildQuery({ ...params })}`,
+      { signal }
     );
-    return counts;
   }
 
   async getOrder(workspaceId: string, orderId: string) {
@@ -1202,10 +2032,22 @@ export class ApiClient {
     return order;
   }
 
-  async cancelOrder(workspaceId: string, orderId: string, reason: string) {
+  /**
+   * Cancels the order and its uncollected courier bookings. 409
+   * CARRIER_MANUAL_CANCEL_REQUIRED (details.shipments) when a booking's
+   * courier has no cancel API: nothing changed; repeat with
+   * `acknowledgeManualCancel: true` once the merchant cancelled it there.
+   */
+  async cancelOrder(
+    workspaceId: string,
+    orderId: string,
+    reason: string,
+    options: ManualCancelAcknowledgement = {}
+  ) {
+    const body = options.acknowledgeManualCancel ? { reason, acknowledgeManualCancel: true } : { reason };
     const { order } = await this.request<{ order: Order }>(
       `${this.ordersBase(workspaceId)}/${orderId}/cancel`,
-      { method: "POST", body: { reason } }
+      { method: "POST", body }
     );
     return order;
   }
@@ -1225,6 +2067,13 @@ export class ApiClient {
     return shipments;
   }
 
+  /**
+   * Manual shipment, or a booking with a connected courier. Courier-specific
+   * failures: 422 CARRIER_ADDRESS_UNMATCHED (pick the address, resend with
+   * `carrierAddress`), CARRIER_BOOKING_NOT_SAVED (424, 502 on older servers:
+   * the courier has the booking but it wasn't recorded — cancel it in the
+   * courier's dashboard). Match these by code, never by status.
+   */
   async createShipment(workspaceId: string, orderId: string, payload: CreateShipmentPayload) {
     const { shipment } = await this.request<{ shipment: Shipment }>(
       `${this.ordersBase(workspaceId)}/${orderId}/shipments`,
@@ -1233,6 +2082,10 @@ export class ApiClient {
     return shipment;
   }
 
+  /**
+   * Status `cancelled` on a booking whose courier has no cancel API needs
+   * `acknowledgeManualCancel` (409 CARRIER_MANUAL_CANCEL_REQUIRED without it).
+   */
   async updateShipment(
     workspaceId: string,
     orderId: string,
@@ -1246,27 +2099,25 @@ export class ApiClient {
     return shipment;
   }
 
-  private bostaBase(workspaceId: string) {
-    return `/workspaces/${workspaceId}/bosta`;
-  }
-
   /**
-   * Bosta's own cities, for the staff-side district picker on one shipment
-   * (see createShipment's `bostaDistrictId`). Resolves to `[]` rather than
-   * throwing when Bosta isn't connected for this store — callers should treat
-   * an empty list as "don't show the picker", not as an error.
+   * Pull a courier-booked shipment's status from the courier now. 409
+   * SHIPMENT_NOT_CARRIER_MANAGED for manual shipments, 409
+   * CARRIER_NOT_CONNECTED once the courier was disconnected.
    */
-  async listBostaCities(workspaceId: string) {
-    const { cities } = await this.request<{ cities: BostaCity[] }>(`${this.bostaBase(workspaceId)}/cities`);
-    return cities;
+  async syncShipment(workspaceId: string, orderId: string, shipmentId: string) {
+    return this.request<ShipmentSyncResult>(
+      `${this.ordersBase(workspaceId)}/${orderId}/shipments/${shipmentId}/sync`,
+      { method: "POST" }
+    );
   }
 
-  /** Same "quietly empty" contract as listBostaCities above. */
-  async listBostaDistricts(workspaceId: string, cityId: string) {
-    const { districts } = await this.request<{ districts: BostaDistrict[] }>(
-      `${this.bostaBase(workspaceId)}/cities/${cityId}/districts`
+  /** The courier's own printable label (AWB) for a courier-booked shipment, as a PDF Blob. */
+  async getShipmentLabel(workspaceId: string, orderId: string, shipmentId: string): Promise<Blob> {
+    const res = await this.rawFetch(
+      `${this.ordersBase(workspaceId)}/${orderId}/shipments/${shipmentId}/label`,
+      { headers: { Accept: "application/pdf" } }
     );
-    return districts;
+    return res.blob();
   }
 
   async listOrderReturns(workspaceId: string, orderId: string) {
@@ -1330,28 +2181,74 @@ export class ApiClient {
 
   // ---------------------------------------------------------------------
   // Confirmation queue (auth, /workspaces/:workspaceId/confirmation-tasks/...)
-  // `listConfirmationQueue` returns the tasks still needing a call; `claim`
-  // locks one to the current user; `recordConfirmationOutcome` closes it.
-  // Every response is unwrapped to the row(s) the caller wants.
+  // `listConfirmationQueue` pages one tab; `claim` locks a task to the
+  // current user (again: extends the lock); `release` hands it back;
+  // `recordConfirmationOutcome` records a call; `correctConfirmationOutcome`
+  // changes a finished outcome (orders.manage). `confirmOrder` is the order
+  // page's Confirm, under the orders routes.
   // ---------------------------------------------------------------------
 
   private confirmationTasksBase(workspaceId: string) {
     return `/workspaces/${workspaceId}/confirmation-tasks`;
   }
 
-  async listConfirmationQueue(
-    workspaceId: string,
-    params: { status?: ConfirmationTaskStatus; limit?: number } = {}
-  ) {
-    const { tasks } = await this.request<{ tasks: ConfirmationTask[] }>(
+  async listConfirmationQueue(workspaceId: string, params: ConfirmationQueueParams = {}) {
+    return this.request<ConfirmationQueuePage>(
       `${this.confirmationTasksBase(workspaceId)}${buildQuery({ ...params })}`
     );
-    return tasks;
+  }
+
+  async getConfirmationQueueCounts(workspaceId: string) {
+    const { counts } = await this.request<{ counts: ConfirmationQueueCounts }>(
+      `${this.confirmationTasksBase(workspaceId)}/counts`
+    );
+    return counts;
+  }
+
+  /** Members a task may be assigned to (orders.manage). */
+  async listConfirmationAssignees(workspaceId: string) {
+    const { assignees } = await this.request<{ assignees: ConfirmationAssignee[] }>(
+      `${this.confirmationTasksBase(workspaceId)}/assignees`
+    );
+    return assignees;
+  }
+
+  /** Hands one open task to an agent (orders.manage). */
+  async assignConfirmationTask(workspaceId: string, taskId: string, userId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/assign`,
+      { method: "POST", body: { userId } }
+    );
+    return task;
+  }
+
+  async unassignConfirmationTask(workspaceId: string, taskId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/unassign`,
+      { method: "POST", body: {} }
+    );
+    return task;
+  }
+
+  /** One agent for up to 200 tasks; `userId: null` unassigns them. Done tasks are skipped. */
+  async assignConfirmationTasks(workspaceId: string, taskIds: string[], userId: string | null) {
+    return this.request<AssignConfirmationTasksResult>(`${this.confirmationTasksBase(workspaceId)}/assign`, {
+      method: "POST",
+      body: { taskIds, userId },
+    });
   }
 
   async claimConfirmationTask(workspaceId: string, taskId: string) {
     const { task } = await this.request<{ task: ConfirmationTask }>(
       `${this.confirmationTasksBase(workspaceId)}/${taskId}/claim`,
+      { method: "POST", body: {} }
+    );
+    return task;
+  }
+
+  async releaseConfirmationTask(workspaceId: string, taskId: string) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/release`,
       { method: "POST", body: {} }
     );
     return task;
@@ -1367,6 +2264,26 @@ export class ApiClient {
       { method: "POST", body: payload }
     );
     return task;
+  }
+
+  async correctConfirmationOutcome(
+    workspaceId: string,
+    taskId: string,
+    payload: CorrectConfirmationOutcomePayload
+  ) {
+    const { task } = await this.request<{ task: ConfirmationTask }>(
+      `${this.confirmationTasksBase(workspaceId)}/${taskId}/correction`,
+      { method: "POST", body: payload }
+    );
+    return task;
+  }
+
+  /** Confirms a COD order from the order page; resolves to the refreshed order detail. */
+  async confirmOrder(workspaceId: string, orderId: string, notes?: string, channel?: ConfirmationChannel) {
+    return this.request<{ order: Order; task: ConfirmationTask }>(
+      `${this.ordersBase(workspaceId)}/${orderId}/confirmation`,
+      { method: "POST", body: { ...(notes ? { notes } : {}), ...(channel ? { channel } : {}) } }
+    );
   }
 
   // ---------------------------------------------------------------------
@@ -1486,6 +2403,54 @@ export class ApiClient {
     });
   }
 
+  /** Tiers, the zone × tier price grid, the pricing mode and the "no weight" count, in one read. */
+  async getWeightTiers(workspaceId: string) {
+    return this.request<WeightTierSettings>(`${this.shippingBase(workspaceId)}/weight-tiers`);
+  }
+
+  /** Replaces the whole set, in order. An entry with `id` keeps that tier; a left-out tier is deleted with its prices. */
+  async replaceWeightTiers(workspaceId: string, payload: ReplaceWeightTiersPayload) {
+    const { tiers } = await this.request<{ tiers: WeightTier[] }>(`${this.shippingBase(workspaceId)}/weight-tiers`, {
+      method: "PUT",
+      body: payload,
+    });
+    return tiers;
+  }
+
+  async getZoneTierPrices(workspaceId: string, zoneId: string) {
+    return this.request<{ zoneId: string; prices: Array<{ tierId: string; amount: number }> }>(
+      `${this.shippingBase(workspaceId)}/zones/${zoneId}/tier-prices`
+    );
+  }
+
+  /** Replaces the zone's prices; a tier left out has no price in this zone. */
+  async replaceZoneTierPrices(workspaceId: string, zoneId: string, prices: Array<{ tierId: string; amount: number }>) {
+    return this.request<{ zoneId: string; prices: Array<{ tierId: string; amount: number }> }>(
+      `${this.shippingBase(workspaceId)}/zones/${zoneId}/tier-prices`,
+      { method: "PUT", body: { prices } }
+    );
+  }
+
+  /** The store's default rate, governorate prices, free-shipping threshold and default courier. */
+  async getShippingSettings(workspaceId: string) {
+    return this.request<ShippingSettingsResponse>(`/workspaces/${workspaceId}/shipping/settings`);
+  }
+
+  async updateShippingSettings(workspaceId: string, payload: UpdateShippingSettingsPayload) {
+    const { settings } = await this.request<{ settings: ShippingSettings }>(
+      `/workspaces/${workspaceId}/shipping/settings`,
+      { method: "PATCH", body: payload }
+    );
+    return settings;
+  }
+
+  async setShippingPricingMode(workspaceId: string, payload: SetPricingModePayload) {
+    return this.request<SetPricingModeResult>(`${this.shippingBase(workspaceId)}/pricing-mode`, {
+      method: "POST",
+      body: payload,
+    });
+  }
+
   // ---------------------------------------------------------------------
   // Tax rates (auth, /workspaces/:workspaceId/tax-rates/...)
   // `rateBasisPoints` is 100ths of a percent (1000 = 10%). Hard deletes.
@@ -1587,6 +2552,248 @@ export class ApiClient {
     return address;
   }
 
+  // ---------------------------------------------------------------------
+  // Fraud (/workspaces/:workspaceId/fraud/...). The rules themselves are
+  // workspace settings: read `settings.fraud_rules` from listWorkspaces(),
+  // write with updateWorkspace() (needs workspace.manage).
+  // ---------------------------------------------------------------------
+
+  private fraudBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/fraud`;
+  }
+
+  /** Orders carrying a risk flag, newest first. A stale `before` is a 422 on "before". */
+  async listFlaggedOrders(workspaceId: string, params: FlaggedOrderListParams = {}) {
+    return this.request<FlaggedOrderListResponse>(
+      `${this.fraudBase(workspaceId)}/flagged-orders${buildQuery({ ...params })}`
+    );
+  }
+
+  /** Clears the order's risk flags and nothing else. Idempotent. */
+  async approveFlaggedOrder(workspaceId: string, orderId: string) {
+    const { order } = await this.request<{ order: { id: string; riskFlags: string[] } }>(
+      `${this.fraudBase(workspaceId)}/flagged-orders/${orderId}/approve`,
+      { method: "POST" }
+    );
+    return order;
+  }
+
+  /**
+   * Every blacklisted customer (capped at 500 by the server, not paged).
+   * Unblocking is setCustomerBlacklist(…, { isBlacklisted: false }).
+   */
+  async listBlocklist(workspaceId: string) {
+    const body = await this.request<unknown>(`${this.fraudBase(workspaceId)}/blocklist`);
+    return unwrapList<BlocklistEntry>(body, "entries");
+  }
+
+  /**
+   * Blocks a phone, whether or not it has ever ordered. Re-blocking only
+   * updates the reason (`created: false`). 422 INVALID_PHONE for a phone that
+   * doesn't normalize.
+   */
+  async blockPhone(workspaceId: string, payload: BlockPhonePayload): Promise<BlockPhoneResult> {
+    const res = await this.rawFetch(`${this.fraudBase(workspaceId)}/blocklist`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const { entry } = (await res.json()) as { entry: BlockPhoneResult["entry"] };
+    return { created: res.status === 201, entry };
+  }
+
+  // ---------------------------------------------------------------------
+  // Abandoned checkouts (/workspaces/:workspaceId/checkout-sessions)
+  // ---------------------------------------------------------------------
+
+  async listCheckoutSessions(workspaceId: string, params: CheckoutSessionListParams = {}) {
+    return this.request<CheckoutSessionListResponse>(
+      `/workspaces/${workspaceId}/checkout-sessions${buildQuery({ ...params })}`
+    );
+  }
+
+  /**
+   * Record the merchant's follow-up. "contacted" stamps contactedAt the first
+   * time; an order from that shopper later turns "contacted" into
+   * "recovered" on its own.
+   */
+  async updateCheckoutSessionRecovery(
+    workspaceId: string,
+    sessionId: string,
+    recoveryStatus: CheckoutRecoveryStatus
+  ) {
+    const { session } = await this.request<{ session: CheckoutSession }>(
+      `/workspaces/${workspaceId}/checkout-sessions/${sessionId}`,
+      { method: "PATCH", body: { recoveryStatus } }
+    );
+    return session;
+  }
+
+  // ---------------------------------------------------------------------
+  // Courier integrations (/workspaces/:workspaceId/carriers)
+  // Reads: shipping.manage OR orders.manage. Connect/disconnect: shipping.manage.
+  // ---------------------------------------------------------------------
+
+  private carriersBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/carriers`;
+  }
+
+  /** Always 200 — check `configured` before offering to connect anything. */
+  async listCarriers(workspaceId: string) {
+    return this.request<CarrierList>(this.carriersBase(workspaceId));
+  }
+
+  /**
+   * Connect, or change the settings of an existing connection (omit
+   * `credentials` to keep the stored key — it is re-verified either way).
+   * Nothing is stored when verification fails.
+   */
+  async connectCarrier(workspaceId: string, code: string, payload: ConnectCarrierPayload) {
+    return this.request<ConnectCarrierResult>(`${this.carriersBase(workspaceId)}/${code}`, {
+      method: "PUT",
+      body: payload,
+    });
+  }
+
+  async disconnectCarrier(workspaceId: string, code: string) {
+    return this.request<{ disconnected: boolean }>(`${this.carriersBase(workspaceId)}/${code}`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
+   * The courier's city → district list (cached ~1h server-side). Pass
+   * `cityId` for just that city — 404 NOT_FOUND if it isn't in the list.
+   * City/district couriers only; see `listCarrierAddressTree` for the rest.
+   */
+  async listCarrierCities(workspaceId: string, code: string, cityId?: string) {
+    const body = await this.request<unknown>(
+      `${this.carriersBase(workspaceId)}/${code}/cities${buildQuery({ cityId })}`
+    );
+    return unwrapList<CarrierCity>(body, "cities");
+  }
+
+  /**
+   * A courier's whole address tree, for couriers whose levels are not
+   * city/district: GET /carriers/:code/cities answers `{ levels, cities }`
+   * with each node's `children`. The server has no per-parent endpoint, so
+   * the tree is fetched once and kept here briefly (the server caches it
+   * ~1h); `listCarrierAreas` walks it.
+   */
+  async listCarrierAddressTree(workspaceId: string, code: string): Promise<CarrierAddressTree> {
+    const key = `${workspaceId}:${code}`;
+    const hit = this.addressTrees.get(key);
+    if (hit && Date.now() - hit.at < ADDRESS_TREE_TTL_MS) return hit.value;
+    const pending = this.request<{ levels?: string[]; cities?: CarrierAreaNode[] }>(
+      `${this.carriersBase(workspaceId)}/${code}/cities`
+    ).then((body) => {
+      const nodes = unwrapList<CarrierAreaNode>(body, "cities");
+      return { levels: Array.isArray(body.levels) ? body.levels : [], nodes };
+    });
+    this.addressTrees.set(key, { at: Date.now(), value: pending });
+    // A failure is not remembered: the next call asks again.
+    pending.catch(() => {
+      if (this.addressTrees.get(key)?.value === pending) this.addressTrees.delete(key);
+    });
+    return pending;
+  }
+
+  /**
+   * One level of a courier's address tree: the top level without
+   * `parentId`, else the children of that node (by id, at any depth).
+   * [] for a leaf; 404-style ApiError NOT_FOUND for an id not in the tree.
+   */
+  async listCarrierAreas(workspaceId: string, code: string, parentId?: string): Promise<CarrierAreaNode[]> {
+    const { nodes } = await this.listCarrierAddressTree(workspaceId, code);
+    if (!parentId) return nodes;
+    const parent = findAreaNode(nodes, parentId);
+    if (!parent) throw new ApiError("Area not found in the courier's list", 404, "NOT_FOUND");
+    return parent.children ?? [];
+  }
+
+  /** Forgets the cached address trees (after a reconnect, or for tests). */
+  clearCarrierAddressTrees() {
+    this.addressTrees.clear();
+  }
+
+  /** Attempts, gateway events, refunds and what can still be refunded (orders.view). */
+  async getPaymentTimeline(workspaceId: string, orderId: string) {
+    const { timeline } = await this.request<{ timeline: PaymentTimeline }>(
+      `/workspaces/${workspaceId}/orders/${orderId}/payment-timeline`
+    );
+    return timeline;
+  }
+
+  /** "Sync payment status": ask the gateway now (orders.manage). */
+  async syncOrderPayments(workspaceId: string, orderId: string) {
+    const { timeline } = await this.request<{ timeline: PaymentTimeline }>(
+      `/workspaces/${workspaceId}/orders/${orderId}/payments/sync`,
+      { method: "POST", body: {} }
+    );
+    return timeline;
+  }
+
+  /**
+   * Refund (refunds.manage). Gateway-paid orders: `status` may come back
+   * 'pending' (the gateway has not finished) or 'failed' (with failureReason);
+   * `paymentId` picks which payment when there are several.
+   */
+  async refundOrder(workspaceId: string, orderId: string, body: { amount: number; reason?: string; paymentId?: string }) {
+    const { refund } = await this.request<{ refund: Refund }>(`/workspaces/${workspaceId}/orders/${orderId}/refunds`, {
+      method: "POST",
+      body,
+    });
+    return refund;
+  }
+
+  // ---------------------------------------------------------------------
+  // Online payments: merchant settings (owner / workspace manager only)
+  // ---------------------------------------------------------------------
+
+  private paymentsBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/payments`;
+  }
+
+  /** Always 200: check `configured` before offering to connect anything. */
+  async listPaymentGateways(workspaceId: string) {
+    return this.request<PaymentGatewayList>(`${this.paymentsBase(workspaceId)}/gateways`);
+  }
+
+  /** Connect, or update settings (omit `credentials` to keep the stored keys). Keys are never returned. */
+  async connectPaymentGateway(workspaceId: string, code: string, payload: ConnectPaymentGatewayPayload) {
+    return this.request<PaymentGatewayInfo>(`${this.paymentsBase(workspaceId)}/gateways/${code}`, {
+      method: "PUT",
+      body: payload,
+    });
+  }
+
+  /** 409 GATEWAY_HAS_PENDING_PAYMENTS while an order still waits on a payment through it. */
+  async disconnectPaymentGateway(workspaceId: string, code: string) {
+    return this.request<{ disconnected: boolean }>(`${this.paymentsBase(workspaceId)}/gateways/${code}`, {
+      method: "DELETE",
+    });
+  }
+
+  async listPaymentMethods(workspaceId: string) {
+    return this.request<PaymentMethodList>(`${this.paymentsBase(workspaceId)}/methods`);
+  }
+
+  /** The full ordered list. 422 when no available method would stay on. */
+  async updatePaymentMethods(workspaceId: string, methods: Array<{ id: string; enabled: boolean }>) {
+    return this.request<PaymentMethodList>(`${this.paymentsBase(workspaceId)}/methods`, {
+      method: "PUT",
+      body: { methods },
+    });
+  }
+
+  /** A 2-hour token that shows test-mode methods on this store's own storefront. */
+  async createPaymentPreviewToken(workspaceId: string) {
+    return this.request<{ token: string; expiresAt: string }>(`${this.paymentsBase(workspaceId)}/preview-token`, {
+      method: "POST",
+      body: {},
+    });
+  }
+
   /**
    * Fetch a path with the Bearer token attached, one transparent retry after a
    * silent refresh on 401, and the standard error envelope turned into ApiError.
@@ -1665,6 +2872,35 @@ export class ApiClient {
     return this.request<StorefrontProductList>(`/store/${workspaceId}/products${qs ? `?${qs}` : ""}`, {
       auth: false,
     });
+  }
+
+  /**
+   * The searchable, filterable listing. Sends the new parameters, so the
+   * backend answers with page / total / facets rather than a cursor.
+   */
+  async searchStorefrontProducts(workspaceId: string, params: StorefrontListingParams = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (params.collection) query.set("collection", params.collection);
+    for (const tag of params.tags ?? []) query.append("tag", tag);
+    if (params.minPrice !== undefined) query.set("minPrice", String(params.minPrice));
+    if (params.maxPrice !== undefined) query.set("maxPrice", String(params.maxPrice));
+    for (const [name, values] of Object.entries(params.options ?? {})) {
+      for (const value of values) query.append(`option[${name}]`, value);
+    }
+    query.set("sort", params.sort ?? "newest");
+    query.set("page", String(params.page ?? 1));
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.facets) query.set("facets", "true");
+    return this.request<StorefrontListing>(`/store/${workspaceId}/products?${query.toString()}`, { auth: false });
+  }
+
+  /** Suggestions for the search box, while the shopper types. */
+  async suggestStorefrontProducts(workspaceId: string, q: string, init?: { signal?: AbortSignal }) {
+    return this.request<StorefrontSuggestions>(
+      `/store/${workspaceId}/products/suggest?q=${encodeURIComponent(q)}`,
+      { auth: false, ...(init?.signal ? { signal: init.signal } : {}) }
+    );
   }
 
   async getStorefrontProduct(workspaceId: string, idOrSlug: string) {
@@ -1770,17 +3006,43 @@ export class ApiClient {
     });
   }
 
+  /**
+   * `customizations` answers the product's custom fields; a photo answer is
+   * the id of an upload this visitor made (uploadCustomerPhoto), so send the
+   * same `visitorId` with both.
+   */
   async addCartItem(
     workspaceId: string,
     cartToken: string,
-    payload: { variantId: string; offerId?: string; quantity?: number }
+    payload: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput },
+    opts: { visitorId?: string } = {}
   ) {
     return this.request<Cart>(`/store/${workspaceId}/cart/items`, {
       method: "POST",
       body: payload,
       auth: false,
-      headers: { "X-Cart-Token": cartToken },
+      headers: { "X-Cart-Token": cartToken, ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}) },
     });
+  }
+
+  /**
+   * A shopper's photo for a product's image field. The server re-encodes it
+   * (upright, no metadata, ≤ 5 MB) and keeps it for 48 hours unless an order
+   * takes it. 413 over 15 MB, 415 for anything but JPEG / PNG / WebP, 422 when
+   * it cannot be read, 429 when too many are waiting or too many were sent.
+   */
+  async uploadCustomerPhoto(workspaceId: string, file: File | Blob, opts: { visitorId: string; productId?: string }) {
+    const form = new FormData();
+    form.append("file", file, file instanceof File ? file.name : "photo");
+    if (opts.productId) form.append("productId", opts.productId);
+    // Multipart, so the raw path; no Content-Type here — the browser adds the boundary.
+    const res = await this.rawFetch(`/store/${workspaceId}/uploads`, {
+      method: "POST",
+      body: form,
+      headers: { "X-Visitor-Id": opts.visitorId },
+    });
+    const { upload } = (await res.json()) as { upload: CustomerUpload };
+    return upload;
   }
 
   async updateCartItem(
@@ -1810,15 +3072,195 @@ export class ApiClient {
    * cart's lines; omit it and put a single `item` in the payload for a "Buy
    * Now". The server replies with `{ order }` — unwrapped here like createOrder.
    */
-  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string) {
+  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string, opts: { visitorId?: string } = {}) {
     const { order } = await this.request<{ order: Order }>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,
       auth: false,
       idempotent: true,
-      headers: cartToken ? { "X-Cart-Token": cartToken } : {},
+      headers: {
+        ...(cartToken ? { "X-Cart-Token": cartToken } : {}),
+        // Whose uploaded photos the order may take (custom fields).
+        ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}),
+      },
     });
     return order;
+  }
+
+  /**
+   * Checkout, full answer. For an online method the body also carries
+   * `payment` (send the shopper to `payment.redirectUrl`) and `paymentToken`
+   * (keep it: it is the only key to the order's payment endpoints).
+   * `previewToken` (X-Store-Preview) unlocks test-mode methods.
+   */
+  async placeCheckout(
+    workspaceId: string,
+    payload: CheckoutPayload,
+    opts: { cartToken?: string; previewToken?: string; visitorId?: string } = {}
+  ) {
+    const headers: Record<string, string> = {};
+    if (opts.cartToken) headers["X-Cart-Token"] = opts.cartToken;
+    if (opts.previewToken) headers["X-Store-Preview"] = opts.previewToken;
+    // Whose uploaded photos the order may take (custom fields).
+    if (opts.visitorId) headers["X-Visitor-Id"] = opts.visitorId;
+    return this.request<CheckoutResult>(`/store/${workspaceId}/checkout`, {
+      method: "POST",
+      body: payload,
+      auth: false,
+      idempotent: true,
+      headers,
+    });
+  }
+
+  /** The methods the checkout offers (always at least cash on delivery). */
+  async getStorefrontPaymentMethods(workspaceId: string, previewToken?: string) {
+    return this.request<{ methods: StorefrontPaymentMethod[]; preview: boolean }>(
+      `/store/${workspaceId}/payment-methods`,
+      { auth: false, headers: previewToken ? { "X-Store-Preview": previewToken } : {} }
+    );
+  }
+
+  private shopperPaymentHeaders(paymentToken: string, previewToken?: string) {
+    const headers: Record<string, string> = { "X-Payment-Token": paymentToken };
+    if (previewToken) headers["X-Store-Preview"] = previewToken;
+    return headers;
+  }
+
+  /** An unpaid online order, for the shopper. `refresh` asks the gateway (throttled server-side). */
+  async getOrderPayment(
+    workspaceId: string,
+    orderId: string,
+    paymentToken: string,
+    opts: { refresh?: boolean; previewToken?: string } = {}
+  ) {
+    const { payment } = await this.request<{ payment: ShopperPaymentStatus }>(
+      `/store/${workspaceId}/orders/${orderId}/payment${opts.refresh ? "?refresh=1" : ""}`,
+      { auth: false, headers: this.shopperPaymentHeaders(paymentToken, opts.previewToken) }
+    );
+    return payment;
+  }
+
+  /** The shopper is back from the gateway: forward its query string, signed or not. */
+  async returnFromPayment(
+    workspaceId: string,
+    orderId: string,
+    paymentToken: string,
+    query: Record<string, string>,
+    previewToken?: string
+  ) {
+    const { payment } = await this.request<{ payment: ShopperPaymentStatus }>(
+      `/store/${workspaceId}/orders/${orderId}/payment/return`,
+      { method: "POST", body: { query }, auth: false, headers: this.shopperPaymentHeaders(paymentToken, previewToken) }
+    );
+    return payment;
+  }
+
+  async retryOrderPayment(
+    workspaceId: string,
+    orderId: string,
+    paymentToken: string,
+    body: { paymentMethod?: "card" | "wallet"; paymentProvider?: string; returnUrl?: string },
+    previewToken?: string
+  ) {
+    const { payment } = await this.request<{ payment: ShopperPaymentStatus }>(
+      `/store/${workspaceId}/orders/${orderId}/payment/retry`,
+      { method: "POST", body, auth: false, headers: this.shopperPaymentHeaders(paymentToken, previewToken) }
+    );
+    return payment;
+  }
+
+  async switchOrderToCod(workspaceId: string, orderId: string, paymentToken: string, previewToken?: string) {
+    const { payment } = await this.request<{ payment: ShopperPaymentStatus }>(
+      `/store/${workspaceId}/orders/${orderId}/payment/switch-to-cod`,
+      { method: "POST", body: {}, auth: false, headers: this.shopperPaymentHeaders(paymentToken, previewToken) }
+    );
+    return payment;
+  }
+
+  /**
+   * The shipping line a checkout would get (no auth). Send `items`, or omit
+   * them and pass `cartToken` to quote that cart. Read-only.
+   */
+  async getShippingQuote(workspaceId: string, payload: ShippingQuotePayload, cartToken?: string) {
+    const { quote } = await this.request<{ quote: ShippingQuote }>(`/store/${workspaceId}/shipping-quote`, {
+      method: "POST",
+      body: payload,
+      auth: false,
+      headers: cartToken ? { "X-Cart-Token": cartToken } : {},
+    });
+    return quote;
+  }
+
+  /**
+   * Checkout-form autosave for abandoned-checkout recovery (no auth). An
+   * upsert keyed on `visitorId`, so replays are harmless. Returns the session
+   * id to send as `checkoutSessionId` with the order. Callers treat a failure
+   * as silent — it must never block the checkout.
+   */
+  async captureCheckoutSession(workspaceId: string, payload: CaptureCheckoutSessionPayload) {
+    const { session } = await this.request<{ session: { id: string } }>(
+      `/store/${workspaceId}/checkout-sessions`,
+      { method: "POST", body: payload, auth: false }
+    );
+    return session;
+  }
+
+  // ---------------------------------------------------------------------
+  // Store analytics — /workspaces/:ws/analytics/* (analytics.view)
+  // Computed on every call (orders, funnel sessions and the storefront's
+  // own events), so a wide range is a slower request, not a cached one.
+  // ---------------------------------------------------------------------
+
+  async getAnalyticsSummary(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    const { summary } = await this.request<{ summary: AnalyticsSummary }>(
+      `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
+    );
+    return summary;
+  }
+
+  // Funnel analytics — every funnel's sessions, orders and revenue for a
+  // range, and one funnel's step-by-step drop-off, sources and daily series.
+  async getFunnelAnalytics(workspaceId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsOverview>(
+      `/workspaces/${workspaceId}/analytics/funnels${buildQuery({ ...params })}`
+    );
+  }
+
+  async getFunnelAnalyticsDetail(workspaceId: string, funnelId: string, params: AnalyticsSummaryParams = {}) {
+    return this.request<FunnelAnalyticsDetail>(
+      `/workspaces/${workspaceId}/analytics/funnels/${funnelId}${buildQuery({ ...params })}`
+    );
+  }
+
+  // Web analytics — Umami-style stats over the store's own page views.
+  private webAnalyticsBase(workspaceId: string) {
+    return `/workspaces/${workspaceId}/analytics/web`;
+  }
+
+  async getWebAnalyticsStats(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsStats>(`${this.webAnalyticsBase(workspaceId)}/stats${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsSeries(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsSeries>(`${this.webAnalyticsBase(workspaceId)}/series${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsMetrics(
+    workspaceId: string,
+    type: WebAnalyticsMetricType,
+    params: WebAnalyticsRangeParams & { limit?: number } = {}
+  ) {
+    return this.request<WebAnalyticsMetrics>(
+      `${this.webAnalyticsBase(workspaceId)}/metrics${buildQuery({ ...params, type })}`
+    );
+  }
+
+  async getWebAnalyticsWeekly(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
+    return this.request<WebAnalyticsWeekly>(`${this.webAnalyticsBase(workspaceId)}/weekly${buildQuery({ ...params })}`);
+  }
+
+  async getWebAnalyticsRealtime(workspaceId: string, params: { tz?: string } = {}) {
+    return this.request<WebAnalyticsRealtime>(`${this.webAnalyticsBase(workspaceId)}/realtime${buildQuery({ ...params })}`);
   }
 
   // ---------------------------------------------------------------------
@@ -1842,6 +3284,11 @@ export class ApiClient {
     );
     return template;
   }
+
+  // =====================================================================
+  // Merchant operations added on top of upstream: COD settlements, WhatsApp
+  // Cloud API, order automations, browser ad pixels, media library list.
+  // =====================================================================
 
   // ---------------------------------------------------------------------
   // COD settlements — /workspaces/:ws/settlements
@@ -2048,35 +3495,9 @@ export class ApiClient {
   }
 
   // ---------------------------------------------------------------------
-  // Abandoned checkouts — /workspaces/:ws/checkout-sessions
-  // Reads need orders:view, the recovery PATCH needs orders:manage. The
-  // default view is `abandoned`; pass `all` to see in-progress carts too.
-  // ---------------------------------------------------------------------
-
-  async listCheckoutSessions(workspaceId: string, params: CheckoutSessionListParams = {}) {
-    return this.request<CheckoutSessionListResponse>(
-      `/workspaces/${workspaceId}/checkout-sessions${buildQuery({ ...params })}`
-    );
-  }
-
-  /** Setting `contacted` also stamps `contactedAt` server-side. */
-  async setCheckoutSessionRecovery(
-    workspaceId: string,
-    sessionId: string,
-    recoveryStatus: CheckoutRecoveryStatus
-  ) {
-    const { session } = await this.request<{ session: CheckoutSession }>(
-      `/workspaces/${workspaceId}/checkout-sessions/${sessionId}`,
-      { method: "PATCH", body: { recoveryStatus } }
-    );
-    return session;
-  }
-
-  // ---------------------------------------------------------------------
-  // Marketing & fraud settings — the `tracking_pixels` / `fraud_rules` blobs
-  // inside the workspace's settings. Read them off `workspace.settings`;
-  // this writes them back through the same PATCH the shipping knobs use, so
-  // the response is the whole refreshed workspace.
+  // Browser ad pixels — the `tracking_pixels` blob inside the workspace's
+  // settings. Read it off `workspace.settings`; this writes it back through
+  // PATCH /workspaces/:id, so the response is the whole refreshed workspace.
   // ---------------------------------------------------------------------
 
   /** Partial merge: omitted keys keep their stored value, `null` clears one. */
@@ -2086,106 +3507,6 @@ export class ApiClient {
       { method: "PATCH", body: { settings } }
     );
     return workspace;
-  }
-
-  // ---------------------------------------------------------------------
-  // Fraud protection — /workspaces/:ws/fraud
-  // Flagged orders need orders:view / orders:manage; the blocklist needs
-  // customers:view / customers:manage, so a 403 can hit one half only.
-  // ---------------------------------------------------------------------
-
-  /** Open flagged orders by default — `includeResolved` adds the rest. */
-  async listFlaggedOrders(workspaceId: string, params: FlaggedOrderListParams = {}) {
-    return this.request<FlaggedOrderListResponse>(
-      `/workspaces/${workspaceId}/fraud/flagged-orders${buildQuery({ ...params })}`
-    );
-  }
-
-  /** Clears every risk flag on the order. Audited, and not reversible. */
-  async approveFlaggedOrder(workspaceId: string, orderId: string) {
-    const { order } = await this.request<{ order: { id: string; riskFlags: RiskFlag[] } }>(
-      `/workspaces/${workspaceId}/fraud/flagged-orders/${orderId}/approve`,
-      { method: "POST" }
-    );
-    return order;
-  }
-
-  /** The blacklisted customers, newest change first. */
-  async listBlocklist(workspaceId: string) {
-    const { entries } = await this.request<{ entries: BlocklistEntry[] }>(
-      `/workspaces/${workspaceId}/fraud/blocklist`
-    );
-    return entries;
-  }
-
-  /**
-   * Blocks a phone even if it never ordered — the customer record is created
-   * on the spot. Unblocking goes through `setCustomerBlacklist` with
-   * `{ isBlacklisted: false }`, since that is a customer-level change.
-   */
-  async addToBlocklist(workspaceId: string, payload: AddToBlocklistPayload) {
-    const { entry } = await this.request<{
-      entry: { customerId: string; phone: string | null; reason: string | null };
-    }>(`/workspaces/${workspaceId}/fraud/blocklist`, { method: "POST", body: payload });
-    return entry;
-  }
-
-  // ---------------------------------------------------------------------
-  // Store analytics — /workspaces/:ws/analytics/summary
-  // Needs analytics:view. Computed from orders on every call, so a wide
-  // range is a slow request rather than a cached one.
-  // ---------------------------------------------------------------------
-
-  async getAnalyticsSummary(workspaceId: string, params: AnalyticsSummaryParams = {}) {
-    const { summary } = await this.request<{ summary: AnalyticsSummary }>(
-      `/workspaces/${workspaceId}/analytics/summary${buildQuery({ ...params })}`
-    );
-    return summary;
-  }
-
-  // Funnel analytics — every funnel's sessions, orders and revenue for a
-  // range, and one funnel's step-by-step drop-off, sources and daily series.
-  async getFunnelAnalytics(workspaceId: string, params: AnalyticsSummaryParams = {}) {
-    return this.request<FunnelAnalyticsOverview>(
-      `/workspaces/${workspaceId}/analytics/funnels${buildQuery({ ...params })}`
-    );
-  }
-
-  // Web analytics — Umami-style stats over the store's own page views.
-  private webAnalyticsBase(workspaceId: string) {
-    return `/workspaces/${workspaceId}/analytics/web`;
-  }
-
-  async getWebAnalyticsStats(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
-    return this.request<WebAnalyticsStats>(`${this.webAnalyticsBase(workspaceId)}/stats${buildQuery({ ...params })}`);
-  }
-
-  async getWebAnalyticsSeries(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
-    return this.request<WebAnalyticsSeries>(`${this.webAnalyticsBase(workspaceId)}/series${buildQuery({ ...params })}`);
-  }
-
-  async getWebAnalyticsMetrics(
-    workspaceId: string,
-    type: WebAnalyticsMetricType,
-    params: WebAnalyticsRangeParams & { limit?: number } = {}
-  ) {
-    return this.request<WebAnalyticsMetrics>(
-      `${this.webAnalyticsBase(workspaceId)}/metrics${buildQuery({ ...params, type })}`
-    );
-  }
-
-  async getWebAnalyticsWeekly(workspaceId: string, params: WebAnalyticsRangeParams = {}) {
-    return this.request<WebAnalyticsWeekly>(`${this.webAnalyticsBase(workspaceId)}/weekly${buildQuery({ ...params })}`);
-  }
-
-  async getWebAnalyticsRealtime(workspaceId: string, params: { tz?: string } = {}) {
-    return this.request<WebAnalyticsRealtime>(`${this.webAnalyticsBase(workspaceId)}/realtime${buildQuery({ ...params })}`);
-  }
-
-  async getFunnelAnalyticsDetail(workspaceId: string, funnelId: string, params: AnalyticsSummaryParams = {}) {
-    return this.request<FunnelAnalyticsDetail>(
-      `/workspaces/${workspaceId}/analytics/funnels/${funnelId}${buildQuery({ ...params })}`
-    );
   }
 
   // ---------------------------------------------------------------------
@@ -2201,91 +3522,11 @@ export class ApiClient {
     );
   }
 
-  /**
-   * Removes the library entry only — the stored file is left in place because
-   * a product or a page may still be pointing at its URL.
-   */
+  /** Removes the asset from the library. */
   async deleteMedia(workspaceId: string, mediaId: string) {
     return this.request<{ deleted: boolean; id: string }>(
       `/workspaces/${workspaceId}/media/${mediaId}`,
       { method: "DELETE" }
     );
-  }
-
-  // ---------------------------------------------------------------------
-  // Call centre history — /workspaces/:ws/confirmation-tasks/...
-  // Same permission as the queue itself (orders:confirm).
-  // ---------------------------------------------------------------------
-
-  /** Every confirmation attempt with its order and agent, newest first. */
-  async listConfirmationAttempts(
-    workspaceId: string,
-    params: ConfirmationAttemptListParams = {}
-  ) {
-    return this.request<ConfirmationAttemptListResponse>(
-      `${this.confirmationTasksBase(workspaceId)}/attempts${buildQuery({ ...params })}`
-    );
-  }
-
-  /**
-   * Team members who may confirm orders, with their activity over the last
-   * `days` days (1–366, default 30) and whatever they hold right now.
-   */
-  async listConfirmationAgents(workspaceId: string, params: { days?: number } = {}) {
-    return this.request<ConfirmationAgentListResponse>(
-      `${this.confirmationTasksBase(workspaceId)}/agents${buildQuery({ ...params })}`
-    );
-  }
-
-  // ---------------------------------------------------------------------
-  // Public storefront — shipping quote and online payment (no auth). Shapes
-  // mirror src/modules/storefront and src/modules/payments/paymob* on the
-  // API; nothing here is wrapped, the bodies are returned as they arrive.
-  // ---------------------------------------------------------------------
-
-  /**
-   * What the shipping engine would charge for a destination, before an order
-   * exists: the same calculation checkout runs, so the checkout page can show
-   * the fee as soon as the governorate is chosen. `region` is the province
-   * string the checkout payload sends. `amount` and `subtotal` are integer
-   * minor units.
-   */
-  async quoteStorefrontShipping(
-    workspaceId: string,
-    params: { country?: string; region?: string; subtotal?: number; quantity?: number; weightGrams?: number } = {}
-  ) {
-    const { quote } = await this.request<{
-      quote: { amount: number; currency: string; freeShippingThreshold: number | null };
-    }>(`/store/${workspaceId}/shipping/quote${buildQuery({ ...params })}`, { auth: false });
-    return quote;
-  }
-
-  /**
-   * Whether this store takes online payment through Paymob, and which methods
-   * are wired up. `connected: false` (with both methods false) when the
-   * merchant has not connected Paymob — the storefront then shows nothing
-   * about paying online.
-   */
-  async getStorefrontPaymentOptions(workspaceId: string) {
-    return this.request<{ paymob: { connected: boolean; card: boolean; wallet: boolean } }>(
-      `/store/${workspaceId}/payment-options`,
-      { auth: false }
-    );
-  }
-
-  /**
-   * Opens a Paymob payment session for an order placed with an online
-   * `paymentMethod` (card / wallet) and returns the hosted checkout URL to
-   * send the shopper to. Each call opens a fresh session, so a shopper who
-   * abandoned the payment page can simply ask again. 422 for a COD order or
-   * when Paymob is not connected; 409 when the order is already paid.
-   */
-  async payStorefrontOrder(workspaceId: string, orderId: string) {
-    return this.request<{
-      payment: { id: string; status: string; amount: number; currency: string };
-      method: "card" | "wallet";
-      checkoutUrl: string;
-      expiresInSeconds: number | null;
-    }>(`/store/${workspaceId}/orders/${orderId}/pay`, { method: "POST", body: {}, auth: false });
   }
 }

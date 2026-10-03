@@ -1,32 +1,40 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type HTMLAttributes } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-  ApiError,
-  funnelsAdvance,
-  funnelsGetSessionStep,
-  funnelsRuntimeErrorKind,
+  isApiErrorCode,
+  funnelRuntimeAdvance,
+  funnelRuntimeGetStep,
   parseMoney,
-  type FunnelOutcomeType,
-  type FunnelPublicOfferDto,
+  type FunnelRuntimeOffer,
+  type FunnelRuntimeOutcomeType,
   type FunnelStepTypeDto,
+  type StorefrontOrderBump,
   type StorefrontProduct,
 } from "@store-builder/api-client";
+import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
-import { BoxIcon, CashIcon, CheckIcon } from "@/components/Icons";
-import { OrderTicket } from "@/components/immersive/OrderTicket";
+import { BoxIcon, CashIcon } from "@/components/Icons";
+import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
-import { btnMetalLg, btnSecondary, card, container, input, label as labelClass, skeleton } from "@/components/ui";
+import { btnPrimaryLg, btnSecondary, card, container, input, label as labelClass, skeleton } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getOrderSnapshot, saveOrderSnapshot, snapshotFromOrder } from "@/lib/commerce";
+import {
+  getOrderSnapshot,
+  mergeIntoOrderSnapshot,
+  orderBumpOf,
+  saveOrderSnapshot,
+  snapshotFromOrder,
+  type OrderBumpOffer,
+} from "@/lib/commerce";
+import { funnelErrorKind, isOutOfStock } from "@/lib/funnelErrors";
 import {
   rememberFollowOn,
   rememberPlacedOrder,
   useFollowOnOrders,
-  useHydrated,
   usePlacedOrder,
 } from "@/lib/funnelSession";
 import {
@@ -38,26 +46,29 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { orderErrorMessage, placeCodOrder } from "@/lib/placeOrder";
+import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
+import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
+import { useIsClient } from "@/lib/useIsClient";
+import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 
 /**
- * The step chrome of a running funnel: what the shopper *does* on a step,
- * drawn under the page the merchant built for it (rendered by the server page
- * with PageRenderer).
+ * What the shopper *does* on a running funnel's step, drawn under the page the
+ * merchant built for it (rendered by the server page with PageRenderer).
  *
  * The backend routes a funnel on step-level outcomes, not on page elements —
- * POST …/advance with `clicked_through`, `completed_checkout`, `accepted_offer`
- * or `declined_offer` — so each step type gets its own island here:
+ * POST …/advance with `clicked_through`, `completed_checkout`,
+ * `accepted_offer` or `declined_offer` — so each step type gets its own
+ * island here:
  *
  *   landing / sales / opt_in / custom → one "Continue" (clicked_through)
  *   checkout                          → the COD order form, then completed_checkout
  *   upsell / downsell                 → "Yes, add it" / "No thanks"
- *   thank_you                         → the confirmation, no advance
+ *   thank_you, or a finished session  → the confirmation, no advance
  *
  * After an advance the page is refreshed in place: the URL is the session's,
  * and the server reads its new current step.
@@ -65,68 +76,124 @@ import { useCatalog } from "@/lib/useCatalog";
 
 /**
  * The id of the step's action island. The step page hands the renderer
- * `/f/<funnel>/<session>#<this>` as the funnel's next href, so "order now"
- * on the merchant's page scrolls to the real Continue / order form / offer.
+ * `/f/<funnel>/<session>#<this>` as the funnel's next href, so "order now" on
+ * the merchant's page scrolls to the real Continue / order form / offer.
  */
 export const FUNNEL_ACTIONS_ID = "funnel-actions";
 
-/** The action island's section: anchored for the page's own CTAs, with room under the sticky masthead. */
+/** The action island: anchored for the page's own CTAs, clear of the sticky masthead. */
 const island = `${container} scroll-mt-24`;
 
 // --- advancing ---------------------------------------------------------------
 
+/**
+ * Reports the step's outcome. Every advance names the step it came from
+ * (`fromStepKey`), so a double tap, a stale tab or a retry after a lost
+ * response can't answer the *next* step: the server refuses it with
+ * STEP_MISMATCH, and this re-reads where the session is and refreshes onto it.
+ */
 function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { t } = useStore();
-  const [pending, setPending] = useState<FunnelOutcomeType | null>(null);
+  const [pending, setPending] = useState<FunnelRuntimeOutcomeType | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A ref as well as state: two taps in one frame must not both get through.
   const busy = useRef(false);
-  // Set when an advance failed without an answer (network): it may still
-  // have landed. The API applies an outcome to whatever step the session is on
-  // *now*, so a blind retry could answer the next step — an accepted upsell
-  // becoming the downsell's too. Check where the session is first.
-  const uncertain = useRef(false);
 
-  async function advance(type: FunnelOutcomeType, orderId?: string) {
+  function release(message: string | null) {
+    busy.current = false;
+    setPending(null);
+    setError(message);
+  }
+
+  /**
+   * Where is the session now? A different step (or a finished journey) is
+   * refreshed onto — the island stays pending, since that render replaces it.
+   * The same step means the failure was about this step's own action, and
+   * `sameStep` says what to tell the shopper.
+   */
+  async function resync(sameStep: string) {
+    try {
+      const now = await funnelRuntimeGetStep(createStorefrontApiClient(), workspaceId, funnelId, sessionId);
+      if (!now.done && now.session.currentStepKey === stepKey) {
+        release(sameStep);
+        return;
+      }
+      router.refresh();
+    } catch (err) {
+      const kind = funnelErrorKind(err);
+      if (kind === "notFound") {
+        // The session (or the funnel's publication) is gone: start over from
+        // the entry, which resumes or shows "not available".
+        router.replace(storeHref(basePath, `/f/${funnelId}`));
+      } else if (kind === "paused") {
+        router.refresh();
+      } else {
+        release(t.funnel.advanceFailed);
+      }
+    }
+  }
+
+  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string) {
     if (busy.current) return;
     busy.current = true;
     setPending(type);
     setError(null);
-    const client = createStorefrontApiClient();
     try {
-      if (uncertain.current) {
-        const now = await funnelsGetSessionStep(client, workspaceId, funnelId, sessionId);
-        if (now.done || now.session.currentStepKey !== stepKey) {
-          router.refresh();
-          return;
-        }
-        uncertain.current = false;
-      }
-      const res = await funnelsAdvance(client, workspaceId, funnelId, sessionId, {
-        type,
-        ...(orderId ? { orderId } : {}),
+      const res = await funnelRuntimeAdvance(createStorefrontApiClient(), workspaceId, funnelId, sessionId, {
+        fromStepKey: stepKey,
+        outcome: { type, ...(orderId ? { orderId } : {}) },
       });
       if (res.followOnOrder) {
         rememberFollowOn(sessionId, res.followOnOrder);
         trackPurchaseOnce(res.followOnOrder.id, { valueMinor: parseMoney(res.followOnOrder.totalAmount), numItems: 1 });
       }
+      if (res.mergedOrder) {
+        // Joined the checkout order: the thank-you page shows its new total,
+        // and the purchase is the added line alone (keyed by that line, since
+        // the order's own purchase was already sent).
+        mergeIntoOrderSnapshot(workspaceId, res.mergedOrder);
+        const added = res.mergedOrder.items.find((i) => i.id === res.mergedOrder?.addedItemId);
+        if (added) {
+          trackPurchaseOnce(added.id, {
+            valueMinor: parseMoney(added.lineTotalAmount),
+            currency: res.mergedOrder.currency,
+            numItems: added.quantity,
+          });
+        }
+      }
       // Stays pending: the refreshed step remounts this island.
       router.refresh();
     } catch (err) {
-      const kind = funnelsRuntimeErrorKind(err);
-      if (!(err instanceof ApiError)) uncertain.current = true;
-      busy.current = false;
-      setPending(null);
-      if (kind === "sessionGone") {
-        router.replace(storeHref(basePath, `/f/${funnelId}`));
-      } else if (kind === "paused" || kind === "unavailable") {
-        router.refresh();
-      } else if (kind === "offerNeedsOrder") {
-        setError(t.funnel.offerNeedsOrder);
-      } else {
-        setError(orderErrorMessage(err, t.funnel.advanceFailed));
+      switch (funnelErrorKind(err)) {
+        case "stepMismatch":
+          // Already moved on (a double tap, another tab, or an earlier
+          // attempt whose answer was lost). Go where the session is.
+          await resync(t.funnel.advanceFailed);
+          return;
+        case "notFound":
+          // A lost session, an unpublished funnel, or — on an accepted
+          // offer — an offer/order that no longer exists. Only the session's
+          // step can tell them apart.
+          await resync(type === "accepted_offer" ? t.funnel.offerGone : t.funnel.advanceFailed);
+          return;
+        case "paused":
+          router.refresh();
+          return;
+        case "offerNeedsOrder":
+          release(t.funnel.offerNeedsOrder);
+          return;
+        default:
+          // "network" lands here too, and retrying is safe: if the lost
+          // attempt went through, the retry is refused as STEP_MISMATCH.
+          release(
+            isApiErrorCode(err, "ORDER_REJECTED")
+              ? t.form.errors.rejected
+              : isOutOfStock(err)
+                ? t.funnel.offerOutOfStock
+                : t.funnel.advanceFailed
+          );
       }
     }
   }
@@ -166,6 +233,8 @@ export function FunnelStepActions({
   sessionId,
   step,
   offer,
+  offerJoinsOrder = false,
+  bump,
   product,
   sessionOrderId,
 }: {
@@ -173,7 +242,11 @@ export function FunnelStepActions({
   funnelId: string;
   sessionId: string;
   step: { key: string; name: string; stepType: FunnelStepTypeDto };
-  offer: FunnelPublicOfferDto | null;
+  offer: FunnelRuntimeOffer | null;
+  /** Accepting the offer joins the checkout order (the runtime says). */
+  offerJoinsOrder?: boolean;
+  /** A checkout step's order bump, as the runtime sent it. */
+  bump?: StorefrontOrderBump | null;
   product: StorefrontProduct | null;
   sessionOrderId: string | null;
 }) {
@@ -196,7 +269,7 @@ export function FunnelStepActions({
       track("ViewContent", {
         contentName: offer.name,
         contentIds: [offer.id],
-        valueMinor: offer.priceAmount === null ? undefined : parseMoney(offer.priceAmount),
+        valueMinor: parseMoney(offer.priceAmount),
         currency: offer.currency,
       });
     } else {
@@ -206,11 +279,28 @@ export function FunnelStepActions({
 
   if (step.stepType === "checkout") {
     return (
-      <FunnelCheckout workspaceId={workspaceId} funnelId={funnelId} sessionId={sessionId} product={product} flow={flow} />
+      <FunnelCheckout
+        workspaceId={workspaceId}
+        funnelId={funnelId}
+        sessionId={sessionId}
+        stepKey={step.key}
+        sessionOrderId={sessionOrderId}
+        product={product}
+        bumpOffer={orderBumpOf(bump, product ? [product.id] : [])}
+        flow={flow}
+      />
     );
   }
   if (step.stepType === "upsell" || step.stepType === "downsell") {
-    return <FunnelOfferCard workspaceId={workspaceId} offer={offer} canAccept={!!sessionOrderId} flow={flow} />;
+    return (
+      <FunnelOfferCard
+        workspaceId={workspaceId}
+        offer={offer}
+        canAccept={!!sessionOrderId}
+        joinsOrder={offerJoinsOrder}
+        flow={flow}
+      />
+    );
   }
   if (step.stepType === "thank_you") {
     return <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={sessionOrderId} />;
@@ -227,9 +317,9 @@ export function FunnelStepActions({
           onClick={() => void flow.advance("clicked_through")}
           disabled={!!flow.pending}
           aria-busy={!!flow.pending}
-          className={btnMetalLg}
+          className={btnPrimaryLg}
         >
-          {flow.pending ? t.common.loading : t.funnel.continue}
+          {flow.pending ? t.funnel.continuing : t.funnel.continue}
         </button>
       </div>
     </section>
@@ -241,36 +331,53 @@ export function FunnelStepActions({
 const FORM_PREFIX = "funnel";
 
 /**
- * The same COD form as the store's checkout and product quick-order
- * (OrderFormFields + lib/orderForm), placing a Buy-Now order for the product
- * the merchant put on this step through the storefront checkout — tagged with
- * the funnel — then reporting it to the funnel with `completed_checkout`.
+ * The store's COD form (OrderFormFields + lib/orderForm, with the merchant's
+ * checkout settings re-read on mount), placing a Buy-Now order for the product
+ * the merchant put on this step — tagged with the funnel and the autosaved
+ * checkout session — then reporting it with `completed_checkout`.
  *
- * The order is remembered per session the moment it exists, so a failed
- * advance or a reload only ever retries the advance, never the order.
+ * The order is remembered for this session and step the moment it exists, so a
+ * failed advance or a reload only ever retries the advance, never the order.
  */
 function FunnelCheckout({
   workspaceId,
   funnelId,
   sessionId,
+  stepKey,
+  sessionOrderId,
   product,
+  bumpOffer,
   flow,
 }: {
   workspaceId: string;
   funnelId: string;
   sessionId: string;
+  stepKey: string;
+  sessionOrderId: string | null;
   product: StorefrontProduct | null;
+  /** The step's order bump (funnel_steps.bump_offer_id), or null. */
+  bumpOffer: OrderBumpOffer | null;
   flow: Flow;
 }) {
   const { t, money, store } = useStore();
-  const placed = usePlacedOrder(sessionId);
+  const [client] = useState(() => createStorefrontApiClient());
+  const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
+  const saved = usePlacedOrder(sessionId);
+  // Only an order placed on this very step and not yet reported counts: one the
+  // session already holds belongs to an earlier pass (a funnel that loops back).
+  const placed = saved && saved.stepKey === stepKey && saved.id !== sessionOrderId ? saved : null;
+
   const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [bumpOn, setBumpOn] = useState(false);
+  // Refused by the server since this step loaded (sold out, withdrawn): hidden.
+  const [bumpGone, setBumpGone] = useState(false);
+  const bump = bumpGone ? null : bumpOffer;
 
-  const variants = product?.variants ?? [];
+  const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
   const variant = variants.find((v) => v.id === variantId);
   const offer = product ? defaultOfferOf(product) : undefined;
@@ -279,6 +386,17 @@ function FunnelCheckout({
   // line carries the offer, the variant's own price otherwise.
   const unit = offerId && offer ? parseMoney(offer.priceAmount) : variant ? parseMoney(variant.priceAmount) : 0;
   const currency = (offerId ? offer?.currency : variant?.currency) ?? store?.currency;
+
+  const line: OrderLine | null = variant ? { variantId: variant.id, offerId, quantity: 1 } : null;
+  const autosaveLines: OrderLine[] = line && !placed ? [line] : [];
+  if (autosaveLines.length > 0 && bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  const autosave = useCheckoutAutosave({
+    client,
+    workspaceId,
+    values,
+    lines: autosaveLines,
+    source: "funnel",
+  });
 
   useTrackOnce(() => {
     if (!product) return;
@@ -299,7 +417,7 @@ function FunnelCheckout({
       return;
     }
 
-    const found = validateOrderForm(values, t);
+    const found = validateOrderForm(values, t, fields);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -307,7 +425,7 @@ function FunnelCheckout({
       document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
       return;
     }
-    if (!product || !variant || !variant.inStock) {
+    if (!product || !variant || !variant.inStock || !line) {
       setFormError(t.form.errors.unavailable);
       return;
     }
@@ -315,30 +433,56 @@ function FunnelCheckout({
     submittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
+    const checkoutSessionId = await autosave.stop();
+    const payload = {
+      ...toCheckoutPayload(values, fields, { item: line }),
+      funnelId,
+      // The server adds the step's bump to this order from its offer.
+      ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+      ...(checkoutSessionId ? { checkoutSessionId } : {}),
+    };
+    let order;
     try {
-      const payload = {
-        ...toCheckoutPayload(values, { item: { variantId: variant.id, offerId, quantity: 1 } }),
-        funnelId,
-      };
-      const order = await placeCodOrder({ client: createStorefrontApiClient(), workspaceId, payload });
-      // For the thank-you step, the store's own order page and /track.
-      saveOrderSnapshot(workspaceId, snapshotFromOrder(order, payload.contact.phone));
-      rememberPlacedOrder(sessionId, { id: order.id, orderNumber: order.orderNumber });
-      trackPurchaseOnce(order.id, {
-        valueMinor: parseMoney(order.totalAmount),
-        currency: order.currency,
-        contentIds: [product.id],
-        contentName: product.name,
-        numItems: 1,
-      });
-      submittingRef.current = false;
-      setSubmitting(false);
-      await flow.advance("completed_checkout", order.id);
+      order = await placeCodOrder({ client, workspaceId, payload });
     } catch (err) {
       submittingRef.current = false;
-      setFormError(orderErrorMessage(err, t.form.errors.generic));
-      setSubmitting(false);
+      if (isOrderBumpRefused(err)) {
+        setBumpOn(false);
+        setBumpGone(true);
+      }
+      const fromServer = serverFieldErrors(err, t.form.errors);
+      const invalidFromServer = FIELD_ORDER.filter((k) => fromServer[k]);
+      if (invalidFromServer.length > 0) {
+        // Commit first: a field the server named may be one this form was
+        // hiding, and it has to exist before it can take focus.
+        flushSync(() => {
+          reveal(fromServer);
+          setErrors(fromServer);
+          setFormError(t.form.errors.summary(invalidFromServer.length));
+          setSubmitting(false);
+        });
+        document.getElementById(fieldId(FORM_PREFIX, invalidFromServer[0]))?.focus();
+      } else {
+        setFormError(orderErrorMessage(err, t.form.errors));
+        setSubmitting(false);
+      }
+      autosave.resume();
+      return;
     }
+
+    // For the thank-you step, the store's own order page and /track.
+    saveOrderSnapshot(workspaceId, snapshotFromOrder(order, payload.contact.phone));
+    rememberPlacedOrder(sessionId, { id: order.id, orderNumber: order.orderNumber, stepKey });
+    trackPurchaseOnce(order.id, {
+      valueMinor: parseMoney(order.totalAmount),
+      currency: order.currency,
+      contentIds: bumpOn && bump ? [product.id, bump.productId] : [product.id],
+      contentName: product.name,
+      numItems: bumpOn && bump ? 2 : 1,
+    });
+    submittingRef.current = false;
+    setSubmitting(false);
+    await flow.advance("completed_checkout", order.id);
   }
 
   if (!product) {
@@ -356,7 +500,7 @@ function FunnelCheckout({
 
   return (
     <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-checkout-title">
-      <form id="order-form" onSubmit={handleSubmit} noValidate className={`${card} mx-auto max-w-2xl p-5 sm:p-8`}>
+      <form onSubmit={handleSubmit} noValidate className={`${card} mx-auto max-w-2xl p-5 sm:p-8`}>
         <h2 id="funnel-checkout-title" className="font-display text-xl font-bold text-ink sm:text-2xl">
           {t.funnel.checkoutTitle}
         </h2>
@@ -364,6 +508,7 @@ function FunnelCheckout({
         <div className="mt-5 flex items-center gap-4 rounded-xl border border-line p-3">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-paper">
             {image ? (
+              // Merchant media are arbitrary remote URLs (no next/image allowlist).
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image} alt="" width={64} height={64} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
@@ -407,25 +552,55 @@ function FunnelCheckout({
             values={values}
             errors={errors}
             onChange={onFieldChange}
+            fields={fields}
             showAltPhone
-            showEmail
           />
         </fieldset>
 
-        <p className="mt-5 flex items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 text-sm text-ink">
+        {/* Cash on delivery is the only method the checkout accepts — a fact, not a choice. */}
+        <div className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
           <CashIcon className="shrink-0 text-primary" />
-          {t.checkout.codHint}
-        </p>
+          <p>
+            <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
+            <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
+          </p>
+        </div>
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+
+        {bump && !placed && (
+          <div className="mt-5 space-y-3">
+            <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
+            {bumpOn && variant && (
+              <dl className="space-y-1.5 rounded-xl bg-paper px-4 py-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{product.name}</dt>
+                  <dd className="shrink-0 text-ink">{money(unit, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{bump.name}</dt>
+                  <dd className="shrink-0 text-ink">{money(bump.priceAmount, currency)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-line pt-1.5 font-semibold text-ink">
+                  <dt>{t.checkout.subtotal}</dt>
+                  <dd className="shrink-0">{money(unit + bump.priceAmount, currency)}</dd>
+                </div>
+              </dl>
+            )}
+          </div>
+        )}
 
         <div className="mt-5 space-y-3">
           {placed && (
-            <p role="status" className="rounded-xl bg-success-soft px-4 py-3 text-sm font-medium text-success">
-              {t.funnel.placedNote(placed.orderNumber)}
+            <p role="status" className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success">
+              <span className="font-semibold">
+                {t.funnel.placedTitle} —{" "}
+                <bdi dir="ltr">#{placed.orderNumber}</bdi>
+              </span>
+              <span className="block">{t.funnel.placedHint}</span>
             </p>
           )}
           <ErrorBox message={formError ?? flow.error} />
-          <button type="submit" disabled={busy} aria-busy={busy} className={btnMetalLg}>
+          <button type="submit" disabled={busy} aria-busy={busy} className={btnPrimaryLg}>
             {busy ? t.checkout.placing : placed ? t.funnel.continue : t.checkout.place}
           </button>
         </div>
@@ -444,34 +619,36 @@ function FunnelCheckout({
  *
  * The offer names its cart lines, not a product, so the photo and the
  * struck-through price come from the catalogue: the product the first line's
- * variant belongs to, and that variant's own compare-at when it is higher
- * than the offer price. No compare-at, no "you save".
+ * variant belongs to, and that variant's own compare-at when it is higher than
+ * the offer price. No compare-at, no "you save".
  */
 function FunnelOfferCard({
   workspaceId,
   offer,
   canAccept,
+  joinsOrder = false,
   flow,
 }: {
   workspaceId: string;
-  offer: FunnelPublicOfferDto | null;
+  offer: FunnelRuntimeOffer | null;
   canAccept: boolean;
+  /** Accepting adds it to the checkout order rather than a second one. */
+  joinsOrder?: boolean;
   flow: Flow;
 }) {
   const { t, money } = useStore();
   const { byVariant, loaded } = useCatalog(workspaceId);
-  const price = offer && offer.priceAmount !== null ? parseMoney(offer.priceAmount) : null;
+  const price = offer ? parseMoney(offer.priceAmount) : null;
 
   const firstLine = offer?.lines[0];
   const product = firstLine ? byVariant.get(firstLine.variantId) : undefined;
   const variant = product?.variants.find((v) => v.id === firstLine?.variantId);
   const image = product ? firstImage(product) : null;
   const quantity = offer?.lines.reduce((sum, l) => sum + (l.quantity || 0), 0) ?? 0;
+  const compareAtTotal =
+    variant?.compareAtAmount != null ? parseMoney(variant.compareAtAmount) * Math.max(1, quantity) : null;
   // Only a compare-at the merchant set on the variant counts, and only when the offer beats it.
-  const compareAt =
-    price !== null && variant?.compareAtAmount != null && parseMoney(variant.compareAtAmount) * Math.max(1, quantity) > price
-      ? parseMoney(variant.compareAtAmount) * Math.max(1, quantity)
-      : null;
+  const compareAt = price !== null && compareAtTotal !== null && compareAtTotal > price ? compareAtTotal : null;
 
   return (
     <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-offer-title">
@@ -512,7 +689,7 @@ function FunnelOfferCard({
               {price !== null && compareAt !== null && (
                 <p className="mt-1 text-sm font-medium text-success">{t.upsell.save(money(compareAt - price, offer.currency))}</p>
               )}
-              <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{t.funnel.offerHint}</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{joinsOrder ? t.funnel.offerJoinsHint : t.funnel.offerHint}</p>
             </>
           ) : (
             <h2 id="funnel-offer-title" className="text-base font-medium text-ink-soft">
@@ -533,7 +710,7 @@ function FunnelOfferCard({
                 onClick={() => void flow.advance("accepted_offer")}
                 disabled={!!flow.pending}
                 aria-busy={flow.pending === "accepted_offer"}
-                className={btnMetalLg}
+                className={btnPrimaryLg}
               >
                 {flow.pending === "accepted_offer" ? t.funnel.accepting : t.funnel.accept}
               </button>
@@ -543,9 +720,9 @@ function FunnelOfferCard({
               onClick={() => void flow.advance("declined_offer")}
               disabled={!!flow.pending}
               aria-busy={flow.pending === "declined_offer"}
-              className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-xl text-sm font-medium text-ink-soft underline-offset-4 hover:text-ink hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex min-h-11 w-full cursor-pointer items-center justify-center rounded-xl text-sm font-medium text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {flow.pending === "declined_offer" ? t.common.loading : t.funnel.decline}
+              {flow.pending === "declined_offer" ? t.funnel.continuing : t.funnel.decline}
             </button>
           </div>
         </div>
@@ -556,41 +733,52 @@ function FunnelOfferCard({
 
 // --- thank you -------------------------------------------------------------------
 
+const orderPath = (id: string, number: string | null) =>
+  `/orders/${id}${number ? `?${new URLSearchParams({ number }).toString()}` : ""}`;
+
 /**
- * The confirmation for a thank-you step, or for a session whose funnel has
- * ended: the checkout order as the store's thank-you page shows it (the order
- * ticket and "what happens next"), plus any offer orders accepted on the way.
- * Order numbers and totals come from this device (the order snapshot saved at
- * checkout, the follow-on orders remembered at accept), read after hydration.
+ * The confirmation on a thank-you step, or on a session whose funnel has ended:
+ * the store's own thank-you pieces (ConfirmationHeading, the "what happens next"
+ * timeline, the order summary) plus any offer orders accepted on the way.
+ * Order numbers and totals come from this device — the snapshot saved at
+ * checkout and the follow-on orders remembered at accept — read after
+ * hydration.
+ *
+ * Under a merchant-built page (`standalone` false) a session with no order
+ * shows only the way back to the store: the merchant's page is the message.
  */
 export function FunnelOrders({
   workspaceId,
   sessionId,
   orderId,
+  standalone = false,
 }: {
   workspaceId: string;
   sessionId: string;
   orderId: string | null;
+  standalone?: boolean;
 }) {
   const { t, money, store } = useStore();
-  const basePath = useStoreBasePath();
-  const hydrated = useHydrated();
+  const isClient = useIsClient();
   const placed = usePlacedOrder(sessionId);
   const followOns = useFollowOnOrders(sessionId);
 
-  const snapshot = hydrated && orderId ? getOrderSnapshot(workspaceId, orderId) : null;
+  const snapshot = isClient && orderId ? getOrderSnapshot(workspaceId, orderId) : null;
   const orderNumber = snapshot?.orderNumber ?? (placed && placed.id === orderId ? placed.orderNumber : null);
   const currency = snapshot?.currency ?? store?.currency;
-  const orderHref = (id: string, number: string | null) =>
-    storeHref(basePath, `/orders/${id}${number ? `?${new URLSearchParams({ number }).toString()}` : ""}`);
+  const Title = standalone ? "h1" : "h2";
 
   if (!orderId) {
     return (
-      <section className={`${container} pb-16 pt-6`}>
+      <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`}>
         <div className="mx-auto max-w-md text-center">
-          <h2 className="font-display text-2xl font-bold text-ink">{t.funnel.doneTitle}</h2>
-          <p className="mt-2 text-sm text-ink-soft">{t.funnel.doneBody}</p>
-          <StoreLink href="/" className={`${btnSecondary} mt-6`}>
+          {standalone && (
+            <>
+              <Title className="font-display text-2xl font-bold text-ink">{t.funnel.doneTitle}</Title>
+              <p className="mt-2 text-sm text-ink-soft">{t.funnel.doneBody}</p>
+            </>
+          )}
+          <StoreLink href="/" className={`${btnSecondary} ${standalone ? "mt-6" : ""}`}>
             {t.thankYou.backToStore}
           </StoreLink>
         </div>
@@ -598,62 +786,45 @@ export function FunnelOrders({
     );
   }
 
-  return (
-    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-thanks-title">
-      <div className="mx-auto max-w-2xl">
-        <div className="flex flex-col items-center text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">
-            <CheckIcon size={32} />
-          </span>
-          <h2 id="funnel-thanks-title" className="mt-5 font-display text-2xl font-bold text-ink sm:text-3xl">
-            {t.thankYou.title}
-          </h2>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-soft">{t.thankYou.callNotice}</p>
-        </div>
+  const sub = standalone ? "h2" : "h3";
 
-        {orderNumber && (
-          <div className="mt-8">
-            <OrderTicket
-              orderNumber={orderNumber}
-              total={snapshot?.totalAmount}
+  return (
+    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`}>
+      <div className="mx-auto max-w-2xl">
+        <ConfirmationHeading as={Title} orderNumber={orderNumber} phone={snapshot?.phone} />
+
+        {followOns.length > 0 && (
+          <FunnelOrderList
+            heading={sub}
+            rows={[
+              { id: orderId, label: t.funnel.mainOrder, number: orderNumber, total: snapshot ? money(snapshot.totalAmount, currency) : null },
+              ...followOns.map((o) => ({
+                id: o.id,
+                label: t.funnel.extraOrder,
+                number: o.orderNumber,
+                total: money(parseMoney(o.totalAmount), currency),
+              })),
+            ]}
+          />
+        )}
+
+        <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="funnel-next-title">
+          <FunnelHeading as={sub} id="funnel-next-title" className="mb-5 text-lg font-semibold text-ink">
+            {t.thankYou.steps}
+          </FunnelHeading>
+          <StatusTimeline stage={1} />
+        </section>
+
+        {snapshot && (
+          <div className="mt-6">
+            <OrderSnapshotSummary
+              snapshot={snapshot}
               currency={currency}
-              storeName={store?.name ?? ""}
-              note={t.thankYou.payOnDelivery}
+              headingLevel={sub}
+              footnote={followOns.length > 0 ? t.checkout.finalNote : undefined}
             />
           </div>
         )}
-
-        <section className={`${card} mt-6 p-5 sm:p-6`} aria-labelledby="funnel-orders-title">
-          <h3 id="funnel-orders-title" className="text-lg font-semibold text-ink">
-            {t.funnel.yourOrders}
-          </h3>
-          <ul className="mt-3 divide-y divide-line">
-            <OrderRow
-              label={t.thankYou.orderNumber}
-              number={orderNumber}
-              total={snapshot ? money(snapshot.totalAmount, currency) : null}
-              href={orderHref(orderId, orderNumber)}
-              linkLabel={t.funnel.viewOrder}
-            />
-            {followOns.map((o) => (
-              <OrderRow
-                key={o.id}
-                label={t.funnel.extraOrder}
-                number={o.orderNumber}
-                total={money(parseMoney(o.totalAmount), currency)}
-                href={orderHref(o.id, o.orderNumber)}
-                linkLabel={t.funnel.viewOrder}
-              />
-            ))}
-          </ul>
-        </section>
-
-        <section className={`${card} mt-6 p-5 sm:p-6`} aria-labelledby="funnel-next-title">
-          <h3 id="funnel-next-title" className="mb-5 text-lg font-semibold text-ink">
-            {t.thankYou.steps}
-          </h3>
-          <StatusTimeline stage={1} />
-        </section>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <StoreLink href="/track" className={btnSecondary}>
@@ -668,52 +839,50 @@ export function FunnelOrders({
   );
 }
 
-function OrderRow({
-  label,
-  number,
-  total,
-  href,
-  linkLabel,
-}: {
-  label: string;
-  number: string | null;
-  total: string | null;
-  href: string;
-  linkLabel: string;
-}) {
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-      <span className="min-w-0">
-        <span className="block text-ink-soft">{label}</span>
-        {number && (
-          <span dir="ltr" className="font-semibold text-ink">
-            #{number}
-          </span>
-        )}
-      </span>
-      <span className="flex items-center gap-3">
-        {total && <span className="font-semibold text-ink">{total}</span>}
-        <Link href={href} className="inline-flex min-h-11 items-center font-medium text-primary hover:underline">
-          {linkLabel}
-        </Link>
-      </span>
-    </li>
-  );
+function FunnelHeading({
+  as: Tag,
+  ...props
+}: { as: "h2" | "h3" } & HTMLAttributes<HTMLHeadingElement>) {
+  return <Tag {...props} />;
 }
 
-/** A session whose funnel has ended (no outbound edge matched). */
-export function FunnelDone({
-  workspaceId,
-  sessionId,
-  orderId,
+function FunnelOrderList({
+  heading,
+  rows,
 }: {
-  workspaceId: string;
-  sessionId: string;
-  orderId: string | null;
+  heading: "h2" | "h3";
+  rows: { id: string; label: string; number: string | null; total: string | null }[];
 }) {
+  const { t } = useStore();
+
   return (
-    <main className="flex-1 pt-6">
-      <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={orderId} />
-    </main>
+    <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="funnel-orders-title">
+      <FunnelHeading as={heading} id="funnel-orders-title" className="text-lg font-semibold text-ink">
+        {t.funnel.yourOrders}
+      </FunnelHeading>
+      <ul className="mt-3 divide-y divide-line">
+        {rows.map((row) => (
+          <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+            <span className="min-w-0">
+              <span className="block text-ink-soft">{row.label}</span>
+              {row.number && (
+                <bdi dir="ltr" className="font-semibold text-ink">
+                  #{row.number}
+                </bdi>
+              )}
+            </span>
+            <span className="flex items-center gap-3">
+              {row.total && <span className="font-semibold text-ink">{row.total}</span>}
+              <StoreLink
+                href={orderPath(row.id, row.number)}
+                className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+              >
+                {t.funnel.viewOrder}
+              </StoreLink>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

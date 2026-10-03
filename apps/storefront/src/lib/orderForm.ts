@@ -1,5 +1,5 @@
-import type { CheckoutPayload } from "@store-builder/api-client";
-import { findGovernorate, isEgyptianMobile, normalizePhone, type Governorate } from "./egypt";
+import type { CheckoutFieldMode, CheckoutPayload, CheckoutSettings } from "@store-builder/api-client";
+import { findGovernorate, isEgyptianMobile, normalizePhone } from "./egypt";
 import type { Dictionary } from "./i18n";
 
 /** The COD order form shared by the product quick-order form and checkout. */
@@ -11,6 +11,7 @@ export interface OrderFormValues {
   governorate: string;
   city: string;
   address: string;
+  postalCode: string;
   notes: string;
 }
 
@@ -25,6 +26,7 @@ export const EMPTY_ORDER_FORM: OrderFormValues = {
   governorate: "",
   city: "",
   address: "",
+  postalCode: "",
   notes: "",
 };
 
@@ -37,69 +39,87 @@ export const FIELD_ORDER: OrderFormField[] = [
   "governorate",
   "city",
   "address",
+  "postalCode",
   "notes",
 ];
 
-/** The checkout page's sections — who the order is for, then where it goes. */
-export const CONTACT_FIELDS: OrderFormField[] = ["fullName", "phone", "altPhone", "email"];
-export const ADDRESS_FIELDS: OrderFormField[] = ["governorate", "city", "address", "notes"];
+/** Backend limits (checkoutValidation.js) — kept as input maxLengths. */
+export const POSTAL_CODE_MAX = 20;
+export const NOTES_MAX = 500;
 
-/** One field's error, or undefined when it is fine — for validation on blur. */
-export function validateField(field: OrderFormField, values: OrderFormValues, t: Dictionary): string | undefined {
-  switch (field) {
-    case "fullName":
-      return values.fullName.trim().length < 2 ? t.form.errors.fullName : undefined;
-    case "phone":
-      return isEgyptianMobile(values.phone) ? undefined : t.form.errors.phone;
-    case "altPhone":
-      return values.altPhone.trim() && !isEgyptianMobile(values.altPhone) ? t.form.errors.altPhone : undefined;
-    case "email":
-      return values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
-        ? t.form.errors.email
-        : undefined;
-    case "governorate":
-      return findGovernorate(values.governorate) ? undefined : t.form.errors.governorate;
-    case "city":
-      return values.city.trim() ? undefined : t.form.errors.city;
-    case "address":
-      return values.address.trim().length < 5 ? t.form.errors.address : undefined;
-    case "notes":
-      return undefined;
-  }
+/**
+ * How one form renders the merchant-configurable fields. The checkout page
+ * uses the store's settings as they are; the product quick form keeps itself
+ * short — see `quickFormFields`.
+ */
+export type OrderFormFieldModes = CheckoutSettings;
+
+/**
+ * The quick form only asks for email/postal code when the store demands them
+ * (the server would refuse the order otherwise). Notes follow the setting.
+ */
+export function quickFormFields(settings: CheckoutSettings): OrderFormFieldModes {
+  const onlyIfRequired = (mode: CheckoutFieldMode): CheckoutFieldMode => (mode === "required" ? "required" : "hidden");
+  return {
+    email: onlyIfRequired(settings.email),
+    postal_code: onlyIfRequired(settings.postal_code),
+    notes: settings.notes,
+  };
 }
 
-export function validateOrderForm(values: OrderFormValues, t: Dictionary): OrderFormErrors {
+export function validateOrderForm(
+  values: OrderFormValues,
+  t: Dictionary,
+  fields: OrderFormFieldModes
+): OrderFormErrors {
   const e: OrderFormErrors = {};
-  for (const field of FIELD_ORDER) {
-    const error = validateField(field, values, t);
-    if (error) e[field] = error;
+  if (values.fullName.trim().length < 2) e.fullName = t.form.errors.fullName;
+  if (!isEgyptianMobile(values.phone)) e.phone = t.form.errors.phone;
+  if (values.altPhone.trim() && !isEgyptianMobile(values.altPhone)) e.altPhone = t.form.errors.altPhone;
+  if (fields.email !== "hidden") {
+    const email = values.email.trim();
+    if (!email) {
+      if (fields.email === "required") e.email = t.form.errors.emailRequired;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      e.email = t.form.errors.email;
+    }
+  }
+  if (!findGovernorate(values.governorate)) e.governorate = t.form.errors.governorate;
+  if (!values.city.trim()) e.city = t.form.errors.city;
+  if (values.address.trim().length < 5) e.address = t.form.errors.address;
+  if (fields.postal_code === "required" && !values.postalCode.trim()) {
+    e.postalCode = t.form.errors.postalCode;
   }
   return e;
 }
 
 /**
- * The province string an order carries: the Arabic name — what Egyptian
- * couriers and confirmation agents read — with the English name alongside so
- * either reads naturally in the merchant dashboard. The shipping quote sends
- * the same string, so it matches the zones the merchant set up exactly as
- * checkout will.
+ * The governorate as the order stores it in shippingAddress.province: its
+ * Arabic name with the English one alongside. The shipping quote sends the
+ * same string, so a zone's regions match the quote and the order alike.
  */
-export function shippingRegionOf(gov: Governorate): string {
-  return `${gov.ar} (${gov.en})`;
+export function provinceFor(code: string): string | undefined {
+  const gov = findGovernorate(code);
+  return gov ? `${gov.ar} (${gov.en})` : undefined;
 }
 
-/** Builds the checkout payload — cash on delivery unless an online method was chosen. */
+/**
+ * Builds the COD checkout payload. The governorate is sent by its Arabic name —
+ * what Egyptian couriers and confirmation agents read — with the English name
+ * alongside so either reads naturally in the merchant dashboard. A field the
+ * form doesn't show is never sent. The shopper's note travels as
+ * `shippingAddress.notes` (for the courier); the top-level `notes` is ours.
+ */
 export function toCheckoutPayload(
   values: OrderFormValues,
-  options: {
-    discountCode?: string;
-    systemNotes?: string[];
-    item?: CheckoutPayload["item"];
-    paymentMethod?: CheckoutPayload["paymentMethod"];
-  } = {}
+  fields: OrderFormFieldModes,
+  options: { discountCode?: string; systemNotes?: string[]; item?: CheckoutPayload["item"] } = {}
 ): CheckoutPayload {
-  const gov = findGovernorate(values.governorate);
+  const province = provinceFor(values.governorate);
   const altPhone = values.altPhone.trim() ? normalizePhone(values.altPhone) : "";
+  const email = fields.email !== "hidden" ? values.email.trim() : "";
+  const postalCode = fields.postal_code !== "hidden" ? values.postalCode.trim() : "";
+  const notes = fields.notes !== "hidden" ? values.notes.trim() : "";
   const systemNotes = (options.systemNotes ?? []).filter(Boolean);
 
   return {
@@ -107,16 +127,17 @@ export function toCheckoutPayload(
       fullName: values.fullName.trim(),
       phone: normalizePhone(values.phone),
       ...(altPhone ? { alternatePhone: altPhone } : {}),
-      ...(values.email.trim() ? { email: values.email.trim() } : {}),
+      ...(email ? { email } : {}),
     },
     shippingAddress: {
       country: "EG",
-      ...(gov ? { province: shippingRegionOf(gov) } : {}),
+      ...(province ? { province } : {}),
       city: values.city.trim(),
       addressLine: values.address.trim(),
-      ...(values.notes.trim() ? { notes: values.notes.trim() } : {}),
+      ...(postalCode ? { postalCode } : {}),
+      ...(notes ? { notes } : {}),
     },
-    paymentMethod: options.paymentMethod ?? "cod",
+    paymentMethod: "cod",
     ...(options.discountCode?.trim() ? { discountCode: options.discountCode.trim() } : {}),
     ...(systemNotes.length ? { notes: systemNotes.join(" | ") } : {}),
     ...(options.item ? { item: options.item } : {}),

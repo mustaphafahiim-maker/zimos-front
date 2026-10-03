@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { PageTree } from "@store-builder/api-client";
-import { readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
+import { readColorMode, readPreviewTheme, type PreviewTheme } from "@/lib/brandTheme";
 import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
+import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
+import { STORE_PREVIEW_COOKIE, storePreviewCookieOptions } from "@/lib/storePreview";
 
 /**
  * Receives a draft page tree from the dashboard's live preview (a form post
@@ -20,6 +22,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_TREE_CHARS = 1_000_000;
 // Same ~5KB ceiling the API puts on a saved themeSettings blob.
 const MAX_THEME_CHARS = 5_000;
+// The header and footer live in that same blob, so the same ceiling, with room
+// for the unsaved edit the merchant hasn't trimmed yet.
+const MAX_SHELL_CHARS = 10_000;
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
@@ -48,8 +53,9 @@ function readOrigin(value: FormDataEntryValue | null): string | null {
 
 /**
  * The website editor's extras (see PreviewOptions). All optional — a post
- * without them is a plain preview, exactly as before. A malformed theme is
- * dropped rather than refused: the page still previews, in the saved look.
+ * without them is a plain preview, exactly as before. A malformed theme or
+ * shell is dropped rather than refused: the page still previews, in the saved
+ * look.
  */
 function readOptions(form: FormData): PreviewOptions | undefined {
   const editable = form.get("edit") === "1";
@@ -63,8 +69,38 @@ function readOptions(form: FormData): PreviewOptions | undefined {
       theme = null;
     }
   }
-  if (!editable && !parentOrigin && !theme) return undefined;
-  return { editable: editable && parentOrigin !== null, parentOrigin, theme };
+  const rawShell = String(form.get("shell") ?? "");
+  let shell: ShellOverride | null = null;
+  if (rawShell && rawShell.length <= MAX_SHELL_CHARS) {
+    try {
+      shell = readShellOverride(JSON.parse(rawShell));
+    } catch {
+      shell = null;
+    }
+  }
+  const colorMode = readColorMode(form.get("colorMode"));
+  if (!editable && !parentOrigin && !theme && !shell && !colorMode) return undefined;
+  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell, colorMode };
+}
+
+/**
+ * A staff preview token for the store (POST /workspaces/:id/store-preview-token),
+ * so the preview page can read a store the public can't see yet — a draft.
+ * Null if the API won't give one; the preview of a live store needs none.
+ */
+async function storePreviewToken(workspaceId: string, accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/workspaces/${workspaceId}/store-preview-token`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { token?: unknown };
+    return typeof body.token === "string" ? body.token : null;
+  } catch {
+    return null;
+  }
 }
 
 async function canEditWorkspace(workspaceId: string, accessToken: string): Promise<boolean> {
@@ -126,6 +162,17 @@ export async function POST(
   }
 
   putPreview(token, workspaceId, tree, readOptions(form));
+  const viewToken = await storePreviewToken(workspaceId, accessToken);
   // 303 so the frame follows with a GET, whatever method brought it here.
-  return NextResponse.redirect(new URL(`/store/${workspaceId}/preview/${token}`, request.url), 303);
+  // Relative, not resolved against request.url: behind the host's proxy that
+  // is the internal origin (https://localhost:8080), which the browser can't reach.
+  const response = new NextResponse(null, {
+    status: 303,
+    headers: { Location: `/store/${workspaceId}/preview/${token}` },
+  });
+  if (viewToken) {
+    const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
+    response.cookies.set(STORE_PREVIEW_COOKIE, viewToken, storePreviewCookieOptions(secure));
+  }
+  return response;
 }

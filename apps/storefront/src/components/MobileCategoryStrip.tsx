@@ -16,11 +16,9 @@ const MAX_COLLECTIONS = 6;
  * Sourced from the same public collections list the home page's fallback
  * catalogue already reads (`getStoreCollections`, `lib/storeMeta.ts`) — no
  * invented category names — and capped at a handful so the row never wraps.
- * Each chip reuses the home page's own collection-filter link
- * (`/?collection=<id>#products`); on a store with a custom published home
- * page that query string currently has no effect there either (PageRenderer
- * doesn't read it), which is an existing limit of that mechanism, not
- * something new here.
+ * Each chip opens the collection's own page (`/products?collection=<slug>`),
+ * which works whether or not the store has published a home page. Only
+ * top-level collections are listed; the page's sidebar leads further in.
  *
  * Renders nothing when the store has no collections, so it never leaves an
  * empty strip of padding under the header.
@@ -32,7 +30,7 @@ export function MobileCategoryStrip({
   collections: StorefrontCollection[];
   t: Dictionary;
 }) {
-  const items = collections.slice(0, MAX_COLLECTIONS);
+  const items = collections.filter((c) => !c.parentId).slice(0, MAX_COLLECTIONS);
   if (items.length === 0) return null;
 
   return (
@@ -41,8 +39,8 @@ export function MobileCategoryStrip({
         {items.map((c) => (
           <li key={c.id} className="shrink-0">
             <StoreLink
-              href={`/?collection=${encodeURIComponent(c.id)}#products`}
-              className="inline-flex min-h-9 items-center rounded-full border border-line bg-paper px-3 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+              href={`/products?collection=${encodeURIComponent(c.slug)}`}
+              className="zt-chip inline-flex min-h-11 items-center rounded-full border border-line bg-paper px-3 text-xs font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
             >
               {c.name}
             </StoreLink>

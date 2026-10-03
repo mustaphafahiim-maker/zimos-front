@@ -39,6 +39,8 @@ import {
   type EditorUi,
 } from "./editorLocale";
 import { ImageField, ImageListField } from "./ImageField";
+import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
+import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
@@ -767,6 +769,24 @@ function SectionStyleFieldset({
           onChange={(value) => onChange(setSectionSetting(section, spec.key, value))}
         />
       ))}
+      <Field label={ui.minHeight} hint={ui.minHeightHint}>
+        {({ id }) => (
+          <Input
+            id={id}
+            type="number"
+            min={0}
+            max={MAX_SECTION_HEIGHT_PX}
+            step={8}
+            placeholder={ui.canvasAuto}
+            value={sectionMinHeight(section) ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const px = raw === "" ? null : Math.min(MAX_SECTION_HEIGHT_PX, Math.max(0, Math.round(Number(raw))));
+              onChange(setSectionMinHeight(section, px && px > 0 ? px : null));
+            }}
+          />
+        )}
+      </Field>
     </div>
   );
 }

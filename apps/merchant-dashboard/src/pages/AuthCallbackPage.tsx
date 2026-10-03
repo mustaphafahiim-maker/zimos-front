@@ -44,7 +44,7 @@ export function AuthCallbackPage() {
         <div className="w-full max-w-sm text-center">
           {failed ? (
             <>
-              <h2 className="text-2xl font-semibold text-ink">
+              <h2 className="font-display text-2xl font-medium text-ink">
                 تعذّر تسجيل الدخول بجوجل
               </h2>
               <p className="mt-3 text-sm text-ink-soft">

@@ -1,0 +1,128 @@
+import type { TrackData, TrackEvent } from "./track";
+
+/**
+ * The merchant's ad pixels (Meta, TikTok, Snapchat, Google), loaded by
+ * components/TrackingPixels.tsx when the merchant set at least one ID in the
+ * dashboard (Marketing). `track()` in lib/track.ts hands every commerce event
+ * here; each platform is only called if its script is on the page, so a store
+ * with no pixels sends nothing.
+ */
+
+type Fn = (...args: unknown[]) => void;
+type PixelWindow = Window & {
+  fbq?: Fn;
+  ttq?: { track: Fn; page: Fn };
+  snaptr?: Fn;
+  gtag?: Fn;
+};
+
+const TIKTOK: Record<TrackEvent, string> = {
+  PageView: "Pageview",
+  ViewContent: "ViewContent",
+  AddToCart: "AddToCart",
+  InitiateCheckout: "InitiateCheckout",
+  Purchase: "CompletePayment",
+};
+const SNAP: Record<TrackEvent, string> = {
+  PageView: "PAGE_VIEW",
+  ViewContent: "VIEW_CONTENT",
+  AddToCart: "ADD_CART",
+  InitiateCheckout: "START_CHECKOUT",
+  Purchase: "PURCHASE",
+};
+const GOOGLE: Record<TrackEvent, string> = {
+  PageView: "page_view",
+  ViewContent: "view_item",
+  AddToCart: "add_to_cart",
+  InitiateCheckout: "begin_checkout",
+  Purchase: "purchase",
+};
+
+export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
+  if (typeof window === "undefined") return;
+  const w = window as PixelWindow;
+  const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
+  const common = { value, currency: data.currency };
+
+  try {
+    if (w.fbq) {
+      if (event === "PageView") w.fbq("track", "PageView");
+      else
+        w.fbq(
+          "track",
+          event,
+          {
+            ...common,
+            content_ids: data.contentIds,
+            content_name: data.contentName,
+            content_type: "product",
+            num_items: data.numItems,
+          },
+          // Same id as the server-side Conversions API event for this order
+          // (backend marketing/pixelEvents.js sends order.id verbatim as
+          // event_id), so browser and server events dedup into one conversion.
+          data.orderId ? { eventID: data.orderId } : undefined
+        );
+    }
+    if (w.ttq) {
+      if (event === "PageView") w.ttq.page();
+      // Third argument is TikTok's own dedup contract: the same event_id the
+      // server-side Events API call carries for this order.
+      else
+        w.ttq.track(
+          TIKTOK[event],
+          { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems },
+          data.orderId ? { event_id: data.orderId } : undefined
+        );
+    }
+    if (w.snaptr) {
+      // event_id is Snap Conversions API v3's dedup field — same order id sent server-side.
+      w.snaptr("track", SNAP[event], {
+        price: value,
+        currency: data.currency,
+        item_ids: data.contentIds,
+        number_items: data.numItems,
+        transaction_id: data.orderId,
+        event_id: data.orderId,
+      });
+    }
+    if (w.gtag && event !== "PageView") {
+      w.gtag("event", GOOGLE[event], {
+        ...common,
+        transaction_id: data.orderId,
+        items: data.contentIds?.map((id) => ({ item_id: id })),
+      });
+    }
+  } catch {
+    /* a broken third-party script must never break the store */
+  }
+}
+
+/** The pixel IDs components/TrackingPixels loads. */
+export interface PixelIds {
+  meta?: string;
+  tiktok?: string;
+  snapchat?: string;
+  googleTag?: string;
+}
+
+/**
+ * The pixel IDs from store metadata. GET /store/:workspaceId sends a `tracking`
+ * block that StorefrontMeta doesn't name, so it is read defensively: only
+ * non-empty strings, and `{}` when the merchant configured none. Plain module
+ * code, so server components can call it.
+ */
+export function pixelIdsOf(store: unknown): PixelIds {
+  const tracking = (store as { tracking?: unknown } | null)?.tracking;
+  if (!tracking || typeof tracking !== "object") return {};
+  const pick = (key: keyof PixelIds) => {
+    const v = (tracking as Record<string, unknown>)[key];
+    return typeof v === "string" && v.trim() ? v.trim() : undefined;
+  };
+  return { meta: pick("meta"), tiktok: pick("tiktok"), snapchat: pick("snapchat"), googleTag: pick("googleTag") };
+}
+
+/** True when at least one pixel is configured — nothing loads or fires otherwise. */
+export function hasPixels(ids: PixelIds): boolean {
+  return Boolean(ids.meta || ids.tiktok || ids.snapchat || ids.googleTag);
+}

@@ -1,13 +1,59 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { ChevronDown, ChevronUp, Star, Trash2, Upload } from "lucide-react";
-import { Alert, Button, Card, Spinner, cn } from "@store-builder/ui";
+import { Alert, Button, Card, CardContent, Spinner, cn } from "@store-builder/ui";
 import type { ProductMedia } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { getErrorMessage } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { useToast } from "@/components/Toast";
 import { ProductImage } from "@/components/ProductImage";
+
+const STRINGS = {
+  en: {
+    title: "Images",
+    discard: "Discard",
+    saving: "Saving…",
+    save: "Save images",
+    savedToast: "Images saved.",
+    help:
+      "PNG, JPEG, GIF or WEBP. Anything over 5\u00a0MB is resized automatically before upload. The first image is the primary one shown in the catalog and storefront.",
+    drop: "Drop images here or click to choose",
+    multiple: "Multiple files supported",
+    preparingOne: "Preparing 1 image…",
+    preparingMany: "Preparing {n} images…",
+    uploadingOne: "Uploading 1 image…",
+    uploadingMany: "Uploading {n} images…",
+    imageAlt: "Image {n}",
+    primary: "Primary",
+    moveEarlier: "Move image earlier",
+    moveLater: "Move image later",
+    remove: "Remove image",
+    empty: "No images yet.",
+  },
+  ar: {
+    title: "الصور",
+    discard: "تجاهل",
+    saving: "جارٍ الحفظ…",
+    save: "حفظ الصور",
+    savedToast: "تم حفظ الصور.",
+    help:
+      "PNG أو JPEG أو GIF أو WEBP. أي صورة أكبر من 5\u00a0ميجابايت يتم تصغيرها تلقائيًا قبل الرفع. الصورة الأولى هي الصورة الرئيسية في الكتالوج والمتجر.",
+    drop: "اسحب الصور هنا أو اضغط للاختيار",
+    multiple: "يمكن رفع أكثر من ملف",
+    preparingOne: "جارٍ تجهيز صورة واحدة…",
+    preparingMany: "جارٍ تجهيز {n} صور…",
+    uploadingOne: "جارٍ رفع صورة واحدة…",
+    uploadingMany: "جارٍ رفع {n} صور…",
+    imageAlt: "صورة {n}",
+    primary: "رئيسية",
+    moveEarlier: "نقل الصورة للأمام",
+    moveLater: "نقل الصورة للخلف",
+    remove: "إزالة الصورة",
+    empty: "لا توجد صور بعد.",
+  },
+} satisfies Messages;
 
 /**
  * Two modes:
@@ -34,6 +80,8 @@ type Props =
     };
 
 export function ProductImagesSection(props: Props) {
+  const t = useT(STRINGS);
+  const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
 
@@ -105,7 +153,7 @@ export function ProductImagesSection(props: Props) {
           return { ok: true as const, uploaded };
         } catch (err) {
           setUploading((n) => n - 1);
-          return { ok: false as const, msg: `${file.name}: ${getErrorMessage(err)}` };
+          return { ok: false as const, msg: `${file.name}: ${errorMessage(err)}` };
         }
       })
     );
@@ -135,10 +183,10 @@ export function ProductImagesSection(props: Props) {
     setSaving(true);
     try {
       await apiClient.updateProduct(workspaceId, props.productId, { media: editItems });
-      toast.success("Images saved.");
+      toast.success(t.savedToast);
       props.onChanged();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast.error(errorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -151,29 +199,25 @@ export function ProductImagesSection(props: Props) {
   }
 
   return (
-    <Card className="min-w-0 gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-ink">
-            Images{props.mode === "create" && <span className="text-danger"> *</span>}
+    <Card>
+      <CardContent className="pt-6">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-display text-lg font-medium text-ink">
+            {t.title}{props.mode === "create" && <span className="text-danger"> *</span>}
           </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            PNG, JPEG, GIF or WEBP. Anything over 5&nbsp;MB is resized automatically before upload.
-            The first image is the primary one shown in the catalog and storefront.
-          </p>
+          {dirty && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setEditItems(savedMedia)} disabled={saving}>
+                {t.discard}
+              </Button>
+              <Button size="sm" onClick={save} disabled={saving || uploading > 0 || preparing > 0}>
+                {saving ? t.saving : t.save}
+              </Button>
+            </div>
+          )}
         </div>
-        {dirty && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setEditItems(savedMedia)} disabled={saving}>
-              Discard
-            </Button>
-            <Button size="sm" onClick={save} disabled={saving || uploading > 0 || preparing > 0}>
-              {saving ? "Saving…" : "Save images"}
-            </Button>
-          </div>
-        )}
-      </div>
-      <div className="mt-3">
+        <p className="mb-4 text-sm text-ink-soft">{t.help}</p>
+
         {props.mode === "create" && props.error && (
           <Alert variant="danger" className="mb-4">
             {props.error}
@@ -198,13 +242,13 @@ export function ProductImagesSection(props: Props) {
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
+            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-[0.5rem] border-2 border-dashed px-4 py-8 text-center text-sm transition-colors",
             dragOver ? "border-primary bg-primary-soft" : "border-line hover:border-primary/60"
           )}
         >
           <Upload className="size-5 text-ink-soft" aria-hidden />
-          <span className="font-medium text-ink">Drop images here or click to choose</span>
-          <span className="text-xs text-ink-soft">Multiple files supported</span>
+          <span className="font-medium text-ink">{t.drop}</span>
+          <span className="text-xs text-ink-soft">{t.multiple}</span>
           <input
             type="file"
             accept={ACCEPTED_IMAGE_ACCEPT}
@@ -219,13 +263,15 @@ export function ProductImagesSection(props: Props) {
 
         {preparing > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
-            <Spinner className="size-4" /> Preparing {preparing} image{preparing === 1 ? "" : "s"}…
+            <Spinner className="size-4" />{" "}
+            {preparing === 1 ? t.preparingOne : fmt(t.preparingMany, { n: preparing })}
           </p>
         )}
 
         {uploading > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
-            <Spinner className="size-4" /> Uploading {uploading} image{uploading === 1 ? "" : "s"}…
+            <Spinner className="size-4" />{" "}
+            {uploading === 1 ? t.uploadingOne : fmt(t.uploadingMany, { n: uploading })}
           </p>
         )}
 
@@ -234,12 +280,12 @@ export function ProductImagesSection(props: Props) {
             {items.map((m, i) => (
               <li
                 key={m.path || m.url}
-                className="group relative overflow-hidden rounded-lg border border-line"
+                className="group relative overflow-hidden rounded-[0.5rem] border border-line"
               >
-                <ProductImage media={m} alt={`Image ${i + 1}`} className="aspect-square w-full" />
+                <ProductImage media={m} alt={fmt(t.imageAlt, { n: i + 1 })} className="aspect-square w-full" />
                 {i === 0 && (
                   <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
-                    <Star className="size-3" aria-hidden /> Primary
+                    <Star className="size-3" aria-hidden /> {t.primary}
                   </span>
                 )}
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/60 px-1.5 py-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -248,8 +294,8 @@ export function ProductImagesSection(props: Props) {
                       type="button"
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
-                      aria-label="Move image earlier"
-                      className="cursor-pointer rounded-md p-1 text-white hover:bg-white/20 disabled:opacity-30"
+                      aria-label={t.moveEarlier}
+                      className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronUp className="size-4" aria-hidden />
                     </button>
@@ -257,8 +303,8 @@ export function ProductImagesSection(props: Props) {
                       type="button"
                       onClick={() => move(i, 1)}
                       disabled={i === items.length - 1}
-                      aria-label="Move image later"
-                      className="cursor-pointer rounded-md p-1 text-white hover:bg-white/20 disabled:opacity-30"
+                      aria-label={t.moveLater}
+                      className="cursor-pointer rounded p-1 text-white hover:bg-white/20 disabled:opacity-30"
                     >
                       <ChevronDown className="size-4" aria-hidden />
                     </button>
@@ -266,8 +312,8 @@ export function ProductImagesSection(props: Props) {
                   <button
                     type="button"
                     onClick={() => remove(i)}
-                    aria-label="Remove image"
-                    className="cursor-pointer rounded-md p-1 text-white hover:bg-danger"
+                    aria-label={t.remove}
+                    className="cursor-pointer rounded p-1 text-white hover:bg-danger"
                   >
                     <Trash2 className="size-4" aria-hidden />
                   </button>
@@ -277,9 +323,9 @@ export function ProductImagesSection(props: Props) {
           </ul>
         ) : (
           uploading === 0 &&
-          preparing === 0 && <p className="mt-4 text-sm text-ink-soft">No images yet.</p>
+          preparing === 0 && <p className="mt-4 text-sm text-ink-soft">{t.empty}</p>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

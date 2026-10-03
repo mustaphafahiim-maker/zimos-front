@@ -105,6 +105,22 @@ describe("readFrameMessage — payloads", () => {
     });
   });
 
+  it("reads the mode the frame opened in, and every later switch", () => {
+    expect(read({ type: "zimos:preview-ready", sectionIds: [], colorMode: "dark" })).toEqual({
+      type: "zimos:preview-ready",
+      sectionIds: [],
+      colorMode: "dark",
+    });
+    // An unknown mode is left out rather than guessed.
+    expect(read({ type: "zimos:preview-ready", sectionIds: [], colorMode: "sepia" })).toEqual({
+      type: "zimos:preview-ready",
+      sectionIds: [],
+    });
+    expect(read({ type: "zimos:color-mode", mode: "light" })).toEqual({ type: "zimos:color-mode", mode: "light" });
+    expect(read({ type: "zimos:color-mode", mode: "Dark" })).toBeNull();
+    expect(read({ type: "zimos:color-mode" })).toBeNull();
+  });
+
   it("drops junk ids from a ready message rather than the whole message", () => {
     expect(read({ type: "zimos:preview-ready", sectionIds: ["a", 7, "", null, "b"] })).toEqual({
       type: "zimos:preview-ready",

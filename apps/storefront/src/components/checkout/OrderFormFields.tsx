@@ -2,7 +2,14 @@
 
 import type { ReactNode } from "react";
 import { GOVERNORATES } from "@/lib/egypt";
-import type { OrderFormErrors, OrderFormField, OrderFormValues } from "@/lib/orderForm";
+import {
+  NOTES_MAX,
+  POSTAL_CODE_MAX,
+  type OrderFormErrors,
+  type OrderFormField,
+  type OrderFormFieldModes,
+  type OrderFormValues,
+} from "@/lib/orderForm";
 import { useStore } from "@/lib/StoreContext";
 import { input, label as labelClass } from "../ui";
 
@@ -59,34 +66,25 @@ function Field({
 /**
  * The COD address/contact fields. Controlled; validation lives in
  * lib/orderForm.ts so the product quick form and checkout behave identically.
- *
- * `fields` lets the checkout page draw the contact fields and the address
- * fields as two sections of the same form; by default all of them render
- * in one grid, as the product quick-order form has them. `onBlur` is how a
- * caller validates a field as the shopper leaves it.
+ * `fields` decides whether email, postal code and notes are hidden, optional
+ * or required — the store's checkout settings, as that form applies them.
  */
 export function OrderFormFields({
   idPrefix,
   values,
   errors,
   onChange,
-  onBlur,
+  fields,
   showAltPhone = false,
-  showEmail = false,
-  fields = "all",
 }: {
   idPrefix: string;
   values: OrderFormValues;
   errors: OrderFormErrors;
   onChange: (field: OrderFormField, value: string) => void;
-  onBlur?: (field: OrderFormField) => void;
+  fields: OrderFormFieldModes;
   showAltPhone?: boolean;
-  showEmail?: boolean;
-  fields?: "all" | "contact" | "address";
 }) {
   const { t, locale } = useStore();
-  const contact = fields !== "address";
-  const address = fields !== "contact";
 
   const a11y = (field: OrderFormField, hasHint = false) => {
     const id = fieldId(idPrefix, field);
@@ -96,13 +94,11 @@ export function OrderFormFields({
       name: field,
       "aria-invalid": errors[field] ? true : undefined,
       "aria-describedby": describedBy,
-      onBlur: onBlur ? () => onBlur(field) : undefined,
     } as const;
   };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {contact && (
       <Field id={fieldId(idPrefix, "fullName")} label={t.form.fullName} required error={errors.fullName} className="sm:col-span-2">
         <input
           {...a11y("fullName")}
@@ -115,9 +111,7 @@ export function OrderFormFields({
           className={input}
         />
       </Field>
-      )}
 
-      {contact && (
       <Field
         id={fieldId(idPrefix, "phone")}
         label={t.form.phone}
@@ -140,9 +134,8 @@ export function OrderFormFields({
           className={`${input} text-start rtl:text-end`}
         />
       </Field>
-      )}
 
-      {contact && showAltPhone && (
+      {showAltPhone && (
         <Field id={fieldId(idPrefix, "altPhone")} label={t.form.altPhone} optionalLabel={t.common.optional} error={errors.altPhone}>
           <input
             {...a11y("altPhone")}
@@ -159,10 +152,11 @@ export function OrderFormFields({
         </Field>
       )}
 
-      {contact && showEmail && (
+      {fields.email !== "hidden" && (
         <Field
           id={fieldId(idPrefix, "email")}
           label={t.form.email}
+          required={fields.email === "required"}
           optionalLabel={t.common.optional}
           error={errors.email}
           className="sm:col-span-2"
@@ -172,6 +166,7 @@ export function OrderFormFields({
             type="email"
             inputMode="email"
             autoComplete="email"
+            required={fields.email === "required"}
             dir="ltr"
             value={values.email}
             onChange={(e) => onChange("email", e.target.value)}
@@ -180,7 +175,6 @@ export function OrderFormFields({
         </Field>
       )}
 
-      {address && (
       <Field id={fieldId(idPrefix, "governorate")} label={t.form.governorate} required error={errors.governorate}>
         <div className="relative">
           <select
@@ -212,9 +206,7 @@ export function OrderFormFields({
           </svg>
         </div>
       </Field>
-      )}
 
-      {address && (
       <Field id={fieldId(idPrefix, "city")} label={t.form.city} required error={errors.city}>
         <input
           {...a11y("city")}
@@ -226,9 +218,7 @@ export function OrderFormFields({
           className={input}
         />
       </Field>
-      )}
 
-      {address && (
       <Field id={fieldId(idPrefix, "address")} label={t.form.address} required error={errors.address} className="sm:col-span-2">
         <input
           {...a11y("address")}
@@ -241,19 +231,49 @@ export function OrderFormFields({
           className={input}
         />
       </Field>
+
+      {fields.postal_code !== "hidden" && (
+        <Field
+          id={fieldId(idPrefix, "postalCode")}
+          label={t.form.postalCode}
+          required={fields.postal_code === "required"}
+          optionalLabel={t.common.optional}
+          error={errors.postalCode}
+          className="sm:col-span-2"
+        >
+          <input
+            {...a11y("postalCode")}
+            type="text"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            required={fields.postal_code === "required"}
+            dir="ltr"
+            maxLength={POSTAL_CODE_MAX}
+            value={values.postalCode}
+            onChange={(e) => onChange("postalCode", e.target.value)}
+            className={`${input} text-start rtl:text-end sm:max-w-56`}
+          />
+        </Field>
       )}
 
-      {address && (
-      <Field id={fieldId(idPrefix, "notes")} label={t.form.notes} optionalLabel={t.common.optional} className="sm:col-span-2">
-        <textarea
-          {...a11y("notes")}
-          rows={2}
-          placeholder={t.form.notesPlaceholder}
-          value={values.notes}
-          onChange={(e) => onChange("notes", e.target.value)}
-          className={`${input} min-h-20 resize-y`}
-        />
-      </Field>
+      {fields.notes !== "hidden" && (
+        <Field
+          id={fieldId(idPrefix, "notes")}
+          label={t.form.notes}
+          optionalLabel={t.common.optional}
+          error={errors.notes}
+          className="sm:col-span-2"
+        >
+          <textarea
+            {...a11y("notes")}
+            rows={2}
+            maxLength={NOTES_MAX}
+            placeholder={t.form.notesPlaceholder}
+            value={values.notes}
+            onChange={(e) => onChange("notes", e.target.value)}
+            className={`${input} min-h-20 resize-y`}
+          />
+        </Field>
       )}
     </div>
   );

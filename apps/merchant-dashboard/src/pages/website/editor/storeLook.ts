@@ -1,6 +1,17 @@
 import type { Workspace } from "@store-builder/api-client";
 import { normalizeHex } from "@/lib/brandColors";
-import type { PreviewTheme } from "@/lib/previewBridge";
+import type { PreviewTheme, ShellPreview } from "@/lib/previewBridge";
+import {
+  readFooterLook,
+  readHeaderLook,
+  sameFooter,
+  sameHeader,
+  writeFooter,
+  writeHeader,
+  type FooterLook,
+  type HeaderLook,
+} from "./storeShell";
+import { ORIGINAL_LOOK, readThemeChoice, type ThemeChoice } from "./storeThemes";
 
 /**
  * The store's look as the website editor's "Store look" panel edits it. It is
@@ -9,7 +20,19 @@ import type { PreviewTheme } from "@/lib/previewBridge";
  * see lib/brandColors.ts), the logo is the workspace's own `logoUrl`.
  *
  * The storefront reads every key here in apps/storefront/src/lib/brandTheme.ts
- * — the option keys below must match THEME_FONTS / THEME_RADII there.
+ * — the option keys below must match THEME_FONTS / THEME_RADII there, and the
+ * theme keys STORE_THEMES (see storeThemes.ts).
+ *
+ * The theme (`storeTheme`) owns the whole look but one thing: the accent the
+ * merchant picks for each mode — `primaryColor` in light mode (the key the
+ * Settings page has always written) and `primaryColorDark` in dark mode, which
+ * stays unset — "same as light mode" — until the merchant picks one, so a
+ * store that saved one colour looks exactly as it always did. On the original
+ * look the merchant also picks the second colour, font and corners.
+ *
+ * The header and footer (storeShell.ts) are part of the look too: they live in
+ * the same `themeSettings` blob and are saved by the same PATCH, so they share
+ * its undo history, its dirty check and its Save.
  */
 
 export type FontKey = "classic" | "modern" | "tajawal" | "system";
@@ -35,13 +58,30 @@ export interface StoreAnnouncementLook {
 }
 
 export interface StoreLook {
-  /** Null while the store has never saved one — the storefront's own default applies. */
+  /** A store theme, or the original look — where font, corners and second colour are the merchant's. */
+  storeTheme: ThemeChoice;
+  /**
+   * The accent in light mode. Null while the store has never saved one — the
+   * theme's own default applies.
+   */
   primaryColor: string | null;
+  /**
+   * True while `primaryColor` is one a website template carried over
+   * (WebsitePage) and the merchant has not picked a colour since. On a theme
+   * such a colour is ignored — the theme keeps its own accent — so read the
+   * accent through `accentOf`, never `primaryColor` directly.
+   */
+  primaryColorFromTemplate: boolean;
+  /** The accent in dark mode. Null follows `primaryColor` (or the theme's dark default without one). */
+  primaryColorDark: string | null;
+  /** Original look only; a theme brings its own. */
   secondaryColor: string | null;
   fontFamily: FontKey;
   cornerRadius: RadiusKey;
   logoUrl: string | null;
   announcement: StoreAnnouncementLook;
+  header: HeaderLook;
+  footer: FooterLook;
 }
 
 /** Font pairings, each drawn in its own face in the panel. Only fonts the storefront already loads. */
@@ -73,6 +113,21 @@ export const PALETTES: Array<{ key: string; primary: string; secondary: string }
   { key: "charcoal", primary: "#1F2937", secondary: "#D97706" },
 ];
 
+/**
+ * `themeSettings.primaryColorSource` for a colour a template carried over.
+ * Must match TEMPLATE_COLOR_SOURCE in apps/storefront/src/lib/brandTheme.ts.
+ */
+export const TEMPLATE_COLOR_SOURCE = "template";
+
+/**
+ * The light-mode accent the store actually paints with under `theme` (the
+ * look's own theme by default): a template's colour counts on the original
+ * look only, exactly as the storefront's brandVars reads it.
+ */
+export function accentOf(look: StoreLook, theme: ThemeChoice = look.storeTheme): string | null {
+  return look.primaryColorFromTemplate && theme !== ORIGINAL_LOOK ? null : look.primaryColor;
+}
+
 const FONT_KEYS = new Set<string>(FONT_OPTIONS.map((o) => o.value));
 const RADIUS_KEYS = new Set<string>(RADIUS_OPTIONS.map((o) => o.value));
 
@@ -84,12 +139,17 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
     typeof ts.cornerRadius === "string" && RADIUS_KEYS.has(ts.cornerRadius) ? (ts.cornerRadius as RadiusKey) : "soft";
   const header = ts.header && typeof ts.header === "object" ? (ts.header as Record<string, unknown>) : {};
   return {
+    storeTheme: readThemeChoice(ts.storeTheme),
     primaryColor: color("primaryColor"),
+    primaryColorFromTemplate: ts.primaryColorSource === TEMPLATE_COLOR_SOURCE && color("primaryColor") !== null,
+    primaryColorDark: color("primaryColorDark"),
     secondaryColor: color("secondaryColor"),
     fontFamily: font,
     cornerRadius: radius,
     logoUrl: workspace?.logoUrl ?? null,
     announcement: readAnnouncement(header.announcement),
+    header: readHeaderLook(ts.header),
+    footer: readFooterLook(ts.footer),
   };
 }
 
@@ -128,16 +188,16 @@ function readAnnouncement(raw: unknown): StoreAnnouncementLook {
 /**
  * What the preview frame lays over the saved look. Unset colours stay unset.
  *
- * Deliberately silent on `look.announcement`: `PreviewTheme` (this file and
- * its storefront-side twin in brandTheme.ts) only ever carries colours, font,
- * corners and the logo — the two apps share no code, so adding a field here
- * would do nothing until the storefront's `readPreviewTheme` / `PreviewBridge`
- * learned to apply it too. An unsaved announcement-bar edit previews only
- * after a real save and reload; see StoreLookPanel's module doc.
+ * Silent on the announcement bar, header and footer: those travel to the
+ * preview separately, as `lookToShellPreview` below.
  */
 export function lookToPreview(look: StoreLook): PreviewTheme {
+  const accent = accentOf(look);
   return {
-    ...(look.primaryColor ? { primaryColor: look.primaryColor } : {}),
+    // Always spelled out, so switching back to the original look beats a saved theme.
+    storeTheme: look.storeTheme,
+    ...(accent ? { primaryColor: accent } : {}),
+    ...(look.primaryColorDark ? { primaryColorDark: look.primaryColorDark } : {}),
     ...(look.secondaryColor ? { secondaryColor: look.secondaryColor } : {}),
     fontFamily: look.fontFamily,
     cornerRadius: look.cornerRadius,
@@ -160,13 +220,40 @@ export function lookToWorkspacePatch(
     cornerRadius: look.cornerRadius,
   };
   if (look.primaryColor) themeSettings.primaryColor = look.primaryColor;
+  // Kept only until the merchant picks a colour of their own.
+  if (look.primaryColorFromTemplate) themeSettings.primaryColorSource = TEMPLATE_COLOR_SOURCE;
+  else delete themeSettings.primaryColorSource;
   if (look.secondaryColor) themeSettings.secondaryColor = look.secondaryColor;
+  // Both keys belong to this panel alone: dropping one is how "the original
+  // look" and "same as light mode" are saved, leaving no trace of either.
+  if (look.storeTheme !== ORIGINAL_LOOK) themeSettings.storeTheme = look.storeTheme;
+  else delete themeSettings.storeTheme;
+  if (look.primaryColorDark) themeSettings.primaryColorDark = look.primaryColorDark;
+  else delete themeSettings.primaryColorDark;
 
-  const existingHeader =
-    existing?.header && typeof existing.header === "object" ? (existing.header as Record<string, unknown>) : {};
-  themeSettings.header = { ...existingHeader, announcement: announcementPatch(look.announcement) };
+  themeSettings.header = writeHeader(existing?.header, look.header, announcementPatch(look.announcement));
+  const footer = writeFooter(existing?.footer, look.footer);
+  if (footer) themeSettings.footer = footer;
+  else delete themeSettings.footer;
 
   return { logoUrl: look.logoUrl, themeSettings };
+}
+
+/**
+ * The unsaved header, footer and announcement bar as the preview shows them:
+ * exactly the `header` / `footer` objects a save would write, so what the
+ * merchant sees in the canvas is what the store will get.
+ */
+export function lookToShellPreview(existing: Record<string, unknown> | undefined, look: StoreLook): ShellPreview {
+  const { themeSettings } = lookToWorkspacePatch(existing, look);
+  const header = themeSettings.header as Record<string, unknown>;
+  const footer = (themeSettings.footer as Record<string, unknown> | undefined) ?? null;
+  return { header, footer };
+}
+
+/** How long the saved `themeSettings` JSON would be — the API refuses more than THEME_SETTINGS_MAX_CHARS. */
+export function themeSettingsSize(existing: Record<string, unknown> | undefined, look: StoreLook): number {
+  return JSON.stringify(lookToWorkspacePatch(existing, look).themeSettings).length;
 }
 
 /**
@@ -208,11 +295,28 @@ function sameAnnouncement(a: StoreAnnouncementLook, b: StoreAnnouncementLook): b
 
 export function sameLook(a: StoreLook, b: StoreLook): boolean {
   return (
+    a.storeTheme === b.storeTheme &&
     a.primaryColor === b.primaryColor &&
+    a.primaryColorFromTemplate === b.primaryColorFromTemplate &&
+    a.primaryColorDark === b.primaryColorDark &&
     a.secondaryColor === b.secondaryColor &&
     a.fontFamily === b.fontFamily &&
     a.cornerRadius === b.cornerRadius &&
     a.logoUrl === b.logoUrl &&
-    sameAnnouncement(a.announcement, b.announcement)
+    sameAnnouncement(a.announcement, b.announcement) &&
+    sameHeader(a.header, b.header) &&
+    sameFooter(a.footer, b.footer)
+  );
+}
+
+/** Only the theme, colours, font, corners and logo — what the Store look tab itself edits. */
+export function sameAppearance(a: StoreLook, b: StoreLook): boolean {
+  return sameLook({ ...a, announcement: b.announcement, header: b.header, footer: b.footer }, b);
+}
+
+/** Only the announcement bar, header and footer — what the preview's `shell` carries. */
+export function sameShellParts(a: StoreLook, b: StoreLook): boolean {
+  return (
+    sameAnnouncement(a.announcement, b.announcement) && sameHeader(a.header, b.header) && sameFooter(a.footer, b.footer)
   );
 }

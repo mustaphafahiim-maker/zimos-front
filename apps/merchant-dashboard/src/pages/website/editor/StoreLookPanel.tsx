@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { Check, Plus, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { AlertTriangle, Check, CheckCircle2, Megaphone, Moon, PanelBottom, PanelTop, Plus, Sun, X } from "lucide-react";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import { ColorField } from "@/components/ColorField";
 import { TextField } from "@/components/Field";
 import { DEFAULT_PRIMARY, DEFAULT_SECONDARY, normalizeHex } from "@/lib/brandColors";
+import { checkAccent, suggestAccent } from "@/lib/contrast";
+import { useThemeFonts } from "@/lib/themeFonts";
 import { ImageField } from "./ImageField";
 import { editorUi, useEditorLocale, type EditorUi } from "./editorLocale";
 import { MoveButtons } from "./MoveButtons";
@@ -12,144 +14,272 @@ import {
   MAX_ANNOUNCEMENT_MESSAGES,
   PALETTES,
   RADIUS_OPTIONS,
+  accentOf,
   type StoreAnnouncementLook,
   type StoreLook,
 } from "./storeLook";
+import type { ShellPart } from "./storeShell";
+import { ORIGINAL_LOOK, THEME_CHOICES, THEME_SPECS, accentGrounds, type ColorMode } from "./storeThemes";
+import { ThemeSketch } from "./ThemeSketch";
 
 /**
- * The inspector's "Store look" tab: colours, font, corners and logo for the
- * whole store. Every change goes straight into the live preview (as an
- * unsaved look the frame lays over the saved one) and is written to the
- * workspace only when the editor saves — see storeLook.ts for the keys.
+ * The inspector's "Store look" tab: the theme, the accent colour for each
+ * mode, and the logo, for the whole store. Every change goes straight into
+ * the live preview (as an unsaved look the frame lays over the saved one) and
+ * is written to the workspace only when the editor saves — see storeLook.ts
+ * for the keys.
+ *
+ * A theme fixes everything but the accent. On the original look the
+ * merchant also picks the second colour, font and corners, as before themes.
+ *
+ * Each accent is checked for contrast in its own mode, against that theme's
+ * grounds (storeThemes.ts `accentGrounds`, lib/contrast.ts): a colour that is
+ * hard to read gets a warning and a nearest readable suggestion — never a
+ * block, the merchant can still save it.
  *
  * `onChange` takes a history key so a burst of typing in a hex box, or a drag
  * across the native colour picker, is one undo step.
  *
- * The announcement bar section at the bottom previews live on the real
- * storefront once saved — `announcementOf` (storeAnnouncement.ts) reads it
- * straight off the workspace on every request. It does NOT preview inside
- * this editor's own live iframe before that save: the preview bridge's
- * `PreviewTheme` only ever carries colours/font/corners/logo (see
- * storeLook.ts's `lookToPreview`), so an unsaved toggle here has nothing to
- * show in the canvas until Save reloads it for real.
+ * The announcement bar, header and footer are part of the look too, but each
+ * has its own panel (ShellPanels.tsx), opened by clicking it in the preview or
+ * in the outline; the foot of this tab points there.
  */
 export function StoreLookPanel({
   look,
   onChange,
+  onEditShell,
+  storeName = "",
+  previewMode = "light",
+  onPreviewMode,
 }: {
   look: StoreLook;
   onChange: (next: StoreLook, historyKey?: string) => void;
+  /** Opens the announcement bar's, header's or footer's own panel. */
+  onEditShell?: (part: ShellPart) => void;
+  /** The specimen in each theme's thumbnail. */
+  storeName?: string;
+  /** The mode the preview is showing; the thumbnails follow it. */
+  previewMode?: ColorMode;
+  /** Switches the preview to the mode whose colour the merchant is changing. */
+  onPreviewMode?: (mode: ColorMode) => void;
 }) {
-  const ui = editorUi(useEditorLocale());
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+  useThemeFonts();
+
+  const theme = look.storeTheme;
+  const spec = THEME_SPECS[theme];
+  const original = theme === ORIGINAL_LOOK;
+  const accentFor = (mode: ColorMode) =>
+    mode === "light" ? accentOf(look) : (look.primaryColorDark ?? accentOf(look));
+
+  function setAccent(mode: ColorMode, hex: string | null, historyKey?: string) {
+    onPreviewMode?.(mode);
+    onChange(
+      mode === "light" ? { ...look, primaryColor: hex, primaryColorFromTemplate: false } : { ...look, primaryColorDark: hex },
+      historyKey
+    );
+  }
 
   return (
     <div className="space-y-6 px-4 py-4">
       <p className="text-xs text-ink-soft">{ui.lookHint}</p>
 
       <section className="space-y-2">
-        <Label>{ui.palettes}</Label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {PALETTES.map((palette) => {
-            const name = ui.paletteName(palette.key);
-            const active = look.primaryColor === palette.primary && look.secondaryColor === palette.secondary;
+        <Label>{ui.theme}</Label>
+        <div role="radiogroup" aria-label={ui.theme} className="grid grid-cols-2 gap-2">
+          {THEME_CHOICES.map((key) => {
+            const active = theme === key;
+            const option = THEME_SPECS[key];
             return (
               <button
-                key={palette.key}
-                type="button"
-                aria-pressed={active}
-                aria-label={ui.usePalette(name)}
-                onClick={() =>
-                  onChange({ ...look, primaryColor: palette.primary, secondaryColor: palette.secondary })
-                }
-                className={cn(
-                  "cursor-pointer flex items-center gap-2 rounded-[0.5rem] border px-2 py-1.5 text-start text-xs font-medium text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                  active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
-                )}
-              >
-                <span className="flex shrink-0 overflow-hidden rounded-full border border-line" aria-hidden>
-                  <span className="size-4" style={{ backgroundColor: palette.primary }} />
-                  <span className="size-4" style={{ backgroundColor: palette.secondary }} />
-                </span>
-                <span className="min-w-0 flex-1 truncate">{name}</span>
-                {active && <Check className="size-3.5 shrink-0 text-primary" aria-hidden />}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <LookColor
-        label={ui.primaryColor}
-        hint={look.primaryColor ? ui.primaryColorHint : ui.storeDefaultColor}
-        value={look.primaryColor}
-        fallback={DEFAULT_PRIMARY}
-        onChange={(hex) => onChange({ ...look, primaryColor: hex }, "look:primary")}
-      />
-      <LookColor
-        label={ui.accentColor}
-        hint={look.secondaryColor ? ui.accentColorHint : ui.storeDefaultColor}
-        value={look.secondaryColor}
-        fallback={DEFAULT_SECONDARY}
-        onChange={(hex) => onChange({ ...look, secondaryColor: hex }, "look:secondary")}
-      />
-
-      <section className="space-y-2">
-        <Label>{ui.font}</Label>
-        <div role="radiogroup" aria-label={ui.font} className="grid grid-cols-2 gap-1.5">
-          {FONT_OPTIONS.map((font) => {
-            const active = look.fontFamily === font.value;
-            return (
-              <button
-                key={font.value}
+                key={key}
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => onChange({ ...look, fontFamily: font.value })}
+                aria-label={option.name[locale]}
+                title={option.description[locale]}
+                onClick={() => onChange({ ...look, storeTheme: key })}
                 className={cn(
-                  "cursor-pointer rounded-[0.5rem] border px-2.5 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                  active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
+                  "cursor-pointer overflow-hidden rounded-[0.5rem] border text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                  active ? "border-primary ring-1 ring-primary" : "border-line hover:border-primary/50"
                 )}
               >
-                <span className="block text-lg leading-tight text-ink" style={{ fontFamily: font.heading }}>
-                  Aa أب
-                </span>
-                <span className="block text-xs text-ink-soft" style={{ fontFamily: font.body }}>
-                  {ui.fontName(font.value)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <Label>{ui.corners}</Label>
-        <div role="radiogroup" aria-label={ui.corners} className="grid grid-cols-3 gap-1.5">
-          {RADIUS_OPTIONS.map((option) => {
-            const active = look.cornerRadius === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => onChange({ ...look, cornerRadius: option.value })}
-                className={cn(
-                  "cursor-pointer flex flex-col items-center gap-1.5 rounded-[0.5rem] border px-2 py-2 text-xs text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                  active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
-                )}
-              >
-                <span
-                  className="block h-7 w-10 border-2 border-ink-soft/60 bg-paper-raised"
-                  style={{ borderRadius: option.radius }}
-                  aria-hidden
+                <ThemeSketch
+                  theme={key}
+                  mode={previewMode}
+                  accent={previewMode === "light" ? accentOf(look, key) : (look.primaryColorDark ?? accentOf(look, key))}
+                  title={storeName || option.name[locale]}
                 />
-                {ui.radiusName(option.value)}
+                <span className="flex items-center gap-1 border-t border-line px-2 py-1.5 text-xs font-medium text-ink">
+                  <span className="min-w-0 flex-1 truncate">{option.name[locale]}</span>
+                  {active && <Check className="size-3.5 shrink-0 text-primary" aria-hidden />}
+                </span>
               </button>
             );
           })}
         </div>
+        <p className="text-xs text-ink-soft">
+          <span className="font-medium text-ink">{spec.name[locale]}</span> — {spec.description[locale]}
+        </p>
+        <p className="text-xs text-ink-soft">{original ? ui.themeOriginalHint : ui.themeHint}</p>
       </section>
+
+      <section className="space-y-3">
+        <div>
+          <Label>{ui.accentColors}</Label>
+          <p className="mt-1 text-xs text-ink-soft">{ui.accentColorsHint}</p>
+        </div>
+        {(["light", "dark"] as const).map((mode) => {
+          const own = mode === "light" ? accentOf(look) : look.primaryColorDark;
+          const effective = accentFor(mode) ?? spec.palette[mode].accent;
+          const hint =
+            mode === "light"
+              ? own
+                ? ui.accentLightHint
+                : ui.themeDefaultColor
+              : own
+                ? ui.accentDarkHint
+                : accentOf(look)
+                  ? ui.accentDarkFollows
+                  : ui.themeDefaultColor;
+          return (
+            <div key={mode} className="space-y-2 rounded-[0.5rem] border border-line p-3">
+              <LookColor
+                label={mode === "light" ? ui.lightMode : ui.darkMode}
+                icon={mode === "light" ? <Sun className="size-3.5" aria-hidden /> : <Moon className="size-3.5" aria-hidden />}
+                hint={hint}
+                value={accentFor(mode)}
+                fallback={spec.palette[mode].accent}
+                onChange={(hex) => setAccent(mode, hex, `look:accent:${mode}`)}
+              />
+              {mode === "dark" && own && (
+                <button
+                  type="button"
+                  onClick={() => setAccent("dark", null)}
+                  className="cursor-pointer text-xs font-medium text-primary hover:underline"
+                >
+                  {ui.matchLightMode}
+                </button>
+              )}
+              <ContrastNote
+                ui={ui}
+                mode={mode}
+                accent={effective}
+                grounds={accentGrounds(theme, mode, effective)}
+                onUse={(hex) => setAccent(mode, hex)}
+              />
+            </div>
+          );
+        })}
+      </section>
+
+      {original && (
+        <>
+          <section className="space-y-2">
+            <Label>{ui.palettes}</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {PALETTES.map((palette) => {
+                const name = ui.paletteName(palette.key);
+                const active = accentOf(look) === palette.primary && look.secondaryColor === palette.secondary;
+                return (
+                  <button
+                    key={palette.key}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={ui.usePalette(name)}
+                    onClick={() =>
+                      onChange({
+                        ...look,
+                        primaryColor: palette.primary,
+                        primaryColorFromTemplate: false,
+                        secondaryColor: palette.secondary,
+                      })
+                    }
+                    className={cn(
+                      "cursor-pointer flex items-center gap-2 rounded-[0.5rem] border px-2 py-1.5 text-start text-xs font-medium text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
+                    )}
+                  >
+                    <span className="flex shrink-0 overflow-hidden rounded-full border border-line" aria-hidden>
+                      <span className="size-4" style={{ backgroundColor: palette.primary }} />
+                      <span className="size-4" style={{ backgroundColor: palette.secondary }} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{name}</span>
+                    {active && <Check className="size-3.5 shrink-0 text-primary" aria-hidden />}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <LookColor
+            label={ui.secondColor}
+            hint={look.secondaryColor ? ui.secondColorHint : ui.storeDefaultColor}
+            value={look.secondaryColor}
+            fallback={DEFAULT_SECONDARY}
+            onChange={(hex) => onChange({ ...look, secondaryColor: hex }, "look:secondary")}
+          />
+
+          <section className="space-y-2">
+            <Label>{ui.font}</Label>
+            <div role="radiogroup" aria-label={ui.font} className="grid grid-cols-2 gap-1.5">
+              {FONT_OPTIONS.map((font) => {
+                const active = look.fontFamily === font.value;
+                return (
+                  <button
+                    key={font.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => onChange({ ...look, fontFamily: font.value })}
+                    className={cn(
+                      "cursor-pointer rounded-[0.5rem] border px-2.5 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
+                    )}
+                  >
+                    <span className="block text-lg leading-tight text-ink" style={{ fontFamily: font.heading }}>
+                      Aa أب
+                    </span>
+                    <span className="block text-xs text-ink-soft" style={{ fontFamily: font.body }}>
+                      {ui.fontName(font.value)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <Label>{ui.corners}</Label>
+            <div role="radiogroup" aria-label={ui.corners} className="grid grid-cols-3 gap-1.5">
+              {RADIUS_OPTIONS.map((option) => {
+                const active = look.cornerRadius === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => onChange({ ...look, cornerRadius: option.value })}
+                    className={cn(
+                      "cursor-pointer flex flex-col items-center gap-1.5 rounded-[0.5rem] border px-2 py-2 text-xs text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      active ? "border-primary bg-primary-soft" : "border-line hover:border-primary/50"
+                    )}
+                  >
+                    <span
+                      className="block h-7 w-10 border-2 border-ink-soft/60 bg-paper-raised"
+                      style={{ borderRadius: option.radius }}
+                      aria-hidden
+                    />
+                    {ui.radiusName(option.value)}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       <ImageField
         label={ui.logo}
@@ -158,10 +288,87 @@ export function StoreLookPanel({
         onChange={(url) => onChange({ ...look, logoUrl: url || null })}
       />
 
-      <AnnouncementSection
-        announcement={look.announcement}
-        onChange={(next) => onChange({ ...look, announcement: next })}
-      />
+      {onEditShell && (
+        <section className="space-y-2 border-t border-line pt-4">
+          <p className="text-xs text-ink-soft">{ui.shellEditHint}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["announcement", ui.announcementBar, Megaphone],
+                ["header", ui.shellHeader, PanelTop],
+                ["footer", ui.shellFooter, PanelBottom],
+              ] as const
+            ).map(([part, label, Icon]) => (
+              <Button key={part} type="button" size="sm" variant="outline" onClick={() => onEditShell(part)}>
+                <Icon className="size-4" aria-hidden />
+                {label}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+const ratio = (value: number) => `${(Math.floor(value * 10) / 10).toFixed(1)} : 1`;
+
+/**
+ * Whether the accent reads well in this mode — and, when it doesn't, why and
+ * the nearest colour that does. A warning, never a block: the merchant can
+ * keep their colour and save.
+ */
+function ContrastNote({
+  ui,
+  mode,
+  accent,
+  grounds,
+  onUse,
+}: {
+  ui: EditorUi;
+  mode: ColorMode;
+  accent: string;
+  grounds: ReturnType<typeof accentGrounds>;
+  onUse: (hex: string) => void;
+}) {
+  const check = checkAccent(accent, grounds);
+  if (check.ok) {
+    return (
+      <p className="flex items-start gap-1.5 text-xs text-success">
+        <CheckCircle2 className="mt-px size-3.5 shrink-0" aria-hidden />
+        {ui.contrastOk(ratio(check.label), ratio(Math.min(check.onPage, check.onCard)))}
+      </p>
+    );
+  }
+  const suggestion = suggestAccent(accent, grounds, mode);
+  return (
+    <div role="status" className="space-y-1.5 rounded-[0.375rem] border border-accent/50 bg-accent-soft px-2.5 py-2 text-xs text-ink">
+      <p className="flex items-center gap-1.5 font-semibold">
+        <AlertTriangle className="size-3.5 shrink-0 text-accent-dark" aria-hidden />
+        {ui.contrastLow(mode)}
+      </p>
+      <ul className="space-y-0.5 ps-5 text-ink-soft">
+        {check.failing.includes("label") && <li>{ui.contrastLabel(ratio(check.label))}</li>}
+        {check.failing.includes("text") && <li>{ui.contrastText(ratio(Math.min(check.onPage, check.onCard)))}</li>}
+      </ul>
+      <p className="text-ink-soft">{ui.contrastTarget}</p>
+      {suggestion ? (
+        <button
+          type="button"
+          onClick={() => onUse(suggestion)}
+          aria-label={ui.contrastUseAria(suggestion, mode)}
+          className="cursor-pointer inline-flex items-center gap-1.5 rounded-[0.375rem] border border-line bg-paper-raised px-2 py-1 font-medium text-ink hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          <span className="size-3.5 rounded-full border border-line" style={{ backgroundColor: suggestion }} aria-hidden />
+          {ui.contrastUse}
+          {/* Isolated: after Arabic words the digits of a hex code would otherwise reorder ("B00 … #826"). */}
+          <bdi dir="ltr" className="font-mono">
+            {suggestion}
+          </bdi>
+        </button>
+      ) : (
+        <p className="text-ink-soft">{ui.contrastNoSuggestion}</p>
+      )}
     </div>
   );
 }
@@ -171,17 +378,25 @@ function announcementIsBlank(messages: string[]): boolean {
   return messages.every((m) => m.trim() === "");
 }
 
-function AnnouncementSection({
+/**
+ * The announcement bar's fields — its own panel in the inspector (see
+ * ShellPanels.tsx). `onChange` takes a history key, so typing a message or a
+ * link is one undo step rather than one per letter.
+ */
+export function AnnouncementSection({
   announcement,
   onChange,
+  bare = false,
 }: {
   announcement: StoreAnnouncementLook;
-  onChange: (next: StoreAnnouncementLook) => void;
+  onChange: (next: StoreAnnouncementLook, historyKey?: string) => void;
+  /** No top rule — the section is a panel of its own rather than the foot of another. */
+  bare?: boolean;
 }) {
   const ui = editorUi(useEditorLocale());
 
   return (
-    <section className="space-y-3 border-t border-line pt-4">
+    <section className={bare ? "space-y-3" : "space-y-3 border-t border-line pt-4"}>
       <label className="flex items-center gap-2 text-sm font-medium text-ink">
         <input
           type="checkbox"
@@ -198,7 +413,7 @@ function AnnouncementSection({
           <AnnouncementMessages
             messages={announcement.messages}
             ui={ui}
-            onChange={(messages) => onChange({ ...announcement, messages })}
+            onChange={(messages) => onChange({ ...announcement, messages }, "look:announcement:messages")}
           />
           {announcementIsBlank(announcement.messages) && (
             <p className="text-xs font-medium text-danger">{ui.announcementNeedsMessage}</p>
@@ -209,7 +424,9 @@ function AnnouncementSection({
             hint={ui.announcementLinkHint}
             dir="ltr"
             value={announcement.href ?? ""}
-            onChange={(e) => onChange({ ...announcement, href: e.target.value.trim() ? e.target.value : null })}
+            onChange={(e) =>
+              onChange({ ...announcement, href: e.target.value.trim() ? e.target.value : null }, "look:announcement:href")
+            }
           />
 
           <LookColor
@@ -324,12 +541,14 @@ function AnnouncementMessages({
  */
 function LookColor({
   label,
+  icon,
   hint,
   value,
   fallback,
   onChange,
 }: {
   label: string;
+  icon?: ReactNode;
   hint: string;
   value: string | null;
   fallback: string;
@@ -340,6 +559,7 @@ function LookColor({
   return (
     <ColorField
       label={label}
+      icon={icon}
       hint={hint}
       value={draft ?? value ?? fallback}
       onChange={(raw) => {

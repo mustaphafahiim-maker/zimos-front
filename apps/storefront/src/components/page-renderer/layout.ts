@@ -109,10 +109,13 @@ export const ROW_GAP: Record<string, string> = {
 
 // --- column ------------------------------------------------------------------
 
-/** A card is the same surface every card element already draws itself. */
+/**
+ * A card is the same surface every card element already draws itself.
+ * `zt-card` is a theme hook (globals.css): nothing without a store theme.
+ */
 export const COLUMN_SURFACE: Record<string, string> = {
   none: "",
-  card: "rounded-2xl border border-line bg-paper-raised p-6",
+  card: "zt-card rounded-2xl border border-line bg-paper-raised p-6",
 };
 
 /**
@@ -124,7 +127,9 @@ export const COLUMN_SURFACE: Record<string, string> = {
  */
 export const COLUMN_ALIGN: Record<string, string> = {
   start: "",
-  center: "text-center [&_.self-start]:self-center [&>svg]:self-center",
+  // The second svg rule only ever matches in the editor's preview, where each
+  // element sits in a `display: contents` marker (PageRenderer's editable mode).
+  center: "text-center [&_.self-start]:self-center [&>svg]:self-center [&>[data-zimos-el]>svg]:self-center",
 };
 
 /** Where a column sits when its neighbour is taller. Only from `md`, where columns sit side by side. */
@@ -148,16 +153,112 @@ export function settingClass(
   return typeof value === "string" && value in table ? table[value] : table[fallback];
 }
 
-/** Classes for the `<section>` and for the width wrapper inside it. */
+/** The tallest minimum height a section may ask for, in px. */
+export const MAX_SECTION_MIN_HEIGHT = 2000;
+
+/**
+ * A section's minimum height in px — what dragging the handle under a section
+ * in the editor's preview sets — or null for its natural height, which is
+ * every section written before this existed. Numbers only, clamped.
+ */
+export function sectionMinHeight(settings: unknown): number | null {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return null;
+  const raw = (settings as Record<string, unknown>).minHeight;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) return null;
+  return Math.min(MAX_SECTION_MIN_HEIGHT, Math.round(raw));
+}
+
+/**
+ * Classes for the `<section>` and for the width wrapper inside it. A section
+ * given a minimum height also centres its content vertically in the extra
+ * room, the way a tall hero band reads; without one, the classes are exactly
+ * what they always were.
+ */
 export function sectionClasses(settings: unknown): { outer: string; inner: string } {
   const background = settingClass(settings, "background", SECTION_BACKGROUND, "none");
   const tone = settingClass(settings, "background", SECTION_TONE, "none");
   const padding = settingClass(settings, "padding", SECTION_PADDING, "normal");
   const width = settingClass(settings, "width", SECTION_WIDTH, "normal");
+  const tall = sectionMinHeight(settings) !== null ? " flex flex-col justify-center" : "";
   return {
-    outer: `px-4 sm:px-6 ${padding} ${background}`.trimEnd(),
+    outer: `px-4 sm:px-6 ${padding} ${background}`.trimEnd() + tall,
     inner: `mx-auto flex flex-col gap-6 ${width} ${tone}`.trimEnd(),
   };
+}
+
+/** The value one setting resolves to — the table key, or `fallback` when unusable. */
+function settingKey(settings: unknown, key: string, table: Record<string, string>, fallback: string): string {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return fallback;
+  const value = (settings as Record<string, unknown>)[key];
+  return typeof value === "string" && value in table ? value : fallback;
+}
+
+/**
+ * The attributes a store theme styles a section by (globals.css,
+ * `[data-zt-section]`): its vertical space, which the theme scales to its own
+ * density; its width, which follows the theme's container; and its
+ * background, which a theme's hero leaves alone once the merchant has picked
+ * one. Attributes rather than classes so the class strings above — and every
+ * page rendered with them — stay exactly as they were. Without a theme
+ * nothing reads them.
+ */
+export function sectionHooks(settings: unknown): Record<string, string> {
+  const hooks: Record<string, string> = {
+    "data-zt-section": "",
+    "data-zt-pad": settingKey(settings, "padding", SECTION_PADDING, "normal"),
+    "data-zt-width": settingKey(settings, "width", SECTION_WIDTH, "normal"),
+  };
+  const background = settingKey(settings, "background", SECTION_BACKGROUND, "none");
+  if (background !== "none") hooks["data-zt-bg"] = background;
+  return hooks;
+}
+
+/** Just enough of a page-tree node to walk it; everything is checked, never trusted. */
+type Node = { rows?: unknown; columns?: unknown; elements?: unknown; type?: unknown; props?: unknown };
+
+function children(node: unknown, key: "rows" | "columns" | "elements"): Node[] {
+  if (!node || typeof node !== "object") return [];
+  const list = (node as Node)[key];
+  return Array.isArray(list) ? (list.filter((n) => n && typeof n === "object") as Node[]) : [];
+}
+
+function headingLevel(element: Node): number {
+  const props = element.props && typeof element.props === "object" ? (element.props as Record<string, unknown>) : {};
+  const level = Number(props.level);
+  return Number.isFinite(level) ? level : 2;
+}
+
+/**
+ * Whether a section reads as a page's opening: a top-level heading anywhere
+ * in it, or a heading and a button sharing a column (the editor's plain
+ * "Hero" block writes a level-2 heading, so the level alone would miss it).
+ */
+function isHeadline(section: unknown): boolean {
+  for (const row of children(section, "rows")) {
+    for (const column of children(row, "columns")) {
+      const elements = children(column, "elements");
+      if (elements.some((el) => el.type === "heading" && headingLevel(el) === 1)) return true;
+      if (elements.some((el) => el.type === "heading") && elements.some((el) => el.type === "button")) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Which section is the page's hero — the one a store theme lays out its own
+ * way (globals.css, `[data-zimos-hero]`: its alignment, whitespace, heading
+ * scale and picture treatment). Sections aren't typed, so it is read off the
+ * content: the first of the page's first two sections that opens with a
+ * headline. The second is allowed because a page often starts with a thin
+ * announcement band or a claims strip. -1 when there is none, and nothing on
+ * the page is treated as a hero.
+ */
+export function heroSectionIndex(sections: unknown): number {
+  if (!Array.isArray(sections)) return -1;
+  for (let i = 0; i < Math.min(2, sections.length); i++) {
+    if (isHeadline(sections[i])) return i;
+  }
+  return -1;
 }
 
 export function rowClasses(settings: unknown): string {

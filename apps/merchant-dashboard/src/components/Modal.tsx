@@ -33,13 +33,13 @@ export function Modal({ open, onClose, title, description, children, footer, cla
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "w-full max-w-lg rounded-xl bg-paper-raised shadow-xl ring-1 ring-foreground/10",
+          "w-full max-w-lg rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-xl",
           className
         )}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="border-b border-line px-5 py-4">
-          <h2 className="text-base font-semibold text-ink">{title}</h2>
+          <h2 className="font-display text-lg font-medium text-ink">{title}</h2>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
         </div>
         <div className="px-5 py-4">{children}</div>

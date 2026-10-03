@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { Input, Label, cn } from "@store-builder/ui";
 import { BRAND_COLOR_PRESETS, normalizeHex } from "@/lib/brandColors";
@@ -11,11 +11,14 @@ import { BRAND_COLOR_PRESETS, normalizeHex } from "@/lib/brandColors";
  */
 export function ColorField({
   label,
+  icon,
   hint,
   value,
   onChange,
 }: {
   label: string;
+  /** Drawn before the label, e.g. a sun or moon for a per-mode colour. */
+  icon?: ReactNode;
   hint?: string;
   value: string;
   onChange: (hex: string) => void;
@@ -27,7 +30,10 @@ export function ColorField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={icon ? "inline-flex items-center gap-1.5" : undefined}>
+        {icon}
+        {label}
+      </Label>
       <div className="flex items-center gap-2">
         <input
           id={id}
@@ -42,6 +48,7 @@ export function ColorField({
           onChange={(e) => onChange(e.target.value)}
           onBlur={() => valid && onChange(valid)}
           spellCheck={false}
+          dir="ltr"
           aria-invalid={valid ? undefined : true}
           placeholder="#1F5D5B"
           className={cn("w-32 font-mono uppercase", !valid && "border-danger focus-visible:ring-danger/30")}

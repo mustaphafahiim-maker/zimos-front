@@ -3,17 +3,31 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
+import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
-import { ShopChrome } from "@/components/ShopChrome";
-import { StoreAnalytics } from "@/components/StoreAnalytics";
+import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
+import { StoreAnalytics } from "@/components/StoreAnalytics";
+import { TrackingPixels } from "@/components/TrackingPixels";
+import { hasPixels, pixelIdsOf } from "@/lib/adPixels";
+import { resolveCheckoutSettings } from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
+import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
-import { brandStyle, getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
+import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
+import { storeThemeOf } from "@/lib/brandTheme";
+import { StoreUnavailable } from "@/components/StoreUnavailable";
+import { THEME_FONT_CSS } from "@/app/themeFonts";
+
+/** An unavailable store has no themeSettings; its own default language still counts. */
+function localeSource(store: UnavailableStore) {
+  const source = { themeSettings: {}, defaultLocale: store.defaultLocale ?? undefined };
+  return source;
+}
 import { getStoreBasePath } from "@/lib/storeRoute";
 
 /**
@@ -31,7 +45,12 @@ export async function generateMetadata({
   params: Promise<{ workspaceId: string }>;
 }): Promise<Metadata> {
   const { workspaceId } = await params;
-  const store = await getStoreMeta(workspaceId);
+  const state = await getStoreState(workspaceId);
+  if (state.kind === "unavailable") {
+    const t = getDictionary(await getStoreLocale(localeSource(state.store)));
+    return { title: { absolute: state.store.name ? `${state.store.name} — ${t.unavailable.metaTitle}` : t.unavailable.metaTitle }, robots: { index: false } };
+  }
+  const store = state.kind === "ok" ? state.store : null;
   if (!store) return {};
 
   const locale = await getStoreLocale(store);
@@ -58,6 +77,12 @@ export async function generateMetadata({
  *  - the merchant's brand colours as CSS custom properties, so the whole
  *    subtree (header, buttons, links, badges) picks them up through the
  *    semantic tokens — see the `.brand-theme` block in globals.css;
+ *  - the store theme, when the merchant picked one: `data-store-theme` on the
+ *    wrapper switches on that theme's palette, type, shapes and hero layout
+ *    (globals.css "Store themes"), and the small stylesheet beside it holds
+ *    the themes' self-hosted font stacks (app/themeFonts.ts; the editor's
+ *    preview page renders it too, for switching). Without a theme the store
+ *    renders exactly as it did before themes existed;
  *  - the store's link prefix, resolved once for the client components below it,
  *    since only a server component can tell how the request arrived;
  *  - the store language: `lang`/`dir` on this wrapper, mirrored onto <html> by
@@ -65,8 +90,12 @@ export async function generateMetadata({
  *    is for;
  *  - the shared header/footer, so every page of the store — including one the
  *    merchant built in the website editor — sits under the same branding.
- *    Funnel pages (`/f/…`) are the one exception: ShopChrome leaves the header
- *    and footer out there, and the funnel layout draws a minimal masthead.
+ *    Funnel pages (`/f/…`) are the exception: they draw their own masthead,
+ *    so HideInFunnel leaves these two out there;
+ *  - the store's own analytics (StoreAnalytics): one page_view per navigation
+ *    for every page of the store, funnel pages included — the funnel layout
+ *    nests inside this one, so it deliberately doesn't mount it again. An
+ *    unavailable store renders none of this, so it is never tracked.
  */
 export default async function StoreLayout({
   children,
@@ -76,56 +105,87 @@ export default async function StoreLayout({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const [store, basePath, collections] = await Promise.all([
-    getStoreMeta(workspaceId),
+  const [state, basePath] = await Promise.all([
+    getStoreState(workspaceId),
     getStoreBasePath(workspaceId),
-    getStoreCollections(workspaceId),
   ]);
-  if (!store) notFound();
+  // Suspended, or unpaid past its grace day: every page of the store is the
+  // "currently unavailable" page, and none of the store's own content.
+  if (state.kind === "unavailable") {
+    const locale = await getStoreLocale(localeSource(state.store));
+    return <StoreUnavailable store={state.store} locale={locale} />;
+  }
+  if (state.kind !== "ok") notFound();
+  const store = state.store;
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
+  const collections = await getStoreCollections(workspaceId);
   const info: StoreInfo = {
     workspaceId,
+    id: store.id,
+    slug: store.slug,
     name: store.name,
     currency: store.currency,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    // Re-resolved rather than trusted: an older API without `checkout` must
+    // still give the forms the defaults.
+    checkout: resolveCheckoutSettings(store.checkout),
+    orderBump: store.orderBump ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
-  // (like pixelIdsOf) so events carry it as soon as the API sends one.
+  // so events carry it as soon as the API sends one.
   const websiteId = (store as { websiteId?: unknown }).websiteId;
+  const theme = storeThemeOf(store.themeSettings);
+  // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
+  const pixels = pixelIdsOf(store);
 
   return (
     <StoreRouteProvider basePath={basePath}>
       <StoreContextProvider locale={locale} store={info}>
-        {/* The store's own analytics — one page_view per navigation for every
-            page of the store, funnel pages included (their layout nests here,
-            so it deliberately does not mount this again). Reads the search
-            params, hence the Suspense boundary. */}
-        <Suspense fallback={null}>
-          <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
-        </Suspense>
-        <div
-          lang={intlLocaleFor(locale)}
-          dir={dirFor(locale)}
-          className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-          style={brandStyle(store.themeSettings)}
-        >
-          <DocumentLocale locale={locale} />
-          <ShopChrome>
-            <StoreHeader store={store} locale={locale} />
-            <MobileCategoryStrip collections={collections} t={t} />
-          </ShopChrome>
-          <div className="flex flex-1 flex-col">{children}</div>
-          <ShopChrome>
-            <StoreFooter store={store} locale={locale} />
-            {/* The slide-over cart: opened by "add to cart" and the header's cart icon.
-                Funnel pages have no cart, so it steps aside with the rest of the chrome. */}
-            <CartDrawer />
-          </ShopChrome>
-          <BackToTop label={t.common.backToTop} />
-        </div>
+        {/* Holds the editor preview's unsaved header/footer settings; empty,
+            and so invisible, on every page a shopper sees. */}
+        <StoreShellProvider>
+          {/* Reads the search params, hence the Suspense boundary. */}
+          <Suspense fallback={null}>
+            <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+          </Suspense>
+          {hasPixels(pixels) && (
+            // Reads the search params to send page views on navigation.
+            <Suspense fallback={null}>
+              <TrackingPixels ids={pixels} />
+            </Suspense>
+          )}
+          {/* suppressHydrationWarning: the editor's preview page puts its
+              unsaved theme on this element before hydrating (brandTheme.ts
+              previewBootScript); a live store never changes it. */}
+          <div
+            lang={intlLocaleFor(locale)}
+            dir={dirFor(locale)}
+            className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
+            style={brandStyle(store.themeSettings)}
+            data-store-theme={theme ?? undefined}
+            suppressHydrationWarning
+          >
+            {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
+            <DocumentLocale locale={locale} />
+            <PaymentsPreviewBanner workspaceId={workspaceId} />
+            <HideInFunnel>
+              <StoreHeader store={store} locale={locale} />
+              <MobileCategoryStrip collections={collections} t={t} />
+            </HideInFunnel>
+            <div className="flex flex-1 flex-col">{children}</div>
+            <HideInFunnel>
+              <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+              {/* The slide-over cart: opened by "add to cart" and the header's
+                  cart icon. Funnel pages have no cart, so it steps aside with
+                  the rest of the store's chrome. */}
+              <CartDrawer />
+            </HideInFunnel>
+            <BackToTop label={t.common.backToTop} />
+          </div>
+        </StoreShellProvider>
       </StoreContextProvider>
     </StoreRouteProvider>
   );

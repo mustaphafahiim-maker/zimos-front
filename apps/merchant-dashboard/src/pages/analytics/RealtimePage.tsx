@@ -41,30 +41,30 @@ const STRINGS = {
     agoMin: "{m}m ago",
   },
   ar: {
-    title: "الآن مباشر",
-    description: "آخر 30 دقيقة، بتتحدّث كل 10 ثواني.",
+    title: "مباشر الآن",
+    description: "آخر 30 دقيقة، ويُحدَّث كل 10 ثوانٍ.",
     back: "زيارات الموقع",
-    active: "متواجدين دلوقتي",
-    activeHint: "زوار في آخر 5 دقايق",
+    active: "المتصفحون الآن",
+    activeHint: "الزوار خلال آخر 5 دقائق",
     views: "المشاهدات",
     visitors: "الزوار",
     events: "الأحداث",
     countries: "الدول",
-    minute: "المشاهدات كل دقيقة",
+    minute: "المشاهدات في الدقيقة",
     activity: "النشاط",
     all: "الكل",
-    onlyViews: "مشاهدات",
-    onlyEvents: "أحداث",
-    searchPlaceholder: "فلتر بالصفحة أو الحدث أو المُحيل",
+    onlyViews: "المشاهدات",
+    onlyEvents: "الأحداث",
+    searchPlaceholder: "تصفية حسب الصفحة أو الحدث أو الموقع المُحيل",
     paths: "الصفحات",
-    referrers: "المُحيلون",
+    referrers: "المواقع المُحيلة",
     countriesTitle: "الدول",
-    empty: "لسه مفيش — السجل بيتملى مع وصول الزوار.",
+    empty: "لا يوجد نشاط بعد — يمتلئ السجل مع وصول الزوار.",
     direct: "مباشر",
-    viewed: "شاف {path}",
-    fired: "عمل {event}",
-    ago: "من {s} ث",
-    agoMin: "من {m} د",
+    viewed: "شاهد {path}",
+    fired: "نفّذ {event}",
+    ago: "قبل {s} ث",
+    agoMin: "قبل {m} د",
   },
 } satisfies Messages;
 
@@ -128,8 +128,12 @@ export function RealtimePage() {
       (!q || [a.urlPath, a.eventName, a.referrerDomain, a.browser, a.country].some((v) => v?.toLowerCase().includes(q)))
   );
 
+  // Measured from the moment the server took this snapshot (it refreshes
+  // every 10 seconds), not from the clock at render time.
+  const snapshotAt = d?.timestamp ? new Date(d.timestamp).getTime() : null;
   const ago = (iso: string) => {
-    const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    const at = new Date(iso).getTime();
+    const s = Math.max(0, Math.round(((snapshotAt ?? at) - at) / 1000));
     return s < 60 ? fmt(t.ago, { s }) : fmt(t.agoMin, { m: Math.floor(s / 60) });
   };
   const describe = (a: WebAnalyticsRealtimeActivity) =>

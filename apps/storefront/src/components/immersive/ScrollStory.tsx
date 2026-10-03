@@ -49,8 +49,8 @@ export function ScrollStory({ steps, title }: { steps: StoryStep[]; title?: stri
       <div className={allowed ? "md:sticky md:top-24" : undefined}>
         <div className="aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper">
           {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {current.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={current.image}
               alt={current.title}

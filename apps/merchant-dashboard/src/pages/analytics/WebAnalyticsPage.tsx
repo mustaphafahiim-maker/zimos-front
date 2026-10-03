@@ -97,25 +97,25 @@ const STRINGS = {
   },
   ar: {
     title: "زيارات الموقع",
-    description: "مين بيزور متجرك وبيعمل إيه فيه، من متتبّع المتجر نفسه.",
-    realtime: "الآن مباشر",
+    description: "من يزور متجرك وماذا يفعل فيه، من تتبّع المتجر نفسه.",
+    realtime: "مباشر الآن",
     range: "الفترة",
-    rToday: "النهارده",
+    rToday: "اليوم",
     r24h: "آخر 24 ساعة",
-    rWeek: "الأسبوع ده",
+    rWeek: "هذا الأسبوع",
     r7d: "آخر 7 أيام",
-    rMonth: "الشهر ده",
-    r30d: "آخر 30 يوم",
-    r90d: "آخر 90 يوم",
-    rYear: "السنة دي",
-    r6m: "آخر 6 شهور",
-    r12m: "آخر 12 شهر",
+    rMonth: "هذا الشهر",
+    r30d: "آخر 30 يومًا",
+    r90d: "آخر 90 يومًا",
+    rYear: "هذا العام",
+    r6m: "آخر 6 أشهر",
+    r12m: "آخر 12 شهرًا",
     rAll: "كل الوقت",
-    compare: "مقارنة",
-    cNone: "من غير مقارنة",
-    cPrev: "الفترة اللي قبلها",
-    cYoy: "نفس الفترة السنة اللي فاتت",
-    unit: "تجميع",
+    compare: "المقارنة",
+    cNone: "بدون مقارنة",
+    cPrev: "الفترة السابقة",
+    cYoy: "الفترة نفسها من العام الماضي",
+    unit: "التجميع",
     uMinute: "دقيقة",
     uHour: "ساعة",
     uDay: "يوم",
@@ -123,17 +123,17 @@ const STRINGS = {
     visitors: "الزوار",
     visits: "الزيارات",
     views: "المشاهدات",
-    bounceRate: "نسبة الارتداد",
+    bounceRate: "معدل الارتداد",
     visitDuration: "مدة الزيارة",
     chartTitle: "المشاهدات والزوار",
-    chartDesc: "المشاهدات العمود الفاتح والزوار قدامه؛ فترة المقارنة متقطعة.",
+    chartDesc: "المشاهدات في العمود الفاتح والزوار أمامه؛ وفترة المقارنة بخط متقطع.",
     pages: "الصفحات",
     path: "المسار",
-    entry: "الدخول",
-    exit: "الخروج",
+    entry: "صفحة الدخول",
+    exit: "صفحة الخروج",
     pageTitle: "العنوان",
     sources: "المصادر",
-    referrers: "المُحيلون",
+    referrers: "المواقع المُحيلة",
     channels: "القنوات",
     utmSource: "UTM source",
     utmCampaign: "UTM campaign",
@@ -143,20 +143,20 @@ const STRINGS = {
     devices: "الأجهزة",
     screens: "الشاشات",
     languages: "اللغات",
-    location: "المكان",
+    location: "الموقع الجغرافي",
     countries: "الدول",
     regions: "المناطق",
     cities: "المدن",
     events: "الأحداث",
     weekly: "الزيارات الأسبوعية",
-    weeklyDesc: "الزوار حسب يوم الأسبوع والساعة، على طول الفترة.",
-    filters: "الفلاتر",
-    clear: "امسح الكل",
-    noData: "مفيش زيارات في الفترة دي",
-    noDataDesc: "المتجر بيبلّغ عن كل زيارة بنفسه — مفيش حاجة تتظبط. الأرقام بتظهر مع أول زاير.",
-    direct: "مباشر / بدون",
+    weeklyDesc: "الزوار حسب يوم الأسبوع والساعة، على مدار الفترة.",
+    filters: "عوامل التصفية",
+    clear: "مسح الكل",
+    noData: "لا توجد زيارات في هذه الفترة",
+    noDataDesc: "يُبلغ المتجر عن كل زيارة بنفسه ولا يحتاج إلى أي إعداد. ستظهر الأرقام مع أول زائر.",
+    direct: "مباشر / بدون مصدر",
     fUrl: "الصفحة",
-    fReferrer: "المُحيل",
+    fReferrer: "الموقع المُحيل",
     fTitle: "العنوان",
     fBrowser: "المتصفح",
     fOs: "النظام",
@@ -167,10 +167,10 @@ const STRINGS = {
     fLanguage: "اللغة",
     fScreen: "الشاشة",
     fEvent: "الحدث",
-    fHostname: "الهوست",
+    fHostname: "اسم النطاق",
     fTag: "الوسم",
     fUtm: "UTM",
-    days: ["سبت", "أحد", "اتنين", "تلات", "أربع", "خميس", "جمعة"] as unknown as string,
+    days: ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as unknown as string,
   },
 } satisfies Messages;
 
@@ -318,6 +318,9 @@ export function WebAnalyticsPage() {
   const eventTabs: MetricTab[] = [{ type: "event", label: t.events, filterKey: "event" }];
 
   const days = t.days as unknown as string[];
+  // The rows run Saturday first (the Egyptian week, like `days`), but the API's
+  // `dow` is Postgres's: 0 = Sunday … 6 = Saturday.
+  const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
   const weeklyMax = Math.max(1, ...(weekly.data?.rows.map((r) => r.visitors) ?? [1]));
   const weeklyGrid = new Map((weekly.data?.rows ?? []).map((r) => [`${r.dow}:${r.hour}`, r.visitors]));
 
@@ -415,7 +418,9 @@ export function WebAnalyticsPage() {
                     <h2 className="text-sm font-semibold text-ink">{t.weekly}</h2>
                     <p className="mb-3 text-xs text-ink-soft">{t.weeklyDesc}</p>
                     <div className="grid gap-px" style={{ gridTemplateColumns: "2.5rem repeat(24, minmax(0, 1fr))" }} dir="ltr">
-                      {days.map((day, dow) => (
+                      {days.map((day, row) => {
+                        const dow = WEEK_ORDER[row];
+                        return (
                         <div key={day} className="contents">
                           <span className="pe-1 text-[10px] leading-4 text-ink-soft">{day}</span>
                           {Array.from({ length: 24 }, (_, hour) => {
@@ -430,7 +435,8 @@ export function WebAnalyticsPage() {
                             );
                           })}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </Card>
                 </div>

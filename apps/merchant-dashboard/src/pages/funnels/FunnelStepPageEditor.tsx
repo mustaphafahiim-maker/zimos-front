@@ -129,7 +129,7 @@ export function FunnelStepPageEditor({
   }
 
   function addBlock(preset: BlockPreset) {
-    const section = createSection(preset);
+    const section = createSection(preset, locale);
     setSections([...sections, section]);
     selectSection(section.id);
   }

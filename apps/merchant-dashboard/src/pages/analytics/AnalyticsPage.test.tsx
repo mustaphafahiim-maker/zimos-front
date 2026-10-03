@@ -177,15 +177,15 @@ describe("AnalyticsPage", () => {
     expect(screen.queryByText("Conversion funnel")).not.toBeInTheDocument();
   });
 
-  it("re-queries when the merchant picks another range from the date menu", async () => {
+  it("re-queries when the merchant picks another range from the date control", async () => {
     api.getAnalyticsSummary.mockResolvedValue(summary());
 
     const { user } = renderWithProviders(<AnalyticsPage />, { route: "/analytics" });
 
     await screen.findAllByText("Gross sales");
     api.getAnalyticsSummary.mockClear();
-    await user.click(screen.getByRole("button", { name: "Date range" }));
-    await user.click(await screen.findByRole("menuitemradio", { name: "Last 7 days" }));
+    // The range is the dashboard's native select (RangeSwitch).
+    await user.selectOptions(screen.getByRole("combobox", { name: "Date range" }), "7d");
 
     expect(api.getAnalyticsSummary).toHaveBeenCalledTimes(2);
     const [call] = api.getAnalyticsSummary.mock.calls;

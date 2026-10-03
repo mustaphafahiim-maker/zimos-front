@@ -1,12 +1,6 @@
-import { CalendarDays, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-  cn,
-} from "@store-builder/ui";
+import { CalendarDays } from "lucide-react";
+import { cn } from "@store-builder/ui";
+import { Select } from "@/components/Select";
 import { useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { ANALYTICS_RANGES, type AnalyticsRange } from "@/lib/analytics";
 
@@ -19,15 +13,17 @@ const STRINGS = {
   },
   ar: {
     label: "الفترة",
-    yesterday: "إمبارح",
-    last365: "آخر 365 يوم",
-    compare: "مقارنة: الفترة اللي قبلها",
+    yesterday: "أمس",
+    last365: "آخر 365 يومًا",
+    compare: "المقارنة: الفترة السابقة",
   },
 } satisfies Messages;
 
 /**
- * The date-range control above the analytics and profit screens: a calendar
- * button that opens the presets, next to the (always-on) comparison chip.
+ * The date-range control above the analytics and funnel screens: the presets
+ * in a native select (the dashboard's own control — it also keeps the menu
+ * library out of every page that shows this), next to the always-on
+ * comparison chip.
  */
 export function RangeSwitch({
   value,
@@ -48,27 +44,29 @@ export function RangeSwitch({
     "90d": common.last90,
     "365d": t.last365,
   };
-  const chip =
-    "inline-flex h-9 items-center gap-2 rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink";
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <DropdownMenu>
-        <DropdownMenuTrigger aria-label={t.label} className={cn(chip, "cursor-pointer transition-colors hover:bg-paper")}>
-          <CalendarDays className="size-4 text-ink-soft" aria-hidden />
-          <span>{labels[value]}</span>
-          <ChevronDown className="size-4 text-ink-soft" aria-hidden />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
-          <DropdownMenuRadioGroup value={value} onValueChange={(next) => onChange(next as AnalyticsRange)}>
-            {ANALYTICS_RANGES.map((range) => (
-              <DropdownMenuRadioItem key={range} value={range}>
-                {labels[range]}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <span className={cn(chip, "text-ink-soft")}>{t.compare}</span>
+      <div className="relative">
+        <CalendarDays
+          className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
+          aria-hidden
+        />
+        <Select
+          aria-label={t.label}
+          value={value}
+          onChange={(e) => onChange(e.target.value as AnalyticsRange)}
+          className="h-9 w-auto ps-9 font-medium"
+        >
+          {ANALYTICS_RANGES.map((range) => (
+            <option key={range} value={range}>
+              {labels[range]}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <span className="inline-flex h-9 items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft">
+        {t.compare}
+      </span>
     </div>
   );
 }

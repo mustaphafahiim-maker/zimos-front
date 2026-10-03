@@ -67,9 +67,6 @@ const ALLOWED_ELEMENT_TYPES = new Set([
 
 const SETTING_KEYS = new Set(SECTION_SETTING_SPECS.map((s) => s.key));
 
-/** Where a ready-made store section's pictures are served from. */
-const KIT_PREFIX = "/store-kit/";
-
 /** Every preset with a column layout, paired with its key for `it.each`. */
 const LAID_OUT = BLOCK_PRESETS.filter((p) => p.rows).map((preset) => [preset.key, preset] as const);
 
@@ -149,20 +146,16 @@ describe("BLOCK_PRESETS", () => {
               expect(content.author, key).toBe("");
               expect(content.rating, key).toBe(0);
             }
-            // A ready-made store section is the one kind that starts with
-            // pictures already in it — the kit's own, which the suite at the
-            // bottom of this file checks in its place.
-            const isStoreKit = preset.group === "store";
-            if (type === "image" && !isStoreKit) expect(content.src ?? "", key).toBe("");
+            // No preset starts with pictures — the ready-made store sections
+            // included: every picture slot is the merchant's to fill.
+            if (type === "image") expect(content.src ?? "", key).toBe("");
             if (type === "social_icons") expect(content.links, key).toEqual([]);
-            if (type === "gallery" && !isStoreKit) expect(content.images, key).toEqual([]);
+            if (type === "gallery") expect(content.images, key).toEqual([]);
             if (type === "map") expect(content.address, key).toBe("");
             // Western digits would be a statistic or a price; the numbered
             // steps use Arabic-Indic ordinals, which are labels, not data.
             for (const value of Object.values(content)) {
-              // A kit picture's path is a file name, never a number the store quotes.
-              if (typeof value === "string" && !value.startsWith(KIT_PREFIX))
-                expect(value, `${key}: ${value}`).not.toMatch(/[0-9]/);
+              if (typeof value === "string") expect(value, `${key}: ${value}`).not.toMatch(/[0-9]/);
             }
           });
         }
@@ -310,6 +303,16 @@ describe("createSection", () => {
     // The same elements in a single column are still recognisable by shape.
     const flat: BlockPreset = { ...split, rows: undefined };
     expect(sectionLabel(createSection(flat))).toBe(split.label);
+  });
+
+  it("tells presets of the same shape apart by the section settings they carry", () => {
+    const byKey = (key: string) => BLOCK_PRESETS.find((p) => p.key === key)!;
+    // One span-12 text: a plain Text, not the brand-coloured Announcement bar.
+    expect(sectionLabel(createSection(byKey("text")))).toBe(byKey("text").label);
+    expect(sectionLabel(createSection(byKey("announcement-bar")))).toBe(byKey("announcement-bar").label);
+    // One span-12 image: a plain Image, not the Full-width banner.
+    expect(sectionLabel(createSection(byKey("image")))).toBe(byKey("image").label);
+    expect(sectionLabel(createSection(byKey("store-banner-wide")))).toBe(byKey("store-banner-wide").label);
   });
 
   it("applies a preset's section settings and leaves the rest without any", () => {
@@ -491,28 +494,6 @@ describe("the ready-made store sections", () => {
     });
   }
 
-  /**
-   * The kit as it is actually served: every file under `store-kit` in each
-   * app's own `public` folder, keyed by the path the storefront requests.
-   * Vite's glob reads the folders at transform time, so this needs no node
-   * types in `src` — and a preset pointing at a file that was never copied
-   * (or was copied into only one of the two apps) fails here rather than
-   * as a broken picture on a merchant's page.
-   */
-  function served(files: Record<string, unknown>): Set<string> {
-    return new Set(
-      Object.keys(files).map((path) => path.slice(path.indexOf(KIT_PREFIX))).map((p) => p.split("?")[0])
-    );
-  }
-
-  const SERVED = {
-    "merchant dashboard": served(
-      import.meta.glob("../../../../public/store-kit/**/*", { eager: true, query: "?url" })
-    ),
-    storefront: served(
-      import.meta.glob("../../../../../storefront/public/store-kit/**/*", { eager: true, query: "?url" })
-    ),
-  };
   it("offers whole floors of a shop front, not single elements", () => {
     expect(STORE_KIT.length).toBeGreaterThanOrEqual(10);
     for (const preset of STORE_KIT) {
@@ -521,22 +502,13 @@ describe("the ready-made store sections", () => {
     }
   });
 
-  it("serves every picture it starts with from the kit folder", () => {
+  // The original kit shipped a third-party theme's demo photography, whose
+  // licence forbids commercial use without permission. None of it was
+  // brought across: the sections keep their layout, and every picture slot
+  // starts empty for the store's own photos.
+  it("starts with no pictures at all, so no third-party photo ever ships", () => {
     for (const preset of STORE_KIT) {
-      for (const src of kitPictures(preset)) {
-        expect(src.startsWith(KIT_PREFIX), `${preset.key}: ${src}`).toBe(true);
-      }
-    }
-  });
-
-  it("points at files that actually ship, in both apps that serve them", () => {
-    for (const [app, files] of Object.entries(SERVED)) {
-      expect(files.size, app).toBeGreaterThan(0);
-      for (const preset of STORE_KIT) {
-        for (const src of kitPictures(preset)) {
-          expect([...files], `${preset.key} on the ${app}`).toContain(src);
-        }
-      }
+      expect(kitPictures(preset), preset.key).toEqual([]);
     }
   });
 
@@ -643,28 +615,73 @@ describe("the store kit's icons and logos", () => {
     }
   });
 
+  // The slots are found by their alt text now that they start without a file.
+  const byAlt = (alt: string) => contents.filter(({ type, content }) => type === "image" && content?.alt === alt);
+
   it("caps the icons and the payment strip instead of stretching them", () => {
-    const sizeOf = (src: string) =>
-      contents.find(({ content }) => typeof content?.src === "string" && (content.src as string).includes(src))?.content?.size;
-    expect(sizeOf("services-icon/1.png")).toBe("icon");
-    expect(sizeOf("services-icon/2.png")).toBe("icon");
-    expect(sizeOf("services-icon/3.png")).toBe("icon");
-    expect(sizeOf("services-icon/4.png")).toBe("icon");
-    expect(sizeOf("pay_icons.png")).toBe("small");
+    const icons = byAlt("أيقونة الخدمة");
+    expect(icons).toHaveLength(4);
+    for (const icon of icons) expect(icon.content?.size, icon.preset).toBe("icon");
+    const payments = byAlt("وسائل الدفع");
+    expect(payments).toHaveLength(1);
+    expect(payments[0].content?.size).toBe("small");
   });
 
   it("shows the brand marks whole rather than cropping them square", () => {
-    const brands = contents.find(
-      ({ type, content }) =>
-        type === "gallery" && Array.isArray(content?.images) && (content.images as string[]).some((i) => i.includes("/brands/"))
-    );
+    const brands = contents.find(({ preset, type }) => preset === "store-brand-strip" && type === "gallery");
     expect(brands?.content?.fit).toBe("whole");
   });
 
   it("leaves the photographs alone, at the full width of their column", () => {
-    const banner = contents.find(
-      ({ content }) => typeof content?.src === "string" && (content.src as string).includes("text-image-banner-9")
-    );
-    expect(banner?.content?.size).toBeUndefined();
+    const photo = byAlt("صورة المنتج");
+    expect(photo).toHaveLength(1);
+    expect(photo[0].content?.size).toBeUndefined();
+  });
+});
+
+/**
+ * The presets' starting copy is written in Arabic (prompts to the merchant,
+ * never claims) and localised by createSection for the editor's language
+ * (presetCopy.ts): an English editor must get English prompts all the way
+ * down, and an Arabic editor the Arabic element defaults.
+ */
+describe("preset starting copy in the editor's language", () => {
+  const ARABIC = /[؀-ۿ]/;
+
+  function strings(value: unknown): string[] {
+    if (typeof value === "string") return [value];
+    if (Array.isArray(value)) return value.flatMap(strings);
+    if (value && typeof value === "object") return Object.values(value).flatMap(strings);
+    return [];
+  }
+
+  it("gives an English editor no Arabic in any preset, the store kit included", () => {
+    for (const preset of BLOCK_PRESETS) {
+      const section = createSection(preset, "en");
+      for (const text of strings(sectionElements(section).map((el) => el.props))) {
+        expect(text, `${preset.key}: ${text}`).not.toMatch(ARABIC);
+      }
+    }
+  });
+
+  it("gives an Arabic editor the Arabic prompts, and Arabic for the element defaults", () => {
+    const hero = BLOCK_PRESETS.find((p) => p.key === "hero");
+    expect(hero).toBeDefined();
+    const ar = strings(sectionElements(createSection(hero!, "ar")).map((el) => el.props));
+    expect(ar.some((text) => ARABIC.test(text))).toBe(true);
+    const en = strings(sectionElements(createSection(hero!, "en")).map((el) => el.props));
+    expect(en.some((text) => ARABIC.test(text))).toBe(false);
+  });
+
+  it("keeps links, sources and option values exactly as written", () => {
+    for (const preset of BLOCK_PRESETS) {
+      const ar = sectionElements(createSection(preset, "ar"));
+      const en = sectionElements(createSection(preset, "en"));
+      ar.forEach((el, i) => {
+        for (const key of ["href", "src", "variant", "layout", "tone", "speed", "name"]) {
+          expect(en[i].props?.[key], `${preset.key}.${key}`).toEqual(el.props?.[key]);
+        }
+      });
+    }
   });
 });

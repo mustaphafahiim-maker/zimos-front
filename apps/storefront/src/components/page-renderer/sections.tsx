@@ -134,7 +134,7 @@ export function ComparisonElement({ props, t }: { props: Props; t: Dictionary })
     <div>
       {title ? <h2 className="mb-5 text-2xl font-bold text-ink">{title}</h2> : null}
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-paper-raised">
+      <div className="zt-card overflow-hidden rounded-2xl border border-line bg-paper-raised">
         {/* Visual column headings only — every value repeats them for a
             screen reader, so announcing them here too would double up. */}
         <div

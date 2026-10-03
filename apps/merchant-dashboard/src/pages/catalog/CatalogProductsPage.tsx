@@ -1,30 +1,111 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List } from "lucide-react";
-import { Button, Card, Input, cn } from "@store-builder/ui";
+import { Button, Input, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
-import { getErrorMessage } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoneyRange, formatProductCode, parseMoney } from "@/lib/format";
 import { primaryImage } from "@/lib/media";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
+import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
-import { DataTable, type Column } from "@/components/DataTable";
-import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { ProductImage } from "@/components/ProductImage";
 import { LoadMore } from "@/components/LoadMore";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { useCatalogLabels } from "./catalogLabels";
+import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
 
-const STATUS_TABS: ReadonlyArray<FilterTab<"" | ProductStatus>> = [
-  { value: "", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "draft", label: "Draft" },
-  { value: "archived", label: "Archived" },
-];
+const STRINGS = {
+  en: {
+    title: "Products",
+    description: "Everything you sell — with variants, offers, and stock.",
+    newProduct: "New product",
+    filterLabel: "Filter products by status",
+    tabAll: "All",
+    tabActive: "Active",
+    tabDraft: "Draft",
+    tabArchived: "Archived",
+    searchPlaceholder: "Filter loaded products by name or SKU",
+    listView: "List view",
+    gridView: "Grid view",
+    manageCollections: "Manage collections →",
+    emptyAll: "No products yet. Create your first one.",
+    emptyActive: "No active products.",
+    emptyDraft: "No draft products.",
+    emptyArchived: "No archived products. Products you archive show up here.",
+    emptyFilter: "No products match your filter.",
+    colProduct: "Product",
+    colStatus: "Status",
+    colPrice: "Price range",
+    colStock: "Stock",
+    colActions: "Actions",
+    noVariants: "No variants",
+    stock: "{total} in stock · {count} variants",
+    stockOne: "{total} in stock · 1 variant",
+    noWeight: "No weight",
+    noWeightHint: "A variant has no weight. Shipping uses your default item weight for it.",
+    edit: "Edit",
+    delete: "Delete",
+    restore: "Restore",
+    restoring: "Restoring…",
+    restoreHint: "Restores the product as a draft",
+    deletePermanently: "Delete permanently",
+    restoredToast: "“{name}” restored as a draft. Set it to Active when it's ready to sell.",
+  },
+  ar: {
+    title: "المنتجات",
+    description: "كل ما تبيعه — مع المتغيرات والعروض والمخزون.",
+    newProduct: "منتج جديد",
+    filterLabel: "تصفية المنتجات حسب الحالة",
+    tabAll: "الكل",
+    tabActive: "نشط",
+    tabDraft: "مسودة",
+    tabArchived: "المؤرشف",
+    searchPlaceholder: "ابحث في المنتجات المعروضة بالاسم أو SKU",
+    listView: "عرض القائمة",
+    gridView: "عرض الشبكة",
+    manageCollections: "إدارة المجموعات ←",
+    emptyAll: "لا توجد منتجات بعد. أنشئ أول منتج.",
+    emptyActive: "لا توجد منتجات نشطة.",
+    emptyDraft: "لا توجد منتجات في المسودة.",
+    emptyArchived: "لا توجد منتجات مؤرشفة. المنتجات التي تؤرشفها تظهر هنا.",
+    emptyFilter: "لا توجد منتجات مطابقة للبحث.",
+    colProduct: "المنتج",
+    colStatus: "الحالة",
+    colPrice: "نطاق السعر",
+    colStock: "المخزون",
+    colActions: "إجراءات",
+    noVariants: "بدون متغيرات",
+    stock: "المخزون: {total} · المتغيرات: {count}",
+    stockOne: "المخزون: {total} · متغير واحد",
+    noWeight: "بدون وزن",
+    noWeightHint: "يوجد متغير بدون وزن. الشحن يستخدم الوزن الافتراضي للمنتج بدلًا منه.",
+    edit: "تعديل",
+    delete: "حذف",
+    restore: "استعادة",
+    restoring: "جارٍ الاستعادة…",
+    restoreHint: "يستعيد المنتج كمسودة",
+    deletePermanently: "حذف نهائي",
+    restoredToast: "تمت استعادة “{name}” كمسودة. اجعله نشطًا عندما يكون جاهزًا للبيع.",
+  },
+} satisfies Messages;
+
+type Strings = (typeof STRINGS)["en"];
+
+/** "all" is every product that can still sell or be finished: archived ones have their own tab. */
+type Tab = "all" | "active" | "draft" | "archived";
+
+const TAB_STATUS: Record<Tab, ProductStatus | ProductStatus[]> = {
+  all: ["draft", "active"],
+  active: "active",
+  draft: "draft",
+  archived: "archived",
+};
 
 type CatalogView = "list" | "grid";
 const VIEW_KEY = "sb.catalogView";
@@ -44,20 +125,36 @@ function priceRange(product: Product): string {
   return formatMoneyRange(Math.min(...prices), Math.max(...prices), variants[0].currency);
 }
 
-function stockSummary(product: Product): string {
+/** A live physical product with an active variant that has no weight set. */
+function missingWeight(product: Product): boolean {
+  if (product.productType !== "physical" || product.status === "archived") return false;
+  return (product.variants ?? []).some((v) => v.status === "active" && v.weightGrams === null);
+}
+
+function NoWeightBadge({ product, t }: { product: Product; t: Strings }) {
+  if (!missingWeight(product)) return null;
+  return <StatusBadge value="no_weight" tone="warning" text={t.noWeight} className="ms-1.5" />;
+}
+
+function stockSummary(product: Product, t: Strings): string {
   const variants = product.variants ?? [];
-  if (variants.length === 0) return "No variants";
+  if (variants.length === 0) return t.noVariants;
   const total = variants.reduce((sum, v) => sum + v.stockOnHand, 0);
-  return `${total} in stock · ${variants.length} variant${variants.length === 1 ? "" : "s"}`;
+  return fmt(variants.length === 1 ? t.stockOne : t.stock, { total, count: variants.length });
 }
 
 export function CatalogProductsPage() {
+  const t = useT(STRINGS);
+  const labels = useCatalogLabels();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const [status, setStatus] = useState<"" | ProductStatus>("");
+  const errorMessage = useErrorMessage();
+  const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<CatalogView>(readView);
-  const [toDelete, setToDelete] = useState<Product | null>(null);
+  const [toRemove, setToRemove] = useState<Product | null>(null);
+  // Rows with a restore in flight, so a second click can't send it twice.
+  const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -70,9 +167,9 @@ export function CatalogProductsPage() {
   const list = useCursorList<Product>(
     (cursor) =>
       apiClient
-        .listProducts(workspaceId, { status: status || undefined, cursor, limit: 50 })
+        .listProducts(workspaceId, { status: TAB_STATUS[tab], cursor, limit: 50 })
         .then((r) => ({ items: r.products, nextCursor: r.nextCursor })),
-    [workspaceId, status]
+    [workspaceId, tab]
   );
 
   const filtered = useMemo(() => {
@@ -85,48 +182,110 @@ export function CatalogProductsPage() {
     );
   }, [list.items, search]);
 
-  async function confirmDelete() {
-    if (!toDelete) return;
-    const name = toDelete.name;
-    await apiClient.deleteProduct(workspaceId, toDelete.id);
-    toast.success(
-      `"${name}" archived. It's hidden from the storefront; existing orders keep their history.`
-    );
-    setToDelete(null);
-    list.reload();
+  async function restore(product: Product) {
+    if (restoring.has(product.id)) return;
+    setRestoring((prev) => new Set(prev).add(product.id));
+    try {
+      await apiClient.restoreProduct(workspaceId, product.id);
+      toast.success(fmt(t.restoredToast, { name: product.name }));
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setRestoring((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+      // Either way the row's real state is worth re-reading: a
+      // PRODUCT_NOT_ARCHIVED means someone else already moved it.
+      list.reload();
+    }
   }
+
+  const tabs = [
+    { value: "all" as const, label: t.tabAll },
+    { value: "active" as const, label: t.tabActive },
+    { value: "draft" as const, label: t.tabDraft },
+    { value: "archived" as const, label: t.tabArchived },
+  ];
+
+  const emptyByTab: Record<Tab, string> = {
+    all: t.emptyAll,
+    active: t.emptyActive,
+    draft: t.emptyDraft,
+    archived: t.emptyArchived,
+  };
+
+  function renderActions(product: Product) {
+    const busy = restoring.has(product.id);
+    return (
+      <>
+        <Button asChild size="sm" variant="ghost">
+          <Link to={`/catalog/${product.id}`}>{t.edit}</Link>
+        </Button>
+        {product.status === "archived" ? (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              title={t.restoreHint}
+              disabled={busy}
+              onClick={() => restore(product)}
+            >
+              {busy ? t.restoring : t.restore}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-danger hover:bg-danger-soft"
+              disabled={busy}
+              onClick={() => setToRemove(product)}
+            >
+              {t.deletePermanently}
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-danger hover:bg-danger-soft"
+            onClick={() => setToRemove(product)}
+          >
+            {t.delete}
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  const rowProps = { products: filtered, t, statusLabel: labels.status, renderActions };
 
   return (
     <div className="max-w-6xl">
       <PageHeader
-        title="Products"
-        description="Everything you sell — with variants, offers, and stock."
+        title={t.title}
+        description={t.description}
         actions={
           <Button asChild>
-            <Link to="/catalog/new">New product</Link>
+            <Link to="/catalog/new">{t.newProduct}</Link>
           </Button>
         }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <FilterTabs
-          tabs={STATUS_TABS}
-          value={status}
-          onChange={setStatus}
-          label="Filter products by status"
-        />
+        <FilterTabs tabs={tabs} value={tab} onChange={setTab} label={t.filterLabel} />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter loaded products by name or SKU"
+          placeholder={t.searchPlaceholder}
           className="max-w-xs"
         />
 
         <div className="ms-auto flex items-center gap-3">
-          <div className="inline-flex gap-1 rounded-lg bg-paper-raised p-1 shadow-xs ring-1 ring-foreground/10">
+          <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
             <button
               onClick={() => setView("list")}
-              aria-label="List view"
+              aria-label={t.listView}
               aria-pressed={view === "list"}
               className={cn(
                 "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
@@ -137,7 +296,7 @@ export function CatalogProductsPage() {
             </button>
             <button
               onClick={() => setView("grid")}
-              aria-label="Grid view"
+              aria-label={t.gridView}
               aria-pressed={view === "grid"}
               className={cn(
                 "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
@@ -148,7 +307,7 @@ export function CatalogProductsPage() {
             </button>
           </div>
           <Link to="/catalog/collections" className="text-sm text-primary hover:underline">
-            Manage collections →
+            {t.manageCollections}
           </Link>
         </div>
       </div>
@@ -157,125 +316,103 @@ export function CatalogProductsPage() {
         loading={list.loading}
         error={list.items.length ? null : list.error}
         empty={filtered.length === 0}
-        emptyMessage={
-          list.items.length === 0
-            ? "No products yet. Create your first one."
-            : "No products match your filter."
-        }
+        emptyMessage={list.items.length === 0 ? emptyByTab[tab] : t.emptyFilter}
         onRetry={list.reload}
       >
-        {view === "list" ? (
-          <ProductTable products={filtered} onDelete={setToDelete} />
-        ) : (
-          <ProductGrid products={filtered} onDelete={setToDelete} />
-        )}
+        {view === "list" ? <ProductTable {...rowProps} /> : <ProductGrid {...rowProps} />}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
 
-      <ConfirmDialog
-        open={toDelete !== null}
-        title={`Delete "${toDelete?.name ?? ""}"?`}
-        description="Products are soft-deleted (archived), not removed — so past orders and inventory history stay intact. It disappears from the storefront and can't take new orders."
-        confirmLabel="Archive product"
-        destructive
-        onCancel={() => setToDelete(null)}
-        onConfirm={confirmDelete}
-      />
+      {toRemove && (
+        <ProductRemoveDialog
+          key={toRemove.id}
+          product={toRemove}
+          onClose={() => setToRemove(null)}
+          onDone={() => {
+            setToRemove(null);
+            list.reload();
+          }}
+        />
+      )}
 
       {Boolean(list.error) && list.items.length > 0 && (
-        <p className="mt-2 text-xs text-danger">{getErrorMessage(list.error)}</p>
+        <p className="mt-2 text-xs text-danger">{errorMessage(list.error)}</p>
       )}
     </div>
   );
 }
 
-function ProductTable({
-  products,
-  onDelete,
-}: {
+interface RowsProps {
   products: Product[];
-  onDelete: (p: Product) => void;
-}) {
-  const columns: ReadonlyArray<Column<Product>> = [
-    {
-      key: "image",
-      header: "",
-      headerClassName: "w-14",
-      cell: (product) => (
-        <ProductImage media={primaryImage(product)} alt={product.name} className="size-10" />
-      ),
-    },
-    {
-      key: "product",
-      header: "Product",
-      cell: (product) => (
-        <>
-          <Link to={`/catalog/${product.id}`} className="font-medium text-ink hover:text-primary">
-            {product.name}
-          </Link>
-          {formatProductCode(product.productCode) && (
-            <span className="ms-1.5 text-xs text-ink-soft">
-              · {formatProductCode(product.productCode)}
-            </span>
-          )}
-          <div className="text-xs text-ink-soft">{product.slug}</div>
-        </>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      cell: (product) => <StatusBadge value={product.status} />,
-    },
-    {
-      key: "price",
-      header: "Price range",
-      className: "text-ink-soft",
-      cell: (product) => priceRange(product),
-    },
-    {
-      key: "stock",
-      header: "Stock",
-      className: "text-ink-soft",
-      cell: (product) => stockSummary(product),
-    },
-    {
-      key: "actions",
-      header: "",
-      align: "end",
-      cell: (product) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-danger hover:bg-danger-soft"
-          onClick={() => onDelete(product)}
-        >
-          Delete
-        </Button>
-      ),
-    },
-  ];
+  t: Strings;
+  statusLabel: (status: ProductStatus) => string;
+  renderActions: (product: Product) => ReactNode;
+}
 
+function ProductTable({ products, t, statusLabel, renderActions }: RowsProps) {
   return (
-    <Card className="gap-0 p-0">
-      <DataTable columns={columns} rows={products} rowKey={(product) => product.id} minWidth="45rem" />
-    </Card>
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead>
+          <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+            <th className="w-14 px-4 py-3 font-medium" />
+            <th className="px-4 py-3 text-start font-medium">{t.colProduct}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colPrice}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colStock}</th>
+            <th className="px-4 py-3 font-medium">
+              <span className="sr-only">{t.colActions}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((product) => (
+            <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+              <td className="py-2 ps-4">
+                <ProductImage
+                  media={primaryImage(product)}
+                  alt={product.name}
+                  className="size-10"
+                />
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  to={`/catalog/${product.id}`}
+                  className="font-medium text-ink hover:text-primary"
+                >
+                  {product.name}
+                </Link>
+                {formatProductCode(product.productCode) && (
+                  <span className="ms-1.5 text-xs text-ink-soft">
+                    · {formatProductCode(product.productCode)}
+                  </span>
+                )}
+                <div className="text-xs text-ink-soft">{product.slug}</div>
+              </td>
+              <td className="px-4 py-3">
+                <span className="inline-flex flex-wrap items-center gap-y-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
+                  <StatusBadge value={product.status} text={statusLabel(product.status)} />
+                  <NoWeightBadge product={product} t={t} />
+                </span>
+              </td>
+              <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
+              <td className="px-4 py-3 text-ink-soft">{stockSummary(product, t)}</td>
+              <td className="px-4 py-3 text-end whitespace-nowrap">{renderActions(product)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-function ProductGrid({
-  products,
-  onDelete,
-}: {
-  products: Product[];
-  onDelete: (p: Product) => void;
-}) {
+function ProductGrid({ products, t, statusLabel, renderActions }: RowsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => (
         <div
           key={product.id}
-          className="flex flex-col overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 transition-shadow hover:shadow-md"
+          className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised transition-colors hover:border-primary"
         >
           <Link to={`/catalog/${product.id}`} className="block">
             <ProductImage
@@ -300,22 +437,16 @@ function ProductGrid({
                   </span>
                 )}
               </div>
-              <StatusBadge value={product.status} />
+              <span className="flex shrink-0 flex-col items-end gap-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
+                <StatusBadge value={product.status} text={statusLabel(product.status)} />
+                <NoWeightBadge product={product} t={t} />
+              </span>
             </div>
             <div className="mt-auto space-y-0.5 text-sm text-ink-soft">
               <div>{priceRange(product)}</div>
-              <div className="text-xs">{stockSummary(product)}</div>
+              <div className="text-xs">{stockSummary(product, t)}</div>
             </div>
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-danger hover:bg-danger-soft"
-                onClick={() => onDelete(product)}
-              >
-                Delete
-              </Button>
-            </div>
+            <div className="flex flex-wrap justify-end gap-1">{renderActions(product)}</div>
           </div>
         </div>
       ))}

@@ -1,30 +1,6 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  Activity,
-  Ban,
-  Building2,
-  ChevronDown,
-  CreditCard,
-  Factory,
-  Flag,
-  LayoutDashboard,
-  LayoutTemplate,
-  Layers,
-  LifeBuoy,
-  LogOut,
-  Megaphone,
-  Menu,
-  MessageCircle,
-  Puzzle,
-  ScrollText,
-  Search,
-  ShieldAlert,
-  Truck,
-  UserCog,
-  Wallet,
-  X,
-} from "lucide-react";
+import { ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
 import { Spinner, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { ZimosLogo } from "@/components/ZimosLogo";
@@ -33,65 +9,11 @@ import { Status } from "@/components/StatusBadge";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminWorkspaceRow } from "@/lib/adminApi";
 import { initials } from "@/lib/format";
-
-interface NavItem {
-  label: string;
-  to: string;
-  icon: ComponentType<{ className?: string }>;
-}
-
-const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
-  { label: null, items: [{ label: "Overview", to: "/", icon: LayoutDashboard }] },
-  {
-    label: "Merchants",
-    items: [
-      { label: "Workspaces", to: "/workspaces", icon: Building2 },
-      { label: "Subscriptions", to: "/subscriptions", icon: CreditCard },
-      { label: "Plans", to: "/plans", icon: Layers },
-    ],
-  },
-  {
-    label: "Marketplace",
-    items: [
-      { label: "Templates", to: "/templates", icon: LayoutTemplate },
-      { label: "Suppliers", to: "/suppliers", icon: Factory },
-      { label: "Apps", to: "/apps", icon: Puzzle },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { label: "Carriers", to: "/carriers", icon: Truck },
-      { label: "Payment gateways", to: "/payment-gateways", icon: Wallet },
-      { label: "WhatsApp numbers", to: "/whatsapp-numbers", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Risk",
-    items: [
-      { label: "Fraud signals", to: "/fraud-signals", icon: ShieldAlert },
-      { label: "Blocklist (global)", to: "/blocklist", icon: Ban },
-    ],
-  },
-  {
-    label: "Support",
-    items: [
-      { label: "Tickets", to: "/tickets", icon: LifeBuoy },
-      { label: "Announcements", to: "/announcements", icon: Megaphone },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Feature flags", to: "/feature-flags", icon: Flag },
-      { label: "Audit log", to: "/audit-log", icon: ScrollText },
-      { label: "System health", to: "/system-health", icon: Activity },
-      { label: "Admin users", to: "/admin-users", icon: UserCog },
-    ],
-  },
-];
+import { P } from "@/lib/permissions";
+import { useVisibleNav } from "@/lib/nav";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const groups = useVisibleNav();
   return (
     <>
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
@@ -101,7 +23,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </div>
       <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
-        {NAV_GROUPS.map((group, gi) => (
+        {groups.map((group, gi) => (
           <div key={gi} className={cn(gi > 0 && "mt-4")}>
             {group.label && (
               <p className="mb-1 px-3 text-[11px] font-semibold tracking-wider text-ink-soft uppercase">{group.label}</p>
@@ -333,6 +255,7 @@ function UserMenu() {
 export function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { can } = useAuth();
 
   useEffect(() => {
     setMobileOpen(false);
@@ -387,7 +310,8 @@ export function AdminLayout() {
           >
             <Menu className="size-5" aria-hidden />
           </button>
-          <GlobalSearch />
+          {/* Workspace search reads the workspace and subscription lists. */}
+          {can(P.WORKSPACES_VIEW) && <GlobalSearch />}
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
             <span
               className="hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-dark sm:inline-flex"

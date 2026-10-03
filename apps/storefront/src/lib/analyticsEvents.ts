@@ -3,7 +3,8 @@
  * to POST /store/:workspaceId/events for the merchant dashboard. Nothing
  * third-party runs here, and nothing here can break the store — every call is
  * fire-and-forget behind try/catch, batched (lib/eventQueue.ts) and carried
- * with the visitor, session and attribution from lib/visitor.ts.
+ * with the visitor, session and attribution from lib/visitor.ts. The visitor
+ * id is the same one the checkout autosave uses (one per store per tab).
  *
  * What goes out matches Umami's tracker (lib/trackerCore.ts has the pure
  * parts): per batch the screen size, language and hostname; per event the
@@ -14,7 +15,12 @@
  *  - components/StoreAnalytics.tsx: `page_view` per navigation (router or
  *    history.pushState), `window.zimos.track`, the `[data-zimos-event]`
  *    clicks, the pagehide flush, and the tracking context;
- *  - lib/track.ts: the commerce events, alongside the ad pixels.
+ *  - lib/track.ts: the commerce events (ad pixels there are still stubbed).
+ *
+ * A failed or refused request (the API down, a store answering 423 while it
+ * is unavailable, a rate limit) is dropped silently: analytics are best
+ * effort, and never retried in a way that could compete with the cart or
+ * checkout.
  */
 import { createEventQueue } from "./eventQueue";
 import {
@@ -98,6 +104,8 @@ const MAX_NAME = 50;
 // --- context & options ------------------------------------------------------------
 
 let context: TrackingContext | null = null;
+// Set while a merchant looks at a preview (StoreAnalytics): nothing is sent.
+let paused = false;
 let options: TrackerOptions = { ...DEFAULT_URL_OPTIONS, respectDnt: false };
 let navigation: NavigationState | null = null;
 
@@ -114,6 +122,11 @@ export function setTrackingContext(next: Partial<TrackingContext>) {
 
 export function getTrackingContext(): TrackingContext | null {
   return context;
+}
+
+/** Stop (or resume) sending anything — a merchant's preview is not a visit. */
+export function setTrackingPaused(value: boolean) {
+  paused = value;
 }
 
 /**
@@ -141,7 +154,7 @@ function readFlag(key: string): string | null {
 
 /** `zimos.analytics.disabled=1`, or Do Not Track when the store (or the shopper) asked for it. */
 export function trackingDisabled(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined" || paused) return true;
   const w = window as Window & { doNotTrack?: string | number | null };
   const nav = navigator as Navigator & { msDoNotTrack?: string | number | null };
   return isTrackingDisabled({
@@ -214,7 +227,7 @@ function eventsUrl(workspaceId: string) {
 
 function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean) {
   const body: Batch = {
-    visitorId: getVisitorId(),
+    visitorId: getVisitorId(workspaceId),
     sessionId: getSessionId(),
     events,
   };
@@ -230,11 +243,17 @@ function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean)
   const json = JSON.stringify(body);
   const url = eventsUrl(workspaceId);
 
-  try {
-    // Leaving the page: sendBeacon survives the unload where fetch may not.
-    if (urgent && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+  // Leaving the page: sendBeacon survives the unload where fetch may not. Some
+  // browsers refuse (or throw on) a cross-origin JSON beacon; fetch with
+  // keepalive is the fallback either way.
+  if (urgent && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    try {
       if (navigator.sendBeacon(url, new Blob([json], { type: "application/json" }))) return;
+    } catch {
+      /* fall through to fetch */
     }
+  }
+  try {
     void fetch(url, {
       method: "POST",
       keepalive: true,

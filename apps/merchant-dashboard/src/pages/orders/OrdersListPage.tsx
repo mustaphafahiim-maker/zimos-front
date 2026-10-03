@@ -1,485 +1,612 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Download, Search, ShoppingBag, Workflow } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
-import type { Order, OrderCounts, OrderListFilters, OrderListSort } from "@store-builder/api-client";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Search, X } from "lucide-react";
+import { Alert, Button, Input, cn } from "@store-builder/ui";
+import {
+  ORDER_SORTS,
+  ORDER_STAGES,
+  isInvalidCursorError,
+  type Order,
+  type OrderPipeline,
+  type OrderSort,
+  type OrderStage,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
 import { useAsync } from "@/lib/useAsync";
-import { formatDateTime, formatMoney, humanize } from "@/lib/format";
-import { rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { formatMoney } from "@/lib/format";
+import { useListSort } from "@/lib/listSort";
+import { providerName } from "@/lib/providers";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadMore } from "@/components/LoadMore";
 import { Select } from "@/components/Select";
-import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { useNow } from "@/pages/confirmation/confirmationRoles";
+import { STAGE_TONE, useOrderLabels } from "./orderLabels";
+import { OrderTimelineLines } from "./components/OrderTimelineLines";
 
 const STRINGS = {
   en: {
     title: "Orders",
-    description: "Every order, with where it came from and where it stands.",
+    description: "Every order, grouped by where it stands right now.",
+    tabsLabel: "Filter orders by stage",
     tabAll: "All",
-    tabPending: "Awaiting confirmation",
-    tabConfirmed: "Confirmed",
-    tabUnreachable: "Unreachable",
-    tabPostponed: "Postponed",
-    tabUnfulfilled: "Unfulfilled",
-    tabDelivered: "Delivered",
-    tabReturned: "Returned",
-    tabUnpaid: "Unpaid",
-    tabCancelled: "Cancelled",
-    tabsLabel: "Order status",
-    searchPlaceholder: "Search order number, name or phone",
-    period: "Period",
-    allTime: "All time",
-    yesterday: "Yesterday",
-    last365: "Last 365 days",
-    channel: "Channel",
-    anyChannel: "All channels",
-    channelStore: "Online store",
-    channelFunnel: "Funnels",
-    payment: "Payment",
-    anyPayment: "Any payment method",
-    sort: "Sort",
-    sortNewest: "Newest first",
-    sortOldest: "Oldest first",
-    sortTotalDesc: "Highest total",
-    sortTotalAsc: "Lowest total",
+    searchLabel: "Search orders",
+    searchPlaceholder: "Order number, name, email or phone",
+    searchHint: "Matches the order number, customer name or email, or the full phone number.",
+    searchTooShort: "Type at least 2 characters to search.",
+    clearSearch: "Clear search",
+    from: "From",
+    to: "To",
+    datesHint: "Dates are matched in UTC — Cairo time is 2–3 hours ahead.",
+    rangeInvalid: "The start date is after the end date, so the dates aren't applied.",
+    clearFilters: "Clear filters",
+    countsFailed: "Couldn't load the tab counts.",
+    retry: "Try again",
     colOrder: "Order",
-    colDate: "Date",
     colCustomer: "Customer",
-    colChannel: "Channel",
     colTotal: "Total",
+    colStage: "Stage",
     colPayment: "Payment",
-    colConfirmation: "Confirmation",
-    colFulfillment: "Fulfilment",
-    colItems: "Items",
-    itemsCount: "{n} items",
-    itemsOne: "1 item",
-    cancelledBadge: "Cancelled",
-    selectAll: "Select all loaded orders",
-    selectOne: "Select order {n}",
-    selected: "{n} selected",
-    clearSelection: "Clear",
-    exportSelected: "Export selected",
-    exportLoaded: "Export CSV",
-    exportHint: "Exports the orders loaded on this page.",
-    emptyTitle: "No orders match",
-    emptyDesc: "Try another tab, clear the search, or widen the period.",
-    emptyAllTitle: "No orders yet",
-    emptyAllDesc: "Orders from your store and funnels will show up here the moment they come in.",
-    loadedOf: "{loaded} of {total} orders",
+    colTimeline: "Placed / confirmed",
+    sortLabel: "Sort",
+    sort_newest: "Newest first",
+    sort_oldest: "Oldest first",
+    sort_total_desc: "Total: high to low",
+    sort_total_asc: "Total: low to high",
+    emptyAll: "No orders yet. Orders from your store will appear here.",
+    emptyStage: "No orders under “{stage}” right now.",
+    emptyFiltered: "No orders match this search and dates.",
+    loadMoreFailed: "Couldn't load more orders.",
+    phoneLabel: "Phone",
   },
   ar: {
-    title: "الطلبات",
-    description: "كل طلب، جه منين ووصل لفين.",
+    title: "الأوردرات",
+    description: "كل الأوردرات، مجمّعة حسب حالتها الآن.",
+    tabsLabel: "تصفية الأوردرات حسب المرحلة",
     tabAll: "الكل",
-    tabPending: "مستنية التأكيد",
-    tabConfirmed: "متأكدة",
-    tabUnreachable: "مردّوش",
-    tabPostponed: "متأجلة",
-    tabUnfulfilled: "لسه ما اتشحنتش",
-    tabDelivered: "اتسلّمت",
-    tabReturned: "مرتجعة",
-    tabUnpaid: "مش مدفوعة",
-    tabCancelled: "ملغية",
-    tabsLabel: "حالة الطلب",
-    searchPlaceholder: "دوّر برقم الطلب أو الاسم أو التليفون",
-    period: "الفترة",
-    allTime: "كل الوقت",
-    yesterday: "إمبارح",
-    last365: "آخر 365 يوم",
-    channel: "القناة",
-    anyChannel: "كل القنوات",
-    channelStore: "المتجر الإلكتروني",
-    channelFunnel: "مسارات البيع",
-    payment: "الدفع",
-    anyPayment: "أي طريقة دفع",
-    sort: "الترتيب",
-    sortNewest: "الأحدث الأول",
-    sortOldest: "الأقدم الأول",
-    sortTotalDesc: "الأعلى قيمة",
-    sortTotalAsc: "الأقل قيمة",
-    colOrder: "الطلب",
-    colDate: "التاريخ",
+    searchLabel: "البحث في الأوردرات",
+    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف",
+    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا.",
+    searchTooShort: "اكتب حرفين على الأقل للبحث.",
+    clearSearch: "مسح البحث",
+    from: "من",
+    to: "إلى",
+    datesHint: "تتم مطابقة التواريخ بتوقيت UTC — توقيت القاهرة متقدم بساعتين إلى ثلاث.",
+    rangeInvalid: "تاريخ البداية بعد تاريخ النهاية، لذلك لم يتم تطبيق التواريخ.",
+    clearFilters: "مسح عوامل التصفية",
+    countsFailed: "تعذّر تحميل أعداد التبويبات.",
+    retry: "حاول مرة أخرى",
+    colOrder: "الأوردر",
     colCustomer: "العميل",
-    colChannel: "القناة",
     colTotal: "الإجمالي",
+    colStage: "المرحلة",
     colPayment: "الدفع",
-    colConfirmation: "التأكيد",
-    colFulfillment: "الشحن",
-    colItems: "القطع",
-    itemsCount: "{n} قطعة",
-    itemsOne: "قطعة واحدة",
-    cancelledBadge: "ملغي",
-    selectAll: "اختار كل الطلبات المعروضة",
-    selectOne: "اختار الطلب {n}",
-    selected: "{n} مختار",
-    clearSelection: "إلغاء الاختيار",
-    exportSelected: "تصدير المختار",
-    exportLoaded: "تصدير CSV",
-    exportHint: "بيصدّر الطلبات المعروضة في الصفحة.",
-    emptyTitle: "مفيش طلبات مطابقة",
-    emptyDesc: "جرّب تبويب تاني أو امسح البحث أو وسّع الفترة.",
-    emptyAllTitle: "مفيش طلبات لسه",
-    emptyAllDesc: "طلبات المتجر ومسارات البيع هتظهر هنا أول ما تيجي.",
-    loadedOf: "{loaded} من {total} طلب",
+    colTimeline: "الطلب / التأكيد",
+    sortLabel: "الترتيب",
+    sort_newest: "الأحدث أولًا",
+    sort_oldest: "الأقدم أولًا",
+    sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
+    sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
+    emptyAll: "لا توجد أوردرات بعد. ستظهر هنا أوردرات متجرك.",
+    emptyStage: "لا توجد أوردرات في «{stage}» حاليًا.",
+    emptyFiltered: "لا توجد أوردرات تطابق هذا البحث والتواريخ.",
+    loadMoreFailed: "تعذّر تحميل المزيد من الأوردرات.",
+    phoneLabel: "الهاتف",
   },
 } satisfies Messages;
 
-type Tab =
-  | "all"
-  | "pending"
-  | "confirmed"
-  | "unreachable"
-  | "postponed"
-  | "unfulfilled"
-  | "delivered"
-  | "returned"
-  | "unpaid"
-  | "cancelled";
+const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_MIN = 2;
+const SEARCH_MAX = 100;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const TABS: Tab[] = ["all", "pending", "confirmed", "unreachable", "postponed", "unfulfilled", "delivered", "returned", "unpaid", "cancelled"];
+/** `value`, once it has stopped changing for `delayMs`. */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettled(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, delayMs]);
+  return settled;
+}
 
-/** What each tab asks the API for. Every tab but "cancelled" hides cancelled orders. */
-function tabFilters(tab: Tab): OrderListFilters {
-  switch (tab) {
-    case "all":
-      return { cancelled: false };
-    case "cancelled":
-      return { cancelled: true };
-    case "unfulfilled":
-      return { cancelled: false, fulfillmentState: "unfulfilled" };
-    case "delivered":
-      return { cancelled: false, fulfillmentState: "fulfilled" };
-    case "returned":
-      return { cancelled: false, fulfillmentState: "returned" };
-    case "unpaid":
-      return { cancelled: false, financialState: "pending" };
-    default:
-      return { cancelled: false, confirmationState: tab };
+function isStage(value: string | null): value is OrderStage {
+  return value !== null && (ORDER_STAGES as readonly string[]).includes(value);
+}
+
+/**
+ * The list's filters live in the URL (?stage=&q=&from=&to=) so a view can be
+ * shared and survives a refresh. Anything malformed in a hand-edited URL is
+ * ignored rather than sent.
+ */
+function useOrderFilters() {
+  const [params, setParams] = useSearchParams();
+  const rawStage = params.get("stage");
+  const stage = isStage(rawStage) ? rawStage : null;
+  const rawQ = (params.get("q") ?? "").trim();
+  const q = rawQ.length >= SEARCH_MIN ? rawQ.slice(0, SEARCH_MAX) : "";
+  const rawFrom = params.get("from") ?? "";
+  const rawTo = params.get("to") ?? "";
+  const from = DATE_RE.test(rawFrom) ? rawFrom : "";
+  const to = DATE_RE.test(rawTo) ? rawTo : "";
+  const rangeInvalid = Boolean(from && to && from > to);
+
+  function update(patch: Partial<Record<"stage" | "q" | "from" | "to", string | null>>) {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [key, value] of Object.entries(patch)) {
+          if (value) next.set(key, value);
+          else next.delete(key);
+        }
+        return next;
+      },
+      { replace: true }
+    );
   }
-}
 
-function countOf(counts: OrderCounts | null, tab: Tab): number | null {
-  if (!counts) return null;
-  switch (tab) {
-    case "all":
-      return counts.all - counts.cancelled;
-    case "delivered":
-      return counts.fulfilled;
-    default:
-      return counts[tab];
-  }
-}
-
-type Period = "all" | AnalyticsRange;
-
-function periodFilters(period: Period): Pick<OrderListFilters, "from" | "to"> {
-  if (period === "all") return {};
-  return rangeWindows(period).current;
-}
-
-function csvCell(value: unknown): string {
-  const text = value === null || value === undefined ? "" : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-function exportCsv(orders: Order[]) {
-  const header = ["order_number", "created_at", "customer", "phone", "channel", "total", "currency", "payment_method", "payment_state", "confirmation_state", "fulfillment_state", "items", "cancelled_at"];
-  const rows = orders.map((o) => [
-    o.orderNumber,
-    o.createdAt,
-    o.contactSnapshot?.fullName ?? "",
-    o.contactSnapshot?.phone ?? "",
-    o.funnel?.name ?? (o.funnelId ? "funnel" : "store"),
-    (Number(o.totalAmount) / 100).toFixed(2),
-    o.currency,
-    o.paymentMethod,
-    o.financialState,
-    o.confirmationState,
-    o.fulfillmentState,
-    o.items?.length ?? "",
-    o.cancelledAt ?? "",
-  ]);
-  const csv = [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n");
-  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  return {
+    stage,
+    q,
+    from,
+    to,
+    rangeInvalid,
+    // Dates only reach the API as a valid range.
+    query: {
+      q: q || undefined,
+      from: rangeInvalid ? undefined : from || undefined,
+      to: rangeInvalid ? undefined : to || undefined,
+    },
+    hasSearchFilters: Boolean(q || from || to),
+    update,
+  };
 }
 
 export function OrdersListPage() {
-  const t = useT(STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
-  const navigate = useNavigate();
+  const t = useT(STRINGS);
+  const labels = useOrderLabels();
+  const errorMessage = useErrorMessage();
+  const filters = useOrderFilters();
+  const { stage, query } = filters;
+  // Sorted on the server; the default is the list's order as it always was.
+  const [sort, setSort] = useListSort<OrderSort>("zimos.orders.sort", ORDER_SORTS, "newest");
 
-  const [tab, setTab] = useState<Tab>("all");
-  const [query, setQuery] = useState("");
-  const [q, setQ] = useState("");
-  const [period, setPeriod] = useState<Period>("all");
-  const [source, setSource] = useState<"" | "store" | "funnel">("");
-  const [paymentMethod, setPaymentMethod] = useState<Order["paymentMethod"] | "">("");
-  const [sort, setSort] = useState<OrderListSort>("newest");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  // Search as you type, but only ask the API once the merchant pauses.
-  useEffect(() => {
-    const handle = setTimeout(() => setQ(query.trim()), 300);
-    return () => clearTimeout(handle);
-  }, [query]);
-
-  const baseFilters = useMemo<OrderListFilters>(
-    () => ({
-      ...periodFilters(period),
-      q: q || undefined,
-      source: source || undefined,
-      paymentMethod: paymentMethod || undefined,
-    }),
-    [period, q, source, paymentMethod]
+  const pipeline = useAsync<OrderPipeline>(
+    () => apiClient.getOrderPipeline(workspaceId, query),
+    [workspaceId, query.q, query.from, query.to]
   );
-  const filtersKey = JSON.stringify(baseFilters);
-
-  const counts = useAsync(() => apiClient.getOrderCounts(workspaceId, baseFilters), [workspaceId, filtersKey]);
 
   const list = useCursorList<Order>(
     (cursor) =>
       apiClient
-        .listOrders(workspaceId, { ...baseFilters, ...tabFilters(tab), sort, cursor, limit: 50 })
+        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, sort, ...query })
         .then((r) => ({ items: r.orders, nextCursor: r.nextCursor })),
-    [workspaceId, filtersKey, tab, sort]
+    [workspaceId, stage, sort, query.q, query.from, query.to],
+    { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
 
-  useEffect(() => setSelected(new Set()), [filtersKey, tab, sort]);
-
-  const tabLabel: Record<Tab, string> = {
-    all: t.tabAll,
-    pending: t.tabPending,
-    confirmed: t.tabConfirmed,
-    unreachable: t.tabUnreachable,
-    postponed: t.tabPostponed,
-    unfulfilled: t.tabUnfulfilled,
-    delivered: t.tabDelivered,
-    returned: t.tabReturned,
-    unpaid: t.tabUnpaid,
-    cancelled: t.tabCancelled,
-  };
-  const periodLabel: Record<Period, string> = {
-    all: t.allTime,
-    today: c.today,
-    yesterday: t.yesterday,
-    "7d": c.last7,
-    "30d": c.last30,
-    "90d": c.last90,
-    "365d": t.last365,
-  };
-
-  const allSelected = list.items.length > 0 && list.items.every((o) => selected.has(o.id));
-  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(list.items.map((o) => o.id)));
-  const toggleOne = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const isFiltered = Boolean(q || source || paymentMethod || period !== "all" || tab !== "all");
-  const tabTotal = countOf(counts.data ?? null, tab);
+  const emptyMessage = filters.hasSearchFilters
+    ? t.emptyFiltered
+    : stage
+      ? fmt(t.emptyStage, { stage: labels.stage(stage) })
+      : t.emptyAll;
 
   return (
-    <div className="min-w-0 max-w-7xl">
-      <PageHeader
-        title={t.title}
-        description={t.description}
-        actions={
-          <Button variant="outline" size="sm" title={t.exportHint} disabled={list.items.length === 0} onClick={() => exportCsv(list.items)}>
-            <Download className="size-4" aria-hidden /> {t.exportLoaded}
-          </Button>
-        }
+    <div className="max-w-6xl">
+      <PageHeader title={t.title} description={t.description} />
+
+      <SearchAndDates filters={filters} />
+
+      <SortPicker value={sort} onChange={setSort} />
+
+      <StageTabs
+        value={stage}
+        onChange={(next) => filters.update({ stage: next })}
+        pipeline={pipeline.data}
+        countsLoading={pipeline.loading}
       />
+      {pipeline.error != null && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-danger" role="alert">
+          {t.countsFailed}
+          <Button size="sm" variant="outline" className="min-h-11" onClick={() => pipeline.refresh()}>
+            {t.retry}
+          </Button>
+        </p>
+      )}
 
-      <div className="rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10">
-        <div role="tablist" aria-label={t.tabsLabel} className="flex gap-1 overflow-x-auto border-b border-line px-2 pt-2">
-          {TABS.map((key) => {
-            const n = countOf(counts.data ?? null, key);
-            const active = tab === key;
-            return (
-              <button
-                key={key}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                onClick={() => setTab(key)}
-                className={cn(
-                  "-mb-px flex shrink-0 cursor-pointer items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-2 text-[13px] font-medium transition-colors",
-                  active ? "border-ink text-ink" : "border-transparent text-ink-soft hover:bg-paper hover:text-ink"
-                )}
-              >
-                {tabLabel[key]}
-                {n !== null && (
-                  <span className={cn("tabular-nums rounded-full px-1.5 py-0.5 text-[11px]", active ? "bg-ink text-paper-raised" : "bg-paper text-ink-soft")}>
-                    <bdi dir="ltr">{n}</bdi>
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
-          <label className="relative min-w-56 flex-1">
-            <span className="sr-only">{c.search}</span>
-            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-            <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchPlaceholder} className="ps-8" />
-          </label>
-          <Select aria-label={t.period} value={period} onChange={(e) => setPeriod(e.target.value as Period)} className="h-9 w-auto">
-            {(Object.keys(periodLabel) as Period[]).map((p) => (
-              <option key={p} value={p}>
-                {periodLabel[p]}
-              </option>
-            ))}
-          </Select>
-          <Select aria-label={t.channel} value={source} onChange={(e) => setSource(e.target.value as "" | "store" | "funnel")} className="h-9 w-auto">
-            <option value="">{t.anyChannel}</option>
-            <option value="store">{t.channelStore}</option>
-            <option value="funnel">{t.channelFunnel}</option>
-          </Select>
-          <Select aria-label={t.payment} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as Order["paymentMethod"] | "")} className="h-9 w-auto">
-            <option value="">{t.anyPayment}</option>
-            {(["cod", "card", "wallet", "bank_transfer"] as const).map((m) => (
-              <option key={m} value={m}>
-                {humanize(m)}
-              </option>
-            ))}
-          </Select>
-          <Select aria-label={t.sort} value={sort} onChange={(e) => setSort(e.target.value as OrderListSort)} className="h-9 w-auto">
-            <option value="newest">{t.sortNewest}</option>
-            <option value="oldest">{t.sortOldest}</option>
-            <option value="total_desc">{t.sortTotalDesc}</option>
-            <option value="total_asc">{t.sortTotalAsc}</option>
-          </Select>
-        </div>
-
-        {selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-line bg-paper px-3 py-2 text-sm">
-            <span className="font-medium text-ink">{fmt(t.selected, { n: selected.size })}</span>
-            <Button size="sm" variant="outline" onClick={() => exportCsv(list.items.filter((o) => selected.has(o.id)))}>
-              <Download className="size-4" aria-hidden /> {t.exportSelected}
+      <DataState
+        loading={list.loading}
+        error={list.items.length ? null : list.error}
+        empty={list.items.length === 0}
+        emptyMessage={emptyMessage}
+        onRetry={list.reload}
+      >
+        <OrdersTable orders={list.items} />
+        {list.error != null && list.items.length > 0 && (
+          <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {t.loadMoreFailed} {errorMessage(list.error)}
+            </span>
+            <Button size="sm" variant="outline" className="min-h-11" onClick={list.loadMore}>
+              {t.retry}
             </Button>
-            <button type="button" className="cursor-pointer text-sm text-ink-soft hover:text-ink" onClick={() => setSelected(new Set())}>
-              {t.clearSelection}
-            </button>
-          </div>
+          </Alert>
         )}
+        <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
+      </DataState>
 
-        <DataState loading={list.loading} error={list.items.length ? null : list.error} onRetry={list.reload}>
-          {list.items.length === 0 ? (
-            <div className="p-4">
-              <EmptyState
-                icon={<ShoppingBag />}
-                title={isFiltered ? t.emptyTitle : t.emptyAllTitle}
-                description={isFiltered ? t.emptyDesc : t.emptyAllDesc}
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1040px] text-sm">
-                <thead>
-                  <tr className="border-b border-line text-start text-xs text-ink-soft">
-                    <th className="w-10 px-3 py-2.5">
-                      <input type="checkbox" aria-label={t.selectAll} checked={allSelected} onChange={toggleAll} className="size-4 cursor-pointer accent-primary" />
-                    </th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colOrder}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colDate}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colCustomer}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colChannel}</th>
-                    <th className="px-3 py-2.5 text-end font-medium">{t.colTotal}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colPayment}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colConfirmation}</th>
-                    <th className="px-3 py-2.5 text-start font-medium">{t.colFulfillment}</th>
-                    <th className="px-3 py-2.5 text-end font-medium">{t.colItems}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.items.map((order) => {
-                    const itemCount = order.items?.length ?? null;
-                    const checked = selected.has(order.id);
-                    return (
-                      <tr
-                        key={order.id}
-                        onClick={() => navigate(`/orders/${order.id}`)}
-                        className={cn("cursor-pointer border-b border-line last:border-0 hover:bg-paper", checked && "bg-primary-soft/40")}
-                      >
-                        <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            aria-label={fmt(t.selectOne, { n: order.orderNumber })}
-                            checked={checked}
-                            onChange={() => toggleOne(order.id)}
-                            className="size-4 cursor-pointer accent-primary"
-                          />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Link to={`/orders/${order.id}`} className="font-medium text-ink hover:text-primary" onClick={(e) => e.stopPropagation()}>
-                            <bdi dir="ltr">{order.orderNumber}</bdi>
-                          </Link>
-                          {order.cancelledAt && (
-                            <span className="ms-2 rounded-full bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft">{t.cancelledBadge}</span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-ink-soft">{formatDateTime(order.createdAt)}</td>
-                        <td className="px-3 py-2.5">
-                          <span className="block text-ink" dir="auto">
-                            {order.contactSnapshot?.fullName || "—"}
-                          </span>
-                          {order.contactSnapshot?.phone && (
-                            <span className="block text-xs text-ink-soft" dir="ltr">
-                              {order.contactSnapshot.phone}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-ink-soft">
-                          <span className="inline-flex items-center gap-1.5">
-                            {order.funnelId ? <Workflow className="size-3.5" aria-hidden /> : <ShoppingBag className="size-3.5" aria-hidden />}
-                            <span dir="auto">{order.funnel?.name ?? (order.funnelId ? t.channelFunnel : t.channelStore)}</span>
-                          </span>
-                        </td>
-                        <td className="tabular-nums whitespace-nowrap px-3 py-2.5 text-end text-ink">
-                          <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <StatusBadge value={order.financialState} />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <StatusBadge value={order.confirmationState} />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <StatusBadge value={order.fulfillmentState} />
-                        </td>
-                        <td className="tabular-nums px-3 py-2.5 text-end text-ink-soft">
-                          {itemCount === null ? "—" : itemCount === 1 ? t.itemsOne : fmt(t.itemsCount, { n: itemCount })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-ink-soft">
-            <span>{tabTotal !== null && list.items.length > 0 ? fmt(t.loadedOf, { loaded: list.items.length, total: tabTotal }) : ""}</span>
-            <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
-          </div>
-        </DataState>
-      </div>
+      {filters.hasSearchFilters && list.items.length === 0 && !list.loading && !list.error && (
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="outline"
+            className="min-h-11"
+            onClick={() => filters.update({ q: null, from: null, to: null })}
+          >
+            {t.clearFilters}
+          </Button>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilters> }) {
+  const t = useT(STRINGS);
+  const searchId = useId();
+  const hintId = useId();
+  const fromId = useId();
+  const toId = useId();
+  const datesHintId = useId();
+
+  // What's typed, ahead of the debounce. The URL only ever holds a query the
+  // API accepts (2+ characters), so a single character stays local.
+  const [draft, setDraft] = useState(filters.q);
+  // Back/forward or a shared link changed the query under us: adopt it,
+  // unless it's just what the draft already says.
+  const [syncedQ, setSyncedQ] = useState(filters.q);
+  if (filters.q !== syncedQ) {
+    setSyncedQ(filters.q);
+    if (draft.trim() !== filters.q) setDraft(filters.q);
+  }
+
+  const { update } = filters;
+  const debounced = useDebouncedValue(draft.trim(), SEARCH_DEBOUNCE_MS);
+  useEffect(() => {
+    const next = debounced.length >= SEARCH_MIN ? debounced : "";
+    if (next !== filters.q) update({ q: next || null });
+    // Only a settled draft should write the URL — not every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+
+  const tooShort = draft.trim().length > 0 && draft.trim().length < SEARCH_MIN;
+
+  return (
+    <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div>
+        <label htmlFor={searchId} className="sr-only">
+          {t.searchLabel}
+        </label>
+        <div className="relative">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
+          />
+          <Input
+            id={searchId}
+            type="search"
+            value={draft}
+            maxLength={SEARCH_MAX}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={t.searchPlaceholder}
+            aria-describedby={hintId}
+            className="h-11 ps-9 pe-11"
+          />
+          {draft && (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft("");
+                update({ q: null });
+              }}
+              aria-label={t.clearSearch}
+              className="absolute end-0 top-0 flex size-11 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+          )}
+        </div>
+        <p id={hintId} className={cn("mt-1 text-xs", tooShort ? "text-accent-dark" : "text-ink-soft")} aria-live="polite">
+          {tooShort ? t.searchTooShort : t.searchHint}
+        </p>
+      </div>
+
+      <fieldset className="min-w-0">
+        <legend className="sr-only">
+          {t.from} / {t.to}
+        </legend>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor={fromId} className="text-sm text-ink-soft">
+            {t.from}
+          </label>
+          <Input
+            id={fromId}
+            type="date"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(e) => update({ from: e.target.value || null })}
+            aria-describedby={datesHintId}
+            className="h-11 w-auto"
+          />
+          <label htmlFor={toId} className="text-sm text-ink-soft">
+            {t.to}
+          </label>
+          <Input
+            id={toId}
+            type="date"
+            value={filters.to}
+            min={filters.from || undefined}
+            onChange={(e) => update({ to: e.target.value || null })}
+            aria-describedby={datesHintId}
+            className="h-11 w-auto"
+          />
+          {(filters.from || filters.to) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-11"
+              onClick={() => update({ from: null, to: null })}
+            >
+              {t.clearFilters}
+            </Button>
+          )}
+        </div>
+        <p id={datesHintId} className="mt-1 text-xs text-ink-soft">
+          {t.datesHint}
+        </p>
+        {filters.rangeInvalid && (
+          <p className="mt-1 text-xs font-medium text-danger" role="alert">
+            {t.rangeInvalid}
+          </p>
+        )}
+      </fieldset>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function SortPicker({ value, onChange }: { value: OrderSort; onChange: (next: OrderSort) => void }) {
+  const t = useT(STRINGS);
+  const id = useId();
+  return (
+    <div className="mb-3 flex items-center justify-end gap-2">
+      <label htmlFor={id} className="text-sm text-ink-soft">
+        {t.sortLabel}
+      </label>
+      <Select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as OrderSort)}
+        className="h-11 w-auto min-w-48"
+      >
+        {ORDER_SORTS.map((key) => (
+          <option key={key} value={key}>
+            {t[`sort_${key}`]}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
+/** "Cash on delivery", or "Card · Paymob" for an online order. */
+function usePaymentLabel() {
+  const labels = useOrderLabels();
+  return (order: Order) => {
+    const method = labels.paymentMethod(order.paymentMethod);
+    return order.paymentProvider ? `${method} · ${providerName(order.paymentProvider)}` : method;
+  };
+}
+
+// ---------------------------------------------------------------------------
+
+function StageTabs({
+  value,
+  onChange,
+  pipeline,
+  countsLoading,
+}: {
+  value: OrderStage | null;
+  onChange: (next: OrderStage | null) => void;
+  pipeline: OrderPipeline | null;
+  countsLoading: boolean;
+}) {
+  const t = useT(STRINGS);
+  const labels = useOrderLabels();
+  const selectedRef = useRef<HTMLButtonElement | null>(null);
+
+  // A shared link may open on a tab that's scrolled out of view on a phone.
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [value]);
+
+  const tabs: Array<{ key: OrderStage | null; label: string; count: number | undefined }> = [
+    { key: null, label: t.tabAll, count: pipeline?.total },
+    ...ORDER_STAGES.map((stage) => ({
+      key: stage,
+      label: labels.stage(stage),
+      count: pipeline?.stages[stage],
+    })),
+  ];
+
+  return (
+    <div
+      role="group"
+      aria-label={t.tabsLabel}
+      aria-busy={countsLoading || undefined}
+      className="-mx-4 mb-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+    >
+      {tabs.map((tab) => {
+        const selected = tab.key === value;
+        return (
+          <button
+            key={tab.key ?? "all"}
+            ref={selected ? selectedRef : undefined}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(tab.key)}
+            className={cn(
+              "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              selected
+                ? "border-primary/40 bg-primary-soft text-primary-dark dark:text-primary"
+                : "border-line bg-paper-raised text-ink-soft hover:text-ink"
+            )}
+          >
+            {tab.label}
+            <span
+              className={cn(
+                "min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs tabular-nums",
+                selected ? "bg-paper-raised text-ink" : "bg-paper text-ink-soft",
+                countsLoading && "opacity-50"
+              )}
+            >
+              {tab.count ?? "–"}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function OrdersTable({ orders }: { orders: Order[] }) {
+  const t = useT(STRINGS);
+  const labels = useOrderLabels();
+  const paymentLabel = usePaymentLabel();
+  // One clock for the whole list, so every row's "3 hours ago" moves together.
+  const now = useNow(60_000);
+
+  const rows = useMemo(
+    () =>
+      orders.map((order) => ({
+        order,
+        stageLabel: order.stage ? labels.stage(order.stage) : null,
+        flagged: order.riskFlags.length > 0,
+      })),
+    [orders, labels]
+  );
+
+  return (
+    <>
+      {/* Phones and small tablets: one card per order. */}
+      <ul className="space-y-3 md:hidden">
+        {rows.map(({ order, stageLabel, flagged }) => (
+          <li key={order.id}>
+            <Link
+              to={`/orders/${order.id}`}
+              className="block rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium text-ink">
+                  <bdi dir="ltr">{order.orderNumber}</bdi>
+                </span>
+                <span className="text-sm text-ink">{formatMoney(order.totalAmount, order.currency)}</span>
+              </div>
+              <div className="mt-1 text-sm text-ink-soft">
+                {order.contactSnapshot?.fullName || "—"}
+                {order.contactSnapshot?.phone && (
+                  <>
+                    {" · "}
+                    <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
+                  </>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {order.stage && stageLabel && (
+                  <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
+                )}
+                {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
+                <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
+              </div>
+              <OrderTimelineLines order={order} now={now} className="mt-2" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {/* Tablet landscape and up: the table. */}
+      <div className="hidden overflow-x-auto rounded-[var(--radius-card)] border border-line md:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colOrder}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colCustomer}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colTotal}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colPayment}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colStage}
+              </th>
+              <th scope="col" className="px-4 py-3 text-start font-medium">
+                {t.colTimeline}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ order, stageLabel, flagged }) => (
+              <tr key={order.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+                <td className="px-4 py-3">
+                  <Link
+                    to={`/orders/${order.id}`}
+                    className="inline-flex min-h-11 items-center font-medium text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    <bdi dir="ltr">{order.orderNumber}</bdi>
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-ink-soft">
+                  <div className="text-ink">{order.contactSnapshot?.fullName || "—"}</div>
+                  {order.contactSnapshot?.phone && (
+                    <div className="text-xs">
+                      <span className="sr-only">{t.phoneLabel}: </span>
+                      <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
+                <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {order.stage && stageLabel && (
+                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
+                    )}
+                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <OrderTimelineLines order={order} now={now} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

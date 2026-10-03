@@ -7,7 +7,14 @@
  *   api.listSettlements.mockResolvedValue({ settlements: [], nextCursor: null });
  */
 import { vi, type Mock } from "vitest";
-import type { ApiClient, AuthUser, LoginPayload, RegisterPayload, Workspace } from "@store-builder/api-client";
+import type {
+  ApiClient,
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+  VerificationChallenge,
+  Workspace,
+} from "@store-builder/api-client";
 import type { CreateWorkspaceResult } from "@/context/WorkspaceContext";
 
 // oxlint-disable-next-line no-explicit-any
@@ -39,6 +46,9 @@ export const api = new Proxy({} as ApiClientMock, {
   },
 });
 
+/** One store as `listWorkspaces` returns it: the workspace plus the caller's role key. */
+export type ListedWorkspace = Awaited<ReturnType<ApiClient["listWorkspaces"]>>[number];
+
 /** Cast a partial fixture to a full API type (tests only set what the screen reads). */
 export function fake<T>(value: Record<string, unknown>): T {
   return value as unknown as T;
@@ -56,8 +66,9 @@ export const testWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store" })
 export interface AuthMock {
   user: AuthUser | null;
   status: "loading" | "authenticated" | "guest";
-  login: Mock<(payload: LoginPayload) => Promise<void>>;
-  register: Mock<(payload: RegisterPayload) => Promise<void>>;
+  needsPlan: boolean;
+  login: Mock<(payload: LoginPayload) => Promise<VerificationChallenge | null>>;
+  register: Mock<(payload: RegisterPayload) => Promise<VerificationChallenge | null>>;
   logout: Mock<() => Promise<void>>;
   refreshUser: Mock<() => Promise<void>>;
 }
@@ -69,6 +80,7 @@ export interface WorkspaceMock {
   selectWorkspace: Mock<(id: string) => void>;
   createWorkspace: Mock<(name: string, slug?: string) => Promise<CreateWorkspaceResult>>;
   refresh: Mock<() => Promise<void>>;
+  applySavedWorkspace: Mock<(workspace: Workspace) => void>;
 }
 
 export const authMock = {} as AuthMock;
@@ -79,8 +91,9 @@ export function resetMocks() {
   Object.assign(authMock, {
     user: testUser,
     status: "authenticated",
-    login: vi.fn(async () => undefined),
-    register: vi.fn(async () => undefined),
+    needsPlan: false,
+    login: vi.fn(async () => null),
+    register: vi.fn(async () => null),
     logout: vi.fn(async () => undefined),
     refreshUser: vi.fn(async () => undefined),
   } satisfies AuthMock);
@@ -91,6 +104,7 @@ export function resetMocks() {
     selectWorkspace: vi.fn(),
     createWorkspace: vi.fn(async () => ({ workspace: testWorkspace })),
     refresh: vi.fn(async () => undefined),
+    applySavedWorkspace: vi.fn(),
   } satisfies WorkspaceMock);
 }
 

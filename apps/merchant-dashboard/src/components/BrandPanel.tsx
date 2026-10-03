@@ -30,11 +30,11 @@ export function BrandPanel() {
   return (
     <div className="relative hidden overflow-hidden bg-primary-dark px-12 py-16 text-white lg:flex lg:w-[44%] lg:flex-col lg:justify-between">
       <div className="relative z-10">
-        <span className="text-lg font-semibold tracking-tight">Zimos</span>
+        <span className="font-display text-lg tracking-tight">Zimos</span>
       </div>
 
       <div className="relative z-10 max-w-sm">
-        <h1 className="text-4xl font-semibold leading-[1.15]">
+        <h1 className="font-display text-4xl font-medium leading-[1.15]">
           Every shelf, every price, every order — one workspace.
         </h1>
         <p className="mt-5 text-[15px] leading-relaxed text-white/70">

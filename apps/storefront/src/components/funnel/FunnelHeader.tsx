@@ -1,5 +1,6 @@
 import type { StorefrontMeta } from "@store-builder/api-client";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { container } from "@/components/ui";
 import { ZimosLogo } from "@/components/ZimosLogo";
 
@@ -7,11 +8,12 @@ import { ZimosLogo } from "@/components/ZimosLogo";
  * The masthead of a funnel page: the same brand bar, logo and name as the
  * store's own header (StoreHeader), and deliberately nothing else. No cart, no
  * tracking link, and the logo isn't a link — a funnel keeps the shopper on one
- * path. The language switch stays, since it re-renders the same step in place.
+ * path. The language and theme switches stay, since they re-render the same
+ * step in place.
  */
 export function FunnelHeader({ store }: { store: StorefrontMeta }) {
   return (
-    <header className="border-b border-line bg-paper-raised">
+    <header className="sticky top-0 z-30 border-b border-line bg-paper-raised/95 backdrop-blur supports-[backdrop-filter]:bg-paper-raised/85">
       <div
         className="h-1 w-full"
         style={{
@@ -36,7 +38,10 @@ export function FunnelHeader({ store }: { store: StorefrontMeta }) {
           )}
           <span className="truncate font-display text-lg font-bold text-ink">{store.name}</span>
         </div>
-        <LanguageSwitch />
+        <div className="flex items-center gap-2">
+          <LanguageSwitch />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

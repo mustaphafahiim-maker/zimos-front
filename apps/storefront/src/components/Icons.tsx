@@ -32,6 +32,20 @@ export const CashIcon = (p: IconProps) => (
   </Base>
 );
 
+export const CardIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="2.5" y="5" width="19" height="14" rx="2" />
+    <path d="M2.5 10h19M6.5 15h4" />
+  </Base>
+);
+
+export const WalletIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+    <path d="M10.5 18.5h3" />
+  </Base>
+);
+
 export const TruckIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7z" />
@@ -143,23 +157,6 @@ export const SearchIcon = (p: IconProps) => (
 export const MenuIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M4 7h16M4 12h16M4 17h16" />
-  </Base>
-);
-
-/** Online payment by card — shown only when the store has Paymob connected. */
-export const CardIcon = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
-    <path d="M2.5 10h19M6.5 14.5h4" />
-  </Base>
-);
-
-/** Online payment from a mobile wallet — same condition as CardIcon. */
-export const WalletIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5H18v3" />
-    <path d="M3.5 7.5v9a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-13a2 2 0 0 1-2-1z" />
-    <circle cx="16.5" cy="13.5" r="1.2" />
   </Base>
 );
 

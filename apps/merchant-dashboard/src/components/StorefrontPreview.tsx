@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from "react";
-import { Monitor, RefreshCw, Smartphone, Tablet, X } from "lucide-react";
+import { Monitor, Moon, RefreshCw, Smartphone, Sun, Tablet, X } from "lucide-react";
 import { Button, Spinner, cn } from "@store-builder/ui";
 import type { PageTree } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
+import type { CanvasEdit, CanvasStep } from "@/lib/canvasDrag";
+import { useCanvasDragSession } from "./useCanvasDragSession";
 import {
   nearestGapIndex,
   originOf,
   readFrameMessage,
+  type CanvasStrings,
+  type ColorMode,
   type DragStateMessage,
   type EditorStateMessage,
   type PreviewTheme,
   type ScrollToSectionMessage,
+  type ScrollToShellMessage,
   type SectionRect,
+  type ShellPart,
+  type ShellPreview,
 } from "@/lib/previewBridge";
 
 export interface PreviewLabels {
@@ -25,6 +32,9 @@ export interface PreviewLabels {
   frameTitle: string;
   /** Adds a tablet-width button to the device switch when given. */
   tablet?: string;
+  /** The light/dark switch's two labels — each says what pressing it does. */
+  lightMode?: string;
+  darkMode?: string;
 }
 
 /**
@@ -39,7 +49,7 @@ export interface PreviewCanvas {
   selectedId: string | null;
   /** Section id → the name shown on its outline. */
   labels: Record<string, string>;
-  strings: { addAbove: string; addBelow: string; moveUp: string; moveDown: string };
+  strings: CanvasStrings;
   theme?: PreviewTheme | null;
   /** Scrolls the frame to a section; a new `nonce` asks again for the same one. */
   scrollRequest?: { sectionId: string; nonce: number } | null;
@@ -57,6 +67,24 @@ export interface PreviewCanvas {
   dragActive?: boolean;
   /** Called with the computed insert index once a drag ends in a drop on the canvas. */
   onDrop?: (index: number) => void;
+  /** The header, footer or announcement bar picked in the editor, outlined like a section. */
+  selectedShell?: ShellPart | null;
+  /** Their names on the outline, in the editor's language. */
+  shellLabels?: Record<ShellPart, string>;
+  /** Unsaved header/footer settings, applied in the frame without a reload. Null shows the saved ones. */
+  shell?: ShellPreview | null;
+  /** The header, footer or announcement bar was clicked in the frame. */
+  onSelectShell?: (part: ShellPart) => void;
+  /** Scrolls the frame to the header or footer; a new `nonce` asks again. */
+  shellScrollRequest?: { part: ShellPart; nonce: number } | null;
+  /**
+   * A drag or resize on the page itself was released (lib/canvasDrag.ts) —
+   * one tree edit. The frame showed it live while the pointer moved; nothing
+   * was posted until now, and the refreshed preview goes out straight away.
+   */
+  onCanvasEdit?: (edit: CanvasEdit) => void;
+  /** One arrow-key press on a canvas handle. */
+  onCanvasStep?: (step: CanvasStep) => void;
 }
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -91,6 +119,8 @@ export function StorefrontPreview({
   onClose,
   className,
   canvas,
+  colorMode: controlledMode,
+  onColorModeChange,
 }: {
   workspaceId: string;
   tree: PageTree;
@@ -99,6 +129,14 @@ export function StorefrontPreview({
   onClose?: () => void;
   className?: string;
   canvas?: PreviewCanvas;
+  /**
+   * The preview's own light/dark mode, separate from the dashboard's. Null
+   * (or leaving it out) shows the page in whatever mode it opens in — the
+   * shopper-side stored choice or the system setting — until the switch in
+   * the toolbar picks one. Controlled when given with `onColorModeChange`.
+   */
+  colorMode?: ColorMode | null;
+  onColorModeChange?: (mode: ColorMode) => void;
 }) {
   const baseName = `storefront-preview-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const frameNames = [`${baseName}-a`, `${baseName}-b`] as const;
@@ -106,6 +144,11 @@ export function StorefrontPreview({
   const frameA = useRef<HTMLIFrameElement>(null);
   const frameB = useRef<HTMLIFrameElement>(null);
   const firstPost = useRef(true);
+  /** The next tree change posts at once rather than after the typing pause — a canvas drop. */
+  const urgentPost = useRef(false);
+  /** A render that came due while a canvas drag was on, held until it ends so the frame isn't swapped mid-drag. */
+  const deferredPost = useRef(false);
+  const lastPosted = useRef<string | null>(null);
   const lastSessionCheck = useRef(0);
   const [token] = useState(() => crypto.randomUUID());
   const [device, setDevice] = useState<Device>("desktop");
@@ -116,16 +159,41 @@ export function StorefrontPreview({
   const pendingRef = useRef<0 | 1 | null>(null);
 
   const serialized = JSON.stringify(tree);
+  const serializedRef = useRef(serialized);
   const editing = canvas !== undefined;
+
+  // Light or dark. `chosen` is an explicit pick (the toolbar switch, the page's
+  // own moon, or the editor); `frameMode` is what the page reported it opened
+  // in. Until either is known the system setting is the best guess.
+  const [ownMode, setOwnMode] = useState<ColorMode | null>(null);
+  const chosen = controlledMode !== undefined ? controlledMode : ownMode;
+  const [frameMode, setFrameMode] = useState<ColorMode | null>(null);
+  const shownMode: ColorMode =
+    chosen ?? frameMode ?? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const chosenRef = useRef(chosen);
+  const pickMode = useCallback(
+    (mode: ColorMode) => {
+      if (controlledMode === undefined) setOwnMode(mode);
+      onColorModeChange?.(mode);
+    },
+    [controlledMode, onColorModeChange]
+  );
+  const pickModeRef = useRef(pickMode);
   const themeJson = JSON.stringify(canvas?.theme ?? null);
+  const shellJson = JSON.stringify(canvas?.shell ?? null);
 
   // The latest canvas, for the message listener and the form post, which must
   // not re-subscribe or re-post on every render.
   const canvasRef = useRef(canvas);
   const themeRef = useRef(themeJson);
+  const shellRef = useRef(shellJson);
   useEffect(() => {
     canvasRef.current = canvas;
     themeRef.current = themeJson;
+    shellRef.current = shellJson;
+    serializedRef.current = serialized;
+    chosenRef.current = chosen;
+    pickModeRef.current = pickMode;
   });
 
   const frames = useCallback(
@@ -153,18 +221,60 @@ export function StorefrontPreview({
     form.target = `${baseName}-${target === 0 ? "a" : "b"}`;
     (form.elements.namedItem("tree") as HTMLInputElement).value = treeJson;
     (form.elements.namedItem("accessToken") as HTMLInputElement).value = apiClient.tokens.accessToken ?? "";
+    lastPosted.current = treeJson;
     const theme = form.elements.namedItem("theme") as HTMLInputElement | null;
     if (theme) theme.value = themeRef.current;
+    const shell = form.elements.namedItem("shell") as HTMLInputElement | null;
+    if (shell) shell.value = shellRef.current;
+    (form.elements.namedItem("colorMode") as HTMLInputElement).value = chosenRef.current ?? "";
     setLoading(true);
     form.submit();
   }, [baseName]);
 
+  // A drag on the canvas (lib/canvasDrag.ts): held here in a ref, so the
+  // pointer moving re-renders nothing. A release that changes the page is one
+  // tree edit, posted straight away.
+  const canvasDrag = useCanvasDragSession({
+    origin: STOREFRONT_ORIGIN,
+    labels: { auto: canvas?.strings.auto ?? "Auto" },
+    onEdit: (edit) => {
+      urgentPost.current = true;
+      canvasRef.current?.onCanvasEdit?.(edit);
+    },
+    onSettled: () => {
+      if (!deferredPost.current) return;
+      deferredPost.current = false;
+      // After React has applied the edit the drop may have just made.
+      window.setTimeout(() => {
+        if (serializedRef.current !== lastPosted.current) void post(serializedRef.current);
+      }, 0);
+    },
+  });
+
   useEffect(() => {
-    const delay = firstPost.current ? 0 : 700;
+    const delay = firstPost.current || urgentPost.current ? 0 : 700;
     firstPost.current = false;
-    const handle = window.setTimeout(() => void post(serialized), delay);
+    urgentPost.current = false;
+    const handle = window.setTimeout(() => {
+      // Never swap the frame out from under a drag in progress.
+      if (canvasDrag.isActive()) {
+        deferredPost.current = true;
+        return;
+      }
+      void post(serialized);
+    }, delay);
     return () => window.clearTimeout(handle);
-  }, [serialized, post]);
+  }, [serialized, post, canvasDrag]);
+
+  // A plain preview has no bridge in the frame to switch it live, so a new
+  // mode is a new render. (The editor's canvas switches in place: the mode
+  // rides on zimos:editor-state below.)
+  const lastPostedMode = useRef(chosen);
+  useEffect(() => {
+    if (editing || chosen === lastPostedMode.current) return;
+    lastPostedMode.current = chosen;
+    void post(serializedRef.current);
+  }, [chosen, editing, post]);
 
   function onFrameLoad(index: 0 | 1) {
     const frame = index === 0 ? frameA.current : frameB.current;
@@ -177,6 +287,8 @@ export function StorefrontPreview({
     }
     if (pendingRef.current !== index) return;
     pendingRef.current = null;
+    // The frame a drag started in is going out of view.
+    canvasDrag.abort();
     visibleRef.current = index;
     setVisible(index);
     setLoading(false);
@@ -191,6 +303,10 @@ export function StorefrontPreview({
         labels: canvas.labels,
         strings: canvas.strings,
         theme: canvas.theme ?? null,
+        selectedShell: canvas.selectedShell ?? null,
+        shellLabels: canvas.shellLabels ?? null,
+        shell: canvas.shell ?? null,
+        colorMode: chosen,
       } satisfies EditorStateMessage)
     : "";
   const stateRef = useRef(stateJson);
@@ -222,9 +338,13 @@ export function StorefrontPreview({
   // own "+" indicators and drop-line agree with what a drop would actually do.
   const dragActive = canvas?.dragActive ?? false;
   const [hoverGapIndex, setHoverGapIndex] = useState<number | null>(null);
-  useEffect(() => {
+  // A drag that ends forgets its gap — adjusted during render rather than in
+  // an effect, so no stale gap is ever posted when the next drag starts.
+  const [wasDragActive, setWasDragActive] = useState(dragActive);
+  if (wasDragActive !== dragActive) {
+    setWasDragActive(dragActive);
     if (!dragActive) setHoverGapIndex(null);
-  }, [dragActive]);
+  }
   useEffect(() => {
     if (!STOREFRONT_ORIGIN) return;
     const message: DragStateMessage = { type: "zimos:drag-state", active: dragActive, hoverIndex: hoverGapIndex };
@@ -246,7 +366,7 @@ export function StorefrontPreview({
     event.dataTransfer.dropEffect = "copy";
     const y = event.clientY - event.currentTarget.getBoundingClientRect().top;
     setHoverGapIndex(nearestGapIndex(sectionRectsRef.current[visibleRef.current], y));
-  }, []);
+  }, [setHoverGapIndex]);
 
   const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -254,7 +374,7 @@ export function StorefrontPreview({
     const index = nearestGapIndex(sectionRectsRef.current[visibleRef.current], y);
     canvasRef.current?.onDrop?.(index);
     setHoverGapIndex(null);
-  }, []);
+  }, [setHoverGapIndex]);
   const scrollNonce = canvas?.scrollRequest?.nonce;
   useEffect(() => {
     const request = canvasRef.current?.scrollRequest;
@@ -269,6 +389,16 @@ export function StorefrontPreview({
     }
   }, [scrollNonce]);
 
+  // Editor → frame: "scroll to the header / footer". They are on every page,
+  // so the showing render always has them.
+  const shellScrollNonce = canvas?.shellScrollRequest?.nonce;
+  useEffect(() => {
+    const request = canvasRef.current?.shellScrollRequest;
+    if (shellScrollNonce === undefined || !request || !STOREFRONT_ORIGIN) return;
+    const message: ScrollToShellMessage = { type: "zimos:scroll-to-shell", part: request.part };
+    (visibleRef.current === 0 ? frameA : frameB).current?.contentWindow?.postMessage(message, STOREFRONT_ORIGIN);
+  }, [shellScrollNonce]);
+
   // Frame → editor. Only the storefront origin, and only our own two frames.
   useEffect(() => {
     if (!editing) return;
@@ -280,6 +410,7 @@ export function StorefrontPreview({
         case "zimos:preview-ready": {
           const source = event.source as Window | null;
           if (!source || !STOREFRONT_ORIGIN) break;
+          if (message.colorMode) setFrameMode(message.colorMode);
           frameSections.current[source === frameA.current?.contentWindow ? 0 : 1] = message.sectionIds;
           if (stateRef.current) source.postMessage(JSON.parse(stateRef.current), STOREFRONT_ORIGIN);
           const waiting = pendingScroll.current;
@@ -293,6 +424,9 @@ export function StorefrontPreview({
         case "zimos:select-section":
           current?.onSelect(message.sectionId);
           break;
+        case "zimos:select-shell":
+          current?.onSelectShell?.(message.part);
+          break;
         case "zimos:insert-section":
           current?.onInsert(message.index);
           break;
@@ -305,16 +439,30 @@ export function StorefrontPreview({
           sectionRectsRef.current[source === frameA.current?.contentWindow ? 0 : 1] = message.sections;
           break;
         }
+        case "zimos:canvas-drag": {
+          const source = event.source as Window | null;
+          if (source) canvasDrag.handle(message, source);
+          break;
+        }
+        case "zimos:canvas-step":
+          current?.onCanvasStep?.(message.step);
+          break;
+        case "zimos:color-mode":
+          // The page's own moon (or the OS) switched it: follow, so the next
+          // render opens in the same mode and the toolbar switch agrees.
+          setFrameMode(message.mode);
+          if (message.mode !== chosenRef.current) pickModeRef.current(message.mode);
+          break;
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [editing, frames]);
+  }, [editing, frames, canvasDrag]);
 
   const deviceButton = (value: Device, label: string, Icon: typeof Monitor) => (
     <Button
       type="button"
-      size="icon"
+      size="icon-sm"
       variant={device === value ? "secondary" : "ghost"}
       aria-label={label}
       title={label}
@@ -329,22 +477,40 @@ export function StorefrontPreview({
     <div className={cn("flex h-full min-h-0 flex-col bg-paper-raised", className)}>
       {/* One compact row: title and hint share a line (the hint is a plain
           sentence, so it reads fine run-on) rather than stacking two lines of
-          text above the device switcher — chrome the canvas doesn't need. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-1.5">
-        <p className="min-w-0 truncate text-xs text-ink-soft">
+          text above the device switcher — chrome the canvas doesn't need. The
+          hint truncates rather than pushing the switcher onto a second line. */}
+      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-1">
+        <p className="min-w-0 flex-1 truncate text-xs text-ink-soft" title={labels.hint}>
           <span className="font-semibold text-ink">{labels.title}</span>
           <span className="mx-1.5 text-line" aria-hidden>
             ·
           </span>
           {labels.hint}
         </p>
-        <div className="flex items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           {deviceButton("desktop", labels.desktop, Monitor)}
           {labels.tablet && deviceButton("tablet", labels.tablet, Tablet)}
           {deviceButton("mobile", labels.mobile, Smartphone)}
+          {(() => {
+            const label =
+              shownMode === "dark" ? (labels.lightMode ?? "Preview in light mode") : (labels.darkMode ?? "Preview in dark mode");
+            return (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={label}
+                title={label}
+                aria-pressed={shownMode === "dark"}
+                onClick={() => pickMode(shownMode === "dark" ? "light" : "dark")}
+              >
+                {shownMode === "dark" ? <Sun className="size-4" aria-hidden /> : <Moon className="size-4" aria-hidden />}
+              </Button>
+            );
+          })()}
           <Button
             type="button"
-            size="icon"
+            size="icon-sm"
             variant="ghost"
             aria-label={labels.refresh}
             title={labels.refresh}
@@ -353,7 +519,7 @@ export function StorefrontPreview({
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
           </Button>
           {onClose && (
-            <Button type="button" size="icon" variant="ghost" aria-label={labels.close} onClick={onClose}>
+            <Button type="button" size="icon-sm" variant="ghost" aria-label={labels.close} onClick={onClose}>
               <X className="size-4" aria-hidden />
             </Button>
           )}
@@ -366,7 +532,10 @@ export function StorefrontPreview({
             <Spinner className="size-5 text-ink-soft" />
           </div>
         )}
-        <div className={cn("relative mx-auto h-full min-h-[32rem] transition-[width]", DEVICE_WIDTH[device])}>
+        {/* Exactly the height it's given: a taller floor would put a second
+            scrollbar around the frame's own on a short laptop screen. The
+            small floor only stops it collapsing on a phone held sideways. */}
+        <div className={cn("relative mx-auto h-full min-h-64 transition-[width]", DEVICE_WIDTH[device])}>
           {([0, 1] as const).map((index) => (
             <iframe
               key={index}
@@ -407,11 +576,13 @@ export function StorefrontPreview({
         <input type="hidden" name="tree" />
         <input type="hidden" name="accessToken" />
         <input type="hidden" name="token" value={token} />
+        <input type="hidden" name="colorMode" />
         {editing && (
           <>
             <input type="hidden" name="edit" value="1" />
             <input type="hidden" name="parentOrigin" value={window.location.origin} />
             <input type="hidden" name="theme" />
+            <input type="hidden" name="shell" />
           </>
         )}
       </form>

@@ -4,7 +4,7 @@ import { GripVertical, Trash2, type LucideIcon } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
-import { useEditorLocale } from "./editorLocale";
+import { editorUi, useEditorLocale } from "./editorLocale";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -181,7 +181,7 @@ export function SectionCard({
           className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           {elements.length === 0 ? (
-            <span className="text-sm text-ink-soft">Empty section</span>
+            <span className="text-sm text-ink-soft">{editorUi(locale).emptySection}</span>
           ) : (
             elements.map((element) => {
               const spec = ELEMENT_SPECS[element.type];

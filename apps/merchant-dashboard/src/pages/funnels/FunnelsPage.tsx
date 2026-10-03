@@ -18,6 +18,8 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { formatDate, formatMoney, formatPercentValue } from "@/lib/format";
 import { percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { canViewAnalytics } from "@/lib/analyticsAccess";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { RangeSwitch } from "@/components/RangeSwitch";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
@@ -55,6 +57,7 @@ const STRINGS = {
     kpiConversion: "Conversion",
     kpiConversionHint: "Checkouts ÷ sessions",
     statsUnavailable: "Stats couldn't be loaded",
+    statsNoAccess: "Your role can't see analytics",
     viewAnalytics: "Analytics",
     emptyTitle: "No funnels yet",
     emptyDescription: "Create a funnel to sell a single product with a focused landing page and one-click offers.",
@@ -95,14 +98,15 @@ const STRINGS = {
     description: "مسارات بيع لمنتج واحد مع عروض إضافية عند الدفع وعروض بعد الشراء وعروض بديلة.",
     createFunnel: "إنشاء مسار بيع",
     kpiVisits: "الجلسات",
-    kpiVisitsHint: "كل المسارات، في الفترة دي",
+    kpiVisitsHint: "كل المسارات، خلال الفترة",
     kpiOrders: "الطلبات",
-    kpiOrdersHint: "اتعملت جوه المسارات",
+    kpiOrdersHint: "الطلبات المُنشأة داخل المسارات",
     kpiRevenue: "الإيرادات",
     kpiRevenueHint: "شاملة العروض الإضافية",
-    kpiConversion: "نسبة التحويل",
-    kpiConversionHint: "الطلبات ÷ الجلسات",
-    statsUnavailable: "الإحصاءات معرفناش نحمّلها",
+    kpiConversion: "معدل التحويل",
+    kpiConversionHint: "عمليات الدفع ÷ الجلسات",
+    statsUnavailable: "تعذّر تحميل الإحصاءات",
+    statsNoAccess: "دورك لا يتيح عرض التحليلات",
     viewAnalytics: "التحليلات",
     emptyTitle: "لا توجد مسارات بيع بعد",
     emptyDescription: "أنشئ مسار بيع لبيع منتج واحد بصفحة هبوط مركّزة وعروض بنقرة واحدة.",
@@ -216,10 +220,14 @@ export function FunnelsPage() {
     return new Map(entries);
   }, [workspaceId, idsKey]);
 
+  // Funnel stats need analytics.view; a role without it gets dashes, not a 403.
+  const { currentWorkspace } = useWorkspace();
+  const analyticsAllowed = canViewAnalytics(currentWorkspace?.role);
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const stats = useAsync(
-    () => apiClient.getFunnelAnalytics(workspaceId, rangeWindows(range).current),
-    [workspaceId, range]
+    () =>
+      analyticsAllowed ? apiClient.getFunnelAnalytics(workspaceId, rangeWindows(range).current) : Promise.resolve(null),
+    [workspaceId, range, analyticsAllowed]
   );
   const statsById = new Map((stats.data?.funnels ?? []).map((row) => [row.id, row]));
   const currency = stats.data?.currency ?? "EGP";
@@ -232,9 +240,10 @@ export function FunnelsPage() {
     paused: t.statusPaused,
   };
 
-  /** Shown while the stats load or when they failed: never a made-up number. */
+  /** Shown while the stats load, when they failed or aren't allowed: never a made-up number. */
+  const noStatReason = !analyticsAllowed ? t.statsNoAccess : stats.error ? t.statsUnavailable : undefined;
   const noStat = (
-    <span title={stats.error ? t.statsUnavailable : undefined} aria-label={stats.error ? t.statsUnavailable : undefined}>
+    <span title={noStatReason} aria-label={noStatReason}>
       —
     </span>
   );
@@ -312,7 +321,7 @@ export function FunnelsPage() {
         description={t.description}
         actions={
           <>
-            <RangeSwitch value={range} onChange={setRange} />
+            {analyticsAllowed && <RangeSwitch value={range} onChange={setRange} />}
             <Button onClick={() => setCreating(true)}>
               <Plus className="size-4" aria-hidden /> {t.createFunnel}
             </Button>
@@ -322,14 +331,29 @@ export function FunnelsPage() {
 
       <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard label={t.kpiVisits} value={stat(totals?.sessions, numberFmt.format)} icon={<Eye />} hint={t.kpiVisitsHint} />
-          <KpiCard label={t.kpiOrders} value={stat(totals?.orders, numberFmt.format)} icon={<ShoppingBag />} hint={t.kpiOrdersHint} />
-          <KpiCard label={t.kpiRevenue} value={stat(totals?.revenue, (v) => formatMoney(v, currency))} icon={<Wallet />} hint={t.kpiRevenueHint} />
+          <KpiCard
+            label={t.kpiVisits}
+            value={stat(totals?.sessions, numberFmt.format)}
+            icon={<Eye />}
+            hint={noStatReason ?? t.kpiVisitsHint}
+          />
+          <KpiCard
+            label={t.kpiOrders}
+            value={stat(totals?.orders, numberFmt.format)}
+            icon={<ShoppingBag />}
+            hint={noStatReason ?? t.kpiOrdersHint}
+          />
+          <KpiCard
+            label={t.kpiRevenue}
+            value={stat(totals?.revenue, (v) => formatMoney(v, currency))}
+            icon={<Wallet />}
+            hint={noStatReason ?? t.kpiRevenueHint}
+          />
           <KpiCard
             label={t.kpiConversion}
             value={stat(totals?.conversionRate, (v) => formatPercentValue(percentToRatio(v)))}
             icon={<MousePointerClick />}
-            hint={t.kpiConversionHint}
+            hint={noStatReason ?? t.kpiConversionHint}
           />
         </div>
 
@@ -391,19 +415,23 @@ export function FunnelsPage() {
                       <td className="px-4 py-3 text-end tabular-nums text-ink-soft">
                         {stat(row ? row.conversionRate : undefined, (v) => formatPercentValue(percentToRatio(v)))}
                       </td>
-                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{stat(row?.revenue, (v) => formatMoney(v, currency))}</td>
+                      <td className="px-4 py-3 text-end tabular-nums text-ink-soft">
+                        {stat(row?.revenue, (v) => formatMoney(v, currency))}
+                      </td>
                       <td className="px-4 py-3 text-ink-soft">{formatDate(f.updatedAt)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-0.5">
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            title={t.viewAnalytics}
-                            aria-label={t.viewAnalytics}
-                            onClick={() => navigate(`/analytics/funnels/${f.id}`)}
-                          >
-                            <BarChart3 className="size-4" aria-hidden />
-                          </Button>
+                          {analyticsAllowed && (
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              title={t.viewAnalytics}
+                              aria-label={t.viewAnalytics}
+                              onClick={() => navigate(`/analytics/funnels/${f.id}`)}
+                            >
+                              <BarChart3 className="size-4" aria-hidden />
+                            </Button>
+                          )}
                           <Button size="icon-sm" variant="ghost" title={c.edit} aria-label={c.edit} onClick={() => navigate(`/funnels/${f.id}`)}>
                             <Pencil className="size-4" aria-hidden />
                           </Button>

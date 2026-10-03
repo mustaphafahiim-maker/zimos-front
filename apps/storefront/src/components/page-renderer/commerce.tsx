@@ -11,6 +11,11 @@ import { CartSummary } from "./CartSummary";
 import type { PageRendererFunnel } from "./PageRenderer";
 import { COLUMN_CLASS, type Props, bool, num, resolveHref, str } from "./props";
 
+/** The funnel step's actions as a store link, or null outside a funnel. */
+function funnelHref(funnel: PageRendererFunnel | undefined): string | null {
+  return funnel ? resolveHref(funnel.nextHref) : null;
+}
+
 /**
  * The four commerce element types. Each is an async server component that
  * fetches from the public storefront API, so what a shopper sees is the
@@ -20,28 +25,44 @@ import { COLUMN_CLASS, type Props, bool, num, resolveHref, str } from "./props";
  * down: one misconfigured block should not 500 a live storefront.
  *
  * In funnel mode (PageRenderer's `funnel` prop) the product blocks send the
- * shopper to the funnel's next step instead of the product page — a funnel is
- * one path, and a link out of it is a shopper lost.
+ * shopper to the funnel step's actions instead of the product page — a funnel
+ * is one path, and a link out of it is a shopper lost.
  */
 
-/** The funnel's next step as a store link, or null when this isn't a funnel. */
-function funnelHref(funnel: PageRendererFunnel | undefined): string | null {
-  return funnel ? resolveHref(funnel.nextHref) : null;
-}
-
-async function listProducts(workspaceId: string, limit: number): Promise<StorefrontProduct[]> {
+/** The catalogue's first `limit` products; null when the call failed (not the same as "none"). */
+async function listProducts(workspaceId: string, limit: number): Promise<StorefrontProduct[] | null> {
   try {
     const client = await createServerStorefrontApiClient();
     const { products } = await client.listStorefrontProducts(workspaceId, { limit });
     return products;
   } catch {
-    return [];
+    return null;
   }
 }
 
 function BlockTitle({ children }: { children: string }) {
   if (!children.trim()) return null;
   return <h2 className="mb-5 text-2xl font-bold text-ink">{children}</h2>;
+}
+
+/**
+ * What a catalogue block shows while the store has nothing to put in it (no
+ * products or collections yet): its title and a "coming soon" note, so a new
+ * store built from a template reads as not ready yet rather than broken — and
+ * the merchant sees where their products will appear.
+ */
+export function EmptyBlock({ title, message }: { title: string; message: string }) {
+  return (
+    <div>
+      <BlockTitle>{title}</BlockTitle>
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-paper-raised px-6 py-10 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-primary-soft text-primary" aria-hidden>
+          <BoxIcon size={24} />
+        </span>
+        <p className="max-w-sm text-sm text-ink-soft">{message}</p>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -70,7 +91,10 @@ export async function ProductListElement({
   const limit = num(props, "limit", 8, 1, 48);
   const columns = num(props, "columns", 4, 1, 6);
   const products = await listProducts(workspaceId, limit);
-  if (products.length === 0) return null;
+  if (!products) return null;
+  if (products.length === 0) {
+    return <EmptyBlock title={str(props, "title")} message={getDictionary(locale).renderer.emptyProducts} />;
+  }
   const next = funnelHref(funnel);
 
   return (
@@ -90,11 +114,10 @@ export async function ProductListElement({
 }
 
 /**
- * A product in a funnel's grid: the same card shape as ProductCard, but the
- * whole tile is one link to the funnel's next step — no product page, no
- * add-to-cart, nothing that leaves the path. Kept here rather than as a mode
- * on ProductCard so the catalogue card shoppers see everywhere else is not
- * touched by funnel work.
+ * A product in a funnel's grid: the same look as ProductCard, but the whole
+ * tile is one link to the step's actions — no product page, nothing that
+ * leaves the path. Kept apart so the card shoppers see everywhere else is
+ * untouched by funnel work.
  */
 function FunnelProductTile({
   product,
@@ -114,10 +137,11 @@ function FunnelProductTile({
   return (
     <StoreLink
       href={href}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="zt-card zt-product group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <span className="relative block aspect-square overflow-hidden bg-paper">
         {image ? (
+          // Merchant media are arbitrary remote URLs (no next/image allowlist).
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={image}
@@ -126,7 +150,7 @@ function FunnelProductTile({
             height={600}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-primary/40">
@@ -172,13 +196,19 @@ export async function ProductCardElement({
   const client = await createServerStorefrontApiClient();
 
   let product: StorefrontProduct | null = null;
-  try {
-    product = productId
-      ? await client.getStorefrontProduct(workspaceId, productId)
-      : ((await listProducts(workspaceId, 1))[0] ?? null);
-  } catch (err) {
-    // A deleted or unpublished product is a 404 — drop the block, don't crash.
-    if (!(err instanceof ApiError) || err.status !== 404) throw err;
+  if (productId) {
+    try {
+      product = await client.getStorefrontProduct(workspaceId, productId);
+    } catch (err) {
+      // A deleted or unpublished product is a 404 — drop the block, don't crash.
+      if (!(err instanceof ApiError) || err.status !== 404) throw err;
+    }
+  } else {
+    // No product picked: the newest one — or, in a store with none yet, the
+    // empty state (the block stays where the product will appear).
+    const newest = await listProducts(workspaceId, 1);
+    if (newest && newest.length === 0) return <EmptyBlock title={str(props, "title")} message={t.renderer.emptyProducts} />;
+    product = newest?.[0] ?? null;
   }
   if (!product) return null;
 
@@ -189,15 +219,15 @@ export async function ProductCardElement({
   const image = firstImage(product);
   const next = funnelHref(funnel);
   const href = next ?? `/products/${product.slug}`;
-  // "Order now" jumps straight to the product page's order form; in a funnel
-  // the next step is the order form, so it is the same link twice.
+  // "Order now" jumps to the product page's order form; in a funnel the
+  // step's own actions are the order form, so it is the same link twice.
   const orderHref = next ?? `${href}#order-form`;
 
   return (
     <div>
       <BlockTitle>{str(props, "title")}</BlockTitle>
-      <div className="grid gap-6 rounded-2xl border border-line bg-paper-raised p-5 sm:grid-cols-2 sm:p-6">
-        <div className="aspect-square overflow-hidden rounded-2xl bg-paper">
+      <div className="zt-card grid gap-6 rounded-2xl border border-line bg-paper-raised p-5 sm:grid-cols-2 sm:p-6">
+        <div className="zt-img aspect-square overflow-hidden rounded-2xl bg-paper">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" width={600} height={600} loading="lazy" className="h-full w-full object-cover" />
@@ -224,7 +254,7 @@ export async function ProductCardElement({
             <StoreLink href={orderHref} className={`${btnPrimary} w-full`}>
               {t.product.orderNow}
             </StoreLink>
-            {/* The cart is a way out of a funnel, so the buy button stays off the path. */}
+            {/* Add-to-cart leads to the cart, off the funnel's path. */}
             {bool(props, "showBuyButton", true) && !next ? (
               <AddToCartButton
                 variant="secondary"
@@ -247,16 +277,18 @@ export async function ProductCardElement({
 }
 
 /**
- * `collection_list`. Each card links to the store home filtered by that
- * collection (`?collection=<id>`), which the home catalogue honours through the
- * public products endpoint's `collectionId` filter.
+ * `collection_list`. Each card links to that collection's page on the product
+ * listing (`/products?collection=<slug>`), the same address the store header
+ * and category strip use.
  */
 export async function CollectionListElement({
   props,
   workspaceId,
+  locale,
 }: {
   props: Props;
   workspaceId: string;
+  locale: Locale;
 }) {
   const limit = num(props, "limit", 6, 1, 24);
   const columns = num(props, "columns", 3, 1, 6);
@@ -268,8 +300,11 @@ export async function CollectionListElement({
   } catch {
     return null;
   }
-  const shown = collections.slice(0, limit);
-  if (shown.length === 0) return null;
+  // Top-level collections first: a sub-collection is reached from its parent's page.
+  const shown = collections.filter((c) => !c.parentId).slice(0, limit);
+  if (shown.length === 0) {
+    return <EmptyBlock title={str(props, "title")} message={getDictionary(locale).renderer.emptyCollections} />;
+  }
 
   return (
     <div>
@@ -278,8 +313,8 @@ export async function CollectionListElement({
         {shown.map((collection) => (
           <StoreLink
             key={collection.id}
-            href={`/?collection=${encodeURIComponent(collection.id)}#products`}
-            className="block rounded-2xl border border-line bg-paper-raised p-5 transition-colors hover:border-primary"
+            href={`/products?collection=${encodeURIComponent(collection.slug || collection.id)}`}
+            className="zt-card zt-product block rounded-2xl border border-line bg-paper-raised p-5 transition-colors hover:border-primary"
           >
             <h3 className="font-semibold text-ink">{collection.name}</h3>
             {collection.description && (

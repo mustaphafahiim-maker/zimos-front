@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import type { WebsiteTemplateDetail, WebsiteTemplateSummary } from "@store-builder/api-client";
-import { api, fake } from "@/test/mocks";
-import { renderWithProviders } from "@/test/renderWithProviders";
+import type { WebsiteTemplateDetail, WebsiteTemplateSummary, Workspace } from "@store-builder/api-client";
+import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
+import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
 import { MAX_LOADING_PREVIEWS } from "@/lib/templatePreview";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { WebsitePage } from "./WebsitePage";
@@ -162,5 +162,76 @@ describe("WebsitePage template gallery", () => {
     // Blank-document loads of the new frame don't free another slot either.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(submit).toHaveBeenCalledTimes(MAX_LOADING_PREVIEWS + 1);
+  });
+});
+
+describe("WebsitePage template colour", () => {
+  /** Opens the one template, lets its detail load, and creates the site from it. */
+  async function createFromTemplate() {
+    api.listWebsiteTemplates.mockResolvedValue([template("t_1", "Oud House", "perfume")]);
+    api.getWebsiteTemplate.mockResolvedValue(fake<WebsiteTemplateDetail>({ ...homeDetail, globalStyles: { primaryColor: "#7C2D12" } }));
+    api.createWebsite.mockResolvedValue(fake({ website: { id: "site_1", name: "Nile Store" }, pages: [] }));
+    const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    await user.click(await screen.findByRole("button", { name: "Preview Oud House" }));
+    await screen.findByText(/This template includes one page/);
+    await user.click(screen.getByRole("button", { name: "Use this template" }));
+    await waitFor(() => expect(currentPath()).toBe("/website/site_1/edit"));
+  }
+
+  it("copies the template's colour, marked as the template's, onto a store with no look of its own", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    // Another key saved from another tab after this one loaded: it must survive.
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { productCountdownHours: 6 } })]);
+    const saved = fake<Workspace>({
+      id: "ws_1",
+      themeSettings: { productCountdownHours: 6, primaryColor: "#7C2D12", primaryColorSource: "template" },
+    });
+    api.updateWorkspace.mockResolvedValue(saved);
+
+    await createFromTemplate();
+
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
+      themeSettings: { productCountdownHours: 6, primaryColor: "#7C2D12", primaryColorSource: "template" },
+    });
+    expect(workspaceMock.applySavedWorkspace).toHaveBeenCalledWith(saved);
+  });
+
+  it("leaves a store on a theme with the theme's own accent", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: { storeTheme: "warm" } });
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).not.toHaveBeenCalled();
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("leaves a theme picked in another tab alone", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "elegant" } })]);
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).toHaveBeenCalledTimes(1);
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("leaves a colour the store picked in another tab alone", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { primaryColor: "#BE123C" } })]);
+
+    await createFromTemplate();
+
+    expect(api.listWorkspaces).toHaveBeenCalledTimes(1);
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("still opens the new site when the store's latest settings can't be loaded", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
+    api.listWorkspaces.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await createFromTemplate();
+
+    expect(api.updateWorkspace).not.toHaveBeenCalled();
   });
 });

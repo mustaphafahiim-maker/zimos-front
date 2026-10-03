@@ -14,7 +14,6 @@ import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Section } from "@/components/Section";
 import { formatDate, formatMoney } from "@/lib/format";
 
 export function CustomerDetailPage() {
@@ -95,11 +94,11 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
   const orders = history.data?.orders ?? [];
 
   return (
-    <Section
-      title="Orders"
-      description="Every order this customer has placed, newest first."
-    >
-      <div>
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Orders</h2>
+      <p className="mt-1 text-sm text-ink-soft">Every order this customer has placed, newest first.</p>
+
+      <div className="mt-4">
         <DataState
           loading={history.loading}
           error={history.error}
@@ -107,7 +106,7 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
           emptyMessage="No orders from this customer yet."
           onRetry={() => history.refresh()}
         >
-          <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+          <ul className="divide-y divide-line overflow-hidden rounded-[0.5rem] border border-line">
             {orders.map((order) => (
               <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -133,7 +132,7 @@ function OrderHistorySection({ customer }: { customer: Customer }) {
           </p>
         )}
       </div>
-    </Section>
+    </section>
   );
 }
 
@@ -172,8 +171,9 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
   }
 
   return (
-    <Section title="Contact details">
-      <form onSubmit={submit} className="space-y-4">
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Contact details</h2>
+      <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -215,7 +215,7 @@ function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () =>
           </Button>
         </div>
       </form>
-    </Section>
+    </section>
   );
 }
 
@@ -252,36 +252,35 @@ function BlacklistSection({
   }
 
   return (
-    <>
-      <Section title="Blacklist">
-        {customer.isBlacklisted ? (
-          <div className="space-y-3">
-            <p className="text-sm text-ink-soft">
-              This customer is blacklisted
-              {customer.blacklistReason ? ` — ${customer.blacklistReason}` : ""}.
-            </p>
-            <Button variant="outline" size="sm" onClick={() => setUnblacklisting(true)}>
-              Remove from blacklist
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-ink-soft">
-              Blacklisting stops this customer from checking out.
-            </p>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                setReason("");
-                setBlacklisting(true);
-              }}
-            >
-              Blacklist customer
-            </Button>
-          </div>
-        )}
-      </Section>
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Blacklist</h2>
+      {customer.isBlacklisted ? (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-ink-soft">
+            This customer is blacklisted
+            {customer.blacklistReason ? ` — ${customer.blacklistReason}` : ""}.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setUnblacklisting(true)}>
+            Remove from blacklist
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-ink-soft">
+            Blacklisting stops this customer from checking out.
+          </p>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              setReason("");
+              setBlacklisting(true);
+            }}
+          >
+            Blacklist customer
+          </Button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={blacklisting}
@@ -312,7 +311,7 @@ function BlacklistSection({
         onCancel={() => setUnblacklisting(false)}
         onConfirm={confirmRemove}
       />
-    </>
+    </section>
   );
 }
 
@@ -327,41 +326,39 @@ function AddressesSection({
   const addresses = customer.addresses ?? [];
 
   return (
-    <>
-      <Section
-        title="Addresses"
-        actions={
-          <Button size="sm" onClick={() => setTarget("new")}>
-            Add address
-          </Button>
-        }
-      >
-        {addresses.length === 0 ? (
-          <p className="text-sm text-ink-soft">No addresses on file.</p>
-        ) : (
-          <ul className="space-y-2">
-            {addresses.map((a) => (
-              <li
-                key={a.id}
-                className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-line p-3"
-              >
-                <div className="min-w-0 text-sm">
-                  <p className="text-ink">
-                    {[a.addressLine, a.city, a.province, a.postalCode, a.country]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                  {a.notes && <p className="text-xs text-ink-soft">{a.notes}</p>}
-                  {a.isDefault && <p className="text-xs text-primary">Default</p>}
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => setTarget(a)}>
-                  Edit
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-medium text-ink">Addresses</h2>
+        <Button size="sm" onClick={() => setTarget("new")}>
+          Add address
+        </Button>
+      </div>
+
+      {addresses.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-soft">No addresses on file.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {addresses.map((a) => (
+            <li
+              key={a.id}
+              className="flex flex-wrap items-start justify-between gap-3 rounded-[0.5rem] border border-line p-3"
+            >
+              <div className="min-w-0 text-sm">
+                <p className="text-ink">
+                  {[a.addressLine, a.city, a.province, a.postalCode, a.country]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+                {a.notes && <p className="text-xs text-ink-soft">{a.notes}</p>}
+                {a.isDefault && <p className="text-xs text-primary">Default</p>}
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setTarget(a)}>
+                Edit
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Modal
         open={target !== null}
@@ -381,7 +378,7 @@ function AddressesSection({
           />
         )}
       </Modal>
-    </>
+    </section>
   );
 }
 

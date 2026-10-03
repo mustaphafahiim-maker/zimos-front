@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import type { CheckoutSettings, StorefrontOrderBump } from "@store-builder/api-client";
 import {
   DEFAULT_LOCALE,
   dirFor,
@@ -12,12 +13,20 @@ import {
 } from "./i18n";
 
 export interface StoreInfo {
+  /** The route segment the store was reached by — its UUID or its slug. */
   workspaceId: string;
+  /** The workspace's real UUID, whichever way the store was reached. */
+  id: string;
+  slug: string;
   name: string;
   currency: string;
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
+  /** Which optional checkout fields the merchant shows/requires (GET /store/:ws `checkout`). */
+  checkout: CheckoutSettings;
+  /** The checkout's order bump (GET /store/:ws `orderBump`); null when none can be offered. */
+  orderBump: StorefrontOrderBump | null;
 }
 
 export interface StoreContextValue {

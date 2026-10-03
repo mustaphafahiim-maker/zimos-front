@@ -8,10 +8,10 @@ import { useStore } from "@/lib/StoreContext";
 
 /**
  * A funnel the shopper can't enter: paused by the merchant (410), or not
- * published / not there at all (404 — the API doesn't tell those apart). Same
- * shape and tone as the store's 404 (NotFoundContent) minus the "404", since a
- * paused funnel isn't missing: the store language first, the other one quietly
- * underneath, and a way back into the store.
+ * published / not there at all (404). Same shape and tone as the store's 404
+ * (NotFoundContent) minus the "404", since a paused funnel isn't missing: the
+ * store language first, the other one quietly underneath, and a way back into
+ * the store.
  *
  * `error` is the other case — the API couldn't be reached — and offers a retry.
  */
@@ -19,14 +19,14 @@ export function FunnelUnavailable({ kind, onRetry }: { kind: "unavailable" | "er
   const { t, locale } = useStore();
   const router = useRouter();
   const otherLang = locale === "ar" ? "en" : "ar";
-  const other = getDictionary(otherLang);
+  const other = getDictionary(otherLang).funnel;
 
   const title = kind === "unavailable" ? t.funnel.unavailableTitle : t.funnel.errorTitle;
   const body = kind === "unavailable" ? t.funnel.unavailableBody : t.funnel.errorBody;
   const secondary =
     kind === "unavailable"
-      ? `${other.funnel.unavailableTitle} — ${other.funnel.unavailableBody}`
-      : `${other.funnel.errorTitle} — ${other.funnel.errorBody}`;
+      ? `${other.unavailableTitle} — ${other.unavailableBody}`
+      : `${other.errorTitle} — ${other.errorBody}`;
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">

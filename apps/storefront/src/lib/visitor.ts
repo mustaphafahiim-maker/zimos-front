@@ -1,23 +1,33 @@
 /**
- * First-party visitor identity for the store's own analytics
- * (lib/analyticsEvents.ts): who this browser is, which visit this is, and
- * where the visit came from. Plain module, SSR-safe — every function returns
- * a harmless value on the server or when storage is blocked, and nothing here
- * ever throws. No third-party code, no PII: random ids and URL parameters only.
+ * Who this shopper is, for everything the storefront reports about them: the
+ * checkout autosave (lib/useCheckoutAutosave.ts, through ./visitorId) and the
+ * store's own analytics (lib/analyticsEvents.ts). Plain module, no imports and
+ * SSR-safe — every function returns a harmless value on the server or when
+ * storage is blocked, and nothing here ever throws — so it also runs under
+ * Node's test runner (`node --test src/lib/visitor.test.mjs`).
  *
- * Keys (all prefixed `zimos_`):
- *  - localStorage `zimos_vid`      — the visitor id, created once per browser
- *  - sessionStorage `zimos_sid`    — the session id for this tab
- *  - localStorage `zimos_sid_at`   — when the session was last active
- *  - sessionStorage `zimos_attr`   — the attribution captured on the first page
+ * One visitor identity, one storage key:
+ *  - sessionStorage `zimos_visitor_<workspaceId>` — the visitor id. One per
+ *    store per browser tab, so a new tab is a new shopping trip and nothing
+ *    outlives the session. This is the id the checkout autosave has always
+ *    upserted on (abandoned checkouts are one per visitor), and analytics
+ *    events carry the same one, so an abandoned checkout and the visit it came
+ *    from share an id.
+ *
+ * Next to it, for analytics only (a visit, not an identity):
+ *  - sessionStorage `zimos_sid` + localStorage `zimos_sid_at` — the analytics
+ *    session: ends after 30 idle minutes (Umami / Shopify semantics);
+ *  - sessionStorage `zimos_attr` — how the session began (utm, click ids,
+ *    external referrer), captured on its first page.
+ * No third-party code, no PII: random ids and URL parameters only.
  */
 
-export const VISITOR_KEY = "zimos_vid";
+export const VISITOR_KEY_PREFIX = "zimos_visitor_";
 export const SESSION_KEY = "zimos_sid";
 export const SESSION_AT_KEY = "zimos_sid_at";
 export const ATTRIBUTION_KEY = "zimos_attr";
 
-/** A session ends after this much idle time (Shopify uses the same window). */
+/** An analytics session ends after this much idle time (Shopify uses the same window). */
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
 
 export interface Attribution {
@@ -58,7 +68,51 @@ function write(kind: Store, key: string, value: string) {
   }
 }
 
-// --- ids ------------------------------------------------------------------------
+// --- visitor id -----------------------------------------------------------------
+
+// The API wants 8–64 characters.
+const memoryVisitorIds = new Map<string, string>();
+
+function isValidVisitorId(id: string | null | undefined): id is string {
+  return typeof id === "string" && id.length >= 8 && id.length <= 64;
+}
+
+function newVisitorId(): string {
+  try {
+    const id = crypto.randomUUID();
+    if (isValidVisitorId(id)) return id;
+  } catch {
+    // fall through
+  }
+  const rand = () => Math.random().toString(36).slice(2, 10).padEnd(8, "0");
+  return `v${Date.now().toString(36)}${rand()}${rand()}`;
+}
+
+/**
+ * The visitor id for this store in this tab. When storage or
+ * crypto.randomUUID is unavailable (private mode, an insecure origin) the id
+ * lives in memory for the life of the page instead.
+ */
+export function getVisitorId(workspaceId: string): string {
+  const key = `${VISITOR_KEY_PREFIX}${workspaceId}`;
+  try {
+    const stored = window.sessionStorage.getItem(key);
+    if (isValidVisitorId(stored)) return stored;
+    const id = memoryVisitorIds.get(key) ?? newVisitorId();
+    window.sessionStorage.setItem(key, id);
+    memoryVisitorIds.set(key, id);
+    return id;
+  } catch {
+    let id = memoryVisitorIds.get(key);
+    if (!id) {
+      id = newVisitorId();
+      memoryVisitorIds.set(key, id);
+    }
+    return id;
+  }
+}
+
+// --- analytics session ----------------------------------------------------------
 
 const HEX32 = /^[0-9a-f]{32}$/;
 
@@ -79,24 +133,14 @@ export function randomId(): string {
   return out;
 }
 
-// In-memory fallbacks so one page still has stable ids when storage is blocked.
-let memoryVisitorId: string | null = null;
+// In-memory fallbacks so one page still has a stable session when storage is blocked.
 let memorySessionId: string | null = null;
 let memorySessionAt = 0;
 
-/** Stable per browser: created once and kept in localStorage. */
-export function getVisitorId(): string {
-  const saved = read("local", VISITOR_KEY);
-  if (saved && HEX32.test(saved)) return saved;
-  if (!memoryVisitorId) memoryVisitorId = randomId();
-  write("local", VISITOR_KEY, memoryVisitorId);
-  return memoryVisitorId;
-}
-
 /**
- * The current visit. A new id when this tab has none, or when the last activity
- * (any tab) was more than SESSION_IDLE_MS ago; every call refreshes the
- * activity timestamp so the window slides with the shopper.
+ * The current analytics session. A new id when this tab has none, or when the
+ * last activity (any tab) was more than SESSION_IDLE_MS ago; every call
+ * refreshes the activity timestamp so the window slides with the shopper.
  */
 export function getSessionId(now: number = Date.now()): string {
   const saved = read("session", SESSION_KEY) ?? memorySessionId;

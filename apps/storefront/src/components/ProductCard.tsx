@@ -7,7 +7,6 @@ import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
 import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
-import { TiltCard } from "./immersive/TiltCard";
 import { QuickAddButton } from "./QuickAddButton";
 import { skeleton } from "./ui";
 
@@ -31,7 +30,8 @@ export function ProductCard({
   // One variant and it is in stock: nothing to choose, so the card adds it in
   // one tap. Anything with options sends the shopper to the product page.
   const only = product.variants.length === 1 ? product.variants[0] : undefined;
-  const quickAdd = only && only.inStock ? only : undefined;
+  // A product with custom fields is answered on its own page, never quick-added.
+  const quickAdd = only && only.inStock && !(product.customFields && product.customFields.length > 0) ? only : undefined;
   const offer = quickAdd ? defaultOfferOf(product) : undefined;
 
   // --- image carousel: every real photo, not just the first ----------------
@@ -79,11 +79,7 @@ export function ProductCard({
   }
 
   return (
-    // The tilt is a wrapper, not a rewrite: it leans the card towards the
-    // pointer (or the phone's tilt) and switches itself off entirely for
-    // reduced motion, metered connections and weak devices.
-    <TiltCard className="h-full rounded-2xl" max={7}>
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
+    <article className="zt-card zt-product group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
       {/* `z-10` lifts this above the title's stretched link (below) so the
           swipe and the nav arrows receive their own pointer events; a plain
           tap still reaches the same product through the link inside it. */}
@@ -164,7 +160,7 @@ export function ProductCard({
         )}
         {!anyInStock && (
           <span className="absolute end-3 top-3 rounded-full bg-paper-raised/95 px-2.5 py-1 text-xs font-semibold text-danger">
-            {t.common.outOfStock}
+            {product.variants.length === 0 ? t.common.unavailable : t.common.outOfStock}
           </span>
         )}
       </div>
@@ -200,13 +196,12 @@ export function ProductCard({
           // where the options are chosen.
           <span
             aria-hidden
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
+            className="zt-btn zt-btn-primary mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors group-hover:bg-primary/90 group-has-[a:focus-visible]:outline-2 group-has-[a:focus-visible]:outline-offset-2 group-has-[a:focus-visible]:outline-primary"
           >
             {anyInStock ? t.shop.chooseOptions : t.product.viewDetails}
           </span>
         )}
       </div>
     </article>
-    </TiltCard>
   );
 }

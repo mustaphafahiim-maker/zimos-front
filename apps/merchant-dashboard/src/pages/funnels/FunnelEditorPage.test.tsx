@@ -126,12 +126,12 @@ describe("FunnelEditorPage", () => {
     serve(emptyFunnel);
     const { user } = renderEditor("ar");
 
-    expect(await screen.findByText("مسودة — مش منشور")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /منتج بالدفع عند الاستلام \+ عرض إضافي بضغطة/ }));
+    expect(await screen.findByText("مسودة — غير منشور")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /منتج بالدفع عند الاستلام مع عرض إضافي بنقرة/ }));
 
     expect(screen.getByRole("button", { name: "صفحة المنتج" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "عرض إضافي بضغطة" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "عرض إضافي بنقرة" })).toBeInTheDocument();
     // Its upsell still needs an offer before it can go live.
-    expect(screen.getByText("لسه مختارتش عرض")).toBeInTheDocument();
+    expect(screen.getByText("لم تختر عرضًا بعد")).toBeInTheDocument();
   });
 });

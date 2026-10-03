@@ -21,7 +21,8 @@ import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatMoney, formatPercentValue } from "@/lib/format";
 import { formatAxisDate, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { STEP_TYPE_LABELS } from "@/pages/funnels/FunnelEditorPage.strings";
 
 const STRINGS = {
   en: {
@@ -61,45 +62,41 @@ const STRINGS = {
   },
   ar: {
     back: "مسارات البيع",
-    description: "الزوار بيتحركوا إزاي جوه المسار ده، متحسوب من جلساته وطلباته الحقيقية.",
+    description: "كيف يتنقّل الزوار داخل هذا المسار، محسوبًا من جلساته وطلباته الفعلية.",
     editFunnel: "تعديل المسار",
     sessions: "الجلسات",
-    sessionsHint: "زوار بدأوا المسار",
-    completed: "طلبات اتعملت",
-    completedHint: "جلسات كمّلت الشيك أوت",
-    conversion: "نسبة التحويل",
+    sessionsHint: "الزوار الذين بدأوا المسار",
+    completed: "الطلبات المكتملة",
+    completedHint: "الجلسات التي أتمّت الدفع",
+    conversion: "معدل التحويل",
     conversionHint: "الطلبات ÷ الجلسات",
     orders: "الطلبات",
     revenue: "الإيراد",
-    upsellOrders: "عروض إضافية اتقبلت",
+    upsellOrders: "العروض الإضافية المقبولة",
     upsellRevenue: "إيراد العروض الإضافية",
     stepsTitle: "خطوة بخطوة",
-    stepsDesc: "كام جلسة وصلت لكل خطوة، وكام وقفت عندها.",
+    stepsDesc: "عدد الجلسات التي وصلت إلى كل خطوة، وعدد التي توقفت عندها.",
     colStep: "الخطوة",
     colReached: "وصلوا",
-    colDropped: "وقفوا هنا",
+    colDropped: "توقفوا هنا",
     ofSessions: "{pct} من الجلسات",
     sourcesTitle: "مصادر الزيارات",
-    sourcesDesc: "من وسوم UTM في اللينك اللي الزاير جه منه.",
+    sourcesDesc: "من وسوم UTM في الرابط الذي جاء منه الزائر.",
     colSource: "المصدر",
     colSessions: "الجلسات",
     colOrders: "الطلبات",
     colRevenue: "الإيراد",
-    direct: "مباشر / من غير وسم",
-    noSources: "مفيش جلسات في الفترة دي",
-    overTime: "الجلسات والطلبات بمرور الوقت",
-    overTimeDesc: "كل يوم، على طول الفترة.",
+    direct: "مباشر / بلا وسم",
+    noSources: "لا توجد جلسات في هذه الفترة",
+    overTime: "الجلسات والطلبات عبر الزمن",
+    overTimeDesc: "يومًا بيوم، على مدار الفترة.",
     sessionsCount: "{n} جلسة",
     ordersCount: "{n} طلب",
-    noSessions: "مفيش جلسات في الفترة دي",
-    noSessionsDesc: "شارك لينك المسار — الأرقام بتبدأ مع أول زاير.",
+    noSessions: "لا توجد جلسات في هذه الفترة",
+    noSessionsDesc: "شارك رابط المسار — تبدأ الأرقام بالظهور مع أول زائر.",
   },
 } satisfies Messages;
 
-const STEP_TYPES = {
-  en: { landing: "Landing", sales: "Sales page", checkout: "Checkout", upsell: "Upsell", downsell: "Downsell", thank_you: "Thank you" },
-  ar: { landing: "صفحة هبوط", sales: "صفحة بيع", checkout: "شيك أوت", upsell: "عرض إضافي", downsell: "عرض بديل", thank_you: "شكرًا" },
-} satisfies Messages;
 
 function Tile({ label, hint, value }: { label: string; hint?: string; value: ReactNode }) {
   return (
@@ -123,7 +120,8 @@ function Panel({ title, description, children, className }: { title: string; des
 
 export function FunnelAnalyticsPage() {
   const t = useT(STRINGS);
-  const stepTypes: Record<string, string | undefined> = useT(STEP_TYPES);
+  // The funnel editor's own names for step types, so both screens agree.
+  const stepTypes: Record<string, string | undefined> = STEP_TYPE_LABELS[useLocale().locale];
   const workspaceId = useWorkspaceId();
   const { funnelId = "" } = useParams();
   const [range, setRange] = useState<AnalyticsRange>("30d");

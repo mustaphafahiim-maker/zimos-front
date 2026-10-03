@@ -1,20 +1,24 @@
 import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from "./analyticsEvents";
+import { sendToAdPixels } from "./adPixels";
 
 /**
- * Sends a standard commerce event to every ad pixel the merchant configured
- * (loaded by components/TrackingPixels.tsx). Each platform is only called if
- * its script is on the page, so a store with no pixels sends nothing.
+ * Commerce events. Two destinations:
  *
- * The same call also feeds the store's own analytics (lib/analyticsEvents.ts)
- * once components/StoreAnalytics has set the tracking context — see
- * setTrackingContext, re-exported here for the funnel side.
+ *  - Ad pixels (Meta, TikTok, Snapchat, Google): lib/adPixels.ts, for the
+ *    pixels the merchant configured (components/TrackingPixels loads them);
+ *    nothing is sent on a store with none.
+ *  - The store's own analytics (lib/analyticsEvents.ts): sent now, once
+ *    components/StoreAnalytics has named the store in the tracking context
+ *    (setTrackingContext, re-exported for the funnel side).
+ *
+ * Nothing here can break the store: every call is fire-and-forget.
  */
 export { setTrackingContext };
 
 export type TrackEvent = "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase";
 
 export interface TrackData {
-  /** Integer minor units, e.g. piastres. */
+  /** Integer minor units, like every amount the API returns. */
   valueMinor?: number;
   currency?: string;
   contentIds?: string[];
@@ -23,28 +27,6 @@ export interface TrackData {
   orderId?: string;
 }
 
-type Fn = (...args: unknown[]) => void;
-type PixelWindow = Window & {
-  fbq?: Fn;
-  ttq?: { track: Fn; page: Fn };
-  snaptr?: Fn;
-  gtag?: Fn;
-};
-
-const TIKTOK: Record<TrackEvent, string> = {
-  PageView: "Pageview",
-  ViewContent: "ViewContent",
-  AddToCart: "AddToCart",
-  InitiateCheckout: "InitiateCheckout",
-  Purchase: "CompletePayment",
-};
-const SNAP: Record<TrackEvent, string> = {
-  PageView: "PAGE_VIEW",
-  ViewContent: "VIEW_CONTENT",
-  AddToCart: "ADD_CART",
-  InitiateCheckout: "START_CHECKOUT",
-  Purchase: "PURCHASE",
-};
 /**
  * First-party names. PageView is absent on purpose: StoreAnalytics sends
  * `page_view` per navigation itself, so nothing here double counts it.
@@ -56,114 +38,40 @@ const FIRST_PARTY: Partial<Record<TrackEvent, AnalyticsEventName>> = {
   Purchase: "purchase",
 };
 
-const GOOGLE: Record<TrackEvent, string> = {
-  PageView: "page_view",
-  ViewContent: "view_item",
-  AddToCart: "add_to_cart",
-  InitiateCheckout: "begin_checkout",
-  Purchase: "purchase",
-};
-
-export function track(event: TrackEvent, data: TrackData = {}) {
+export function track(event: TrackEvent, data: TrackData = {}): void {
   if (typeof window === "undefined") return;
-  const w = window as PixelWindow;
-  const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
-  const common = { value, currency: data.currency };
-
-  try {
-    if (w.fbq) {
-      if (event === "PageView") w.fbq("track", "PageView");
-      else
-        w.fbq("track", event, {
-          ...common,
-          content_ids: data.contentIds,
-          content_name: data.contentName,
-          content_type: "product",
-          num_items: data.numItems,
-          // Same id as the server-side Conversions API event for this order
-          // (src/modules/marketing/pixelEvents.js sends order.id verbatim as
-          // event_id) — a bare order id, not "<event>-<id>", so browser and
-          // server events for the same order dedup into one conversion.
-        }, data.orderId ? { eventID: data.orderId } : undefined);
-    }
-    if (w.ttq) {
-      if (event === "PageView") w.ttq.page();
-      // Third argument matches TikTok's own dedup contract: the same
-      // event_id the server-side Events API call carries for this order.
-      else w.ttq.track(TIKTOK[event], { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems }, data.orderId ? { event_id: data.orderId } : undefined);
-    }
-    if (w.snaptr) {
-      // event_id is Snap Conversions API v3's own dedup field (its v2
-      // predecessor used client_dedup_id) — same order id sent server-side.
-      w.snaptr("track", SNAP[event], { price: value, currency: data.currency, item_ids: data.contentIds, number_items: data.numItems, transaction_id: data.orderId, event_id: data.orderId });
-    }
-    if (w.gtag && event !== "PageView") {
-      w.gtag("event", GOOGLE[event], { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) });
-    }
-  } catch {
-    /* a broken third-party script must never break the store */
-  }
-
+  sendToAdPixels(event, data);
   const own = FIRST_PARTY[event];
-  if (own) {
-    try {
-      // Ids and amounts only — no name, phone or email ever leaves here.
-      sendContextEvent({
-        name: own,
-        orderId: data.orderId,
-        revenueAmount: data.valueMinor !== undefined ? Math.round(data.valueMinor) : undefined,
-        currency: data.currency,
-        dedupeId: own === "purchase" && data.orderId ? `purchase:${data.orderId}` : undefined,
-        metadata: {
-          ...(data.currency ? { currency: data.currency } : {}),
-          ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
-          ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
-        },
-      });
-    } catch {
-      /* same rule: our own analytics never break the store */
-    }
+  if (!own) return;
+  try {
+    // Ids and amounts only — no name, phone or email ever leaves here. The
+    // API values a purchase from the stored order, never from this amount.
+    sendContextEvent({
+      name: own,
+      orderId: data.orderId,
+      revenueAmount: data.valueMinor !== undefined ? Math.round(data.valueMinor) : undefined,
+      currency: data.currency,
+      dedupeId: own === "purchase" && data.orderId ? `purchase:${data.orderId}` : undefined,
+      metadata: {
+        ...(data.currency ? { currency: data.currency } : {}),
+        ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
+        ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
+      },
+    });
+  } catch {
+    /* our own analytics never break the store */
   }
 }
 
-/** Fires a Purchase once per order on this device (thank-you page reloads don't double count). */
-export function trackPurchaseOnce(orderId: string, data: TrackData) {
+/** A Purchase that must be reported once per order, however often the page renders. */
+export function trackPurchaseOnce(orderId: string, data: TrackData): void {
   if (typeof window === "undefined") return;
   const key = `zimos_purchase_tracked_${orderId}`;
   try {
     if (window.localStorage.getItem(key)) return;
     window.localStorage.setItem(key, "1");
   } catch {
-    /* storage blocked — still send once for this render */
+    /* storage blocked — still send once for this render; the API dedupes it */
   }
   track("Purchase", { ...data, orderId });
-}
-
-/** The pixel IDs components/TrackingPixels loads. */
-export interface PixelIds {
-  meta?: string;
-  tiktok?: string;
-  snapchat?: string;
-  googleTag?: string;
-}
-
-/**
- * The pixel IDs from store metadata. GET /store/:workspaceId sends a `tracking`
- * block that StorefrontMeta doesn't name yet, so it is read defensively: only
- * non-empty strings, and `{}` when the merchant configured none. Plain module
- * code, so server components can call it.
- */
-export function pixelIdsOf(store: unknown): PixelIds {
-  const tracking = (store as { tracking?: unknown } | null)?.tracking;
-  if (!tracking || typeof tracking !== "object") return {};
-  const pick = (key: keyof PixelIds) => {
-    const v = (tracking as Record<string, unknown>)[key];
-    return typeof v === "string" && v.trim() ? v.trim() : undefined;
-  };
-  return { meta: pick("meta"), tiktok: pick("tiktok"), snapchat: pick("snapchat"), googleTag: pick("googleTag") };
-}
-
-/** True when at least one pixel is configured — nothing loads or fires otherwise. */
-export function hasPixels(ids: PixelIds): boolean {
-  return Boolean(ids.meta || ids.tiktok || ids.snapchat || ids.googleTag);
 }

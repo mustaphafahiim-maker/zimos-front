@@ -5,7 +5,7 @@ import {
   SESSION_AT_KEY,
   SESSION_IDLE_MS,
   SESSION_KEY,
-  VISITOR_KEY,
+  VISITOR_KEY_PREFIX,
   attributionFrom,
   externalReferrer,
   getSessionId,
@@ -14,9 +14,10 @@ import {
 } from "./visitor.ts";
 
 /**
- * Pins the identity rules of the store's own analytics: a visitor id that
- * never changes, a session that ends after 30 idle minutes, and attribution
- * read the way the funnel entry page reads it. Runs on Node's built-in runner
+ * Pins the identity rules of the storefront: one visitor id per store per tab
+ * (the key the checkout autosave has always used, now shared with analytics),
+ * an analytics session that ends after 30 idle minutes, and attribution read
+ * the way the funnel entry page reads it. Runs on Node's built-in runner
  * (`node --test src/lib/visitor.test.mjs`), so browser storage is faked here.
  */
 
@@ -59,17 +60,36 @@ describe("randomId", () => {
 });
 
 describe("getVisitorId", () => {
-  it("is created once and then reused", () => {
-    const { local } = installWindow();
-    const a = getVisitorId();
-    assert.match(a, /^[0-9a-f]{32}$/);
-    assert.equal(local.getItem(VISITOR_KEY), a);
-    assert.equal(getVisitorId(), a);
+  it("is created once per store per tab, in sessionStorage, and then reused", () => {
+    const { local, session } = installWindow();
+    const a = getVisitorId("ws-one");
+    assert.ok(a.length >= 8 && a.length <= 64, "the API wants 8-64 characters");
+    assert.equal(session.getItem(`${VISITOR_KEY_PREFIX}ws-one`), a);
+    assert.equal(getVisitorId("ws-one"), a);
+    // Another store in the same tab is another visitor; nothing outlives the tab.
+    assert.notEqual(getVisitorId("ws-two"), a);
+    assert.equal(local.map.size, 0);
   });
 
-  it("still returns an id when storage is blocked", () => {
+  it("keeps the id a tab already holds (the checkout autosave's existing key)", () => {
+    const { session } = installWindow();
+    session.setItem(`${VISITOR_KEY_PREFIX}ws-three`, "existing-visitor-0001");
+    assert.equal(getVisitorId("ws-three"), "existing-visitor-0001");
+  });
+
+  it("replaces a stored value the API would refuse", () => {
+    const { session } = installWindow();
+    session.setItem(`${VISITOR_KEY_PREFIX}ws-four`, "short");
+    const id = getVisitorId("ws-four");
+    assert.notEqual(id, "short");
+    assert.equal(session.getItem(`${VISITOR_KEY_PREFIX}ws-four`), id);
+  });
+
+  it("still returns a stable id when storage is blocked", () => {
     installWindow({ blocked: true });
-    assert.match(getVisitorId(), /^[0-9a-f]{32}$/);
+    const id = getVisitorId("ws-five");
+    assert.ok(id.length >= 8 && id.length <= 64);
+    assert.equal(getVisitorId("ws-five"), id);
   });
 });
 
