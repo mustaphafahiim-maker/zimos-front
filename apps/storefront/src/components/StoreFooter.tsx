@@ -1,6 +1,7 @@
 "use client";
 
-import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
+import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
+import { SocialLinks } from "./SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
@@ -120,6 +121,12 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {Object.keys(storefrontGeneralMeta(store).social).length > 0 && (
+        <div className={`${container} pb-6`}>
+          <SocialLinks links={storefrontGeneralMeta(store).social} />
         </div>
       )}
 

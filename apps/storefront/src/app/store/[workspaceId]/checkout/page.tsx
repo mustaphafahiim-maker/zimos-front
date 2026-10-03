@@ -61,7 +61,10 @@ export default function CheckoutPage() {
   const [adoptedShipTo, setAdoptedShipTo] = useState(false);
   if (!adoptedShipTo && shipTo) {
     setAdoptedShipTo(true);
-    if (!values.governorate) setValues((prev) => ({ ...prev, governorate: shipTo }));
+    // Settings → purchase form: "pre-select the shipping region" can be switched off.
+    if (!values.governorate && formOptionsOf(store?.checkout).auto_select_region) {
+      setValues((prev) => ({ ...prev, governorate: shipTo }));
+    }
   }
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);

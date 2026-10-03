@@ -8,6 +8,8 @@ import {
   storefrontProductPage,
 } from "@store-builder/api-client";
 import { StoreInfoCards } from "@/components/StoreInfoCards";
+import { ProductJsonLd } from "@/components/product/ProductJsonLd";
+import { storeOrigin } from "@/lib/domains";
 import { ProductContent } from "@/components/product/ProductContent";
 import { storefrontProductReviews } from "@store-builder/api-client";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -140,6 +142,13 @@ export default async function ProductPage({ params }: { params: Params }) {
     <main className="flex-1 pb-24 md:pb-0">
       {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
       <PixelScope productIds={[product.id]} />
+      {/* schema.org Product for search engines and Google Merchant. */}
+      <ProductJsonLd
+        product={product}
+        url={`${storeOrigin(store.slug)}/products/${product.slug}`}
+        currency={store.currency}
+        storeName={store.name}
+      />
       {/* A landing page without the store's menu: hidden only while this page is shown. */}
       {ps.hide_header && (
         <style

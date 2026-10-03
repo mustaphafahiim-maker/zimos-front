@@ -442,3 +442,145 @@ export async function storeDesignUpdatePageFlags(
   );
   return page;
 }
+
+// ------------------------------------- general settings and store SEO ----
+// Backend: src/modules/storefront/generalSettings.js. Four settings blobs,
+// each sent whole through PATCH /workspaces/:workspaceId.
+
+export const SOCIAL_LINK_KEYS = ["facebook", "instagram", "tiktok", "whatsapp", "youtube", "snapchat", "x"] as const;
+export type SocialLinkKey = (typeof SOCIAL_LINK_KEYS)[number];
+
+export interface GeneralStoreSettings {
+  favicon_url: string;
+  /** ISO 3166-1 alpha-2, e.g. "EG". */
+  country: string;
+  social_links: Record<SocialLinkKey, string>;
+  floating_whatsapp: { enabled: boolean; phone: string; message: string };
+}
+
+export function resolveGeneralStoreSettings(settings: unknown): GeneralStoreSettings {
+  const s = (settings && typeof settings === "object" ? settings : {}) as Record<string, unknown>;
+  const general = (s.general ?? {}) as Record<string, unknown>;
+  const links = (s.social_links ?? {}) as Record<string, unknown>;
+  const wa = (s.floating_whatsapp ?? {}) as Record<string, unknown>;
+  return {
+    favicon_url: text(general.favicon_url),
+    country: text(general.country),
+    social_links: Object.fromEntries(SOCIAL_LINK_KEYS.map((key) => [key, text(links[key])])) as Record<
+      SocialLinkKey,
+      string
+    >,
+    floating_whatsapp: { enabled: wa.enabled === true, phone: text(wa.phone), message: text(wa.message) },
+  };
+}
+
+export async function storeDesignSaveGeneral(
+  client: ApiClient,
+  workspaceId: string,
+  draft: GeneralStoreSettings
+): Promise<Workspace> {
+  const { workspace } = await client.request<{ workspace: Workspace }>("/workspaces/" + workspaceId, {
+    method: "PATCH",
+    body: {
+      settings: {
+        general: { favicon_url: draft.favicon_url.trim() || null, country: draft.country.trim() || null },
+        social_links: Object.fromEntries(SOCIAL_LINK_KEYS.map((key) => [key, draft.social_links[key].trim() || null])),
+        floating_whatsapp: {
+          enabled: draft.floating_whatsapp.enabled,
+          phone: draft.floating_whatsapp.phone.replace(/[\s-]/g, "") || null,
+          message: draft.floating_whatsapp.message.trim() || null,
+        },
+      },
+    },
+  });
+  return workspace;
+}
+
+export interface StoreSeoSettings {
+  /** "%s" stands for the page's own title, e.g. "%s | My store". */
+  title_template: string;
+  description: string;
+  og_image_url: string;
+  google_site_verification: string;
+}
+
+export function resolveStoreSeo(stored: unknown): StoreSeoSettings {
+  const s = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  return {
+    title_template: text(s.title_template),
+    description: text(s.description),
+    og_image_url: text(s.og_image_url),
+    google_site_verification: text(s.google_site_verification),
+  };
+}
+
+export async function storeDesignSaveSeo(
+  client: ApiClient,
+  workspaceId: string,
+  seo: StoreSeoSettings
+): Promise<Workspace> {
+  const { workspace } = await client.request<{ workspace: Workspace }>("/workspaces/" + workspaceId, {
+    method: "PATCH",
+    body: {
+      settings: {
+        store_seo: {
+          title_template: seo.title_template.trim() || null,
+          description: seo.description.trim() || null,
+          og_image_url: seo.og_image_url.trim() || null,
+          google_site_verification: seo.google_site_verification.trim() || null,
+        },
+      },
+    },
+  });
+  return workspace;
+}
+
+/** The general-settings additions to GET /store/:workspaceId, read defensively. */
+export interface StorefrontGeneralMeta {
+  general: { faviconUrl: string | null; country: string | null };
+  social: Partial<Record<SocialLinkKey, string>>;
+  floatingWhatsapp: { phone: string; message: string } | null;
+  seo: {
+    titleTemplate: string | null;
+    description: string | null;
+    ogImageUrl: string | null;
+    googleSiteVerification: string | null;
+  };
+}
+
+export function storefrontGeneralMeta(store: unknown): StorefrontGeneralMeta {
+  const s = (store && typeof store === "object" ? store : {}) as Record<string, unknown>;
+  const general = (s.general ?? {}) as Record<string, unknown>;
+  const seo = (s.seo ?? {}) as Record<string, unknown>;
+  const wa = s.floatingWhatsapp as { phone?: unknown; message?: unknown } | null | undefined;
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const social: Partial<Record<SocialLinkKey, string>> = {};
+  for (const key of SOCIAL_LINK_KEYS) {
+    const url = str(((s.social ?? {}) as Record<string, unknown>)[key]);
+    // Only http(s) ever reaches an href.
+    if (url && /^https?:\/\//i.test(url)) social[key] = url;
+  }
+  return {
+    general: { faviconUrl: str(general.faviconUrl), country: str(general.country) },
+    social,
+    floatingWhatsapp: wa && str(wa.phone) ? { phone: str(wa.phone) as string, message: text(wa.message) } : null,
+    seo: {
+      titleTemplate: str(seo.titleTemplate),
+      description: str(seo.description),
+      ogImageUrl: str(seo.ogImageUrl),
+      googleSiteVerification: str(seo.googleSiteVerification),
+    },
+  };
+}
+
+/** Every public path of a store (GET /store/:workspaceId/sitemap). */
+export async function storefrontSitemap(
+  client: ApiClient,
+  workspaceId: string
+): Promise<Array<{ path: string; updatedAt: string | null }>> {
+  const { entries } = await client.request<{ entries: Array<{ path: string; updatedAt: string | null }> }>(
+    "/store/" + workspaceId + "/sitemap",
+    { auth: false }
+  );
+  return entries;
+}
