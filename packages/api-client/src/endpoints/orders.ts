@@ -476,3 +476,83 @@ export async function ordersFulfill(
   });
   return order;
 }
+
+// ------------------------------------ documents and tracking import (§12.4) --
+
+interface OrderDocumentAnswer {
+  filename: string;
+  contentType: string;
+  base64: string;
+}
+
+function documentBlob(answer: OrderDocumentAnswer): Blob {
+  const binary = atob(answer.base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: answer.contentType });
+}
+
+export type OrderWaybillFormat = "a4x4" | "10x15";
+
+/** One PDF of labels for the given orders: four to an A4 page, or one per 10×15 cm label. Up to 200 orders. */
+export async function ordersWaybillsPdf(
+  client: ApiClient,
+  workspaceId: string,
+  orderIds: string[],
+  format: OrderWaybillFormat = "a4x4"
+): Promise<Blob> {
+  const answer = await client.request<OrderDocumentAnswer>(`${base(workspaceId)}/documents/waybills?as=base64`, {
+    method: "POST",
+    body: { orderIds, format },
+  });
+  return documentBlob(answer);
+}
+
+/**
+ * The courier handover sheet: the given orders' shipments, or — with none
+ * named — every shipment created on `date` (default today, UTC).
+ * 422 NO_SHIPMENTS when there is nothing to hand over.
+ */
+export async function ordersManifestPdf(
+  client: ApiClient,
+  workspaceId: string,
+  params: { orderIds?: string[]; date?: string; carrier?: string } = {}
+): Promise<Blob> {
+  const answer = await client.request<OrderDocumentAnswer>(`${base(workspaceId)}/documents/manifest?as=base64`, {
+    method: "POST",
+    body: params,
+  });
+  return documentBlob(answer);
+}
+
+export interface OrderTrackingImportRow {
+  /** The file's line number (the header is line 1). */
+  line: number;
+  orderNumber: string | null;
+  orderId?: string;
+  ok: boolean;
+  /** ok: any of shipment_created, tracking_updated, status_updated (empty when nothing changed). */
+  changes?: string[];
+  code?: string;
+  message?: string;
+}
+
+export interface OrderTrackingImportResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+  results: OrderTrackingImportRow[];
+}
+
+/**
+ * Applies a courier's sheet. `csv` is the file's text; columns order_number
+ * (required), tracking_number, tracking_url, carrier, status.
+ * 422 EMPTY_FILE / MISSING_COLUMN / TOO_MANY_ROWS for a file that can't be read.
+ */
+export async function ordersImportTracking(
+  client: ApiClient,
+  workspaceId: string,
+  csv: string
+): Promise<OrderTrackingImportResult> {
+  return client.request<OrderTrackingImportResult>(`${base(workspaceId)}/import-tracking`, { method: "POST", body: { csv } });
+}

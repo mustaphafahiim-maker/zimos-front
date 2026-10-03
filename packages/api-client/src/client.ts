@@ -610,6 +610,8 @@ export class ApiClient {
       auth: false,
     });
     if ("verificationRequired" in result) return result;
+    // Two-step sign-in (endpoints/security.ts): a challenge, no tokens yet.
+    if ("twoFactorRequired" in result) return result;
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
   }

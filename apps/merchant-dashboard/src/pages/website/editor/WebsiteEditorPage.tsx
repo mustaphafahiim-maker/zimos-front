@@ -27,6 +27,7 @@ import { useSessionBool } from "@/lib/useSessionState";
 import { BlockLibrary } from "./BlockLibrary";
 import { LayerList } from "./LayerList";
 import { SectionInspector } from "./SectionInspector";
+import { namedStylesOf } from "./ElementStylePanel";
 import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
@@ -691,6 +692,11 @@ function WebsiteEditor() {
           <SectionInspector
             section={selected}
             onChange={updateSection}
+            namedStyles={namedStylesOf(treeMeta.globalStyles)}
+            onNamedStylesChange={(named) =>
+              // Saved with the page tree; the element that triggered it changes too, which marks the page unsaved.
+              setTreeMeta((prev) => ({ ...prev, globalStyles: { ...(prev.globalStyles ?? {}), named } }))
+            }
             onDelete={() => setPendingDelete(selected)}
             onClose={() => {
               setSelectedId(null);

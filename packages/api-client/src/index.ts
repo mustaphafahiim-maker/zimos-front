@@ -40,6 +40,7 @@ export * from "./endpoints/funnelRuntime";
 export * from "./endpoints/developers";
 export * from "./endpoints/webhookExtras";
 export * from "./endpoints/apps";
+export * from "./endpoints/security";
 // Store design and settings: purchase form builder, thank-you page (lane 5).
 export * from "./endpoints/storeDesign";
 // Catalog additions: product page settings, content, option display (lane 3).
@@ -67,6 +68,8 @@ export * from "./endpoints/stores";
 export * from "./endpoints/dashboard";
 // Digital products: file library, deliveries, licence codes, download grants (lane 8).
 export * from "./endpoints/digital";
+// AI module: generation jobs, usage, apply as draft (lane 8).
+export * from "./endpoints/ai";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).
@@ -83,3 +86,5 @@ export * from "./endpoints/orderEmails";
 export * from "./endpoints/coupons";
 // Lost orders: refused and unfinished checkouts, recovery (lane 2).
 export * from "./endpoints/lostOrders";
+// Social proof, newsletter sign-up, referral results (lane 3).
+export * from "./endpoints/engagement";

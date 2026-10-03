@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
+import { ChevronRight, BellRing, Link2, Mail, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
 import { Card } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -26,6 +26,12 @@ const STRINGS = {
     exitHint: "A last offer with a coupon for a visitor who is leaving.",
     rules: "Minimum order and free shipping",
     rulesHint: "A floor under small orders, and a bar that shows what is left for free shipping.",
+    social: "Sales notifications",
+    socialHint: "“Ahmed from Mansoura bought this” — from real orders only.",
+    newsletter: "Newsletter sign-up",
+    newsletterHint: "Collect mobile numbers from visitors who want to hear from you.",
+    referrals: "Referral links",
+    referralsHint: "A link per marketer, and the orders each one brought.",
     discounts: "Discount codes",
     discountsHint: "Coupons and automatic discounts.",
   },
@@ -44,6 +50,12 @@ const STRINGS = {
     exitHint: "عرض أخير بكوبون لزائر يغادر.",
     rules: "الحد الأدنى للطلب والشحن المجاني",
     rulesHint: "حد أدنى للأوردرات الصغيرة، وشريط يوضح المتبقي للشحن المجاني.",
+    social: "إشعارات المبيعات",
+    socialHint: "«أحمد من المنصورة اشترى هذا» — من أوردرات حقيقية فقط.",
+    newsletter: "الاشتراك في النشرة",
+    newsletterHint: "اجمع أرقام الزوار الذين يريدون متابعتك.",
+    referrals: "روابط الإحالة",
+    referralsHint: "رابط لكل مسوّق، والأوردرات التي جاءت منه.",
     discounts: "أكواد الخصم",
     discountsHint: "الكوبونات والخصومات التلقائية.",
   },
@@ -82,6 +94,9 @@ export function OffersPage() {
     { to: "/offers/upsells", icon: <Sparkles />, title: t.upsells, hint: t.upsellsHint },
     { to: "/offers/exit-popup", icon: <DoorOpen />, title: t.exit, hint: t.exitHint },
     { to: "/offers/order-rules", icon: <Truck />, title: t.rules, hint: t.rulesHint },
+    { to: "/offers/social-proof", icon: <BellRing />, title: t.social, hint: t.socialHint },
+    { to: "/offers/newsletter", icon: <Mail />, title: t.newsletter, hint: t.newsletterHint },
+    { to: "/offers/referrals", icon: <Link2 />, title: t.referrals, hint: t.referralsHint },
     { to: "/discounts", icon: <Tag />, title: t.discounts, hint: t.discountsHint },
   ];
   return (
