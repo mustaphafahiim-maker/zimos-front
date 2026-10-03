@@ -6,12 +6,13 @@ import type {
   AdminManualSubscription,
   AdminPlan,
   AdminWorkspaceFeature,
+  PlanFeatureCatalogEntry,
   PlanFeatureKey,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { PLAN_FEATURES } from "@/lib/planFeatures";
+import { catalogFromFeatureTable, featureLabelIn } from "@/lib/planFeatures";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { DataState, EmptyBlock } from "./DataState";
@@ -45,7 +46,6 @@ const ACTION_LABEL: Record<string, string> = {
 const localDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const featureLabel = (key: string) => PLAN_FEATURES.find((f) => f.key === key)?.label ?? key;
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now()));
 
 function addMonths(date: Date, months: number) {
@@ -584,6 +584,9 @@ function sourceBadge(f: AdminWorkspaceFeature) {
 export function FeatureOverridesPanel({ workspaceId, canManage, onChanged }: { workspaceId: string; canManage: boolean; onChanged?: () => void }) {
   const toast = useToast();
   const { data, loading, error, refresh } = useAsync(() => apiClient.adminListWorkspaceFeatures(workspaceId), [workspaceId]);
+  // The catalogue's names come with the store's features (no list in the console).
+  const catalog = data ? catalogFromFeatureTable(data.features) : [];
+  const featureLabel = (key: string) => featureLabelIn(catalog, key);
   const [adding, setAdding] = useState(false);
   const [revoking, setRevoking] = useState<AdminFeatureOverride | null>(null);
   const [busy, setBusy] = useState(false);
@@ -693,6 +696,7 @@ export function FeatureOverridesPanel({ workspaceId, canManage, onChanged }: { w
       {adding && data && (
         <AddFeatureDialog
           workspaceId={workspaceId}
+          catalog={catalog}
           live={data.features.filter((f) => f.override).map((f) => f.key)}
           onClose={() => setAdding(false)}
           onDone={async (message) => {
@@ -730,11 +734,13 @@ export function FeatureOverridesPanel({ workspaceId, canManage, onChanged }: { w
 
 function AddFeatureDialog({
   workspaceId,
+  catalog,
   live,
   onClose,
   onDone,
 }: {
   workspaceId: string;
+  catalog: PlanFeatureCatalogEntry[];
   live: PlanFeatureKey[];
   onClose: () => void;
   onDone: (message: string) => Promise<void>;
@@ -761,7 +767,7 @@ function AddFeatureDialog({
           expiresAt: until ? new Date(`${until}T23:59:59`).toISOString() : null,
         });
       }
-      await onDone(keys.length === 1 ? `${featureLabel(keys[0])} ${mode === "grant" ? "added" : "removed"}.` : `${keys.length} features ${mode === "grant" ? "added" : "removed"}.`);
+      await onDone(keys.length === 1 ? `${featureLabelIn(catalog, keys[0])} ${mode === "grant" ? "added" : "removed"}.` : `${keys.length} features ${mode === "grant" ? "added" : "removed"}.`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -799,6 +805,7 @@ function AddFeatureDialog({
           </div>
         </fieldset>
         <FeaturePicker
+          catalog={catalog}
           value={keys}
           onChange={setKeys}
           legend="Features"

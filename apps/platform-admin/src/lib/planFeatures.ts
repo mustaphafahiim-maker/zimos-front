@@ -1,18 +1,23 @@
-import type { PlanFeatureKey } from "@store-builder/api-client";
+import type { AdminWorkspaceFeature, PlanFeatureCatalogEntry, PlanFeatureKey } from "@store-builder/api-client";
 
 /**
- * Display labels for the feature keys the backend stores in `plans.features`.
- * The keys are the contract; this is only how they are named in the UI.
+ * The feature catalogue lives in the backend (billing/featureCatalog.js) and
+ * reaches the console with the plans (`GET /admin/plans` → featureCatalog) and
+ * with a store's features (`GET /admin/workspaces/:id/features`). There is no
+ * list of keys or names here: these helpers only read what the API sent.
  */
-export const PLAN_FEATURES: Array<{ key: PlanFeatureKey; label: string }> = [
-  { key: "custom_domain", label: "Custom domain" },
-  { key: "funnels", label: "Sales funnels" },
-  { key: "whatsapp_confirmation", label: "WhatsApp order confirmation" },
-  { key: "abandoned_cart", label: "Abandoned cart recovery" },
-  { key: "multi_warehouse", label: "Multiple warehouses" },
-  { key: "api_access", label: "API access" },
-  { key: "staff_accounts", label: "Staff accounts" },
-  { key: "advanced_analytics", label: "Advanced analytics" },
-  { key: "remove_branding", label: "Remove platform branding" },
-  { key: "priority_support", label: "Priority support" },
-];
+
+/** A feature's console name from the catalogue the page loaded; the key itself if it isn't there. */
+export function featureLabelIn(catalog: readonly PlanFeatureCatalogEntry[] | undefined, key: string): string {
+  return catalog?.find((f) => f.key === key)?.label.en ?? key;
+}
+
+/** The catalogue as a store's feature table carries it (a server from before the catalogue sends no names). */
+export function catalogFromFeatureTable(features: readonly AdminWorkspaceFeature[]): PlanFeatureCatalogEntry[] {
+  return features.map((f) => ({
+    key: f.key as PlanFeatureKey,
+    type: "boolean",
+    available: f.available ?? true,
+    label: f.label ?? { en: f.key, ar: f.key },
+  }));
+}
