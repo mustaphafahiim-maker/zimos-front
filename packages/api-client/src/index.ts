@@ -78,6 +78,8 @@ export * from "./endpoints/affiliates";
 export * from "./endpoints/customerSubscriptions";
 // Services marketplace: the providers directory and its admin (lane 8).
 export * from "./endpoints/serviceListings";
+// Shoppable images: pictures with product hotspots (lane 8).
+export * from "./endpoints/shoppableImages";
 // Tracking pixels (Marketing → Tracking tools).
 export * from "./endpoints/trackingPixels";
 // Automations as step sequences (the Automations page).

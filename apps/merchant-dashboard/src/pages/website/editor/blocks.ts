@@ -383,6 +383,15 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { links: [] },
     fields: [{ key: "links", label: "Links", kind: "linkList" }],
   },
+  shoppable_image: {
+    label: "Shoppable image",
+    icon: ShoppingBag,
+    defaultProps: { title: "", imageId: "" },
+    fields: [
+      { key: "title", label: "Title", kind: "text" },
+      { key: "imageId", label: "Shoppable image ID", kind: "text", hint: "Copy it from Catalog → Shoppable images." },
+    ],
+  },
   product_card: {
     label: "Single product",
     icon: ShoppingBag,

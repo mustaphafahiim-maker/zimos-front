@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   FileDown,
+  MousePointerClick,
   Handshake,
   Repeat,
   UsersRound,
@@ -75,6 +76,7 @@ export type NavKey =
   | "affiliates"
   | "subscriptions"
   | "services"
+  | "shoppableImages"
   | "storeSettings"
   | "apps"
   | "activity";
@@ -142,6 +144,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "customers", to: "/customers", icon: Users },
       { key: "media", to: "/media", icon: Images },
       { key: "digital", to: "/digital", icon: FileDown },
+      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
     ],
   },
   {
@@ -252,6 +255,7 @@ export const NAV_LABELS = {
     affiliates: "Affiliates",
     subscriptions: "Subscriptions",
     services: "Services",
+    shoppableImages: "Shoppable images",
     storeSettings: "Store settings",
   },
   ar: {
@@ -291,6 +295,7 @@ export const NAV_LABELS = {
     affiliates: "المسوّقون بالعمولة",
     subscriptions: "الاشتراكات",
     services: "الخدمات",
+    shoppableImages: "الصور التفاعلية",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;

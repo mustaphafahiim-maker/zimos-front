@@ -41,6 +41,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   map: "خريطة",
   social_icons: "روابط التواصل",
   product_card: "منتج واحد",
+  shoppable_image: "صورة تفاعلية",
   product_list: "شبكة منتجات",
   collection_list: "المجموعات",
   cart: "السلة",
@@ -146,6 +147,7 @@ const FIELD_HINT_AR: Record<string, string> = {
   "image.width": "نسبة من عرض العمود — أو اسحب ركن الصورة في المعاينة. يحل محل الحجم؛ اتركه فارغًا لاستخدام الحجم.",
   "embed.url": "رابط للتضمين. السيرفر بيرفض الـ HTML الخام.",
   "product_card.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
+  "shoppable_image.imageId": "انسخه من الكتالوج ← الصور التفاعلية.",
   "shader_hero.height": "تتحرك الخلفية بألوان متجرك نفسه.",
   "product_3d.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
   "product_3d.modelUrl":
