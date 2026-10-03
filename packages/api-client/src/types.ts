@@ -88,6 +88,22 @@ export interface VerificationSent {
   resendAvailableAt: string;
 }
 
+/** What the account settings can offer (`GET /auth/me`'s `account`). */
+export interface AccountSettingsInfo {
+  /** Changes are confirmed with the current password; without one (Google), with a code to the current email. */
+  hasPassword: boolean;
+  /** PHONE_CHANGE_ENABLED: the phone number can be changed by an SMS code. */
+  phoneChange: boolean;
+}
+
+/** Confirming an email or phone change: who you are, then where the new code goes. */
+export interface AccountChangeRequest {
+  currentPassword?: string;
+  /** For an account without a password: the code sent to its current email. */
+  reauthCode?: string;
+  locale?: "ar" | "en";
+}
+
 /**
  * The code a new account gets to confirm its email while sign-up codes are
  * off (it is signed in at once). `sent: false` when none could go out — the
