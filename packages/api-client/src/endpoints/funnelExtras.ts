@@ -92,3 +92,207 @@ export interface FunnelIssues {
 export function funnelExtrasIssues(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelIssues> {
   return client.request<FunnelIssues>(base(workspaceId) + "/" + funnelId + "/issues");
 }
+
+// --------------------------------------------------------- split tests ----
+// Backend: src/modules/funnels/splitTests.js — /workspaces/:ws/experiments
+// (funnels.manage). Codes: SPLIT_TEST_EXISTS (409 — the page already has a
+// test), SPLIT_TEST_COMPLETED (409 — a finished test's variants cannot change).
+
+export type SplitTestStatus = "running" | "paused" | "completed";
+export type SplitTestMetric = "conversion_rate" | "revenue_per_visit";
+
+export interface SplitTestVariant {
+  /** "A" is the step's own page (the control); others carry a page of their own. */
+  key: string;
+  name: string;
+  /** Share of visitors, in percent; the shares add up to 100. */
+  weight: number;
+  /** Present on detail reads for variants other than "A". */
+  builderData?: unknown;
+}
+
+export interface SplitTestAutoWinner {
+  enabled: boolean;
+  afterVisits: number;
+  metric: SplitTestMetric;
+}
+
+export interface SplitTest {
+  id: string;
+  name: string;
+  funnelId: string;
+  stepKey: string;
+  status: SplitTestStatus;
+  autoWinner: SplitTestAutoWinner;
+  winnerVariantKey: string | null;
+  variants: SplitTestVariant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SplitTestResults {
+  totalVisits: number;
+  variants: Array<{
+    key: string;
+    name: string;
+    weight: number;
+    visits: number;
+    orders: number;
+    /** Basis points: 100 = 1%. */
+    conversionRateBp: number;
+    /** Minor units, as a string. */
+    revenueAmount: string;
+    revenuePerVisitAmount: string;
+  }>;
+  leaderKey: string | null;
+  /** 0.5–1: how sure the leader's conversion rate is really better; null with too little data. */
+  confidence: number | null;
+}
+
+const experimentsBase = (workspaceId: string) => "/workspaces/" + workspaceId + "/experiments";
+
+export async function splitTestsList(client: ApiClient, workspaceId: string, funnelId: string): Promise<SplitTest[]> {
+  const { experiments } = await client.request<{ experiments: SplitTest[] }>(
+    experimentsBase(workspaceId) + "?funnelId=" + encodeURIComponent(funnelId)
+  );
+  return experiments;
+}
+
+export function splitTestsGet(
+  client: ApiClient,
+  workspaceId: string,
+  experimentId: string
+): Promise<{ experiment: SplitTest; results: SplitTestResults }> {
+  return client.request<{ experiment: SplitTest; results: SplitTestResults }>(experimentsBase(workspaceId) + "/" + experimentId);
+}
+
+export async function splitTestsCreate(
+  client: ApiClient,
+  workspaceId: string,
+  payload: {
+    funnelId: string;
+    stepKey: string;
+    name: string;
+    variants: Array<{ key: string; name?: string; weight: number; builderData?: unknown }>;
+    autoWinner?: SplitTestAutoWinner | null;
+  }
+): Promise<SplitTest> {
+  const { experiment } = await client.request<{ experiment: SplitTest }>(experimentsBase(workspaceId), {
+    method: "POST",
+    body: payload,
+  });
+  return experiment;
+}
+
+export async function splitTestsUpdate(
+  client: ApiClient,
+  workspaceId: string,
+  experimentId: string,
+  patch: {
+    name?: string;
+    status?: "running" | "paused";
+    variants?: Array<{ key: string; name?: string; weight: number; builderData?: unknown }>;
+    autoWinner?: SplitTestAutoWinner | null;
+  }
+): Promise<SplitTest> {
+  const { experiment } = await client.request<{ experiment: SplitTest }>(experimentsBase(workspaceId) + "/" + experimentId, {
+    method: "PATCH",
+    body: patch,
+  });
+  return experiment;
+}
+
+/** Finishes the test: every visitor then sees the winner's page. */
+export async function splitTestsChooseWinner(
+  client: ApiClient,
+  workspaceId: string,
+  experimentId: string,
+  variantKey: string
+): Promise<SplitTest> {
+  const { experiment } = await client.request<{ experiment: SplitTest }>(
+    experimentsBase(workspaceId) + "/" + experimentId + "/winner",
+    { method: "POST", body: { variantKey } }
+  );
+  return experiment;
+}
+
+export async function splitTestsDelete(client: ApiClient, workspaceId: string, experimentId: string): Promise<void> {
+  await client.request(experimentsBase(workspaceId) + "/" + experimentId, { method: "DELETE" });
+}
+
+// ------------------------------------- geo redirects and funnel settings ----
+// Backend: src/modules/funnels/geoRedirects.js, under the funnels routes.
+
+export interface FunnelGeoRedirect {
+  id: string;
+  sourceFunnelId: string;
+  targetFunnelId: string;
+  targetFunnelName?: string | null;
+  /** ISO 3166-1 alpha-2, upper case. */
+  countries: string[];
+  isActive: boolean;
+}
+
+export async function funnelGeoRedirectsList(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelGeoRedirect[]> {
+  const { geoRedirects } = await client.request<{ geoRedirects: FunnelGeoRedirect[] }>(
+    base(workspaceId) + "/" + funnelId + "/geo-redirects"
+  );
+  return geoRedirects;
+}
+
+export async function funnelGeoRedirectsCreate(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId: string,
+  payload: { targetFunnelId: string; countries: string[]; isActive?: boolean }
+): Promise<FunnelGeoRedirect> {
+  const { geoRedirect } = await client.request<{ geoRedirect: FunnelGeoRedirect }>(
+    base(workspaceId) + "/" + funnelId + "/geo-redirects",
+    { method: "POST", body: payload }
+  );
+  return geoRedirect;
+}
+
+export async function funnelGeoRedirectsUpdate(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId: string,
+  ruleId: string,
+  patch: { targetFunnelId?: string; countries?: string[]; isActive?: boolean }
+): Promise<FunnelGeoRedirect> {
+  const { geoRedirect } = await client.request<{ geoRedirect: FunnelGeoRedirect }>(
+    base(workspaceId) + "/" + funnelId + "/geo-redirects/" + ruleId,
+    { method: "PATCH", body: patch }
+  );
+  return geoRedirect;
+}
+
+export async function funnelGeoRedirectsDelete(client: ApiClient, workspaceId: string, funnelId: string, ruleId: string): Promise<void> {
+  await client.request(base(workspaceId) + "/" + funnelId + "/geo-redirects/" + ruleId, { method: "DELETE" });
+}
+
+export interface FunnelOwnSettings {
+  /** A 3-letter currency code shown as the funnel's currency; null = the store's. */
+  currency: string | null;
+  faviconUrl: string | null;
+  title: string | null;
+  description: string | null;
+}
+
+export async function funnelSettingsGet(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelOwnSettings> {
+  const { settings } = await client.request<{ settings: FunnelOwnSettings }>(base(workspaceId) + "/" + funnelId + "/settings");
+  return settings;
+}
+
+export async function funnelSettingsSave(
+  client: ApiClient,
+  workspaceId: string,
+  funnelId: string,
+  patch: Partial<Record<keyof FunnelOwnSettings, string | null>>
+): Promise<FunnelOwnSettings> {
+  const { settings } = await client.request<{ settings: FunnelOwnSettings }>(base(workspaceId) + "/" + funnelId + "/settings", {
+    method: "PATCH",
+    body: patch,
+  });
+  return settings;
+}

@@ -71,6 +71,7 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { FunnelDraftBanner, useFunnelDraft } from "./FunnelDraft";
 import { FunnelIssuesButton } from "./FunnelIssues";
+import { FunnelGrowthButton } from "./FunnelGrowthPanel";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OfferPicker } from "@/components/OfferPicker";
 import { Select } from "@/components/Select";
@@ -577,6 +578,7 @@ export function FunnelEditorPage() {
                   {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
                   <FunnelIssuesButton
                     funnelId={funnelId}
                     version={Number(!dirty)}
