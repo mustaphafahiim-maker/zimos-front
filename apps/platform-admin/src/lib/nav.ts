@@ -10,6 +10,9 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   Layers,
+  ListChecks,
+  Gauge,
+  Network,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -41,6 +44,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Users", to: "/users", icon: Users, permission: P.WORKSPACES_VIEW },
       { label: "Subscriptions", to: "/subscriptions", icon: CreditCard, permission: P.SUBSCRIPTIONS_VIEW },
       { label: "Plans", to: "/plans", icon: Layers, permission: P.PLANS_VIEW },
+      { label: "Usage", to: "/usage", icon: Gauge, permission: P.SUBSCRIPTIONS_VIEW },
     ],
   },
   {
@@ -71,6 +75,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     items: [
       { label: "Fraud signals", to: "/fraud-signals", icon: ShieldAlert, permission: P.RISK_VIEW },
       { label: "Blocklist (global)", to: "/blocklist", icon: Ban, permission: P.RISK_VIEW },
+      { label: "Delivery network", to: "/network-stats", icon: Network, permission: P.RISK_VIEW },
     ],
   },
   {
@@ -86,6 +91,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Feature flags", to: "/feature-flags", icon: Flag, permission: P.FEATURE_FLAGS_VIEW },
       { label: "Audit log", to: "/audit-log", icon: ScrollText, permission: P.AUDIT_LOG_VIEW },
       { label: "System health", to: "/system-health", icon: Activity, permission: P.SYSTEM_VIEW },
+      { label: "Queues", to: "/queues", icon: ListChecks, permission: P.SYSTEM_VIEW },
       { label: "Admin users", to: "/admin-users", icon: UserCog, permission: P.ADMINS_VIEW },
     ],
   },

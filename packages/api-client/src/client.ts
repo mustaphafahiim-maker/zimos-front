@@ -515,6 +515,13 @@ export class ApiClient {
       });
     };
 
+    // After a reload the access token is gone from memory but the session
+    // (refresh cookie) is not: fetch a token first instead of sending a
+    // request that can only come back 401.
+    if (auth && !this.tokenStorage.get().accessToken && this.tokenStorage.hasSession?.()) {
+      await this.tryRefresh();
+    }
+
     let res = await doFetch();
 
     if (res.status === 401 && auth) {
