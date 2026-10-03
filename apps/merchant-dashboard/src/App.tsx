@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
 import { LoginPage } from "@/pages/LoginPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { ChooseUsernamePage } from "@/pages/ChooseUsernamePage";
@@ -203,6 +204,7 @@ export default function App() {
                       <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />
+                      <Route path="*" element={<NotFoundPage />} />
                     </Route>
 
                     {/* Full-screen editors: their own bar instead of the sidebar,
