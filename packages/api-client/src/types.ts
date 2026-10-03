@@ -2430,7 +2430,7 @@ export interface UpdateCustomerAddressPayload {
 // `parseMoney` treatment the storefront needs does not apply here.
 // ---------------------------------------------------------------------------
 
-/** Feature keys a plan can grant. Mirrors the `plans.features` JSONB. */
+/** Feature keys a plan can grant. Mirrors the `plans.features` JSONB and the backend's billing/featureCatalog.js. */
 export type PlanFeatureKey =
   | "custom_domain"
   | "funnels"
@@ -2559,10 +2559,38 @@ export interface AdminFeatureOverride {
   state: "active" | "expired" | "revoked";
 }
 
+/**
+ * One entry of the backend's feature catalogue (billing/featureCatalog.js),
+ * served to the console with the plans: the key, its names, and whether the
+ * feature exists today. An unavailable one can't be added to a plan (422
+ * PLAN_FEATURE_NOT_AVAILABLE) and is never shown to merchants or visitors.
+ */
+export interface PlanFeatureCatalogEntry {
+  key: PlanFeatureKey;
+  type: "boolean";
+  available: boolean;
+  label: { en: string; ar: string };
+}
+
+/** `GET /admin/plans`: every plan in the pricing page's order, and the catalogue. */
+export interface AdminPlansWithCatalog {
+  plans: AdminPlan[];
+  featureCatalog: PlanFeatureCatalogEntry[];
+}
+
+/** 403 PLAN_FEATURE_REQUIRED's details: the feature the store's plan lacks. */
+export interface PlanFeatureRequiredDetails {
+  feature: PlanFeatureKey;
+  label: { en: string; ar: string };
+}
+
 /** One catalogue feature for a store: enabled or not, and why. */
 export interface AdminWorkspaceFeature {
   key: PlanFeatureKey;
   type: "boolean";
+  /** From the catalogue (servers from before it omit them). */
+  available?: boolean;
+  label?: { en: string; ar: string };
   inPlan: boolean;
   enabled: boolean;
   source: "plan" | "override" | "none";

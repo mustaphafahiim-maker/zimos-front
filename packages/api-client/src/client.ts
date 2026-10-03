@@ -70,6 +70,7 @@ import type {
   AdminOverview,
   AdminPlan,
   AdminPlanInput,
+  AdminPlansWithCatalog,
   AdminServiceReport,
   AdminServiceTile,
   AdminSupportTicket,
@@ -1389,6 +1390,12 @@ export class ApiClient {
   async adminListPlans() {
     const { plans } = await this.request<{ plans: AdminPlan[] }>("/admin/plans");
     return plans ?? [];
+  }
+
+  /** The plans with the feature catalogue the plan editor ticks from (one request). */
+  async adminListPlansWithCatalog(): Promise<AdminPlansWithCatalog> {
+    const res = await this.request<Partial<AdminPlansWithCatalog>>("/admin/plans");
+    return { plans: res.plans ?? [], featureCatalog: res.featureCatalog ?? [] };
   }
 
   async adminSavePlan(payload: AdminPlanInput) {

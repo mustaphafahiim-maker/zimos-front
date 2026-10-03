@@ -98,6 +98,8 @@ export type ApiErrorCode =
   | "SUBSCRIPTION_CANCELLED" // 409 — special terms on a cancelled subscription (console)
   | "PLAN_IS_FREE" // 409 — pricing a charge on a free plan (console)
   | "NO_PLAN" // 409 — pricing a charge for a subscription with no plan (console)
+  | "PLAN_FEATURE_NOT_AVAILABLE" // 422, details[] = { field: "features", key, message } — a feature that doesn't exist yet added to a plan (console)
+  | "PLAN_FEATURE_REQUIRED" // 403, details = PlanFeatureRequiredDetails — the store's plan lacks the feature (PLAN_FEATURE_ENFORCEMENT on)
   // catalog
   | "PRODUCT_HAS_ORDERS" // 409 — permanent delete refused; archive instead
   | "PRODUCT_IN_FUNNEL" // 409, details[0] = { field: "funnelIds", message, funnelIds }
