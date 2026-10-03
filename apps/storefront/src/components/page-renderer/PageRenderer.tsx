@@ -39,6 +39,19 @@ import {
   ShaderHeroElement,
 } from "./immersive";
 import { ComparisonElement, MarqueeElement } from "./sections";
+import {
+  CarouselElement,
+  CheckoutSummaryElement,
+  CodFormElement,
+  OrderSummaryElement,
+  PriceElement,
+  ReviewsListElement,
+  StarsDisplayElement,
+  TabsElement,
+  TextLinkElement,
+  ToggleElement,
+  UpsellActionElement,
+} from "./builderElements";
 import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf } from "./props";
 
@@ -168,6 +181,31 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <MarqueeElement props={props} />;
     case "comparison":
       return <ComparisonElement props={props} t={t} />;
+    // --- SPEC §9.3 builder elements (builderElements.tsx) ---
+    case "text_link":
+      return <TextLinkElement props={props} />;
+    case "tabs":
+      return <TabsElement props={props} />;
+    case "toggle":
+      return <ToggleElement props={props} />;
+    case "carousel":
+      return <CarouselElement props={props} />;
+    case "stars_display":
+      return <StarsDisplayElement props={props} t={t} />;
+    case "price":
+      return <PriceElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />;
+    case "reviews_list":
+      return <ReviewsListElement props={props} workspaceId={ctx.workspaceId} t={t} locale={ctx.locale} />;
+    case "cod_form":
+      return <CodFormElement props={props} workspaceId={ctx.workspaceId} funnel={ctx.funnel} editable={ctx.editable} />;
+    case "checkout_summary":
+      return <CheckoutSummaryElement props={props} funnel={ctx.funnel} />;
+    case "order_summary":
+      return <OrderSummaryElement props={props} workspaceId={ctx.workspaceId} />;
+    case "upsell_accept_button":
+      return <UpsellActionElement props={props} action="accepted_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    case "upsell_decline_link":
+      return <UpsellActionElement props={props} action="declined_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
     default:
       // Unreachable for the 29 allowed types, but a tree written before this
       // renderer knew about a new type must not blank the page.

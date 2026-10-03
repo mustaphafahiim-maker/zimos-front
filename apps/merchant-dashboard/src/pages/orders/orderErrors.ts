@@ -42,8 +42,14 @@ export function useOrderErrorMessage() {
   const fallback = useErrorMessage();
   return useCallback(
     (err: unknown): string => {
-      const code = err instanceof ApiError ? (err.code as string | undefined) : undefined;
+      // An ApiError, or one order's { code, message } out of a bulk answer.
+      const plain =
+        !(err instanceof ApiError) && err && typeof err === "object" && "code" in err
+          ? (err as { code?: string; message?: string })
+          : null;
+      const code = err instanceof ApiError ? (err.code as string | undefined) : plain?.code;
       if (code && code in t) return t[code as Code];
+      if (plain) return plain.message || code || fallback(err);
       return fallback(err);
     },
     [t, fallback]

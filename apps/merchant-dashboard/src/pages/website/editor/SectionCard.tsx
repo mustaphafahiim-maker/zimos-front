@@ -99,6 +99,28 @@ function elementSummary(element: PageElement): string {
       const n = Array.isArray(props.rows) ? props.rows.length : 0;
       return truncate([str("title"), `${n} ${n === 1 ? "row" : "rows"}`].filter(Boolean).join(" · "));
     }
+    case "tabs": {
+      const n = Array.isArray(props.items) ? props.items.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "tab" : "tabs"}`].filter(Boolean).join(" · "));
+    }
+    case "carousel": {
+      const n = Array.isArray(props.images) ? props.images.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "image" : "images"}`].filter(Boolean).join(" · "));
+    }
+    case "text_link":
+      return truncate([str("text"), str("href") && `→ ${str("href")}`].filter(Boolean).join(" "));
+    case "stars_display":
+      return truncate([props.rating && `${props.rating}★`, str("label")].filter(Boolean).join(" · "));
+    case "upsell_accept_button":
+    case "upsell_decline_link":
+      return truncate(str("label"));
+    case "toggle":
+    case "price":
+    case "reviews_list":
+    case "cod_form":
+    case "checkout_summary":
+    case "order_summary":
+      return truncate(str("title"));
   }
 }
 

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
+import { ExitDownsell } from "@/components/offers/StoreOffers";
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
@@ -216,6 +217,8 @@ export default async function StoreLayout({
                   cart icon. Funnel pages have no cart, so it steps aside with
                   the rest of the store's chrome. */}
               <CartDrawer />
+              {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
+              <ExitDownsell workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />
