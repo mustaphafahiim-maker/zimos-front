@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   Star,
   Tag,
+  Target,
   Truck,
   Undo2,
   Users,
@@ -46,6 +47,7 @@ export type NavKey =
   | "funnels"
   | "analytics"
   | "webAnalytics"
+  | "attribution"
   | "realtime"
   | "settings"
   | "support"
@@ -136,6 +138,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
@@ -195,6 +198,7 @@ export const NAV_LABELS = {
     funnels: "Funnels",
     analytics: "Analytics",
     webAnalytics: "Web analytics",
+    attribution: "Sales attribution",
     realtime: "Realtime",
     settings: "Settings",
     support: "Contact support",
@@ -222,6 +226,7 @@ export const NAV_LABELS = {
     funnels: "مسارات البيع",
     analytics: "التحليلات",
     webAnalytics: "زيارات الموقع",
+    attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
