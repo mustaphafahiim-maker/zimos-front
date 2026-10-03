@@ -30,7 +30,6 @@ import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
 import { BillingSection } from "./BillingSection";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { WhatsappSection } from "./WhatsappSection";
@@ -67,7 +66,6 @@ export function SettingsPage() {
       <AccountSection />
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
