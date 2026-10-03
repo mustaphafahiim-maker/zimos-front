@@ -119,7 +119,7 @@ export function SavedMethodsCard({
         {data.saved.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-ink">
-              <bdi dir="ltr">{cardName(m)}</bdi>
+              <bdi>{cardName(m)}</bdi>
               {m.expired ? (
                 <Badge variant="destructive" className="ms-2">
                   {t.expired}
