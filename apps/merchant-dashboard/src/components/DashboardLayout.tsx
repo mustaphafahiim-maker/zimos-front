@@ -13,6 +13,7 @@ import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 const STRINGS = {
   en: {
@@ -311,6 +312,7 @@ export function DashboardLayout() {
             {/* Dashboard-wide locale switch. Lives in the header (not the
                 sidebar footer beside ThemeToggle) so it stays reachable on
                 mobile, where the sidebar collapses into the drawer. */}
+            <NotificationsBell />
             <LanguageSwitch className="hidden sm:inline-flex" />
             <LanguageSwitch compact className="sm:hidden" />
             <span className="hidden sm:inline">{user?.fullName ?? user?.email}</span>

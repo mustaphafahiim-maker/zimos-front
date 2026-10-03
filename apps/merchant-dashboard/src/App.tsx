@@ -59,6 +59,9 @@ const RealtimePage = lazy(() => import("@/pages/analytics/RealtimePage").then((m
 const FunnelAnalyticsPage = lazy(() =>
   import("@/pages/analytics/FunnelAnalyticsPage").then((m) => ({ default: m.FunnelAnalyticsPage }))
 );
+const AttributionPage = lazy(() =>
+  import("@/pages/analytics/AttributionPage").then((m) => ({ default: m.AttributionPage }))
+);
 const SettlementsPage = lazy(() =>
   import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
@@ -119,6 +122,7 @@ export default function App() {
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
+                      <Route path="/analytics/attribution" element={<LazyRoute><AttributionPage /></LazyRoute>} />
                       <Route path="/analytics/realtime" element={<LazyRoute><RealtimePage /></LazyRoute>} />
                       <Route
                         path="/analytics/funnels/:funnelId"
