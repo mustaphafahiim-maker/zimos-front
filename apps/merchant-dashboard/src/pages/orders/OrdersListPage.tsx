@@ -1,3 +1,4 @@
+import { RiskBadge, RiskFilter, useRiskParam } from "@/pages/fraud/RiskBadge";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -175,20 +176,22 @@ export function OrdersListPage() {
   const errorMessage = useErrorMessage();
   const filters = useOrderFilters();
   const { stage, query } = filters;
+  // Lane 2: the risk tabs (`?risk=`), sent to the list and the tab counts alike.
+  const risk = useRiskParam();
   // Sorted on the server; the default is the list's order as it always was.
   const [sort, setSort] = useListSort<OrderSort>("zimos.orders.sort", ORDER_SORTS, "newest");
 
   const pipeline = useAsync<OrderPipeline>(
-    () => apiClient.getOrderPipeline(workspaceId, query),
-    [workspaceId, query.q, query.from, query.to]
+    () => apiClient.getOrderPipeline(workspaceId, { ...query, ...risk.query }),
+    [workspaceId, query.q, query.from, query.to, risk.risk]
   );
 
   const list = useCursorList<Order>(
     (cursor) =>
       apiClient
-        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, sort, ...query })
+        .listOrders(workspaceId, { cursor, limit: 50, stage: stage ?? undefined, sort, ...query, ...risk.query })
         .then((r) => ({ items: r.orders, nextCursor: r.nextCursor })),
-    [workspaceId, stage, sort, query.q, query.from, query.to],
+    [workspaceId, stage, sort, query.q, query.from, query.to, risk.risk],
     { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
   );
 
@@ -209,6 +212,8 @@ export function OrdersListPage() {
       <SearchAndDates filters={filters} />
 
       <SortPicker value={sort} onChange={setSort} />
+
+      <RiskFilter />
 
       <StageTabs
         value={stage}
@@ -541,6 +546,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                   <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
                 )}
                 {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
+                <RiskBadge order={order} />
                 <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
               </div>
               <OrderTimelineLines order={order} now={now} className="mt-2" />
@@ -602,6 +608,7 @@ function OrdersTable({ orders }: { orders: Order[] }) {
                       <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
                     )}
                     {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
+                <RiskBadge order={order} />
                   </div>
                 </td>
                 <td className="px-4 py-3">

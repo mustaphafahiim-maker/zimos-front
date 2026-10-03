@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track";
-import { registerPixels, type StorePixel } from "@/lib/adPixels";
+import { registerPixels, type PurchaseTiming, type StorePixel } from "@/lib/adPixels";
 
 /**
  * Loads the tracking pixels the merchant configured (dashboard → Marketing →
@@ -20,9 +20,9 @@ import { registerPixels, type StorePixel } from "@/lib/adPixels";
  * view here. A funnel's or product's pixels get theirs when the shopper
  * reaches that funnel or product (lib/adPixels.ts decides per event).
  */
-export function TrackingPixels({ pixels }: { pixels: StorePixel[] }) {
+export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[]; purchaseTiming?: PurchaseTiming }) {
   // Before any effect below (or in a child page) sends an event.
-  registerPixels(pixels);
+  registerPixels(pixels, purchaseTiming);
 
   const of = (platform: StorePixel["platform"]) => pixels.filter((p) => p.platform === platform);
   const storeWide = (list: StorePixel[]) => list.filter((p) => p.scope.type === "all");

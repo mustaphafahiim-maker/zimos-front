@@ -1,3 +1,5 @@
+import { catalogCollectionFlags } from "@store-builder/api-client";
+import { CollectionVisibilityFields } from "./components/CollectionVisibilityFields";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -215,6 +217,8 @@ function CollectionForm({
   const [description, setDescription] = useState(collection?.description ?? "");
   const [parentId, setParentId] = useState(collection?.parentId ?? "");
   const [imageUrl, setImageUrl] = useState(collection?.imageUrl ?? "");
+  // Header menu / hidden (components/CollectionVisibilityFields).
+  const [flags, setFlags] = useState(() => catalogCollectionFlags(collection));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -230,6 +234,7 @@ function CollectionForm({
       name: name.trim(),
       description: description.trim(),
       imageUrl: imageUrl || null,
+      ...{ showInHeader: flags.showInHeader && !flags.hidden, hidden: flags.hidden },
     };
     // Sent only when it changed, so an edit never moves a collection by accident.
     if (!collection || (collection.parentId ?? "") !== parentId) payload.parentId = parentId || null;
@@ -285,6 +290,7 @@ function CollectionForm({
         )}
       </Field>
       <ImageField label={t.image} value={imageUrl} onChange={setImageUrl} />
+      <CollectionVisibilityFields value={flags} onChange={setFlags} disabled={saving} />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="min-h-11">
           {t.cancel}
