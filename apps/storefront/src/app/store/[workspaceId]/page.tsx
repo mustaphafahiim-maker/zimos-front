@@ -72,6 +72,7 @@ export default async function StoreHomePage({
           workspaceId={workspaceId}
           currency={store.currency}
           locale={locale}
+          siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
         />
       </main>
     );
