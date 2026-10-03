@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  BadgeDollarSign,
   BarChart3,
   Bot,
   ClipboardCheck,
@@ -19,7 +20,9 @@ import {
   ShoppingBag,
   ShoppingCart,
   Star,
+  Store,
   Tag,
+  Target,
   Truck,
   Undo2,
   Users,
@@ -46,6 +49,7 @@ export type NavKey =
   | "funnels"
   | "analytics"
   | "webAnalytics"
+  | "attribution"
   | "realtime"
   | "settings"
   | "support"
@@ -54,7 +58,9 @@ export type NavKey =
   | "automations"
   | "marketing"
   | "profit"
-  | "media";
+  | "ads"
+  | "media"
+  | "storeSettings";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -136,14 +142,19 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
     id: "storefront",
     labelKey: "storefront",
-    items: [{ key: "website", to: "/website", icon: Globe }],
+    items: [
+      { key: "website", to: "/website", icon: Globe },
+      { key: "storeSettings", to: "/store-settings", icon: Store },
+    ],
   },
   {
     id: "config",
@@ -195,6 +206,7 @@ export const NAV_LABELS = {
     funnels: "Funnels",
     analytics: "Analytics",
     webAnalytics: "Web analytics",
+    attribution: "Sales attribution",
     realtime: "Realtime",
     settings: "Settings",
     support: "Contact support",
@@ -203,7 +215,9 @@ export const NAV_LABELS = {
     automations: "Automations",
     marketing: "Marketing",
     profit: "Profit",
+    ads: "Ad campaigns",
     media: "Media library",
+    storeSettings: "Store settings",
   },
   ar: {
     overview: "نظرة عامة",
@@ -222,6 +236,7 @@ export const NAV_LABELS = {
     funnels: "مسارات البيع",
     analytics: "التحليلات",
     webAnalytics: "زيارات الموقع",
+    attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
@@ -230,7 +245,9 @@ export const NAV_LABELS = {
     automations: "الأتمتة",
     marketing: "التسويق",
     profit: "الأرباح",
+    ads: "الحملات الإعلانية",
     media: "مكتبة الصور",
+    storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
 

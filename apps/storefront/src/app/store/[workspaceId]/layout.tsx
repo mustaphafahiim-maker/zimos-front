@@ -9,9 +9,15 @@ import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
+import { BotGuard } from "@/components/BotGuard";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { hasPixels, pixelIdsOf } from "@/lib/adPixels";
-import { resolveCheckoutSettings } from "@store-builder/api-client";
+import { storePixelsOf } from "@/lib/adPixels";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  resolveThankYouPage,
+  storefrontDesignMeta,
+} from "@store-builder/api-client";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
@@ -131,7 +137,9 @@ export default async function StoreLayout({
     phone: storePhone(store),
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
-    checkout: resolveCheckoutSettings(store.checkout),
+    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
+    thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
+    legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
@@ -139,7 +147,7 @@ export default async function StoreLayout({
   const websiteId = (store as { websiteId?: unknown }).websiteId;
   const theme = storeThemeOf(store.themeSettings);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
-  const pixels = pixelIdsOf(store);
+  const pixels = storePixelsOf(store);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -150,11 +158,12 @@ export default async function StoreLayout({
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+            <BotGuard workspaceId={workspaceId} />
           </Suspense>
-          {hasPixels(pixels) && (
+          {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels ids={pixels} />
+              <TrackingPixels pixels={pixels} />
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its

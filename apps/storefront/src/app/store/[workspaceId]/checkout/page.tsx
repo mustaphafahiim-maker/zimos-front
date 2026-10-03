@@ -17,6 +17,7 @@ import { orderBumpOf } from "@/lib/commerce";
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
+  formOptionsOf,
   toCheckoutPayload,
   validateOrderForm,
   type OrderFormErrors,
@@ -35,6 +36,7 @@ import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { PolicyLinks } from "@/components/PolicyLinks";
 
 const FORM_PREFIX = "checkout";
 
@@ -112,7 +114,8 @@ export default function CheckoutPage() {
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields);
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
   const progressDone: CheckoutStep[] = [
@@ -131,7 +134,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields);
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -151,7 +154,7 @@ export default function CheckoutPage() {
     const checkoutSessionId = await autosave.stop();
     try {
       const payload = {
-        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes }),
+        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
@@ -283,6 +286,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
+            {formOptions.allow_discount_codes && (
             <div className="mt-5 border-t border-line pt-4">
               <label htmlFor="discount-code" className="mb-1.5 block text-sm font-medium text-ink">
                 {t.checkout.discountCode}
@@ -321,6 +325,7 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+            )}
 
             <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">
               <div className="flex justify-between gap-3">
@@ -351,6 +356,7 @@ export default function CheckoutPage() {
               className="mt-3"
             />
             <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+            <PolicyLinks className="mt-2" />
           </section>
 
           {bump && items.length > 0 && (

@@ -314,7 +314,11 @@ export function FunnelStepActions({
         <ErrorBox message={flow.error} />
         <button
           type="button"
-          onClick={() => void flow.advance("clicked_through")}
+          onClick={() => {
+            // An opt-in step moving on is the ad platforms' Lead.
+            if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
+            void flow.advance("clicked_through");
+          }}
           disabled={!!flow.pending}
           aria-busy={!!flow.pending}
           className={btnPrimaryLg}
@@ -417,7 +421,7 @@ function FunnelCheckout({
       return;
     }
 
-    const found = validateOrderForm(values, t, fields);
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -435,7 +439,7 @@ function FunnelCheckout({
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: line }),
+      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true }),
       funnelId,
       // The server adds the step's bump to this order from its offer.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),

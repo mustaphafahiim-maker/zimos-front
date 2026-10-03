@@ -196,6 +196,8 @@ export interface OrderSnapshot {
   id: string;
   orderNumber: string;
   phone: string;
+  /** The name the order was placed under, for the thank-you message. */
+  customerName?: string;
   currency: string;
   createdAt: string;
   subtotalAmount: number;
@@ -211,6 +213,7 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
     id: order.id,
     orderNumber: order.orderNumber,
     phone,
+    customerName: (order as { contactSnapshot?: { fullName?: string } }).contactSnapshot?.fullName ?? undefined,
     currency: order.currency,
     createdAt: order.createdAt ?? new Date().toISOString(),
     subtotalAmount: parseMoney(order.subtotalAmount),

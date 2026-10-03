@@ -1,19 +1,40 @@
+import { getTrackingContext, setPixelInfoProvider } from "./analyticsEvents";
 import type { TrackData, TrackEvent } from "./track";
 
 /**
- * The merchant's ad pixels (Meta, TikTok, Snapchat, Google), loaded by
- * components/TrackingPixels.tsx when the merchant set at least one ID in the
- * dashboard (Marketing). `track()` in lib/track.ts hands every commerce event
- * here; each platform is only called if its script is on the page, so a store
- * with no pixels sends nothing.
+ * The merchant's tracking pixels (dashboard → Marketing → Tracking tools),
+ * loaded by components/TrackingPixels.tsx. `track()` in lib/track.ts hands
+ * every commerce event here.
+ *
+ * A store can have several pixels per platform, and each pixel has a scope:
+ * the whole store, some funnels, or some products. All of a store's pixels
+ * are initialised on load, but an event only goes to the pixels whose scope
+ * covers the page — the store-wide ones, the pixels of the funnel being
+ * walked, and the pixels of a product the shopper viewed in this visit (so
+ * its add-to-cart, checkout and purchase reach the same pixel).
+ *
+ * Each platform is only called if its script is on the page, so a store with
+ * no pixels sends nothing.
  */
 
+export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+
+export interface StorePixel {
+  platform: PixelPlatform;
+  pixelId: string;
+  scope: { type: "all" | "funnels" | "products"; ids: string[] };
+  /** Google Ads conversion label, for an `AW-` id. */
+  adsConversionLabel?: string;
+}
+
 type Fn = (...args: unknown[]) => void;
+type TikTokInstance = { track: Fn; page: Fn };
 type PixelWindow = Window & {
   fbq?: Fn;
-  ttq?: { track: Fn; page: Fn };
+  ttq?: TikTokInstance & { instance?: (id: string) => TikTokInstance };
   snaptr?: Fn;
   gtag?: Fn;
+  dataLayer?: unknown[];
 };
 
 const TIKTOK: Record<TrackEvent, string> = {
@@ -21,61 +42,201 @@ const TIKTOK: Record<TrackEvent, string> = {
   ViewContent: "ViewContent",
   AddToCart: "AddToCart",
   InitiateCheckout: "InitiateCheckout",
+  AddPaymentInfo: "AddPaymentInfo",
   Purchase: "CompletePayment",
+  Lead: "SubmitForm",
 };
 const SNAP: Record<TrackEvent, string> = {
   PageView: "PAGE_VIEW",
   ViewContent: "VIEW_CONTENT",
   AddToCart: "ADD_CART",
   InitiateCheckout: "START_CHECKOUT",
+  AddPaymentInfo: "ADD_BILLING",
   Purchase: "PURCHASE",
+  Lead: "SIGN_UP",
 };
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
   ViewContent: "view_item",
   AddToCart: "add_to_cart",
   InitiateCheckout: "begin_checkout",
+  AddPaymentInfo: "add_payment_info",
   Purchase: "purchase",
+  Lead: "generate_lead",
 };
+
+// ---------------------------------------------------------------- registry --
+
+let registry: StorePixel[] = [];
+/** Scoped Snap pixels already initialised (Snap has no per-pixel send, so they are added on first match). */
+const snapInitialised = new Set<string>();
+
+const VIEWED_KEY = "zimos_pixel_products";
+
+function viewedProducts(): string[] {
+  try {
+    const raw = window.sessionStorage.getItem(VIEWED_KEY);
+    const list: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** components/TrackingPixels calls this with the store's pixels before any event is sent. */
+export function registerPixels(pixels: StorePixel[]): void {
+  registry = pixels;
+  setPixelInfoProvider(pixels.length ? pixelInfo : null);
+}
+
+function cookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]).slice(0, 400) : undefined;
+}
+
+/** A click id from the landing URL, remembered for the visit. */
+function clickId(param: string): string | undefined {
+  try {
+    const key = "zimos_click_" + param;
+    const fromUrl = new URLSearchParams(window.location.search).get(param);
+    if (fromUrl) window.sessionStorage.setItem(key, fromUrl.slice(0, 400));
+    return window.sessionStorage.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * What the API needs to send the same event server-side and have the platform
+ * match it: the platforms' own browser ids (set by their scripts) and the
+ * products viewed this visit, for product-scoped pixels. No personal data.
+ */
+function pixelInfo(): Record<string, unknown> | undefined {
+  if (typeof window === "undefined" || registry.length === 0) return undefined;
+  const fbclid = clickId("fbclid");
+  const info: Record<string, unknown> = {
+    fbp: cookie("_fbp"),
+    fbc: cookie("_fbc") ?? (fbclid ? "fb.1." + Date.now() + "." + fbclid : undefined),
+    ttp: cookie("_ttp"),
+    ttclid: clickId("ttclid"),
+    scCid: clickId("ScCid"),
+  };
+  const products = viewedProducts().filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  if (products.length) info.productIds = products;
+  for (const key of Object.keys(info)) if (info[key] === undefined) delete info[key];
+  return info;
+}
+
+function inScope(pixel: StorePixel): boolean {
+  if (pixel.scope.type === "all") return true;
+  if (pixel.scope.type === "funnels") {
+    const funnelId = getTrackingContext()?.funnelId;
+    return Boolean(funnelId) && pixel.scope.ids.includes(funnelId as string);
+  }
+  const viewed = viewedProducts();
+  return pixel.scope.ids.some((id) => viewed.includes(id));
+}
+
+const active = (platform: PixelPlatform) => registry.filter((p) => p.platform === platform && inScope(p));
+
+/**
+ * A product page is on screen (components/PixelScope): its product-scoped
+ * pixels join this visit and get the page view they missed on load.
+ */
+export function enterProductScope(productIds: string[]): void {
+  if (typeof window === "undefined" || productIds.length === 0) return;
+  const before = new Set(viewedProducts());
+  const fresh = productIds.filter((id) => !before.has(id));
+  if (fresh.length === 0) return;
+  try {
+    window.sessionStorage.setItem(VIEWED_KEY, JSON.stringify([...before, ...fresh].slice(-50)));
+  } catch {
+    return; // storage blocked: product-scoped pixels stay out rather than guess
+  }
+  const joined = registry.filter((p) => p.scope.type === "products" && p.scope.ids.some((id) => fresh.includes(id)));
+  if (joined.length) sendPageViewTo(joined);
+}
+
+function sendPageViewTo(pixels: StorePixel[]): void {
+  const w = window as PixelWindow;
+  try {
+    for (const p of pixels) {
+      if (p.platform === "meta" && w.fbq) w.fbq("trackSingle", p.pixelId, "PageView");
+      if (p.platform === "tiktok" && w.ttq?.instance) w.ttq.instance(p.pixelId).page();
+      if (p.platform === "snapchat" && w.snaptr) {
+        initSnap(w, p.pixelId);
+        w.snaptr("track", "PAGE_VIEW");
+      }
+      if (p.platform === "google" && w.gtag) w.gtag("event", "page_view", { send_to: p.pixelId });
+    }
+  } catch {
+    /* a broken third-party script must never break the store */
+  }
+}
+
+function initSnap(w: PixelWindow, pixelId: string): void {
+  if (snapInitialised.has(pixelId) || !w.snaptr) return;
+  snapInitialised.add(pixelId);
+  w.snaptr("init", pixelId, {});
+}
+
+// ------------------------------------------------------------------ events --
 
 export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
   if (typeof window === "undefined") return;
   const w = window as PixelWindow;
   const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
   const common = { value, currency: data.currency };
+  // The order id for a Purchase, a per-event UUID otherwise — the same id the
+  // API sends with its server-side copy (backend marketing/pixelEvents.js and
+  // browserEventRelay.js), so the two dedup into one event.
+  const dedupeId = data.orderId ?? data.eventId;
 
   try {
-    if (w.fbq) {
-      if (event === "PageView") w.fbq("track", "PageView");
-      else
-        w.fbq(
-          "track",
-          event,
-          {
-            ...common,
-            content_ids: data.contentIds,
-            content_name: data.contentName,
-            content_type: "product",
-            num_items: data.numItems,
-          },
-          // Same id as the server-side Conversions API event for this order
-          // (backend marketing/pixelEvents.js sends order.id verbatim as
-          // event_id), so browser and server events dedup into one conversion.
-          data.orderId ? { eventID: data.orderId } : undefined
-        );
+    const meta = active("meta");
+    if (w.fbq && meta.length) {
+      for (const p of meta) {
+        if (event === "PageView") w.fbq("trackSingle", p.pixelId, "PageView");
+        else
+          w.fbq(
+            "trackSingle",
+            p.pixelId,
+            event,
+            {
+              ...common,
+              content_ids: data.contentIds,
+              content_name: data.contentName,
+              content_type: "product",
+              num_items: data.numItems,
+            },
+            // Same id as the server-side Conversions API event for this order
+            // (backend marketing/pixelEvents.js sends order.id verbatim as
+            // event_id), so browser and server events dedup into one
+            // conversion — on every Meta pixel the event goes to.
+            dedupeId ? { eventID: dedupeId } : undefined
+          );
+      }
     }
-    if (w.ttq) {
-      if (event === "PageView") w.ttq.page();
-      // Third argument is TikTok's own dedup contract: the same event_id the
-      // server-side Events API call carries for this order.
-      else
-        w.ttq.track(
-          TIKTOK[event],
-          { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems },
-          data.orderId ? { event_id: data.orderId } : undefined
-        );
+
+    const tiktok = active("tiktok");
+    if (w.ttq && tiktok.length) {
+      for (const p of tiktok) {
+        const ttq = w.ttq.instance ? w.ttq.instance(p.pixelId) : w.ttq;
+        if (event === "PageView") ttq.page();
+        // Third argument is TikTok's own dedup contract: the same event_id the
+        // server-side Events API call carries for this order.
+        else
+          ttq.track(
+            TIKTOK[event],
+            { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems },
+            dedupeId ? { event_id: dedupeId } : undefined
+          );
+      }
     }
-    if (w.snaptr) {
+
+    const snap = active("snapchat");
+    if (w.snaptr && snap.length) {
+      for (const p of snap) initSnap(w, p.pixelId);
       // event_id is Snap Conversions API v3's dedup field — same order id sent server-side.
       w.snaptr("track", SNAP[event], {
         price: value,
@@ -83,14 +244,32 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         item_ids: data.contentIds,
         number_items: data.numItems,
         transaction_id: data.orderId,
-        event_id: data.orderId,
+        event_id: dedupeId,
       });
     }
-    if (w.gtag && event !== "PageView") {
+
+    const google = active("google");
+    if (w.gtag && google.length) {
+      // send_to keeps the event off the Google tags whose scope does not cover this page.
       w.gtag("event", GOOGLE[event], {
-        ...common,
+        ...(event === "PageView" ? { page_path: window.location.pathname } : common),
         transaction_id: data.orderId,
         items: data.contentIds?.map((id) => ({ item_id: id })),
+        send_to: google.map((p) => p.pixelId),
+      });
+      if (event === "Purchase") {
+        for (const p of google) {
+          if (!p.adsConversionLabel || !/^AW-/i.test(p.pixelId)) continue;
+          w.gtag("event", "conversion", { ...common, transaction_id: data.orderId, send_to: `${p.pixelId}/${p.adsConversionLabel}` });
+        }
+      }
+    }
+
+    // Tag Manager gets every event on its dataLayer; the merchant's own tags decide what to do with it.
+    if (w.dataLayer && active("gtm").length && event !== "PageView") {
+      w.dataLayer.push({
+        event: GOOGLE[event],
+        ecommerce: { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) },
       });
     }
   } catch {
@@ -98,31 +277,49 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
   }
 }
 
-/** The pixel IDs components/TrackingPixels loads. */
-export interface PixelIds {
-  meta?: string;
-  tiktok?: string;
-  snapchat?: string;
-  googleTag?: string;
-}
+// ------------------------------------------------------------- store pixels --
+
+const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity"];
+// IDs are validated by the backend; re-checked here because they are placed in inline scripts.
+const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
 
 /**
- * The pixel IDs from store metadata. GET /store/:workspaceId sends a `tracking`
- * block that StorefrontMeta doesn't name, so it is read defensively: only
- * non-empty strings, and `{}` when the merchant configured none. Plain module
- * code, so server components can call it.
+ * The pixels from store metadata. GET /store/:workspaceId sends
+ * `trackingPixels` (and, from older backends, only the one-ID-per-platform
+ * `tracking` block); neither is named by StorefrontMeta, so both are read
+ * defensively. Plain module code, so server components can call it.
  */
-export function pixelIdsOf(store: unknown): PixelIds {
-  const tracking = (store as { tracking?: unknown } | null)?.tracking;
-  if (!tracking || typeof tracking !== "object") return {};
-  const pick = (key: keyof PixelIds) => {
-    const v = (tracking as Record<string, unknown>)[key];
-    return typeof v === "string" && v.trim() ? v.trim() : undefined;
-  };
-  return { meta: pick("meta"), tiktok: pick("tiktok"), snapchat: pick("snapchat"), googleTag: pick("googleTag") };
-}
+export function storePixelsOf(store: unknown): StorePixel[] {
+  const list = (store as { trackingPixels?: unknown } | null)?.trackingPixels;
+  if (Array.isArray(list)) {
+    const out: StorePixel[] = [];
+    for (const raw of list) {
+      if (!raw || typeof raw !== "object") continue;
+      const r = raw as Record<string, unknown>;
+      const platform = r.platform as PixelPlatform;
+      const pixelId = typeof r.pixelId === "string" ? r.pixelId.trim() : "";
+      if (!PLATFORMS.includes(platform) || !SAFE.test(pixelId)) continue;
+      const scope = (r.scope ?? {}) as { type?: unknown; ids?: unknown };
+      const type = scope.type === "funnels" || scope.type === "products" ? scope.type : "all";
+      const ids = Array.isArray(scope.ids) ? scope.ids.filter((x): x is string => typeof x === "string") : [];
+      const label = typeof r.adsConversionLabel === "string" && SAFE.test(r.adsConversionLabel) ? r.adsConversionLabel : undefined;
+      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}) });
+    }
+    return out;
+  }
 
-/** True when at least one pixel is configured — nothing loads or fires otherwise. */
-export function hasPixels(ids: PixelIds): boolean {
-  return Boolean(ids.meta || ids.tiktok || ids.snapchat || ids.googleTag);
+  const tracking = (store as { tracking?: unknown } | null)?.tracking;
+  if (!tracking || typeof tracking !== "object") return [];
+  const legacy: Array<[string, PixelPlatform]> = [
+    ["meta", "meta"],
+    ["tiktok", "tiktok"],
+    ["snapchat", "snapchat"],
+    ["googleTag", "google"],
+  ];
+  const out: StorePixel[] = [];
+  for (const [key, platform] of legacy) {
+    const v = (tracking as Record<string, unknown>)[key];
+    if (typeof v === "string" && SAFE.test(v.trim())) out.push({ platform, pixelId: v.trim(), scope: { type: "all", ids: [] } });
+  }
+  return out;
 }

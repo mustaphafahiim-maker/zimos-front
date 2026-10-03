@@ -18,6 +18,7 @@ import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { HeldByCouriers, StatementImport } from "./StatementTools";
 
 const STRINGS = {
   en: {
@@ -269,7 +270,20 @@ export function SettlementsPage() {
 
   return (
     <div className="min-w-0 max-w-6xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={
+          <StatementImport
+            workspaceId={workspaceId}
+            carriers={(unsettled.data?.carriers ?? []).map((c) => c.carrierCode)}
+            onCreated={(id) => {
+              refreshAll();
+              setOpenId(id);
+            }}
+          />
+        }
+      />
 
       {s && (
         <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
@@ -280,6 +294,8 @@ export function SettlementsPage() {
           <KpiCard label={t.kpiDrafts} value={s.draftSettlements} icon={<FileText />} />
         </div>
       )}
+
+      <HeldByCouriers workspaceId={workspaceId} refreshKey={settlements.data?.settlements.length} />
 
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-ink">{t.unsettledTitle}</h2>
