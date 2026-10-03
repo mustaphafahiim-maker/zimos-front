@@ -38,3 +38,5 @@ export * from "./endpoints/funnels";
 export * from "./endpoints/funnelRuntime";
 // API keys and outbound webhooks (Settings → Developers).
 export * from "./endpoints/developers";
+// Merchant notifications (the header bell and its preferences).
+export * from "./endpoints/notifications";
