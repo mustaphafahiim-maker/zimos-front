@@ -14,6 +14,7 @@ export const NOTIFICATION_STRINGS = {
     type_stock_low: "Low stock",
     type_integration_failed: "A connected service failed",
     type_export_ready: "Exports ready",
+    type_shipping_batch_done: "Bulk shipping finished",
     type_announcement: "Announcements from Zimos",
     type_automation: "Alerts from your automations",
     orderNewTitle: "New order {orderNumber}",
@@ -23,6 +24,10 @@ export const NOTIFICATION_STRINGS = {
     stockLowBody: "{available} left in stock.",
     integrationFailedTitle: "Could not reach {integration}",
     exportReadyTitle: "Your file is ready: {name}",
+    autoBookingFailedTitle: "Order {orderNumber} wasn't booked with {integration} automatically",
+    autoBookingFailedBody: "{reason} Book it from the order page.",
+    batchDoneTitle: "Booked {booked} of {total} orders with {carrier}",
+    batchFailedBody: "{failed} weren't booked. Open the report to see why and send them again.",
   },
   ar: {
     type_order_new: "الطلبات الجديدة",
@@ -30,6 +35,7 @@ export const NOTIFICATION_STRINGS = {
     type_stock_low: "قرب نفاد المخزون",
     type_integration_failed: "تعطّل خدمة مربوطة",
     type_export_ready: "جاهزية ملفات التصدير",
+    type_shipping_batch_done: "انتهاء الشحن المجمّع",
     type_announcement: "إعلانات زيموس",
     type_automation: "تنبيهات الأتمتة",
     orderNewTitle: "طلب جديد {orderNumber}",
@@ -39,6 +45,10 @@ export const NOTIFICATION_STRINGS = {
     stockLowBody: "المتاح {available} قطعة.",
     integrationFailedTitle: "تعذّر الاتصال بـ {integration}",
     exportReadyTitle: "الملف جاهز: {name}",
+    autoBookingFailedTitle: "لم يُحجز الطلب {orderNumber} تلقائيًا مع {integration}",
+    autoBookingFailedBody: "{reason} احجزه من صفحة الطلب.",
+    batchDoneTitle: "تم حجز {booked} من {total} طلب مع {carrier}",
+    batchFailedBody: "لم يُحجز {failed}. افتح التقرير لمعرفة السبب وإعادة إرسالها.",
   },
 } satisfies Messages;
 
@@ -70,7 +80,20 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       };
     case "integration.failed":
       if (!d.integration) break;
+      // An order the store's courier could not book on its own (shipping/carrierBooking.js).
+      if (d.orderNumber) {
+        return {
+          title: fmt(t.autoBookingFailedTitle, { orderNumber: str(d.orderNumber), integration: str(d.integration) }),
+          body: fmt(t.autoBookingFailedBody, { reason: str(d.reason) }).trim(),
+        };
+      }
       return { title: fmt(t.integrationFailedTitle, { integration: str(d.integration) }), body: str(d.message) || null };
+    case "shipping.batch_done":
+      if (d.total === undefined) break;
+      return {
+        title: fmt(t.batchDoneTitle, { booked: str(d.booked), total: str(d.total), carrier: str(d.carrierName) || str(d.carrierCode) }),
+        body: Number(d.failed) > 0 ? fmt(t.batchFailedBody, { failed: str(d.failed) }) : null,
+      };
     case "export.ready":
       if (!d.name) break;
       return { title: fmt(t.exportReadyTitle, { name: str(d.name) }), body: null };

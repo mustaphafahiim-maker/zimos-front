@@ -112,3 +112,5 @@ export * from "./endpoints/funnelExtras";
 export * from "./endpoints/carrierBooking";
 // Where each governorate/city is on a courier's own list (shipping/carrierRegionMap.js).
 export * from "./endpoints/carrierRegions";
+// "Ship selected" with a connected courier, as a queued batch (shipping/bulkShipping.js).
+export * from "./endpoints/shipmentBatches";

@@ -5,9 +5,7 @@ import {
   carrierRegionSet,
   carrierRegionsList,
   carrierRegionsRematch,
-  type CarrierAreaNode,
   type CarrierRegion,
-  type CarrierRegionList,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -17,11 +15,10 @@ import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { Modal } from "@/components/Modal";
-import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { useLevelLabel } from "@/pages/orders/components/useLevelLabel";
 import { placeName } from "./carriers";
+import { CourierPlacePicker } from "./CourierPlacePicker";
 
 const STRINGS = {
   en: {
@@ -45,15 +42,11 @@ const STRINGS = {
     change: "Change",
     choose: "Choose",
     reset: "Use the matched one",
-    save: "Save",
-    cancel: "Cancel",
-    chooseLevel: "Choose {level}",
     saved: "{area} is now {place} on {name}.",
     resetDone: "{area} is back to the matched place.",
     rematch: "Match again",
     rematched: "Matched {matched} of {places} places by name.",
     close: "Close",
-    listFailed: "{name}'s list could not be loaded.",
   },
   ar: {
     title: "مناطق التوصيل",
@@ -76,15 +69,11 @@ const STRINGS = {
     change: "تغيير",
     choose: "اختيار",
     reset: "استخدام الربط التلقائي",
-    save: "حفظ",
-    cancel: "إلغاء",
-    chooseLevel: "اختر {level}",
     saved: "{area} أصبحت {place} مع {name}.",
     resetDone: "عادت {area} إلى الربط التلقائي.",
     rematch: "إعادة الربط",
     rematched: "تم ربط {matched} من {places} مكان بالاسم.",
     close: "إغلاق",
-    listFailed: "تعذّر تحميل قائمة {name}.",
   },
 };
 
@@ -362,13 +351,20 @@ function CarrierAreasDialog({
                       </div>
                     </div>
                     {editing === r.code && list.data && (
-                      <AreaEditor
+                      <CourierPlacePicker
                         carrierCode={carrierCode}
                         name={name}
-                        region={r}
                         levels={list.data.levels}
+                        initialPath={r.mapping?.path.map((p) => p.id) ?? []}
                         onCancel={() => setEditing(null)}
-                        onSaved={async (place) => {
+                        onSave={async (path, place) => {
+                          await carrierRegionSet(
+                            apiClient,
+                            workspaceId,
+                            carrierCode,
+                            r.code,
+                            path,
+                          );
                           toast.success(
                             fmt(t.saved, { area: regionName(r), place, name }),
                           );
@@ -386,148 +382,5 @@ function CarrierAreasDialog({
         </div>
       </DataState>
     </Modal>
-  );
-}
-
-/** The courier's list as one tree: city/district couriers answer cities with `districts`. */
-async function courierTree(
-  workspaceId: string,
-  carrierCode: string,
-  levels: CarrierRegionList["levels"],
-) {
-  const usable = (n: { dropOffAvailable?: boolean }) =>
-    n.dropOffAvailable !== false;
-  if (levels.length === 2 && levels[0] === "city" && levels[1] === "district") {
-    const cities = await apiClient.listCarrierCities(workspaceId, carrierCode);
-    return cities.filter(usable).map<CarrierAreaNode>((c) => ({
-      id: c.id,
-      name: c.name,
-      nameAr: c.nameAr,
-      children: (c.districts ?? [])
-        .filter(usable)
-        .map((d) => ({ id: d.id, name: d.name, nameAr: d.nameAr })),
-    }));
-  }
-  const prune = (nodes: CarrierAreaNode[]): CarrierAreaNode[] =>
-    nodes
-      .filter(usable)
-      .map((n) => ({
-        ...n,
-        children: n.children ? prune(n.children) : undefined,
-      }));
-  return prune(
-    (await apiClient.listCarrierAddressTree(workspaceId, carrierCode)).nodes,
-  );
-}
-
-function AreaEditor({
-  carrierCode,
-  name,
-  region,
-  levels,
-  onCancel,
-  onSaved,
-  onError,
-}: {
-  carrierCode: string;
-  name: string;
-  region: CarrierRegion;
-  levels: string[];
-  onCancel: () => void;
-  onSaved: (place: string) => Promise<void>;
-  onError: (err: unknown) => void;
-}) {
-  const t = useT(STRINGS);
-  const { locale } = useLocale();
-  const levelLabel = useLevelLabel();
-  const workspaceId = useWorkspaceId();
-  const tree = useAsync(
-    () => courierTree(workspaceId, carrierCode, levels),
-    [workspaceId, carrierCode, levels.join(">")],
-  );
-  const [path, setPath] = useState<string[]>(
-    () => region.mapping?.path.map((p) => p.id) ?? [],
-  );
-  const [saving, setSaving] = useState(false);
-
-  // The options of each level: the top list, then the children of what is chosen above.
-  const options: CarrierAreaNode[][] = [];
-  const chosen: CarrierAreaNode[] = [];
-  let nodes: CarrierAreaNode[] | undefined = tree.data ?? undefined;
-  for (let i = 0; i < levels.length && nodes; i += 1) {
-    options.push(nodes);
-    const node: CarrierAreaNode | undefined = nodes.find(
-      (n) => n.id === path[i],
-    );
-    if (!node) break;
-    chosen.push(node);
-    nodes = node.children;
-  }
-  const complete = chosen.length === levels.length;
-
-  async function save() {
-    setSaving(true);
-    try {
-      await carrierRegionSet(
-        apiClient,
-        workspaceId,
-        carrierCode,
-        region.code,
-        chosen.map((n) => n.id),
-      );
-      await onSaved(chosen.map((n) => placeName(n, locale)).join(" › "));
-    } catch (err) {
-      onError(err);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="mt-2 rounded-[0.625rem] border border-line bg-paper p-3">
-      {tree.error ? (
-        <p className="text-sm text-danger">{fmt(t.listFailed, { name })}</p>
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {levels.map((level, i) => (
-            <Select
-              key={level}
-              aria-label={fmt(t.chooseLevel, { level: levelLabel(level) })}
-              value={path[i] ?? ""}
-              disabled={tree.loading || saving || !options[i]}
-              onChange={(e) => setPath([...path.slice(0, i), e.target.value])}
-            >
-              <option value="">
-                {fmt(t.chooseLevel, { level: levelLabel(level) })}
-              </option>
-              {(options[i] ?? []).map((n) => (
-                <option key={n.id} value={n.id}>
-                  {placeName(n, locale)}
-                </option>
-              ))}
-            </Select>
-          ))}
-        </div>
-      )}
-      <div className="mt-3 flex justify-end gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={saving}
-        >
-          {t.cancel}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={save}
-          disabled={!complete || saving}
-        >
-          {t.save}
-        </Button>
-      </div>
-    </div>
   );
 }

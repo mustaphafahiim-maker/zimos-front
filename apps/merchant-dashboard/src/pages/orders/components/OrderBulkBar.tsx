@@ -18,6 +18,7 @@ import { Select } from "@/components/Select";
 import { useOrderLabels } from "../orderLabels";
 import { useOrderErrorMessage } from "../orderErrors";
 import { SelectionDocuments } from "./OrderDocuments";
+import { BulkShipDialog } from "./BulkShipDialog";
 
 const STRINGS = {
   en: {
@@ -123,6 +124,8 @@ export function OrderBulkBar({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OrderBulkResponse | null>(null);
+  // A connected courier ships through a checked, queued batch (BulkShipDialog).
+  const [bulkShip, setBulkShip] = useState(false);
 
   const carriers = useAsync(
     () => apiClient.listCarriers(workspaceId).then((r) => r.carriers.filter((c) => c.connection)),
@@ -147,6 +150,11 @@ export function OrderBulkBar({
     if (!action) return;
     const body = payload();
     if (!body) return;
+    if (action === "ship" && courier) {
+      setAction(null);
+      setBulkShip(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -272,6 +280,18 @@ export function OrderBulkBar({
           </div>
         </form>
       </Modal>
+
+      {bulkShip && courier && (
+        <BulkShipDialog
+          carrierCode={courier}
+          orderIds={selectedIds}
+          onClose={() => setBulkShip(false)}
+          onStarted={() => {
+            setBulkShip(false);
+            onDone();
+          }}
+        />
+      )}
 
       <Modal
         open={result !== null}
