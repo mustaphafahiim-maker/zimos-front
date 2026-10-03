@@ -28,6 +28,7 @@ import { BlockLibrary } from "./BlockLibrary";
 import { LayerList } from "./LayerList";
 import { SectionInspector } from "./SectionInspector";
 import { namedStylesOf } from "./ElementStylePanel";
+import { SavedSectionsLibrary } from "./SavedSections";
 import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
@@ -620,6 +621,14 @@ function WebsiteEditor() {
         />
       }
       bottom={
+        <>
+        <SavedSectionsLibrary
+          onInsert={(section) => {
+            setSections((prev) => insertSection(prev, section, insertIndex ?? prev.length));
+            selectSection(section.id, { scroll: true });
+            setInsertIndex(null);
+          }}
+        />
         <BlockLibrary
           onAdd={addBlock}
           insertPosition={insertIndex === null ? null : insertIndex + 1}
@@ -627,6 +636,7 @@ function WebsiteEditor() {
           onDragStart={setDraggingPreset}
           onDragEnd={() => setDraggingPreset(null)}
         />
+        </>
       }
     />
   );
