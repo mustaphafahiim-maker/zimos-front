@@ -5,7 +5,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { PageHeader } from "@/components/PageHeader";
 import { FraudRulesTab } from "./FraudRulesTab";
 import { FlaggedOrdersTab } from "./FlaggedOrdersTab";
-import { BlocklistTab } from "./BlocklistTab";
+import { BlockedEntriesTab } from "./BlockedEntriesTab";
 
 const TABS = ["rules", "flagged", "blocklist"] as const;
 type FraudTab = (typeof TABS)[number];
@@ -58,7 +58,7 @@ export function FraudPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       <PageHeader title={t.title} description={t.description} />
 
       <Tabs value={tab} onValueChange={selectTab}>
@@ -81,7 +81,7 @@ export function FraudPage() {
           <FlaggedOrdersTab key={workspaceId} />
         </TabsContent>
         <TabsContent value="blocklist" className="pt-4">
-          <BlocklistTab key={workspaceId} />
+          <BlockedEntriesTab key={workspaceId} />
         </TabsContent>
       </Tabs>
     </div>

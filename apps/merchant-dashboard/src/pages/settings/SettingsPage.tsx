@@ -37,6 +37,7 @@ import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { DevelopersSection } from "./DevelopersSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 
 /**
  * A link that names one of the user's stores (?workspace=<id>, as on the way
@@ -63,6 +64,7 @@ export function SettingsPage() {
         description="Your store profile and the people who can manage it."
       />
       <AccountSection />
+      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
