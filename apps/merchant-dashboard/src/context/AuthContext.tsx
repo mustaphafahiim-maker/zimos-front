@@ -5,6 +5,8 @@ import {
   type LoginPayload,
   type RegisterPayload,
   type VerificationChallenge,
+  TwoFactorRequiredError,
+  isTwoFactorChallenge,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 
@@ -62,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       needsPlan,
       async login(payload) {
         const result = await apiClient.login(payload);
+        // Two-step sign-in: the login page catches this and asks for the code.
+        if (isTwoFactorChallenge(result)) throw new TwoFactorRequiredError(result);
         // Sign-up codes on: an account not confirmed yet gets its code screen.
         if ("verificationRequired" in result) return result;
         // The backend hands out tokens to a `pending_verification` account, but

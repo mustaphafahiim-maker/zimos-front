@@ -7,7 +7,8 @@ import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { useLocale } from "@/i18n/LocaleContext";
-import type { VerificationChallenge } from "@store-builder/api-client";
+import { TwoFactorRequiredError, type TwoFactorChallenge, type VerificationChallenge } from "@store-builder/api-client";
+import { TwoFactorStep } from "@/components/TwoFactorStep";
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
 function GoogleIcon() {
@@ -39,6 +40,8 @@ export function LoginPage() {
   // An account that still has to confirm its sign-up code gets the code
   // screen here instead of being signed in.
   const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
+  // An account with two-step sign-in, from a browser that is not remembered.
+  const [twoFactor, setTwoFactor] = useState<TwoFactorChallenge | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
@@ -72,7 +75,9 @@ export function LoginPage() {
       }
       navigate(from, { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (err instanceof TwoFactorRequiredError) {
+        setTwoFactor(err.challenge);
+      } else if (err instanceof ApiError) {
         setError(err.status === 401 ? "Incorrect email or password." : err.message);
         // AuthContext.login() throws this exact code for a pending_verification
         // account — the only login error we offer a "resend link" affordance for.
@@ -102,6 +107,29 @@ export function LoginPage() {
     } finally {
       setResending(false);
     }
+  }
+
+  if (twoFactor) {
+    return (
+      <div className="flex min-h-screen">
+        <BrandPanel />
+        <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+          <div className="w-full max-w-sm">
+            <TwoFactorStep
+              challenge={twoFactor}
+              onBack={() => {
+                setTwoFactor(null);
+                setPassword("");
+              }}
+              onVerified={async () => {
+                await refreshUser();
+                navigate(from, { replace: true });
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (challenge) {

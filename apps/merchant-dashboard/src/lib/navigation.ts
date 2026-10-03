@@ -9,6 +9,7 @@ import {
   CreditCard,
   Gift,
   Globe,
+  History,
   Images,
   LayoutDashboard,
   LayoutGrid,
@@ -66,7 +67,8 @@ export type NavKey =
   | "media"
   | "digital"
   | "storeSettings"
-  | "apps";
+  | "apps"
+  | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
@@ -170,6 +172,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
+      { key: "activity", to: "/activity", icon: History },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -219,6 +222,7 @@ export const NAV_LABELS = {
     attribution: "Sales attribution",
     realtime: "Realtime",
     apps: "Apps",
+    activity: "Activity log",
     settings: "Settings",
     support: "Contact support",
     settlements: "COD settlements",
@@ -252,6 +256,7 @@ export const NAV_LABELS = {
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
     apps: "التطبيقات",
+    activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
     settlements: "تحصيل الشحن",
