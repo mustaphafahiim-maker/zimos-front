@@ -66,3 +66,5 @@ export * from "./endpoints/trackingPixels";
 export * from "./endpoints/automations";
 // Quantity bundles (lane 3).
 export * from "./endpoints/bundles";
+// Offer rules: product order bumps, cross-sell, thank-you upsell, exit popup (lane 3).
+export * from "./endpoints/offers";

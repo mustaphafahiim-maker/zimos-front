@@ -37,6 +37,9 @@ import { CustomerDetailPage } from "@/pages/customers/CustomerDetailPage";
 import { DiscountsPage } from "@/pages/discounts/DiscountsPage";
 import { OffersPage } from "@/pages/offers/OffersPage";
 import { BundlesPage } from "@/pages/offers/BundlesPage";
+import { OrderBumpsPage, UpsellsPage } from "@/pages/offers/OrderBumpsPage";
+import { CrossSellPage } from "@/pages/offers/CrossSellPage";
+import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
 import { PaymentsPage } from "@/pages/payments/PaymentsPage";
 import { WebsitePage } from "@/pages/website/WebsitePage";
@@ -131,6 +134,10 @@ export default function App() {
                       <Route path="/discounts" element={<DiscountsPage />} />
                       <Route path="/offers" element={<OffersPage />} />
                       <Route path="/offers/bundles" element={<BundlesPage />} />
+                      <Route path="/offers/order-bumps" element={<OrderBumpsPage />} />
+                      <Route path="/offers/cross-sell" element={<CrossSellPage />} />
+                      <Route path="/offers/upsells" element={<UpsellsPage />} />
+                      <Route path="/offers/exit-popup" element={<ExitDownsellPage />} />
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
