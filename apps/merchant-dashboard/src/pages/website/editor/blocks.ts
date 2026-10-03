@@ -360,6 +360,8 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text" },
       { key: "submitLabel", label: "Submit button text", kind: "text" },
+      { key: "successMessage", label: "Message after sending", kind: "text" },
+      { key: "tags", label: "Tags added to the contact (comma-separated)", kind: "text" },
     ],
   },
   map: {

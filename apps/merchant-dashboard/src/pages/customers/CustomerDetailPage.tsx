@@ -15,6 +15,7 @@ import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate, formatMoney } from "@/lib/format";
+import { ContactInsights } from "./ContactInsights";
 
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -34,7 +35,7 @@ export function CustomerDetailPage() {
             ? customer.fullName || customer.phoneRaw || customer.phoneNormalized
             : "Customer"
         }
-        back={{ to: "/customers", label: "Customers" }}
+        back={{ to: "/customers", label: "Contacts" }}
         description={
           customer
             ? `${customer.totalOrders} orders · reliability ${customer.reliabilityScore}`
@@ -45,6 +46,7 @@ export function CustomerDetailPage() {
       <DataState loading={detail.loading} error={detail.error} onRetry={() => detail.refresh()}>
         {customer && (
           <div className="space-y-6">
+            <ContactInsights customerId={customer.id} />
             <ContactForm customer={customer} onSaved={reload} />
             <OrderHistorySection customer={customer} />
             <BlacklistSection customer={customer} onChanged={reload} />
