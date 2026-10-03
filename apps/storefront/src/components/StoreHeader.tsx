@@ -58,7 +58,7 @@ const LOGO_NAME_CLASS: Record<LogoSize, string> = {
 
 /** An inline header link, hidden until its breakpoint class adds `…:inline-flex`. */
 const NAV_LINK =
-  "hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
+  "zt-nav-link hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
 
 export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: Locale }) {
   const t = getDictionary(locale);
@@ -91,7 +91,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
       href="/"
       data-store-logo=""
       data-logo-size={size === "md" ? undefined : size}
-      className={`flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85${centred ? " justify-self-center" : ""}`}
+      className={`zt-logo flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85${centred ? " justify-self-center" : ""}`}
     >
       {store.logoUrl ? (
         // Merchant logos are arbitrary remote URLs (no next/image allowlist).
@@ -103,7 +103,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           alt=""
           width={LOGO_IMG_PX[size]}
           height={LOGO_IMG_PX[size]}
-          className={`${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
+          className={`zt-logo-img ${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
         />
       ) : (
         // `.zimos-logo[data-overlay ancestor]` forces the dark-surface
@@ -112,7 +112,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
         <ZimosLogo height={LOGO_MARK_PX[size]} surface="auto" className="shrink-0" />
       )}
       <span
-        className={`truncate font-display ${LOGO_NAME_CLASS[size]} font-bold text-ink transition-colors duration-200 group-data-[overlay]/header:text-white motion-reduce:transition-none`}
+        className={`zt-logo-name truncate font-display ${LOGO_NAME_CLASS[size]} font-bold text-ink transition-colors duration-200 group-data-[overlay]/header:text-white motion-reduce:transition-none`}
       >
         {store.name}
       </span>
@@ -180,10 +180,10 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
         </div>
       ) : (
         <div
-          className={`${container} flex h-16 items-center justify-between gap-3 transition-[height] duration-200 group-data-[scrolled]/header:h-14 motion-reduce:transition-none`}
+          className={`zt-header-bar ${container} flex h-16 items-center justify-between gap-3 transition-[height] duration-200 group-data-[scrolled]/header:h-14 motion-reduce:transition-none`}
         >
           {logo}
-          <nav aria-label={t.common.menu} className="flex items-center gap-2">
+          <nav aria-label={t.common.menu} className="zt-nav flex items-center gap-2">
             {menuLinks}
             {controls}
           </nav>

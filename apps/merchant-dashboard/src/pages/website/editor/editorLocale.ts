@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { PageElementType } from "@store-builder/api-client";
+import { SHOWCASE_LABEL_AR } from "./showcaseBlocks";
 
 /**
  * Language for the shared page-editor pieces — the field inspector, the block
@@ -50,6 +51,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   scroll_story: "قصة مع التمرير",
   marquee: "شريط عبارات متحرك",
   comparison: "جدول مقارنة",
+  ...SHOWCASE_LABEL_AR,
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */

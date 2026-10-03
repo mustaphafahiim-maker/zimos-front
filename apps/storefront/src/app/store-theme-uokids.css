@@ -1,0 +1,223 @@
+/* ---------------------------------------------------------------- uokids *
+ * The Uokids look: white pages, navy ink and one coral-pink accent, a round
+ * friendly face for headings (Baloo Bhaijaan 2) over Tajawal, pill buttons,
+ * soft hairline cards, and a blush footer under a wave. Built with the
+ * showcase sections (store-sections.css), whose `--zs-*` colours it pins to
+ * the exact ones of the store it was drawn from.
+ *
+ * Same contract as the themes in store-themes.css: tokens on the wrapper,
+ * element rules on the `zt-*` hooks, the merchant's accent still wins.
+ * ---------------------------------------------------------------------- */
+.brand-theme[data-store-theme="uokids"] {
+  --color-ink: #235d90;
+  --color-ink-soft: #687985;
+  --color-paper: #ffffff;
+  --color-paper-raised: #ffffff;
+  --color-line: #e6e0d6;
+  --color-line-strong: #8a97a3;
+  --brand-primary-default: #e8415b;
+  --brand-secondary: #177966;
+
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1.125rem;
+  --radius-card: 1.125rem;
+  --zt-btn-radius: 0.75rem;
+  --zt-btn-weight: 700;
+  --zt-btn-tracking: 0;
+  --zt-btn-case: none;
+  --zt-card-radius: 1.125rem;
+  --zt-input-radius: 0.75rem;
+  --zt-chip-radius: 999px;
+  --zt-icon-radius: 999px;
+  --zt-img-radius: 1.125rem;
+  --zt-h-weight: 700;
+  --zt-h-tracking: 0;
+  --zt-h-leading: 1.2;
+  --zt-density: 1;
+  --zt-container: 82.5rem;
+  --zt-divider: 0px;
+  --zt-shadow: rgb(35 93 144 / 0.14);
+}
+
+.dark .brand-theme[data-store-theme="uokids"] {
+  --color-ink: #dbe9f6;
+  --color-ink-soft: #9fb0bf;
+  --color-paper: #0e1a26;
+  --color-paper-raised: #152433;
+  --color-line: #263a4d;
+  --color-line-strong: #5f7b94;
+  --brand-primary-default: #ff6b82;
+  --brand-secondary: #4fc7ae;
+  --zt-shadow: rgb(0 0 0 / 0.5);
+}
+
+body:has(.brand-theme[data-store-theme="uokids"]) { background-color: #ffffff; }
+.dark body:has(.brand-theme[data-store-theme="uokids"]) { background-color: #0e1a26; }
+
+/* The showcase bands, in the store's own measured colours (light mode). */
+html:not(.dark) [data-store-theme="uokids"] .zs {
+  --zs-ink-deep: #1b4a74;
+  --zs-ink-soft: #e4edf5;
+  --zs-body: #45413e;
+  --zs-accent-deep: #d93650;
+  --zs-badge-bg: #fdecef;
+  --zs-badge-fg: #c8253f;
+  --zs-blush: #f7d9e1;
+  --zs-good: #177966;
+  --zs-good-soft: #f1faf7;
+  --zs-well: #f7f9fb;
+  --zs-hairline: rgb(35 93 144 / 0.055);
+  --zs-tone-primary: #fff4f6;
+  --zs-tone-secondary: #f1faf7;
+  --zs-tone-cool: #eff9fc;
+}
+
+[data-store-theme="uokids"] .zt-btn-primary {
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+[data-store-theme="uokids"] .zt-btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+[data-store-theme="uokids"] .zt-card {
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--color-ink) 4.3%, transparent);
+}
+[data-store-theme="uokids"] .zt-product:hover {
+  border-color: color-mix(in srgb, var(--brand-secondary) 48%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+[data-store-theme="uokids"] .zt-brand-bar {
+  display: none;
+}
+
+/* Header: a plain white bar with a hairline shadow. */
+[data-store-theme="uokids"] header[data-zimos-shell="header"]:not([data-overlay]) {
+  border-bottom-color: transparent;
+  background-color: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+}
+
+/* Footer: blush, under a wave. */
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"] {
+  position: relative;
+  margin-top: 78px;
+  border-top: 0;
+  background-color: #f7d9e1;
+}
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"]::before {
+  content: "";
+  position: absolute;
+  inset: -82px 0 auto;
+  height: 84px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'%3E%3Cpath fill='%23F7D9E1' d='M0 72C214 111 420 111 646 91C880 70 1034 14 1212 7C1305 3 1380 12 1440 22V120H0Z'/%3E%3C/svg%3E") center bottom / 100% 100% no-repeat;
+  pointer-events: none;
+}
+[data-store-theme="uokids"] footer[data-zimos-shell="footer"] > div {
+  border-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+.dark [data-store-theme="uokids"] footer[data-zimos-shell="footer"] {
+  background-color: var(--color-paper-raised);
+}
+.dark [data-store-theme="uokids"] footer[data-zimos-shell="footer"]::before {
+  display: none;
+}
+
+/* Masthead layout: the logo alone at the start, the menu centred, two plain
+   icons at the end — search opens from its icon at every width. */
+[data-store-theme="uokids"] .zt-header-bar {
+  height: 110px;
+  max-width: 1320px;
+  padding-inline: 28px;
+}
+[data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
+  height: 84px;
+}
+[data-store-theme="uokids"] .zt-logo-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+[data-store-theme="uokids"] .zt-logo-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 0;
+}
+[data-store-theme="uokids"] header[data-scrolled] .zt-logo-img {
+  width: 80px;
+  height: 80px;
+}
+[data-store-theme="uokids"] .zt-nav {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 4px;
+}
+[data-store-theme="uokids"] .zt-nav > .zt-nav-link:first-child {
+  margin-inline-start: auto;
+}
+[data-store-theme="uokids"] .zt-nav > .zt-nav-link + :not(.zt-nav-link) {
+  margin-inline-start: auto;
+}
+[data-store-theme="uokids"] .zt-nav-link {
+  padding-inline: 17px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+[data-store-theme="uokids"] .zt-nav-link:hover {
+  background: transparent;
+  color: var(--color-primary);
+}
+[data-store-theme="uokids"] .zt-search-inline {
+  display: none;
+}
+[data-store-theme="uokids"] .zt-search-toggle {
+  display: block;
+}
+[data-store-theme="uokids"] header[data-zimos-shell="header"] .zt-icon-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-ink);
+}
+[data-store-theme="uokids"] header[data-zimos-shell="header"] .zt-icon-btn:hover {
+  color: var(--color-primary);
+}
+@media (max-width: 767px) {
+  [data-store-theme="uokids"] .zt-header-bar {
+    height: 62px;
+    padding-inline: 8px;
+  }
+  [data-store-theme="uokids"] .zt-nav {
+    display: contents;
+  }
+  [data-store-theme="uokids"] .zt-menu-toggle {
+    order: -1;
+    flex: 1 0 0;
+  }
+  [data-store-theme="uokids"] .zt-logo {
+    position: relative;
+    inset-inline-start: 24px;
+    height: 62px;
+    flex: 0 0 auto;
+    overflow: hidden;
+  }
+  [data-store-theme="uokids"] .zt-logo-img,
+  [data-store-theme="uokids"] header[data-scrolled] .zt-logo-img {
+    width: 150px;
+    height: 150px;
+    max-width: none;
+  }
+  [data-store-theme="uokids"] .zt-search-toggle {
+    display: flex;
+    flex: 1 0 0;
+    justify-content: flex-end;
+  }
+}

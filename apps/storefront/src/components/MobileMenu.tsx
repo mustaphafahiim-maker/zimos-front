@@ -53,7 +53,7 @@ export function MobileMenu({
   const link = `flex min-h-12 items-center rounded-xl px-3 text-base font-medium text-ink transition-colors hover:bg-primary-soft hover:text-primary ${focusRing}`;
 
   return (
-    <div className={until === "md" ? "md:hidden" : "sm:hidden"}>
+    <div className={`zt-menu-toggle ${until === "md" ? "md:hidden" : "sm:hidden"}`}>
       <button
         type="button"
         onClick={() => setOpen(true)}

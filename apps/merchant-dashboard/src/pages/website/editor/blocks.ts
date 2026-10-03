@@ -74,6 +74,7 @@ import type {
 } from "@store-builder/api-client";
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
+import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
 
 /**
  * The editor's model of the backend page tree (modules/pages/pageTree.js).
@@ -539,6 +540,9 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       },
     ],
   },
+
+  // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
+  ...SHOWCASE_ELEMENT_SPECS,
 };
 
 // ---------------------------------------------------------------------------
@@ -2875,7 +2879,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

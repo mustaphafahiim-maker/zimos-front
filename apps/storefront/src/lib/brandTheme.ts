@@ -76,7 +76,7 @@ export function onColor(color: string): string {
  * font stacks from app/themeFonts.ts. Named for how they look, never for a
  * kind of shop. Must match STORE_THEMES in the dashboard's storeThemes.ts.
  */
-export const STORE_THEMES = ["elegant", "bold", "minimal", "classic", "warm", "glass"] as const;
+export const STORE_THEMES = ["elegant", "bold", "minimal", "classic", "warm", "glass", "uokids"] as const;
 export type StoreThemeKey = (typeof STORE_THEMES)[number];
 
 /** How a preview asks for the original look explicitly (a saved theme would win otherwise). */

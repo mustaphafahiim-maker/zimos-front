@@ -399,6 +399,17 @@ export const PAGE_ELEMENT_TYPES = [
   // Storefront sections (backend pageTree.js accepts these too).
   "marquee",
   "comparison",
+  // Showcase sections — full-width storefront bands (backend showcaseElements.js).
+  "hero_slider",
+  "category_tiles",
+  "trust_strip",
+  "bundle_cards",
+  "need_picker",
+  "product_rail",
+  "video_reels",
+  "product_shelf",
+  "product_cards",
+  "image_banner",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */

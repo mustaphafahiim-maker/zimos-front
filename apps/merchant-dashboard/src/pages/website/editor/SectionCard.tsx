@@ -5,6 +5,7 @@ import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, useEditorLocale } from "./editorLocale";
+import { showcaseSummary } from "./showcaseBlocks";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -99,6 +100,9 @@ function elementSummary(element: PageElement): string {
       const n = Array.isArray(props.rows) ? props.rows.length : 0;
       return truncate([str("title"), `${n} ${n === 1 ? "row" : "rows"}`].filter(Boolean).join(" · "));
     }
+    default:
+      // The showcase sections (showcaseBlocks.ts).
+      return truncate(showcaseSummary(element.type, props) ?? "");
   }
 }
 
