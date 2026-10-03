@@ -88,3 +88,5 @@ export * from "./endpoints/coupons";
 export * from "./endpoints/lostOrders";
 // WhatsApp campaigns to consenting contacts.
 export * from "./endpoints/whatsappCampaigns";
+// Social proof, newsletter sign-up, referral results (lane 3).
+export * from "./endpoints/engagement";

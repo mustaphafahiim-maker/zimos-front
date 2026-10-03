@@ -5,6 +5,7 @@ import { BackToTop } from "@/components/BackToTop";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
 import { CouponFromLink } from "@/components/offers/CouponBits";
+import { NewsletterSignup, SocialProofPopup } from "@/components/offers/Engagement";
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
@@ -212,6 +213,8 @@ export default async function StoreLayout({
             <div className="flex flex-1 flex-col">{children}</div>
             <HideInFunnel>
               <CodeSlot name="above_footer" />
+              {/* The merchant's sign-up form: a band above the footer, or a popup (Offers → Newsletter). */}
+              <NewsletterSignup workspaceId={store.id} />
               <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
               <CodeSlot name="below_footer" />
               {/* The slide-over cart: opened by "add to cart" and the header's
@@ -222,6 +225,8 @@ export default async function StoreLayout({
               <ExitDownsell workspaceId={store.id} />
               {/* Remembers a ?coupon=CODE link so checkout applies it. */}
               <CouponFromLink workspaceId={workspaceId} />
+              {/* Sales notifications from real orders (Offers → Sales notifications). */}
+              <SocialProofPopup workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />

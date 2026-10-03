@@ -17,6 +17,7 @@ import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useOrderLabels } from "../orderLabels";
 import { useOrderErrorMessage } from "../orderErrors";
+import { SelectionDocuments } from "./OrderDocuments";
 
 const STRINGS = {
   en: {
@@ -186,6 +187,7 @@ export function OrderBulkBar({
               </option>
             ))}
           </Select>
+          <SelectionDocuments orderIds={selectedIds} />
           <Button variant="ghost" size="sm" className="ms-auto min-h-11" onClick={onClear}>
             {t.clear}
           </Button>
