@@ -14,7 +14,8 @@ import { api, fake } from "@/test/mocks";
 const { AuthProvider, useAuth } = await vi.importActual<typeof import("@/context/AuthContext")>("@/context/AuthContext");
 
 const user = fake<AuthUser>({ id: "user_1", email: "owner@zimos.test", fullName: "Mona Adel", status: "active" });
-const me = { user, needsPlan: false, confirmed: true, suggestedUsername: null };
+// `account` is what a newer API adds to /auth/me (account settings); harmless before it.
+const me = { user, needsPlan: false, confirmed: true, suggestedUsername: null, account: { hasPassword: true, phoneChange: false } };
 
 function Probe() {
   const auth = useAuth();
