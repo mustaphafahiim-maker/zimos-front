@@ -277,6 +277,11 @@ export interface FunnelOwnSettings {
   faviconUrl: string | null;
   title: string | null;
   description: string | null;
+  /** The funnel's own scripts, on every step (storefront FunnelCode). */
+  headCode?: string | null;
+  bodyCode?: string | null;
+  /** Its shipping group (Shipping → groups); null = each product's own. */
+  shippingProfileId?: string | null;
 }
 
 export async function funnelSettingsGet(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelOwnSettings> {

@@ -30,6 +30,7 @@ import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { useFunnelErrorMessage, type UiStep } from "./funnelAdapter";
+import { FunnelCodeAndShippingFields, FunnelLinkSetting } from "./FunnelSettingsMore";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
 
 /**
@@ -667,12 +668,14 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
     <DataState loading={loaded.loading} error={loaded.error} onRetry={() => void loaded.refresh()}>
       <div className="space-y-4">
         <p className="text-sm text-ink-soft">{t.settingsIntro}</p>
+        <FunnelLinkSetting funnelId={funnelId} />
         <div className="grid gap-3 sm:grid-cols-2">
           {field("title", t.seoTitle, { maxLength: 200 })}
           {field("currency", t.currency, { dir: "ltr", maxLength: 3 })}
           {field("description", t.seoDescription, { maxLength: 320 })}
           {field("faviconUrl", t.favicon, { dir: "ltr", maxLength: 1000 })}
         </div>
+        <FunnelCodeAndShippingFields value={value} onChange={(key, next) => setDraft((prev) => ({ ...prev, [key]: next }))} disabled={busy} />
         <div className="flex justify-end">
           <Button
             type="button"

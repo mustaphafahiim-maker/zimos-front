@@ -13,6 +13,7 @@ import { FunnelProgress } from "@/components/funnel/FunnelProgress";
 import { FUNNEL_ACTIONS_ID, FunnelOrders, FunnelStepActions } from "@/components/funnel/FunnelStep";
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
 import { StepTransition } from "@/components/funnel/StepTransition";
+import { FunnelCode } from "@/components/funnel/FunnelCode";
 import { PageRenderer } from "@/components/page-renderer";
 import { FunnelSessionProvider } from "@/lib/funnelSessionContext";
 import { PageScripts } from "@/components/PageScripts";
@@ -174,6 +175,8 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
+      {/* The funnel's own scripts (funnel settings → code). */}
+      <FunnelCode headCode={data.funnel?.settings?.headCode} bodyCode={data.funnel?.settings?.bodyCode} />
       {!done && <FunnelProgress completed={session.path.length} />}
       <FunnelCurrencyProvider currency={currency}>
         <StepTransition key={stepKey}>

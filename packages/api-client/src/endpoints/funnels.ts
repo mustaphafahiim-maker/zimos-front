@@ -128,6 +128,8 @@ export interface FunnelCreatePayload {
 
 export interface FunnelUpdatePayload {
   name?: string;
+  /** The funnel's link (/f/<subdomain>); 409 FUNNEL_SUBDOMAIN_TAKEN when another funnel has it. */
+  subdomain?: string;
 }
 
 export interface FunnelStepCreatePayload {
