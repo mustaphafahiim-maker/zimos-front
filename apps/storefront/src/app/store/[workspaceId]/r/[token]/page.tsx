@@ -28,7 +28,8 @@ const COPY = {
 
 /**
  * A recovery link: puts the lost order's products back in the cart, hands the
- * form what the shopper had typed, and opens the checkout.
+ * form what the shopper had typed, and opens the checkout — with the
+ * automation's coupon when the link carries one (SPEC §6.4).
  */
 export default function RecoveryPage() {
   const { workspaceId, token } = useParams<{ workspaceId: string; token: string }>();
@@ -51,7 +52,9 @@ export default function RecoveryPage() {
           await addItem(item.variantId, item.offerId ?? undefined, item.quantity).catch(() => {});
         }
         saveRecoveryPrefill(workspaceId, recovery);
-        const coupon = recovery.couponCode ? `?coupon=${encodeURIComponent(recovery.couponCode)}` : "";
+        // The automation's coupon rides on the link (?coupon=); it wins over a code the shopper had typed.
+        const code = new URLSearchParams(window.location.search).get("coupon")?.trim() || recovery.couponCode;
+        const coupon = code ? `?coupon=${encodeURIComponent(code)}` : "";
         router.replace(storeHref(basePath, `/checkout${coupon}`));
       } catch {
         setFailed(true);
