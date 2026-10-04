@@ -43,6 +43,7 @@ import {
   useOrderListPrefs,
   type OrderColumn,
 } from "./components/OrderListFilters";
+import { OrdersHeaderTools } from "./components/OrdersHeaderTools";
 
 const STRINGS = {
   en: {
@@ -268,6 +269,12 @@ export function OrdersListPage() {
         description={t.description}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <OrdersHeaderTools
+              onRefresh={() => {
+                list.reload();
+                pipeline.refresh({ silent: true });
+              }}
+            />
             <OrderListDocuments
               onImported={() => {
                 list.reload();

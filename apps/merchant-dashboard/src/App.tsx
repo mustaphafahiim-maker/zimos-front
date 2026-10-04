@@ -29,6 +29,7 @@ import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
 import { ShipmentBatchPage } from "@/pages/orders/ShipmentBatchPage";
 import { ExportFilePage } from "@/pages/exports/ExportFilePage";
+import { OrderBoardPage } from "@/pages/orders/OrderBoardPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
@@ -138,6 +139,7 @@ export default function App() {
 
                       <Route path="/orders" element={<OrdersListPage />} />
                       <Route path="/orders/new" element={<ManualOrderPage />} />
+                      <Route path="/orders/board" element={<OrderBoardPage />} />
                       <Route path="/orders/shipment-batches/:batchId" element={<ShipmentBatchPage />} />
                       <Route path="/exports/:exportId" element={<ExportFilePage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
