@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, cn } from "@store-builder/ui";
 import type { MerchantInvoice, BillingPaymentProof, WorkspaceBilling } from "@store-builder/api-client";
@@ -24,17 +24,23 @@ type PayText = Record<keyof (typeof PAY_STRINGS)["en"], string>;
  * button (while something is due and a way to pay is offered: a gateway's
  * page or a transfer with its proof), the store's transfers and how they
  * were reviewed, and, back from a gateway, what became of the payment.
+ * `payRequested` (the Plans tab's "Pay now") opens the Pay dialog once it is
+ * known that something is due and can be paid, then `onPayRequestDone`.
  */
 export function InvoicesTab({
   billing,
   returned,
   onReturnDone,
   onPaid,
+  payRequested = false,
+  onPayRequestDone,
 }: {
   billing: WorkspaceBilling | null;
   returned: { paymentId: string; hint: ReturnHint } | null;
   onReturnDone: () => void;
   onPaid: () => void;
+  payRequested?: boolean;
+  onPayRequestDone?: () => void;
 }) {
   const t = useT(SUBSCRIPTION_STRINGS);
   const p = useT(PAY_STRINGS);
@@ -54,6 +60,14 @@ export function InvoicesTab({
   const waiting = allProofs.find((x) => x.status === "pending" && x.purpose === "invoice") ?? null;
   const latestFor = (invoiceId: string) => allProofs.find((x) => x.invoiceId === invoiceId) ?? null;
   const canPay = offered.length > 0 && !waiting;
+  const known = Boolean(billing && invoices.data && methods.data && proofs.data);
+
+  useEffect(() => {
+    if (!payRequested || !known) return;
+    // Nothing due, no method, or a transfer under review: the panel says so instead.
+    if (due && canPay) setPaying(true);
+    onPayRequestDone?.();
+  }, [payRequested, known, due, canPay, onPayRequestDone]);
 
   return (
     <div className="space-y-5">

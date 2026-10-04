@@ -87,6 +87,7 @@ export type ApiErrorCode =
   | "PAYMENT_STARTING" // 409 — a second press while the first checkout is being made
   | "NOTHING_TO_PAY" // 409 — the charge comes to nothing (a full discount)
   | "CHARGE_NOT_PENDING" // 409 — the charge was settled in the meantime
+  | "CHARGE_AMOUNT_CHANGED" // 409, details = { amountDue, currency } — a transfer's proof sent with an expectedAmount the charge no longer comes to
   // store access (workspaces/workspaceAccessService)
   | "SUBSCRIPTION_REQUIRED" // 402 — creating a product or funnel while unpaid past the grace day
   | "STORE_SUSPENDED" // 403 — creating a product or funnel while suspended by the platform

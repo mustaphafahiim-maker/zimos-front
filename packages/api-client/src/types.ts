@@ -3609,10 +3609,19 @@ export interface BillingPaymentMethodList {
   contactSupport: boolean;
 }
 
-/** `POST /workspaces/:id/billing/invoices/open` — the charge to pay now (201 when written). */
+/**
+ * `POST /workspaces/:id/billing/invoices/open` — the charge to pay now and the
+ * ways to pay it, written nowhere: `invoice.id` is the open charge's, or
+ * "next" while none is open (the proof sent for it writes the charge;
+ * `createdAt` is null until then). An API from before wrote the charge here
+ * (201, `created`), always with its id, and sends no `written` or `methods`.
+ */
 export interface OpenBillingInvoiceResult {
-  invoice: MerchantInvoice;
+  invoice: Omit<MerchantInvoice, "createdAt"> & { createdAt: string | null };
   created: boolean;
+  /** Whether `invoice` is a charge already written (absent from an API from before: it always is). */
+  written?: boolean;
+  methods?: BillingPaymentMethod[];
 }
 
 export type BillingPaymentProofStatus = "pending" | "approved" | "rejected";

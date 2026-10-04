@@ -39,6 +39,8 @@ export const PAY_STRINGS = {
     payCurrency: "Online payment is only available for plans priced in Egyptian pounds.",
     payStartFailed: "The payment page couldn't be opened. Try again in a few minutes.",
     payStarting: "A payment is already being opened. Wait a moment and try again.",
+    amountChanged: "The amount due has changed since you opened this window. Check the new amount above before sending.",
+    transferCurrency: "A transfer can only pay plans priced in Egyptian pounds. Contact Zimos support.",
     // The Invoices tab
     payPanelTitle: "Pay",
     payPanelBody: "Amount due: {amount}",
@@ -92,6 +94,8 @@ export const PAY_STRINGS = {
     payCurrency: "الدفع الإلكتروني متاح فقط للخطط المسعّرة بالجنيه المصري.",
     payStartFailed: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد دقائق.",
     payStarting: "يجري فتح دفعة بالفعل. انتظر لحظة ثم حاول مرة أخرى.",
+    amountChanged: "تغيّر المبلغ المستحق منذ فتح هذه النافذة. راجع المبلغ الجديد أعلاه قبل الإرسال.",
+    transferCurrency: "الدفع بالتحويل متاح فقط للخطط المسعّرة بالجنيه المصري. تواصل مع دعم Zimos.",
     payPanelTitle: "الدفع",
     payPanelBody: "المبلغ المستحق: {amount}",
     payButton: "ادفع",

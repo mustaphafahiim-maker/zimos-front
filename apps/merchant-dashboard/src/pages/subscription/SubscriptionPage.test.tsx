@@ -94,6 +94,75 @@ describe("SubscriptionPage", () => {
     await waitFor(() => expect(api.changeSubscriptionPlan).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "yearly" }));
   });
 
+  it("leads from the current plan to paying while its charge is due", async () => {
+    setup({ bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
+    const basic = await screen.findByRole("article", { name: "Basic" });
+    expect(within(basic).getByText(/Amount due: .*300/)).toBeInTheDocument();
+    expect(within(basic).getByRole("button", { name: "Pay now" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
+    // Only the current plan's card.
+    expect(within(screen.getByRole("article", { name: "Pro" })).queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+  });
+
+  it("offers no Pay now on the plans while a paid period runs, nor when nothing is due", async () => {
+    setup({
+      plans: view({ subscription: { ...view().subscription, status: "active" }, planChange: "support" }),
+      bill: billing({
+        subscription: { ...billing().subscription, status: "active" },
+        nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" },
+      }),
+    });
+    await screen.findByRole("article", { name: "Basic" });
+    expect(screen.queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+  });
+
+  it("leads straight to paying after a priced plan is chosen", async () => {
+    const proCurrent = view({
+      plans: [card(), card({ id: "plan_pro", name: "Pro", isCurrent: true, monthlyPrice: 80000, yearlyPrice: 800000, prices: { monthly: price(80000), yearly: price(800000) } })],
+    });
+    api.changeSubscriptionPlan.mockResolvedValue({ changed: true, plans: proCurrent });
+    // Before: Basic, its charge due. Nothing on Pro's card until the summary is Pro's.
+    const { user } = setup({ bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
+    const choose = within(await screen.findByRole("article", { name: "Pro" })).getByRole("button", { name: "Choose this plan" });
+    // What the page reads again after the change.
+    api.getSubscriptionPlans.mockResolvedValue(proCurrent);
+    api.getWorkspaceBilling.mockResolvedValue(
+      billing({
+        subscription: { ...billing().subscription, plan: { id: "plan_pro", name: "Pro", currency: "EGP", monthlyPrice: 80000, yearlyPrice: 800000 } },
+        nextCharge: { grossAmount: 80000, discountAmount: 0, amount: 80000, currency: "EGP" },
+      })
+    );
+    await user.click(choose);
+
+    const pro = await screen.findByRole("article", { name: "Pro" });
+    expect(await within(pro).findByRole("button", { name: "Pay now" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
+    expect(within(pro).getByText(/Amount due: .*800/)).toBeInTheDocument();
+    expect(within(screen.getByRole("article", { name: "Basic" })).queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+  });
+
+  it("goes from Pay now to the Invoices tab with the Pay dialog open", async () => {
+    const instapay = { code: "instapay", kind: "manual" as const, label: { ar: "إنستا باي", en: "InstaPay" }, accountNumber: "zimos@instapay", note: { ar: null, en: null } };
+    api.getPaymentMethods.mockResolvedValue({ methods: [instapay], currency: "EGP", contactSupport: false });
+    api.listBillingPaymentProofs.mockResolvedValue({ proofs: [] });
+    api.openBillingInvoice.mockResolvedValue({
+      invoice: { id: "next", status: "pending", periodStart: "2030-01-01", periodEnd: "2030-02-01", grossAmount: 30000, discountAmount: 0, amountDue: 30000, amountPaid: null, currency: "EGP", paidAt: null, paymentSource: null, createdAt: null },
+      created: false,
+      written: false,
+    });
+    const { user } = setup({ bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
+    await user.click(within(await screen.findByRole("article", { name: "Basic" })).getByRole("button", { name: "Pay now" }));
+
+    expect(await screen.findByRole("tab", { name: "Invoices", selected: true })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", { name: "Pay your invoice" });
+    expect(await within(dialog).findByText("zimos@instapay")).toBeInTheDocument();
+    await waitFor(() => expect(currentPath()).toBe("/subscription?tab=invoices"));
+  });
+
+  it("opens the Invoices tab from ?tab=invoices, and the summary links there", async () => {
+    setup({ route: "/subscription?tab=invoices", bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
+    expect(await screen.findByRole("tab", { name: "Invoices", selected: true })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pay and see invoices" })).toHaveAttribute("href", "/subscription?tab=invoices");
+  });
+
   it("offers the free trial on every plan of a draft store whose account hasn't had one", async () => {
     api.startTrial.mockResolvedValue(fake({ started: true }));
     const { user } = setup({
@@ -173,6 +242,12 @@ describe("SubscriptionPage", () => {
     expect(await screen.findByRole("tab", { name: "الخطط", selected: true })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "الفواتير" })).toBeInTheDocument();
     expect(await screen.findByText("خطتك الحالية")).toBeInTheDocument();
+  });
+
+  it("says Pay now in Arabic", async () => {
+    setup({ locale: "ar", bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
+    expect(await screen.findByRole("button", { name: "ادفع الآن" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
+    expect(screen.getByRole("link", { name: "ادفع واعرض الفواتير" })).toBeInTheDocument();
   });
 });
 

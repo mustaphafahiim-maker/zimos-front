@@ -20,8 +20,12 @@ import { useToast } from "@/components/Toast";
 import { CycleSwitch, PlanSummary } from "@/components/plans/PlanPicker";
 import { BillingCycleChoice } from "./billingParts";
 import { BILLING_STRINGS, codeDiscountLabel } from "./billingText";
+import { PAY_STRINGS } from "./payStrings";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
 import { WALLET_STRINGS } from "./walletStrings";
+
+/** The Invoices tab with its Pay dialog open (SubscriptionPage). */
+const PAY_NOW_LINK = "/subscription?tab=invoices&pay=1";
 
 /** What a card offers, from the subscription's state (see the backend's merchantPlansService). */
 type CardAction = "trial" | "choose" | "support" | "current" | "none";
@@ -40,7 +44,9 @@ const priceFor = (prices: { monthly: PlanPrice; yearly: PlanPrice }, cycle: Bill
  * for the chosen cycle (with what annual saves), a code field on each, and
  * the one action the subscription allows — a free trial from a draft, the
  * plan itself while nothing is paid, or support once paid. Every price is
- * the server's.
+ * the server's. The current plan's card leads to paying ("Pay now") while
+ * its next charge is due and no paid period runs — so right after a priced
+ * plan is chosen, once the summary is read again.
  */
 export function PlansTab({
   view,
@@ -61,6 +67,12 @@ export function PlansTab({
   const [cycle, setCycle] = useState<BillingCycle>(view.subscription.billingCycle);
   const code = view.referralCode;
   const paidPlan = billing?.subscription.plan;
+  // The next charge, for the current plan's card — not while a paid period
+  // runs (that renews from the Invoices tab). Read again after a plan change.
+  const due =
+    billing && billing.subscription.status !== "active" && billing.nextCharge
+      ? { ...billing.nextCharge, planId: billing.subscription.plan?.id ?? null }
+      : null;
 
   return (
     <div className="space-y-5">
@@ -92,6 +104,7 @@ export function PlansTab({
             plan={plan}
             view={view}
             cycle={view.planChange === "support" ? view.subscription.billingCycle : cycle}
+            due={due}
             onPlansChange={onPlansChange}
             onChanged={onChanged}
           />
@@ -106,16 +119,20 @@ function PlanCard({
   plan,
   view,
   cycle,
+  due,
   onPlansChange,
   onChanged,
 }: {
   plan: SubscriptionPlan;
   view: SubscriptionPlans;
   cycle: BillingCycle;
+  /** The store's next charge while it is due, and the plan it is for (see PlansTab). */
+  due: (NonNullable<WorkspaceBilling["nextCharge"]> & { planId: string | null }) | null;
   onPlansChange: (next: SubscriptionPlans) => void;
   onChanged: () => void;
 }) {
   const t = useT(SUBSCRIPTION_STRINGS);
+  const p = useT(PAY_STRINGS);
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -126,6 +143,11 @@ function PlanCard({
   const price = priceFor(plan.prices, cycle);
   const yearlySaving = plan.prices.monthly.net * 12 - plan.prices.yearly.net;
   const titleId = useId();
+  // Right after a change the summary may still hold the old plan's charge: shown once it is this plan's.
+  const payAmount =
+    plan.isCurrent && action === "current" && due && due.planId === plan.id && due.amount > 0
+      ? formatMinorMoney(due.amount, due.currency)
+      : null;
 
   async function act() {
     setBusy(true);
@@ -204,6 +226,14 @@ function PlanCard({
           <Button asChild variant="outline" className="min-h-11 w-full">
             <Link to="/support">{t.contactSupport}</Link>
           </Button>
+        )}
+        {payAmount && (
+          <>
+            <p className="text-sm text-ink">{fmt(p.payPanelBody, { amount: payAmount })}</p>
+            <Button asChild className="min-h-11 w-full">
+              <Link to={PAY_NOW_LINK}>{t.payNow}</Link>
+            </Button>
+          </>
         )}
       </div>
     </article>
