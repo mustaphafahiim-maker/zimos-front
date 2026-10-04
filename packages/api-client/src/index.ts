@@ -202,3 +202,5 @@ export * from "./endpoints/codSwitch";
 export * from "./endpoints/marketingUnsubscribe";
 // Two-step sign-in recovery: backup codes, the platform reset (auth/twoFactorRecovery.js).
 export * from "./endpoints/twoFactorRecovery";
+// The opt-in step's sign-up (funnels/funnelOptIn.js).
+export * from "./endpoints/funnelOptIn";

@@ -63,6 +63,7 @@ import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { useFunnelCurrency } from "./FunnelCurrency";
+import { FunnelOptIn } from "./FunnelOptIn";
 import { readPick } from "@/lib/pagePicks";
 import { storeHref } from "@/lib/storeHref";
 import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
@@ -87,7 +88,8 @@ import { variantImageOf } from "@/lib/variantImage";
  * `accepted_offer` or `declined_offer` — so each step type gets its own
  * island here:
  *
- *   landing / sales / opt_in / custom → one "Continue" (clicked_through)
+ *   landing / sales / custom          → one "Continue" (clicked_through)
+ *   opt_in                            → the sign-up form, then clicked_through (FunnelOptIn)
  *   checkout                          → the COD order form, then completed_checkout
  *   upsell / downsell                 → "Yes, add it" / "No thanks"
  *   thank_you, or a finished session  → the confirmation, no advance
@@ -332,26 +334,34 @@ export function FunnelStepActions({
     return <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={sessionOrderId} />;
   }
 
-  // landing / sales / opt_in / custom. There is no public opt-in capture
-  // endpoint, so opt_in moves on the same way.
+  // The visitor signs up before the opt-in step moves on (FunnelOptIn; backend funnels/funnelOptIn.js).
+  if (step.stepType === "opt_in") {
+    return (
+      <FunnelOptIn
+        anchorId={FUNNEL_ACTIONS_ID}
+        workspaceId={workspaceId}
+        funnelId={funnelId}
+        sessionId={sessionId}
+        stepName={step.name}
+        pending={!!flow.pending}
+        advanceError={flow.error}
+        onSignedUp={() => void flow.advance("clicked_through")}
+      />
+    );
+  }
+
+  // landing / sales / custom.
   return (
     <section id={FUNNEL_ACTIONS_ID} className={`${island} flex flex-col items-center gap-3 pb-16 pt-6`}>
       <PageLinkActions
         pending={!!flow.pending}
-        onClick={(sourceElementId) => {
-          if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
-          void flow.advance("clicked_through", undefined, sourceElementId);
-        }}
+        onClick={(sourceElementId) => void flow.advance("clicked_through", undefined, sourceElementId)}
       />
       <div className="w-full max-w-md space-y-3">
         <ErrorBox message={flow.error} />
         <button
           type="button"
-          onClick={() => {
-            // An opt-in step moving on is the ad platforms' Lead.
-            if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
-            void flow.advance("clicked_through");
-          }}
+          onClick={() => void flow.advance("clicked_through")}
           disabled={!!flow.pending}
           aria-busy={!!flow.pending}
           className={btnPrimaryLg}
