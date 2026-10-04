@@ -17,6 +17,7 @@ import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { SegmentConditionFields, type SegmentConditions } from "./SegmentConditionFields";
+import { ProductFunnelConditionFields } from "./ProductFunnelConditionFields";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
@@ -194,6 +195,7 @@ export function RuleEditorDialog({
   const [firstOrder, setFirstOrder] = useState(c.isFirstOrder === true ? "first" : c.isFirstOrder === false ? "returning" : "");
   const [risk, setRisk] = useState<string[]>(c.riskLevel ?? []);
   const [segment, setSegment] = useState<SegmentConditions>({ segmentId: c.segmentId ?? null, excludeSegmentId: c.excludeSegmentId ?? null });
+  const [scope, setScope] = useState({ productIds: c.productIds ?? [], funnelIds: c.funnelIds ?? [] });
   const [coupon, setCoupon] = useState(c.couponCode ?? "");
   const [delayDays, setDelayDays] = useState(String(c.delayDays ?? 3));
   const [stopOnChange, setStopOnChange] = useState(c.stopOnStatusChange !== false);
@@ -251,9 +253,9 @@ export function RuleEditorDialog({
       couponCode: coupon.trim() || null,
       ...segment,
       stopOnStatusChange: stopOnChange,
-      // Kept as they are: the editor has no picker for these yet.
-      ...(c.productIds?.length ? { productIds: c.productIds } : {}),
-      ...(c.funnelIds?.length ? { funnelIds: c.funnelIds } : {}),
+      // Picked in ProductFunnelConditionFields; nothing chosen = any.
+      productIds: scope.productIds,
+      funnelIds: scope.funnelIds,
       ...(trigger === "review.request" ? { delayDays: Math.min(60, Math.max(1, Number(delayDays) || 3)) } : {}),
     };
     const cleaned = steps.map((s) =>
@@ -435,6 +437,7 @@ export function RuleEditorDialog({
             <TextField label={t.governorates} hint={t.listHint} value={governorates} onChange={(e) => setGovernorates(e.target.value)} />
             <TextField label={t.tags} hint={t.listHint} value={tags} onChange={(e) => setTags(e.target.value)} />
             <SegmentConditionFields value={segment} onChange={setSegment} />
+            <ProductFunnelConditionFields productIds={scope.productIds} funnelIds={scope.funnelIds} onChange={setScope} />
             <TextField label={t.coupon} dir="ltr" value={coupon} maxLength={100} onChange={(e) => setCoupon(e.target.value)} />
             <fieldset>
               <legend className="mb-1.5 text-sm font-medium text-ink">{t.risk}</legend>
