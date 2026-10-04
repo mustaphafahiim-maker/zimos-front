@@ -112,10 +112,13 @@ export function ProductLanding({
   // --- variant selection -------------------------------------------------
   const groups = useMemo(() => optionGroups(product.variants), [product.variants]);
   const initialVariant = product.variants.find((v) => v.inStock) ?? product.variants[0];
-  const [selection, setSelection] = useState<Record<string, string>>(() => ({
-    ...(initialVariant?.optionValues ?? {}),
-  }));
-  const variant = groups.length > 0 ? findVariant(product.variants, selection) : initialVariant;
+  // page settings → auto_select_variant: off, the shopper picks every option before buying.
+  const [selection, setSelection] = useState<Record<string, string>>(() =>
+    page.pageSettings.auto_select_variant === false && groups.length > 0 ? {} : { ...(initialVariant?.optionValues ?? {}) }
+  );
+  // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
+  const choosing = page.pageSettings.auto_select_variant === false && groups.some((g) => !selection[g.name]);
+  const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
   const available = !!variant?.inStock;
 
   function isValueAvailable(name: string, value: string) {
@@ -366,10 +369,12 @@ export function ProductLanding({
             </span>
           )}
         </div>
-        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : "text-danger"}`}>
+        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}`}>
           {available && <CheckIcon size={16} />}
           {available
             ? t.common.inStock
+            : choosing
+              ? t.shop.chooseOptions
             : product.variants.length === 0
               ? t.common.unavailable
               : t.common.outOfStock}

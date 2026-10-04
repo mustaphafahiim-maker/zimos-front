@@ -27,6 +27,9 @@ import { orderBumpOf } from "@/lib/commerce";
 import { firstImage, productImages } from "@/lib/product";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
+import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { PageRenderer } from "@/components/page-renderer";
+import { RelatedProducts } from "@/components/product/RelatedProducts";
 
 export const revalidate = 60;
 
@@ -90,6 +93,30 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (!store || !product) notFound();
 
   const locale = await getStoreLocale(store);
+
+  // The product's own landing page (page settings → landing page), built in the
+  // page builder with this product as the page's product; the standard page
+  // shows when it is not in the published website.
+  const landingPath = (product as { landingPagePath?: string | null }).landingPagePath;
+  if (landingPath) {
+    const client = await createServerStorefrontApiClient();
+    const landing = await client.getStorefrontPage(workspaceId, landingPath).catch(() => null);
+    if (landing && landing.kind === "page" && (landing.data.page.tree?.sections?.length ?? 0) > 0) {
+      return (
+        <main className="flex-1">
+          <PixelScope productIds={[product.id]} />
+          <PageRenderer
+            tree={{ ...landing.data.page.tree, productId: product.id } as typeof landing.data.page.tree}
+            workspaceId={workspaceId}
+            currency={store.currency}
+            locale={locale}
+            siteStyles={landing.data.site?.globalStyles}
+          />
+        </main>
+      );
+    }
+  }
+
   const t = getDictionary(locale);
   // The merchant's bump — not on its own product's page.
   const bump = orderBumpOf(store.orderBump, [product.id]);
@@ -203,6 +230,9 @@ export default async function ProductPage({ params }: { params: Params }) {
               ))}
           </aside>
         </div>
+
+        {/* Similar products, unless the page settings hide them. */}
+        {!ps.hide_related_products && <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />}
       </div>
     </main>
   );

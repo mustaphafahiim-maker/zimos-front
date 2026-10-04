@@ -33,6 +33,8 @@ export interface ProductOptionDisplay {
 }
 
 export interface ProductPageSettings {
+  /** The first in-stock variant starts chosen; false: the shopper picks every option first. */
+  auto_select_variant: boolean;
   /** "Buy now" goes straight to the checkout instead of the cart. */
   skip_cart: boolean;
   buy_now_text: string | null;
@@ -52,6 +54,7 @@ export interface ProductPageSettings {
 }
 
 export const PRODUCT_PAGE_SETTINGS_DEFAULTS: ProductPageSettings = {
+  auto_select_variant: true,
   skip_cart: false,
   buy_now_text: null,
   sticky_buy_button: true,
