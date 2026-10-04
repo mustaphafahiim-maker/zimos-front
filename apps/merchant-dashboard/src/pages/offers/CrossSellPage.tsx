@@ -23,6 +23,7 @@ import { Select } from "@/components/Select";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { ProductChecklist, RuleCard, useStoreProducts } from "./OfferRuleParts";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * Cross-sell rules (SPEC §10.2): "with these products, suggest those". With no
@@ -107,6 +108,8 @@ function names(ids: string[], products: Product[], t: Strings): string {
 }
 
 export function CrossSellPage() {
+  // Each offer's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -168,6 +171,7 @@ export function CrossSellPage() {
                     {rule.triggerProductIds.length > 0 ? fmt(t.when, { names: names(rule.triggerProductIds, all, t) }) : t.whenAny}
                   </p>
                   <p className="text-sm text-ink">{fmt(t.suggests, { names: names(rule.offerProductIds, all, t) })}</p>
+                  <OfferNumbers stat={stats?.crossSell[id]} />
                 </RuleCard>
               );
             })}

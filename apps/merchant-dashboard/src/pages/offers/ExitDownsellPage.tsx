@@ -11,6 +11,7 @@ import { DataState } from "@/components/DataState";
 import { Select } from "@/components/Select";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * The exit popup (SPEC §10.4): a message and a real coupon shown once to a
@@ -73,6 +74,8 @@ const STRINGS = {
 } satisfies Messages;
 
 export function ExitDownsellPage() {
+  // Each offer's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -107,6 +110,9 @@ export function ExitDownsellPage() {
   return (
     <div className="max-w-2xl">
       <PageHeader title={t.title} description={t.description} back={{ to: "/offers", label: t.back }} />
+      <div className="mb-3">
+        <OfferNumbers stat={stats?.exitDownsell} />
+      </div>
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
         {draft && (
           <Card className="space-y-4 p-5">

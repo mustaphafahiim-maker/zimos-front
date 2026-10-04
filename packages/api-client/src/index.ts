@@ -182,3 +182,5 @@ export * from "./endpoints/funnelPayments";
 export * from "./endpoints/orderSession";
 // The shipping card's "Save as draft" (orders/shipmentDraft.js).
 export * from "./endpoints/shipmentDraft";
+// Each offer's impressions, acceptances and added revenue (offers/offerStats.js).
+export * from "./endpoints/offerStats";

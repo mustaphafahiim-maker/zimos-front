@@ -23,6 +23,7 @@ import { Modal } from "@/components/Modal";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { BundleEditorDialog } from "./BundleEditorDialog";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * Quantity bundles (SPEC §10.1): the list of the store's bundles, each with
@@ -113,6 +114,8 @@ function tierText(tier: BundleTierDto, t: Strings): string {
 }
 
 export function BundlesPage() {
+  // Each offer's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -160,6 +163,7 @@ export function BundlesPage() {
                     <p className="mt-0.5 text-sm text-ink-soft">
                       {bundle.productCount > 0 ? fmt(t.products, { count: bundle.productCount }) : t.noProducts}
                     </p>
+                    <OfferNumbers stat={stats?.bundles[bundle.id]} />
                   </div>
                   <StatusBadge
                     value={bundle.isActive ? "active" : "inactive"}

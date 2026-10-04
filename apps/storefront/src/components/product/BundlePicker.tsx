@@ -5,6 +5,7 @@ import { storefrontShippingQuoteFor, type ApiClient, type StorefrontBundle, type
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { useStoreCountry } from "@/lib/storeCountry";
+import { useOfferView } from "@/lib/offerViews";
 import { variantLabel } from "@/lib/product";
 import { getVisitorId } from "@/lib/visitorId";
 import type { OrderLine } from "@/lib/placeOrder";
@@ -87,6 +88,8 @@ export function useBundleSelection({
   // Pieces the shopper set by hand, by position; the rest follow the main variant.
   const [overrides, setOverrides] = useState<Record<number, string>>({});
   const tier = bundle?.tiers.find((t) => t.id === tierId) ?? bundle?.tiers[0];
+  // The bundle on the page counts as seen (lib/offerViews).
+  useOfferView(workspaceId, "bundle", bundle?.id);
 
   const unitVariantIds = useMemo(() => {
     if (!tier || !mainVariant) return [];

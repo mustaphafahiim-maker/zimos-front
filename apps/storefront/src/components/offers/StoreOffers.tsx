@@ -27,6 +27,7 @@ import { ProductCard } from "../ProductCard";
 import { btnPrimary, btnSecondary, card } from "../ui";
 import { OfferVariantPicker, useOfferProduct } from "./OfferVariantPicker";
 import { OfferTimer, useOfferCountdown } from "./OfferTimer";
+import { trackOfferView, useOfferView } from "@/lib/offerViews";
 
 /*
  * The shopper's side of the offer rules (backend modules/offers): a
@@ -119,6 +120,11 @@ export function useProductBumps(client: ApiClient, workspaceId: string, productI
     };
   }, [client, workspaceId, productId, version]);
 
+  // Each bump on screen counts as seen (lib/offerViews).
+  useEffect(() => {
+    for (const row of rows) if (row.offerId !== exclude) trackOfferView(workspaceId, "bump", row.id);
+  }, [rows, workspaceId, exclude]);
+
   const bumps = useMemo(
     () =>
       rows
@@ -170,6 +176,8 @@ export function CrossSellStrip({
   const text = TEXT[locale] ?? TEXT.ar;
   const key = [...productIds].sort().join(",");
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  // The rule that filled the strip (null: bought together), for its numbers (lib/offerViews).
+  const [ruleId, setRuleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!key) {
@@ -179,7 +187,10 @@ export function CrossSellStrip({
     let cancelled = false;
     storefrontCrossSell(createStorefrontApiClient(), workspaceId, key.split(","), placement)
       .then((result) => {
-        if (!cancelled) setProducts(result.products);
+        if (!cancelled) {
+          setProducts(result.products);
+          setRuleId((result as { ruleId?: string | null }).ruleId ?? null);
+        }
       })
       .catch(() => {
         if (!cancelled) setProducts([]);
@@ -189,6 +200,8 @@ export function CrossSellStrip({
     };
   }, [workspaceId, key, placement]);
 
+  useOfferView(workspaceId, "cross_sell", products.length > 0 ? ruleId : null);
+
   if (products.length === 0) return null;
   return (
     <section aria-labelledby={`cross-sell-${placement}`} className="mt-10">
@@ -196,7 +209,7 @@ export function CrossSellStrip({
         {text.crossSell}
       </h2>
       {/* A quick add from here counts as a cross-sell add (lib/addSource.ts). */}
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4" onClickCapture={() => markAddSource("cross_sell")}>
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4" onClickCapture={() => markAddSource("cross_sell", ruleId)}>
         {products.map((product) => (
           <ProductCard key={product.id} product={product} currency={store?.currency ?? "EGP"} locale={locale} from="cross_sell" />
         ))}
@@ -234,6 +247,7 @@ export function ThankYouUpsell({
   const [chosenId, setChosenId] = useState<string | null>(null);
   // The offer's real countdown from the order (offers/offerCountdown.js).
   const countdown = useOfferCountdown(offer?.expiresAt);
+  useOfferView(workspaceId, "upsell", offer?.ruleId);
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -390,6 +404,7 @@ export function ExitDownsell({ workspaceId }: { workspaceId: string }) {
       } catch {
         return;
       }
+      trackOfferView(workspaceId, "exit_downsell", "popup");
       setOpen(true);
     };
     if (config.trigger === "delay") {

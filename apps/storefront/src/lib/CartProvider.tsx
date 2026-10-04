@@ -15,7 +15,7 @@ import { getVisitorId } from "@/lib/visitorId";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { track } from "@/lib/track";
 import { contentIdOf } from "@/lib/contentId";
-import { takeAddSource } from "./addSource";
+import { takeAddSource, takenAddSourceId } from "./addSource";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -174,6 +174,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           currency: next.currency,
           numItems: quantity,
           source: takeAddSource(),
+          sourceId: takenAddSourceId(),
         });
       } catch {
         /* tracking never breaks the cart */
