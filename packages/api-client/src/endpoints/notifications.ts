@@ -23,7 +23,8 @@ export type MerchantNotificationType =
   | "announcement"
   | "automation";
 
-export type MerchantNotificationChannel = "inApp" | "email" | "push";
+/** whatsapp: from the platform's number to the teammate's verified phone (off until turned on). */
+export type MerchantNotificationChannel = "inApp" | "email" | "push" | "whatsapp";
 
 export interface MerchantNotificationDto {
   id: string;
@@ -57,6 +58,8 @@ export interface MerchantNotificationTypePreference {
   email: boolean;
   /** Push to the person's devices (notifications/push). */
   push: boolean;
+  /** WhatsApp to the person's verified phone; false until turned on. */
+  whatsapp: boolean;
 }
 
 export interface MerchantNotificationPreferences {
