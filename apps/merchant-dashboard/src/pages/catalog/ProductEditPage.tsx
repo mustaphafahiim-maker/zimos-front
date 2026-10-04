@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useCatalogLabels } from "./catalogLabels";
 import { ProductDetailsForm } from "./components/ProductDetailsForm";
 import { ProductImagesSection } from "./components/ProductImagesSection";
+import { ProductVideoSection, isVideoMedia } from "./components/ProductVideoSection";
 import { VariantsSection } from "./components/VariantsSection";
 import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
@@ -101,9 +102,11 @@ export function ProductEditPage() {
             <ProductImagesSection
               mode="edit"
               productId={data.id}
-              media={data.media ?? []}
+              media={(data.media ?? []).filter((m) => !isVideoMedia(m))}
+              keep={(data.media ?? []).filter(isVideoMedia)}
               onChanged={reload}
             />
+            <ProductVideoSection productId={data.id} media={data.media ?? []} onChanged={reload} />
             <VariantsSection
               productId={data.id}
               variants={data.variants ?? []}

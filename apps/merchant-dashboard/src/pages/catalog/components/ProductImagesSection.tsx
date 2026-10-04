@@ -67,6 +67,8 @@ type Props =
       mode: "edit";
       productId: string;
       media: ProductMedia[];
+      /** Media this section doesn't show (the product's video), saved back alongside the pictures. */
+      keep?: ProductMedia[];
       onChanged: () => void;
       error?: undefined;
       onUploadingChange?: undefined;
@@ -182,7 +184,7 @@ export function ProductImagesSection(props: Props) {
     if (props.mode !== "edit") return;
     setSaving(true);
     try {
-      await apiClient.updateProduct(workspaceId, props.productId, { media: editItems });
+      await apiClient.updateProduct(workspaceId, props.productId, { media: [...editItems, ...(props.keep ?? [])] });
       toast.success(t.savedToast);
       props.onChanged();
     } catch (err) {

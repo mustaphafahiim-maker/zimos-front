@@ -18,6 +18,7 @@ import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
+import { ProductVideos } from "@/components/product/ProductVideos";
 import { ProductTabs, type ProductTab } from "@/components/product/ProductTabs";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
@@ -201,6 +202,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           <div className="md:sticky md:top-24 md:self-start">
             <CodeSlot name="above_gallery" />
             <ProductGallery images={productImages(product)} name={product.name} />
+            <ProductVideos product={product} label={product.name} />
             <CodeSlot name="below_gallery" />
           </div>
           <ProductLanding
