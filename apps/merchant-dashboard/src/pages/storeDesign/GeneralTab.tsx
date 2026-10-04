@@ -8,6 +8,7 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { StoreAppSection } from "./StoreAppSection";
 import { DataState } from "@/components/DataState";
 import { Section } from "@/components/Section";
 import { Field, TextField } from "@/components/Field";
@@ -222,6 +223,8 @@ export function GeneralTab() {
           onSave={() => void editor.save()}
           onReset={editor.reset}
         />
+
+        <StoreAppSection />
       </div>
     </DataState>
   );

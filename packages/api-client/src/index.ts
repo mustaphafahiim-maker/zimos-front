@@ -154,3 +154,5 @@ export * from "./endpoints/lostOrdersBulk";
 export * from "./endpoints/adminSupportView";
 // The couriers' areas map in the platform console (platformAdmin/carrierMapRoutes.js).
 export * from "./endpoints/adminCarrierAreas";
+// The store as an app for shoppers (storefront/storeApp.js).
+export * from "./endpoints/storeApp";

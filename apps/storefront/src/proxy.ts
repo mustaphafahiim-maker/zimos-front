@@ -59,11 +59,11 @@ function isPassThrough(pathname: string): boolean {
  *     checks — left alone so development and deploys keep working.
  */
 /** Metadata files every store answers for itself, from its own settings. */
-const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml"]);
+const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"]);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // On a store's own host these two are the store's (app/store/[workspaceId]/…/route.ts).
+  // On a store's own host these are the store's (app/store/[workspaceId]/…/route.ts).
   if (STORE_FILES.has(pathname)) {
     const fileHost = request.headers.get("host");
     const storeSlug = storeSlugFromHost(fileHost) ?? (await resolveCustomHost(fileHost))?.slug;

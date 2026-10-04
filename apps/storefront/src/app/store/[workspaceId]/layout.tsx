@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { StoreAppInstall } from "@/components/StoreAppInstall";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
 import { CouponFromLink } from "@/components/offers/CouponBits";
@@ -23,6 +24,7 @@ import {
   storefrontDesignMeta,
   storefrontCustomCode,
   storefrontGeneralMeta,
+  storefrontStoreApp,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -231,6 +233,8 @@ export default async function StoreLayout({
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
             <BackToTop label={t.common.backToTop} />
+            {/* The store as an app for shoppers (Settings → Store app). */}
+            <StoreAppInstall app={storefrontStoreApp(store)} locale={locale} />
             {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
             <ThemeChrome store={store} />
           </div>
