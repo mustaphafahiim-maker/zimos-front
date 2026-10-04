@@ -13,20 +13,22 @@
 :root {
   color-scheme: light;
 
-  --color-ink: #0b1220;
-  --color-ink-soft: #445066;
-  --color-paper: #f5f7fb;
+  --color-ink: #081f5c;
+  --color-ink-soft: #56648c;
+  --color-paper: #f6f9ff;
   --color-paper-raised: #ffffff;
-  --color-line: #dce3ee;
+  --color-line: #e3e8f2;
   /* Border for interactive controls (inputs, selects, textareas, checkboxes).
      WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
      --color-line is a decorative hairline (~1.3:1) and fails that, so controls
      use this darker step while cards/dividers keep the softer line. Same hue
      ramp, so the palette identity is unchanged. */
   --color-line-strong: #8a8e95;
-  --color-primary: #2563eb;
-  --color-primary-dark: #1e3a8a;
-  --color-primary-soft: #e7eefc;
+  --color-primary: #165dff;
+  /* Small accents only: never text on white. */
+  --color-cyan: #12c8da;
+  --color-primary-dark: #081f5c;
+  --color-primary-soft: #eaf0ff;
   --color-accent: #d9a441;
   /* Badge text on accent-soft (Pricing, order-lifecycle code chip) — deep
      enough to hold 4.5:1 there. Same value as the apps' accent-dark. */
