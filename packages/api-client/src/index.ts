@@ -136,3 +136,5 @@ export * from "./endpoints/phoneVerification";
 export * from "./endpoints/twoFactorWhatsapp";
 // Account settings: timezone, contact-form email, legal details (workspaces/accountSettings.js).
 export * from "./endpoints/accountSettings";
+// The signed-in person's name and picture (auth/profileRoutes.js).
+export * from "./endpoints/profile";

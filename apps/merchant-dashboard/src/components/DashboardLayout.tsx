@@ -10,6 +10,7 @@ import {
   findNavItem,
   isNavItemVisible,
 } from "@/lib/navigation";
+import { profileAvatarOf } from "@store-builder/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -185,9 +186,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="flex items-center gap-3 border-t border-white/10 px-4 py-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </div>
+        {profileAvatarOf(user) ? (
+          <img src={profileAvatarOf(user) ?? undefined} alt="" className="size-9 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+            {(userLabel || "?").charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-white">{userLabel}</p>
           {user?.fullName && user.email && (

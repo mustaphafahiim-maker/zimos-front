@@ -11,6 +11,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { UsernameField } from "@/components/UsernameField";
 import { useToast } from "@/components/Toast";
 import { PhoneVerification } from "./PhoneVerification";
+import { ProfileEditor } from "./ProfileEditor";
 
 /** How often a username may be changed (the backend's CHANGE_INTERVAL_DAYS). */
 const CHANGE_INTERVAL_DAYS = 30;
@@ -101,12 +102,9 @@ export function AccountSection() {
     <section className="rounded-[var(--radius-card)] border border-line p-5">
       <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+      <ProfileEditor />
 
       <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-ink-soft">{t.name}</dt>
-          <dd className="mt-0.5 font-medium text-ink">{user.fullName}</dd>
-        </div>
         <div>
           <dt className="text-ink-soft">{t.email}</dt>
           <dd className="mt-0.5 break-all font-medium text-ink">
