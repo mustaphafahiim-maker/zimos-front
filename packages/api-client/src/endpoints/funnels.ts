@@ -42,7 +42,7 @@ export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
 /** Step types that must reference an active offer before publishing. */
 export const FUNNEL_OFFER_STEP_TYPES: readonly FunnelStepTypeDto[] = ["upsell", "downsell"];
 
-export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer";
+export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer" | "clicked_through";
 
 export type FunnelEdgeConditionDto = ({ type: FunnelEdgeConditionType } & Record<string, unknown>) | null;
 
