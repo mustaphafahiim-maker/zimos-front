@@ -263,11 +263,11 @@ export function FunnelStepActions({
   // screen. Set during render so the view_content / begin_checkout effects
   // below already carry it; cleared when the shopper leaves the funnel. Both
   // merge into the context StoreAnalytics (store layout) owns.
-  if (typeof window !== "undefined") setTrackingContext({ workspaceId, funnelId });
+  if (typeof window !== "undefined") setTrackingContext({ workspaceId, funnelId, stepKey: step.key });
   useEffect(() => {
-    setTrackingContext({ workspaceId, funnelId });
-    return () => setTrackingContext({ funnelId: undefined });
-  }, [workspaceId, funnelId]);
+    setTrackingContext({ workspaceId, funnelId, stepKey: step.key });
+    return () => setTrackingContext({ funnelId: undefined, stepKey: undefined });
+  }, [workspaceId, funnelId, step.key]);
 
   useTrackOnce(() => {
     if (step.stepType === "checkout" || step.stepType === "thank_you") return;

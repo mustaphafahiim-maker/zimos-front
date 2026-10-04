@@ -87,6 +87,8 @@ export interface TrackingContext {
   workspaceId: string;
   websiteId?: string;
   funnelId?: string;
+  /** The funnel step on screen: carried as metadata.stepKey, for the funnel's page performance. */
+  stepKey?: string;
   /** Free-form label carried on every event (Umami `data-tag`). */
   tag?: string;
 }
@@ -331,6 +333,7 @@ export function sendEvent(workspaceId: string, event: AnalyticsEvent) {
     if (full.tag === undefined && ctx?.tag) full.tag = ctx.tag;
     if (full.websiteId === undefined && ctx?.websiteId) full.websiteId = ctx.websiteId;
     if (full.funnelId === undefined && ctx?.funnelId) full.funnelId = ctx.funnelId;
+    if (ctx?.stepKey && full.funnelId === ctx.funnelId) full.metadata = { ...(full.metadata ?? {}), stepKey: ctx.stepKey };
     for (const key of Object.keys(full) as Array<keyof AnalyticsEvent>) {
       if (full[key] === undefined || full[key] === "") delete full[key];
     }
