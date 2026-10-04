@@ -223,12 +223,12 @@ export default async function StoreLayout({
               <CartDrawer />
               {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
               <ExitDownsell workspaceId={store.id} />
-              {/* Remembers a ?coupon=CODE link so checkout applies it. */}
-              <CouponFromLink workspaceId={workspaceId} />
               {/* Sales notifications from real orders (Offers → Sales notifications). */}
               <SocialProofPopup workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
+            {/* Remembers a ?coupon=CODE link so a checkout applies it — the store's or a funnel's. */}
+            <CouponFromLink workspaceId={workspaceId} />
             <BackToTop label={t.common.backToTop} />
             {/* The store as an app for shoppers (Settings → Store app). */}
             <StoreAppInstall app={storefrontStoreApp(store)} locale={locale} />

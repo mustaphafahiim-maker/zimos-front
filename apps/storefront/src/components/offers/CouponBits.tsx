@@ -90,7 +90,9 @@ export function useCouponPreview(
   client: ApiClient,
   workspaceId: string,
   code: string,
-  lines: { variantId: string; offerId?: string; quantity: number }[]
+  lines: { variantId: string; offerId?: string; quantity: number }[],
+  /** In a funnel's checkout: its funnel-limited codes apply. */
+  funnelId?: string
 ): StorefrontCouponPreview | null {
   const items = lines.filter((l) => l.quantity > 0).map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity }));
   const key = code && items.length > 0 ? JSON.stringify([code, items]) : "";
@@ -102,7 +104,7 @@ export function useCouponPreview(
     const timer = setTimeout(() => {
       const [couponCode, couponItems] = JSON.parse(key) as [string, typeof items];
       // A product A/B test prices the lines for this visitor (lib/productTest).
-      storefrontCouponPreview(client, workspaceId, couponCode, couponItems, { visitorId: getVisitorId(workspaceId) })
+      storefrontCouponPreview(client, workspaceId, couponCode, couponItems, { visitorId: getVisitorId(workspaceId), funnelId })
         .then((preview) => {
           if (!cancelled) setState({ key, preview });
         })
@@ -114,7 +116,7 @@ export function useCouponPreview(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [key, client, workspaceId]);
+  }, [key, client, workspaceId, funnelId]);
 
   return key && state && state.key === key ? state.preview : null;
 }

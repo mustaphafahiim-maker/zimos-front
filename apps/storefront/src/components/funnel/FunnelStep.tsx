@@ -52,6 +52,7 @@ import {
 import {
   EMPTY_ORDER_FORM,
   FIELD_ORDER,
+  formOptionsOf,
   toCheckoutPayload,
   validateOrderForm,
   type OrderFormErrors,
@@ -69,6 +70,7 @@ import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useIsClient } from "@/lib/useIsClient";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 
 /**
  * What the shopper *does* on a running funnel's step, drawn under the page the
@@ -452,6 +454,17 @@ export function FunnelCheckout({
     source: "funnel",
   });
 
+  // A discount code: typed here, or from a ?coupon= link (stored by the store layout). Previewed by
+  // the server for these lines in this funnel — a funnel-limited code applies — and sent only when it applies.
+  const allowCodes = formOptionsOf(fields).allow_discount_codes;
+  const linkCoupon = useStoredCoupon(workspaceId);
+  const [codeInput, setCodeInput] = useState("");
+  const [typedCode, setTypedCode] = useState("");
+  const [codeRemoved, setCodeRemoved] = useState(false);
+  const appliedCode = allowCodes && !codeRemoved ? typedCode || linkCoupon : "";
+  const coupon = useCouponPreview(client, workspaceId, appliedCode, autosaveLines, funnelId);
+  const couponOff = coupon?.valid ? coupon.amount : 0;
+
   useTrackOnce(() => {
     if (!product) return;
     track("InitiateCheckout", { contentIds: [product.id], contentName: product.name, valueMinor: unit, currency, numItems: 1 });
@@ -496,7 +509,7 @@ export function FunnelCheckout({
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true }),
+      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       funnelId,
       // The server adds the step's bump to this order from its offer.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -681,6 +694,64 @@ export function FunnelCheckout({
           />
         )}
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+
+        {allowCodes && !placed && (
+          <div className="mt-5 border-t border-line pt-4">
+            <label htmlFor={`${FORM_PREFIX}-discount`} className="mb-1.5 block text-sm font-medium text-ink">
+              {t.checkout.discountCode}
+            </label>
+            {appliedCode ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
+                <dl className="min-w-0 flex-1 text-sm" aria-live="polite">
+                  {coupon ? (
+                    <DiscountRows extras={{ automaticDiscount: null, minimumOrder: null, bundleDiscountAmount: 0 }} coupon={coupon} currency={currency} />
+                  ) : (
+                    <p className="text-xs text-primary">{t.checkout.discountPending(appliedCode)}</p>
+                  )}
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypedCode("");
+                    setCodeRemoved(true);
+                    clearStoredCoupon(workspaceId);
+                  }}
+                  className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
+                >
+                  {t.checkout.removeCode}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  id={`${FORM_PREFIX}-discount`}
+                  type="text"
+                  autoComplete="off"
+                  dir="ltr"
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  className={`${input} uppercase`}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!codeInput.trim()) return;
+                    setTypedCode(codeInput.trim());
+                    setCodeRemoved(false);
+                  }}
+                  className={btnSecondary}
+                >
+                  {t.checkout.apply}
+                </button>
+              </div>
+            )}
+            {couponOff > 0 && variant && (
+              <p className="mt-2 text-sm font-semibold text-ink">
+                {t.checkout.subtotal}: {money(unit + (bumpOn && bump ? bump.priceAmount : 0) - couponOff, currency)}
+              </p>
+            )}
+          </div>
+        )}
 
         {bump && !placed && (
           <div className="mt-5 space-y-3">
