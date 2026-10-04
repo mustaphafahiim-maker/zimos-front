@@ -16,6 +16,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { SegmentConditionFields, type SegmentConditions } from "./SegmentConditionFields";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
@@ -191,6 +192,7 @@ export function RuleEditorDialog({
   const [tags, setTags] = useState((c.tags ?? []).join("، "));
   const [firstOrder, setFirstOrder] = useState(c.isFirstOrder === true ? "first" : c.isFirstOrder === false ? "returning" : "");
   const [risk, setRisk] = useState<string[]>(c.riskLevel ?? []);
+  const [segment, setSegment] = useState<SegmentConditions>({ segmentId: c.segmentId ?? null, excludeSegmentId: c.excludeSegmentId ?? null });
   const [coupon, setCoupon] = useState(c.couponCode ?? "");
   const [delayDays, setDelayDays] = useState(String(c.delayDays ?? 3));
   const [stopOnChange, setStopOnChange] = useState(c.stopOnStatusChange !== false);
@@ -246,6 +248,7 @@ export function RuleEditorDialog({
       isFirstOrder: firstOrder === "first" ? true : firstOrder === "returning" ? false : null,
       riskLevel: risk as AutomationFlowConditions["riskLevel"],
       couponCode: coupon.trim() || null,
+      ...segment,
       stopOnStatusChange: stopOnChange,
       // Kept as they are: the editor has no picker for these yet.
       ...(c.productIds?.length ? { productIds: c.productIds } : {}),
@@ -430,6 +433,7 @@ export function RuleEditorDialog({
             </Field>
             <TextField label={t.governorates} hint={t.listHint} value={governorates} onChange={(e) => setGovernorates(e.target.value)} />
             <TextField label={t.tags} hint={t.listHint} value={tags} onChange={(e) => setTags(e.target.value)} />
+            <SegmentConditionFields value={segment} onChange={setSegment} />
             <TextField label={t.coupon} dir="ltr" value={coupon} maxLength={100} onChange={(e) => setCoupon(e.target.value)} />
             <fieldset>
               <legend className="mb-1.5 text-sm font-medium text-ink">{t.risk}</legend>

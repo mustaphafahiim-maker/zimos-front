@@ -54,6 +54,10 @@ export interface AutomationFlowConditions {
   delayDays?: number;
   /** The value of `{{coupon_code}}` in this rule's messages. */
   couponCode?: string | null;
+  /** Only contacts in this segment, checked when the rule starts (any trigger with a contact). */
+  segmentId?: string | null;
+  /** Never contacts in this segment. */
+  excludeSegmentId?: string | null;
 }
 
 export interface AutomationFlowRule {
