@@ -200,3 +200,5 @@ export * from "./endpoints/digitalMultipart";
 export * from "./endpoints/codSwitch";
 // Unsubscribing from marketing emails (notifications/marketingUnsubscribe.js).
 export * from "./endpoints/marketingUnsubscribe";
+// Two-step sign-in recovery: backup codes, the platform reset (auth/twoFactorRecovery.js).
+export * from "./endpoints/twoFactorRecovery";
