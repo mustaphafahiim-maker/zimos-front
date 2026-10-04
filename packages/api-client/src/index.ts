@@ -180,3 +180,5 @@ export * from "./endpoints/productTests";
 export * from "./endpoints/funnelPayments";
 // The order page's session details, customer history and last action (orders/orderSessionDetails.js).
 export * from "./endpoints/orderSession";
+// The shipping card's "Save as draft" (orders/shipmentDraft.js).
+export * from "./endpoints/shipmentDraft";
