@@ -70,6 +70,7 @@ import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useIsClient } from "@/lib/useIsClient";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { contentIdOf, lineContentId } from "@/lib/contentId";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 
 /**
@@ -467,7 +468,7 @@ export function FunnelCheckout({
 
   useTrackOnce(() => {
     if (!product) return;
-    track("InitiateCheckout", { contentIds: [product.id], contentName: product.name, valueMinor: unit, currency, numItems: 1 });
+    track("InitiateCheckout", { contentIds: [contentIdOf(variant) ?? product.id], contentName: product.name, valueMinor: unit, currency, numItems: 1 });
   });
 
   function onFieldChange(field: OrderFormField, value: string) {
@@ -575,7 +576,7 @@ export function FunnelCheckout({
     trackPurchaseOnce(order.id, {
       valueMinor: parseMoney(order.totalAmount),
       currency: order.currency,
-      contentIds: bumpOn && bump ? [product.id, bump.productId] : [product.id],
+      contentIds: (order.items ?? []).map((i) => lineContentId(i)).filter((id): id is string => !!id),
       contentName: product.name,
       numItems: bumpOn && bump ? 2 : 1,
     });

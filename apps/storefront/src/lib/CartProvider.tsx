@@ -14,6 +14,7 @@ import { ApiError, parseMoney, type Cart, type CustomizationInput } from "@store
 import { getVisitorId } from "@/lib/visitorId";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
 import { takeAddSource } from "./addSource";
 
 /**
@@ -168,7 +169,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const line = next.items.find((l) => l.variantId === variantId && (l.offerId ?? undefined) === offerId);
         const unit = line ? parseMoney(line.unitPriceSnapshot) : 0;
         track("AddToCart", {
-          contentIds: [variantId],
+          contentIds: [contentIdOf(line?.variant) ?? variantId],
           valueMinor: Math.round(unit * quantity),
           currency: next.currency,
           numItems: quantity,

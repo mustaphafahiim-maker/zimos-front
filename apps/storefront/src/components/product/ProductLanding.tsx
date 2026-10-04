@@ -71,6 +71,8 @@ import { CashIcon, CheckIcon } from "../Icons";
 import { customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
 import { readPick, usePick } from "@/lib/pagePicks";
 import { useProductTest } from "@/lib/productTest";
+import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
@@ -240,6 +242,39 @@ export function ProductLanding({
     productBumpsAmount +
     shipping.amount -
     discountOff(shipping.extras, coupon);
+
+  // The product's view and the start of its order form, for the store's pixels and analytics
+  // (SPEC §13.2), once each per page view; ids as the product feed gives them (lib/contentId).
+  const viewTracked = useRef<string | null>(null);
+  useEffect(() => {
+    if (viewTracked.current === product.id) return;
+    // A tick later, and marked sent only once it is (an effect can run twice before it sticks).
+    const timer = window.setTimeout(() => {
+      viewTracked.current = product.id;
+      track("ViewContent", {
+        contentIds: [contentIdOf(variant ?? initialVariant) ?? product.id],
+        contentName: product.name,
+        valueMinor: unit,
+        currency: store?.currency,
+      });
+    });
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+  const checkoutTracked = useRef(false);
+  function onFormStart() {
+    if (checkoutTracked.current) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", {
+      contentIds: [mainLine, ...bundleExtraLines]
+        .filter((l): l is OrderLine => !!l)
+        .map((l) => contentIdOf(product.variants.find((v) => v.id === l.variantId)) ?? l.variantId),
+      contentName: product.name,
+      valueMinor: pricing.total,
+      currency: store?.currency,
+      numItems: [mainLine, ...bundleExtraLines].reduce((sum, l) => sum + (l?.quantity ?? 0), 0),
+    });
+  }
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -568,7 +603,7 @@ export function ProductLanding({
         </h2>
         <p className="mt-1 text-sm text-ink-soft">{t.form.subtitle}</p>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
+        <form onSubmit={handleSubmit} onFocusCapture={onFormStart} noValidate className="mt-5 space-y-5">
           <OrderFormFields
             idPrefix={FORM_PREFIX}
             values={values}

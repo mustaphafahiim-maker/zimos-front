@@ -41,6 +41,7 @@ import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
 import { useCatalog } from "@/lib/useCatalog";
 import { CrossSellStrip, ProductBumpCards } from "@/components/offers/StoreOffers";
 import { useCartBumps } from "@/components/offers/CartBumps";
@@ -122,7 +123,7 @@ export default function CheckoutPage() {
     if (checkoutTracked.current || !cart || cart.items.length === 0) return;
     checkoutTracked.current = true;
     track("InitiateCheckout", {
-      contentIds: cart.items.map((line) => line.variantId),
+      contentIds: cart.items.map((line) => contentIdOf(line.variant) ?? line.variantId),
       valueMinor: cart.subtotal,
       currency: cart.currency,
       numItems: cart.items.reduce((sum, line) => sum + line.quantity, 0),

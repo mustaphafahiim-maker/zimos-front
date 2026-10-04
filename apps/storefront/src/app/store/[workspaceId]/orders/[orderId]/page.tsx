@@ -59,7 +59,7 @@ function Confirmation() {
     trackPurchaseOnce(snapshot.id, {
       valueMinor: snapshot.totalAmount,
       currency: snapshot.currency,
-      contentIds: snapshot.productIds,
+      contentIds: snapshot.contentIds ?? snapshot.productIds,
       numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
     });
   }, [snapshot]);

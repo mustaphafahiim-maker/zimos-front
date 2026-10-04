@@ -1,3 +1,4 @@
+import { lineContentId } from "./contentId";
 import {
   parseMoney,
   type FunnelRuntimeMergedOrder,
@@ -206,6 +207,8 @@ export interface OrderSnapshot {
   totalAmount: number;
   items: { name: string; options: string; quantity: number; lineTotal: number }[];
   productIds: string[];
+  /** The pixels' ids for the lines (lib/contentId): the feed's item ids. */
+  contentIds?: string[];
 }
 
 export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
@@ -227,6 +230,7 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
       lineTotal: parseMoney(item.lineTotalAmount),
     })),
     productIds: (order.items ?? []).map((i) => i.productId).filter((id): id is string => !!id),
+    contentIds: (order.items ?? []).map((i) => lineContentId(i)).filter((id): id is string => !!id),
   };
 }
 
@@ -253,6 +257,7 @@ export function mergeIntoOrderSnapshot(workspaceId: string, merged: FunnelRuntim
       lineTotal: parseMoney(item.lineTotalAmount),
     })),
     productIds: merged.items.map((i) => i.productId).filter((id): id is string => !!id),
+    contentIds: merged.items.map((i) => lineContentId(i as { skuSnapshot?: string | null; variantId?: string | null })).filter((id): id is string => !!id),
   });
 }
 
