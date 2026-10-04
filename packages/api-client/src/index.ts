@@ -194,3 +194,5 @@ export * from "./endpoints/shipmentDraft";
 export * from "./endpoints/offerStats";
 // A funnel's generic pages — contact, about, policies — off the map (funnels/genericPages.js).
 export * from "./endpoints/funnelGenericPages";
+// Large digital files, uploaded in parts straight to storage (digital/multipartUploads.js).
+export * from "./endpoints/digitalMultipart";
