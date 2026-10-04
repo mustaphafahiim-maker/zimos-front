@@ -20,7 +20,7 @@ const STRINGS = {
   en: {
     title: "WhatsApp bot",
     description:
-      "Answers your customers on WhatsApp from your products, prices, stock, policies and their own orders. It never gives discounts, and it hands the chat to your team when it can't help, when a customer asks for a person, or is upset.",
+      "Answers your customers on WhatsApp from your products, prices, stock, policies and their own orders. It can take a cash-on-delivery order in the chat, confirming every detail first (tagged whatsapp-bot). It never gives discounts, and it hands the chat to your team when it can't help, when a customer asks for a person, or is upset.",
     back: "Inbox",
     enabled: "Let the bot answer customers",
     hours: "When it answers",
@@ -62,7 +62,7 @@ const STRINGS = {
   ar: {
     title: "بوت واتساب",
     description:
-      "بيرد على عملائك على واتساب من منتجاتك وأسعارك والمخزون وسياساتك وطلباتهم. مش بيدّي خصومات، وبيحوّل المحادثة لفريقك لما مايعرفش يساعد أو العميل يطلب حد أو يكون متضايق.",
+      "بيرد على عملائك على واتساب من منتجاتك وأسعارك والمخزون وسياساتك وطلباتهم. وبياخد طلب دفع عند الاستلام في الشات بعد ما يأكد كل التفاصيل (عليه وسم whatsapp-bot). مش بيدّي خصومات، وبيحوّل المحادثة لفريقك لما مايعرفش يساعد أو العميل يطلب حد أو يكون متضايق.",
     back: "صندوق الرسائل",
     enabled: "خلّي البوت يرد على العملاء",
     hours: "بيرد إمتى",
