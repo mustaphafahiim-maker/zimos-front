@@ -167,7 +167,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                           {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
                         </div>
                       )}
-                      <CustomizationList customizations={item.customizations} className="mt-2" />
+                      <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, apiErrorCode, apiErrorDetails, type CustomField, type CustomizationInput } from "@store-builder/api-client";
+import { ApiError, apiErrorCode, apiErrorDetails, type CustomField, type CustomizationInput, customFieldPrice } from "@store-builder/api-client";
 import { compressImageIfNeeded } from "@store-builder/image-tools";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
@@ -174,7 +174,7 @@ export function useCustomFieldAnswers(workspaceId: string, productId: string, fi
 }
 
 export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
-  const { t, locale } = useStore();
+  const { t, locale, money } = useStore();
   if (state.fields.length === 0) return null;
 
   const problemText = (field: CustomField, problem: FieldProblem | undefined) => {
@@ -197,6 +197,9 @@ export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
         const heading = (
           <>
             {label}
+            {customFieldPrice(field) > 0 && (
+              <span className="ms-1 text-xs font-semibold text-primary">{t.custom.adds(money(customFieldPrice(field)))}</span>
+            )}
             {field.required ? (
               <span className="text-danger" aria-hidden>
                 {" "}

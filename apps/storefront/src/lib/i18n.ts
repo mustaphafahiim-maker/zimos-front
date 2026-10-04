@@ -144,6 +144,8 @@ const en = {
   },
   custom: {
     counter: (n: number, max: number) => `${n}/${max}`,
+    adds: (amount: string) => `+${amount}`,
+    extras: "Personalisation",
     required: "This field is required.",
     tooLong: (max: number) => `Keep it to ${max} characters or fewer.`,
     choosePhoto: "Choose a photo",
@@ -674,6 +676,8 @@ const ar: Dictionary = {
   },
   custom: {
     counter: (n: number, max: number) => `${arNum(n)}/${arNum(max)}`,
+    adds: (amount: string) => `+${amount}`,
+    extras: "إضافات التخصيص",
     required: "الخانة دي مطلوبة.",
     tooLong: (max: number) => `اكتب ${arNum(max)} حرف بالكتير.`,
     choosePhoto: "اختار صورة",

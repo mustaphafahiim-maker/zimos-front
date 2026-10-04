@@ -162,3 +162,5 @@ export * from "./endpoints/orderPush";
 export * from "./endpoints/merchantReferrals";
 // The customer service bot on WhatsApp (whatsapp/bot/botService.js).
 export * from "./endpoints/waBot";
+// What a product's custom fields add to its price (catalog/customFieldPricing.js).
+export * from "./endpoints/customFieldPrice";

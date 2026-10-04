@@ -59,7 +59,7 @@ import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
-import { storefrontProductBundle } from "@store-builder/api-client";
+import { customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
@@ -141,14 +141,13 @@ export function ProductLanding({
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
   const tier = tiers.find((x) => x.id === tierId);
+  // The product's custom fields: answered here, sent with the order line.
+  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
   const unit = variantUnitPrice(product, variant);
   const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
-
-  // The product's custom fields: answered here, sent with the order line.
-  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
 
   const defaultOffer = defaultOfferOf(product);
   // The bundle's pieces beyond the first line (another variant per piece).
@@ -194,8 +193,11 @@ export function ProductLanding({
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
   const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
+  // Priced fields the shopper filled in, on every unit of the line they ride on (as the server charges them).
+  const fieldsExtra = customFieldsDelta(product.customFields, custom.toInput()) * (mainLine?.quantity ?? 0);
   const total =
     pricing.total +
+    fieldsExtra +
     (bumpOn && bump ? bump.priceAmount : 0) +
     productBumpsAmount +
     shipping.amount -
@@ -535,6 +537,12 @@ export function ProductLanding({
               </dt>
               <dd className="shrink-0 text-ink">{money(pricing.full)}</dd>
             </div>
+            {fieldsExtra > 0 && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{t.custom.extras}</dt>
+                <dd className="shrink-0 text-ink">{money(fieldsExtra)}</dd>
+              </div>
+            )}
             {pricing.saving > 0 && (
               <div className="flex justify-between gap-3 text-success">
                 <dt>{t.checkout.bundleSaving}</dt>
