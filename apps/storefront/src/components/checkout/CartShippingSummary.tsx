@@ -7,6 +7,7 @@ import { GOVERNORATES } from "@/lib/egypt";
 import { useShipTo } from "@/lib/shipTo";
 import { useStore } from "@/lib/StoreContext";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { input } from "@/components/ui";
 import { FreeShippingHint, ShippingFee } from "./ShippingFee";
 
@@ -33,10 +34,12 @@ export function CartShippingSummary({
   const [client] = useState(() => createStorefrontApiClient());
   const [shipTo, setShipTo] = useShipTo(workspaceId);
   const selectId = useId();
+  const country = useStoreCountry();
   const shipping = useShippingQuote({
     client,
     workspaceId,
     governorate: shipTo,
+    country,
     lines: cart.items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity })),
     enabled,
   });

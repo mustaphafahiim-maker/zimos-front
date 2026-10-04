@@ -26,7 +26,6 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { orderBumpOf } from "@/lib/commerce";
 import {
-  EMPTY_ORDER_FORM,
   FIELD_ORDER,
   formOptionsOf,
   toCheckoutPayload,
@@ -51,6 +50,7 @@ import { useShippingChoice } from "@/lib/shippingChoice";
 import { ShippingOptionPicker } from "@/components/ShippingOptionPicker";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { PolicyLinks } from "@/components/PolicyLinks";
 import { CodeSlot } from "@/components/CustomCode";
@@ -71,7 +71,9 @@ export default function CheckoutPage() {
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
 
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
   // Arriving from a recovery link (/r/:token): what the shopper had typed comes back, once.
   useEffect(() => {
     const prefill = takeRecoveryPrefill(workspaceId);
@@ -147,7 +149,7 @@ export default function CheckoutPage() {
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
-  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines }));
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
   const shipping = shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);

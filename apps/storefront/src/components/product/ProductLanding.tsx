@@ -19,7 +19,6 @@ import { ShippingOptionPicker } from "../ShippingOptionPicker";
 import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
-  EMPTY_ORDER_FORM,
   formOptionsOf,
   FIELD_ORDER,
   quickFormFields,
@@ -73,6 +72,7 @@ import { readPick, usePick } from "@/lib/pagePicks";
 import { useProductTest } from "@/lib/productTest";
 import { track } from "@/lib/track";
 import { contentIdOf } from "@/lib/contentId";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
@@ -199,7 +199,9 @@ export function ProductLanding({
     : null;
 
   // --- form ----------------------------------------------------------------
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -227,7 +229,7 @@ export function ProductLanding({
   for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
-  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines }));
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
   const shipping = shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.

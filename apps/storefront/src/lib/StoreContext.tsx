@@ -39,6 +39,8 @@ export interface StoreInfo {
   legal?: LegalPolicyKey[];
   /** The checkout's order bump (GET /store/:ws `orderBump`); null when none can be offered. */
   orderBump: StorefrontOrderBump | null;
+  /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
+  country?: string | null;
 }
 
 export interface StoreContextValue {

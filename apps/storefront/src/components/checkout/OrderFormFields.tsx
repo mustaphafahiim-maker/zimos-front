@@ -16,6 +16,7 @@ import {
   type OrderFormValues,
 } from "@/lib/orderForm";
 import { useStore } from "@/lib/StoreContext";
+import { countryName } from "@/lib/storeCountry";
 import { input, label as labelClass } from "../ui";
 
 export function fieldId(prefix: string, field: OrderFormField) {
@@ -225,6 +226,8 @@ export function OrderFormFields({
                 onChange={(e) => set(e.target.value)}
                 className={`${input} cursor-pointer appearance-none pe-10`}
               >
+                {/* A store country the list does not carry (lib/storeCountry) is offered too. */}
+                {value && !FORM_COUNTRIES.some((c) => c.code === value) && <option value={value}>{countryName(value, locale)}</option>}
                 {FORM_COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c[locale]}

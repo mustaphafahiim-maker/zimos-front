@@ -50,7 +50,6 @@ import {
   usePlacedOrder,
 } from "@/lib/funnelSession";
 import {
-  EMPTY_ORDER_FORM,
   FIELD_ORDER,
   formOptionsOf,
   toCheckoutPayload,
@@ -71,6 +70,7 @@ import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useIsClient } from "@/lib/useIsClient";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { contentIdOf, lineContentId } from "@/lib/contentId";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 import { PolicyLinks } from "@/components/PolicyLinks";
 
@@ -407,7 +407,9 @@ export function FunnelCheckout({
   // session already holds belongs to an earlier pass (a funnel that loops back).
   const placed = saved && saved.stepKey === stepKey && saved.id !== sessionOrderId ? saved : null;
 
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

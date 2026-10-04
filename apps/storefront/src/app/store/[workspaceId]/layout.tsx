@@ -160,6 +160,8 @@ export default async function StoreLayout({
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
     legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
+    // The order form's country (lib/storeCountry).
+    country: storefrontGeneralMeta(store).general.country,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.

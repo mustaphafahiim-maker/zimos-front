@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { storefrontShippingQuoteFor, type ApiClient, type StorefrontBundle, type StorefrontBundleTier, type StorefrontProduct, type StorefrontVariant } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { variantLabel } from "@/lib/product";
 import { getVisitorId } from "@/lib/visitorId";
 import type { OrderLine } from "@/lib/placeOrder";
@@ -104,11 +105,13 @@ export function useBundleSelection({
   const mixed = lines.length > 1;
   const requestKey = mixed ? JSON.stringify(lines) : "";
   const [quoted, setQuoted] = useState<{ key: string; full: number; total: number } | null>(null);
+  // Quoted for the store's own country (lib/storeCountry), as the order form starts on it.
+  const country = useStoreCountry();
   useEffect(() => {
     if (!requestKey) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      storefrontShippingQuoteFor(client, workspaceId, { country: "EG", governorate: null, items: JSON.parse(requestKey) }, { visitorId: getVisitorId(workspaceId) })
+      storefrontShippingQuoteFor(client, workspaceId, { country, governorate: null, items: JSON.parse(requestKey) }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (cancelled) return;
           const discount = (quote as { bundleDiscountAmount?: number }).bundleDiscountAmount ?? 0;
@@ -122,7 +125,7 @@ export function useBundleSelection({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [requestKey, client, workspaceId]);
+  }, [requestKey, client, workspaceId, country]);
 
   if (!bundle || !tier) return null;
 
