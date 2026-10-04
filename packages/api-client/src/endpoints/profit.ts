@@ -104,6 +104,8 @@ export interface ProfitAdSpendEntry {
   platform: ProfitAdPlatform;
   campaignName: string;
   campaignId: string | null;
+  /** The ads behind it, from an import at ad level (Ad ID column): orders carrying ad_id match through them. */
+  adIds?: string[];
   spendAmount: number;
   currency: string;
   impressions: number | null;
