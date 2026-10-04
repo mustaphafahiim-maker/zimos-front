@@ -166,3 +166,5 @@ export * from "./endpoints/waBot";
 export * from "./endpoints/customFieldPrice";
 // Importing the merchant's own reviews from their Shopify store (reviews/import).
 export * from "./endpoints/reviewImport";
+// Translating the text of live pages and funnels (translations/contentTranslations.js).
+export * from "./endpoints/contentTranslations";
