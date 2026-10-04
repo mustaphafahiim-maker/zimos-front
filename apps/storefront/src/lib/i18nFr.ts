@@ -311,16 +311,8 @@ export const fr: Dictionary = {
     error: "Une erreur s'est produite. Veuillez réessayer.",
   },
   upsell: {
-    eyebrow: "Attendez ! Votre commande est passée — une offre exclusive",
-    title: "Ajoutez ceci à votre commande à un prix spécial",
-    subtitle: "Disponible uniquement sur cette page. Livré dans le même colis — sans frais de livraison en plus.",
-    yes: "Oui, l'ajouter à ma commande",
-    no: "Non merci, je passe cette offre",
+    // A funnel offer's saving (FunnelStep).
     save: (amount: string) => `Vous économisez ${amount}`,
-    fallbackName: "Kit d'entretien offert",
-    fallbackDescription: "Un complément pratique qui va parfaitement avec votre commande.",
-    accepted: (name: string) => `Ajouté à votre commande : ${name}`,
-    acceptedHint: "Nous l'inclurons lors de l'appel de confirmation.",
   },
   thankYou: {
     title: "Merci ! Votre commande est passée",

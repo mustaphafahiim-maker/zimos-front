@@ -11,9 +11,7 @@ import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
 import {
-  getAcceptedUpsell,
   getOrderSnapshot,
-  type AcceptedUpsell,
   type OrderSnapshot,
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
@@ -37,10 +35,6 @@ function Confirmation() {
   const isClient = useIsClient();
   const snapshot = useMemo<OrderSnapshot | null>(
     () => (isClient ? getOrderSnapshot(workspaceId, orderId) : null),
-    [isClient, workspaceId, orderId]
-  );
-  const upsell = useMemo<AcceptedUpsell | null>(
-    () => (isClient ? getAcceptedUpsell(workspaceId, orderId) : null),
     [isClient, workspaceId, orderId]
   );
   // The store’s shareable address: its own origin on a subdomain, the
@@ -101,15 +95,6 @@ function Confirmation() {
           <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />
         )}
 
-        {upsell && (
-          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
-            <p className="font-semibold text-primary">
-              {t.upsell.accepted(upsell.name)} — {money(upsell.offerAmount, currency)}
-            </p>
-            <p className="mt-0.5 text-ink-soft">{t.upsell.acceptedHint}</p>
-          </div>
-        )}
-
         {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
         <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
 
@@ -131,11 +116,7 @@ function Confirmation() {
 
         {snapshot && (
           <div className="mt-6">
-            <OrderSnapshotSummary
-              snapshot={snapshot}
-              currency={currency}
-              footnote={upsell ? t.checkout.finalNote : undefined}
-            />
+            <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
           </div>
         )}
 

@@ -6,7 +6,7 @@ import {
   type StorefrontOrderBump,
   type StorefrontProduct,
 } from "@store-builder/api-client";
-import { firstImage, priceOf } from "./product";
+import { priceOf } from "./product";
 
 /**
  * ------------------------------------------------------------------------
@@ -117,73 +117,6 @@ export function orderBumpOf(
     priceAmount: price,
     compareAtAmount: compareAt !== null && compareAt > price ? compareAt : null,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Post-purchase one-click upsell
-// ---------------------------------------------------------------------------
-
-export interface UpsellOffer {
-  id: string;
-  productSlug: string | null;
-  name: string;
-  description: string;
-  imageUrl: string | null;
-  regularAmount: number;
-  offerAmount: number;
-}
-
-/**
- * 25% off a catalogue product the shopper didn't just buy. Returns null when
- * there is no other in-stock product to offer.
- *
- * Accepting does not modify the placed order — there is no public
- * "append to order" endpoint — so the acceptance is stored on the device,
- * surfaced on the thank-you page, and confirmed on the call.
- */
-export function getUpsellOffer(
-  products: StorefrontProduct[],
-  orderedProductIds: string[]
-): UpsellOffer | null {
-  const pick = products.find(
-    (p) =>
-      !orderedProductIds.includes(p.id) &&
-      p.variants.some((v) => v.inStock) &&
-      (priceOf(p) ?? 0) > 0
-  );
-  if (!pick) return null;
-
-  const regular = priceOf(pick) ?? 0;
-  return {
-    id: pick.id,
-    productSlug: pick.slug,
-    name: pick.name,
-    description: pick.description?.slice(0, 180) ?? "",
-    imageUrl: firstImage(pick),
-    regularAmount: regular,
-    offerAmount: Math.round((regular * 0.75) / 100) * 100,
-  };
-}
-
-export interface AcceptedUpsell {
-  name: string;
-  offerAmount: number;
-  acceptedAt: string;
-}
-
-const upsellKey = (workspaceId: string, orderId: string) => `zimos_upsell_${workspaceId}_${orderId}`;
-
-export function acceptUpsell(workspaceId: string, orderId: string, offer: UpsellOffer) {
-  const record: AcceptedUpsell = {
-    name: offer.name,
-    offerAmount: offer.offerAmount,
-    acceptedAt: new Date().toISOString(),
-  };
-  writeJson(upsellKey(workspaceId, orderId), record);
-}
-
-export function getAcceptedUpsell(workspaceId: string, orderId: string): AcceptedUpsell | null {
-  return readJson<AcceptedUpsell>(upsellKey(workspaceId, orderId));
 }
 
 // ---------------------------------------------------------------------------

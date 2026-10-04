@@ -395,16 +395,8 @@ const en = {
     error: "Something went wrong. Please try again.",
   },
   upsell: {
-    eyebrow: "Wait! Your order is placed — one exclusive offer",
-    title: "Add this to your order at a special price",
-    subtitle: "Only available on this page. It ships in the same package — no extra shipping.",
-    yes: "Yes, add it to my order",
-    no: "No thanks, I'll skip this offer",
+    // A funnel offer's saving (FunnelStep).
     save: (amount: string) => `You save ${amount}`,
-    fallbackName: "Bonus care kit",
-    fallbackDescription: "A handy add-on that pairs perfectly with your order.",
-    accepted: (name: string) => `Added to your order: ${name}`,
-    acceptedHint: "We'll include it when we call to confirm your order.",
   },
   thankYou: {
     title: "Thank you! Your order is placed",
@@ -927,16 +919,8 @@ const ar: Dictionary = {
     error: "حصلت مشكلة. جرّب تاني.",
   },
   upsell: {
-    eyebrow: "استنى! طلبك اتسجل — عندنا عرض خاص ليك",
-    title: "ضيف ده لطلبك بسعر مميز",
-    subtitle: "العرض متاح في الصفحة دي بس، وهيتشحن في نفس الشحنة بدون مصاريف شحن إضافية.",
-    yes: "أيوه، ضيفه لطلبي",
-    no: "لا شكرًا، مش عايز العرض",
+    // A funnel offer's saving (FunnelStep).
     save: (amount) => `هتوفّر ${amount}`,
-    fallbackName: "طقم عناية إضافي",
-    fallbackDescription: "إضافة مفيدة تكمّل طلبك.",
-    accepted: (name) => `اتضاف لطلبك: ${name}`,
-    acceptedHint: "هنأكده معاك في مكالمة تأكيد الطلب.",
   },
   thankYou: {
     title: "شكرًا! طلبك اتسجل",
