@@ -42,6 +42,7 @@ import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
+import { CrossSellStrip } from "@/components/offers/StoreOffers";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShippingChoice } from "@/lib/shippingChoice";
@@ -455,6 +456,15 @@ export default function CheckoutPage() {
           </button>
         </aside>
       </form>
+
+      {/* What goes with the order (Offers → Cross-sell, at checkout). */}
+      {items.length > 0 && (
+        <CrossSellStrip
+          workspaceId={workspaceId}
+          placement="checkout"
+          productIds={[...new Set(items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
+        />
+      )}
     </main>
   );
 }

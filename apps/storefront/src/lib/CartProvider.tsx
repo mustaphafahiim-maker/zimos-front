@@ -14,6 +14,7 @@ import { ApiError, parseMoney, type Cart, type CustomizationInput } from "@store
 import { getVisitorId } from "@/lib/visitorId";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { track } from "@/lib/track";
+import { takeAddSource } from "./addSource";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -171,6 +172,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           valueMinor: Math.round(unit * quantity),
           currency: next.currency,
           numItems: quantity,
+          source: takeAddSource(),
         });
       } catch {
         /* tracking never breaks the cart */

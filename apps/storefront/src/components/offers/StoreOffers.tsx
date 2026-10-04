@@ -18,6 +18,7 @@ import {
   type StorefrontUpsellAccepted,
 } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { markAddSource } from "@/lib/addSource";
 import { orderBumpOf, type OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
@@ -182,9 +183,10 @@ export function CrossSellStrip({
       <h2 id={`cross-sell-${placement}`} className="text-lg font-semibold text-ink">
         {text.crossSell}
       </h2>
-      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* A quick add from here counts as a cross-sell add (lib/addSource.ts). */}
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4" onClickCapture={() => markAddSource("cross_sell")}>
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} currency={store?.currency ?? "EGP"} locale={locale} />
+          <ProductCard key={product.id} product={product} currency={store?.currency ?? "EGP"} locale={locale} from="cross_sell" />
         ))}
       </div>
     </section>

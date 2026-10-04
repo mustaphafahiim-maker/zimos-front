@@ -18,7 +18,7 @@ import {
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
-import { ThankYouUpsell } from "@/components/offers/StoreOffers";
+import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
 import { ThankYouDownloads } from "@/components/ThankYouDownloads";
 import { OrderUpdatesButton } from "@/components/OrderUpdatesButton";
 import { trackPurchaseOnce } from "@/lib/track";
@@ -118,6 +118,9 @@ function Confirmation() {
 
         {/* Notifications about this order on this phone, when the store app is on. */}
         <OrderUpdatesButton workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* What goes with what they just bought (Offers → Cross-sell, on the thank-you page). */}
+        {snapshot && snapshot.productIds.length > 0 && <CrossSellStrip workspaceId={workspaceId} placement="thank_you" productIds={snapshot.productIds} />}
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">

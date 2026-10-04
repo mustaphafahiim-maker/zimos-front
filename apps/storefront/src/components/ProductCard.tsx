@@ -15,10 +15,13 @@ export function ProductCard({
   product,
   currency,
   locale,
+  from,
 }: {
   product: StorefrontProduct;
   currency: string;
   locale: Locale;
+  /** Where the card is shown (e.g. cross_sell): carried to the product page for the add-to-cart event. */
+  from?: string;
 }) {
   const t = getDictionary(locale);
   const price = priceOf(product);
@@ -87,7 +90,7 @@ export function ProductCard({
       <div className="relative z-10 aspect-square overflow-hidden bg-paper">
         {current ? (
           <StoreLink
-            href={`/products/${product.slug}`}
+            href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
             aria-label={product.name}
             onPointerDown={onPointerDown}
             onPointerUp={(e) => {
@@ -170,7 +173,7 @@ export function ProductCard({
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
           {/* The whole card is clickable via this stretched link. */}
           <StoreLink
-            href={`/products/${product.slug}`}
+            href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
             className="after:absolute after:inset-0 focus-visible:outline-none"
           >
             {product.name}
