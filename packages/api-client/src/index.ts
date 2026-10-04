@@ -156,3 +156,5 @@ export * from "./endpoints/adminSupportView";
 export * from "./endpoints/adminCarrierAreas";
 // The store as an app for shoppers (storefront/storeApp.js).
 export * from "./endpoints/storeApp";
+// Shoppers following their order by push (notifications/push/orderPush.js).
+export * from "./endpoints/orderPush";

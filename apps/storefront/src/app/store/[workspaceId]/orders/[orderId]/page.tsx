@@ -20,6 +20,7 @@ import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { ThankYouUpsell } from "@/components/offers/StoreOffers";
 import { ThankYouDownloads } from "@/components/ThankYouDownloads";
+import { OrderUpdatesButton } from "@/components/OrderUpdatesButton";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -114,6 +115,9 @@ function Confirmation() {
 
         {/* A paid online order's digital products, as soon as the payment is captured. */}
         <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />
+
+        {/* Notifications about this order on this phone, when the store app is on. */}
+        <OrderUpdatesButton workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
