@@ -10,6 +10,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
+import { ImportReviewsButton } from "./ImportReviewsDialog";
 import { DataState } from "@/components/DataState";
 import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -123,7 +124,12 @@ export function ReviewsPage() {
       <PageHeader
         title={t.title}
         description={t.description}
-        actions={<AddReviewButton onAdded={() => list.refresh({ silent: true })} />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ImportReviewsButton onImported={() => list.refresh({ silent: true })} />
+            <AddReviewButton onAdded={() => list.refresh({ silent: true })} />
+          </div>
+        }
       />
 
       <div className="mb-4">

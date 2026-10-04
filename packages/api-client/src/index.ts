@@ -164,3 +164,5 @@ export * from "./endpoints/merchantReferrals";
 export * from "./endpoints/waBot";
 // What a product's custom fields add to its price (catalog/customFieldPricing.js).
 export * from "./endpoints/customFieldPrice";
+// Importing the merchant's own reviews from their Shopify store (reviews/import).
+export * from "./endpoints/reviewImport";

@@ -337,7 +337,7 @@ export interface ManualReviewPayload {
 export interface CatalogReviewExtras {
   authorName?: string | null;
   photos?: string[];
-  source?: "customer" | "manual";
+  source?: "customer" | "manual" | "import";
 }
 
 /** Adds a real review that reached the merchant through another channel (products.manage). */
