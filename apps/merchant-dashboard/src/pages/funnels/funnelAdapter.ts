@@ -278,7 +278,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
       patch.bumpOfferId = s.bumpOfferId;
     }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
-    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
+    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key) || JSON.stringify(s.seo) !== JSON.stringify(before.seo)) {
+      patch.seo = withCanvas(s, order);
+    }
     if (Object.keys(patch).length > 0) {
       const id = s.id;
       ops.push(() => funnelsUpdateStep(apiClient, workspaceId, fid, id, patch));

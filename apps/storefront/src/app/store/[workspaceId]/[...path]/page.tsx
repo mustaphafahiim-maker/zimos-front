@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageRenderer } from "@/components/page-renderer";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
@@ -48,6 +50,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description: page.og?.description || undefined,
     alternates: { canonical },
+    // "Hide from search engines" in the page settings.
+    ...((page.seo as { noindex?: unknown } | undefined)?.noindex === true ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title,
       description: page.og?.description || undefined,
@@ -103,6 +107,7 @@ export default async function CustomStorePage({ params }: { params: Params }) {
         locale={locale}
         siteStyles={result.data.site?.globalStyles}
       />
+      <PageScripts scripts={scriptsOf(page)} />
     </main>
   );
 }

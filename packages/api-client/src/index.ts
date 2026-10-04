@@ -168,3 +168,5 @@ export * from "./endpoints/customFieldPrice";
 export * from "./endpoints/reviewImport";
 // Translating the text of live pages and funnels (translations/contentTranslations.js).
 export * from "./endpoints/contentTranslations";
+// A page's or funnel step's own scripts (customCode/pageScripts.js).
+export * from "./endpoints/pageScripts";

@@ -14,6 +14,8 @@ import { FUNNEL_ACTIONS_ID, FunnelOrders, FunnelStepActions } from "@/components
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
 import { StepTransition } from "@/components/funnel/StepTransition";
 import { PageRenderer } from "@/components/page-renderer";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { funnelErrorKind, type FunnelErrorKind } from "@/lib/funnelErrors";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
@@ -199,6 +201,7 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
           )}
         </StepTransition>
       </FunnelCurrencyProvider>
+      <PageScripts scripts={scriptsOf(step)} />
     </main>
   );
 }

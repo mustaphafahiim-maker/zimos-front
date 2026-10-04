@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import type { StorefrontCollection } from "@store-builder/api-client";
 import { ArrowIcon } from "@/components/Icons";
 import { PageRenderer } from "@/components/page-renderer";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
@@ -74,6 +76,7 @@ export default async function StoreHomePage({
           locale={locale}
           siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
         />
+        {published.kind === "page" && <PageScripts scripts={scriptsOf(published.data.page)} />}
       </main>
     );
   }

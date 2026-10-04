@@ -24,6 +24,7 @@ import { SectionCard } from "../website/editor/SectionCard";
 import { SectionInspector } from "../website/editor/SectionInspector";
 import { createSection, moveSection, sectionLabel, type BlockPreset } from "../website/editor/blocks";
 import { EditorLocaleContext } from "../website/editor/editorLocale";
+import { PageSettingsButton } from "../website/editor/PageSettingsDialog";
 import { PAGE_STRINGS, STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
 import type { UiStep } from "./funnelAdapter";
 
@@ -76,6 +77,7 @@ export function FunnelStepPageEditor({
   offerProduct,
   onSelectStep,
   onTreeChange,
+  onSeoChange,
   onBack,
 }: {
   workspaceId: string;
@@ -85,6 +87,8 @@ export function FunnelStepPageEditor({
   offerProduct: { id: string; name: string } | null;
   onSelectStep: (key: string) => void;
   onTreeChange: (tree: PageTree) => void;
+  /** The step's SEO from its page settings, into the funnel draft. Without it (a split-test variant) there are no page settings. */
+  onSeoChange?: (seo: Record<string, unknown>) => void;
   onBack: () => void;
 }) {
   const t = useT(PAGE_STRINGS);
@@ -185,6 +189,9 @@ export function FunnelStepPageEditor({
                   </span>
                   {t.backToFlow}
                 </Button>
+                {onSeoChange && (
+                  <PageSettingsButton key={step.key} name={step.name} seo={step.seo} scripts={{ kind: "step", id: step.id }} onSaveSeo={onSeoChange} />
+                )}
                 <Button variant={previewOpen ? "secondary" : "outline"} aria-pressed={previewOpen} onClick={() => setPreviewOpen((o) => !o)}>
                   <Eye className="size-4" aria-hidden /> {t.preview}
                 </Button>

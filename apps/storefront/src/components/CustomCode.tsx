@@ -29,7 +29,7 @@ export function CustomCodeProvider({ slots, children }: { slots: Slots; children
 }
 
 /** Whether merchant code may run on this page at all. */
-function useCodeAllowed(): boolean {
+export function useCodeAllowed(): boolean {
   const basePath = useStoreBasePath();
   const pathname = usePathname() ?? "";
   // An empty base path means the store is being served at the root of its own host.
@@ -37,7 +37,7 @@ function useCodeAllowed(): boolean {
   return !/^\/(pay|preview)(\/|$)/.test(pathname);
 }
 
-function inject(target: Element, code: string): Node[] {
+export function injectCode(target: Element, code: string): Node[] {
   const fragment = document.createRange().createContextualFragment(code);
   const nodes = Array.from(fragment.childNodes);
   target.appendChild(fragment);
@@ -54,7 +54,7 @@ export function CodeSlot({ name }: { name: CustomCodeSlotKey }) {
     const el = ref.current;
     if (!el || !code || !allowed) return;
     el.replaceChildren();
-    inject(el, code);
+    injectCode(el, code);
     return () => el.replaceChildren();
   }, [code, allowed]);
 
@@ -71,7 +71,7 @@ export function CustomCodeHead() {
   useEffect(() => {
     if (!allowed) return;
     const added: Node[] = [];
-    if (head) added.push(...inject(document.head, head));
+    if (head) added.push(...injectCode(document.head, head));
     if (css) {
       const style = document.createElement("style");
       style.setAttribute("data-zimos-slot", "css");

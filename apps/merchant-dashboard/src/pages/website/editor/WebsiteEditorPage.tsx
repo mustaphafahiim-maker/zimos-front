@@ -33,6 +33,7 @@ import { PageProductField } from "./DataBinding";
 import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
+import { PageSettingsButton } from "./PageSettingsDialog";
 import { ResizableSplit } from "./ResizableSplit";
 import { applyCanvasEdit, nudgeElement } from "./canvasEdits";
 import { ShellPanel } from "./ShellPanels";
@@ -806,6 +807,20 @@ function WebsiteEditor() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {page && (
+              <PageSettingsButton
+                key={page.id}
+                compact
+                name={page.title}
+                seo={(page.seo ?? {}) as Record<string, unknown>}
+                scripts={{ kind: "page", id: page.id }}
+                onSaveSeo={async (seo) => {
+                  const saved = await apiClient.updateWebsitePage(workspaceId, websiteId, page.id, { seo });
+                  const detail = site.data;
+                  if (detail) site.setData({ ...detail, pages: detail.pages.map((p) => (p.id === saved.id ? { ...p, seo: saved.seo } : p)) });
+                }}
+              />
+            )}
             {/* Below lg / xl the side panes are drawers, opened from here. */}
             <Button
               type="button"

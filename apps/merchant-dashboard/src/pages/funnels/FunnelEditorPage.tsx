@@ -727,6 +727,7 @@ export function FunnelEditorPage() {
             offerProduct={pageOffer ? { id: pageOffer.productId, name: pageOffer.productName } : null}
             onSelectStep={setSelectedKey}
             onTreeChange={(tree: PageTree) => updateStep(pageStep.key, { tree })}
+            onSeoChange={(seo) => updateStep(pageStep.key, { seo })}
             onBack={() => setView("flow")}
           />
         ) : (
