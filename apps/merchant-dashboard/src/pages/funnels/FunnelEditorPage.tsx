@@ -86,6 +86,7 @@ import {
   saveFunnelDiff,
   starterPlan,
   tempId,
+  uniqueStepKey,
   useFunnelErrorMessage,
   type SaveProgress,
   type StarterTemplateId,
@@ -123,6 +124,8 @@ import {
 } from "./funnelFlow";
 import { pageElementCount } from "./funnelPages";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
+import { GenericPagesPanel } from "./GenericPagesPanel";
+import { flowSteps, genericPageTree, isGenericStep, type GenericPreset } from "./genericPageRules";
 import { StepChain } from "./StepChain";
 import { StepStatsLine, StepThumbnail, useFlowZoom, useStepStats } from "./FlowMapTools";
 import { LinkPoints, linkPoint, linkPointsOf, pointOfEdge, pointY, useLinkLabels, type LinkDrag, type LinkPoint } from "./FlowLinkPoints";
@@ -195,7 +198,8 @@ function StepIcon({ type, className }: { type: UiStepType; className?: string })
 /** Entry = the only step with no incoming edge (backend resolveEntry). */
 function entryKeysOf(funnel: UiFunnel): string[] {
   const targeted = new Set(funnel.edges.map((e) => e.toStepKey));
-  return funnel.steps.filter((s) => !targeted.has(s.key)).map((s) => s.key);
+  // Generic pages (genericPageRules.ts) are off the path: never the start.
+  return flowSteps(funnel.steps, funnel.edges).filter((s) => !targeted.has(s.key)).map((s) => s.key);
 }
 
 // ------------------------------------------------------------ validation --
@@ -370,7 +374,7 @@ export function FunnelEditorPage() {
    */
   function addStep(type: UiStepType) {
     if (!funnel) return;
-    const openEnd = [...funnel.steps].reverse().find((s) => !funnel.edges.some((e) => e.fromStepKey === s.key));
+    const openEnd = [...funnel.steps].reverse().find((s) => !isGenericStep(s, funnel.edges) && !funnel.edges.some((e) => e.fromStepKey === s.key));
     const anchor = selected ?? openEnd ?? null;
     if (anchor) {
       addAfter(anchor.key, type);
@@ -380,6 +384,16 @@ export function FunnelEditorPage() {
     const step = newStep(type, locale, takenKeys(funnel), { x: last ? last.x + CARD_GAP_X : 40, y: last ? last.y : 64 });
     patch((f) => ({ ...f, steps: [...f.steps, step] }));
     setSelectedKey(step.key);
+  }
+
+  /** A generic page (contact, about, policies): a custom step off the map, opened in the page editor. */
+  function addGenericPage(preset: GenericPreset, name: string, body: string) {
+    if (!funnel) return;
+    // Its key is its address (/f/<funnel>/p/<key>): named after what it is.
+    const key = uniqueStepKey(preset === "blank" ? "page" : preset, takenKeys(funnel));
+    const step = { ...newStep("custom", locale, takenKeys(funnel), { x: 40, y: 64 }), key, name, tree: genericPageTree(preset, name, body) };
+    patch((f) => ({ ...f, steps: [...f.steps, step] }));
+    openPage(step.key);
   }
 
   function addAfter(fromKey: string, type: UiStepType) {
@@ -759,9 +773,9 @@ export function FunnelEditorPage() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
               <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onSortEnd}>
-                <SortableContext items={funnel.steps.map((s) => s.key)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={flowSteps(funnel.steps, funnel.edges).map((s) => s.key)} strategy={verticalListSortingStrategy}>
                   <ul className="space-y-1">
-                    {funnel.steps.map((s) => (
+                    {flowSteps(funnel.steps, funnel.edges).map((s) => (
                       <SortableStepRow
                         key={s.key}
                         step={s}
@@ -775,10 +789,11 @@ export function FunnelEditorPage() {
                 </SortableContext>
               </DndContext>
             </div>
+            <GenericPagesPanel funnel={funnel} selectedKey={selectedKey} onAdd={addGenericPage} onOpen={openPage} onDelete={setPendingDelete} />
           </aside>
 
           <FlowCanvas
-            funnel={funnel}
+            funnel={{ ...funnel, steps: flowSteps(funnel.steps, funnel.edges) }}
             entryKey={entryKeys.length === 1 ? entryKeys[0] : null}
             selectedKey={selectedKey}
             problemsByStep={grouped.byStep}

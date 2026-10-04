@@ -15,6 +15,7 @@ import { fmt, type Locale } from "@/i18n/LocaleContext";
 import { STEP_DEFAULT_NAMES, STEP_TYPE_LABELS, VALIDATION_STRINGS } from "./FunnelEditorPage.strings";
 import { tempId, uniqueStepKey, type StarterPlan, type UiEdge, type UiEdgeCondition, type UiFunnel, type UiStep, type UiStepType } from "./funnelAdapter";
 import { pageElementCount, stepPageTree } from "./funnelPages";
+import { flowSteps, isGenericStep } from "./genericPageRules";
 
 // ---------------------------------------------------------------- layout --
 
@@ -281,8 +282,9 @@ export function collectFunnelProblems(funnel: UiFunnel, locale: Locale = "en"): 
     problems.push({ field: "steps", message: v.noSteps });
     return problems;
   }
+  // Generic pages (genericPageRules.ts) are off the path: neither the start nor "unreachable".
   const entries = entryKeysOf(
-    funnel.steps.map((s) => s.key),
+    flowSteps(funnel.steps, funnel.edges).map((s) => s.key),
     funnel.edges
   );
   if (entries.length === 0) {
@@ -306,7 +308,7 @@ export function collectFunnelProblems(funnel: UiFunnel, locale: Locale = "en"): 
     }
   }
   for (const s of funnel.steps) {
-    if (!seen.has(s.key)) problems.push({ field: `steps.${s.key}`, stepKey: s.key, message: fmt(v.unreachable, { name: s.name }) });
+    if (!seen.has(s.key) && !isGenericStep(s, funnel.edges)) problems.push({ field: `steps.${s.key}`, stepKey: s.key, message: fmt(v.unreachable, { name: s.name }) });
   }
   return problems;
 }

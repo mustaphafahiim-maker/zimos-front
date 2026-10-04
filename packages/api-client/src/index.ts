@@ -192,3 +192,5 @@ export * from "./endpoints/orderSession";
 export * from "./endpoints/shipmentDraft";
 // Each offer's impressions, acceptances and added revenue (offers/offerStats.js).
 export * from "./endpoints/offerStats";
+// A funnel's generic pages — contact, about, policies — off the map (funnels/genericPages.js).
+export * from "./endpoints/funnelGenericPages";
