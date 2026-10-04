@@ -148,6 +148,32 @@ This material uses existing token names. Admin and marketing adoption needs
 review of their host tokens, Tailwind sources and portal theme scope. Do not
 import the dashboard CSS into another app.
 
+## Proposed identity (brand board)
+
+The lab opens with a brand board built from the owner's identity brief:
+`apps/merchant-dashboard/src/design-system/brand/`. It is a proposal, shown
+only in the lab.
+
+- `geometry.ts` holds the numbers: a Z of three modules (24 / 12 / 28 / 12 /
+  24 on a 100-unit square), one 29° diagonal, one corner radius, plus the
+  16-unit small-size drawing and the drawn wordmark. Change the mark there,
+  nowhere else.
+- `ZimosBrand.tsx` renders the mark, wordmark, lockups and app icon from it.
+- `brand.css` scopes the palette to `.zb` (Deep Navy `#081F5C`, Product Blue
+  `#165DFF`, Cyan `#12C8DA`, Light Surface `#F6F9FF`). No product token
+  changes.
+
+Until the owner signs it off, the product keeps the approved logo files
+(`components/ZimosLogo.tsx`, `public/brand/`) and the tokens in `index.css`.
+Rolling it out is a separate, bounded change: the logo component and
+favicons, then the tokens.
+
+The brief rules out glass, glow, gradients as structure and 3D. Where it and
+the Glass material below disagree, the brief is the newer decision: keep
+Glass in the lab until the owner chooses, and do not add it to product
+screens. The shared `Button` already follows the brief — flat, one weight, a
+clear edge.
+
 ## Review before rollout
 
 1. Review the lab in English/LTR and Arabic/RTL, light and dark, at desktop

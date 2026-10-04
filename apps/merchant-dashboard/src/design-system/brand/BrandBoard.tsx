@@ -201,7 +201,7 @@ export function BrandBoard() {
       <header className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-end">
         <div>
           <p className="zb-eyebrow">{t.eyebrow}</p>
-          <div className="mt-6" dir="ltr">
+          <div className="mt-6 flex">
             <ZLogo height={64} className="max-w-full" />
           </div>
           <h2 className="mt-8 max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">{t.title}</h2>
