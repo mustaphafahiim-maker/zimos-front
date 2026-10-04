@@ -15,6 +15,7 @@ const STRINGS = {
     title: "Export orders",
     description: "A CSV file you can open in Excel or Google Sheets.",
     scopeFiltered: "Exports the orders matching your current search, dates and tab.",
+    scopeSelected: "Exports the {count} orders you ticked.",
     scopeAll: "Exports every order in the store. Pick a tab or dates first to narrow it.",
     rowPer: "Rows",
     rowPerOrder: "One row per order",
@@ -35,6 +36,7 @@ const STRINGS = {
     title: "تصدير الطلبات",
     description: "ملف CSV يفتح في Excel أو Google Sheets.",
     scopeFiltered: "يصدّر الطلبات المطابقة للبحث والتواريخ والتبويب الحالي.",
+    scopeSelected: "يصدّر الطلبات المحددة ({count}).",
     scopeAll: "يصدّر كل طلبات المتجر. اختر تبويبًا أو تواريخ أولًا لتحديد جزء منها.",
     rowPer: "الصفوف",
     rowPerOrder: "صف لكل طلب",
@@ -55,7 +57,10 @@ const STRINGS = {
 type RowPer = "order" | "item";
 
 /** The orders list's current filters, passed straight to the export. */
-export type ExportOrdersFilters = Pick<OrderExportParams, "q" | "from" | "to" | "stage" | "sort">;
+export type ExportOrdersFilters = Pick<OrderExportParams, "q" | "from" | "to" | "stage" | "sort"> & {
+  /** Ticked orders, comma-separated (up to 100): the export takes only these. */
+  ids?: string;
+};
 
 function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -72,14 +77,22 @@ function saveBlob(blob: Blob, filename: string) {
  * The "Export" button of the orders list and its dialog: one row per order or
  * per product, and which columns. The file is the list as it is filtered now.
  */
-export function ExportOrders({ filters }: { filters: ExportOrdersFilters }) {
+export function ExportOrders({
+  filters,
+  label,
+  size,
+}: {
+  filters: ExportOrdersFilters;
+  label?: string;
+  size?: "sm";
+}) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="outline" size={size} className={size ? "min-h-11" : undefined} onClick={() => setOpen(true)}>
         <Download className="size-4" aria-hidden />
-        {t.open}
+        {label ?? t.open}
       </Button>
       {open && <ExportOrdersDialog filters={filters} onClose={() => setOpen(false)} />}
     </>
@@ -158,6 +171,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
   }
 
   const filtered = Boolean(filters.q || filters.from || filters.to || filters.stage);
+  const picked = filters.ids ? filters.ids.split(",").length : 0;
   const chosen = visible.filter((c) => selected.includes(c.key)).length;
 
   return (
@@ -186,7 +200,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
       ) : (
         <div className="space-y-5">
           <p className="text-sm text-ink-soft">
-            {filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
+            {picked ? fmt(t.scopeSelected, { count: picked }) : filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
           </p>
 
           <fieldset>

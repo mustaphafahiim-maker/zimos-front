@@ -118,3 +118,5 @@ export * from "./endpoints/shipmentBatches";
 export * from "./endpoints/orderRiskCounts";
 // The orders list rows' extra fields: IP country, data quality, latest shipment.
 export * from "./endpoints/orderListColumns";
+// Many invoices in one PDF for the ticked orders (orders/orderInvoicesPdf.js).
+export * from "./endpoints/orderSelection";
