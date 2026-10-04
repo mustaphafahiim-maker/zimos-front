@@ -7,7 +7,9 @@
  * customer's portal is public at /store/:workspaceId/subscriptions/:token.
  *
  * Notable codes: SUBSCRIPTION_ENDED (409), SUBSCRIPTION_NO_CARD (409),
- * SUBSCRIPTION_NOT_CANCELLABLE (409).
+ * SUBSCRIPTION_NOT_CANCELLABLE (409). The store's checkout answers
+ * PLAN_NEEDS_SAVED_CARD (422) for a product on a plan paid any other way than a
+ * card that can be saved (also on a payment retry and a switch to cash on delivery).
  */
 import type { ApiClient } from "../client";
 
@@ -17,6 +19,12 @@ export type BillingInterval = "week" | "month" | "year";
 export type ProductBillingPlan =
   | { mode: "subscription"; interval: BillingInterval; intervalCount?: number }
   | { mode: "installments"; interval: BillingInterval; intervalCount?: number; payments: number };
+
+/** A public product's plan (GET /store/:id/products…: `billingPlan`, null when sold once). */
+export function billingPlanOf(product: object): ProductBillingPlan | null {
+  const plan = (product as { billingPlan?: ProductBillingPlan | null }).billingPlan;
+  return plan && plan.mode ? plan : null;
+}
 
 export interface ProductPlanRow {
   id: string;

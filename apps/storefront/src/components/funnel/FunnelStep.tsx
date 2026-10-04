@@ -17,6 +17,7 @@ import {
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
   TransferDetails,
   asTransferMethod,
@@ -425,7 +426,10 @@ export function FunnelCheckout({
 
   // The methods this funnel offers (payment rules → methods per funnel): cash on
   // delivery, the store's gateways, manual transfers.
-  const payment = usePaymentMethods(client, workspaceId, funnelId);
+  const funnelMethods = usePaymentMethods(client, workspaceId, funnelId);
+  // A product on a plan is paid by a card that can be saved (product/BillingPlan).
+  const planned = hasPlan([product]);
+  const payment = { ...funnelMethods, ...usePlanMethods(funnelMethods.methods, planned) };
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const transferCopy = useTransferCopy();
@@ -433,7 +437,7 @@ export function FunnelCheckout({
   const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
   const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
   const needsTransfer = Boolean(transferMethod || deposit);
-  const onlyCod = payment.methods.length === 1 && payment.methods[0].method === "cod";
+  const onlyCod = !planned && payment.methods.length === 1 && payment.methods[0].method === "cod";
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
@@ -679,7 +683,7 @@ export function FunnelCheckout({
         ) : (
           <fieldset className="mt-5" disabled={!!placed || busy}>
             <legend className={labelClass}>{t.checkout.payment}</legend>
-            <PaymentMethodPicker methods={payment.methods} value={method.id} onChange={setMethodId} idPrefix={FORM_PREFIX} />
+            <PaymentMethodPicker methods={payment.methods} value={method.id} onChange={setMethodId} idPrefix={FORM_PREFIX} plan={planned ? { blocked: payment.blocked } : null} />
           </fieldset>
         )}
         {!placed && (transferMethod || deposit) && (

@@ -9,6 +9,7 @@ import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/Check
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
   TransferDetails,
   asTransferMethod,
@@ -103,7 +104,10 @@ export default function CheckoutPage() {
   const [bumpOn, setBumpOn] = useState(false);
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
-  const payment = usePaymentMethods(client, workspaceId);
+  const storeMethods = usePaymentMethods(client, workspaceId);
+  // A product on a plan in the cart is paid by a card that can be saved (product/BillingPlan).
+  const planned = hasPlan((cart?.items ?? []).map((line) => byVariant.get(line.variantId)));
+  const payment = { ...storeMethods, ...usePlanMethods(storeMethods.methods, planned) };
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
@@ -312,6 +316,7 @@ export default function CheckoutPage() {
               {t.checkout.payment}
             </h2>
             <PaymentMethodPicker
+              plan={planned ? { blocked: payment.blocked } : null}
               methods={payment.methods}
               value={method.id}
               onChange={setMethodId}

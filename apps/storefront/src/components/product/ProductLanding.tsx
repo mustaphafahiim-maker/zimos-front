@@ -38,6 +38,7 @@ import {
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { BillingPlanNote, PlanFormTitle, usePlanMethods } from "@/components/product/BillingPlan";
 import {
   TransferDetails,
   asTransferMethod,
@@ -67,7 +68,7 @@ import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
-import { customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
+import { billingPlanOf, customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
 import { readPick, usePick } from "@/lib/pagePicks";
 import { useProductTest } from "@/lib/productTest";
 import { track } from "@/lib/track";
@@ -218,7 +219,10 @@ export function ProductLanding({
   // The product's own order bumps (Offers → Order bumps), beside the store-wide one.
   const productBumps = useProductBumps(client, workspaceId, product.id, bumpOffer?.offerId);
   const productBumpsAmount = productBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
-  const payment = usePaymentMethods(client, workspaceId);
+  const storeMethods = usePaymentMethods(client, workspaceId);
+  // A product on a plan is paid by a card that can be saved (product/BillingPlan).
+  const plan = billingPlanOf(product);
+  const payment = { ...storeMethods, ...usePlanMethods(storeMethods.methods, Boolean(plan)) };
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   // Manual transfer: the whole order, or the deposit a cash-on-delivery order needs (as on /checkout).
@@ -472,6 +476,7 @@ export function ProductLanding({
               ? t.common.unavailable
               : t.common.outOfStock}
         </p>
+        <BillingPlanNote plan={plan} unitMinor={unit} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
@@ -607,7 +612,7 @@ export function ProductLanding({
       >
         <h2 id="order-form-title" className="flex items-center gap-2 text-lg font-bold text-ink">
           <CashIcon className="text-primary" />
-          {t.form.title}
+          {plan ? <PlanFormTitle /> : t.form.title}
         </h2>
         <p className="mt-1 text-sm text-ink-soft">{t.form.subtitle}</p>
 
@@ -670,8 +675,9 @@ export function ProductLanding({
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
           <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
-          {payment.methods.length > 1 && (
+          {(payment.methods.length > 1 || plan) && (
             <PaymentMethodPicker
+              plan={plan ? { blocked: payment.blocked } : null}
               methods={payment.methods}
               value={method.id}
               onChange={setMethodId}
