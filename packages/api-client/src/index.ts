@@ -126,3 +126,5 @@ export * from "./endpoints/orderWhatsappConfirm";
 export * from "./endpoints/orderContactEdit";
 // Cancel with a refund, and "notify the customer" on cancel and refund (orders/orderCancelRefund.js).
 export * from "./endpoints/orderCancelRefund";
+// The storefront's display currencies (currencies/fxService.getForStorefront).
+export * from "./endpoints/storefrontCurrencies";

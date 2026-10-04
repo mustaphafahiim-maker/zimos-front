@@ -13,6 +13,8 @@ import { getStoreMeta } from "@/lib/storeMeta";
 import { CheckoutSummaryBlock, FunnelActionButton, OrderSummaryBlock, TabsBlock } from "./builderClient";
 import { GallerySlideshow } from "./GallerySlideshow";
 import type { PageRendererFunnel } from "./PageRenderer";
+import { ConvertedPrice } from "@/components/ConvertedPrice";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import { type Props, bool, num, qaList, resolveHref, safeUrl, str, strList } from "./props";
 
 /**
@@ -90,6 +92,11 @@ export function CarouselElement({ props }: { props: Props }) {
 }
 
 /** A fixed star rating the merchant states themselves — for real averages use reviews_list. */
+/** `currency_converter` (SPEC §9.3): lets the shopper view this page's prices in another of the store's currencies. */
+export function CurrencyConverterElement({ props, t }: { props: Props; t: Dictionary }) {
+  return <CurrencySwitcher inline label={str(props, "label") || t.currency.label} note={t.currency.note} />;
+}
+
 export function StarsDisplayElement({ props, t }: { props: Props; t: Dictionary }) {
   const rating = num(props, "rating", 0, 0, 5);
   if (rating === 0) return null;
@@ -132,6 +139,7 @@ export async function PriceElement({
         {formatPrice(price, currency, locale)}
       </span>
       {compareAt !== null && <span className="text-base text-ink-soft line-through">{formatPrice(compareAt, currency, locale)}</span>}
+      <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />
     </p>
   );
 }

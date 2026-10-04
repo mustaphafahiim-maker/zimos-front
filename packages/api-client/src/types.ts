@@ -406,6 +406,7 @@ export const PAGE_ELEMENT_TYPES = [
   "toggle",
   "carousel",
   "stars_display",
+  "currency_converter",
   "price",
   "reviews_list",
   "cod_form",

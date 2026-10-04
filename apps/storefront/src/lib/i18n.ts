@@ -164,6 +164,10 @@ const en = {
     summary: "Complete the product details above.",
     photoAttached: "Photo attached",
   },
+  currency: {
+    label: "Currency",
+    note: "Converted prices are approximate; you pay in the price's own currency.",
+  },
   product: {
     orderNow: "Order now",
     addToCart: "Add to cart",
@@ -689,6 +693,10 @@ const ar: Dictionary = {
     expired: "الصورة انتهت صلاحيتها — ارفعها تاني.",
     summary: "كمّل بيانات المنتج اللي فوق.",
     photoAttached: "صورة مرفقة",
+  },
+  currency: {
+    label: "العملة",
+    note: "الأسعار المحوّلة تقريبية؛ الدفع بعملة السعر نفسه.",
   },
   product: {
     orderNow: "اطلب الآن",

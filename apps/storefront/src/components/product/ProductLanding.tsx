@@ -1,5 +1,6 @@
 "use client";
 
+import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -87,7 +88,7 @@ export function ProductLanding({
   /** From this page's own render, not the layout's — see useFreshCheckoutSettings. */
   checkoutSettings: CheckoutSettings;
 }) {
-  const { t, money, locale } = useStore();
+  const { t, money, locale, store } = useStore();
   const text = productPageText(locale);
   // The product page's settings (SPEC §7.3), defaults filled in.
   const page = useMemo(() => storefrontProductPage(product), [product]);
@@ -347,6 +348,7 @@ export function ProductLanding({
         <h1 className="zt-pdp-title text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
         <div className="zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-3xl font-bold text-ink" data-sale={compareAtUnit ? "" : undefined}>{money(unit)}</span>
+          <ConvertedPrice amountMinor={unit} currency={store?.currency ?? "EGP"} className="basis-full order-last" />
           {compareAtUnit && (
             <span className="text-lg text-ink-soft line-through">
               <span className="sr-only">{t.product.compareAt} </span>

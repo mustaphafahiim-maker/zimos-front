@@ -2,6 +2,7 @@ import {
   AlarmClock,
   AlignLeft,
   BadgeCheck,
+  Coins,
   BarChart3,
   Box,
   Building2,
@@ -607,6 +608,12 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
       { key: "images", label: "Images", kind: "imageList" },
     ],
+  },
+  currency_converter: {
+    label: "Currency converter",
+    icon: Coins,
+    defaultProps: { label: "" },
+    fields: [{ key: "label", label: "Label", kind: "text", hint: "Empty shows \"Currency\". Shoppers see prices approximately in the currency they pick; they pay in the price's own." }],
   },
   stars_display: {
     label: "Star rating",
@@ -2054,6 +2061,14 @@ const CORE_PRESETS: BlockPreset[] = [
     icon: MessageSquareQuote,
     group: "trust",
     elements: ["reviews_list"],
+  },
+  {
+    key: "currency-converter",
+    label: "Currency converter",
+    description: "Lets shoppers view prices in another of your currencies (Settings → Currencies).",
+    icon: Coins,
+    group: "trust",
+    elements: ["currency_converter"],
   },
   {
     key: "stars-display",

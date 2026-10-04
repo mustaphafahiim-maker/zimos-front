@@ -10,6 +10,7 @@ import { resolveShellLinks, type LogoSize, type ResolvedShellLink } from "@/lib/
 import { AnnouncementBar } from "./AnnouncementBar";
 import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 import { MobileMenu } from "./MobileMenu";
 import { SearchBox } from "./SearchBox";
 import { NavDropdown, menuChildren } from "./shell/NavDropdown";
@@ -161,6 +162,10 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <LanguageSwitch />
         </span>
       )}
+      {/* View prices in another of the store's currencies (display only). */}
+      <span className="hidden sm:contents">
+        <CurrencySwitcher workspaceId={store.id} label={t.currency.label} />
+      </span>
       {/* On a phone the theme toggle lives in the menu sheet; a wrapper hides
           it here because the button's own recipe sets its display. */}
       {header.showTheme && (

@@ -112,6 +112,8 @@ function elementSummary(element: PageElement): string {
     }
     case "text_link":
       return truncate([str("text"), str("href") && `→ ${str("href")}`].filter(Boolean).join(" "));
+    case "currency_converter":
+      return truncate(str("label") || "Currency");
     case "stars_display":
       return truncate([props.rating && `${props.rating}★`, str("label")].filter(Boolean).join(" · "));
     case "upsell_accept_button":
