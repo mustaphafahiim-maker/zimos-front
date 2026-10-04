@@ -1,6 +1,6 @@
 import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
 import type { ReactNode } from "react";
-import { PoweredByZimos } from "@/components/PoweredByZimos";
+import { PoweredByZimos, brandingRemoved } from "@/components/PoweredByZimos";
 import { ShellLink } from "@/components/ShellLink";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
@@ -137,7 +137,7 @@ export function RichFooter({
 
       <div className="zs-footer__bottom">
         <p>{t.footer.rights(store.name, year)}</p>
-        <PoweredByZimos label={t.footer.poweredBy} />
+        {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
       </div>
     </footer>
   );

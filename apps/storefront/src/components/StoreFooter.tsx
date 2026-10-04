@@ -6,7 +6,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
-import { PoweredByZimos } from "./PoweredByZimos";
+import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
 import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { container } from "./ui";
@@ -139,7 +139,7 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
         <div className={`${container} flex flex-col items-center justify-between gap-2 py-4 sm:flex-row`}>
           <p className="text-xs text-ink-soft">{t.footer.rights(store.name, year)}</p>
           {/* Removed for stores whose plan includes it (Plan.features.remove_branding). */}
-          {(store as { removeBranding?: unknown }).removeBranding !== true && <PoweredByZimos label={t.footer.poweredBy} />}
+          {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>
       </div>
     </footer>

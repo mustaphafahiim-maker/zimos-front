@@ -4,6 +4,7 @@ import { storefrontHeaderCollections } from "@store-builder/api-client";
 import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { brandingRemoved } from "@/components/PoweredByZimos";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type LogoSize, type ResolvedShellLink } from "@/lib/storeShell";
@@ -132,7 +133,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           height={LOGO_IMG_PX[size]}
           className={`zt-logo-img ${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
         />
-      ) : (
+      ) : brandingRemoved(store) ? null : (
         // `.zimos-logo[data-overlay ancestor]` forces the dark-surface
         // (light wordmark) export regardless of the `auto` surface prop —
         // see the header rules in globals.css.
