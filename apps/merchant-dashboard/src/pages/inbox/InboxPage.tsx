@@ -26,6 +26,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { ApiError, getErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/relativeTime";
 import { PageHeader } from "@/components/PageHeader";
+import { AppOffNotice } from "@/components/AppOffNotice";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
@@ -197,6 +198,7 @@ export function InboxPage() {
   return (
     <div className="min-w-0">
       <PageHeader title={t.title} description={t.description} />
+      <AppOffNotice app="whatsapp" />
       <DataState
         loading={integration.loading}
         error={integration.error}

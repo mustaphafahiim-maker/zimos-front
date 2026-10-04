@@ -6,6 +6,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
+import { AppOffNotice } from "@/components/AppOffNotice";
 import { TextField } from "@/components/Field";
 import { CopyButton } from "@/components/CopyButton";
 import { TrackingPixelsSection } from "./TrackingPixelsSection";
@@ -86,6 +87,7 @@ export function MarketingPage() {
   return (
     <div className="min-w-0 max-w-4xl">
       <PageHeader title={t.title} description={t.description} />
+      <AppOffNotice app="tracking_pixels" />
 
       <TrackingPixelsSection key={workspaceId} onEventsChanged={bumpLog} />
       <PurchaseTimingSection key={`timing-${workspaceId}`} />
