@@ -225,3 +225,20 @@ export async function lostOrdersRevealPhone(client: ApiClient, workspaceId: stri
   });
   return phone;
 }
+
+/**
+ * Sends the recovery template from the store's connected WhatsApp number
+ * (backend checkoutSessions/lostOrderWhatsapp.js): `cart_reminder` unless
+ * another approved template is named, filled with the customer's name, the
+ * store's name and the recovery link. Marks the lost order contacted.
+ * Codes: WHATSAPP_NOT_CONNECTED, WHATSAPP_TEMPLATE_NOT_APPROVED,
+ * MARKETING_NOT_ALLOWED (the phone answered STOP or is blocked), NO_PHONE — all 422.
+ */
+export async function lostOrdersSendWhatsapp(
+  client: ApiClient,
+  workspaceId: string,
+  sessionId: string,
+  options: { template?: string; language?: string } = {}
+): Promise<{ message: { id: string; conversationId: string; status: string }; recoveryStatus: LostOrderRecoveryStatus }> {
+  return client.request(`${base(workspaceId)}/${sessionId}/whatsapp`, { method: "POST", body: options });
+}

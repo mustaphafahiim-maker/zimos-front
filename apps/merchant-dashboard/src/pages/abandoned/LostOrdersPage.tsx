@@ -14,6 +14,7 @@ import {
   lostOrdersList,
   lostOrdersStats,
   lostOrdersRevealPhone,
+  lostOrdersSendWhatsapp,
   lostOrdersUpdate,
   type LostOrder,
   type LostOrderReason,
@@ -111,6 +112,8 @@ const STRINGS = {
     orderPlaced: "Order {order}",
     more: "+{n} more",
     whatsappMessage: "Hello {name}, you left your order unfinished. You can complete it here: {link}",
+    whatsappSent: "Recovery message sent from your WhatsApp number.",
+    whatsappFromStore: "Send the recovery message from your WhatsApp number",
     saved: "Saved.",
     emptyTitle: "No lost orders",
     emptyDescription: "Checkouts that are left unfinished or refused will show up here.",
@@ -190,6 +193,8 @@ const STRINGS = {
     orderPlaced: "الأوردر {order}",
     more: "+{n} أخرى",
     whatsappMessage: "أهلًا {name}، طلبك لسه ما اكتملش. تقدر تكمّله من هنا: {link}",
+    whatsappSent: "اتبعتت رسالة الاسترجاع من رقم واتساب بتاعك.",
+    whatsappFromStore: "ابعت رسالة الاسترجاع من رقم واتساب بتاعك",
     saved: "تم الحفظ.",
     emptyTitle: "لا توجد طلبات مفقودة",
     emptyDescription: "الطلبات التي تُترك دون إتمام أو تُرفض ستظهر هنا.",
@@ -309,6 +314,23 @@ export function LostOrdersPage() {
     const link = recoveryLink(session) ?? "";
     const text = fmt(t.whatsappMessage, { name: session.customerName ?? "", link });
     return `https://wa.me/${whatsappNumber(session.phone)}?text=${encodeURIComponent(text)}`;
+  }
+
+  // With the store's WhatsApp connected, the row's WhatsApp sends the recovery template from that number (§6.3).
+  const storeWhatsapp = useAsync(
+    () => apiClient.getWhatsappIntegration(workspaceId).then((i) => Boolean(i && "connected" in i && i.connected)).catch(() => false),
+    [workspaceId]
+  );
+  const sendsFromStore = storeWhatsapp.data === true;
+
+  async function sendFromStore(session: LostOrder) {
+    try {
+      const res = await lostOrdersSendWhatsapp(apiClient, workspaceId, session.id);
+      replace({ ...session, recoveryStatus: res.recoveryStatus });
+      toast.success(t.whatsappSent);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
   }
 
   /** WhatsApp or call a masked number: the server hands over the one number, and logs it. */
@@ -463,9 +485,14 @@ export function LostOrdersPage() {
             href={whatsappHref(s)}
             target="_blank"
             rel="noreferrer"
-            title={t.whatsapp}
-            aria-label={t.whatsapp}
+            title={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
+            aria-label={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
             onClick={(e) => {
+              if (sendsFromStore) {
+                e.preventDefault();
+                void sendFromStore(s);
+                return;
+              }
               if (isMasked(s.phone)) {
                 e.preventDefault();
                 void reach(s, "whatsapp");
