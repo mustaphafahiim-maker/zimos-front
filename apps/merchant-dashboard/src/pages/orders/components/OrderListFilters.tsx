@@ -10,6 +10,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
 import { useOrderLabels } from "../orderLabels";
+import { useSavedOrderViews } from "./useSavedOrderViews";
 
 const STRINGS = {
   en: {
@@ -335,26 +336,8 @@ export type OrderListPrefs = ReturnType<typeof useOrderListPrefs>;
 
 // ------------------------------------------------------------ saved views --
 
-interface SavedView {
-  name: string;
-  /** The list's URL query string, without "?". */
-  query: string;
-}
-
-function useSavedViews() {
-  const workspaceId = useWorkspaceId();
-  const key = `zimos.orders.views.${workspaceId}`;
-  const [views, setViews] = useState<SavedView[]>(() => readJson<SavedView[]>(key, []));
-  const store = (next: SavedView[]) => {
-    setViews(next);
-    writeJson(key, next);
-  };
-  return {
-    views,
-    save: (name: string, query: string) => store([...views.filter((v) => v.name !== name), { name, query }]),
-    remove: (name: string) => store(views.filter((v) => v.name !== name)),
-  };
-}
+// Per teammate, on the server (useSavedOrderViews.ts).
+const useSavedViews = useSavedOrderViews;
 
 // -------------------------------------------------------------------- bar --
 

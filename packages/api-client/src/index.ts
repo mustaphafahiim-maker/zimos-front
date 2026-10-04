@@ -146,3 +146,5 @@ export * from "./endpoints/shippingProfiles";
 export * from "./endpoints/shippingOptions";
 // Push notifications on the person's devices (notifications/push).
 export * from "./endpoints/push";
+// Each teammate's saved list views (workspaces/savedViews.js).
+export * from "./endpoints/savedViews";
