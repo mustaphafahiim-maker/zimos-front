@@ -125,6 +125,12 @@ export async function affiliatesCommissions(
   return commissions;
 }
 
+/** The payments recorded for one affiliate, newest first. */
+export async function affiliatesPayouts(client: ApiClient, workspaceId: string, affiliateId: string): Promise<AffiliatePayout[]> {
+  const { payouts } = await client.request<{ payouts: AffiliatePayout[] }>(`${affiliatesBase(workspaceId)}/${affiliateId}/payouts`);
+  return payouts;
+}
+
 /** Marks every approved commission of the affiliate as paid, under one payout. */
 export async function affiliatesRecordPayout(
   client: ApiClient,
