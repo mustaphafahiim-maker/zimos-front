@@ -144,3 +144,5 @@ export * from "./endpoints/storefrontDownloads";
 export * from "./endpoints/shippingProfiles";
 // Shipping options the shopper chooses between (shipping/shippingOptions.js).
 export * from "./endpoints/shippingOptions";
+// Push notifications on the person's devices (notifications/push).
+export * from "./endpoints/push";

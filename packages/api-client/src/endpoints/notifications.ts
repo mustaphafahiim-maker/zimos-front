@@ -23,7 +23,7 @@ export type MerchantNotificationType =
   | "announcement"
   | "automation";
 
-export type MerchantNotificationChannel = "inApp" | "email";
+export type MerchantNotificationChannel = "inApp" | "email" | "push";
 
 export interface MerchantNotificationDto {
   id: string;
@@ -55,6 +55,8 @@ export interface MerchantNotificationTypePreference {
   type: MerchantNotificationType;
   inApp: boolean;
   email: boolean;
+  /** Push to the person's devices (notifications/push). */
+  push: boolean;
 }
 
 export interface MerchantNotificationPreferences {

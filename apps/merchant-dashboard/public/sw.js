@@ -44,3 +44,38 @@ self.addEventListener("fetch", (event) => {
     )
   );
 });
+
+/*
+ * Push notifications (SPEC §20 PWA web push; backend notifications/push).
+ * The server sends { title, body, link }; a tap opens the link in the
+ * dashboard (an open window is reused).
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: event.data ? event.data.text() : "Zimos" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Zimos", {
+      body: data.body || undefined,
+      icon: "/icon.png",
+      badge: "/icon.png",
+      data: { link: data.link || "/" },
+      tag: data.type || undefined,
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.link) || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (open) return open.navigate(target).then((w) => (w || open).focus());
+      return self.clients.openWindow(target);
+    })
+  );
+});
