@@ -150,3 +150,5 @@ export * from "./endpoints/push";
 export * from "./endpoints/savedViews";
 // Lost orders in bulk (checkoutSessions/lostOrderBulk.js).
 export * from "./endpoints/lostOrdersBulk";
+// Support's view of a store under the merchant's grant (platformAdmin/supportViewRoutes.js).
+export * from "./endpoints/adminSupportView";
