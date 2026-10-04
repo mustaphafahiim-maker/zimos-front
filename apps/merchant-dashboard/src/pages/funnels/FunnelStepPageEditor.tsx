@@ -95,6 +95,7 @@ export function FunnelStepPageEditor({
   onTreeChange,
   onSeoChange,
   onBack,
+  funnelId,
 }: {
   workspaceId: string;
   steps: UiStep[];
@@ -106,6 +107,8 @@ export function FunnelStepPageEditor({
   /** The step's SEO from its page settings, into the funnel draft. Without it (a split-test variant) there are no page settings. */
   onSeoChange?: (seo: Record<string, unknown>) => void;
   onBack: () => void;
+  /** The funnel: its own saved sections in the library, and saving one for it only. */
+  funnelId?: string;
 }) {
   const t = useT(PAGE_STRINGS);
   const { locale } = useLocale();
@@ -190,6 +193,7 @@ export function FunnelStepPageEditor({
     <SectionInspector
       section={selected}
       onChange={updateSection}
+      funnelId={funnelId}
       namedStyles={namedStylesOf(step.tree.globalStyles)}
       onNamedStylesChange={(named) => change({ ...step.tree, globalStyles: { ...(step.tree.globalStyles ?? {}), named } })}
       onDelete={() => setPendingDelete(selected)}
@@ -236,7 +240,7 @@ export function FunnelStepPageEditor({
             bottom={
               <>
                 <PageProductField value={pageProductId} onChange={setPageProduct} />
-                <SavedSectionsLibrary onInsert={insert} />
+                <SavedSectionsLibrary onInsert={insert} funnelId={funnelId} />
                 <BlockLibrary onAdd={addBlock} insertPosition={insertIndex === null ? null : insertIndex + 1} onCancelInsert={() => setInsertIndex(null)} />
               </>
             }

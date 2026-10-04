@@ -1012,6 +1012,7 @@ export function SectionInspector({
   namedStyles,
   onNamedStylesChange,
   onDuplicate,
+  funnelId,
 }: {
   section: PageSection;
   onChange: (next: PageSection) => void;
@@ -1022,6 +1023,8 @@ export function SectionInspector({
   /** The page's named styles (tree.globalStyles.named) and how to change them. */
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
+  /** In a funnel's editor: a saved section may be kept for that funnel only. */
+  funnelId?: string;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -1116,7 +1119,7 @@ export function SectionInspector({
         )}
       </div>
 
-      <SaveSectionPanel section={section} onChange={onChange} />
+      <SaveSectionPanel section={section} onChange={onChange} funnelId={funnelId} />
 
       <div className="flex gap-2 border-t border-line px-4 py-3">
         {onDuplicate && (

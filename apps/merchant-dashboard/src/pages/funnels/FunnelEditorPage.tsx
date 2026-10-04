@@ -748,6 +748,7 @@ export function FunnelEditorPage() {
             onTreeChange={(tree: PageTree) => updateStep(pageStep.key, { tree })}
             onSeoChange={(seo) => updateStep(pageStep.key, { seo })}
             onBack={() => setView("flow")}
+            funnelId={funnelId}
           />
         ) : (
           <p className="px-6 py-10 text-center text-sm text-ink-soft">{PAGE_STRINGS[locale].noSteps}</p>

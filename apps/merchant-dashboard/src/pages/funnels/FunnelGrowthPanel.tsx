@@ -314,6 +314,7 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
               onSelectStep={() => undefined}
               onTreeChange={(tree) => setEditing((prev) => (prev ? { ...prev, tree } : prev))}
               onBack={() => setEditing(null)}
+              funnelId={funnelId}
             />
           </div>
         )}

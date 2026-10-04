@@ -43,6 +43,9 @@ const STRINGS = {
     updated: "Saved section updated. Publish to apply it to every linked copy.",
     detach: "Detach",
     deleted: "Removed from the library.",
+    // Funnel-only saved sections (backend savedSections: scope "funnel").
+    onlyThisFunnel: "Only in this funnel",
+    funnelOnly: "This funnel",
   },
   ar: {
     title: "السكاشن المحفوظة",
@@ -59,6 +62,8 @@ const STRINGS = {
     updated: "تم تحديث القسم المحفوظ. انشر الموقع لتطبيقه على كل النسخ المرتبطة.",
     detach: "فصل",
     deleted: "تم الحذف من المكتبة.",
+    onlyThisFunnel: "في هذا الفانل فقط",
+    funnelOnly: "هذا الفانل",
   },
 } as const;
 
@@ -99,14 +104,17 @@ function withoutLink(section: PageSection): PageSection {
   return Object.keys(settings).length > 0 ? { ...bare, settings } : bare;
 }
 
-/** The library list, shown above the block library: insert a copy or a linked copy. */
-export function SavedSectionsLibrary({ onInsert }: { onInsert: (section: PageSection) => void }) {
+/**
+ * The library list, shown above the block library: insert a copy or a linked
+ * copy. In a funnel's editor (`funnelId`) it adds that funnel's own sections.
+ */
+export function SavedSectionsLibrary({ onInsert, funnelId }: { onInsert: (section: PageSection) => void; funnelId?: string }) {
   const locale = useEditorLocale();
   const t = STRINGS[locale];
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const state = useAsync(() => storeDesignListSavedSections(apiClient, workspaceId), [workspaceId]);
+  const state = useAsync(() => storeDesignListSavedSections(apiClient, workspaceId, funnelId), [workspaceId, funnelId]);
   const [open, setOpen] = useState(false);
   const list = state.data ?? [];
 
@@ -134,7 +142,12 @@ export function SavedSectionsLibrary({ onInsert }: { onInsert: (section: PageSec
           ) : (
             list.map((saved) => (
               <div key={saved.id} className="rounded-[0.5rem] border border-line p-2">
-                <p className="truncate text-sm font-medium text-ink">{saved.name}</p>
+                <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                  <span className="truncate">{saved.name}</span>
+                  {saved.scope === "funnel" && (
+                    <span className="shrink-0 rounded-full bg-primary-soft px-1.5 py-0.5 text-[0.65rem] font-medium text-primary">{t.funnelOnly}</span>
+                  )}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   <Button type="button" size="sm" variant="outline" onClick={() => onInsert(instantiateSavedSection(saved, false))}>
                     {t.insert}
@@ -171,8 +184,11 @@ export function SavedSectionsLibrary({ onInsert }: { onInsert: (section: PageSec
   );
 }
 
-/** In the section inspector: save this section, or manage its link to a saved one. */
-export function SaveSectionPanel({ section, onChange }: { section: PageSection; onChange: (next: PageSection) => void }) {
+/**
+ * In the section inspector: save this section, or manage its link to a saved
+ * one. In a funnel's editor (`funnelId`) it may be kept for that funnel only.
+ */
+export function SaveSectionPanel({ section, onChange, funnelId }: { section: PageSection; onChange: (next: PageSection) => void; funnelId?: string }) {
   const locale = useEditorLocale();
   const t = STRINGS[locale];
   const workspaceId = useWorkspaceId();
@@ -180,6 +196,7 @@ export function SaveSectionPanel({ section, onChange }: { section: PageSection; 
   const errorMessage = useErrorMessage();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [funnelOnly, setFunnelOnly] = useState(false);
   const linkId = linkedSavedSectionId(section);
 
   async function run(action: () => Promise<void>) {
@@ -232,7 +249,11 @@ export function SaveSectionPanel({ section, onChange }: { section: PageSection; 
           disabled={busy || !name.trim()}
           onClick={() =>
             void run(async () => {
-              await storeDesignCreateSavedSection(apiClient, workspaceId, { name: name.trim(), section: withoutLink(section) });
+              await storeDesignCreateSavedSection(apiClient, workspaceId, {
+                name: name.trim(),
+                section: withoutLink(section),
+                ...(funnelId && funnelOnly ? { scope: "funnel" as const, funnelId } : {}),
+              });
               setName("");
               toast.success(t.saved);
             })
@@ -241,6 +262,12 @@ export function SaveSectionPanel({ section, onChange }: { section: PageSection; 
           {t.save}
         </Button>
       </div>
+      {funnelId && (
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-ink">
+          <input type="checkbox" checked={funnelOnly} disabled={busy} onChange={(e) => setFunnelOnly(e.target.checked)} />
+          {t.onlyThisFunnel}
+        </label>
+      )}
     </div>
   );
 }
