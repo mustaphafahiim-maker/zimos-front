@@ -42,7 +42,8 @@ import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
-import { CrossSellStrip } from "@/components/offers/StoreOffers";
+import { CrossSellStrip, ProductBumpCards } from "@/components/offers/StoreOffers";
+import { useCartBumps } from "@/components/offers/CartBumps";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useShippingChoice } from "@/lib/shippingChoice";
@@ -135,12 +136,15 @@ export default function CheckoutPage() {
     return orderBumpOf(store?.orderBump, inCart);
   }, [bumpGone, items, byVariant, store?.orderBump]);
 
+  // The cart products' own add-ons (Offers → Order bumps), the store-wide one left to `bump` (CartBumps.tsx).
+  const cartBumps = useCartBumps(client, workspaceId, items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[], store?.orderBump?.offerId);
   // A ticked bump is not a cart line: the server adds it to the order.
-  const bumpInTotals = bumpOn && bump ? bump.priceAmount : 0;
+  const bumpInTotals = (bumpOn && bump ? bump.priceAmount : 0) + cartBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
   const subtotal = cart?.subtotal ?? 0;
   // The bump counts toward the parcel's weight as soon as it's ticked.
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
-  if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines }));
   const shipping = shippingChoice.state;
@@ -203,6 +207,7 @@ export default function CheckoutPage() {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
         ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+        ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
       if (method.method !== "cod" && !transferMethod) {
@@ -241,6 +246,7 @@ export default function CheckoutPage() {
         // The totals drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
         setBumpGone(true);
+        cartBumps.reset();
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
@@ -408,12 +414,18 @@ export default function CheckoutPage() {
                 <dt className="text-ink-soft">{t.checkout.subtotal}</dt>
                 <dd className="text-ink">{money(subtotal, currency)}</dd>
               </div>
-              {bumpInTotals > 0 && bump && (
+              {bumpOn && bump && (
                 <div className="flex justify-between gap-3">
                   <dt className="text-ink-soft">{bump.name}</dt>
                   <dd className="text-ink">{money(bump.priceAmount, currency)}</dd>
                 </div>
               )}
+              {cartBumps.selected.map((b) => (
+                <div key={b.offerId} className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{b.name}</dt>
+                  <dd className="text-ink">{money(b.priceAmount, currency)}</dd>
+                </div>
+              ))}
               {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
@@ -440,6 +452,7 @@ export default function CheckoutPage() {
           {bump && items.length > 0 && (
             <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
           )}
+          {items.length > 0 && <ProductBumpCards state={cartBumps} idPrefix={`${FORM_PREFIX}-pb`} />}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
             {formError && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>}
