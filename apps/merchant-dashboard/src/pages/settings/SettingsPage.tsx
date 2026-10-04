@@ -37,6 +37,7 @@ import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { SecuritySection } from "./SecuritySection";
 import { TeamInviteForm } from "./TeamInviteForm";
+import { TeamMemberGroups } from "./TeamMemberGroups";
 import { DevelopersSection } from "./DevelopersSection";
 import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
 import { OrderEmailsSection } from "./OrderEmailsSection";
@@ -493,74 +494,78 @@ function TeamSection() {
 
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
         <div className="mt-4 space-y-8">
-          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 font-medium">{t.member}</th>
-                  <th className="px-4 py-3 font-medium">{t.role}</th>
-                  <th className="px-4 py-3 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
-                  const isSelf = Boolean(member.user && user && member.user.id === user.id);
-                  return (
-                    <tr key={member.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-ink">
-                          {member.user?.fullName || member.user?.email || "—"}
-                          {isSelf && (
-                            <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
-                          )}
-                        </div>
-                        {member.user?.email && (
-                          <div className="text-xs text-ink-soft">{member.user.email}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isSelf ? (
-                          <span className="text-ink-soft">{roleName(member.role)}</span>
-                        ) : (
-                          <Select
-                            aria-label={fmt(t.roleFor, { who: member.user?.email ?? t.roleForFallback })}
-                            value={member.role.id}
-                            onChange={(e) => changeRole(member, e.target.value)}
-                            className="max-w-[220px]"
-                          >
-                            {roles.map((role) => (
-                              <option key={role.id} value={role.id}>
-                                {roleName(role)}
-                              </option>
-                            ))}
-                          </Select>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        {isSelf ? (
-                          <span
-                            className="text-xs text-ink-soft"
-                            title={t.cantRemoveSelf}
-                          >
-                            —
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:bg-danger-soft"
-                            onClick={() => setRemoving(member)}
-                          >
-                            {t.remove}
-                          </Button>
-                        )}
-                      </td>
+          <TeamMemberGroups members={members} invitedCount={invites.length}>
+            {(list) => (
+              <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                      <th className="px-4 py-3 font-medium">{t.member}</th>
+                      <th className="px-4 py-3 font-medium">{t.role}</th>
+                      <th className="px-4 py-3 font-medium" />
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {list.map((member) => {
+                      const isSelf = Boolean(member.user && user && member.user.id === user.id);
+                      return (
+                        <tr key={member.id} className="border-b border-line last:border-0">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-ink">
+                              {member.user?.fullName || member.user?.email || "—"}
+                              {isSelf && (
+                                <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
+                              )}
+                            </div>
+                            {member.user?.email && (
+                              <div className="text-xs text-ink-soft">{member.user.email}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isSelf ? (
+                              <span className="text-ink-soft">{roleName(member.role)}</span>
+                            ) : (
+                              <Select
+                                aria-label={fmt(t.roleFor, { who: member.user?.email ?? t.roleForFallback })}
+                                value={member.role.id}
+                                onChange={(e) => changeRole(member, e.target.value)}
+                                className="max-w-[220px]"
+                              >
+                                {roles.map((role) => (
+                                  <option key={role.id} value={role.id}>
+                                    {roleName(role)}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-end">
+                            {isSelf ? (
+                              <span
+                                className="text-xs text-ink-soft"
+                                title={t.cantRemoveSelf}
+                              >
+                                —
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger hover:bg-danger-soft"
+                                onClick={() => setRemoving(member)}
+                              >
+                                {t.remove}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TeamMemberGroups>
 
           {invites.length > 0 && (
             <div>
