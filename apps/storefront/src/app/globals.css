@@ -433,3 +433,8 @@ header[data-overlay] .zimos-logo .zimos-logo-on-dark {
     animation: none;
   }
 }
+
+/* The ZIMOS wordmark is navy on light surfaces and white on dark ones (components/ZimosLogo.tsx). */
+.dark {
+  --zimos-word: #ffffff;
+}

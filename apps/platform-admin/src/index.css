@@ -398,3 +398,8 @@ input[type="range"].range-primary {
   height: 100%;
   object-fit: cover;
 }
+
+/* The ZIMOS wordmark is navy on light surfaces and white on dark ones (components/ZimosLogo.tsx). */
+.dark {
+  --zimos-word: #ffffff;
+}
