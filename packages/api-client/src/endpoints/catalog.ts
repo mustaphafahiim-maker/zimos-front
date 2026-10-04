@@ -294,26 +294,32 @@ export function storefrontProductReviews(product: unknown): { rating: Storefront
 }
 
 export interface StorefrontReviewSubmission {
-  /** The phone the shopper ordered with; the server checks a delivered order of this product. */
+  /** The order number and the phone it was placed with: a delivered order of this product proves the purchase. */
+  orderNumber: string;
   phone: string;
+  /** Up to three photos, uploaded first (uploadCustomerPhoto) by the same visitor. */
+  photoIds?: string[];
   rating: number;
   comment?: string;
 }
 
 /**
- * Public: a shopper reviews a product they received. 403 NO_DELIVERED_PURCHASE
- * when no delivered order of this product matches the phone. The review waits
- * for the merchant's approval.
+ * Public: a shopper reviews a product they received. 403 REVIEW_NOT_VERIFIED
+ * unless a delivered order of this product has this number and phone; 422
+ * REVIEW_PHOTO_INVALID for a photo that expired or isn't this visitor's. The
+ * review waits for the merchant's approval.
  */
 export async function storefrontSubmitReview(
   client: ApiClient,
   workspaceId: string,
   productId: string,
-  payload: StorefrontReviewSubmission
+  payload: StorefrontReviewSubmission,
+  /** The visitor who uploaded the photos (X-Visitor-Id). */
+  visitorId?: string
 ): Promise<{ id: string; status: string; created: boolean }> {
   const { review } = await client.request<{ review: { id: string; status: string; created: boolean } }>(
     `/store/${workspaceId}/products/${productId}/reviews`,
-    { method: "POST", body: payload, auth: false }
+    { method: "POST", body: payload, auth: false, ...(visitorId ? { headers: { "X-Visitor-Id": visitorId } } : {}) }
   );
   return review;
 }
