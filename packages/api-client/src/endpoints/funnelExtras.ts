@@ -68,6 +68,7 @@ export async function funnelExtrasDiscardDraft(client: ApiClient, workspaceId: s
 
 export type FunnelIssueCode =
   | "graph"
+  | "untranslated_text"
   | "page_without_product"
   | "unlinked_button"
   | "image_without_alt"
@@ -82,6 +83,9 @@ export interface FunnelIssue {
   field?: string | null;
   /** English, from the server; the dashboard translates by `code` where it can. */
   message: string;
+  /** untranslated_text: the language the texts are missing in, and how many. */
+  locale?: string;
+  count?: number;
 }
 
 export interface FunnelIssues {
