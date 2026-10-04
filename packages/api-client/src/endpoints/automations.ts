@@ -123,6 +123,8 @@ export interface AutomationFlowTemplate {
   whatsappTemplates: AutomationWhatsappTemplateHint[];
   /** The rule this store already created from the template, or null. */
   ruleId: string | null;
+  /** Switched on with a coupon code, its last message offers it (abandoned cart). */
+  acceptsCoupon?: boolean;
 }
 
 const base = (workspaceId: string) => `/workspaces/${workspaceId}/automations`;
@@ -182,7 +184,12 @@ export async function automationFlowsEnableTemplate(
   client: ApiClient,
   workspaceId: string,
   key: string,
-  locale: "ar" | "en"
+  locale: "ar" | "en",
+  /** For a template that offers one (`acceptsCoupon`): the code its last message gives. */
+  opts: { couponCode?: string } = {}
 ): Promise<{ rule: AutomationFlowRule; created: boolean }> {
-  return client.request(`${base(workspaceId)}/templates/${encodeURIComponent(key)}/enable`, { method: "POST", body: { locale } });
+  return client.request(`${base(workspaceId)}/templates/${encodeURIComponent(key)}/enable`, {
+    method: "POST",
+    body: { locale, ...(opts.couponCode ? { couponCode: opts.couponCode } : {}) },
+  });
 }
