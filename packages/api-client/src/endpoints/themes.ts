@@ -44,3 +44,12 @@ export async function adminThemeUpdate(
   const { theme } = await client.request<{ theme: CatalogTheme }>(`/admin/themes/${encodeURIComponent(key)}`, { method: "PATCH", body: patch });
   return theme;
 }
+
+/**
+ * "Reset" on the current theme: drops the look tuned on top of it (accent
+ * colours, second colour, font, corners); the theme, logo and header/footer
+ * content stay (themes/themeReset.js). Live at once. Needs website.edit.
+ */
+export async function themeResetCurrent(client: ApiClient, workspaceId: string): Promise<{ themeSettings: Record<string, unknown>; cleared: string[] }> {
+  return client.request(`/workspaces/${workspaceId}/themes/current/reset`, { method: "POST" });
+}

@@ -19,6 +19,8 @@ import { useAsync } from "@/lib/useAsync";
 import { formatMoney } from "@/lib/format";
 import { FilterTabs } from "@/components/FilterTabs";
 import { themeShowcaseTree } from "./themeShowcase";
+import { ThemeResetButton, ThemeTags, useStyleFilterText, useTagLabel } from "./ThemeExtras";
+import { Select } from "@/components/Select";
 
 const STRINGS = {
   en: {
@@ -117,6 +119,9 @@ export function ThemeGallery() {
   const [selected, setSelected] = useState<ThemeChoice | null>(null);
   const [price, setPrice] = useState<"all" | "free" | "paid">("all");
   const [category, setCategory] = useState("");
+  const [tag, setTag] = useState("");
+  const tagLabel = useTagLabel();
+  const styleText = useStyleFilterText();
   // The platform's catalog (themes/themesCatalog.js): which themes, in what order, named how, at what price.
   const catalog = useAsync(() => themesList(apiClient, workspaceId).catch(() => null), [workspaceId]);
   const entries = useMemo(() => new Map((catalog.data?.themes ?? []).map((e) => [e.key, e])), [catalog.data]);
@@ -124,10 +129,13 @@ export function ThemeGallery() {
     ? catalog.data.themes.map((e) => e.key).filter((k): k is ThemeChoice => (THEME_CHOICES as readonly string[]).includes(k))
     : [...THEME_CHOICES];
   const categories = [...new Set(offered.map((k) => entries.get(k)?.category).filter((c): c is string => !!c))];
+  // Every tag the offered themes carry (the console sets them), for the style filter.
+  const tags = [...new Set(offered.flatMap((k) => entries.get(k)?.tags ?? []))].sort();
   const shown = offered.filter((k) => {
     const e = entries.get(k);
     if (price === "free" && e?.price) return false;
     if (price === "paid" && !e?.price) return false;
+    if (tag && !(e?.tags ?? []).includes(tag)) return false;
     return !category || e?.category === category;
   });
   const nameOf = (k: ThemeChoice) => entries.get(k)?.name[locale] || THEME_SPECS[k].name[locale];
@@ -162,6 +170,16 @@ export function ThemeGallery() {
             tabs={[{ value: "", label: t.anyCategory }, ...categories.map((c) => ({ value: c, label: (t as Record<string, string>)[`cat_${c}`] ?? c }))]}
           />
         )}
+        {tags.length > 1 && (
+          <Select aria-label={styleText.style} value={tag} onChange={(e) => setTag(e.target.value)} className="h-9 w-auto">
+            <option value="">{styleText.anyStyle}</option>
+            {tags.map((value) => (
+              <option key={value} value={value}>
+                {tagLabel(value)}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -187,8 +205,11 @@ export function ThemeGallery() {
                       {t.current}
                     </span>
                   )}
+                  {/* Back to the theme's own look (ThemeExtras.tsx). */}
+                  {current && <span className="ms-auto"><ThemeResetButton /></span>}
                 </span>
                 <span className="text-xs text-ink-soft">{spec.description[locale]}</span>
+                <ThemeTags tags={entry?.tags ?? []} />
                 {entry?.price && !entry.owned && (
                   <span className="text-xs font-medium text-accent-dark">{formatMoney(entry.price.amount, entry.price.currency)}</span>
                 )}
