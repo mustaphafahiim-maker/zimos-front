@@ -23,6 +23,7 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { ContentTranslationRows } from "./ContentTranslationRows";
+import { AiTranslateButton } from "./AiTranslateButton";
 
 const STRINGS = {
   en: {
@@ -99,6 +100,8 @@ export function LanguagesTab() {
   const [busy, setBusy] = useState(false);
   const [locale, setLocale] = useState<StoreLocale | "">("");
   const [kind, setKind] = useState<TranslatableEntity | ContentEntity>("product");
+  // Bumped after an AI fill, so the rows below read their translations again.
+  const [version, setVersion] = useState(0);
 
   const data = overview.data;
   const extra = (data?.languages ?? []).filter((l) => !l.isDefault);
@@ -197,17 +200,25 @@ export function LanguagesTab() {
                       { value: "funnel", label: t.funnels },
                     ]}
                   />
+                  <AiTranslateButton
+                    locale={active}
+                    kind={kind}
+                    onDone={() => {
+                      setVersion((v) => v + 1);
+                      void overview.refresh({ silent: true });
+                    }}
+                  />
                 </div>
                 {kind === "page" || kind === "funnel" ? (
                   <ContentTranslationRows
-                    key={`${active}:${kind}`}
+                    key={`${active}:${kind}:${version}`}
                     locale={active}
                     kind={kind}
                     onSaved={() => void overview.refresh({ silent: true })}
                   />
                 ) : (
                   <TranslationRows
-                    key={`${active}:${kind}`}
+                    key={`${active}:${kind}:${version}`}
                     locale={active}
                     kind={kind}
                     onSaved={() => void overview.refresh({ silent: true })}

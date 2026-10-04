@@ -37,3 +37,21 @@ export async function contentTranslationsSave(
   });
   return item;
 }
+
+/** "Translate what's missing with AI" (translations/aiFill.js): AI jobs of up to 20 texts each, at most five per call. */
+export async function translationsAiStart(
+  client: ApiClient,
+  workspaceId: string,
+  payload: { entityType: ContentEntity | "product" | "collection"; locale: StoreLocale }
+): Promise<{ jobs: string[]; texts: number; remaining: number }> {
+  return client.request(`/workspaces/${workspaceId}/translations/ai`, { method: "POST", body: payload });
+}
+
+/** Saves what the finished jobs answered (never over a translation saved meanwhile); call until `pending` is empty. */
+export async function translationsAiApply(
+  client: ApiClient,
+  workspaceId: string,
+  jobIds: string[]
+): Promise<{ saved: number; pending: string[]; failed: string[] }> {
+  return client.request(`/workspaces/${workspaceId}/translations/ai/apply`, { method: "POST", body: { jobIds } });
+}
