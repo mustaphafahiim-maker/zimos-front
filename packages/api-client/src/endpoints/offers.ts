@@ -113,6 +113,8 @@ export interface StorefrontUpsell extends StorefrontOrderBump {
   /** The offer's real countdown from the order (offers/offerCountdown.js); null without one. */
   countdownMinutes?: number | null;
   expiresAt?: string | null;
+  /** The order was paid online: taking it places a linked order rather than adding a line. */
+  followOn?: boolean;
 }
 
 export interface StorefrontUpsellAccepted {
@@ -123,6 +125,11 @@ export interface StorefrontUpsellAccepted {
   totalAmount: number;
   currency: string;
   added: { name: string; productName: string; amount: number };
+  /** A linked order after an order paid online (the fields above are that order's). */
+  followOn?: boolean;
+  paymentMethod?: string;
+  /** paid: charged to the saved card; declined: it waits for payment; cod: paid on delivery. */
+  payment?: { status: "paid" | "declined" | "cod"; amount?: number; currency?: string; code?: string };
 }
 
 export interface StorefrontExitDownsell {

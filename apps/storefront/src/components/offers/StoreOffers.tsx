@@ -44,6 +44,11 @@ const TEXT = {
     upsellNo: "No, thanks",
     upsellAdded: (name: string) => `${name} was added to your order.`,
     upsellTotal: (total: string) => `Your new total: ${total}, paid on delivery.`,
+    upsellNewOrder: (name: string, number: string) => `${name} is on its way as a new order, #${number}.`,
+    upsellPaidCard: (total: string) => `${total} was charged to your saved card.`,
+    upsellCod: (total: string) => `${total}, paid on delivery.`,
+    upsellDeclined: "Your card was declined, so this order is waiting for payment. Your first order is not affected.",
+    upsellFollowOnHint: "It comes as a separate order.",
     upsellClosed: "This offer is no longer available. Your order is unchanged.",
     upsellFailed: "We couldn't add it — your order is unchanged. Try again.",
     exitCode: "Your code",
@@ -60,6 +65,11 @@ const TEXT = {
     upsellNo: "لا، شكرًا",
     upsellAdded: (name: string) => `تمت إضافة ${name} إلى طلبك.`,
     upsellTotal: (total: string) => `الإجمالي الجديد: ${total}، الدفع عند الاستلام.`,
+    upsellNewOrder: (name: string, number: string) => `${name} جاي في طلب جديد، رقم ${number}.`,
+    upsellPaidCard: (total: string) => `اتخصم ${total} من الكارت المحفوظ.`,
+    upsellCod: (total: string) => `${total}، الدفع عند الاستلام.`,
+    upsellDeclined: "الكارت اترفض، فالطلب ده مستني الدفع. طلبك الأول مش متأثر.",
+    upsellFollowOnHint: "هييجي في طلب منفصل.",
     upsellClosed: "هذا العرض لم يعد متاحًا. طلبك كما هو.",
     upsellFailed: "تعذّرت الإضافة — طلبك كما هو. حاول مرة أخرى.",
     exitCode: "الكود",
@@ -262,9 +272,17 @@ export function ThankYouUpsell({
       <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
         <p className="flex items-center gap-2 font-semibold text-primary">
           <CheckIcon size={18} />
-          {text.upsellAdded(accepted.added.productName)}
+          {accepted.followOn ? text.upsellNewOrder(accepted.added.productName, accepted.orderNumber) : text.upsellAdded(accepted.added.productName)}
         </p>
-        <p className="mt-0.5 text-ink-soft">{text.upsellTotal(money(accepted.totalAmount, accepted.currency))}</p>
+        <p className="mt-0.5 text-ink-soft">
+          {!accepted.followOn
+            ? text.upsellTotal(money(accepted.totalAmount, accepted.currency))
+            : accepted.payment?.status === "paid"
+              ? text.upsellPaidCard(money(accepted.totalAmount, accepted.currency))
+              : accepted.payment?.status === "declined"
+                ? text.upsellDeclined
+                : text.upsellCod(money(accepted.totalAmount, accepted.currency))}
+        </p>
       </div>
     );
   }
@@ -300,6 +318,7 @@ export function ThankYouUpsell({
       </div>
       <OfferVariantPicker product={product} value={chosenId ?? offer.variantId} onChange={setChosenId} disabled={state === "busy"} />
       <OfferTimer {...countdown} />
+      {offer.followOn && <p className="mt-2 text-xs text-ink-soft">{text.upsellFollowOnHint}</p>}
       <p role="alert" className="mt-3 text-sm font-medium text-danger empty:hidden">
         {error}
       </p>
