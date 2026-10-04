@@ -76,6 +76,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import { EXTRA_ELEMENT_SPECS, EXTRA_PRESETS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
 /**
@@ -735,6 +736,8 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
+  // Gallery with thumbnails, variant and bundle pickers, review form (builderExtraBlocks.ts).
+  ...EXTRA_ELEMENT_SPECS,
 };
 
 // ---------------------------------------------------------------------------
@@ -3177,7 +3180,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS, ...EXTRA_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

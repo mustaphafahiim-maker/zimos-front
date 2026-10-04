@@ -1,3 +1,4 @@
+import { BuilderExtraElement, EXTRA_ELEMENT_TYPES } from "./builderExtras";
 import type {
   PageColumn,
   PageElement,
@@ -126,7 +127,7 @@ interface Ctx {
 }
 
 /** Elements whose empty `productId` means "the page's product". */
-const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form"]);
+const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form", "image_gallery", "variant_selector", "bundle_selector", "review_form"]);
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   // Bound props are replaced by live data before the element ever sees them.
@@ -263,6 +264,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "repeater":
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
+      // Gallery with thumbnails, variant and bundle pickers, review form (./builderExtras).
+      if (EXTRA_ELEMENT_TYPES.has(element.type)) return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} />;
       // The showcase sections (./showcase) draw their own types; anything
       // else is a type this renderer does not know, and a tree written for a
       // newer one must not blank the page — so it draws nothing.

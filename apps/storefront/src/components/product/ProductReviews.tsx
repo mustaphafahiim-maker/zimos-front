@@ -99,11 +99,14 @@ export function ProductReviews({
   productId,
   rating,
   reviews,
+  formOnly = false,
 }: {
   workspaceId: string;
   productId: string;
   rating: StorefrontRatingSummary;
   reviews: StorefrontReview[];
+  /** The builder's review_form element: only the button and the form, no summary or list. */
+  formOnly?: boolean;
 }) {
   const { locale, intlLocale } = useStore();
   const text = TEXT[locale] ?? TEXT.ar;
@@ -175,9 +178,11 @@ export function ProductReviews({
   return (
     <section aria-labelledby="product-reviews-title" className="mt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="product-reviews-title" className="text-xl font-semibold text-ink">
-          {text.title}
-        </h2>
+        {!formOnly && (
+          <h2 id="product-reviews-title" className="text-xl font-semibold text-ink">
+            {text.title}
+          </h2>
+        )}
         {!open && !sent && (
           <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
             {text.write}
@@ -185,7 +190,7 @@ export function ProductReviews({
         )}
       </div>
 
-      {rating.count > 0 && rating.average !== null ? (
+      {formOnly ? null : rating.count > 0 && rating.average !== null ? (
         <div className={`${card} mt-4 grid gap-5 p-5 sm:grid-cols-[12rem_1fr] sm:items-center`}>
           <div className="text-center">
             <p className="text-4xl font-bold text-ink" dir="ltr">
@@ -304,7 +309,7 @@ export function ProductReviews({
         </form>
       )}
 
-      {reviews.length > 0 && (
+      {!formOnly && reviews.length > 0 && (
         <ul className="mt-4 grid gap-4 md:grid-cols-2">
           {reviews.map((review) => (
             <li key={review.id} className={`${card} space-y-3 p-5`}>

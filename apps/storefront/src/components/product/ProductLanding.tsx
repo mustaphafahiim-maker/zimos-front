@@ -1,7 +1,7 @@
 "use client";
 
 import { ConvertedPrice } from "@/components/ConvertedPrice";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -60,6 +60,7 @@ import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
 import { customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
+import { readPick, usePick } from "@/lib/pagePicks";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
@@ -116,6 +117,22 @@ export function ProductLanding({
   const [selection, setSelection] = useState<Record<string, string>>(() =>
     page.pageSettings.auto_select_variant === false && groups.length > 0 ? {} : { ...(initialVariant?.optionValues ?? {}) }
   );
+  // What the shopper picked on this page's variant_selector / bundle_selector (lib/pagePicks), after hydration.
+  useEffect(() => {
+    const picked = product.variants.find((v) => v.id === readPick("variant", product.id));
+    if (picked) setSelection({ ...(picked.optionValues ?? {}) });
+    const offer = readPick("offer", product.id);
+    if (offer && product.offers.some((o) => o.id === offer)) setTierId(offer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+  usePick(
+    "variant",
+    product.id,
+    useCallback((id: string) => {
+      const picked = product.variants.find((v) => v.id === id);
+      if (picked) setSelection({ ...(picked.optionValues ?? {}) });
+    }, [product.variants])
+  );
   // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
   const choosing = page.pageSettings.auto_select_variant === false && groups.some((g) => !selection[g.name]);
   const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
@@ -140,6 +157,7 @@ export function ProductLanding({
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
+  usePick("offer", product.id, useCallback((id: string) => setTierId(id), []));
   const tier = tiers.find((x) => x.id === tierId);
   // The product's custom fields: answered here, sent with the order line.
   const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);

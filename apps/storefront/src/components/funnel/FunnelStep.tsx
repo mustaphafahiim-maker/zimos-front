@@ -50,6 +50,7 @@ import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { useFunnelCurrency } from "./FunnelCurrency";
+import { readPick } from "@/lib/pagePicks";
 import { storeHref } from "@/lib/storeHref";
 import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
@@ -396,6 +397,11 @@ function FunnelCheckout({
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
+  // A variant picked on an earlier page's variant_selector (lib/pagePicks) comes first.
+  useEffect(() => {
+    const picked = product ? readPick("variant", product.id) : null;
+    if (picked && variants.some((v) => v.id === picked)) setVariantId(picked);
+  }, [product, variants]);
   const variant = variants.find((v) => v.id === variantId);
   const offer = product ? defaultOfferOf(product) : undefined;
   const offerId = offer && variant && offerAppliesTo(offer, variant.id) ? offer.id : undefined;

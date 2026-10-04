@@ -1,3 +1,4 @@
+import { EXTRA_AR } from "./builderExtraBlocks";
 import { createContext, useContext } from "react";
 import type { PageElementType } from "@store-builder/api-client";
 import { SHOWCASE_LABEL_AR } from "./showcaseBlocks";
@@ -511,6 +512,13 @@ const GROUP_AR: Record<string, string> = {
   convert: "الأسئلة والتواصل والإقناع",
   basics: "عناصر أساسية",
 };
+
+// The builder elements added later (builderExtraBlocks.ts) bring their own Arabic.
+Object.assign(ELEMENT_LABEL_AR, EXTRA_AR.elements);
+Object.assign(FIELD_LABEL_AR, EXTRA_AR.fields);
+Object.assign(FIELD_HINT_AR, EXTRA_AR.hints);
+Object.assign(OPTION_LABEL_AR, EXTRA_AR.options);
+Object.assign(PRESET_AR, EXTRA_AR.presets);
 
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
   return locale === "ar" ? (ELEMENT_LABEL_AR[type] ?? fallback) : fallback;
