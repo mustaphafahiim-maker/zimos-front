@@ -34,7 +34,7 @@ import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
 import { OrderListDocuments } from "./components/OrderDocuments";
-import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
+import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
   useColumnLabel,
@@ -51,8 +51,11 @@ const STRINGS = {
     tabsLabel: "Filter orders by stage",
     tabAll: "All",
     searchLabel: "Search orders",
-    searchPlaceholder: "Order number, name, email or phone",
-    searchHint: "Matches the order number, customer name or email, or the full phone number.",
+    searchPlaceholder: "Order number, name, email, phone or waybill",
+    searchHint: "Matches the order number, customer name or email, the full phone number, or a courier waybill number.",
+    today: "Today",
+    last7: "Last 7 days",
+    last30: "Last 30 days",
     searchTooShort: "Type at least 2 characters to search.",
     clearSearch: "Clear search",
     from: "From",
@@ -90,8 +93,11 @@ const STRINGS = {
     tabsLabel: "تصفية الأوردرات حسب المرحلة",
     tabAll: "الكل",
     searchLabel: "البحث في الأوردرات",
-    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف",
-    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا.",
+    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف أو البوليصة",
+    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا، أو رقم بوليصة الشحن.",
+    today: "اليوم",
+    last7: "آخر 7 أيام",
+    last30: "آخر 30 يومًا",
     searchTooShort: "اكتب حرفين على الأقل للبحث.",
     clearSearch: "مسح البحث",
     from: "من",
@@ -285,7 +291,7 @@ export function OrdersListPage() {
 
       <SortPicker value={sort} onChange={setSort} />
 
-      <RiskFilter />
+      <RiskFilter counts={orderRiskCountsOf(pipeline.data)} />
 
       <StageTabs
         value={stage}
@@ -459,6 +465,29 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
             aria-describedby={datesHintId}
             className="h-11 w-auto"
           />
+          {/* Shortcuts, in UTC like the dates themselves. */}
+          {([
+            ["today", 0],
+            ["last7", 6],
+            ["last30", 29],
+          ] as const).map(([key, back]) => {
+            const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+            const from = day(back);
+            const to = day(0);
+            const active = filters.from === from && filters.to === to;
+            return (
+              <Button
+                key={key}
+                variant={active ? "secondary" : "ghost"}
+                size="sm"
+                className="min-h-11"
+                aria-pressed={active}
+                onClick={() => update({ from, to })}
+              >
+                {t[key]}
+              </Button>
+            );
+          })}
           {(filters.from || filters.to) && (
             <Button
               variant="ghost"

@@ -114,3 +114,5 @@ export * from "./endpoints/carrierBooking";
 export * from "./endpoints/carrierRegions";
 // "Ship selected" with a connected courier, as a queued batch (shipping/bulkShipping.js).
 export * from "./endpoints/shipmentBatches";
+// The orders list's risk tab counts (orders/orderService.orderPipeline).
+export * from "./endpoints/orderRiskCounts";

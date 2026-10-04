@@ -202,6 +202,17 @@ export interface OrderListFilters {
   carrier?: string;
   seen?: boolean;
   test?: boolean;
+  /** Orders containing this product. */
+  productId?: string;
+  funnelId?: string;
+  dataQuality?: "good" | "low";
+  /** Two letters, any case. */
+  ipCountry?: string;
+  /** A discount code the order used, any case. */
+  discountCode?: string;
+  /** The visit's utm_source / utm_campaign (last touch, else first), any case. */
+  utmSource?: string;
+  utmCampaign?: string;
 }
 
 // -------------------------------------------------- timeline, neighbours --

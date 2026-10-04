@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Columns3, Filter, X } from "lucide-react";
 import { Button, Input, cn } from "@store-builder/ui";
-import { ORDER_SOURCES, ordersListTags, type OrderListFilters, type OrderSource } from "@store-builder/api-client";
+import { ORDER_SOURCES, funnelsList, ordersListTags, type OrderListFilters, type OrderSource } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -64,6 +64,19 @@ const STRINGS = {
     save: "Save",
     cancel: "Cancel",
     deleteView: "Delete “{name}”",
+    product: "Product",
+    funnel: "Funnel",
+    dataQuality: "Data quality",
+    dq_good: "Good",
+    dq_low: "Poor",
+    ipCountry: "IP country",
+    ipCountryPlaceholder: "e.g. EG",
+    discountCode: "Discount code",
+    discountCodePlaceholder: "e.g. SAVE10",
+    utmSource: "UTM source",
+    utmSourcePlaceholder: "e.g. facebook",
+    utmCampaign: "UTM campaign",
+    utmCampaignPlaceholder: "Campaign name",
   },
   ar: {
     filters: "الفلاتر",
@@ -117,14 +130,44 @@ const STRINGS = {
     save: "حفظ",
     cancel: "إلغاء",
     deleteView: "حذف «{name}»",
+    product: "المنتج",
+    funnel: "الفانل",
+    dataQuality: "جودة البيانات",
+    dq_good: "جيدة",
+    dq_low: "ضعيفة",
+    ipCountry: "دولة الـ IP",
+    ipCountryPlaceholder: "مثلًا EG",
+    discountCode: "كود الخصم",
+    discountCodePlaceholder: "مثلًا SAVE10",
+    utmSource: "مصدر UTM",
+    utmSourcePlaceholder: "مثلًا facebook",
+    utmCampaign: "حملة UTM",
+    utmCampaignPlaceholder: "اسم الحملة",
   },
 } satisfies Messages;
 
 // ---------------------------------------------------------------- filters --
 
-const FILTER_KEYS = ["tag", "source", "paymentMethod", "governorate", "carrier", "seen", "test", "archived"] as const;
+const FILTER_KEYS = [
+  "tag",
+  "source",
+  "paymentMethod",
+  "governorate",
+  "carrier",
+  "seen",
+  "test",
+  "archived",
+  "productId",
+  "funnelId",
+  "dataQuality",
+  "ipCountry",
+  "discountCode",
+  "utmSource",
+  "utmCampaign",
+] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 const PAYMENT_METHODS = ["cod", "card", "wallet", "bank_transfer"] as const;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The list's SPEC §4.3 filters, kept in the URL next to stage / q / from / to
@@ -140,6 +183,10 @@ export function useOrderExtraFilters() {
       const v = params.get(key);
       return v !== null && (allowed as readonly string[]).includes(v) ? (v as T) : "";
     };
+    const matching = (key: string, pattern: RegExp) => {
+      const v = (params.get(key) ?? "").trim();
+      return pattern.test(v) ? v : "";
+    };
     return {
       tag: text("tag", 40),
       source: oneOf("source", ORDER_SOURCES),
@@ -149,6 +196,13 @@ export function useOrderExtraFilters() {
       seen: oneOf("seen", ["true", "false"] as const),
       test: oneOf("test", ["true", "false"] as const),
       archived: oneOf("archived", ["only", "include"] as const),
+      productId: matching("productId", UUID),
+      funnelId: matching("funnelId", UUID),
+      dataQuality: oneOf("dataQuality", ["good", "low"] as const),
+      ipCountry: matching("ipCountry", /^[A-Za-z]{2}$/).toUpperCase(),
+      discountCode: text("discountCode", 100),
+      utmSource: text("utmSource", 100),
+      utmCampaign: text("utmCampaign", 200),
     };
   }, [params]);
 
@@ -162,6 +216,13 @@ export function useOrderExtraFilters() {
       seen: values.seen ? values.seen === "true" : undefined,
       test: values.test ? values.test === "true" : undefined,
       archived: values.archived || undefined,
+      productId: values.productId || undefined,
+      funnelId: values.funnelId || undefined,
+      dataQuality: values.dataQuality || undefined,
+      ipCountry: values.ipCountry || undefined,
+      discountCode: values.discountCode || undefined,
+      utmSource: values.utmSource || undefined,
+      utmCampaign: values.utmCampaign || undefined,
     }),
     [values]
   );
@@ -298,7 +359,15 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
   const [viewName, setViewName] = useState("");
   const saved = useSavedViews();
   const tags = useAsync(() => ordersListTags(apiClient, workspaceId), [workspaceId]);
-  const ids = { size: useId(), views: useId(), tag: useId(), source: useId(), pay: useId(), gov: useId(), carrier: useId(), seen: useId(), test: useId(), arch: useId(), name: useId() };
+  // For the product and funnel pickers and their chips; a failure leaves the picker with what is in the URL.
+  const products = useAsync(
+    () => apiClient.listProducts(workspaceId, { limit: 100 }).then((r) => r.products.map((p) => ({ id: p.id, name: p.name }))),
+    [workspaceId]
+  );
+  const funnels = useAsync(() => funnelsList(apiClient, workspaceId).then((list) => list.map((f) => ({ id: f.id, name: f.name }))), [workspaceId]);
+  const productName = (id: string) => (products.data ?? []).find((p) => p.id === id)?.name ?? id.slice(0, 8);
+  const funnelName = (id: string) => (funnels.data ?? []).find((f) => f.id === id)?.name ?? id.slice(0, 8);
+  const ids = { size: useId(), views: useId(), tag: useId(), source: useId(), pay: useId(), gov: useId(), carrier: useId(), seen: useId(), test: useId(), arch: useId(), name: useId(), product: useId(), funnel: useId(), dq: useId(), ip: useId(), code: useId(), utmS: useId(), utmC: useId() };
   const { values, update } = filters;
 
   const chipText: Record<FilterKey, () => string> = {
@@ -310,6 +379,13 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
     seen: () => (values.seen === "true" ? t.seen_true : t.seen_false),
     test: () => (values.test === "true" ? t.test_true : t.test_false),
     archived: () => (values.archived === "only" ? t.archived_only : t.archived_include),
+    productId: () => `${t.product}: ${productName(values.productId)}`,
+    funnelId: () => `${t.funnel}: ${funnelName(values.funnelId)}`,
+    dataQuality: () => `${t.dataQuality}: ${values.dataQuality === "low" ? t.dq_low : t.dq_good}`,
+    ipCountry: () => `${t.ipCountry}: ${values.ipCountry}`,
+    discountCode: () => `${t.discountCode}: ${values.discountCode}`,
+    utmSource: () => `${t.utmSource}: ${values.utmSource}`,
+    utmCampaign: () => `${t.utmCampaign}: ${values.utmCampaign}`,
   };
 
   const currentQuery = params.toString();
@@ -511,6 +587,76 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
               <option value="include">{t.archived_include}</option>
             </Select>
           </div>
+          <div>
+            <label htmlFor={ids.product} className={label}>
+              {t.product}
+            </label>
+            <Select id={ids.product} value={values.productId} onChange={(e) => update({ productId: e.target.value || null })} className="h-11">
+              <option value="">{t.any}</option>
+              {values.productId && !(products.data ?? []).some((p) => p.id === values.productId) && (
+                <option value={values.productId}>{productName(values.productId)}</option>
+              )}
+              {(products.data ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label htmlFor={ids.funnel} className={label}>
+              {t.funnel}
+            </label>
+            <Select id={ids.funnel} value={values.funnelId} onChange={(e) => update({ funnelId: e.target.value || null })} className="h-11">
+              <option value="">{t.any}</option>
+              {values.funnelId && !(funnels.data ?? []).some((f) => f.id === values.funnelId) && (
+                <option value={values.funnelId}>{funnelName(values.funnelId)}</option>
+              )}
+              {(funnels.data ?? []).map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label htmlFor={ids.dq} className={label}>
+              {t.dataQuality}
+            </label>
+            <Select id={ids.dq} value={values.dataQuality} onChange={(e) => update({ dataQuality: e.target.value || null })} className="h-11">
+              <option value="">{t.any}</option>
+              <option value="good">{t.dq_good}</option>
+              <option value="low">{t.dq_low}</option>
+            </Select>
+          </div>
+          <DebouncedText
+            id={ids.ip}
+            label={t.ipCountry}
+            placeholder={t.ipCountryPlaceholder}
+            value={values.ipCountry}
+            onCommit={(v) => update({ ipCountry: /^[A-Za-z]{2}$/.test(v) ? v.toUpperCase() : null })}
+          />
+          <DebouncedText
+            id={ids.code}
+            label={t.discountCode}
+            placeholder={t.discountCodePlaceholder}
+            value={values.discountCode}
+            onCommit={(v) => update({ discountCode: v || null })}
+          />
+          <DebouncedText
+            id={ids.utmS}
+            label={t.utmSource}
+            placeholder={t.utmSourcePlaceholder}
+            value={values.utmSource}
+            onCommit={(v) => update({ utmSource: v || null })}
+          />
+          <DebouncedText
+            id={ids.utmC}
+            label={t.utmCampaign}
+            placeholder={t.utmCampaignPlaceholder}
+            value={values.utmCampaign}
+            onCommit={(v) => update({ utmCampaign: v || null })}
+          />
         </div>
       )}
 
