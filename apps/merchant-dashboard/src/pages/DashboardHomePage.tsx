@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Workflow } from "lucide-react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, Spinner, cn } from "@store-builder/ui";
+import { Button, Card, Spinner, cn } from "@store-builder/ui";
 import type { Order } from "@store-builder/api-client";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { StoreOverview } from "@/pages/home/StoreOverview";
 import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
 import { SiteAnalytics } from "@/pages/home/SiteAnalytics";
+import { QuickActions } from "@/pages/home/QuickActions";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -172,6 +173,7 @@ export function DashboardHomePage() {
       <h1 className="font-display text-2xl font-medium text-ink">
         {currentWorkspace ? fmt(t.welcomeNamed, { name: currentWorkspace.name }) : t.welcome}
       </h1>
+      <QuickActions awaiting={queue.data ?? null} />
 
       <div className="mt-8">
         {loading ? (
@@ -223,23 +225,6 @@ export function DashboardHomePage() {
           <SiteAnalytics />
         </div>
       )}
-
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          { title: t.ordersTitle, desc: t.ordersDesc, to: "/orders" },
-          { title: t.catalogTitle, desc: t.catalogDesc, to: "/catalog" },
-          { title: t.customersTitle, desc: t.customersDesc, to: "/customers" },
-        ].map((item) => (
-          <Link key={item.to} to={item.to} className="block">
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>{item.desc}</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }

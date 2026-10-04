@@ -55,16 +55,18 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed";
+const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v2";
+/** Groups that start open. The rest start closed and still show the page you are on. */
+const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products"]);
 
 function readCollapsedGroups(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
     if (raw) return JSON.parse(raw) as Record<string, boolean>;
   } catch {
-    /* private mode or malformed — fall through to every group open */
+    /* private mode or malformed — fall through to the default below */
   }
-  return {};
+  return Object.fromEntries(NAV_GROUPS.filter((group) => !NAV_OPEN_BY_DEFAULT.has(group.id)).map((group) => [group.id, true]));
 }
 
 /**
@@ -408,7 +410,9 @@ export function DashboardLayout() {
             {/* One crashing page shows an error here; the sidebar and header
                 stay up so the merchant can move on. */}
             <RouteErrorBoundary resetKey={location.pathname}>
-              <Outlet />
+              <div key={location.pathname.split("/")[1] ?? ""} className="page-in">
+                <Outlet />
+              </div>
             </RouteErrorBoundary>
           </main>
         </div>
