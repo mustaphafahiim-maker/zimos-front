@@ -134,3 +134,5 @@ export * from "./endpoints/exportFiles";
 export * from "./endpoints/phoneVerification";
 // Two-step sign-in by a WhatsApp code (auth/twoFactorWhatsapp.js).
 export * from "./endpoints/twoFactorWhatsapp";
+// Account settings: timezone, contact-form email, legal details (workspaces/accountSettings.js).
+export * from "./endpoints/accountSettings";

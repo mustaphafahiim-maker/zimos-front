@@ -35,6 +35,7 @@ import { WhatsappSection } from "./WhatsappSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
+import { AccountSettingsSection } from "./AccountSettingsSection";
 import { SecuritySection } from "./SecuritySection";
 import { TeamInviteForm } from "./TeamInviteForm";
 import { TeamMemberGroups } from "./TeamMemberGroups";
@@ -197,6 +198,7 @@ export function SettingsPage() {
       <AccountSection />
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+      <AccountSettingsSection key={`account-settings-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
