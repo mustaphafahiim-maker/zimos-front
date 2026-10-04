@@ -152,3 +152,5 @@ export * from "./endpoints/savedViews";
 export * from "./endpoints/lostOrdersBulk";
 // Support's view of a store under the merchant's grant (platformAdmin/supportViewRoutes.js).
 export * from "./endpoints/adminSupportView";
+// The couriers' areas map in the platform console (platformAdmin/carrierMapRoutes.js).
+export * from "./endpoints/adminCarrierAreas";

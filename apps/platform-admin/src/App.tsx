@@ -17,6 +17,7 @@ import { TemplatesPage } from "@/pages/TemplatesPage";
 import { SuppliersPage } from "@/pages/SuppliersPage";
 import { AppsPage } from "@/pages/AppsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
+import { CarrierAreasPage } from "@/pages/CarrierAreasPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
@@ -72,6 +73,7 @@ export default function App() {
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
                 <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
                 <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
+                <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />
                 <Route path="/payment-gateways" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="payment" />)} />
                 <Route path="/whatsapp-numbers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="whatsapp" />)} />
                 <Route path="/fraud-signals" element={gated(P.RISK_VIEW, <FraudSignalsPage />)} />
