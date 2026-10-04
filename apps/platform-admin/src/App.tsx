@@ -18,6 +18,7 @@ import { SuppliersPage } from "@/pages/SuppliersPage";
 import { AppsPage } from "@/pages/AppsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
 import { CarrierAreasPage } from "@/pages/CarrierAreasPage";
+import { ReferralProgramPage } from "@/pages/ReferralProgramPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
                 <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
                 <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
+                <Route path="/referral-program" element={gated(P.AGENTS_VIEW, <ReferralProgramPage />)} />
                 <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />
                 <Route path="/templates" element={gated(P.TEMPLATES_VIEW, <TemplatesPage />)} />
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />

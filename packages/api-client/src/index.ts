@@ -158,3 +158,5 @@ export * from "./endpoints/adminCarrierAreas";
 export * from "./endpoints/storeApp";
 // Shoppers following their order by push (notifications/push/orderPush.js).
 export * from "./endpoints/orderPush";
+// ZIMOS's referral program for merchants (referrals/merchantReferrals.js).
+export * from "./endpoints/merchantReferrals";

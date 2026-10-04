@@ -41,6 +41,7 @@ import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
+import { ReferralProgramPage } from "@/pages/referrals/ReferralProgramPage";
 import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 import { ShoppableImagesPage } from "@/pages/shoppable/ShoppableImagesPage";
@@ -161,6 +162,7 @@ export default function App() {
                       <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/affiliates" element={<AffiliatesPage />} />
+                      <Route path="/referrals" element={<ReferralProgramPage />} />
                       <Route path="/subscriptions" element={<SubscriptionsPage />} />
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/shoppable-images" element={<ShoppableImagesPage />} />

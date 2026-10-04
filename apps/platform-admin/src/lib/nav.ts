@@ -51,6 +51,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: "Referrals",
     items: [
       { label: "Agents", to: "/agents", icon: Handshake, permission: P.AGENTS_VIEW },
+      { label: "Referral program", to: "/referral-program", icon: Handshake, permission: P.AGENTS_VIEW },
       { label: "My referrals", to: "/my-referrals", icon: Handshake, permission: P.REFERRALS_VIEW_OWN },
     ],
   },
