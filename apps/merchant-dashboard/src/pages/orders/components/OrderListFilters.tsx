@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Columns3, Filter, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Filter, X } from "lucide-react";
 import { Button, Input, cn } from "@store-builder/ui";
 import { ORDER_SOURCES, funnelsList, ordersListTags, type OrderListFilters, type OrderSource } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -44,7 +44,7 @@ const STRINGS = {
     perPage: "Per page",
     columns: "Columns",
     columnsTitle: "Choose columns",
-    columnsHint: "Saved on this device for your account.",
+    columnsHint: "Tick the columns to show and move them into the order you want. Saved on this device for your account.",
     done: "Done",
     col_customer: "Customer",
     col_total: "Total",
@@ -54,6 +54,12 @@ const STRINGS = {
     col_tags: "Tags",
     col_source: "Source",
     col_governorate: "Governorate",
+    col_address: "Address",
+    col_shipping: "Shipping",
+    col_ipCountry: "IP country",
+    col_dataQuality: "Data quality",
+    moveUp: "Move {name} up",
+    moveDown: "Move {name} down",
     views: "Saved views",
     viewsNone: "Saved views",
     saveView: "Save this view…",
@@ -110,7 +116,7 @@ const STRINGS = {
     perPage: "في الصفحة",
     columns: "الأعمدة",
     columnsTitle: "اختيار الأعمدة",
-    columnsHint: "تُحفظ على هذا الجهاز لحسابك.",
+    columnsHint: "اختر الأعمدة الظاهرة ورتّبها كما تريد. تُحفظ على هذا الجهاز لحسابك.",
     done: "تم",
     col_customer: "العميل",
     col_total: "الإجمالي",
@@ -120,6 +126,12 @@ const STRINGS = {
     col_tags: "التاجز",
     col_source: "المصدر",
     col_governorate: "المحافظة",
+    col_address: "العنوان",
+    col_shipping: "الشحن",
+    col_ipCountry: "دولة الـ IP",
+    col_dataQuality: "جودة البيانات",
+    moveUp: "تحريك {name} لأعلى",
+    moveDown: "تحريك {name} لأسفل",
     views: "العروض المحفوظة",
     viewsNone: "العروض المحفوظة",
     saveView: "حفظ هذا العرض…",
@@ -257,7 +269,20 @@ export type OrderExtraFilters = ReturnType<typeof useOrderExtraFilters>;
 
 // ---------------------------------------------------- columns, page size --
 
-export const OPTIONAL_COLUMNS = ["customer", "total", "payment", "stage", "timeline", "tags", "source", "governorate"] as const;
+export const OPTIONAL_COLUMNS = [
+  "customer",
+  "total",
+  "payment",
+  "stage",
+  "timeline",
+  "tags",
+  "source",
+  "governorate",
+  "address",
+  "shipping",
+  "ipCountry",
+  "dataQuality",
+] as const;
 export type OrderColumn = (typeof OPTIONAL_COLUMNS)[number];
 const DEFAULT_COLUMNS: OrderColumn[] = ["customer", "total", "payment", "stage", "timeline"];
 export const PAGE_SIZES = [25, 50, 100] as const;
@@ -293,8 +318,8 @@ export function useOrderListPrefs() {
   return {
     columns,
     setColumns: (next: OrderColumn[]) => {
-      // Kept in the table's own order, whatever order they were ticked in.
-      const ordered = OPTIONAL_COLUMNS.filter((c) => next.includes(c));
+      // In the merchant's order (the chooser moves them); unknown ones dropped.
+      const ordered = next.filter((c, i) => OPTIONAL_COLUMNS.includes(c) && next.indexOf(c) === i);
       setColumnsState(ordered);
       writeJson(columnsKey, ordered);
     },
@@ -671,12 +696,44 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
           </Button>
         }
       >
-        <ul className="grid gap-1 sm:grid-cols-2">
-          {OPTIONAL_COLUMNS.map((column) => {
+        <ul className="grid gap-1">
+          {/* Shown ones first, in table order (movable), then the rest. */}
+          {[...prefs.columns, ...OPTIONAL_COLUMNS.filter((c) => !prefs.columns.includes(c))].map((column) => {
             const checked = prefs.columns.includes(column);
+            const at = prefs.columns.indexOf(column);
+            const move = (by: number) => {
+              const next = [...prefs.columns];
+              next.splice(at, 1);
+              next.splice(at + by, 0, column);
+              prefs.setColumns(next);
+            };
             return (
-              <li key={column}>
-                <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <li key={column} className="flex items-center gap-1">
+                {checked && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-11"
+                      disabled={at === 0}
+                      aria-label={fmt(t.moveUp, { name: t[`col_${column}`] })}
+                      onClick={() => move(-1)}
+                    >
+                      <ArrowUp className="size-4" aria-hidden />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-11"
+                      disabled={at === prefs.columns.length - 1}
+                      aria-label={fmt(t.moveDown, { name: t[`col_${column}`] })}
+                      onClick={() => move(1)}
+                    >
+                      <ArrowDown className="size-4" aria-hidden />
+                    </Button>
+                  </>
+                )}
+                <label className={cn("flex min-h-11 flex-1 cursor-pointer items-center gap-2 text-sm text-ink", !checked && "ps-[5.75rem]")}>
                   <input
                     type="checkbox"
                     className="size-4 accent-primary"

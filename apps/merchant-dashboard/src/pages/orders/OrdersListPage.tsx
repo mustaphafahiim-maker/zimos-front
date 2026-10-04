@@ -34,13 +34,13 @@ import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
 import { OrderListDocuments } from "./components/OrderDocuments";
+import { OrderColumnCell } from "./components/OrderColumnCell";
 import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
   useColumnLabel,
   useOrderExtraFilters,
   useOrderListPrefs,
-  useSourceLabel,
   type OrderColumn,
 } from "./components/OrderListFilters";
 
@@ -637,8 +637,6 @@ function OrdersTable({
 }) {
   const t = useT(STRINGS);
   const columnLabel = useColumnLabel();
-  const sourceLabel = useSourceLabel();
-  const show = (column: OrderColumn) => columns.includes(column);
   const labels = useOrderLabels();
   const paymentLabel = usePaymentLabel();
   // One clock for the whole list, so every row's "3 hours ago" moves together.
@@ -717,32 +715,7 @@ function OrdersTable({
               <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colOrder}
               </th>
-              {show("customer") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colCustomer}
-                </th>
-              )}
-              {show("total") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTotal}
-                </th>
-              )}
-              {show("payment") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colPayment}
-                </th>
-              )}
-              {show("stage") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colStage}
-                </th>
-              )}
-              {show("timeline") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTimeline}
-                </th>
-              )}
-              {(["tags", "source", "governorate"] as const).filter(show).map((column) => (
+              {columns.map((column) => (
                 <th key={column} scope="col" className="px-4 py-3 text-start font-medium">
                   {columnLabel(column)}
                 </th>
@@ -780,53 +753,15 @@ function OrdersTable({
                   </Link>
                   {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} className="ms-2" />}
                 </td>
-                {show("customer") && (
-                <td className="px-4 py-3 text-ink-soft">
-                  <div className="text-ink">{order.contactSnapshot?.fullName || "—"}</div>
-                  {order.contactSnapshot?.phone && (
-                    <div className="text-xs">
-                      <span className="sr-only">{t.phoneLabel}: </span>
-                      <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
-                    </div>
-                  )}
-                </td>
-                )}
-                {show("total") && (
-                  <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
-                )}
-                {show("payment") && <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>}
-                {show("stage") && (
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {order.stage && stageLabel && (
-                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
-                    )}
-                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                <RiskBadge order={order} />
-                <OrderNetworkRate order={order} />
-                  </div>
-                </td>
-                )}
-                {show("timeline") && (
-                  <td className="px-4 py-3">
-                    <OrderTimelineLines order={order} now={now} />
-                  </td>
-                )}
-                {show("tags") && (
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {meta.tags.length === 0 ? (
-                        <span className="text-ink-soft">—</span>
-                      ) : (
-                        meta.tags.map((tag) => <StatusBadge key={tag} value={tag} tone="info" text={tag} />)
-                      )}
-                    </div>
-                  </td>
-                )}
-                {show("source") && <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>}
-                {show("governorate") && (
-                  <td className="px-4 py-3 text-xs text-ink-soft">{order.shippingAddressSnapshot?.province || "—"}</td>
-                )}
+                {columns.map((column) => (
+                  <OrderColumnCell
+                    key={column}
+                    column={column}
+                    row={{ order, stageLabel, flagged, meta }}
+                    paymentLabel={paymentLabel(order)}
+                    now={now}
+                  />
+                ))}
               </tr>
             ))}
           </tbody>

@@ -116,3 +116,5 @@ export * from "./endpoints/carrierRegions";
 export * from "./endpoints/shipmentBatches";
 // The orders list's risk tab counts (orders/orderService.orderPipeline).
 export * from "./endpoints/orderRiskCounts";
+// The orders list rows' extra fields: IP country, data quality, latest shipment.
+export * from "./endpoints/orderListColumns";
