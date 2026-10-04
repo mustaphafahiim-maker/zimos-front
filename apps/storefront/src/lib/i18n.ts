@@ -316,6 +316,8 @@ const en = {
   payment: {
     card: "Card",
     cardHint: "Visa, Mastercard or Meeza — you pay on a secure page, then come back here.",
+    saveCard: "Save my card for next time",
+    saveCardHint: "Kept by the payment provider, never by the store. Lets you add an offer after your order in one click.",
     wallet: "Mobile wallet",
     walletHint: "Vodafone Cash, Etisalat Cash, Orange Cash and more.",
     payNow: "Continue to payment",
@@ -502,6 +504,7 @@ const en = {
     continue: "Continue",
     continuing: "One moment…",
     advanceFailed: "We couldn't move on. Please try again.",
+    oneClickDeclined: "Your saved card was declined, so the offer wasn't added. Your first order is fine.",
     progress: "Your progress",
     step: (n: number) => `Step ${n}`,
     checkoutTitle: "Complete your order",
@@ -838,6 +841,8 @@ const ar: Dictionary = {
   payment: {
     card: "كارت",
     cardHint: "فيزا أو ماستركارد أو ميزة — هتدفع في صفحة آمنة وترجع هنا.",
+    saveCard: "احفظ الكارت للمرة الجاية",
+    saveCardHint: "بيحتفظ بيه مزوّد الدفع مش المتجر. وبيخليك تضيف عرض بعد طلبك بضغطة واحدة.",
     wallet: "محفظة إلكترونية",
     walletHint: "فودافون كاش، اتصالات كاش، أورنج كاش وغيرها.",
     payNow: "كمّل للدفع",
@@ -1020,6 +1025,7 @@ const ar: Dictionary = {
     continue: "كمّل",
     continuing: "لحظة…",
     advanceFailed: "مقدرناش نكمّل. جرّب تاني.",
+    oneClickDeclined: "الكارت المحفوظ اترفض، فالعرض ماتضافش. طلبك الأول تمام.",
     progress: "تقدّمك",
     step: (n) => `الخطوة ${arNum(n)}`,
     checkoutTitle: "كمّل طلبك",

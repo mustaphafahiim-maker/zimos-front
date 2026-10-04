@@ -937,6 +937,8 @@ export interface CheckoutPayload {
   paymentProvider?: string;
   /** Online methods: where the gateway sends the shopper back to. */
   returnUrl?: string;
+  /** The shopper agreed to keep the card (card payments; the gateway keeps it once paid). */
+  saveCard?: boolean;
   discountCode?: string;
   funnelId?: string;
   websiteId?: string;

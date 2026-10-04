@@ -1,5 +1,6 @@
 "use client";
 
+import { wantsSaveCard } from "./saveCard";
 import { botGuardFields } from "./botGuard";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -149,6 +150,8 @@ export async function placeOnlineOrder({
     ...payload,
     paymentMethod: method.method,
     ...(method.provider ? { paymentProvider: method.provider } : {}),
+    // The shopper ticked "save my card" (lib/saveCard): kept by the gateway once paid.
+    ...(method.method === "card" && wantsSaveCard(workspaceId) ? { saveCard: true } : {}),
     // The bot guard's token and honeypot (lib/botGuard).
     ...(await botGuardFields(client, workspaceId)),
   };

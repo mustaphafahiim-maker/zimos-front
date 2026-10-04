@@ -6,6 +6,7 @@ import { useStore } from "@/lib/StoreContext";
 import { track } from "@/lib/track";
 import { asTransferMethod, useTransferCopy } from "./TransferDetails";
 import { PaymentAdjustmentNote } from "./PaymentAdjustmentNote";
+import { useSaveCard } from "@/lib/saveCard";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -23,8 +24,11 @@ export function PaymentMethodPicker({
   onChange: (id: string) => void;
   idPrefix: string;
 }) {
-  const { t } = useStore();
+  const { t, store } = useStore();
+  const workspaceId = store?.workspaceId ?? "";
   const transferCopy = useTransferCopy();
+  const [saveCard, setSaveCard] = useSaveCard(workspaceId);
+  const cardChosen = methods.some((m) => m.id === value && m.method === "card");
 
   const copy = (m: StorefrontPaymentMethod) =>
     asTransferMethod(m)
@@ -90,6 +94,20 @@ export function PaymentMethodPicker({
           </label>
         );
       })}
+      {cardChosen && (
+        <label className="flex min-h-11 cursor-pointer items-start gap-2 px-1 pt-1 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={saveCard}
+            onChange={(e) => setSaveCard(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 accent-primary"
+          />
+          <span>
+            <span className="block">{t.payment.saveCard}</span>
+            <span className="block text-xs text-ink-soft">{t.payment.saveCardHint}</span>
+          </span>
+        </label>
+      )}
     </div>
   );
 }
