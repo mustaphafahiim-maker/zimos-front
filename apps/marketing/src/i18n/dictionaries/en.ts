@@ -35,10 +35,10 @@ export const en: Dictionary = {
   },
 
   hero: {
-    kicker: "Commerce infrastructure for cash-on-delivery brands",
+    kicker: "The commerce platform for cash-on-delivery brands",
     headline: "Build. Sell. Grow.",
     subheadline:
-      "Launch your store and funnels, confirm every cash-on-delivery order, ship with local carriers, and see what each delivered order really earns — in one platform built for Egypt and the Arab world.",
+      "Your store, orders, shipping and profit on one platform. Launch your store and sales funnels, confirm every cash-on-delivery order before it ships, ship with local couriers, and see what each delivered order really earned.",
     primaryCta: "Start free",
     secondaryCta: "See how it works",
     ctaNote: "No card required to start.",
@@ -296,7 +296,7 @@ export const en: Dictionary = {
 
   service: {
     kicker: "What ZIMOS is",
-    heading: "A SaaS platform for building online stores",
+    heading: "One platform to build your store and run it from the first order",
     body:
       "ZIMOS is software you use online: you build and run your store on it, and pay a monthly or yearly subscription for the platform. We don't sell products or take part in your sales — you sell to your customers, and ZIMOS gives you the store, the funnels, order confirmation, shipping and reports to do it.",
     points: [
@@ -368,7 +368,7 @@ export const en: Dictionary = {
   },
 
   finalCta: {
-    body: "Build your store, confirm every order and grow on real profit — with infrastructure made for the way you sell.",
+    body: "Start free: add your first product, publish your store and take your first order — everything after that lives in one place.",
     primaryCta: "Start free",
     secondaryCta: "Talk to sales",
   },

@@ -14,6 +14,18 @@ const COPY = {
     heading: "داشبورد واحدة تشغّل بها متجرك كله",
     intro: "هذه شاشات حقيقية من ZIMOS، وليست رسومات. ما تراه هنا هو ما ستفتحه أول يوم.",
     alt: "لقطة من داشبورد ZIMOS",
+    moreHeading: "وكل هذا داخل نفس الداشبورد",
+    more: [
+      ["منشئ المتجر والقوالب", "صمّم موقعك وصفحاتك بدون كود."],
+      ["مسارات البيع", "صفحة هبوط، دفع، عرض إضافي وصفحة شكر."],
+      ["تأكيد الطلبات", "قائمة تأكيد للفريق قبل الشحن."],
+      ["الحماية من الطلبات الوهمية", "قواعد وحظر للأرقام المتكررة والمشبوهة."],
+      ["الشحن والتحصيل", "شركات الشحن المحلية وتسويات الدفع عند الاستلام."],
+      ["الخصومات والعروض", "كوبونات، باقات وعروض إضافية."],
+      ["واتساب والأتمتة", "رسائل تلقائية حسب حالة الطلب."],
+      ["التحليلات والأرباح", "الزوار، المبيعات وصافي الربح."],
+      ["الفريق والصلاحيات", "دور لكل عضو وسجل للنشاط."],
+    ],
     rows: [
       {
         image: "home",
@@ -43,6 +55,18 @@ const COPY = {
     heading: "One dashboard to run the whole store",
     intro: "These are real ZIMOS screens, not illustrations. What you see here is what you open on day one.",
     alt: "A screen of the ZIMOS dashboard",
+    moreHeading: "And all of this is in the same dashboard",
+    more: [
+      ["Store builder and templates", "Design your site and pages without code."],
+      ["Sales funnels", "Landing page, checkout, upsell and thank-you page."],
+      ["Order confirmation", "A confirmation queue for the team before shipping."],
+      ["Fraud protection", "Rules and blocks for repeated and suspicious numbers."],
+      ["Shipping and collection", "Local couriers and cash-on-delivery settlements."],
+      ["Discounts and offers", "Coupons, bundles and upsells."],
+      ["WhatsApp and automations", "Automatic messages as the order moves."],
+      ["Analytics and profit", "Visitors, sales and net profit."],
+      ["Team and roles", "A role for each member and an activity log."],
+    ],
     rows: [
       {
         image: "home",
@@ -112,6 +136,21 @@ export function ProductShowcase({ locale }: { locale: string }) {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-20 sm:mt-28">
+          <h3 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{copy.moreHeading}</h3>
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {copy.more.map(([title, text]) => (
+              <li key={title} className="showcase-chip">
+                <span className="showcase-tick mt-1.5" aria-hidden />
+                <span>
+                  <span className="block text-sm font-semibold text-ink">{title}</span>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-ink-soft">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>
