@@ -10,6 +10,7 @@ import { WorkspaceStatus } from "@/components/workspace";
 import { SubscriptionCharges } from "@/components/charges";
 import { StoreAccessPanel } from "@/components/storeAccess";
 import { SupportAccessPanel } from "@/components/supportAccess";
+import { SupportViewPanel } from "@/components/supportView";
 import { FeatureOverridesPanel, ManualSubscriptionPanel, StoreAuditPanel } from "@/components/storeBilling";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
@@ -95,6 +96,9 @@ export function WorkspaceDetailPage() {
           <div className="mb-4">
             <SupportAccessPanel workspaceId={ws.id} />
           </div>
+          <div className="mb-4">
+            <SupportViewPanel workspaceId={ws.id} />
+          </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title="Workspace">
               <dl>
@@ -131,8 +135,8 @@ export function WorkspaceDetailPage() {
           </div>
 
           <p className="mt-4 text-xs text-ink-soft">
-            Team members, domains, locale and theme settings, and the activity trail each need an
-            admin endpoint that doesn't exist yet, so they aren't shown here.
+            Team members, domains, connections and the activity trail are the store's own data:
+            they open under Store data above, while the merchant allows support in.
           </p>
         </TabsContent>
 

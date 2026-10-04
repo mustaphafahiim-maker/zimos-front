@@ -13,8 +13,9 @@
  * with `order.paymentAdjustmentLabel`).
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
-export type PaymentRuleMethod = "cod" | "card" | "wallet" | "bank_transfer";
+export type PaymentRuleMethod = PaymentMethod;
 
 export interface PaymentRuleAdjustment {
   method: PaymentRuleMethod;

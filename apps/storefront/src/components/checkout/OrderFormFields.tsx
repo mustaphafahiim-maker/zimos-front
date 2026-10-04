@@ -16,7 +16,9 @@ import {
   type OrderFormValues,
 } from "@/lib/orderForm";
 import { useStore } from "@/lib/StoreContext";
+import { countryName } from "@/lib/storeCountry";
 import { input, label as labelClass } from "../ui";
+import { arOrEn } from "@/lib/i18n";
 
 export function fieldId(prefix: string, field: OrderFormField) {
   return `${prefix}-${field}`;
@@ -142,8 +144,8 @@ export function OrderFormFields({
   function renderField(f: CheckoutFormField) {
     const field = FORM_FIELD_OF[f.key];
     const id = fieldId(idPrefix, field);
-    const label = f.label[locale] || f.label.ar || f.label.en || builtInLabel[f.key] || f.key;
-    const help = f.helpText[locale] || f.helpText.ar || f.helpText.en || "";
+    const label = f.label[arOrEn(locale)] || f.label.ar || f.label.en || builtInLabel[f.key] || f.key;
+    const help = f.helpText[arOrEn(locale)] || f.helpText.ar || f.helpText.en || "";
     const value = values[field];
     const set = (v: string) => onChange(field, v);
     // Half-width only when its row partner is on the form too.
@@ -225,9 +227,11 @@ export function OrderFormFields({
                 onChange={(e) => set(e.target.value)}
                 className={`${input} cursor-pointer appearance-none pe-10`}
               >
+                {/* A store country the list does not carry (lib/storeCountry) is offered too. */}
+                {value && !FORM_COUNTRIES.some((c) => c.code === value) && <option value={value}>{countryName(value, locale)}</option>}
                 {FORM_COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c[locale]}
+                    {c[arOrEn(locale)]}
                   </option>
                 ))}
               </select>
@@ -251,7 +255,7 @@ export function OrderFormFields({
                   <option value="">{t.form.chooseGovernorate}</option>
                   {GOVERNORATES.map((g) => (
                     <option key={g.code} value={g.code}>
-                      {g[locale]}
+                      {g[arOrEn(locale)]}
                     </option>
                   ))}
                 </select>

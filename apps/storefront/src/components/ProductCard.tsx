@@ -4,6 +4,7 @@ import { ConvertedPrice } from "./ConvertedPrice";
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
+import { useStore } from "@/lib/StoreContext";
 import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
 import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
@@ -15,12 +16,17 @@ export function ProductCard({
   product,
   currency,
   locale,
+  from,
 }: {
   product: StorefrontProduct;
   currency: string;
   locale: Locale;
+  /** Where the card is shown (e.g. cross_sell): carried to the product page for the add-to-cart event. */
+  from?: string;
 }) {
   const t = getDictionary(locale);
+  // The store's currency format (lib/moneyFormat), from the store context.
+  const storeFormat = useStore().store?.currencyFormat ?? null;
   const price = priceOf(product);
   const compareAt = compareAtOf(product);
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
@@ -87,7 +93,7 @@ export function ProductCard({
       <div className="relative z-10 aspect-square overflow-hidden bg-paper">
         {current ? (
           <StoreLink
-            href={`/products/${product.slug}`}
+            href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
             aria-label={product.name}
             onPointerDown={onPointerDown}
             onPointerUp={(e) => {
@@ -170,7 +176,7 @@ export function ProductCard({
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
           {/* The whole card is clickable via this stretched link. */}
           <StoreLink
-            href={`/products/${product.slug}`}
+            href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
             className="after:absolute after:inset-0 focus-visible:outline-none"
           >
             {product.name}
@@ -178,12 +184,12 @@ export function ProductCard({
         </h3>
         <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
           <span className="text-base font-bold text-ink">
-            {price !== undefined ? formatPrice(price, currency, locale) : "—"}
+            {price !== undefined ? formatPrice(price, currency, locale, storeFormat) : "—"}
           </span>
           {price !== undefined && <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />}
           {compareAt && (
             <span className="text-sm text-ink-soft line-through">
-              {formatPrice(compareAt, currency, locale)}
+              {formatPrice(compareAt, currency, locale, storeFormat)}
             </span>
           )}
         </p>

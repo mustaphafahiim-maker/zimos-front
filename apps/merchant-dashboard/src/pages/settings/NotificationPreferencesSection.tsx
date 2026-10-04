@@ -15,6 +15,8 @@ import { NOTIFICATION_STRINGS, notificationTypeLabel } from "@/lib/notificationT
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";
+import { PushDeviceToggle } from "./PushDeviceToggle";
+import { useAuth } from "@/context/AuthContext";
 
 const STRINGS = {
   en: {
@@ -23,6 +25,10 @@ const STRINGS = {
     type: "Notify me about",
     inApp: "In the dashboard",
     email: "By email",
+    push: "Push",
+    whatsapp: "WhatsApp",
+    whatsappHint: "WhatsApp messages go to your verified phone number.",
+    whatsappNoPhone: "Verify your phone number under “Your account” to get notifications on WhatsApp.",
     sound: "Play a sound when a new order arrives",
     soundHint: "Rings while the dashboard is open in a browser tab.",
     saved: "Notification settings saved.",
@@ -34,6 +40,10 @@ const STRINGS = {
     type: "أبلغني عن",
     inApp: "داخل لوحة التحكم",
     email: "بالبريد الإلكتروني",
+    push: "إشعار على الجهاز",
+    whatsapp: "واتساب",
+    whatsappHint: "رسائل واتساب تصل إلى رقم هاتفك المؤكد.",
+    whatsappNoPhone: "أكّد رقم هاتفك من «حسابك» لتصلك الإشعارات على واتساب.",
     sound: "تشغيل صوت عند وصول طلب جديد",
     soundHint: "يعمل طالما لوحة التحكم مفتوحة في المتصفح.",
     saved: "تم حفظ إعدادات الإشعارات.",
@@ -85,13 +95,17 @@ export function NotificationPreferencesSection() {
     );
   }
 
-  const channelLabel = (channel: MerchantNotificationChannel) => (channel === "inApp" ? t.inApp : t.email);
+  const channelLabel = (channel: MerchantNotificationChannel) =>
+    channel === "inApp" ? t.inApp : channel === "push" ? t.push : channel === "whatsapp" ? t.whatsapp : t.email;
+  const { user } = useAuth();
+  const phoneVerified = Boolean(user?.phoneVerifiedAt);
 
   return (
     <section ref={ref} id="notifications" className="scroll-mt-6 rounded-[var(--radius-card)] border border-line p-5">
       <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
 
+      <PushDeviceToggle />
       <div className="mt-4">
         <DataState loading={loading} error={error} onRetry={() => void refresh()}>
           {data && (
@@ -136,6 +150,9 @@ export function NotificationPreferencesSection() {
                   </tbody>
                 </table>
               </div>
+              {data.channels.includes("whatsapp") && (
+                <p className="text-xs text-ink-soft">{phoneVerified ? t.whatsappHint : t.whatsappNoPhone}</p>
+              )}
 
               <label className="flex cursor-pointer items-start gap-3">
                 <input

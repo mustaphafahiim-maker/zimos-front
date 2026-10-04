@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { Alert, Badge, Button, Card, CardContent } from "@store-builder/ui";
-import { currenciesGet, currenciesRefreshRates, currenciesSave, type CurrencySettings as Settings } from "@store-builder/api-client";
+import { currenciesGet, currenciesRefreshRates, currenciesSave, currenciesSetBase, type CurrencySettings as Settings } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
@@ -17,6 +17,9 @@ const STRINGS = {
     description: "Your store sells and collects in its own currency. You can also show prices in other currencies for visitors from abroad.",
     base: "Store currency",
     baseLocked: "It can't be changed after the first order.",
+    baseChange: "Change",
+    baseHint: "Until your first order. Your products and offers move to it with the same amounts — check their prices after.",
+    baseChanged: "Store currency changed to {code}.",
     display: "Currencies shown to shoppers",
     add: "Add a currency",
     choose: "Choose…",
@@ -47,6 +50,9 @@ const STRINGS = {
     description: "متجرك يبيع ويحصّل بعملته. ويمكنك أيضًا عرض الأسعار بعملات أخرى للزوار من الخارج.",
     base: "عملة المتجر",
     baseLocked: "لا يمكن تغييرها بعد أول طلب.",
+    baseChange: "غيّر",
+    baseHint: "لحد أول طلب بس. منتجاتك وعروضك هتتحول لها بنفس الأرقام — راجع أسعارها بعد التغيير.",
+    baseChanged: "عملة المتجر بقت {code}.",
     display: "العملات المعروضة للمتسوقين",
     add: "أضف عملة",
     choose: "اختر…",
@@ -81,7 +87,8 @@ export function CurrencySettings({ workspaceId, canManage }: { workspaceId: stri
   const toast = useToast();
   const state = useAsync(() => currenciesGet(apiClient, workspaceId).catch(() => null), [workspaceId]);
   const [draft, setDraft] = useState<Settings | null>(null);
-  const [busy, setBusy] = useState<"save" | "refresh" | null>(null);
+  const [busy, setBusy] = useState<"save" | "refresh" | "base" | null>(null);
+  const [nextBase, setNextBase] = useState("");
 
   useEffect(() => {
     if (state.data) setDraft(state.data.settings);
@@ -97,6 +104,20 @@ export function CurrencySettings({ workspaceId, canManage }: { workspaceId: stri
     try {
       state.setData(kind === "save" ? await currenciesSave(apiClient, workspaceId, draft) : await currenciesRefreshRates(apiClient, workspaceId));
       if (kind === "save") toast.success(t.saved);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function changeBase() {
+    if (!nextBase) return;
+    setBusy("base");
+    try {
+      state.setData(await currenciesSetBase(apiClient, workspaceId, nextBase));
+      toast.success(fmt(t.baseChanged, { code: nextBase }));
+      setNextBase("");
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -129,7 +150,31 @@ export function CurrencySettings({ workspaceId, canManage }: { workspaceId: stri
             <span className="text-sm text-ink-soft">{t.base}</span>
             <Badge variant="secondary">{data.baseCurrency}</Badge>
             {data.baseCurrencyLocked && <span className="text-xs text-ink-soft">{t.baseLocked}</span>}
+            {!data.baseCurrencyLocked && canManage && (
+              <>
+                <Select
+                  aria-label={t.base}
+                  value={nextBase}
+                  onChange={(e) => setNextBase(e.target.value)}
+                  className="w-auto min-w-28"
+                  disabled={busy !== null}
+                >
+                  <option value="">{t.choose}</option>
+                  {data.availableCurrencies
+                    .filter((c) => c !== data.baseCurrency)
+                    .map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                </Select>
+                <Button size="sm" variant="outline" disabled={!nextBase || busy !== null} onClick={() => void changeBase()}>
+                  {t.baseChange}
+                </Button>
+              </>
+            )}
           </div>
+          {!data.baseCurrencyLocked && canManage && <p className="-mt-3 text-xs text-ink-soft">{t.baseHint}</p>}
 
           <div>
             <p className="mb-2 text-sm font-medium text-ink">{t.display}</p>

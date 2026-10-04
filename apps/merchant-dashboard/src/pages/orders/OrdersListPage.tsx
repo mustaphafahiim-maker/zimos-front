@@ -33,6 +33,7 @@ import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
+import { SelectAllMatching } from "./components/SelectAllMatching";
 import { OrderListDocuments } from "./components/OrderDocuments";
 import { OrderColumnCell } from "./components/OrderColumnCell";
 import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
@@ -43,6 +44,7 @@ import {
   useOrderListPrefs,
   type OrderColumn,
 } from "./components/OrderListFilters";
+import { OrdersHeaderTools } from "./components/OrdersHeaderTools";
 
 const STRINGS = {
   en: {
@@ -268,6 +270,12 @@ export function OrdersListPage() {
         description={t.description}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <OrdersHeaderTools
+              onRefresh={() => {
+                list.reload();
+                pipeline.refresh({ silent: true });
+              }}
+            />
             <OrderListDocuments
               onImported={() => {
                 list.reload();
@@ -317,6 +325,16 @@ export function OrdersListPage() {
           list.reload();
           pipeline.refresh({ silent: true });
         }}
+      />
+      <SelectAllMatching
+        params={{ stage: stage ?? undefined, sort, ...fullQuery }}
+        pageCount={list.items.length}
+        selectedCount={selected.size}
+        allPageSelected={allSelected}
+        hasMore={list.hasMore}
+        total={pipeline.data ? (stage ? pipeline.data.stages[stage] : pipeline.data.total) : undefined}
+        onSelect={(ids) => setSelected(new Set(ids))}
+        onClear={() => setSelected(new Set())}
       />
 
       <DataState

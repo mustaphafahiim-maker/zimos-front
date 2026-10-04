@@ -25,6 +25,7 @@ import { OfferPicker } from "@/components/OfferPicker";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { ProductSelect, RuleCard, useStoreProducts } from "./OfferRuleParts";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * Two screens with one shape (SPEC §10.3, §10.4): an order bump is an offer
@@ -167,6 +168,8 @@ function OfferRulesPage({ kind }: { kind: Kind }) {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const { list, save, remove } = useRules(kind);
+  // Each rule's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const [editing, setEditing] = useState<Row | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const rows = list.data ?? [];
@@ -238,6 +241,7 @@ function OfferRulesPage({ kind }: { kind: Kind }) {
                     {row.preChecked && <span className="ms-2 text-xs text-ink-soft">· {t.preChecked}</span>}
                   </p>
                 )}
+                <OfferNumbers stat={(isBump ? stats?.bumps : stats?.upsells)?.[row.id]} />
               </RuleCard>
             ))}
           </div>

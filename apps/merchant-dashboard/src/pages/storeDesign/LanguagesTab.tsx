@@ -5,6 +5,7 @@ import {
   translationsList,
   translationsOverview,
   translationsSave,
+  type ContentEntity,
   type StoreLocale,
   type TranslatableEntity,
   type TranslationItem,
@@ -21,6 +22,8 @@ import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { ContentTranslationRows } from "./ContentTranslationRows";
+import { AiTranslateButton } from "./AiTranslateButton";
 
 const STRINGS = {
   en: {
@@ -29,19 +32,21 @@ const STRINGS = {
     yourLanguage: "Store language",
     offer: "Offer",
     done: "{pct}% translated",
-    fields: "{done} of {total} names and descriptions",
+    fields: "{done} of {total} texts",
     ar: "Arabic",
     en: "English",
     fr: "French",
     es: "Spanish",
     it: "Italian",
     de: "German",
-    interfaceNote: "The store's own buttons and labels are available in Arabic and English today; other languages translate your products and collections.",
+    interfaceNote: "The store's own buttons and labels are available in Arabic and English today; other languages translate your products, collections, pages and funnels.",
     translate: "Translate your content",
-    translateDescription: "Write each name and description in the chosen language. Leave a box empty to keep the original.",
+    translateDescription: "Write each text in the chosen language. Leave a box empty to keep the original. Pages and funnels show what is published.",
     language: "Language",
     products: "Products",
     collections: "Collections",
+    pages: "Pages",
+    funnels: "Funnels",
     kind: "What to translate",
     original: "Original",
     name: "Name",
@@ -58,19 +63,21 @@ const STRINGS = {
     yourLanguage: "لغة المتجر",
     offer: "تفعيل",
     done: "تمت ترجمة {pct}%",
-    fields: "{done} من {total} اسم ووصف",
+    fields: "{done} من {total} نص",
     ar: "العربية",
     en: "الإنجليزية",
     fr: "الفرنسية",
     es: "الإسبانية",
     it: "الإيطالية",
     de: "الألمانية",
-    interfaceNote: "أزرار وعناوين المتجر نفسها متاحة بالعربية والإنجليزية حاليًا؛ اللغات الأخرى تترجم منتجاتك وتصنيفاتك.",
+    interfaceNote: "أزرار وعناوين المتجر نفسها متاحة بالعربية والإنجليزية حاليًا؛ اللغات الأخرى تترجم منتجاتك وتصنيفاتك وصفحاتك والفانلز.",
     translate: "ترجمة محتواك",
-    translateDescription: "اكتب كل اسم ووصف باللغة المختارة. اترك الخانة فارغة للإبقاء على الأصل.",
+    translateDescription: "اكتب كل نص باللغة المختارة. اترك الخانة فارغة للإبقاء على الأصل. الصفحات والفانلز بتظهر زي ما هي منشورة.",
     language: "اللغة",
     products: "المنتجات",
     collections: "التصنيفات",
+    pages: "الصفحات",
+    funnels: "الفانلز",
     kind: "ما الذي تترجمه",
     original: "الأصل",
     name: "الاسم",
@@ -92,7 +99,9 @@ export function LanguagesTab() {
   const overview = useAsync(() => translationsOverview(apiClient, workspaceId), [workspaceId]);
   const [busy, setBusy] = useState(false);
   const [locale, setLocale] = useState<StoreLocale | "">("");
-  const [kind, setKind] = useState<TranslatableEntity>("product");
+  const [kind, setKind] = useState<TranslatableEntity | ContentEntity>("product");
+  // Bumped after an AI fill, so the rows below read their translations again.
+  const [version, setVersion] = useState(0);
 
   const data = overview.data;
   const extra = (data?.languages ?? []).filter((l) => !l.isDefault);
@@ -187,15 +196,34 @@ export function LanguagesTab() {
                     tabs={[
                       { value: "product", label: t.products },
                       { value: "collection", label: t.collections },
+                      { value: "page", label: t.pages },
+                      { value: "funnel", label: t.funnels },
                     ]}
                   />
+                  <AiTranslateButton
+                    locale={active}
+                    kind={kind}
+                    onDone={() => {
+                      setVersion((v) => v + 1);
+                      void overview.refresh({ silent: true });
+                    }}
+                  />
                 </div>
-                <TranslationRows
-                  key={`${active}:${kind}`}
-                  locale={active}
-                  kind={kind}
-                  onSaved={() => void overview.refresh({ silent: true })}
-                />
+                {kind === "page" || kind === "funnel" ? (
+                  <ContentTranslationRows
+                    key={`${active}:${kind}:${version}`}
+                    locale={active}
+                    kind={kind}
+                    onSaved={() => void overview.refresh({ silent: true })}
+                  />
+                ) : (
+                  <TranslationRows
+                    key={`${active}:${kind}:${version}`}
+                    locale={active}
+                    kind={kind}
+                    onSaved={() => void overview.refresh({ silent: true })}
+                  />
+                )}
               </div>
             )}
           </Section>

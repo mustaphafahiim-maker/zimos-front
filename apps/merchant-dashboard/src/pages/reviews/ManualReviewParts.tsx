@@ -15,6 +15,7 @@ const STRINGS = {
   en: {
     add: "Add review",
     manual: "Added by you",
+    imported: "Imported",
     delete: "Delete",
     deleting: "Deleting…",
     confirm: "Delete this review? This cannot be undone.",
@@ -23,6 +24,7 @@ const STRINGS = {
   ar: {
     add: "إضافة تقييم",
     manual: "أضفته أنت",
+    imported: "مستورد",
     delete: "حذف",
     deleting: "جارٍ الحذف…",
     confirm: "حذف هذا التقييم؟ لا يمكن التراجع.",
@@ -33,11 +35,13 @@ const STRINGS = {
 export type ReviewRow = Review & CatalogReviewExtras;
 
 export const isManualReview = (review: Review) => (review as ReviewRow).source === "manual";
+/** Added by the merchant — typed in or imported (reviews/import): named, deletable, never "verified". */
+const isMerchantAdded = (review: Review) => isManualReview(review) || (review as ReviewRow).source === "import";
 
 /** Who wrote it: the typed name for a manual review, else the customer. */
 export function reviewAuthor(review: Review, fallback: string): string {
   const row = review as ReviewRow;
-  return (isManualReview(review) ? row.authorName : review.customer?.fullName) || fallback;
+  return (isMerchantAdded(review) ? row.authorName : review.customer?.fullName) || fallback;
 }
 
 /** The header button and its dialog. */
@@ -64,8 +68,12 @@ export function AddReviewButton({ onAdded }: { onAdded: (review: Review) => void
 
 export function ManualReviewBadge({ review }: { review: Review }) {
   const t = useT(STRINGS);
-  if (!isManualReview(review)) return null;
-  return <StatusBadge value="manual" tone="neutral" text={t.manual} />;
+  if (!isMerchantAdded(review)) return null;
+  return isManualReview(review) ? (
+    <StatusBadge value="manual" tone="neutral" text={t.manual} />
+  ) : (
+    <StatusBadge value="import" tone="neutral" text={t.imported} />
+  );
 }
 
 export function ReviewPhotos({ review }: { review: Review }) {
@@ -88,7 +96,7 @@ export function DeleteManualReviewButton({ review, onDeleted }: { review: Review
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const [busy, setBusy] = useState(false);
-  if (!isManualReview(review)) return null;
+  if (!isMerchantAdded(review)) return null;
 
   async function remove() {
     if (busy || !window.confirm(t.confirm)) return;

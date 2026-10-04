@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n";
+import { pickText } from "@/lib/i18n";
 
 /**
  * Strings of the product page pieces lane 3 added (countdown, option
@@ -39,5 +40,5 @@ const TEXT = {
 export type ProductPageText = (typeof TEXT)["en"];
 
 export function productPageText(locale: Locale): ProductPageText {
-  return TEXT[locale] ?? TEXT.ar;
+  return pickText(TEXT, locale);
 }

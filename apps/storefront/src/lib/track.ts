@@ -32,6 +32,10 @@ export interface TrackData {
   contentName?: string;
   numItems?: number;
   orderId?: string;
+  /** Where an add-to-cart came from (lib/addSource.ts), e.g. cross_sell. */
+  source?: string;
+  /** The offer the source names (a cross-sell rule id), for the offers hub (offers/offerStats.js). */
+  sourceId?: string;
   /**
    * Shared by the browser pixels and the API's server-side copy of the event,
    * so each ad platform counts the two as one. Filled in by track(): a fresh
@@ -82,6 +86,8 @@ export function track(event: TrackEvent, input: TrackData = {}): void {
         ...(data.currency ? { currency: data.currency } : {}),
         ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
         ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
+        ...(data.source ? { source: data.source } : {}),
+        ...(data.sourceId ? { sourceId: data.sourceId } : {}),
       },
     });
   } catch {

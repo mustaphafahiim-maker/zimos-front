@@ -18,6 +18,7 @@ import { StoreOverview } from "@/pages/home/StoreOverview";
 import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
 import { SiteAnalytics } from "@/pages/home/SiteAnalytics";
 import { QuickActions } from "@/pages/home/QuickActions";
+import { HelpCards } from "@/components/Education";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -225,6 +226,9 @@ export function DashboardHomePage() {
           <SiteAnalytics />
         </div>
       )}
+
+      {/* Help center, Telegram and support chat, when ZIMOS has set them (components/Education.tsx). */}
+      <HelpCards />
     </div>
   );
 }

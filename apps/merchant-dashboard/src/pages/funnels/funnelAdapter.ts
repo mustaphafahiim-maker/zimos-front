@@ -77,6 +77,8 @@ export interface UiEdge {
   fromStepKey: string;
   toStepKey: string;
   condition: UiEdgeCondition;
+  /** clicked_through only: the button the path follows (funnelRouting.js); null = any. */
+  sourceElementId?: string | null;
   priority: number;
 }
 
@@ -181,6 +183,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
       toStepKey: e.toStepKey,
       // The runtime treats a null condition as "always".
       condition: e.condition?.type ?? "always",
+      sourceElementId: typeof e.condition?.sourceElementId === "string" ? e.condition.sourceElementId : null,
       priority: e.priority,
     })),
   };
@@ -278,7 +281,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
       patch.bumpOfferId = s.bumpOfferId;
     }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
-    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
+    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key) || JSON.stringify(s.seo) !== JSON.stringify(before.seo)) {
+      patch.seo = withCanvas(s, order);
+    }
     if (Object.keys(patch).length > 0) {
       const id = s.id;
       ops.push(() => funnelsUpdateStep(apiClient, workspaceId, fid, id, patch));
@@ -305,7 +310,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
         funnelsCreateEdge(apiClient, workspaceId, fid, {
           fromStepKey: e.fromStepKey,
           toStepKey: e.toStepKey,
-          condition: { type: e.condition },
+          condition: { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) },
           priority: e.priority,
         })
       );
@@ -316,7 +321,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     const patch: FunnelEdgeUpdatePayload = {};
     if (e.fromStepKey !== before.fromStepKey) patch.fromStepKey = e.fromStepKey;
     if (e.toStepKey !== before.toStepKey) patch.toStepKey = e.toStepKey;
-    if (e.condition !== before.condition) patch.condition = { type: e.condition };
+    if (e.condition !== before.condition || (e.sourceElementId ?? null) !== (before.sourceElementId ?? null)) {
+      patch.condition = { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) };
+    }
     if (e.priority !== before.priority) patch.priority = e.priority;
     if (Object.keys(patch).length > 0) {
       const id = e.serverId;

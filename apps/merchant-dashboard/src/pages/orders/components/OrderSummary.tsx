@@ -7,6 +7,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
+import { ShippingOptionNote } from "./ShippingOptionNote";
 
 const STRINGS = {
   en: {
@@ -45,6 +46,7 @@ const STRINGS = {
     rule_all_items_free: "Every product in the order ships free",
     rule_free_threshold: "Free: the order reached the free-shipping amount",
     rule_governorate_rate: "The governorate's shipping price",
+    rule_profile_rate: "The shipping group's price",
     rule_zone_rate: "Shipping zone rate",
     rule_zone_tier_price: "Zone price for the weight tier",
     rule_default_rate: "Default shipping price",
@@ -87,6 +89,7 @@ const STRINGS = {
     rule_all_items_free: "كل منتجات الطلب مجانية الشحن",
     rule_free_threshold: "مجاني: بلغ الطلب حد الشحن المجاني",
     rule_governorate_rate: "سعر الشحن الخاص بالمحافظة",
+    rule_profile_rate: "سعر مجموعة الشحن",
     rule_zone_rate: "سعر منطقة الشحن",
     rule_zone_tier_price: "سعر المنطقة حسب شريحة الوزن",
     rule_default_rate: "سعر الشحن الافتراضي",
@@ -164,7 +167,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                           {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
                         </div>
                       )}
-                      <CustomizationList customizations={item.customizations} className="mt-2" />
+                      <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>
@@ -191,6 +194,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                   : t[`rule_${order.shippingSnapshot.rule as ShippingRule}`]}
               </p>
             )}
+            <ShippingOptionNote order={order} />
             <AmountRow label={t.tax} value={formatMoney(order.taxAmount, c)} />
             <AmountRow label={t.total} value={formatMoney(order.totalAmount, c)} strong />
             {Number(order.amountPaid) > 0 && <AmountRow label={t.paid} value={formatMoney(order.amountPaid, c)} />}

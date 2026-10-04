@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { StoreAppInstall } from "@/components/StoreAppInstall";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
 import { CouponFromLink } from "@/components/offers/CouponBits";
@@ -21,15 +22,15 @@ import {
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
-  storefrontCustomCode,
   storefrontGeneralMeta,
+  storefrontStoreApp,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
-import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { storeCustomCode } from "@/lib/headCode";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
-import { storeOrigin } from "@/lib/domains";
-import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
+import { canonicalOrigin } from "@/lib/domains";
+import { dirFor, getDictionary, intlLocaleFor, arOrEn } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
@@ -78,7 +79,7 @@ export async function generateMetadata({
   const ogImage = seo.ogImageUrl || store.logoUrl;
 
   return {
-    metadataBase: new URL(storeOrigin(store.slug)),
+    metadataBase: new URL(canonicalOrigin(store)),
     title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
     ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),
@@ -149,14 +150,20 @@ export default async function StoreLayout({
     slug: store.slug,
     name: store.name,
     currency: store.currency,
+    // Where the symbol goes and whether decimals show (dashboard → currencies; lib/moneyFormat).
+    currencyFormat: (store as { currencyFormat?: StoreInfo["currencyFormat"] }).currencyFormat ?? null,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    // Offered languages: French joins the language switch when it is one (lib/i18n switchLocales).
+    languages: (store as { languages?: string[] }).languages ?? [],
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
     checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
     legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
+    // The order form's country (lib/storeCountry).
+    country: storefrontGeneralMeta(store).general.country,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
@@ -167,9 +174,7 @@ export default async function StoreLayout({
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
   // The merchant's own code slots. The API returns none to a staff preview,
   // and components/CustomCode.tsx decides where the rest may run.
-  const customCode = await storefrontCustomCode(await createServerStorefrontApiClient(), workspaceId).catch(
-    () => ({})
-  );
+  const customCode = await storeCustomCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -224,13 +229,15 @@ export default async function StoreLayout({
               <CartDrawer />
               {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
               <ExitDownsell workspaceId={store.id} />
-              {/* Remembers a ?coupon=CODE link so checkout applies it. */}
-              <CouponFromLink workspaceId={workspaceId} />
               {/* Sales notifications from real orders (Offers → Sales notifications). */}
               <SocialProofPopup workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
+            {/* Remembers a ?coupon=CODE link so a checkout applies it — the store's or a funnel's. */}
+            <CouponFromLink workspaceId={workspaceId} />
             <BackToTop label={t.common.backToTop} />
+            {/* The store as an app for shoppers (Settings → Store app). */}
+            <StoreAppInstall app={storefrontStoreApp(store)} locale={arOrEn(locale)} />
             {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
             <ThemeChrome store={store} />
           </div>

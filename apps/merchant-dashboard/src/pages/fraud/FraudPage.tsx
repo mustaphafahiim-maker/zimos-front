@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { PageHeader } from "@/components/PageHeader";
+import { AppOffNotice } from "@/components/AppOffNotice";
 import { ProtectionRulesTab } from "./ProtectionRulesTab";
 import { FlaggedOrdersTab } from "./FlaggedOrdersTab";
 import { BlockedEntriesTab } from "./BlockedEntriesTab";
@@ -62,7 +63,9 @@ export function FraudPage() {
 
   return (
     <div className="max-w-5xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        tutorial="fraud" title={t.title} description={t.description} />
+      <AppOffNotice app="fraud_protection" />
 
       <Tabs value={tab} onValueChange={selectTab}>
         <TabsList

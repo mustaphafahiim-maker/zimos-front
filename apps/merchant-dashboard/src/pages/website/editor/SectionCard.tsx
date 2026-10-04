@@ -61,7 +61,11 @@ function elementSummary(element: PageElement): string {
     case "shoppable_image":
       return truncate(str("title") || "Shoppable image");
     case "countdown":
-      return truncate([str("label"), props.endsInHours && `${props.endsInHours}h`].filter(Boolean).join(" · "));
+      return truncate(
+        [str("label"), str("endsAt") ? new Date(str("endsAt")).toLocaleString() : props.endsInHours && `${props.endsInHours}h`]
+          .filter(Boolean)
+          .join(" · ")
+      );
     case "video":
     case "embed":
       return truncate(str("title") || str("url") || "Nothing linked yet");

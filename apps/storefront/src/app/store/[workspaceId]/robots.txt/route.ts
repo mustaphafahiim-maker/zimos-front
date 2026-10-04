@@ -1,4 +1,4 @@
-import { storeOrigin } from "@/lib/domains";
+import { canonicalOrigin } from "@/lib/domains";
 import { getStoreMeta } from "@/lib/storeMeta";
 
 export const revalidate = 3600;
@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ wor
     "Disallow: /offer/",
     "Disallow: /preview",
     "",
-    `Sitemap: ${storeOrigin(store.slug)}/sitemap.xml`,
+    `Sitemap: ${canonicalOrigin(store)}/sitemap.xml`,
     "",
   ].join("\n");
   return new Response(body, { headers: { "content-type": "text/plain; charset=utf-8" } });

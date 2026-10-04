@@ -16,6 +16,19 @@ import {
 } from "@store-builder/api-client";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
+import {
+  TransferDetails,
+  asTransferMethod,
+  transferProblem,
+  useDepositQuote,
+  useTransferCopy,
+  type TransferState,
+} from "@/components/checkout/TransferDetails";
+import type { CheckoutPayload, ManualTransferStoreMethod } from "@store-builder/api-client";
+import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { getVisitorId } from "@/lib/visitorId";
 import { BoxIcon, CashIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
@@ -38,8 +51,8 @@ import {
   usePlacedOrder,
 } from "@/lib/funnelSession";
 import {
-  EMPTY_ORDER_FORM,
   FIELD_ORDER,
+  formOptionsOf,
   toCheckoutPayload,
   validateOrderForm,
   type OrderFormErrors,
@@ -49,12 +62,22 @@ import {
 import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { useFunnelCurrency } from "./FunnelCurrency";
+import { FunnelOptIn } from "./FunnelOptIn";
+import { readPick } from "@/lib/pagePicks";
 import { storeHref } from "@/lib/storeHref";
 import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useIsClient } from "@/lib/useIsClient";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { contentIdOf, lineContentId } from "@/lib/contentId";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
+import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
+import { PolicyLinks } from "@/components/PolicyLinks";
+import { OfferVariantPicker } from "@/components/offers/OfferVariantPicker";
+import { OfferTimer, useOfferCountdown } from "@/components/offers/OfferTimer";
+import { variantImageOf } from "@/lib/variantImage";
 
 /**
  * What the shopper *does* on a running funnel's step, drawn under the page the
@@ -65,7 +88,8 @@ import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderForm
  * `accepted_offer` or `declined_offer` — so each step type gets its own
  * island here:
  *
- *   landing / sales / opt_in / custom → one "Continue" (clicked_through)
+ *   landing / sales / custom          → one "Continue" (clicked_through)
+ *   opt_in                            → the sign-up form, then clicked_through (FunnelOptIn)
  *   checkout                          → the COD order form, then completed_checkout
  *   upsell / downsell                 → "Yes, add it" / "No thanks"
  *   thank_you, or a finished session  → the confirmation, no advance
@@ -92,7 +116,7 @@ const island = `${container} scroll-mt-24`;
  * response can't answer the *next* step: the server refuses it with
  * STEP_MISMATCH, and this re-reads where the session is and refreshes onto it.
  */
-function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
+export function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { t } = useStore();
@@ -135,7 +159,7 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
     }
   }
 
-  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string, sourceElementId?: string) {
+  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string, sourceElementId?: string, variantId?: string) {
     if (busy.current) return;
     busy.current = true;
     setPending(type);
@@ -143,7 +167,7 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
     try {
       const res = await funnelRuntimeAdvance(createStorefrontApiClient(), workspaceId, funnelId, sessionId, {
         fromStepKey: stepKey,
-        outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}) },
+        outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}), ...(variantId ? { variantId } : {}) },
       });
       // A one-click offer charged to a saved card that was declined is not a purchase (SPEC §9.5).
       const declined = (res.followOnOrder as { payment?: { status?: string } } | undefined)?.payment?.status === "declined";
@@ -255,16 +279,17 @@ export function FunnelStepActions({
 }) {
   const flow = useAdvance(workspaceId, funnelId, sessionId, step.key);
   const { t, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
 
   // Tag the store's own analytics with this funnel while its steps are on
   // screen. Set during render so the view_content / begin_checkout effects
   // below already carry it; cleared when the shopper leaves the funnel. Both
   // merge into the context StoreAnalytics (store layout) owns.
-  if (typeof window !== "undefined") setTrackingContext({ workspaceId, funnelId });
+  if (typeof window !== "undefined") setTrackingContext({ workspaceId, funnelId, stepKey: step.key });
   useEffect(() => {
-    setTrackingContext({ workspaceId, funnelId });
-    return () => setTrackingContext({ funnelId: undefined });
-  }, [workspaceId, funnelId]);
+    setTrackingContext({ workspaceId, funnelId, stepKey: step.key });
+    return () => setTrackingContext({ funnelId: undefined, stepKey: undefined });
+  }, [workspaceId, funnelId, step.key]);
 
   useTrackOnce(() => {
     if (step.stepType === "checkout" || step.stepType === "thank_you") return;
@@ -276,7 +301,7 @@ export function FunnelStepActions({
         currency: offer.currency,
       });
     } else {
-      track("ViewContent", { contentName: step.name, currency: store?.currency });
+      track("ViewContent", { contentName: step.name, currency: funnelCurrency ?? store?.currency });
     }
   });
 
@@ -309,26 +334,34 @@ export function FunnelStepActions({
     return <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={sessionOrderId} />;
   }
 
-  // landing / sales / opt_in / custom. There is no public opt-in capture
-  // endpoint, so opt_in moves on the same way.
+  // The visitor signs up before the opt-in step moves on (FunnelOptIn; backend funnels/funnelOptIn.js).
+  if (step.stepType === "opt_in") {
+    return (
+      <FunnelOptIn
+        anchorId={FUNNEL_ACTIONS_ID}
+        workspaceId={workspaceId}
+        funnelId={funnelId}
+        sessionId={sessionId}
+        stepName={step.name}
+        pending={!!flow.pending}
+        advanceError={flow.error}
+        onSignedUp={() => void flow.advance("clicked_through")}
+      />
+    );
+  }
+
+  // landing / sales / custom.
   return (
     <section id={FUNNEL_ACTIONS_ID} className={`${island} flex flex-col items-center gap-3 pb-16 pt-6`}>
       <PageLinkActions
         pending={!!flow.pending}
-        onClick={(sourceElementId) => {
-          if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
-          void flow.advance("clicked_through", undefined, sourceElementId);
-        }}
+        onClick={(sourceElementId) => void flow.advance("clicked_through", undefined, sourceElementId)}
       />
       <div className="w-full max-w-md space-y-3">
         <ErrorBox message={flow.error} />
         <button
           type="button"
-          onClick={() => {
-            // An opt-in step moving on is the ad platforms' Lead.
-            if (step.stepType === "opt_in") track("Lead", { contentName: step.name });
-            void flow.advance("clicked_through");
-          }}
+          onClick={() => void flow.advance("clicked_through")}
           disabled={!!flow.pending}
           aria-busy={!!flow.pending}
           className={btnPrimaryLg}
@@ -353,7 +386,7 @@ const FORM_PREFIX = "funnel";
  * The order is remembered for this session and step the moment it exists, so a
  * failed advance or a reload only ever retries the advance, never the order.
  */
-function FunnelCheckout({
+export function FunnelCheckout({
   workspaceId,
   funnelId,
   sessionId,
@@ -362,6 +395,8 @@ function FunnelCheckout({
   product,
   bumpOffer,
   flow,
+  embedded = false,
+  title,
 }: {
   workspaceId: string;
   funnelId: string;
@@ -372,8 +407,13 @@ function FunnelCheckout({
   /** The step's order bump (funnel_steps.bump_offer_id), or null. */
   bumpOffer: OrderBumpOffer | null;
   flow: Flow;
+  /** Drawn inside the page (a cod_form element): no section of its own. */
+  embedded?: boolean;
+  /** The form's heading; the checkout title when unset. */
+  title?: string;
 }) {
   const { t, money, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const saved = usePlacedOrder(sessionId);
@@ -381,7 +421,9 @@ function FunnelCheckout({
   // session already holds belongs to an earlier pass (a funnel that loops back).
   const placed = saved && saved.stepKey === stepKey && saved.id !== sessionOrderId ? saved : null;
 
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -390,16 +432,37 @@ function FunnelCheckout({
   // Refused by the server since this step loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
   const bump = bumpGone ? null : bumpOffer;
+  const basePath = useStoreBasePath();
+
+  // The methods this funnel offers (payment rules → methods per funnel): cash on
+  // delivery, the store's gateways, manual transfers.
+  const funnelMethods = usePaymentMethods(client, workspaceId, funnelId);
+  // A product on a plan is paid by a card that can be saved (product/BillingPlan).
+  const planned = hasPlan([product]);
+  const payment = { ...funnelMethods, ...usePlanMethods(funnelMethods.methods, planned) };
+  const [methodId, setMethodId] = useState<string | null>(null);
+  const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  const transferCopy = useTransferCopy();
+  const transferMethod = asTransferMethod(method);
+  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
+  const needsTransfer = Boolean(transferMethod || deposit);
+  const onlyCod = !planned && payment.methods.length === 1 && payment.methods[0].method === "cod";
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
+  // A variant picked on an earlier page's variant_selector (lib/pagePicks) comes first.
+  useEffect(() => {
+    const picked = product ? readPick("variant", product.id) : null;
+    if (picked && variants.some((v) => v.id === picked)) setVariantId(picked);
+  }, [product, variants]);
   const variant = variants.find((v) => v.id === variantId);
   const offer = product ? defaultOfferOf(product) : undefined;
   const offerId = offer && variant && offerAppliesTo(offer, variant.id) ? offer.id : undefined;
   // What the order engine charges for this line: the offer's price when the
   // line carries the offer, the variant's own price otherwise.
   const unit = offerId && offer ? parseMoney(offer.priceAmount) : variant ? parseMoney(variant.priceAmount) : 0;
-  const currency = (offerId ? offer?.currency : variant?.currency) ?? store?.currency;
+  const currency = (offerId ? offer?.currency : variant?.currency) ?? funnelCurrency ?? store?.currency;
 
   const line: OrderLine | null = variant ? { variantId: variant.id, offerId, quantity: 1 } : null;
   const autosaveLines: OrderLine[] = line && !placed ? [line] : [];
@@ -412,9 +475,20 @@ function FunnelCheckout({
     source: "funnel",
   });
 
+  // A discount code: typed here, or from a ?coupon= link (stored by the store layout). Previewed by
+  // the server for these lines in this funnel — a funnel-limited code applies — and sent only when it applies.
+  const allowCodes = formOptionsOf(fields).allow_discount_codes;
+  const linkCoupon = useStoredCoupon(workspaceId);
+  const [codeInput, setCodeInput] = useState("");
+  const [typedCode, setTypedCode] = useState("");
+  const [codeRemoved, setCodeRemoved] = useState(false);
+  const appliedCode = allowCodes && !codeRemoved ? typedCode || linkCoupon : "";
+  const coupon = useCouponPreview(client, workspaceId, appliedCode, autosaveLines, funnelId);
+  const couponOff = coupon?.valid ? coupon.amount : 0;
+
   useTrackOnce(() => {
     if (!product) return;
-    track("InitiateCheckout", { contentIds: [product.id], contentName: product.name, valueMinor: unit, currency, numItems: 1 });
+    track("InitiateCheckout", { contentIds: [contentIdOf(variant) ?? product.id], contentName: product.name, valueMinor: unit, currency, numItems: 1 });
   });
 
   function onFieldChange(field: OrderFormField, value: string) {
@@ -443,13 +517,20 @@ function FunnelCheckout({
       setFormError(t.form.errors.unavailable);
       return;
     }
+    if (needsTransfer) {
+      const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
+      if (problem) {
+        setFormError(problem);
+        return;
+      }
+    }
 
     submittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true }),
+      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       funnelId,
       // The server adds the step's bump to this order from its offer.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -457,7 +538,32 @@ function FunnelCheckout({
     };
     let order;
     try {
-      order = await placeCodOrder({ client, workspaceId, payload });
+      if (method && method.method !== "cod" && !transferMethod) {
+        // Paid online: the gateway's page, then the payment page, which sends the
+        // shopper back here to go on (the server moves a card order on once paid).
+        const { result, next } = await placeOnlineOrder({
+          client,
+          workspaceId,
+          basePath,
+          payload: payload as CheckoutPayload,
+          method,
+          visitorId: getVisitorId(workspaceId),
+          returnTo: `/f/${funnelId}/${sessionId}#${FUNNEL_ACTIONS_ID}`,
+        });
+        rememberPlacedOrder(sessionId, { id: result.order.id, orderNumber: result.order.orderNumber, stepKey });
+        // The gateway's page, or our payment page when the gateway could not start (already store-prefixed).
+        window.location.assign(next);
+        return;
+      }
+      // A transfer rides along: the whole order ("bank_transfer") or a COD deposit.
+      order = await placeCodOrder({
+        client,
+        workspaceId,
+        payload: (needsTransfer && transfer
+          ? { ...payload, ...(transferMethod ? { paymentMethod: "bank_transfer" } : {}), transfer: transfer.state.details }
+          : payload) as CheckoutPayload,
+        visitorId: getVisitorId(workspaceId),
+      });
     } catch (err) {
       submittingRef.current = false;
       if (isOrderBumpRefused(err)) {
@@ -490,7 +596,7 @@ function FunnelCheckout({
     trackPurchaseOnce(order.id, {
       valueMinor: parseMoney(order.totalAmount),
       currency: order.currency,
-      contentIds: bumpOn && bump ? [product.id, bump.productId] : [product.id],
+      contentIds: (order.items ?? []).map((i) => lineContentId(i)).filter((id): id is string => !!id),
       contentName: product.name,
       numItems: bumpOn && bump ? 2 : 1,
     });
@@ -513,10 +619,14 @@ function FunnelCheckout({
   const busy = submitting || !!flow.pending;
 
   return (
-    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-checkout-title">
+    <section
+      id={embedded ? undefined : FUNNEL_ACTIONS_ID}
+      className={embedded ? undefined : `${island} pb-16 pt-6`}
+      aria-labelledby={`funnel-checkout-title-${stepKey}${embedded ? "-page" : ""}`}
+    >
       <form onSubmit={handleSubmit} noValidate className={`${card} mx-auto max-w-2xl p-5 sm:p-8`}>
-        <h2 id="funnel-checkout-title" className="font-display text-xl font-bold text-ink sm:text-2xl">
-          {t.funnel.checkoutTitle}
+        <h2 id={`funnel-checkout-title-${stepKey}${embedded ? "-page" : ""}`} className="font-display text-xl font-bold text-ink sm:text-2xl">
+          {title?.trim() || t.funnel.checkoutTitle}
         </h2>
 
         <div className="mt-5 flex items-center gap-4 rounded-xl border border-line p-3">
@@ -571,15 +681,98 @@ function FunnelCheckout({
           />
         </fieldset>
 
-        {/* Cash on delivery is the only method the checkout accepts — a fact, not a choice. */}
-        <div className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
-          <CashIcon className="shrink-0 text-primary" />
-          <p>
-            <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
-            <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
-          </p>
-        </div>
+        {onlyCod || !method ? (
+          // Cash on delivery is the only method this funnel takes — a fact, not a choice.
+          <div className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+            <CashIcon className="shrink-0 text-primary" />
+            <p>
+              <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
+              <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
+            </p>
+          </div>
+        ) : (
+          <fieldset className="mt-5" disabled={!!placed || busy}>
+            <legend className={labelClass}>{t.checkout.payment}</legend>
+            <PaymentMethodPicker methods={payment.methods} value={method.id} onChange={setMethodId} idPrefix={FORM_PREFIX} plan={planned ? { blocked: payment.blocked } : null} />
+          </fieldset>
+        )}
+        {!placed && (transferMethod || deposit) && (
+          <TransferDetails
+            key={transferMethod ? transferMethod.id : "deposit"}
+            client={client}
+            workspaceId={workspaceId}
+            methods={transferMethod ? [transferMethod] : deposit!.methods}
+            deposit={transferMethod ? undefined : (deposit!.amountType ?? "shipping")}
+            amountLabel={
+              transferMethod
+                ? null
+                : deposit!.amountType === "fixed"
+                  ? money(deposit!.fixedAmount ?? 0, currency)
+                  : null
+            }
+            idPrefix={FORM_PREFIX}
+            onChange={(m, state) => setTransfer({ method: m, state })}
+          />
+        )}
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+
+        {allowCodes && !placed && (
+          <div className="mt-5 border-t border-line pt-4">
+            <label htmlFor={`${FORM_PREFIX}-discount`} className="mb-1.5 block text-sm font-medium text-ink">
+              {t.checkout.discountCode}
+            </label>
+            {appliedCode ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
+                <dl className="min-w-0 flex-1 text-sm" aria-live="polite">
+                  {coupon ? (
+                    <DiscountRows extras={{ automaticDiscount: null, minimumOrder: null, bundleDiscountAmount: 0 }} coupon={coupon} currency={currency} />
+                  ) : (
+                    <p className="text-xs text-primary">{t.checkout.discountPending(appliedCode)}</p>
+                  )}
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypedCode("");
+                    setCodeRemoved(true);
+                    clearStoredCoupon(workspaceId);
+                  }}
+                  className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
+                >
+                  {t.checkout.removeCode}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  id={`${FORM_PREFIX}-discount`}
+                  type="text"
+                  autoComplete="off"
+                  dir="ltr"
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  className={`${input} uppercase`}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!codeInput.trim()) return;
+                    setTypedCode(codeInput.trim());
+                    setCodeRemoved(false);
+                  }}
+                  className={btnSecondary}
+                >
+                  {t.checkout.apply}
+                </button>
+              </div>
+            )}
+            {couponOff > 0 && variant && (
+              <p className="mt-2 text-sm font-semibold text-ink">
+                {t.checkout.subtotal}: {money(unit + (bumpOn && bump ? bump.priceAmount : 0) - couponOff, currency)}
+              </p>
+            )}
+          </div>
+        )}
 
         {bump && !placed && (
           <div className="mt-5 space-y-3">
@@ -614,6 +807,8 @@ function FunnelCheckout({
             </p>
           )}
           <ErrorBox message={formError ?? flow.error} />
+          {/* "By placing your order you agree to…", as on the store checkout. */}
+          <PolicyLinks />
           <button type="submit" disabled={busy} aria-busy={busy} className={btnPrimaryLg}>
             {busy ? t.checkout.placing : placed ? t.funnel.continue : t.checkout.place}
           </button>
@@ -656,8 +851,14 @@ function FunnelOfferCard({
 
   const firstLine = offer?.lines[0];
   const product = firstLine ? byVariant.get(firstLine.variantId) : undefined;
-  const variant = product?.variants.find((v) => v.id === firstLine?.variantId);
-  const image = product ? firstImage(product) : null;
+  // The offer's real countdown (offers/offerCountdown.js): once it ends the offer can only be declined.
+  const countdown = useOfferCountdown(offer?.expiresAt);
+  const open = !countdown.ended;
+  // The option the shopper takes it in (a one-line offer of a product with several, OfferVariantPicker).
+  const [chosenId, setChosenId] = useState<string | null>(null);
+  const chosenVariantId = offer && offer.lines.length === 1 ? (chosenId ?? firstLine?.variantId ?? "") : "";
+  const variant = product?.variants.find((v) => v.id === (chosenVariantId || firstLine?.variantId));
+  const image = product ? (variantImageOf(variant) ?? firstImage(product)) : null;
   const quantity = offer?.lines.reduce((sum, l) => sum + (l.quantity || 0), 0) ?? 0;
   const compareAtTotal =
     variant?.compareAtAmount != null ? parseMoney(variant.compareAtAmount) * Math.max(1, quantity) : null;
@@ -703,7 +904,11 @@ function FunnelOfferCard({
               {price !== null && compareAt !== null && (
                 <p className="mt-1 text-sm font-medium text-success">{t.upsell.save(money(compareAt - price, offer.currency))}</p>
               )}
+              {chosenVariantId && (
+                <OfferVariantPicker product={product} value={chosenVariantId} onChange={setChosenId} disabled={!!flow.pending} />
+              )}
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{joinsOrder ? t.funnel.offerJoinsHint : t.funnel.offerHint}</p>
+              <OfferTimer {...countdown} />
             </>
           ) : (
             <h2 id="funnel-offer-title" className="text-base font-medium text-ink-soft">
@@ -711,7 +916,11 @@ function FunnelOfferCard({
             </h2>
           )}
 
-          <PageOfferActions canAccept={!!offer && canAccept} pending={!!flow.pending} onAction={(type) => void flow.advance(type)} />
+          <PageOfferActions
+            canAccept={!!offer && canAccept && open}
+            pending={!!flow.pending}
+            onAction={(type) => void flow.advance(type, undefined, undefined, type === "accepted_offer" && chosenVariantId ? chosenVariantId : undefined)}
+          />
           <div className="mt-6 space-y-2">
             {offer && !canAccept && (
               <p role="status" className="rounded-xl bg-paper px-4 py-3 text-sm text-ink-soft">
@@ -719,10 +928,10 @@ function FunnelOfferCard({
               </p>
             )}
             <ErrorBox message={flow.error} />
-            {offer && canAccept && (
+            {offer && canAccept && open && (
               <button
                 type="button"
-                onClick={() => void flow.advance("accepted_offer")}
+                onClick={() => void flow.advance("accepted_offer", undefined, undefined, chosenVariantId || undefined)}
                 disabled={!!flow.pending}
                 aria-busy={flow.pending === "accepted_offer"}
                 className={btnPrimaryLg}
@@ -825,13 +1034,14 @@ export function FunnelOrders({
   standalone?: boolean;
 }) {
   const { t, money, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
   const isClient = useIsClient();
   const placed = usePlacedOrder(sessionId);
   const followOns = useFollowOnOrders(sessionId);
 
   const snapshot = isClient && orderId ? getOrderSnapshot(workspaceId, orderId) : null;
   const orderNumber = snapshot?.orderNumber ?? (placed && placed.id === orderId ? placed.orderNumber : null);
-  const currency = snapshot?.currency ?? store?.currency;
+  const currency = snapshot?.currency ?? funnelCurrency ?? store?.currency;
   const Title = standalone ? "h1" : "h2";
 
   if (!orderId) {

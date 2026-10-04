@@ -7,6 +7,8 @@ import { track } from "@/lib/track";
 import { asTransferMethod, useTransferCopy } from "./TransferDetails";
 import { PaymentAdjustmentNote } from "./PaymentAdjustmentNote";
 import { useSaveCard } from "@/lib/saveCard";
+import { usePaymentMethodText } from "@/lib/paymentMethodText";
+import { PlanPaymentNote } from "@/components/product/BillingPlan";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -18,17 +20,22 @@ export function PaymentMethodPicker({
   value,
   onChange,
   idPrefix,
+  plan,
 }: {
   methods: StorefrontPaymentMethod[];
   value: string;
   onChange: (id: string) => void;
   idPrefix: string;
+  /** A product on a plan is in the order: card only, saved without a tick (product/BillingPlan). */
+  plan?: { blocked: boolean; trialDays?: number } | null;
 }) {
   const { t, store } = useStore();
   const workspaceId = store?.workspaceId ?? "";
   const transferCopy = useTransferCopy();
+  const more = usePaymentMethodText();
   const [saveCard, setSaveCard] = useSaveCard(workspaceId);
-  const cardChosen = methods.some((m) => m.id === value && m.method === "card");
+  const cardChosen = !plan && methods.some((m) => m.id === value && m.method === "card");
+  const planNote = plan ? <PlanPaymentNote blocked={plan.blocked} trialDays={plan.trialDays} /> : null;
 
   const copy = (m: StorefrontPaymentMethod) =>
     asTransferMethod(m)
@@ -37,18 +44,25 @@ export function PaymentMethodPicker({
       ? { title: t.payment.card, hint: t.payment.cardHint, Icon: CardIcon }
       : m.method === "wallet"
         ? { title: t.payment.wallet, hint: t.payment.walletHint, Icon: WalletIcon }
-        : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
+        : m.method === "valu"
+          ? { title: more.valu, hint: more.valuHint, Icon: CardIcon }
+          : m.method === "kiosk"
+            ? { title: more.kiosk, hint: more.kioskHint, Icon: CashIcon }
+            : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
 
   if (methods.length === 1 && methods[0].method === "cod") {
     const { title, hint, Icon } = copy(methods[0]);
     return (
-      <div className="mt-4 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
-        <Icon className="shrink-0 text-primary" />
-        <p>
-          <span className="block text-sm font-semibold text-ink">{title}</span>
-          <span className="block text-xs text-ink-soft">{hint}</span>
-        </p>
-      </div>
+      <>
+        <div className="mt-4 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+          <Icon className="shrink-0 text-primary" />
+          <p>
+            <span className="block text-sm font-semibold text-ink">{title}</span>
+            <span className="block text-xs text-ink-soft">{hint}</span>
+          </p>
+        </div>
+        {planNote}
+      </>
     );
   }
 
@@ -108,6 +122,7 @@ export function PaymentMethodPicker({
           </span>
         </label>
       )}
+      {planNote}
     </div>
   );
 }

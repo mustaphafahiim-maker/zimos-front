@@ -20,6 +20,7 @@ import { PlanPicker, PlanSummary, type PlanChoice } from "@/components/plans/Pla
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { rememberPlanChoice } from "@/lib/planChoice";
+import { rememberReferralCode } from "@/lib/referralCode";
 
 const STRINGS = {
   en: {
@@ -136,6 +137,8 @@ export function RegisterPage() {
   const { register, login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  // A ZIMOS referral link (/register?ref=CODE): offered again in Billing once the store exists.
+  useEffect(() => rememberReferralCode(params.get("ref")), [params]);
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const planHeadingId = useId();

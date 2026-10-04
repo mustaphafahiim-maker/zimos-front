@@ -3,6 +3,7 @@ import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { container } from "@/components/ui";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { brandingRemoved } from "@/components/PoweredByZimos";
 
 /**
  * The masthead of a funnel page: the same brand bar, logo and name as the
@@ -33,7 +34,7 @@ export function FunnelHeader({ store }: { store: StorefrontMeta }) {
               height={40}
               className="h-10 w-10 shrink-0 rounded-xl object-contain"
             />
-          ) : (
+          ) : brandingRemoved(store) ? null : (
             <ZimosLogo height={32} surface="auto" className="shrink-0" />
           )}
           <span className="truncate font-display text-lg font-bold text-ink">{store.name}</span>

@@ -40,10 +40,20 @@ export async function generateMetadata({ params, searchParams }: { params: Param
     const collections = await getStoreCollections(workspaceId);
     const found = collections.find((c) => c.slug === state.collection || c.id === state.collection);
     if (found) {
+      // The category's own SEO (dashboard → Categories → Search engines and sharing), same keys as a product's.
+      const seo = (found.seo ?? {}) as Record<string, unknown>;
+      const seoText = (key: string) => (typeof seo[key] === "string" && (seo[key] as string).trim() ? (seo[key] as string).trim() : undefined);
+      const title = seoText("title") ?? found.name;
+      const description = seoText("description") ?? (found.description || undefined);
+      const image = seoText("imageUrl") ?? found.imageUrl ?? undefined;
+      const url = `/products?collection=${encodeURIComponent(found.slug)}`;
       return {
-        title: found.name,
-        description: found.description || undefined,
-        alternates: { canonical: `/products?collection=${encodeURIComponent(found.slug)}` },
+        title,
+        description,
+        ...(seo.noindex === true ? { robots: { index: false, follow: true } } : {}),
+        alternates: { canonical: url },
+        openGraph: { type: "website", siteName: store.name, title, description, url, ...(image ? { images: [{ url: image, alt: found.name }] } : {}) },
+        twitter: { card: image ? "summary_large_image" : "summary", title, description },
       };
     }
   }

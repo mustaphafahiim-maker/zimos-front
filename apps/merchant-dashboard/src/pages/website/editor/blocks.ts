@@ -76,6 +76,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import { BUTTON_ACTION_FIELDS, COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS, FORM_INPUT_FIELDS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
 /**
@@ -106,6 +107,8 @@ export type FieldSpec =
   | { key: string; label: string; kind: "text"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "textarea"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "number"; min?: number; max?: number; hint?: string }
+  // A date and time, stored as an ISO string ("" = not set).
+  | { key: string; label: string; kind: "datetime"; hint?: string }
   | { key: string; label: string; kind: "boolean"; hint?: string }
   | {
       key: string;
@@ -121,6 +124,8 @@ export type FieldSpec =
   | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "compareRows"; hint?: string }
   | { key: string; label: string; kind: "linkList"; hint?: string }
+  // An html_block's code, saved through its own API by blockId (HtmlBlockCodeField.tsx).
+  | { key: string; label: string; kind: "htmlBlockCode"; hint?: string }
   // A list of objects, each a small card of its own fields (ItemListField.tsx).
   | {
       key: string;
@@ -291,6 +296,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
     ],
   },
+  // SPEC §8.2 "HTML code": the tree holds only blockId; the HTML lives outside it.
+  html_block: {
+    label: "HTML code",
+    icon: Code2,
+    defaultProps: {},
+    fields: [{ key: "blockId", label: "HTML", kind: "htmlBlockCode", hint: "Scripts and styles are allowed. Test it on your live store." }],
+  },
   spacer: {
     label: "Spacer",
     icon: MoveVertical,
@@ -365,7 +377,16 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { label: "ينتهي العرض خلال", endsInHours: 24 },
     fields: [
       { key: "label", label: "Label", kind: "text" },
-      { key: "endsInHours", label: "Ends in (hours)", kind: "number", min: 1, max: 8760 },
+      { key: "endsAt", label: "Ends at", kind: "datetime", hint: "A fixed date and time — the same for every visitor." },
+      {
+        key: "endsInHours",
+        label: "Or: ends this many hours after publishing",
+        kind: "number",
+        min: 1,
+        max: 8760,
+        hint: "Used when no date is set: publishing turns it into a fixed date.",
+      },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
     ],
   },
   form: {
@@ -665,6 +686,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         kind: "text",
         hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
       },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer when they place the order." },
     ],
   },
   checkout_summary: {
@@ -686,7 +708,10 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     label: "Accept offer button",
     icon: Zap,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   repeater: {
     label: "Repeater",
@@ -723,11 +748,20 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     label: "Decline offer link",
     icon: Minus,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
+  // Gallery with thumbnails, variant and bundle pickers, review form (builderExtraBlocks.ts).
+  ...EXTRA_ELEMENT_SPECS,
 };
+
+// A button's cart actions and a form's photo and stars inputs (item 93, builderExtraBlocks.ts).
+ELEMENT_SPECS.button.fields.push(...BUTTON_ACTION_FIELDS);
+ELEMENT_SPECS.form.fields.push(...FORM_INPUT_FIELDS);
 
 // ---------------------------------------------------------------------------
 // Block presets — what the left sidebar offers
@@ -890,6 +924,9 @@ export const COLUMN_SETTING_SPECS: SectionSettingSpec[] = [
     ],
   },
 ];
+
+// Every column is a flex container: its items' layout (builderExtraBlocks.ts).
+COLUMN_SETTING_SPECS.push(...COLUMN_LAYOUT_SPECS);
 
 export const ROW_SETTING_SPECS: SectionSettingSpec[] = [
   {
@@ -2479,6 +2516,14 @@ const CORE_PRESETS: BlockPreset[] = [
     elements: ["embed"],
   },
   {
+    key: "html-code",
+    label: "HTML code",
+    description: "Your own HTML at this place on the page — runs on your store's domain only.",
+    icon: Code2,
+    group: "basics",
+    elements: ["html_block"],
+  },
+  {
     key: "map",
     label: "Map",
     description: "Show your address on a map.",
@@ -3169,7 +3214,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS, ...EXTRA_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

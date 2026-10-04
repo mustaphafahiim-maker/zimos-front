@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ApiClient, CaptureCheckoutSessionPayload } from "@store-builder/api-client";
+import { botGuardAutosaveFields } from "./botGuard";
 import { isEgyptianMobile, normalizePhone } from "./egypt";
 import { isEgyptForm, type OrderFormValues } from "./orderForm";
 import { getVisitorId } from "./visitorId";
@@ -96,7 +97,10 @@ export function useCheckoutAutosave({
       inflight.current = (inflight.current ?? Promise.resolve()).then(async () => {
         if (stopped.current) return;
         try {
-          const session = await client.captureCheckoutSession(workspaceId, payload);
+          // The bot guard's token and honeypot (SPEC §5.1): without them a guarded store stores nothing.
+          const guard = await botGuardAutosaveFields(client, workspaceId);
+          if (stopped.current) return;
+          const session = await client.captureCheckoutSession(workspaceId, { ...payload, ...guard });
           sessionId.current = session.id;
           lastSaved.current = payloadKey;
         } catch (err) {

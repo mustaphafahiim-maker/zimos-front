@@ -1,5 +1,11 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { twoFactorRecoveryAdminReset, twoFactorRecoveryOfUser } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/apiClient";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { DetailRow } from "@/components/Drawer";
@@ -14,6 +20,12 @@ import { formatDate, formatRelative } from "@/lib/format";
 export function UserDetailPage() {
   const { id = "" } = useParams();
   const { data: user, loading, error, refresh } = useAsync(() => adminApi.getUser(id), [id]);
+  // Two-step sign-in, and support's reset for a person locked out of it (auth/twoFactorRecovery.js).
+  const { can } = useAuth();
+  const toast = useToast();
+  const [resetting, setResetting] = useState(false);
+  const twoFactor = user ? twoFactorRecoveryOfUser(user) : null;
+  const MODE: Record<string, string> = { off: "Off", email: "Email code", totp: "Authenticator app", whatsapp: "WhatsApp code" };
 
   return (
     <div>
@@ -63,6 +75,17 @@ export function UserDetailPage() {
                   <span className="ms-2 text-xs text-ink-soft">{formatRelative(user.createdAt)}</span>
                 </DetailRow>
                 <DetailRow label="Last sign-in">{user.lastLoginAt ? formatRelative(user.lastLoginAt) : "—"}</DetailRow>
+                {twoFactor && (
+                  <DetailRow label="Two-step sign-in">
+                    {MODE[twoFactor.mode] ?? twoFactor.mode}
+                    {twoFactor.enabledAt && <span className="ms-2 text-xs text-ink-soft">since {formatDate(twoFactor.enabledAt)}</span>}
+                    {twoFactor.mode !== "off" && can("support.manage") && (
+                      <Button size="sm" variant="outline" className="ms-3" onClick={() => setResetting(true)}>
+                        Turn off
+                      </Button>
+                    )}
+                  </DetailRow>
+                )}
               </dl>
             </Panel>
 
@@ -109,6 +132,20 @@ export function UserDetailPage() {
           </div>
         )}
       </DataState>
+      <ConfirmDialog
+        open={resetting}
+        title="Turn off two-step sign-in?"
+        description="Only for a person who lost every way through it, after you have checked who they are. They are signed out everywhere, remembered browsers are forgotten, and they get an email saying so."
+        confirmLabel="Turn off"
+        destructive
+        onCancel={() => setResetting(false)}
+        onConfirm={async () => {
+          await twoFactorRecoveryAdminReset(apiClient, id);
+          setResetting(false);
+          toast.success("Two-step sign-in is off. The person was emailed.");
+          void refresh();
+        }}
+      />
     </div>
   );
 }

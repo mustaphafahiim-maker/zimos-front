@@ -1,10 +1,12 @@
 "use client";
 
-import { storefrontQuoteExtras, type StorefrontQuoteExtras } from "@store-builder/api-client";
+import { storefrontQuoteExtras, storefrontShippingQuoteFor, type StorefrontQuoteExtras } from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
+import { getVisitorId } from "./visitorId";
 import { quotePricesShipping, shippingLineFor, type ShippingLine } from "./shippingLine";
+import { quoteOptionsOf, type ShippingOptionChoice } from "./shippingChoice";
 
 const DEBOUNCE_MS = 300;
 
@@ -24,6 +26,8 @@ export interface ShippingQuoteState {
   freeShipping: FreeShippingProgress | null;
   /** The automatic discount, the minimum order and the bundle saving the quote reports (lane 3). */
   extras: StorefrontQuoteExtras;
+  /** The store's shipping options for this cart (standard first); absent or [] = no choice (shippingChoice.ts). */
+  options?: ShippingOptionChoice[];
 }
 
 /**
@@ -40,6 +44,7 @@ export function useShippingQuote({
   client,
   workspaceId,
   governorate,
+  country = "EG",
   lines,
   enabled = true,
 }: {
@@ -47,6 +52,8 @@ export function useShippingQuote({
   workspaceId: string;
   /** The governorate code ("" until chosen). */
   governorate: string;
+  /** The order's country: the form's, which starts on the store's (lib/storeCountry). */
+  country?: string;
   lines: QuoteLine[];
   enabled?: boolean;
 }): ShippingQuoteState {
@@ -55,7 +62,7 @@ export function useShippingQuote({
     .filter((l) => l.quantity > 0)
     .map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity }));
   // The effect keys on content, not on the fresh array each render.
-  const requestKey = JSON.stringify([workspaceId, province, items]);
+  const requestKey = JSON.stringify([workspaceId, country, province, items]);
   const active = enabled && items.length > 0;
 
   const [state, setState] = useState<{ key: string; quote: ShippingQuote | null; failed: boolean } | null>(null);
@@ -64,8 +71,8 @@ export function useShippingQuote({
     if (!active) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: province ?? null, items })
+      // For this visitor: a product A/B test's price counts, as the order will charge it.
+      storefrontShippingQuoteFor(client, workspaceId, { country, governorate: province ?? null, items }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (!cancelled) setState({ key: requestKey, quote, failed: false });
         })
@@ -90,5 +97,6 @@ export function useShippingQuote({
 
   const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras };
+  const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options };
 }

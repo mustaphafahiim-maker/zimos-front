@@ -31,6 +31,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
+import { BackupCodesPanel } from "./BackupCodesPanel";
 
 /**
  * Settings → Security (SPEC §17.2): where the account is signed in, two-step
@@ -396,6 +397,7 @@ function TwoStepPanel({ t }: { t: T }) {
               </div>
             </div>
           )}
+          {data && data.mode !== "off" && <BackupCodesPanel status={data} onChanged={(next) => status.setData({ ...data, ...next })} />}
         </DataState>
       </div>
 

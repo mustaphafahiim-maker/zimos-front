@@ -17,6 +17,10 @@ import { TemplatesPage } from "@/pages/TemplatesPage";
 import { SuppliersPage } from "@/pages/SuppliersPage";
 import { AppsPage } from "@/pages/AppsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
+import { CarrierAreasPage } from "@/pages/CarrierAreasPage";
+import { ReferralProgramPage } from "@/pages/ReferralProgramPage";
+import { EducationLinksPage } from "@/pages/EducationLinksPage";
+import { ThemesPage } from "@/pages/ThemesPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
@@ -67,11 +71,14 @@ export default function App() {
                 <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
                 <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
                 <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
+                <Route path="/referral-program" element={gated(P.AGENTS_VIEW, <ReferralProgramPage />)} />
                 <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />
                 <Route path="/templates" element={gated(P.TEMPLATES_VIEW, <TemplatesPage />)} />
+                <Route path="/themes" element={gated(P.TEMPLATES_VIEW, <ThemesPage />)} />
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
                 <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
                 <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
+                <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />
                 <Route path="/payment-gateways" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="payment" />)} />
                 <Route path="/whatsapp-numbers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="whatsapp" />)} />
                 <Route path="/fraud-signals" element={gated(P.RISK_VIEW, <FraudSignalsPage />)} />
@@ -79,6 +86,7 @@ export default function App() {
                 <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
                 <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
                 <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
+                <Route path="/education" element={gated(P.ANNOUNCEMENTS_VIEW, <EducationLinksPage />)} />
                 <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
                 <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
                 <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />

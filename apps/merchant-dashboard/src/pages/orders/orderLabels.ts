@@ -61,6 +61,8 @@ const LABELS = {
     pay_cod: "Cash on delivery",
     pay_card: "Card",
     pay_wallet: "Wallet",
+    pay_valu: "valU installments",
+    pay_kiosk: "Kiosk (Aman / Masary)",
     pay_bank_transfer: "Bank transfer",
     // risk flags
     risk_blacklisted_customer: "Blocked customer",
@@ -119,6 +121,8 @@ const LABELS = {
     pay_cod: "الدفع عند الاستلام",
     pay_card: "بطاقة",
     pay_wallet: "محفظة إلكترونية",
+    pay_valu: "تقسيط valU",
+    pay_kiosk: "الدفع في الكشك (أمان / مصاري)",
     pay_bank_transfer: "تحويل بنكي",
     risk_blacklisted_customer: "عميل محظور",
     risk_duplicate_order: "أوردر مكرر محتمل",

@@ -1,4 +1,4 @@
-import { hostnameOf, isRootDomainHost } from "./domains";
+import { hostnameOf, isRootDomainHost, storeSlugFromHost } from "./domains";
 
 /**
  * Merchant-owned domains (`shop.example.com`). The proxy cannot tell from the
@@ -12,6 +12,8 @@ export interface ResolvedHost {
   slug: string;
   /** The funnel shown on the domain's root instead of the store home, if any. */
   homeFunnelRef: string | null;
+  /** The store's canonical host (its primary domain with a certificate), if it has one. */
+  primaryHost: string | null;
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
@@ -36,7 +38,21 @@ function isPlatformOrLocal(hostname: string): boolean {
 export async function resolveCustomHost(host: string | null | undefined): Promise<ResolvedHost | null> {
   const hostname = hostnameOf(host);
   if (isPlatformOrLocal(hostname)) return null;
+  return lookup(hostname);
+}
 
+/**
+ * The canonical host of the store served on a platform subdomain
+ * (`<slug>.zimos.co`), when it has a primary domain — the proxy redirects
+ * there. Null for a store without one, and for development hosts.
+ */
+export async function primaryHostForPlatformHost(host: string | null | undefined): Promise<string | null> {
+  const hostname = hostnameOf(host);
+  if (!storeSlugFromHost(hostname) || hostname.endsWith(".localhost") || hostname.includes(":")) return null;
+  return (await lookup(hostname))?.primaryHost ?? null;
+}
+
+async function lookup(hostname: string): Promise<ResolvedHost | null> {
   const hit = cache.get(hostname);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
 
@@ -46,11 +62,16 @@ export async function resolveCustomHost(host: string | null | undefined): Promis
       headers: { accept: "application/json" },
     });
     if (res.ok) {
-      const body = (await res.json()) as { store?: { slug?: unknown; homeFunnel?: { ref?: unknown } | null } };
+      const body = (await res.json()) as { store?: { slug?: unknown; homeFunnel?: { ref?: unknown } | null; primaryHost?: unknown } };
       const slug = body.store?.slug;
       if (typeof slug === "string" && slug) {
         const ref = body.store?.homeFunnel?.ref;
-        value = { slug, homeFunnelRef: typeof ref === "string" && ref ? ref : null };
+        const primary = body.store?.primaryHost;
+        value = {
+          slug,
+          homeFunnelRef: typeof ref === "string" && ref ? ref : null,
+          primaryHost: typeof primary === "string" && primary ? primary.toLowerCase() : null,
+        };
       }
     } else if (res.status !== 404) {
       // The API is unwell: do not remember this as "unknown host".

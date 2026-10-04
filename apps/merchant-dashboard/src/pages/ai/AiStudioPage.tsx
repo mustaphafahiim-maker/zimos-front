@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Languages, LayoutTemplate, PackagePlus, Sparkles } from "lucide-react";
+import { FileText, Languages, LayoutTemplate, Megaphone, PackagePlus, ScanSearch, Sparkles, Store } from "lucide-react";
 import { Alert, Button, Card, Spinner } from "@store-builder/ui";
 import {
   AI_DIALECTS,
@@ -34,16 +34,21 @@ import { Textarea } from "@/components/Textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
+import { ImageListField } from "@/pages/website/editor/ImageField";
+import { AdCreativesTool, PageReviewTool, StoreBuilderTool } from "./AiStudioP2";
 
 const STRINGS = {
   en: {
     title: "AI studio",
-    description: "Draft product listings, landing pages, translations and policies. Everything it writes is a draft until you publish it.",
+    description: "Draft product listings, landing pages, translations, policies, ads and a whole store, and review your pages. Everything it writes is a draft until you publish it.",
     tabs: "AI tool",
     tab_product: "Product",
     tab_page: "Landing page",
     tab_translate: "Translate",
     tab_policies: "Policies",
+    tab_page_review: "Page review",
+    tab_ad_creatives: "Ad creatives",
+    tab_store_builder: "Build a store",
     testProvider: "Test provider",
     testProviderHint: "The test provider returns sample text so you can try the flow. Real generation starts when an AI provider is connected.",
     unavailable: "AI is not available on this store yet.",
@@ -68,6 +73,8 @@ const STRINGS = {
     link: "Source link (optional)",
     notes: "What should it know? (optional)",
     notesHint: "Material, sizes, who it is for, what is in the box.",
+    photos: "Product photos (optional)",
+    photosHint: "Up to 6. The AI describes what they show, and they become the draft product's photos.",
     fName: "Name",
     fDescription: "Description",
     fFeatures: "Features",
@@ -109,12 +116,15 @@ const STRINGS = {
   },
   ar: {
     title: "استوديو الذكاء الاصطناعي",
-    description: "جهّز مسودات للمنتجات وصفحات الهبوط والترجمة والسياسات. كل ما يكتبه يبقى مسودة حتى تنشره أنت.",
+    description: "جهّز مسودات للمنتجات وصفحات الهبوط والترجمة والسياسات والإعلانات ومتجر كامل، وقيّم صفحاتك. كل ما يكتبه يبقى مسودة حتى تنشره أنت.",
     tabs: "أداة الذكاء الاصطناعي",
     tab_product: "منتج",
     tab_page: "صفحة هبوط",
     tab_translate: "ترجمة",
     tab_policies: "السياسات",
+    tab_page_review: "تقييم صفحة",
+    tab_ad_creatives: "إعلانات",
+    tab_store_builder: "بناء متجر",
     testProvider: "مزوّد تجريبي",
     testProviderHint: "المزوّد التجريبي يرجّع نصًا نموذجيًا لتجربة الخطوات. التوليد الحقيقي يبدأ عند ربط مزوّد ذكاء اصطناعي.",
     unavailable: "الذكاء الاصطناعي غير متاح على هذا المتجر بعد.",
@@ -139,6 +149,8 @@ const STRINGS = {
     link: "رابط المصدر (اختياري)",
     notes: "ما الذي يجب أن يعرفه؟ (اختياري)",
     notesHint: "الخامة، المقاسات، لمن المنتج، محتويات العبوة.",
+    photos: "صور المنتج (اختياري)",
+    photosHint: "حتى 6 صور. يصف الذكاء الاصطناعي ما يظهر فيها، وتصبح صور مسودة المنتج.",
     fName: "الاسم",
     fDescription: "الوصف",
     fFeatures: "المميزات",
@@ -181,15 +193,21 @@ const STRINGS = {
 } satisfies Messages;
 
 type T = Record<keyof (typeof STRINGS)["en"], string>;
-const TABS: { value: AiFeature; icon: typeof Sparkles }[] = [
+/** The studio's tools; the suggested WhatsApp reply lives in the inbox. */
+type StudioTab = Exclude<AiFeature, "wa_reply">;
+const TABS: { value: StudioTab; icon: typeof Sparkles }[] = [
   { value: "product", icon: PackagePlus },
   { value: "page", icon: LayoutTemplate },
   { value: "translate", icon: Languages },
   { value: "policies", icon: FileText },
+  // P2 (AiStudioP2.tsx).
+  { value: "page_review", icon: ScanSearch },
+  { value: "ad_creatives", icon: Megaphone },
+  { value: "store_builder", icon: Store },
 ];
 
 /** Runs one generation and keeps its job: start → poll → result or error. */
-function useGeneration<F extends AiFeature>(feature: F, onDone: () => void) {
+export function useGeneration<F extends AiFeature>(feature: F, onDone: () => void) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
@@ -218,7 +236,7 @@ function useGeneration<F extends AiFeature>(feature: F, onDone: () => void) {
   return { job, setJob, busy, error, setError, run };
 }
 
-function DialectField({ value, onChange, label }: { value: AiDialect; onChange: (value: AiDialect) => void; label?: string }) {
+export function DialectField({ value, onChange, label }: { value: AiDialect; onChange: (value: AiDialect) => void; label?: string }) {
   const t = useT(STRINGS);
   return (
     <Field label={label ?? t.dialect}>
@@ -235,7 +253,7 @@ function DialectField({ value, onChange, label }: { value: AiDialect; onChange: 
   );
 }
 
-function ToolLayout({ form, result, busy, error }: { form: ReactNode; result: ReactNode; busy: boolean; error: string | null }) {
+export function ToolLayout({ form, result, busy, error }: { form: ReactNode; result: ReactNode; busy: boolean; error: string | null }) {
   const t = useT(STRINGS);
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
@@ -257,7 +275,7 @@ function ToolLayout({ form, result, busy, error }: { form: ReactNode; result: Re
   );
 }
 
-function SubmitRow({ busy, hasResult, disabled }: { busy: boolean; hasResult: boolean; disabled?: boolean }) {
+export function SubmitRow({ busy, hasResult, disabled }: { busy: boolean; hasResult: boolean; disabled?: boolean }) {
   const t = useT(STRINGS);
   return (
     <Button type="submit" className="w-full" disabled={busy || disabled}>
@@ -273,7 +291,7 @@ function ProductTool({ onDone }: { onDone: () => void }) {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const gen = useGeneration("product", onDone);
-  const [form, setForm] = useState({ name: "", price: "", link: "", notes: "", dialect: "egyptian" as AiDialect });
+  const [form, setForm] = useState({ name: "", price: "", link: "", notes: "", imageUrls: [] as string[], dialect: "egyptian" as AiDialect });
   const [draft, setDraft] = useState<AiProductOutput | null>(null);
   const [applying, setApplying] = useState(false);
 
@@ -288,6 +306,7 @@ function ProductTool({ onDone }: { onDone: () => void }) {
       price: form.price.trim() || undefined,
       link: form.link.trim() || undefined,
       notes: form.notes.trim() || undefined,
+      imageUrls: form.imageUrls.length ? form.imageUrls : undefined,
       dialect: form.dialect,
     });
   }
@@ -322,6 +341,8 @@ function ProductTool({ onDone }: { onDone: () => void }) {
           <Field label={t.notes} hint={t.notesHint}>
             {(props) => <Textarea {...props} rows={3} maxLength={2000} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}
           </Field>
+          {/* §19.2: the photos go to the model and become the draft's media. */}
+          <ImageListField label={t.photos} hint={t.photosHint} value={form.imageUrls} onChange={(imageUrls) => setForm({ ...form, imageUrls: imageUrls.slice(0, 6) })} />
           <DialectField value={form.dialect} onChange={(dialect) => setForm({ ...form, dialect })} />
           <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={form.name.trim().length < 2} />
         </form>
@@ -606,12 +627,12 @@ function usageText(t: T, used: number, limit: number | null) {
   return limit === null ? fmt(t.usage, { used }) : fmt(t.usageOf, { used, limit });
 }
 
-/** AI studio (SPEC §19): four tools over one job flow; every result is a draft. */
+/** AI studio (SPEC §19): seven tools over one job flow; every result is a draft. */
 export function AiStudioPage() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const usage = useAsync(() => aiUsage(apiClient, workspaceId), [workspaceId]);
-  const [tab, setTab] = useState<AiFeature>("product");
+  const [tab, setTab] = useState<StudioTab>("product");
   const refreshUsage = () => void usage.refresh({ silent: true });
   const provider = usage.data?.provider;
 
@@ -634,6 +655,9 @@ export function AiStudioPage() {
             {tab === "page" && <PageTool onDone={refreshUsage} />}
             {tab === "translate" && <TranslateTool onDone={refreshUsage} />}
             {tab === "policies" && <PoliciesTool onDone={refreshUsage} />}
+            {tab === "page_review" && <PageReviewTool onDone={refreshUsage} />}
+            {tab === "ad_creatives" && <AdCreativesTool onDone={refreshUsage} />}
+            {tab === "store_builder" && <StoreBuilderTool onDone={refreshUsage} />}
           </>
         )}
       </DataState>

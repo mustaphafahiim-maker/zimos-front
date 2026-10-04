@@ -267,7 +267,8 @@ export function toCheckoutPayload(
 ): CheckoutPayload {
   const shown = new Set(formOf(fields, { showAltPhone: options.showAltPhone }).map((f) => f.key));
   const read = (key: CheckoutFormFieldKey) => (shown.has(key) ? values[FORM_FIELD_OF[key]].trim() : "");
-  const country = (shown.has("country") && values.country) || "EG";
+  // A hidden country field leaves the store's own country in the values (lib/storeCountry).
+  const country = values.country || "EG";
   const province = country === "EG" ? provinceFor(read("government")) : read("government") || undefined;
   const altPhone = read("phone_alt") ? normalizePhone(read("phone_alt")) : "";
   const email = read("email");

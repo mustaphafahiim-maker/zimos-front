@@ -10,6 +10,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { recallReferralCode } from "@/lib/referralCode";
 import { useToast } from "@/components/Toast";
 import { DataState } from "@/components/DataState";
 
@@ -488,7 +489,7 @@ function ReferralCodeForm({ onApplied }: { onApplied: (next: WorkspaceBilling) =
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => recallReferralCode());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

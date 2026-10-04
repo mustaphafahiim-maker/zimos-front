@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   MARKETING_URL,
   STORE_SLUG_HEADER,
+  hostnameOf,
   isRootDomainHost,
   storeSlugFromHost,
 } from "@/lib/domains";
@@ -14,7 +15,9 @@ import {
   isTokenShaped,
   storePreviewCookieOptions,
 } from "@/lib/storePreview";
-import { resolveCustomHost } from "@/lib/customDomains";
+import { primaryHostForPlatformHost, resolveCustomHost } from "@/lib/customDomains";
+import { STORE_REF_HEADER } from "@/lib/documentLocale";
+import { CODE_REF_HEADER } from "@/lib/headCodeParse";
 
 /**
  * Paths that are served as they are, whatever the host: Next's own internals,
@@ -59,11 +62,11 @@ function isPassThrough(pathname: string): boolean {
  *     checks — left alone so development and deploys keep working.
  */
 /** Metadata files every store answers for itself, from its own settings. */
-const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml"]);
+const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml", "/manifest.webmanifest"]);
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // On a store's own host these two are the store's (app/store/[workspaceId]/…/route.ts).
+  // On a store's own host these are the store's (app/store/[workspaceId]/…/route.ts).
   if (STORE_FILES.has(pathname)) {
     const fileHost = request.headers.get("host");
     const storeSlug = storeSlugFromHost(fileHost) ?? (await resolveCustomHost(fileHost))?.slug;
@@ -84,6 +87,8 @@ export async function proxy(request: NextRequest) {
   const preview = fromLink ?? (isTokenShaped(stored) ? stored : null);
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
+  headers.delete(STORE_REF_HEADER);
+  headers.delete(CODE_REF_HEADER);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -115,6 +120,22 @@ export async function proxy(request: NextRequest) {
       return next();
     }
 
+    // The store's primary domain is its one address (SPEC §8.11): a visit on
+    // its platform subdomain or another of its domains moves there, same path
+    // and query. Not for a staff preview, a payment page (a gateway may return
+    // to the host it was given) or anything but a page load.
+    const method = request.method.toUpperCase();
+    if (!preview && (method === "GET" || method === "HEAD") && !/^\/pay(\/|$)/.test(pathname)) {
+      const primary = custom ? custom.primaryHost : await primaryHostForPlatformHost(host);
+      if (primary && primary !== hostnameOf(host)) {
+        const target = new URL(`https://${primary}${pathname}${request.nextUrl.search}`);
+        // Temporary (307), like the marketing redirect below: a browser keeps a permanent
+        // one for good, and a merchant may change or remove the primary domain later.
+        // Search engines still consolidate on it through the canonical links.
+        return NextResponse.redirect(target, 307);
+      }
+    }
+
     const url = request.nextUrl.clone();
     // A merchant domain with a home funnel opens that funnel on its root.
     url.pathname =
@@ -122,10 +143,19 @@ export async function proxy(request: NextRequest) {
         ? `/store/${slug}/f/${encodeURIComponent(custom.homeFunnelRef)}`
         : `/store/${slug}${pathname === "/" ? "" : pathname}`;
     headers.set(STORE_SLUG_HEADER, slug);
+    headers.set(STORE_REF_HEADER, slug);
+    // The merchant's head code is server-rendered (lib/headCode) only on the
+    // store's own host, never on a payment or preview page or beside a staff token.
+    if (!preview && !/^\/(pay|preview)(\/|$)/.test(pathname)) headers.set(CODE_REF_HEADER, slug);
     return keep(NextResponse.rewrite(url, { request: { headers } }));
   }
 
-  if (isInternalPath) return next();
+  if (isInternalPath) {
+    // /store/<workspaceId>/…: the root layout's <html lang dir> (lib/documentLocale).
+    const ref = pathname.split("/")[2];
+    if (ref) headers.set(STORE_REF_HEADER, ref);
+    return next();
+  }
 
   // No store in the host, and this app has no front page of its own to show.
   // Temporary, not permanent: a browser caches a permanent redirect for the

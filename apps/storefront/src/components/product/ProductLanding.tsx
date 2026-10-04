@@ -1,7 +1,7 @@
 "use client";
 
 import { ConvertedPrice } from "@/components/ConvertedPrice";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -14,10 +14,11 @@ import { useCart } from "@/lib/CartProvider";
 import { storeHref } from "@/lib/storeHref";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useShippingChoice } from "@/lib/shippingChoice";
+import { ShippingOptionPicker } from "../ShippingOptionPicker";
 import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
-  EMPTY_ORDER_FORM,
   formOptionsOf,
   FIELD_ORDER,
   quickFormFields,
@@ -37,6 +38,16 @@ import {
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { BillingPlanNote, PlanFormTitle, usePlanMethods } from "@/components/product/BillingPlan";
+import {
+  TransferDetails,
+  asTransferMethod,
+  transferProblem,
+  useDepositQuote,
+  useTransferCopy,
+  type TransferState,
+} from "@/components/checkout/TransferDetails";
+import type { CheckoutPayload, ManualTransferStoreMethod } from "@store-builder/api-client";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useOrderFormFields } from "@/lib/useOrderFormFields";
 import {
@@ -57,12 +68,18 @@ import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
-import { storefrontProductBundle } from "@store-builder/api-client";
+import { billingPlanOf, customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
+import { readPick, usePick } from "@/lib/pagePicks";
+import { useProductTest } from "@/lib/productTest";
+import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
 import { OfferCountdown } from "./OfferCountdown";
 import { OptionPicker } from "./OptionPicker";
+import { setChosenVariantImage, variantImageOf } from "@/lib/variantImage";
 import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
@@ -75,7 +92,7 @@ const FORM_PREFIX = "quick";
  */
 export function ProductLanding({
   workspaceId,
-  product,
+  product: listedProduct,
   bump: bumpOffer,
   description,
   checkoutSettings,
@@ -89,6 +106,8 @@ export function ProductLanding({
   checkoutSettings: CheckoutSettings;
 }) {
   const { t, money, locale, store } = useStore();
+  // A running A/B test: this visitor's prices (lib/productTest); the price waits until it is known.
+  const { product, pending: testPending } = useProductTest(workspaceId, listedProduct);
   const text = productPageText(locale);
   // The product page's settings (SPEC §7.3), defaults filled in.
   const page = useMemo(() => storefrontProductPage(product), [product]);
@@ -110,11 +129,37 @@ export function ProductLanding({
   // --- variant selection -------------------------------------------------
   const groups = useMemo(() => optionGroups(product.variants), [product.variants]);
   const initialVariant = product.variants.find((v) => v.inStock) ?? product.variants[0];
-  const [selection, setSelection] = useState<Record<string, string>>(() => ({
-    ...(initialVariant?.optionValues ?? {}),
-  }));
-  const variant = groups.length > 0 ? findVariant(product.variants, selection) : initialVariant;
+  // Off on the product (page settings) or for the whole store (purchase form → pre-select a variant):
+  // the shopper picks every option before buying.
+  const autoSelect = page.pageSettings.auto_select_variant !== false && formOptionsOf(checkoutSettings).auto_select_variant !== false;
+  const [selection, setSelection] = useState<Record<string, string>>(() =>
+    !autoSelect && groups.length > 0 ? {} : { ...(initialVariant?.optionValues ?? {}) }
+  );
+  // What the shopper picked on this page's variant_selector / bundle_selector (lib/pagePicks), after hydration.
+  useEffect(() => {
+    const picked = product.variants.find((v) => v.id === readPick("variant", product.id));
+    if (picked) setSelection({ ...(picked.optionValues ?? {}) });
+    const offer = readPick("offer", product.id);
+    if (offer && product.offers.some((o) => o.id === offer)) setTierId(offer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+  usePick(
+    "variant",
+    product.id,
+    useCallback((id: string) => {
+      const picked = product.variants.find((v) => v.id === id);
+      if (picked) setSelection({ ...(picked.optionValues ?? {}) });
+    }, [product.variants])
+  );
+  // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
+  const choosing = !autoSelect && groups.some((g) => !selection[g.name]);
+  const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
   const available = !!variant?.inStock;
+  // The gallery leads with the chosen variant's own picture (lib/variantImage).
+  const chosenImage = variantImageOf(variant);
+  useEffect(() => {
+    setChosenVariantImage(product.id, chosenImage);
+  }, [product.id, chosenImage]);
 
   function isValueAvailable(name: string, value: string) {
     return product.variants.some(
@@ -135,15 +180,15 @@ export function ProductLanding({
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
+  usePick("offer", product.id, useCallback((id: string) => setTierId(id), []));
   const tier = tiers.find((x) => x.id === tierId);
+  // The product's custom fields: answered here, sent with the order line.
+  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
   const unit = variantUnitPrice(product, variant);
   const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
     variant?.compareAtAmount && parseMoney(variant.compareAtAmount) > unit ? parseMoney(variant.compareAtAmount) : null;
   const pct = discountPercent(unit, compareAtUnit);
-
-  // The product's custom fields: answered here, sent with the order line.
-  const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
 
   const defaultOffer = defaultOfferOf(product);
   // The bundle's pieces beyond the first line (another variant per piece).
@@ -161,7 +206,9 @@ export function ProductLanding({
     : null;
 
   // --- form ----------------------------------------------------------------
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -172,9 +219,18 @@ export function ProductLanding({
   // The product's own order bumps (Offers → Order bumps), beside the store-wide one.
   const productBumps = useProductBumps(client, workspaceId, product.id, bumpOffer?.offerId);
   const productBumpsAmount = productBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
-  const payment = usePaymentMethods(client, workspaceId);
+  const storeMethods = usePaymentMethods(client, workspaceId);
+  // A product on a plan is paid by a card that can be saved (product/BillingPlan).
+  const plan = billingPlanOf(product);
+  const payment = { ...storeMethods, ...usePlanMethods(storeMethods.methods, Boolean(plan)) };
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  // Manual transfer: the whole order, or the deposit a cash-on-delivery order needs (as on /checkout).
+  const transferCopy = useTransferCopy();
+  const transferMethod = asTransferMethod(method);
+  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
+  const needsTransfer = Boolean(transferMethod || deposit);
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
@@ -182,17 +238,55 @@ export function ProductLanding({
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
-  const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
+  // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
+  const shipping = shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
   const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
+  // Priced fields the shopper filled in, on every unit of the line they ride on (as the server charges them).
+  const fieldsExtra = customFieldsDelta(product.customFields, custom.toInput()) * (mainLine?.quantity ?? 0);
   const total =
     pricing.total +
+    fieldsExtra +
     (bumpOn && bump ? bump.priceAmount : 0) +
     productBumpsAmount +
     shipping.amount -
     discountOff(shipping.extras, coupon);
+
+  // The product's view and the start of its order form, for the store's pixels and analytics
+  // (SPEC §13.2), once each per page view; ids as the product feed gives them (lib/contentId).
+  const viewTracked = useRef<string | null>(null);
+  useEffect(() => {
+    if (viewTracked.current === product.id) return;
+    // A tick later, and marked sent only once it is (an effect can run twice before it sticks).
+    const timer = window.setTimeout(() => {
+      viewTracked.current = product.id;
+      track("ViewContent", {
+        contentIds: [contentIdOf(variant ?? initialVariant) ?? product.id],
+        contentName: product.name,
+        valueMinor: unit,
+        currency: store?.currency,
+      });
+    });
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+  const checkoutTracked = useRef(false);
+  function onFormStart() {
+    if (checkoutTracked.current) return;
+    checkoutTracked.current = true;
+    track("InitiateCheckout", {
+      contentIds: [mainLine, ...bundleExtraLines]
+        .filter((l): l is OrderLine => !!l)
+        .map((l) => contentIdOf(product.variants.find((v) => v.id === l.variantId)) ?? l.variantId),
+      contentName: product.name,
+      valueMinor: pricing.total,
+      currency: store?.currency,
+      numItems: [mainLine, ...bundleExtraLines].reduce((sum, l) => sum + (l?.quantity ?? 0), 0),
+    });
+  }
 
   function onFieldChange(field: OrderFormField, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -219,6 +313,13 @@ export function ProductLanding({
       setFormError(t.custom.summary);
       return;
     }
+    if (needsTransfer) {
+      const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
+      if (problem) {
+        setFormError(problem);
+        return;
+      }
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
@@ -232,6 +333,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...shippingChoice.payload,
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -240,7 +342,7 @@ export function ProductLanding({
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
-      if (method.method !== "cod") {
+      if (method.method !== "cod" && !transferMethod) {
         const { next, external } = await placeOnlineOrder({
           client,
           workspaceId,
@@ -260,7 +362,10 @@ export function ProductLanding({
       const order = await placeCodOrder({
         client,
         workspaceId,
-        payload,
+        // A transfer rides along: the whole order ("bank_transfer"), or a COD deposit.
+        payload: (needsTransfer && transfer
+          ? { ...payload, ...(transferMethod ? { paymentMethod: "bank_transfer" } : {}), transfer: transfer.state.details }
+          : payload) as CheckoutPayload,
         visitorId,
       });
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
@@ -346,7 +451,7 @@ export function ProductLanding({
       {/* Title + price */}
       <div>
         <h1 className="zt-pdp-title text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
-        <div className="zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className={`zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1${testPending ? " invisible" : ""}`}>
           <span className="text-3xl font-bold text-ink" data-sale={compareAtUnit ? "" : undefined}>{money(unit)}</span>
           <ConvertedPrice amountMinor={unit} currency={store?.currency ?? "EGP"} className="basis-full order-last" />
           {compareAtUnit && (
@@ -361,14 +466,17 @@ export function ProductLanding({
             </span>
           )}
         </div>
-        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : "text-danger"}`}>
+        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}`}>
           {available && <CheckIcon size={16} />}
           {available
             ? t.common.inStock
+            : choosing
+              ? t.shop.chooseOptions
             : product.variants.length === 0
               ? t.common.unavailable
               : t.common.outOfStock}
         </p>
+        <BillingPlanNote plan={plan} unitMinor={unit} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
@@ -504,11 +612,11 @@ export function ProductLanding({
       >
         <h2 id="order-form-title" className="flex items-center gap-2 text-lg font-bold text-ink">
           <CashIcon className="text-primary" />
-          {t.form.title}
+          {plan ? <PlanFormTitle /> : t.form.title}
         </h2>
         <p className="mt-1 text-sm text-ink-soft">{t.form.subtitle}</p>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
+        <form onSubmit={handleSubmit} onFocusCapture={onFormStart} noValidate className="mt-5 space-y-5">
           <OrderFormFields
             idPrefix={FORM_PREFIX}
             values={values}
@@ -516,6 +624,7 @@ export function ProductLanding({
             onChange={onFieldChange}
             fields={fields}
           />
+          <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
@@ -524,6 +633,12 @@ export function ProductLanding({
               </dt>
               <dd className="shrink-0 text-ink">{money(pricing.full)}</dd>
             </div>
+            {fieldsExtra > 0 && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-soft">{t.custom.extras}</dt>
+                <dd className="shrink-0 text-ink">{money(fieldsExtra)}</dd>
+              </div>
+            )}
             {pricing.saving > 0 && (
               <div className="flex justify-between gap-3 text-success">
                 <dt>{t.checkout.bundleSaving}</dt>
@@ -560,12 +675,33 @@ export function ProductLanding({
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
           <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
-          {payment.methods.length > 1 && (
+          {(payment.methods.length > 1 || plan) && (
             <PaymentMethodPicker
+              plan={plan ? { blocked: payment.blocked, trialDays: plan.mode === "subscription" ? plan.trialDays : undefined } : null}
               methods={payment.methods}
               value={method.id}
               onChange={setMethodId}
               idPrefix={FORM_PREFIX}
+            />
+          )}
+          {(transferMethod || deposit) && (
+            <TransferDetails
+              key={transferMethod ? transferMethod.id : "deposit"}
+              client={client}
+              workspaceId={workspaceId}
+              methods={transferMethod ? [transferMethod] : deposit!.methods}
+              deposit={transferMethod ? undefined : (deposit!.amountType ?? "shipping")}
+              amountLabel={
+                transferMethod
+                  ? money(total)
+                  : deposit!.amountType === "fixed"
+                    ? money(deposit!.fixedAmount ?? 0)
+                    : shipping.amount > 0
+                      ? money(shipping.amount)
+                      : null
+              }
+              idPrefix={FORM_PREFIX}
+              onChange={(m, state) => setTransfer({ method: m, state })}
             />
           )}
 
@@ -580,7 +716,7 @@ export function ProductLanding({
               ? t.payment.redirecting
               : submitting
                 ? t.form.submitting
-                : `${method.method === "cod" ? t.form.submit : t.payment.payNow} — ${money(total)}`}
+                : `${method.method === "cod" || transferMethod ? t.form.submit : t.payment.payNow} — ${money(total)}`}
           </button>
           {method.method === "cod" && (
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">

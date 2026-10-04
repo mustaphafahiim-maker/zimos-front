@@ -262,8 +262,11 @@ export function CustomerPanel({
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.orders}</h3>
-                  {/* The manual-order screen is another lane's; until it lands this opens the orders list. */}
-                  <Link to="/orders" className="text-xs font-medium text-primary hover:underline">
+                  {/* A new order for this customer: the number (and name) filled in, their last address offered. */}
+                  <Link
+                    to={`/orders/new?${new URLSearchParams({ phone: conversation.phone, ...(conversation.customerName ? { name: conversation.customerName } : {}) })}`}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
                     {t.createOrder}
                   </Link>
                 </div>

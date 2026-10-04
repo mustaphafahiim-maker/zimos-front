@@ -323,6 +323,7 @@ export function FunnelsPage() {
   return (
     <div className="max-w-6xl">
       <PageHeader
+        tutorial="funnels"
         title={t.title}
         description={t.description}
         actions={

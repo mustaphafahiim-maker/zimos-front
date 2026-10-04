@@ -20,6 +20,7 @@ import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { OrderEmailSender } from "./OrderEmailSender";
 
 /**
  * Settings → "Order emails" (SPEC §14.5): the emails customers get about
@@ -140,6 +141,8 @@ export function OrderEmailsSection() {
     <section id="order-emails" className="scroll-mt-6 rounded-[var(--radius-card)] border border-line p-5">
       <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+      {/* The sender name and Reply-To (OrderEmailSender.tsx). */}
+      <OrderEmailSender />
 
       <div className="mt-4">
         {isPermissionError(error) ? (

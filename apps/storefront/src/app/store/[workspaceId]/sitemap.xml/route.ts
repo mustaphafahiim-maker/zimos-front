@@ -1,5 +1,5 @@
 import { storefrontSitemap } from "@store-builder/api-client";
-import { storeOrigin } from "@/lib/domains";
+import { canonicalOrigin } from "@/lib/domains";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreMeta } from "@/lib/storeMeta";
 
@@ -12,7 +12,7 @@ const escapeXml = (value: string) =>
  * The store's sitemap, generated from what is actually public: home, the
  * product listing, every active product, the published pages and the written
  * policies (GET /store/:workspaceId/sitemap). Addresses are on the store's
- * own subdomain, whichever host asked.
+ * canonical origin (its primary domain, else its subdomain), whichever host asked.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ wor
 
   const client = await createServerStorefrontApiClient();
   const entries = await storefrontSitemap(client, workspaceId).catch(() => []);
-  const origin = storeOrigin(store.slug);
+  const origin = canonicalOrigin(store);
   const urls = entries
     .map((entry) => {
       const loc = escapeXml(`${origin}${entry.path === "/" ? "" : encodeURI(entry.path)}`);

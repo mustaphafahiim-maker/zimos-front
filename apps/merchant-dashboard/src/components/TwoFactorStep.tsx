@@ -24,6 +24,15 @@ const STRINGS = {
     tooMany: "Too many wrong codes. Go back and sign in again to get a new one.",
     failed: "Something went wrong. Please try again.",
     back: "Back to sign in",
+    // Backup codes (backend auth/twoFactorRecovery.js).
+    useBackup: "Can't get the code? Use a backup code",
+    useCode: "Use the sign-in code instead",
+    backupCode: "Backup code",
+    backupHint: "One of the codes you saved, like ABCD-EFGH. Each works once.",
+    codeNotSent: "We already sent several codes, so no new one was sent. Use a backup code, or wait a few minutes and sign in again.",
+    // A browser new to the account (backend auth/newDeviceSignIn.js).
+    newDevice: "You are signing in from a device we don't know yet.",
+    newDeviceWait: "We already sent several codes, so no new one was sent. Wait a few minutes and sign in again.",
   },
   ar: {
     title: "خطوة كمان",
@@ -39,6 +48,13 @@ const STRINGS = {
     tooMany: "محاولات غلط كتير. ارجع وسجّل دخول تاني عشان يوصلك كود جديد.",
     failed: "حصل خطأ. حاول تاني.",
     back: "الرجوع لتسجيل الدخول",
+    useBackup: "الكود موصلكش؟ استخدم رمز احتياطي",
+    useCode: "استخدم كود الدخول بدل كده",
+    backupCode: "رمز احتياطي",
+    backupHint: "واحد من الرموز اللي حفظتها، زي ABCD-EFGH. كل رمز بيشتغل مرة واحدة.",
+    codeNotSent: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استخدم رمز احتياطي، أو استنى كام دقيقة وسجّل دخول تاني.",
+    newDevice: "إنت بتسجّل دخول من جهاز لسه منعرفوش.",
+    newDeviceWait: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استنى كام دقيقة وسجّل دخول تاني.",
   },
 } satisfies Messages;
 
@@ -54,6 +70,13 @@ export function TwoFactorStep({
   const t = useT(STRINGS);
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(true);
+  // Too many codes were sent lately: none went out this time, only a backup code can finish (twoFactorRecovery.js).
+  const extra = challenge as TwoFactorChallenge & { codeNotSent?: boolean; newDevice?: boolean };
+  const codeNotSent = extra.codeNotSent === true;
+  // A new-device code is for an account without two-step sign-in: it has no backup codes.
+  const newDevice = extra.newDevice === true;
+  const [backup, setBackup] = useState(codeNotSent && !newDevice);
+  const ready = backup ? code.replace(/[^A-Z0-9]/g, "").length === 8 : code.length === 6;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +100,12 @@ export function TwoFactorStep({
       <div>
         <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
         <p className="mt-2 text-sm text-ink-soft">
-          {challenge.channel === "email"
+          {newDevice && <span className="mb-1 block font-medium text-ink">{t.newDevice}</span>}
+          {codeNotSent
+            ? newDevice
+              ? t.newDeviceWait
+              : t.codeNotSent
+            : challenge.channel === "email"
             ? fmt(t.emailBody, { email: challenge.sentTo ?? "" })
             : challenge.channel === "whatsapp" || challenge.channel === "sms"
               ? fmt(challenge.channel === "whatsapp" ? t.whatsappBody : t.smsBody, { phone: challenge.sentTo ?? "" })
@@ -86,24 +114,55 @@ export function TwoFactorStep({
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="space-y-2">
-        <Label htmlFor="two-factor-code">{t.code}</Label>
-        <Input
-          id="two-factor-code"
-          dir="ltr"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          autoFocus
-          maxLength={6}
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-          className="text-center font-mono text-lg tracking-[0.4em]"
-        />
+        <Label htmlFor="two-factor-code">{backup ? t.backupCode : t.code}</Label>
+        {backup ? (
+          <Input
+            key="backup"
+            id="two-factor-code"
+            dir="ltr"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            autoFocus
+            maxLength={9}
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+            className="text-center font-mono text-lg tracking-[0.3em]"
+          />
+        ) : (
+          <Input
+            key="code"
+            id="two-factor-code"
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            className="text-center font-mono text-lg tracking-[0.4em]"
+          />
+        )}
+        {backup && <p className="text-xs text-ink-soft">{t.backupHint}</p>}
+        {!newDevice && (
+          <button
+            type="button"
+            onClick={() => {
+              setBackup(!backup);
+              setCode("");
+              setError(null);
+            }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {backup ? t.useCode : t.useBackup}
+          </button>
+        )}
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
         {t.remember}
       </label>
-      <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
+      <Button type="submit" className="w-full" disabled={busy || !ready}>
         {busy ? t.verifying : t.verify}
       </Button>
       <button type="button" onClick={onBack} className="block w-full text-center text-sm text-ink-soft hover:text-primary">

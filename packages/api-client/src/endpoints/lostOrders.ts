@@ -14,6 +14,7 @@
  * createOrder can give.
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
 export const LOST_ORDER_REASONS = [
   "incomplete",
@@ -121,7 +122,7 @@ export interface LostOrderStats {
 export interface LostOrderConvertPayload {
   contact?: { fullName?: string; phone?: string; email?: string | null };
   shippingAddress?: LostOrderAddress;
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   notes?: string;
   items?: { variantId: string; offerId?: string; quantity: number }[];
 }
@@ -212,4 +213,32 @@ export async function lostOrdersRecover(client: ApiClient, workspaceId: string, 
     { auth: false }
   );
   return recovery;
+}
+
+/**
+ * The full phone behind a masked one (lists mask phones for roles without
+ * customers.reveal_sensitive). Needs orders.view; every call is in the activity log.
+ */
+export async function lostOrdersRevealPhone(client: ApiClient, workspaceId: string, sessionId: string): Promise<string | null> {
+  const { phone } = await client.request<{ phone: string | null }>(`${base(workspaceId)}/${sessionId}/reveal-phone`, {
+    method: "POST",
+  });
+  return phone;
+}
+
+/**
+ * Sends the recovery template from the store's connected WhatsApp number
+ * (backend checkoutSessions/lostOrderWhatsapp.js): `cart_reminder` unless
+ * another approved template is named, filled with the customer's name, the
+ * store's name and the recovery link. Marks the lost order contacted.
+ * Codes: WHATSAPP_NOT_CONNECTED, WHATSAPP_TEMPLATE_NOT_APPROVED,
+ * MARKETING_NOT_ALLOWED (the phone answered STOP or is blocked), NO_PHONE — all 422.
+ */
+export async function lostOrdersSendWhatsapp(
+  client: ApiClient,
+  workspaceId: string,
+  sessionId: string,
+  options: { template?: string; language?: string } = {}
+): Promise<{ message: { id: string; conversationId: string; status: string }; recoveryStatus: LostOrderRecoveryStatus }> {
+  return client.request(`${base(workspaceId)}/${sessionId}/whatsapp`, { method: "POST", body: options });
 }

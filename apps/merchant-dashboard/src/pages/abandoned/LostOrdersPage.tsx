@@ -13,6 +13,8 @@ import {
   lostOrdersExport,
   lostOrdersList,
   lostOrdersStats,
+  lostOrdersRevealPhone,
+  lostOrdersSendWhatsapp,
   lostOrdersUpdate,
   type LostOrder,
   type LostOrderReason,
@@ -42,6 +44,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { LostOrderProductFilter, LostOrdersBulkBar, useLostOrderSelection } from "./LostOrdersBulk";
 
 /**
  * System role keys carrying orders.manage, which every action here needs
@@ -109,6 +112,8 @@ const STRINGS = {
     orderPlaced: "Order {order}",
     more: "+{n} more",
     whatsappMessage: "Hello {name}, you left your order unfinished. You can complete it here: {link}",
+    whatsappSent: "Recovery message sent from your WhatsApp number.",
+    whatsappFromStore: "Send the recovery message from your WhatsApp number",
     saved: "Saved.",
     emptyTitle: "No lost orders",
     emptyDescription: "Checkouts that are left unfinished or refused will show up here.",
@@ -188,6 +193,8 @@ const STRINGS = {
     orderPlaced: "الأوردر {order}",
     more: "+{n} أخرى",
     whatsappMessage: "أهلًا {name}، طلبك لسه ما اكتملش. تقدر تكمّله من هنا: {link}",
+    whatsappSent: "اتبعتت رسالة الاسترجاع من رقم واتساب بتاعك.",
+    whatsappFromStore: "ابعت رسالة الاسترجاع من رقم واتساب بتاعك",
     saved: "تم الحفظ.",
     emptyTitle: "لا توجد طلبات مفقودة",
     emptyDescription: "الطلبات التي تُترك دون إتمام أو تُرفض ستظهر هنا.",
@@ -224,7 +231,9 @@ function isTab(value: unknown): value is LostOrderTab {
 }
 
 /** Digits with the country code, for a wa.me link. Egyptian local numbers get 20. */
-const reachable = (phone: string | null | undefined) => Boolean(phone && /\d{6,}/.test(phone));
+const reachable = (phone: string | null | undefined) => Boolean(phone && (/\d{6,}/.test(phone) || isMasked(phone)));
+/** Phones are masked for roles without customers.reveal_sensitive; the row actions ask for the number (audited). */
+const isMasked = (phone: string | null | undefined) => Boolean(phone && phone.includes("*"));
 
 function whatsappNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -252,6 +261,7 @@ export function LostOrdersPage() {
   const [source, setSource] = useState<"" | "store" | "funnel">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [productId, setProductId] = useState("");
 
   const filters = useMemo(
     () => ({
@@ -260,10 +270,11 @@ export function LostOrdersPage() {
       source: source || undefined,
       from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
       to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
+      productId: productId || undefined,
     }),
-    [tab, reason, source, from, to]
+    [tab, reason, source, from, to, productId]
   );
-  const filtered = Boolean(reason || source || from || to);
+  const filtered = Boolean(reason || source || from || to || productId);
 
   const [abandonedAfter, setAbandonedAfter] = useState<number | null>(null);
   const list = useCursorList<LostOrder>(
@@ -305,6 +316,45 @@ export function LostOrdersPage() {
     return `https://wa.me/${whatsappNumber(session.phone)}?text=${encodeURIComponent(text)}`;
   }
 
+  // With the store's WhatsApp connected, the row's WhatsApp sends the recovery template from that number (§6.3).
+  const storeWhatsapp = useAsync(
+    () => apiClient.getWhatsappIntegration(workspaceId).then((i) => Boolean(i && "connected" in i && i.connected)).catch(() => false),
+    [workspaceId]
+  );
+  const sendsFromStore = storeWhatsapp.data === true;
+
+  async function sendFromStore(session: LostOrder) {
+    try {
+      const res = await lostOrdersSendWhatsapp(apiClient, workspaceId, session.id);
+      replace({ ...session, recoveryStatus: res.recoveryStatus });
+      toast.success(t.whatsappSent);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  }
+
+  /** WhatsApp or call a masked number: the server hands over the one number, and logs it. */
+  async function reach(session: LostOrder, kind: "whatsapp" | "call") {
+    // Opened now, while the click still counts as the shopper's gesture; pointed at WhatsApp once the number is in.
+    const win = kind === "whatsapp" ? window.open("", "_blank") : null;
+    try {
+      const phone = await lostOrdersRevealPhone(apiClient, workspaceId, session.id);
+      if (!phone) {
+        win?.close();
+        return;
+      }
+      if (kind === "call") {
+        window.location.href = `tel:${phone}`;
+        return;
+      }
+      if (win) win.location.href = whatsappHref({ ...session, phone });
+      if (canManage && session.recoveryStatus === "not_contacted") void update(session, { recoveryStatus: "contacted" });
+    } catch (err) {
+      win?.close();
+      toast.error(errorMessage(err));
+    }
+  }
+
   async function runExport() {
     setExporting(true);
     try {
@@ -337,6 +387,7 @@ export function LostOrdersPage() {
     void stats.refresh({ silent: true });
   }
 
+  const selection = useLostOrderSelection(list.items);
   const columns: Column<LostOrder>[] = [
     {
       key: "customer",
@@ -434,9 +485,19 @@ export function LostOrdersPage() {
             href={whatsappHref(s)}
             target="_blank"
             rel="noreferrer"
-            title={t.whatsapp}
-            aria-label={t.whatsapp}
-            onClick={() => {
+            title={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
+            aria-label={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
+            onClick={(e) => {
+              if (sendsFromStore) {
+                e.preventDefault();
+                void sendFromStore(s);
+                return;
+              }
+              if (isMasked(s.phone)) {
+                e.preventDefault();
+                void reach(s, "whatsapp");
+                return;
+              }
               if (canManage && s.recoveryStatus === "not_contacted") void update(s, { recoveryStatus: "contacted" });
             }}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
@@ -445,6 +506,11 @@ export function LostOrdersPage() {
           </a>
           <a
             href={`tel:${s.phone}`}
+            onClick={(e) => {
+              if (!isMasked(s.phone)) return;
+              e.preventDefault();
+              void reach(s, "call");
+            }}
             title={t.call}
             aria-label={t.call}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
@@ -524,7 +590,8 @@ export function LostOrdersPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <LostOrderProductFilter value={productId} onChange={setProductId} />
         <Field label={t.filterReason}>
           {(props) => (
             <Select {...props} value={reason} onChange={(e) => setReason(e.target.value as "" | LostOrderReason)}>
@@ -550,10 +617,17 @@ export function LostOrdersPage() {
         <TextField label={t.to} type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
       </div>
 
+      <LostOrdersBulkBar
+        selection={selection}
+        onDone={() => {
+          list.reload();
+          void stats.refresh({ silent: true });
+        }}
+      />
       <DataState loading={list.loading} error={list.items.length ? null : list.error} onRetry={list.reload}>
         <Card className="p-0">
           <DataTable
-            columns={columns}
+            columns={[selection.column, ...columns]}
             rows={list.items}
             rowKey={(s) => s.id}
             minWidth="68rem"

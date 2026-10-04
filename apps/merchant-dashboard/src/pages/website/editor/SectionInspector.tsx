@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Columns3, Palette, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Columns3, Copy, Palette, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import type { PageColumn, PageElement, PageElementType, PageRow, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
@@ -28,6 +28,7 @@ import {
   type SectionSettingSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
+import { duplicateElement } from "./canvasTools";
 import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
 import { SaveSectionPanel } from "./SavedSections";
 import { BindingFields } from "./DataBinding";
@@ -46,6 +47,7 @@ import { ImageField, ImageListField } from "./ImageField";
 import { ItemListField } from "./ItemListField";
 import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
 import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
+import { HtmlBlockCodeField } from "./HtmlBlockCodeField";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
@@ -528,6 +530,31 @@ function ElementField({
         </Field>
       );
 
+    case "datetime": {
+      // datetime-local speaks the editor's own clock; the prop is an ISO date.
+      const parsed = typeof raw === "string" && raw ? new Date(raw) : null;
+      const local =
+        parsed && !Number.isNaN(parsed.getTime())
+          ? new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : "";
+      return (
+        <Field label={label} hint={hint}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="datetime-local"
+              value={local}
+              onChange={(e) => {
+                const v = e.target.value;
+                const at = v ? new Date(v) : null;
+                onChange(spec.key, at && !Number.isNaN(at.getTime()) ? at.toISOString() : "");
+              }}
+            />
+          )}
+        </Field>
+      );
+    }
+
     case "boolean":
       return (
         <label className="flex items-center gap-2 py-1 text-sm text-ink">
@@ -619,6 +646,9 @@ function ElementField({
           onChange={(next) => onChange(spec.key, next)}
         />
       );
+
+    case "htmlBlockCode":
+      return <HtmlBlockCodeField label={label} hint={hint} blockId={asString(raw)} onBlockId={(id) => onChange(spec.key, id)} />;
 
     case "compareRows":
       return (
@@ -981,14 +1011,20 @@ export function SectionInspector({
   onClose,
   namedStyles,
   onNamedStylesChange,
+  onDuplicate,
+  funnelId,
 }: {
   section: PageSection;
   onChange: (next: PageSection) => void;
   onDelete: () => void;
   onClose: () => void;
+  /** Puts a copy of the section right after it (editor/canvasTools.ts). */
+  onDuplicate?: () => void;
   /** The page's named styles (tree.globalStyles.named) and how to change them. */
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
+  /** In a funnel's editor: a saved section may be kept for that funnel only. */
+  funnelId?: string;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -1011,13 +1047,25 @@ export function SectionInspector({
       namedStyles={namedStyles}
       onNamedStylesChange={onNamedStylesChange}
       actions={
-        <ElementMoveButtons
-          section={section}
-          elementId={element.id}
-          label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
-          ui={ui}
-          onChange={onChange}
-        />
+        <>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            title={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            onClick={() => onChange(duplicateElement(section, element.id))}
+          >
+            <Copy className="size-3.5" aria-hidden />
+          </Button>
+          <ElementMoveButtons
+            section={section}
+            elementId={element.id}
+            label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
+            ui={ui}
+            onChange={onChange}
+          />
+        </>
       }
     />
   );
@@ -1071,10 +1119,16 @@ export function SectionInspector({
         )}
       </div>
 
-      <SaveSectionPanel section={section} onChange={onChange} />
+      <SaveSectionPanel section={section} onChange={onChange} funnelId={funnelId} />
 
-      <div className="border-t border-line px-4 py-3">
-        <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
+      <div className="flex gap-2 border-t border-line px-4 py-3">
+        {onDuplicate && (
+          <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDuplicate}>
+            <Copy className="size-4" aria-hidden />
+            {ui.duplicateSection}
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDelete}>
           <Trash2 className="size-4" aria-hidden />
           {ui.deleteSection}
         </Button>

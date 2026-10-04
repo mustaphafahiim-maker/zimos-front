@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  HeartHandshake,
   FileDown,
   GraduationCap,
   MousePointerClick,
@@ -76,6 +77,7 @@ export type NavKey =
   | "affiliates"
   | "subscriptions"
   | "services"
+  | "referrals"
   | "shoppableImages"
   | "courses"
   | "storeSettings"
@@ -203,6 +205,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "settings", to: "/settings", icon: Settings },
       { key: "activity", to: "/activity", icon: History },
       { key: "services", to: "/services", icon: Handshake },
+      { key: "referrals", to: "/referrals", icon: HeartHandshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -272,6 +275,7 @@ export const NAV_LABELS = {
     affiliates: "Affiliates",
     subscriptions: "Subscriptions",
     services: "Services",
+    referrals: "Refer & earn",
     shoppableImages: "Shoppable images",
     courses: "Courses",
     storeSettings: "Store settings",
@@ -312,6 +316,7 @@ export const NAV_LABELS = {
     affiliates: "المسوّقون بالعمولة",
     subscriptions: "الاشتراكات",
     services: "الخدمات",
+    referrals: "اكسب من الإحالة",
     shoppableImages: "الصور التفاعلية",
     courses: "الكورسات",
     storeSettings: "إعدادات المتجر",

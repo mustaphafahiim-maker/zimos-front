@@ -107,6 +107,7 @@ export function ProfitPage() {
   return (
     <div className="min-w-0 max-w-6xl">
       <PageHeader
+        tutorial="profit"
         title={t.title}
         description={t.description}
         actions={<RangeSwitch value={range} onChange={setRange} />}

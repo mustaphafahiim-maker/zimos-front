@@ -1,3 +1,4 @@
+import { FunnelPagePerformance, type StepPerformance } from "./FunnelPagePerformance";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Workflow } from "lucide-react";
@@ -35,6 +36,8 @@ const STRINGS = {
     completedHint: "Sessions that completed a checkout",
     conversion: "Conversion",
     conversionHint: "Checkouts ÷ sessions",
+    epc: "EPC",
+    epcHint: "Earnings per visitor: revenue ÷ sessions",
     orders: "Orders",
     revenue: "Revenue",
     upsellOrders: "Upsells taken",
@@ -68,6 +71,8 @@ const STRINGS = {
     sessionsHint: "الزوار الذين بدأوا المسار",
     completed: "الطلبات المكتملة",
     completedHint: "الجلسات التي أتمّت الدفع",
+    epc: "العائد لكل زائر",
+    epcHint: "الإيرادات ÷ الجلسات",
     conversion: "معدل التحويل",
     conversionHint: "الطلبات ÷ الجلسات",
     orders: "الطلبات",
@@ -97,6 +102,12 @@ const STRINGS = {
   },
 } satisfies Messages;
 
+
+/** Revenue ÷ sessions, from funnel analytics (null with no sessions). */
+const epcOf = (data: unknown): number | null => {
+  const v = (data as { epc?: unknown }).epc;
+  return typeof v === "number" ? v : null;
+};
 
 function Tile({ label, hint, value }: { label: string; hint?: string; value: ReactNode }) {
   return (
@@ -159,12 +170,13 @@ export function FunnelAnalyticsPage() {
           <div className="space-y-4">
             <p className="text-xs text-ink-soft">{formatWindow(data.range.from, data.range.to)}</p>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
               <Tile label={t.sessions} hint={t.sessionsHint} value={count(data.sessions)} />
               <Tile label={t.completed} hint={t.completedHint} value={count(data.completed)} />
               <Tile label={t.conversion} hint={t.conversionHint} value={percent(data.conversionRate)} />
               <Tile label={t.orders} value={count(data.orders)} />
               <Tile label={t.revenue} value={money(data.revenue)} />
+              <Tile label={t.epc} hint={t.epcHint} value={epcOf(data) == null ? "—" : money(epcOf(data) as number)} />
               <Tile label={t.upsellOrders} value={count(data.upsellOrders)} />
               <Tile label={t.upsellRevenue} value={money(data.upsellRevenue)} />
             </div>
@@ -207,6 +219,8 @@ export function FunnelAnalyticsPage() {
                     })}
                   </ol>
                 </Panel>
+
+                <FunnelPagePerformance steps={data.steps as StepPerformance[]} count={count} percent={percent} />
 
                 <Panel title={t.overTime} description={t.overTimeDesc}>
                   <div dir="ltr">

@@ -17,6 +17,7 @@ const STRINGS = {
     scopeFiltered: "Exports the orders matching your current search, dates and tab.",
     scopeSelected: "Exports the {count} orders you ticked.",
     scopeAll: "Exports every order in the store. Pick a tab or dates first to narrow it.",
+    masked: "Phone numbers are partly hidden in the file unless your role may see customers' full numbers.",
     rowPer: "Rows",
     rowPerOrder: "One row per order",
     rowPerItem: "One row per product",
@@ -41,6 +42,7 @@ const STRINGS = {
     scopeFiltered: "يصدّر الطلبات المطابقة للبحث والتواريخ والتبويب الحالي.",
     scopeSelected: "يصدّر الطلبات المحددة ({count}).",
     scopeAll: "يصدّر كل طلبات المتجر. اختر تبويبًا أو تواريخ أولًا لتحديد جزء منها.",
+    masked: "أرقام الموبايل بتظهر مخفية جزئيًا في الملف إلا لو دورك يسمح بشوف أرقام العملاء كاملة.",
     rowPer: "الصفوف",
     rowPerOrder: "صف لكل طلب",
     rowPerItem: "صف لكل منتج",
@@ -218,6 +220,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
             {picked ? fmt(t.scopeSelected, { count: picked }) : filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
           </p>
           {background && <p className="text-sm text-ink-soft">{t.background}</p>}
+          <p className="text-xs text-ink-soft">{t.masked}</p>
 
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-ink">{locale === "ar" ? "صيغة الملف" : "File format"}</legend>

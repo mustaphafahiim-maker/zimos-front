@@ -242,6 +242,19 @@ export function FormSubmissionsPage() {
                       ))}
                     </dl>
                   )}
+                  {/* The form's photo input (backend contacts/formFiles.js): a link that works for a few minutes. */}
+                  {(submission.files ?? []).length > 0 && (
+                    <ul className="mt-3 flex flex-wrap gap-3">
+                      {(submission.files ?? []).map((file, i) => (
+                        <li key={i} className="text-xs text-ink-soft">
+                          <a href={file.url} target="_blank" rel="noreferrer" className="block">
+                            <img src={file.url} alt={file.label} className="size-24 rounded-[var(--radius-card)] border border-line object-cover" />
+                          </a>
+                          <bdi className="mt-1 block max-w-24 truncate">{file.label}</bdi>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {(submission.tags.length > 0 || submission.marketingConsent) && (
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
                       {submission.tags.length > 0 && (

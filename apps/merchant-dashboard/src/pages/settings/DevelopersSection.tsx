@@ -26,6 +26,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AppOffNotice } from "@/components/AppOffNotice";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -253,6 +254,10 @@ export function DevelopersSection() {
     <section className="rounded-[var(--radius-card)] border border-line p-5">
       <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+      <div className="mt-3">
+        <AppOffNotice app="public_api" />
+        <AppOffNotice app="webhooks" />
+      </div>
       {canManage ? (
         <div className="mt-6 space-y-8">
           <ApiKeysPanel t={t} onForbidden={() => setForbidden(true)} />

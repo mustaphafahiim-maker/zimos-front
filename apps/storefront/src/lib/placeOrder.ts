@@ -8,6 +8,7 @@ import {
   type Order,
 } from "@store-builder/api-client";
 import { botGuardFields } from "./botGuard";
+import { adMatchFields } from "./adMatch";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import type { Dictionary } from "./i18n";
@@ -47,7 +48,7 @@ export async function placeCodOrder({
   visitorId?: string;
 }): Promise<Order> {
   // The bot guard's token and honeypot ride along with every order (lib/botGuard).
-  const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)) };
+  const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)), ...adMatchFields(workspaceId) };
   // A store that verifies phones answers OTP_REQUIRED first; the code is asked for and the order sent again.
   return withCheckoutOtp(workspaceId, payload.contact.phone, (otp) =>
     client.checkout(workspaceId, { ...guarded, ...otp }, cartToken, { visitorId })

@@ -17,6 +17,7 @@ import { GoLiveDialog } from "@/components/GoLiveDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
+import { EmailChangeConfirmPage } from "@/pages/EmailChangeConfirmPage";
 import { WorkspacePickerPage } from "@/pages/WorkspacePickerPage";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { EditorLayout } from "@/components/EditorLayout";
@@ -29,6 +30,7 @@ import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
 import { ShipmentBatchPage } from "@/pages/orders/ShipmentBatchPage";
 import { ExportFilePage } from "@/pages/exports/ExportFilePage";
+import { OrderBoardPage } from "@/pages/orders/OrderBoardPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
@@ -40,6 +42,7 @@ import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
+import { ReferralProgramPage } from "@/pages/referrals/ReferralProgramPage";
 import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 import { ShoppableImagesPage } from "@/pages/shoppable/ShoppableImagesPage";
@@ -96,6 +99,7 @@ const SettlementsPage = lazy(() =>
   import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
 const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
@@ -126,6 +130,7 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/account/email-change" element={<EmailChangeConfirmPage />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/choose-username" element={<ChooseUsernamePage />} />
@@ -138,6 +143,7 @@ export default function App() {
 
                       <Route path="/orders" element={<OrdersListPage />} />
                       <Route path="/orders/new" element={<ManualOrderPage />} />
+                      <Route path="/orders/board" element={<OrderBoardPage />} />
                       <Route path="/orders/shipment-batches/:batchId" element={<ShipmentBatchPage />} />
                       <Route path="/exports/:exportId" element={<ExportFilePage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
@@ -159,6 +165,7 @@ export default function App() {
                       <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/affiliates" element={<AffiliatesPage />} />
+                      <Route path="/referrals" element={<ReferralProgramPage />} />
                       <Route path="/subscriptions" element={<SubscriptionsPage />} />
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/shoppable-images" element={<ShoppableImagesPage />} />
@@ -191,6 +198,7 @@ export default function App() {
                       />
                       <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
                       <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
+                      <Route path="/inbox/bot" element={<LazyRoute><WaBotPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />

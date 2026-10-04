@@ -6,9 +6,10 @@ type Params = Promise<{ workspaceId: string; orderId: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /**
- * The post-purchase upsell is parked (see `UpsellOfferView.tsx`): an order now
- * goes straight to its thank-you page, and old or bookmarked /offer links
- * follow it there, keeping the order number.
+ * The old device-made upsell page that lived here is gone (SPEC §9.8): the
+ * post-purchase offer is the store's own (Offers → post-purchase upsell, on
+ * the thank-you page) and a funnel's upsell steps. Old or bookmarked /offer
+ * links follow the order to its thank-you page, keeping the order number.
  */
 export default async function OfferRedirect({
   params,

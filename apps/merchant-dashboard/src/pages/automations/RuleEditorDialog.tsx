@@ -16,11 +16,14 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { SegmentConditionFields, type SegmentConditions } from "./SegmentConditionFields";
+import { ProductFunnelConditionFields } from "./ProductFunnelConditionFields";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { AUTOMATION_STRINGS, emptyStep, stepProblem, stepTypeLabel, triggerLabel } from "./automationText";
+import { TemplatePicker } from "@/components/WhatsappTemplates";
 
 const STRINGS = {
   en: {
@@ -61,6 +64,8 @@ const STRINGS = {
     cod: "Cash on delivery",
     card: "Card",
     wallet: "Wallet",
+    valu: "valU installments",
+    kiosk: "Kiosk (Aman / Masary)",
     bank_transfer: "Bank transfer",
     minTotal: "Order total at least",
     source: "Order came from",
@@ -123,6 +128,8 @@ const STRINGS = {
     cod: "الدفع عند الاستلام",
     card: "بطاقة",
     wallet: "محفظة",
+    valu: "تقسيط valU",
+    kiosk: "الدفع في الكشك (أمان / مصاري)",
     bank_transfer: "تحويل بنكي",
     minTotal: "إجمالي الطلب لا يقل عن",
     source: "مصدر الطلب",
@@ -191,6 +198,8 @@ export function RuleEditorDialog({
   const [tags, setTags] = useState((c.tags ?? []).join("، "));
   const [firstOrder, setFirstOrder] = useState(c.isFirstOrder === true ? "first" : c.isFirstOrder === false ? "returning" : "");
   const [risk, setRisk] = useState<string[]>(c.riskLevel ?? []);
+  const [segment, setSegment] = useState<SegmentConditions>({ segmentId: c.segmentId ?? null, excludeSegmentId: c.excludeSegmentId ?? null });
+  const [scope, setScope] = useState({ productIds: c.productIds ?? [], funnelIds: c.funnelIds ?? [] });
   const [coupon, setCoupon] = useState(c.couponCode ?? "");
   const [delayDays, setDelayDays] = useState(String(c.delayDays ?? 3));
   const [stopOnChange, setStopOnChange] = useState(c.stopOnStatusChange !== false);
@@ -246,10 +255,11 @@ export function RuleEditorDialog({
       isFirstOrder: firstOrder === "first" ? true : firstOrder === "returning" ? false : null,
       riskLevel: risk as AutomationFlowConditions["riskLevel"],
       couponCode: coupon.trim() || null,
+      ...segment,
       stopOnStatusChange: stopOnChange,
-      // Kept as they are: the editor has no picker for these yet.
-      ...(c.productIds?.length ? { productIds: c.productIds } : {}),
-      ...(c.funnelIds?.length ? { funnelIds: c.funnelIds } : {}),
+      // Picked in ProductFunnelConditionFields; nothing chosen = any.
+      productIds: scope.productIds,
+      funnelIds: scope.funnelIds,
       ...(trigger === "review.request" ? { delayDays: Math.min(60, Math.max(1, Number(delayDays) || 3)) } : {}),
     };
     const cleaned = steps.map((s) =>
@@ -405,6 +415,8 @@ export function RuleEditorDialog({
                   <option value="cod">{t.cod}</option>
                   <option value="card">{t.card}</option>
                   <option value="wallet">{t.wallet}</option>
+                  <option value="valu">{t.valu}</option>
+                  <option value="kiosk">{t.kiosk}</option>
                   <option value="bank_transfer">{t.bank_transfer}</option>
                 </Select>
               )}
@@ -430,6 +442,8 @@ export function RuleEditorDialog({
             </Field>
             <TextField label={t.governorates} hint={t.listHint} value={governorates} onChange={(e) => setGovernorates(e.target.value)} />
             <TextField label={t.tags} hint={t.listHint} value={tags} onChange={(e) => setTags(e.target.value)} />
+            <SegmentConditionFields value={segment} onChange={setSegment} />
+            <ProductFunnelConditionFields productIds={scope.productIds} funnelIds={scope.funnelIds} onChange={setScope} />
             <TextField label={t.coupon} dir="ltr" value={coupon} maxLength={100} onChange={(e) => setCoupon(e.target.value)} />
             <fieldset>
               <legend className="mb-1.5 text-sm font-medium text-ink">{t.risk}</legend>
@@ -504,6 +518,12 @@ function StepFields({
     case "whatsapp_template":
       return (
         <div className="space-y-3">
+          {/* A template synced from Meta fills the name, language and variable count. */}
+          <TemplatePicker
+            name={step.template}
+            language={step.language}
+            onPick={(tpl) => onChange({ template: tpl.name, language: tpl.language, params: Array.from({ length: tpl.paramsCount }, (_, i) => step.params[i] ?? "") })}
+          />
           <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
             <TextField label={t.templateName} dir="ltr" hint={t.templateHint} value={step.template} onChange={(e) => onChange({ template: e.target.value.trim() })} />
             <TextField label={t.language} dir="ltr" value={step.language} onChange={(e) => onChange({ language: e.target.value.trim() })} />

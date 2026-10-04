@@ -138,7 +138,69 @@ export * from "./endpoints/twoFactorWhatsapp";
 export * from "./endpoints/accountSettings";
 // The signed-in person's name and picture (auth/profileRoutes.js).
 export * from "./endpoints/profile";
+// Changing the sign-in email, confirmed from the new address (auth/emailChange.js).
+export * from "./endpoints/emailChange";
+// Help center, Telegram and tutorial links (platformAdmin/educationLinks.js).
+export * from "./endpoints/education";
+// WhatsApp message templates synced from Meta (whatsapp/whatsappTemplates.js).
+export * from "./endpoints/whatsappTemplates";
+// Custom HTML blocks kept outside the page tree (customCode/htmlBlocks.js).
+export * from "./endpoints/htmlBlocks";
 // The thank-you page's download links (digital/digitalRoutes.js).
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
 export * from "./endpoints/shippingProfiles";
+// Shipping options the shopper chooses between (shipping/shippingOptions.js).
+export * from "./endpoints/shippingOptions";
+// Push notifications on the person's devices (notifications/push).
+export * from "./endpoints/push";
+// Each teammate's saved list views (workspaces/savedViews.js).
+export * from "./endpoints/savedViews";
+// Lost orders in bulk (checkoutSessions/lostOrderBulk.js).
+export * from "./endpoints/lostOrdersBulk";
+// Support's view of a store under the merchant's grant (platformAdmin/supportViewRoutes.js).
+export * from "./endpoints/adminSupportView";
+// The couriers' areas map in the platform console (platformAdmin/carrierMapRoutes.js).
+export * from "./endpoints/adminCarrierAreas";
+// The store as an app for shoppers (storefront/storeApp.js).
+export * from "./endpoints/storeApp";
+// Shoppers following their order by push (notifications/push/orderPush.js).
+export * from "./endpoints/orderPush";
+// ZIMOS's referral program for merchants (referrals/merchantReferrals.js).
+export * from "./endpoints/merchantReferrals";
+// The customer service bot on WhatsApp (whatsapp/bot/botService.js).
+export * from "./endpoints/waBot";
+// What a product's custom fields add to its price (catalog/customFieldPricing.js).
+export * from "./endpoints/customFieldPrice";
+// Importing the merchant's own reviews from their Shopify store (reviews/import).
+export * from "./endpoints/reviewImport";
+// Translating the text of live pages and funnels (translations/contentTranslations.js).
+export * from "./endpoints/contentTranslations";
+// A page's or funnel step's own scripts (customCode/pageScripts.js).
+export * from "./endpoints/pageScripts";
+// A funnel copied as a new draft (the funnel wizard's "Your funnels").
+export * from "./endpoints/funnelTemplates";
+// The theme catalog: the store's view and the platform console's (themes/themesCatalog.js).
+export * from "./endpoints/themes";
+// A/B tests on a product page: staff CRUD and the shopper's variant (catalog/productTests.js).
+export * from "./endpoints/productTests";
+// The payment methods a funnel's checkout offers (payments/paymentRulesService.js).
+export * from "./endpoints/funnelPayments";
+// The order page's session details, customer history and last action (orders/orderSessionDetails.js).
+export * from "./endpoints/orderSession";
+// The shipping card's "Save as draft" (orders/shipmentDraft.js).
+export * from "./endpoints/shipmentDraft";
+// Each offer's impressions, acceptances and added revenue (offers/offerStats.js).
+export * from "./endpoints/offerStats";
+// A funnel's generic pages — contact, about, policies — off the map (funnels/genericPages.js).
+export * from "./endpoints/funnelGenericPages";
+// Large digital files, uploaded in parts straight to storage (digital/multipartUploads.js).
+export * from "./endpoints/digitalMultipart";
+// Switch to cash on delivery with the COD checks: a code, a deposit (payments/codSwitchChecks.js).
+export * from "./endpoints/codSwitch";
+// Unsubscribing from marketing emails (notifications/marketingUnsubscribe.js).
+export * from "./endpoints/marketingUnsubscribe";
+// Two-step sign-in recovery: backup codes, the platform reset (auth/twoFactorRecovery.js).
+export * from "./endpoints/twoFactorRecovery";
+// The opt-in step's sign-up (funnels/funnelOptIn.js).
+export * from "./endpoints/funnelOptIn";

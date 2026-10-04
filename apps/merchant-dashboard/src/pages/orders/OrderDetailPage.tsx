@@ -28,6 +28,7 @@ import { OrderMetaActions, OrderMetaBadges, OrderNeighborArrows, useMarkSeen } f
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
 import { OrderAttributionSection } from "@/pages/marketing/OrderAttributionSection";
+import { CustomerHistoryBadge, OrderSessionCard, useLastActionText, useOrderSessionDetails } from "./components/OrderSessionDetails";
 
 const STRINGS = {
   en: {
@@ -67,13 +68,16 @@ export function OrderDetailPage() {
   };
   // Opening the page is what "seen" means.
   useMarkSeen(data, reload);
+  // Session details, the customer's order count and the last action (SPEC §4.4).
+  const session = useOrderSessionDetails(data?.id, `${data?.updatedAt}:${refreshCount}`);
+  const lastAction = useLastActionText()(session.data?.lastAction);
 
   return (
     <div className="max-w-5xl space-y-6">
       <PageHeader
         title={data ? data.orderNumber : t.order}
         back={{ to: "/orders", label: t.back }}
-        description={data ? fmt(t.placed, { date: formatDateTime(data.createdAt) }) : undefined}
+        description={data ? [fmt(t.placed, { date: formatDateTime(data.createdAt) }), lastAction].filter(Boolean).join(" · ") : undefined}
         titleBadge={
           data?.stage ? (
             <StatusBadge value={data.stage} tone={STAGE_TONE[data.stage]} text={labels.stage(data.stage)} />
@@ -105,6 +109,7 @@ export function OrderDetailPage() {
                 text={labels.fulfillment(data.fulfillmentState)}
               />
               <OrderMetaBadges order={data} />
+              <CustomerHistoryBadge details={session.data} />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -126,6 +131,8 @@ export function OrderDetailPage() {
 
             {/* Where the customer came from (first/last touch); nothing for an order without it. */}
             <OrderAttributionSection order={data} />
+
+            <OrderSessionCard details={session.data} />
 
             <PaymentsSection order={data} onChanged={reload} />
 

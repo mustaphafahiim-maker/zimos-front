@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ApiClient, StorefrontBundle, StorefrontBundleTier, StorefrontProduct, StorefrontVariant } from "@store-builder/api-client";
+import { storefrontShippingQuoteFor, type ApiClient, type StorefrontBundle, type StorefrontBundleTier, type StorefrontProduct, type StorefrontVariant } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
+import { useStoreCountry } from "@/lib/storeCountry";
+import { useOfferView } from "@/lib/offerViews";
 import { variantLabel } from "@/lib/product";
+import { getVisitorId } from "@/lib/visitorId";
 import type { OrderLine } from "@/lib/placeOrder";
 import { CartGlyph, CheckIcon } from "../Icons";
 import { btnSecondary, input } from "../ui";
+import { pickText } from "@/lib/i18n";
 
 /**
  * The quantity bundle of a product (SPEC §10.1): the shopper picks a tier
@@ -85,6 +89,8 @@ export function useBundleSelection({
   // Pieces the shopper set by hand, by position; the rest follow the main variant.
   const [overrides, setOverrides] = useState<Record<number, string>>({});
   const tier = bundle?.tiers.find((t) => t.id === tierId) ?? bundle?.tiers[0];
+  // The bundle on the page counts as seen (lib/offerViews).
+  useOfferView(workspaceId, "bundle", bundle?.id);
 
   const unitVariantIds = useMemo(() => {
     if (!tier || !mainVariant) return [];
@@ -103,12 +109,13 @@ export function useBundleSelection({
   const mixed = lines.length > 1;
   const requestKey = mixed ? JSON.stringify(lines) : "";
   const [quoted, setQuoted] = useState<{ key: string; full: number; total: number } | null>(null);
+  // Quoted for the store's own country (lib/storeCountry), as the order form starts on it.
+  const country = useStoreCountry();
   useEffect(() => {
     if (!requestKey) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: null, items: JSON.parse(requestKey) })
+      storefrontShippingQuoteFor(client, workspaceId, { country, governorate: null, items: JSON.parse(requestKey) }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (cancelled) return;
           const discount = (quote as { bundleDiscountAmount?: number }).bundleDiscountAmount ?? 0;
@@ -122,7 +129,7 @@ export function useBundleSelection({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [requestKey, client, workspaceId]);
+  }, [requestKey, client, workspaceId, country]);
 
   if (!bundle || !tier) return null;
 
@@ -164,7 +171,7 @@ export function BundlePicker({
   mainVariant: StorefrontVariant | undefined;
 }) {
   const { locale, money } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const { bundle, tier } = selection;
   const variantId = mainVariant?.id ?? product.variants[0]?.id ?? "";
   const hasVariants = product.variants.length > 1;
@@ -286,7 +293,7 @@ export function BundlePicker({
 /** Adds every line of the bundle to the cart, one after the other, without clearing what is in it. */
 export function BundleAddToCartButton({ selection, disabled }: { selection: BundleSelection; disabled: boolean }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const { addItem, openDrawer } = useCart();
   const [status, setStatus] = useState<"idle" | "loading" | "added" | "error">("idle");
 

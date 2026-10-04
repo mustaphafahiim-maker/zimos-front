@@ -8,17 +8,24 @@ import {
   type PageTree,
   type StorefrontProduct,
 } from "@store-builder/api-client";
+import { FunnelCurrencyProvider } from "@/components/funnel/FunnelCurrency";
 import { FunnelProgress } from "@/components/funnel/FunnelProgress";
 import { FUNNEL_ACTIONS_ID, FunnelOrders, FunnelStepActions } from "@/components/funnel/FunnelStep";
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
 import { StepTransition } from "@/components/funnel/StepTransition";
+import { FunnelCode } from "@/components/funnel/FunnelCode";
 import { PageRenderer } from "@/components/page-renderer";
+import { FunnelSessionProvider } from "@/lib/funnelSessionContext";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { funnelErrorKind, type FunnelErrorKind } from "@/lib/funnelErrors";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
 
 type Params = Promise<{ workspaceId: string; ref: string; sessionId: string }>;
 
@@ -43,19 +50,25 @@ function seoString(seo: Record<string, unknown> | undefined, key: string) {
   return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }
 
-/** The step's own SEO from the published snapshot; the funnel layout keeps it noindex. */
+/**
+ * The step's own SEO from the published snapshot, else the funnel's own title
+ * and description (funnel settings); the funnel's icon replaces the store's.
+ * The funnel layout keeps it noindex.
+ */
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId, ref, sessionId } = await params;
   if (!UUID.test(ref) || !UUID.test(sessionId)) return {};
   const result = await loadStep(workspaceId, ref, sessionId);
   if (!result.ok || !result.data.step) return {};
   const { step } = result.data;
-  const title = seoString(step.seo, "title") ?? step.name;
-  const description = seoString(step.seo, "description");
+  const own = result.data.funnel?.settings;
+  const title = seoString(step.seo, "title") ?? own?.title ?? step.name;
+  const description = seoString(step.seo, "description") ?? own?.description ?? undefined;
   const ogImage = seoString(step.seo, "ogImage");
   return {
     title,
     description,
+    ...(own?.faviconUrl ? { icons: { icon: own.faviconUrl, apple: own.faviconUrl } } : {}),
     openGraph: {
       title: seoString(step.seo, "ogTitle") ?? title,
       description: seoString(step.seo, "ogDescription") ?? description,
@@ -139,10 +152,14 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
 
   const { data } = result;
   const { session } = data;
+  // The funnel sells in its own currency when it has one (funnels/funnelCurrency.js).
+  const currency = data.funnel?.settings?.currency || store.currency;
   if (!data.step) {
     return (
       <main className="flex-1 pt-6">
-        <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} standalone />
+        <FunnelCurrencyProvider currency={currency}>
+          <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} standalone />
+        </FunnelCurrencyProvider>
       </main>
     );
   }
@@ -160,32 +177,44 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
+      {/* The funnel's own scripts (funnel settings → code). */}
+      <FunnelCode headCode={data.funnel?.settings?.headCode} bodyCode={data.funnel?.settings?.bodyCode} />
       {!done && <FunnelProgress completed={session.path.length} />}
-      <StepTransition key={stepKey}>
-        <PageRenderer
-          tree={tree}
-          workspaceId={workspaceId}
-          currency={store.currency}
-          locale={locale}
-          funnel={{ nextHref }}
-        />
-        {done ? (
-          <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} />
-        ) : (
-          <FunnelStepActions
-            key={stepKey}
-            workspaceId={workspaceId}
-            funnelId={ref}
-            sessionId={sessionId}
-            step={{ key: step.key, name: step.name, stepType: step.stepType }}
-            offer={data.offer ?? null}
-            offerJoinsOrder={data.offerJoinsOrder ?? false}
-            bump={data.bump ?? null}
-            product={product}
-            sessionOrderId={session.orderId}
-          />
-        )}
-      </StepTransition>
+      <FunnelCurrencyProvider currency={currency}>
+        <StepTransition key={stepKey}>
+          {/* The page's own funnel elements (a COD form on a sales page) act on this session. */}
+          <FunnelSessionProvider
+            value={{ workspaceId, funnelId: ref, sessionId, stepKey: step.key, stepType: done ? "done" : step.stepType, sessionOrderId: session.orderId }}
+          >
+            <HtmlBlocksProvider blocks={htmlBlocksOf(step)}>
+              <PageRenderer
+                tree={tree}
+                workspaceId={workspaceId}
+                currency={currency}
+                locale={locale}
+                funnel={{ nextHref }}
+              />
+            </HtmlBlocksProvider>
+          </FunnelSessionProvider>
+          {done ? (
+            <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} />
+          ) : (
+            <FunnelStepActions
+              key={stepKey}
+              workspaceId={workspaceId}
+              funnelId={ref}
+              sessionId={sessionId}
+              step={{ key: step.key, name: step.name, stepType: step.stepType }}
+              offer={data.offer ?? null}
+              offerJoinsOrder={data.offerJoinsOrder ?? false}
+              bump={data.bump ?? null}
+              product={product}
+              sessionOrderId={session.orderId}
+            />
+          )}
+        </StepTransition>
+      </FunnelCurrencyProvider>
+      <PageScripts scripts={scriptsOf(step)} />
     </main>
   );
 }

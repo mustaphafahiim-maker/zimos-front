@@ -164,3 +164,16 @@ export async function botGuardFields(client: ApiClient, workspaceId: string): Pr
   }
   return fields;
 }
+
+/**
+ * The guard's fields for the checkout autosave: the time token and the
+ * honeypot, no challenge (that one is spent on the order). Like the order,
+ * it waits until the token is old enough, so a fast typist is never refused.
+ */
+export async function botGuardAutosaveFields(client: ApiClient, workspaceId: string): Promise<Record<string, string>> {
+  const held = await primeBotGuard(client, workspaceId);
+  if (!held || !held.guard.enabled || !held.guard.token) return {};
+  const wait = held.guard.minSeconds * 1000 + 300 - (Date.now() - held.fetchedAt);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  return { botToken: held.guard.token, [held.guard.honeypotField]: honeypot };
+}
