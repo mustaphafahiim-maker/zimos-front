@@ -178,3 +178,5 @@ export * from "./endpoints/themes";
 export * from "./endpoints/productTests";
 // The payment methods a funnel's checkout offers (payments/paymentRulesService.js).
 export * from "./endpoints/funnelPayments";
+// The order page's session details, customer history and last action (orders/orderSessionDetails.js).
+export * from "./endpoints/orderSession";
