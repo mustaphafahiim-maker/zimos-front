@@ -21,7 +21,7 @@ import { ProductLanding } from "@/components/product/ProductLanding";
 import { ProductVideos } from "@/components/product/ProductVideos";
 import { ProductTabs, type ProductTab } from "@/components/product/ProductTabs";
 import { StoreLink } from "@/components/StoreRoute";
-import { TrustStrip } from "@/components/TrustStrip";
+import { faqFromCards, shippingRows, storeCards } from "@/lib/storePromises";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { orderBumpOf } from "@/lib/commerce";
@@ -126,15 +126,19 @@ export default async function ProductPage({ params }: { params: Params }) {
   const ps = page.pageSettings;
   // With "form above the description" off, the buy box shows the description itself.
   const descriptionInBuyBox = ps.inline_checkout && !ps.checkout_before_description;
-  // The merchant's own questions replace the store-wide ones.
+  // The store's own shipping / returns / COD cards (lib/storePromises.ts): the
+  // only promises this page makes about them.
+  const cards = storeCards(store);
+  // The product's own questions; else the store-wide ones, answered from the cards.
+  const [payQ, arriveQ, returnsQ] = t.product.faqItems.map((item) => item.q);
   const faqItems =
-    page.cms.faqs.length > 0 ? page.cms.faqs.map((item) => ({ q: item.question, a: item.answer })) : t.product.faqItems;
+    page.cms.faqs.length > 0
+      ? page.cms.faqs.map((item) => ({ q: item.question, a: item.answer }))
+      : faqFromCards(cards, { pay: payQ, arrive: arriveQ, returns: returnsQ });
 
-  // Details / shipping & returns / FAQ as tabs under the buy box. The
-  // shipping tab is the delivery and returns answers from the FAQ, read as
-  // plain paragraphs (the trust strip beside the tabs already carries the
-  // four one-line promises); the FAQ tab is the whole list, as before.
-  const shippingItems = t.product.faqItems.filter((_, i) => i === 1 || i === 2).map((item) => ({ title: item.q, hint: item.a }));
+  // Details / shipping & returns / FAQ as tabs under the buy box, each only
+  // when there is something true to put in it.
+  const shippingItems = shippingRows(cards, locale);
   const tabs: ProductTab[] = [
     ...(product.description && !descriptionInBuyBox
       ? [
@@ -149,25 +153,37 @@ export default async function ProductPage({ params }: { params: Params }) {
           },
         ]
       : []),
-    {
-      id: "shipping",
-      label: t.shop.shippingReturns,
-      content: (
-        <ul className="divide-y divide-line rounded-2xl border border-line bg-paper-raised">
-          {shippingItems.map((item) => (
-            <li key={item.title} className="px-5 py-4">
-              <p className="text-sm font-semibold text-ink">{item.title}</p>
-              <p className="mt-0.5 text-sm text-ink-soft">{item.hint}</p>
-            </li>
-          ))}
-        </ul>
-      ),
-    },
-    {
-      id: "faq",
-      label: t.product.faq,
-      content: <Faq title={t.product.faq} items={faqItems} titleHidden />,
-    },
+    ...(shippingItems.length > 0
+      ? [
+          {
+            id: "shipping",
+            label: t.shop.shippingReturns,
+            content: (
+              <ul className="divide-y divide-line rounded-2xl border border-line bg-paper-raised">
+                {shippingItems.map((item) => (
+                  <li key={item.title} className="px-5 py-4">
+                    <p className="text-sm font-semibold text-ink">{item.title}</p>
+                    {item.points.map((point, i) => (
+                      <p key={i} className="mt-0.5 text-sm text-ink-soft">
+                        {point}
+                      </p>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+    ...(faqItems.length > 0
+      ? [
+          {
+            id: "faq",
+            label: t.product.faq,
+            content: <Faq title={t.product.faq} items={faqItems} titleHidden />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -223,13 +239,10 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            {/* The merchant's own shipping / returns / COD cards when written; the generic row otherwise. */}
-            {resolveCheckoutForm(store.checkout).show_trust_badges &&
-              (storefrontDesignMeta(store).storeInfo?.cards.length ? (
-                <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
-              ) : (
-                <TrustStrip t={t} inAside />
-              ))}
+            {/* The merchant's own shipping / returns / COD cards, when written; nothing invented otherwise. */}
+            {resolveCheckoutForm(store.checkout).show_trust_badges && cards.length > 0 && (
+              <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
+            )}
           </aside>
         </div>
 

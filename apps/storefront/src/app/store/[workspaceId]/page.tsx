@@ -8,6 +8,7 @@ import { scriptsOf } from "@/lib/pageScripts";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { storeCards } from "@/lib/storePromises";
 import { btnPrimary, btnSecondary, container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -132,9 +133,12 @@ export default async function StoreHomePage({
         </div>
       </section>
 
-      <div className={`${container} py-8`}>
-        <TrustStrip t={t} />
-      </div>
+      {/* The store's own shipping / returns / COD cards, when it wrote them (lib/storePromises.ts). */}
+      {storeCards(store).length > 0 && (
+        <div className={`${container} py-8`}>
+          <TrustStrip cards={storeCards(store)} locale={locale} />
+        </div>
+      )}
 
       <section
         id="products"

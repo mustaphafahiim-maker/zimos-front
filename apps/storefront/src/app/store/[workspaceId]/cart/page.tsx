@@ -7,6 +7,7 @@ import { BoxIcon, CartGlyph } from "@/components/Icons";
 import { QuantityStepper } from "@/components/QuantityStepper";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { storeCards } from "@/lib/storePromises";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
@@ -21,7 +22,7 @@ export default function CartPage() {
   // which resolves this store’s own prefix.
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { cart, isLoading, updateItem, removeItem } = useCart();
-  const { t, money } = useStore();
+  const { t, money, store, locale } = useStore();
   const { byVariant } = useCatalog(workspaceId);
 
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -170,7 +171,7 @@ export default function CartPage() {
                 {t.common.continueShopping}
               </StoreLink>
             </div>
-            <TrustStrip t={t} compact />
+            <TrustStrip cards={storeCards(store)} locale={locale} compact />
           </aside>
         </div>
       )}

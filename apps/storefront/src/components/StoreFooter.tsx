@@ -7,6 +7,7 @@ import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
 import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
+import { cardTitle, storeCards } from "@/lib/storePromises";
 import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { container } from "./ui";
@@ -116,13 +117,14 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
             </nav>
           ))}
 
-          {footer.showHelp && (
+          {/* The store's own shipping / returns / COD cards (lib/storePromises.ts), never invented ones. */}
+          {footer.showHelp && storeCards(store).length > 0 && (
             <div>
               <p className="text-sm font-semibold text-ink">{t.footer.help}</p>
               <ul className="mt-2 space-y-2 text-sm text-ink-soft">
-                <li>{t.trust.cod}</li>
-                <li>{t.trust.fast}</li>
-                <li>{t.trust.returns}</li>
+                {storeCards(store).map((card) => (
+                  <li key={card.key}>{cardTitle(card, locale)}</li>
+                ))}
               </ul>
             </div>
           )}
