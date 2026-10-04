@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
+import { Button, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatMoneyRange, formatProductCode, parseMoney } from "@/lib/format";
+import { formatDate, formatMoneyRange, formatProductCode, parseMoney } from "@/lib/format";
+import { STOREFRONT_URL } from "@/lib/storefrontUrl";
+import { useProductFilters } from "./components/ProductFilterBar";
 import { primaryImage } from "@/lib/media";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -39,7 +41,6 @@ const STRINGS = {
     tabActive: "Active",
     tabDraft: "Draft",
     tabArchived: "Archived",
-    searchPlaceholder: "Filter loaded products by name or SKU",
     listView: "List view",
     gridView: "Grid view",
     manageCollections: "Manage collections →",
@@ -52,6 +53,10 @@ const STRINGS = {
     colStatus: "Status",
     colPrice: "Price range",
     colStock: "Stock",
+    colCreated: "Created",
+    notTracked: "Not tracked",
+    preview: "Preview",
+    previewHint: "Open it in your store",
     colActions: "Actions",
     noVariants: "No variants",
     stock: "{total} in stock · {count} variants",
@@ -75,7 +80,6 @@ const STRINGS = {
     tabActive: "نشط",
     tabDraft: "مسودة",
     tabArchived: "المؤرشف",
-    searchPlaceholder: "ابحث في المنتجات المعروضة بالاسم أو SKU",
     listView: "عرض القائمة",
     gridView: "عرض الشبكة",
     manageCollections: "إدارة المجموعات ←",
@@ -88,6 +92,10 @@ const STRINGS = {
     colStatus: "الحالة",
     colPrice: "نطاق السعر",
     colStock: "المخزون",
+    colCreated: "تاريخ الإنشاء",
+    notTracked: "غير متتبع",
+    preview: "معاينة",
+    previewHint: "افتحه في متجرك",
     colActions: "إجراءات",
     noVariants: "بدون متغيرات",
     stock: "المخزون: {total} · المتغيرات: {count}",
@@ -146,6 +154,8 @@ function NoWeightBadge({ product, t }: { product: Product; t: Strings }) {
 }
 
 function stockSummary(product: Product, t: Strings): string {
+  // Digital products and services have no stock to count.
+  if (product.productType === "digital" || product.productType === "service") return t.notTracked;
   const variants = product.variants ?? [];
   if (variants.length === 0) return t.noVariants;
   const total = variants.reduce((sum, v) => sum + v.stockOnHand, 0);
@@ -159,7 +169,8 @@ export function CatalogProductsPage() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const [tab, setTab] = useState<Tab>("all");
-  const [search, setSearch] = useState("");
+  // Server-side search and filters (components/ProductFilterBar.tsx).
+  const filters = useProductFilters();
   const [view, setView] = useState<CatalogView>(readView);
   const [toRemove, setToRemove] = useState<Product | null>(null);
   // Rows ticked for bulk edit (list view).
@@ -178,20 +189,12 @@ export function CatalogProductsPage() {
   const list = useCursorList<Product>(
     (cursor) =>
       apiClient
-        .listProducts(workspaceId, { status: TAB_STATUS[tab], cursor, limit: 50 })
+        .listProducts(workspaceId, { status: TAB_STATUS[tab], cursor, limit: 50, ...filters.params })
         .then((r) => ({ items: r.products, nextCursor: r.nextCursor })),
-    [workspaceId, tab]
+    [workspaceId, tab, filters.key]
   );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return list.items;
-    return list.items.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.variants ?? []).some((v) => v.sku?.toLowerCase().includes(q))
-    );
-  }, [list.items, search]);
+  const filtered = list.items;
 
   async function restore(product: Product) {
     if (restoring.has(product.id)) return;
@@ -234,6 +237,13 @@ export function CatalogProductsPage() {
         <Button asChild size="sm" variant="ghost">
           <Link to={`/catalog/${product.id}`}>{t.edit}</Link>
         </Button>
+        {product.status !== "archived" && (
+          <Button asChild size="sm" variant="ghost" title={t.previewHint}>
+            <a href={`${STOREFRONT_URL}/store/${workspaceId}/products/${product.slug}`} target="_blank" rel="noreferrer">
+              {t.preview}
+            </a>
+          </Button>
+        )}
         <DuplicateProductButton product={product} />
         {product.status === "archived" ? (
           <>
@@ -289,12 +299,7 @@ export function CatalogProductsPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FilterTabs tabs={tabs} value={tab} onChange={setTab} label={t.filterLabel} />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t.searchPlaceholder}
-          className="max-w-xs"
-        />
+        {filters.bar}
 
         <div className="ms-auto flex items-center gap-3">
           <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
@@ -381,6 +386,7 @@ function ProductTable({ products, t, statusLabel, renderActions, selection }: Ro
             <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
             <th className="px-4 py-3 text-start font-medium">{t.colPrice}</th>
             <th className="px-4 py-3 text-start font-medium">{t.colStock}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colCreated}</th>
             <th className="px-4 py-3 font-medium">
               <span className="sr-only">{t.colActions}</span>
             </th>
@@ -421,6 +427,7 @@ function ProductTable({ products, t, statusLabel, renderActions, selection }: Ro
               </td>
               <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
               <td className="px-4 py-3 text-ink-soft">{stockSummary(product, t)}</td>
+              <td className="px-4 py-3 whitespace-nowrap text-ink-soft">{formatDate(product.createdAt)}</td>
               <td className="px-4 py-3 text-end whitespace-nowrap">{renderActions(product)}</td>
             </tr>
           ))}
