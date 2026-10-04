@@ -213,3 +213,14 @@ export async function lostOrdersRecover(client: ApiClient, workspaceId: string, 
   );
   return recovery;
 }
+
+/**
+ * The full phone behind a masked one (lists mask phones for roles without
+ * customers.reveal_sensitive). Needs orders.view; every call is in the activity log.
+ */
+export async function lostOrdersRevealPhone(client: ApiClient, workspaceId: string, sessionId: string): Promise<string | null> {
+  const { phone } = await client.request<{ phone: string | null }>(`${base(workspaceId)}/${sessionId}/reveal-phone`, {
+    method: "POST",
+  });
+  return phone;
+}

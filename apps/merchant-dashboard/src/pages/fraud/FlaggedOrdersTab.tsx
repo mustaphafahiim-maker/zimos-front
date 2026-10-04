@@ -187,9 +187,14 @@ function FlaggedOrderCard({
         {order.phone && (
           <>
             {" · "}
-            <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+            {/* Masked for roles without customers.reveal_sensitive: the order page has the full number. */}
+            {order.phone.includes("*") ? (
               <bdi dir="ltr">{order.phone}</bdi>
-            </a>
+            ) : (
+              <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+                <bdi dir="ltr">{order.phone}</bdi>
+              </a>
+            )}
           </>
         )}
       </p>

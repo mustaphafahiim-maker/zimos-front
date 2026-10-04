@@ -13,6 +13,7 @@ import {
   lostOrdersExport,
   lostOrdersList,
   lostOrdersStats,
+  lostOrdersRevealPhone,
   lostOrdersUpdate,
   type LostOrder,
   type LostOrderReason,
@@ -225,7 +226,9 @@ function isTab(value: unknown): value is LostOrderTab {
 }
 
 /** Digits with the country code, for a wa.me link. Egyptian local numbers get 20. */
-const reachable = (phone: string | null | undefined) => Boolean(phone && /\d{6,}/.test(phone));
+const reachable = (phone: string | null | undefined) => Boolean(phone && (/\d{6,}/.test(phone) || isMasked(phone)));
+/** Phones are masked for roles without customers.reveal_sensitive; the row actions ask for the number (audited). */
+const isMasked = (phone: string | null | undefined) => Boolean(phone && phone.includes("*"));
 
 function whatsappNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -306,6 +309,28 @@ export function LostOrdersPage() {
     const link = recoveryLink(session) ?? "";
     const text = fmt(t.whatsappMessage, { name: session.customerName ?? "", link });
     return `https://wa.me/${whatsappNumber(session.phone)}?text=${encodeURIComponent(text)}`;
+  }
+
+  /** WhatsApp or call a masked number: the server hands over the one number, and logs it. */
+  async function reach(session: LostOrder, kind: "whatsapp" | "call") {
+    // Opened now, while the click still counts as the shopper's gesture; pointed at WhatsApp once the number is in.
+    const win = kind === "whatsapp" ? window.open("", "_blank") : null;
+    try {
+      const phone = await lostOrdersRevealPhone(apiClient, workspaceId, session.id);
+      if (!phone) {
+        win?.close();
+        return;
+      }
+      if (kind === "call") {
+        window.location.href = `tel:${phone}`;
+        return;
+      }
+      if (win) win.location.href = whatsappHref({ ...session, phone });
+      if (canManage && session.recoveryStatus === "not_contacted") void update(session, { recoveryStatus: "contacted" });
+    } catch (err) {
+      win?.close();
+      toast.error(errorMessage(err));
+    }
   }
 
   async function runExport() {
@@ -440,7 +465,12 @@ export function LostOrdersPage() {
             rel="noreferrer"
             title={t.whatsapp}
             aria-label={t.whatsapp}
-            onClick={() => {
+            onClick={(e) => {
+              if (isMasked(s.phone)) {
+                e.preventDefault();
+                void reach(s, "whatsapp");
+                return;
+              }
               if (canManage && s.recoveryStatus === "not_contacted") void update(s, { recoveryStatus: "contacted" });
             }}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
@@ -449,6 +479,11 @@ export function LostOrdersPage() {
           </a>
           <a
             href={`tel:${s.phone}`}
+            onClick={(e) => {
+              if (!isMasked(s.phone)) return;
+              e.preventDefault();
+              void reach(s, "call");
+            }}
             title={t.call}
             aria-label={t.call}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
