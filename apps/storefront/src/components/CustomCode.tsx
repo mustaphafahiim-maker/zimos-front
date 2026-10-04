@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, type ReactNode } from "re
 import { usePathname } from "next/navigation";
 import type { CustomCodeSlotKey } from "@store-builder/api-client";
 import { useStoreBasePath } from "./StoreRoute";
+import { SERVER_HEAD_ATTR, parseHeadCode } from "@/lib/headCodeParse";
 
 /**
  * The merchant's own code (dashboard → store settings → custom code), placed
@@ -62,17 +63,34 @@ export function CodeSlot({ name }: { name: CustomCodeSlotKey }) {
   return <div ref={ref} data-zimos-slot={name} />;
 }
 
-/** The head code, the stylesheet and the script — once per store, in <head>. */
+/**
+ * The head code, the stylesheet and the script — once per store, in <head>.
+ *
+ * The server already rendered what it could of the head code and the
+ * stylesheet (components/HeadCode.tsx, marked SERVER_HEAD_ATTR) when this page
+ * was loaded where code may run; then only the rest is added here. A page
+ * first loaded where it may not (a payment page) gets all of it once the
+ * shopper moves on, and a server stylesheet is switched off while the shopper
+ * is on such a page.
+ */
 export function CustomCodeHead() {
   const slots = useContext(CustomCodeContext);
   const allowed = useCodeAllowed();
   const { head, css, js } = slots;
 
   useEffect(() => {
+    const server = Array.from(document.head.querySelectorAll<HTMLElement>(`[${SERVER_HEAD_ATTR}]`));
+    for (const el of server) {
+      if (el instanceof HTMLStyleElement || el instanceof HTMLLinkElement) {
+        if (el.sheet) el.sheet.disabled = !allowed;
+      }
+    }
     if (!allowed) return;
+    const fromServer = server.length > 0;
     const added: Node[] = [];
-    if (head) added.push(...injectCode(document.head, head));
-    if (css) {
+    const headRest = head ? (fromServer ? parseHeadCode(head).rest : head) : "";
+    if (headRest) added.push(...injectCode(document.head, headRest));
+    if (css && !fromServer) {
       const style = document.createElement("style");
       style.setAttribute("data-zimos-slot", "css");
       style.textContent = css;

@@ -16,6 +16,7 @@ import {
 } from "@/lib/storePreview";
 import { resolveCustomHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
+import { CODE_REF_HEADER } from "@/lib/headCodeParse";
 
 /**
  * Paths that are served as they are, whatever the host: Next's own internals,
@@ -86,6 +87,7 @@ export async function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
   headers.delete(STORE_REF_HEADER);
+  headers.delete(CODE_REF_HEADER);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -125,6 +127,9 @@ export async function proxy(request: NextRequest) {
         : `/store/${slug}${pathname === "/" ? "" : pathname}`;
     headers.set(STORE_SLUG_HEADER, slug);
     headers.set(STORE_REF_HEADER, slug);
+    // The merchant's head code is server-rendered (lib/headCode) only on the
+    // store's own host, never on a payment or preview page or beside a staff token.
+    if (!preview && !/^\/(pay|preview)(\/|$)/.test(pathname)) headers.set(CODE_REF_HEADER, slug);
     return keep(NextResponse.rewrite(url, { request: { headers } }));
   }
 

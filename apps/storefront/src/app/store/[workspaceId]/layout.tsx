@@ -22,12 +22,11 @@ import {
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
-  storefrontCustomCode,
   storefrontGeneralMeta,
   storefrontStoreApp,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
-import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { storeCustomCode } from "@/lib/headCode";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { storeOrigin } from "@/lib/domains";
@@ -169,9 +168,7 @@ export default async function StoreLayout({
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
   // The merchant's own code slots. The API returns none to a staff preview,
   // and components/CustomCode.tsx decides where the rest may run.
-  const customCode = await storefrontCustomCode(await createServerStorefrontApiClient(), workspaceId).catch(
-    () => ({})
-  );
+  const customCode = await storeCustomCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
