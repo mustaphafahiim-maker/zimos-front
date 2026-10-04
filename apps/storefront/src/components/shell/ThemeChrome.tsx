@@ -3,7 +3,6 @@
 import { useTransition, type MouseEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { StorefrontMeta } from "@store-builder/api-client";
-import { WhatsAppIcon } from "@/components/Icons";
 import { StoreLink } from "@/components/StoreRoute";
 import { useCart } from "@/lib/CartProvider";
 import { LOCALE_COOKIE, nextLocale, switchLabel } from "@/lib/i18n";
@@ -15,8 +14,11 @@ import { useStore } from "@/lib/StoreContext";
  *
  *   mobileToolbar: true                       a bar along the bottom of a phone:
  *                                             home, shop, cart, search
- *   floating: { whatsapp?: "2010…", language?: true }
- *                                             round buttons in the corner
+ *   floating: { language?: true }             a language button in the corner
+ *
+ * The WhatsApp button is the store's own (Settings → general → floating
+ * WhatsApp, components/FloatingWhatsapp) — a number in the theme settings is
+ * not used: templates carried another store's there (migration 430).
  *
  * The cart item opens the drawer the way the header's cart icon does.
  */
@@ -28,7 +30,6 @@ const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeL
 export function ThemeChrome({ store }: { store: StorefrontMeta }) {
   const settings = (store.themeSettings ?? {}) as Blob;
   const floating = (settings.floating && typeof settings.floating === "object" ? settings.floating : {}) as Blob;
-  const whatsapp = typeof floating.whatsapp === "string" ? floating.whatsapp.replace(/\D/g, "") : "";
   const toolbar = settings.mobileToolbar === true;
   const { t, locale, intlLocale } = useStore();
   const { itemCount, openDrawer } = useCart();
@@ -38,7 +39,7 @@ export function ThemeChrome({ store }: { store: StorefrontMeta }) {
 
   // A funnel keeps the shopper on one path; the store's chrome steps aside there.
   if (/\/f\//.test(pathname)) return null;
-  if (!toolbar && !whatsapp && floating.language !== true) return null;
+  if (!toolbar && floating.language !== true) return null;
 
   const next = nextLocale(locale, (store as { languages?: string[] }).languages);
   function switchLanguage() {
@@ -53,7 +54,7 @@ export function ThemeChrome({ store }: { store: StorefrontMeta }) {
 
   return (
     <>
-      {(whatsapp || floating.language === true) && (
+      {floating.language === true && (
         <div className="zs-float" data-toolbar={toolbar ? "" : undefined}>
           {floating.language === true && (
             <button
@@ -69,17 +70,6 @@ export function ThemeChrome({ store }: { store: StorefrontMeta }) {
                 <path d="M3.5 12h17M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21M12 3C9.6 5.5 8.4 8.5 8.4 12S9.6 18.5 12 21" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
             </button>
-          )}
-          {whatsapp && (
-            <a
-              className="zs-float__btn zs-float__btn--whatsapp"
-              href={`https://wa.me/${whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="WhatsApp"
-            >
-              <WhatsAppIcon size={24} />
-            </a>
           )}
         </div>
       )}

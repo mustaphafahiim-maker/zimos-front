@@ -1,4 +1,4 @@
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
 import type { ReactNode } from "react";
 import { PoweredByZimos } from "@/components/PoweredByZimos";
 import { ShellLink } from "@/components/ShellLink";
@@ -11,15 +11,13 @@ import { resolveShellLinks, type FooterShell } from "@/lib/storeShell";
  * with how to reach it and its social accounts, then the merchant's link
  * groups, over the same rights line every footer ends with.
  *
- *   footer.contact = { address?, email?, phone? }
- *   footer.social  = [{ platform, url }]
- *
- * Both are read here, defensively, straight from the saved blob; the link
- * groups come through lib/storeShell like the plain footer's.
+ * How to reach the store and its social accounts are the store's own settings
+ * (Store info, Social links) — never values a template carried in its theme
+ * settings, which once put another store's details on every store that used
+ * it (migration 430). The link groups come through lib/storeShell like the
+ * plain footer's.
  */
 
-type Blob = Record<string, unknown>;
-const obj = (v: unknown): Blob | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Blob) : null);
 const text = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 const SOCIAL: Record<string, { label: string; icon: ReactNode }> = {
@@ -51,16 +49,13 @@ export function RichFooter({
   footer: FooterShell;
 }) {
   const t = getDictionary(locale);
-  const raw = obj(obj(store.themeSettings)?.footer) ?? {};
-  const contact = obj(raw.contact) ?? {};
-  const address = text(contact.address);
-  const email = text(contact.email, 120);
-  const phone = text(contact.phone, 40);
-  const social = (Array.isArray(raw.social) ? raw.social : [])
-    .map((item) => obj(item))
-    .filter((item): item is Blob => item !== null)
-    .map((item) => ({ platform: text(item.platform, 20).toLowerCase(), url: text(item.url, 500) }))
-    .filter((item) => /^https:\/\//i.test(item.url) && SOCIAL[item.platform])
+  const info = storefrontDesignMeta(store).storeInfo;
+  const address = text(info?.address);
+  const email = text(info?.email, 120);
+  const phone = text(info?.phone, 40);
+  const social = Object.entries(storefrontGeneralMeta(store).social)
+    .map(([platform, url]) => ({ platform, url: text(url, 500) }))
+    .filter((item) => /^https?:\/\//i.test(item.url) && SOCIAL[item.platform])
     .slice(0, 6);
   const groups = footer.showLinks
     ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) }))
