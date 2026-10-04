@@ -21,6 +21,7 @@ import { ProductSeoSection } from "./components/ProductSeoSection";
 import { ProductOptionsDisplaySection } from "./components/ProductOptionsDisplaySection";
 import { ProductCmsSection } from "./components/ProductCmsSection";
 import { VariantBulkEditor } from "./components/VariantBulkEditor";
+import { ProductTestSection } from "./components/ProductTestSection";
 
 const STRINGS = {
   en: {
@@ -125,6 +126,7 @@ export function ProductEditPage() {
               onChanged={reload}
             />
             <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
+            <ProductTestSection productId={data.id} variants={data.variants ?? []} media={data.media ?? []} onProductChanged={reload} />
             {/* The same product, read with the page fields lane 3 added. */}
             <ProductOptionsDisplaySection
               product={data as unknown as CatalogProduct}
