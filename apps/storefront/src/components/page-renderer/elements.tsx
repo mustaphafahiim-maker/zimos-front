@@ -160,7 +160,7 @@ export function GalleryElement({ props }: { props: Props }) {
   );
 }
 
-const BUTTON_CLASS: Record<string, string> = {
+export const BUTTON_CLASS: Record<string, string> = {
   primary: btnPrimary,
   secondary:
     "zt-btn zt-btn-soft inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15",
@@ -424,6 +424,7 @@ export function FormElement({
         choices: strList(props, "choices").slice(0, 20),
         checkboxLabel: str(props, "checkboxLabel"),
       }}
+      inputs={{ fileLabel: str(props, "fileLabel").trim(), fileRequired: props.fileRequired === true, ratingLabel: str(props, "ratingLabel").trim() }}
       labels={{
         name: t.renderer.formName,
         phone: t.renderer.formPhone,

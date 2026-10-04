@@ -76,7 +76,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
-import { COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS } from "./builderExtraBlocks";
+import { BUTTON_ACTION_FIELDS, COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS, FORM_INPUT_FIELDS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
 /**
@@ -758,6 +758,10 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   // Gallery with thumbnails, variant and bundle pickers, review form (builderExtraBlocks.ts).
   ...EXTRA_ELEMENT_SPECS,
 };
+
+// A button's cart actions and a form's photo and stars inputs (item 93, builderExtraBlocks.ts).
+ELEMENT_SPECS.button.fields.push(...BUTTON_ACTION_FIELDS);
+ELEMENT_SPECS.form.fields.push(...FORM_INPUT_FIELDS);
 
 // ---------------------------------------------------------------------------
 // Block presets — what the left sidebar offers

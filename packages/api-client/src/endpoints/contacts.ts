@@ -83,6 +83,8 @@ export interface FormSubmission {
   message: string | null;
   /** Any further fields the form carried, label → text. */
   data: Record<string, string>;
+  /** The form's photo input: a signed link that works for a few minutes (backend contacts/formFiles.js). */
+  files?: Array<{ label: string; url: string; urlExpiresAt: string }>;
   /** Tags the form added to the contact. */
   tags: string[];
   marketingConsent: boolean;
@@ -178,6 +180,8 @@ export interface StoreFormPayload {
   fields?: Record<string, string>;
   /** Honeypot. Leave empty. */
   website?: string;
+  /** The visitor who uploaded the form's photo (the X-Visitor-Id of uploadCustomerPhoto). */
+  visitorId?: string;
 }
 
 const contactsBase = (workspaceId: string) => `/workspaces/${workspaceId}/contacts`;

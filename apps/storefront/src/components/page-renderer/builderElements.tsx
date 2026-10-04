@@ -14,7 +14,8 @@ import { CheckoutSummaryBlock, FunnelActionButton, OrderSummaryBlock, TabsBlock 
 import { GallerySlideshow } from "./GallerySlideshow";
 import type { PageRendererFunnel } from "./PageRenderer";
 import { FunnelCodForm } from "../funnel/FunnelCodForm";
-import { ConvertedPrice } from "@/components/ConvertedPrice";
+import { PickedPrice } from "./builderMoreClient";
+import { variantPriceTags } from "./builderMore";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import { type Props, bool, num, qaList, resolveHref, safeUrl, str, strList } from "./props";
 
@@ -134,14 +135,17 @@ export async function PriceElement({
   const price = product ? priceOf(product) : undefined;
   if (!product || price === undefined) return null;
   const compareAt = props.showCompareAt === false ? null : compareAtOf(product);
+  // Follows the variant the shopper picks on the page (item 93, builderMore.tsx).
+  const byVariant = variantPriceTags(product, currency, locale);
+  if (props.showCompareAt === false) for (const tag of Object.values(byVariant)) tag.compareAt = null;
   return (
-    <p className="flex flex-wrap items-baseline gap-3">
-      <span className={`font-bold text-ink ${PRICE_SIZE[str(props, "size")] ?? PRICE_SIZE.medium}`}>
-        {formatPrice(price, currency, locale)}
-      </span>
-      {compareAt !== null && <span className="text-base text-ink-soft line-through">{formatPrice(compareAt, currency, locale)}</span>}
-      <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />
-    </p>
+    <PickedPrice
+      productId={product.id}
+      initial={{ amount: price, price: formatPrice(price, currency, locale), compareAt: compareAt === null ? null : formatPrice(compareAt, currency, locale) }}
+      byVariant={byVariant}
+      currency={currency}
+      sizeClass={PRICE_SIZE[str(props, "size")] ?? PRICE_SIZE.medium}
+    />
   );
 }
 

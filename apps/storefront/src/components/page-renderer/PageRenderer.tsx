@@ -65,6 +65,7 @@ import { pageStyleSheet, styleKey } from "./elementStyle";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
 import { HtmlBlock } from "@/components/HtmlBlock";
+import { MasonryGridElement, ProductActionElement, productAction } from "./builderMore";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
@@ -130,7 +131,7 @@ interface Ctx {
 }
 
 /** Elements whose empty `productId` means "the page's product". */
-const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form", "image_gallery", "variant_selector", "bundle_selector", "review_form"]);
+const PAGE_PRODUCT_TYPES = new Set(["button", "price", "reviews_list", "cod_form", "image_gallery", "variant_selector", "bundle_selector", "review_form"]);
 
 function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   // Bound props are replaced by live data before the element ever sees them.
@@ -154,6 +155,10 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
+      // "Add to cart" / "Buy now" (item 93) — on the store; a funnel keeps its own path below.
+      if (!ctx.funnel && productAction(props)) {
+        return <ProductActionElement props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;
+      }
       // In a funnel, a button with no link of its own moves the shopper on:
       // FunnelStep reports the click with this element's id, so the funnel
       // map can route each button of a page to a different step.
@@ -270,6 +275,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "repeater":
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
+      // Pictures in columns of their own heights (item 93, ./builderMore).
+      if ((element.type as string) === "masonry_grid") return <MasonryGridElement props={props} />;
       // Gallery with thumbnails, variant and bundle pickers, review form (./builderExtras).
       if (EXTRA_ELEMENT_TYPES.has(element.type)) {
         return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;

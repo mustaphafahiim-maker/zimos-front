@@ -144,6 +144,18 @@ export const COLUMN_VERTICAL: Record<string, string> = {
   end: "md:self-end",
 };
 
+/**
+ * A sticky column (SPEC §9.3 "sticky container", item 93) stays in view while
+ * the rest of its row scrolls past — on a computer, where columns sit side by
+ * side; on a phone they stack and it scrolls as usual. "header" leaves room
+ * for the store's sticky header. It lines the column up at the top.
+ */
+export const COLUMN_STICKY: Record<string, string> = {
+  none: "",
+  top: "md:sticky md:top-4 md:self-start",
+  header: "md:sticky md:top-24 md:self-start",
+};
+
 // --- readers -----------------------------------------------------------------
 
 /** One setting as a class string; the `fallback` key whenever the stored value is unusable. */
@@ -279,5 +291,6 @@ export function columnClasses(settings: unknown, spanClass: string): string {
   const layout = settingClass(settings, "layout", COLUMN_LAYOUT, "stack");
   const gap = settingClass(settings, "itemGap", COLUMN_GAP, "normal");
   const justify = settingClass(settings, "justify", COLUMN_JUSTIFY, "start");
-  return `flex min-w-0 ${layout} ${gap} ${spanClass} ${surface} ${align} ${vertical} ${justify}`.replace(/\s+/g, " ").trimEnd();
+  const sticky = settingClass(settings, "sticky", COLUMN_STICKY, "none");
+  return `flex min-w-0 ${layout} ${gap} ${spanClass} ${surface} ${align} ${sticky ? sticky : vertical} ${justify}`.replace(/\s+/g, " ").trimEnd();
 }
