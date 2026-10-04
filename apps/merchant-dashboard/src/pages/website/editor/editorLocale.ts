@@ -122,6 +122,7 @@ const FIELD_LABEL_AR: Record<string, string> = {
   submitLabel: "نص زرار الإرسال",
   successMessage: "الرسالة بعد الإرسال",
   tags: "وسوم تُضاف لجهة الاتصال (افصل بفاصلة)",
+  contactTags: "وسوم تُضاف للعميل (افصل بفاصلة)",
   "map.address": "العنوان على الخريطة",
   zoom: "درجة التكبير",
   links: "الروابط",
@@ -146,6 +147,10 @@ const FIELD_LABEL_AR: Record<string, string> = {
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
+  "button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "upsell_accept_button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "upsell_decline_link.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "cod_form.contactTags": "في الفانل: تُضاف للعميل لما يطلب.",
   "rich_text.text": "نص عادي بس في المحرر ده — أدوات التنسيق جاية بعدين.",
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "image.width": "نسبة من عرض العمود — أو اسحب ركن الصورة في المعاينة. يحل محل الحجم؛ اتركه فارغًا لاستخدام الحجم.",

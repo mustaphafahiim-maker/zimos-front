@@ -366,6 +366,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "label", label: "Label", kind: "text" },
       { key: "endsInHours", label: "Ends in (hours)", kind: "number", min: 1, max: 8760 },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
     ],
   },
   form: {
@@ -665,6 +666,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         kind: "text",
         hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
       },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer when they place the order." },
     ],
   },
   checkout_summary: {
@@ -686,7 +688,10 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     label: "Accept offer button",
     icon: Zap,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   repeater: {
     label: "Repeater",
@@ -723,7 +728,10 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     label: "Decline offer link",
     icon: Minus,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
