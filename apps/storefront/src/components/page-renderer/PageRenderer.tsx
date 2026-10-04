@@ -64,6 +64,7 @@ import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
+import { HtmlBlock } from "@/components/HtmlBlock";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
@@ -263,6 +264,9 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <UpsellActionElement props={props} action="accepted_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
     case "upsell_decline_link":
       return <UpsellActionElement props={props} action="declined_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    // The merchant's own HTML, kept outside the tree (components/HtmlBlock.tsx).
+    case "html_block":
+      return <HtmlBlock blockId={String(props.blockId ?? "")} editable={ctx.editable} label={t.renderer.embedded} />;
     case "repeater":
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:

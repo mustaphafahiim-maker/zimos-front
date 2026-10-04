@@ -15,6 +15,8 @@ import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
 
 export const revalidate = 60;
 
@@ -69,13 +71,15 @@ export default async function StoreHomePage({
   if ((tree?.sections?.length ?? 0) > 0) {
     return (
       <main className="flex-1">
-        <PageRenderer
-          tree={tree}
-          workspaceId={workspaceId}
-          currency={store.currency}
-          locale={locale}
-          siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
-        />
+        <HtmlBlocksProvider blocks={published.kind === "page" ? htmlBlocksOf(published.data.page) : {}}>
+          <PageRenderer
+            tree={tree}
+            workspaceId={workspaceId}
+            currency={store.currency}
+            locale={locale}
+            siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
+          />
+        </HtmlBlocksProvider>
         {published.kind === "page" && <PageScripts scripts={scriptsOf(published.data.page)} />}
       </main>
     );

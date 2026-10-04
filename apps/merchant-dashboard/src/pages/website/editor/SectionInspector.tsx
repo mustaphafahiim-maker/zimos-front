@@ -46,6 +46,7 @@ import { ImageField, ImageListField } from "./ImageField";
 import { ItemListField } from "./ItemListField";
 import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
 import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
+import { HtmlBlockCodeField } from "./HtmlBlockCodeField";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
@@ -644,6 +645,9 @@ function ElementField({
           onChange={(next) => onChange(spec.key, next)}
         />
       );
+
+    case "htmlBlockCode":
+      return <HtmlBlockCodeField label={label} hint={hint} blockId={asString(raw)} onBlockId={(id) => onChange(spec.key, id)} />;
 
     case "compareRows":
       return (

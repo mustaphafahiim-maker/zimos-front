@@ -124,6 +124,8 @@ export type FieldSpec =
   | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "compareRows"; hint?: string }
   | { key: string; label: string; kind: "linkList"; hint?: string }
+  // An html_block's code, saved through its own API by blockId (HtmlBlockCodeField.tsx).
+  | { key: string; label: string; kind: "htmlBlockCode"; hint?: string }
   // A list of objects, each a small card of its own fields (ItemListField.tsx).
   | {
       key: string;
@@ -293,6 +295,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       },
       { key: "title", label: "Title", kind: "text" },
     ],
+  },
+  // SPEC §8.2 "HTML code": the tree holds only blockId; the HTML lives outside it.
+  html_block: {
+    label: "HTML code",
+    icon: Code2,
+    defaultProps: {},
+    fields: [{ key: "blockId", label: "HTML", kind: "htmlBlockCode", hint: "Scripts and styles are allowed. Test it on your live store." }],
   },
   spacer: {
     label: "Spacer",
@@ -2501,6 +2510,14 @@ const CORE_PRESETS: BlockPreset[] = [
     icon: Code2,
     group: "basics",
     elements: ["embed"],
+  },
+  {
+    key: "html-code",
+    label: "HTML code",
+    description: "Your own HTML at this place on the page — runs on your store's domain only.",
+    icon: Code2,
+    group: "basics",
+    elements: ["html_block"],
   },
   {
     key: "map",

@@ -24,6 +24,8 @@ import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
 
 type Params = Promise<{ workspaceId: string; ref: string; sessionId: string }>;
 
@@ -184,13 +186,15 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
           <FunnelSessionProvider
             value={{ workspaceId, funnelId: ref, sessionId, stepKey: step.key, stepType: done ? "done" : step.stepType, sessionOrderId: session.orderId }}
           >
-            <PageRenderer
-              tree={tree}
-              workspaceId={workspaceId}
-              currency={currency}
-              locale={locale}
-              funnel={{ nextHref }}
-            />
+            <HtmlBlocksProvider blocks={htmlBlocksOf(step)}>
+              <PageRenderer
+                tree={tree}
+                workspaceId={workspaceId}
+                currency={currency}
+                locale={locale}
+                funnel={{ nextHref }}
+              />
+            </HtmlBlocksProvider>
           </FunnelSessionProvider>
           {done ? (
             <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} />

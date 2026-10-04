@@ -10,6 +10,8 @@ import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, isStoreUnavailable } from "@/lib/storeMeta";
 import type { StorefrontPageResult } from "@store-builder/api-client";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
 
 export const revalidate = 60;
 
@@ -100,13 +102,15 @@ export default async function CustomStorePage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
-      <PageRenderer
-        tree={page.tree}
-        workspaceId={workspaceId}
-        currency={store.currency}
-        locale={locale}
-        siteStyles={result.data.site?.globalStyles}
-      />
+      <HtmlBlocksProvider blocks={htmlBlocksOf(page)}>
+        <PageRenderer
+          tree={page.tree}
+          workspaceId={workspaceId}
+          currency={store.currency}
+          locale={locale}
+          siteStyles={result.data.site?.globalStyles}
+        />
+      </HtmlBlocksProvider>
       <PageScripts scripts={scriptsOf(page)} />
     </main>
   );

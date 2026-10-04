@@ -416,6 +416,8 @@ export const PAGE_ELEMENT_TYPES = [
   "upsell_decline_link",
   // SPEC §9.4: one block per item of a product list.
   "repeater",
+  // The merchant's own HTML, kept outside the tree by blockId (backend customCode/htmlBlocks.js).
+  "html_block",
   // Showcase sections — full-width storefront bands (backend showcaseElements.js).
   "hero_slider",
   "category_tiles",

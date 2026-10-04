@@ -144,6 +144,8 @@ export * from "./endpoints/emailChange";
 export * from "./endpoints/education";
 // WhatsApp message templates synced from Meta (whatsapp/whatsappTemplates.js).
 export * from "./endpoints/whatsappTemplates";
+// Custom HTML blocks kept outside the page tree (customCode/htmlBlocks.js).
+export * from "./endpoints/htmlBlocks";
 // The thank-you page's download links (digital/digitalRoutes.js).
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
