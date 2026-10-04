@@ -140,3 +140,5 @@ export * from "./endpoints/accountSettings";
 export * from "./endpoints/profile";
 // The thank-you page's download links (digital/digitalRoutes.js).
 export * from "./endpoints/storefrontDownloads";
+// Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
+export * from "./endpoints/shippingProfiles";
