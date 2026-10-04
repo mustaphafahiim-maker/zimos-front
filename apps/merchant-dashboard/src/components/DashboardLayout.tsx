@@ -1,8 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Menu, Settings, X } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Menu, Minimize2, Settings, X } from "lucide-react";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
-import { KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
+import { FOCUS_TOGGLE_EVENT, KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
 import {
   NAV_GROUPS,
   NAV_GROUP_LABELS,
@@ -29,6 +29,8 @@ const STRINGS = {
     accountMenu: "Account menu",
     settings: "Settings",
     shortcuts: "Keyboard shortcuts",
+    focus: "Full screen",
+    exitFocus: "Show the side menu",
     selectStore: "Select a store",
     newStore: "+ New store",
     allStores: "All my stores",
@@ -47,6 +49,8 @@ const STRINGS = {
     accountMenu: "قائمة الحساب",
     settings: "الإعدادات",
     shortcuts: "اختصارات الكيبورد",
+    focus: "ملء الشاشة",
+    exitFocus: "إظهار القائمة الجانبية",
     selectStore: "اختر متجرًا",
     newStore: "+ متجر جديد",
     allStores: "كل متاجري",
@@ -363,6 +367,25 @@ export function DashboardLayout() {
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
+  const [focus, setFocus] = useState(() => {
+    try {
+      return localStorage.getItem("zimos.focus") === "on";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("zimos.focus", focus ? "on" : "off");
+    } catch {
+      /* private mode — non-fatal */
+    }
+  }, [focus]);
+  useEffect(() => {
+    const toggle = () => setFocus((on) => !on);
+    window.addEventListener(FOCUS_TOGGLE_EVENT, toggle);
+    return () => window.removeEventListener(FOCUS_TOGGLE_EVENT, toggle);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // The tab names the store being worked on, not the product — a merchant with
@@ -388,7 +411,7 @@ export function DashboardLayout() {
   }, [mobileOpen]);
 
   return (
-    <div className="glass-app flex min-h-screen">
+    <div className="glass-app flex min-h-screen" data-focus={focus ? "on" : undefined}>
       <KeyboardShortcuts />
       <aside className="zimos-glass zimos-glass-panel glass-nav sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[264px] shrink-0 md:flex md:flex-col">
         <SidebarContent />
@@ -437,6 +460,17 @@ export function DashboardLayout() {
             {/* Search, the store's link and alerts. Language and theme are in Settings. */}
             <CommandPalette />
             {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
+            {/* Full screen: the side menu steps aside so the page has the whole width. */}
+            <button
+              type="button"
+              onClick={() => setFocus((on) => !on)}
+              aria-pressed={focus}
+              aria-label={focus ? t.exitFocus : t.focus}
+              title={focus ? t.exitFocus : t.focus}
+              className="hidden shrink-0 cursor-pointer rounded-full p-2 text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink md:inline-flex"
+            >
+              {focus ? <Minimize2 className="size-[18px]" aria-hidden /> : <Maximize2 className="size-[18px]" aria-hidden />}
+            </button>
             <NotificationsBell />
             <AccountMenu />
           </div>

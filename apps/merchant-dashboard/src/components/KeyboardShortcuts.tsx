@@ -7,6 +7,8 @@ import { Modal } from "@/components/Modal";
 
 /** Fired on `window` to open the list of shortcuts (the account menu does). */
 export const SHORTCUTS_HELP_EVENT = "zimos:shortcuts-help";
+/** Fired on `window` to switch full screen on or off (the layout listens). */
+export const FOCUS_TOGGLE_EVENT = "zimos:focus-toggle";
 
 const STRINGS = {
   en: {
@@ -16,6 +18,7 @@ const STRINGS = {
     go: "Go to — press G, then the letter",
     search: "Search and jump to any page",
     help: "Show this list",
+    focus: "Full screen: hide or show the side menu",
     newOrder: "New order",
     newProduct: "Add product",
     home: "Home",
@@ -36,6 +39,7 @@ const STRINGS = {
     go: "انتقال — اضغط G ثم الحرف",
     search: "بحث وانتقال لأي صفحة",
     help: "عرض هذه القائمة",
+    focus: "ملء الشاشة: إخفاء أو إظهار القائمة الجانبية",
     newOrder: "طلب جديد",
     newProduct: "إضافة منتج",
     home: "الرئيسية",
@@ -127,6 +131,11 @@ export function KeyboardShortcuts() {
         }
         return;
       }
+      if (e.code === "KeyF") {
+        e.preventDefault();
+        window.dispatchEvent(new Event(FOCUS_TOGGLE_EVENT));
+        return;
+      }
       if (e.code === "KeyG") {
         waitingForSecondKey = true;
         timer = window.setTimeout(() => {
@@ -160,6 +169,7 @@ export function KeyboardShortcuts() {
             {DIRECT.map((entry) => (
               <Row key={entry.code} label={t[entry.label]} keys={[entry.cap]} />
             ))}
+            <Row label={t.focus} keys={["F"]} />
             <Row label={t.search} keys={["/"]} />
             <Row label={t.help} keys={["?"]} />
           </ul>

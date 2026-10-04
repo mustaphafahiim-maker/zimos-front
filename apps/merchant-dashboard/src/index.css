@@ -782,3 +782,11 @@ html {
     position: relative;
   }
 }
+
+/* Full screen: the side menu is hidden and the page column may use the whole width. */
+.glass-app[data-focus="on"] > aside {
+  display: none;
+}
+.glass-app[data-focus="on"] main .page-in > [class*="max-w-"] {
+  max-width: none;
+}
