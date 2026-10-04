@@ -259,6 +259,7 @@ import type {
   WhatsappConversationStatus,
   WhatsappIntegration,
   WhatsappMessageListResponse,
+  OnlineMethod,
 } from "./types";
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -3200,7 +3201,7 @@ export class ApiClient {
     workspaceId: string,
     orderId: string,
     paymentToken: string,
-    body: { paymentMethod?: "card" | "wallet"; paymentProvider?: string; returnUrl?: string },
+    body: { paymentMethod?: OnlineMethod; paymentProvider?: string; returnUrl?: string },
     previewToken?: string
   ) {
     const { payment } = await this.request<{ payment: ShopperPaymentStatus }>(

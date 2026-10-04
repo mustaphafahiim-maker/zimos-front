@@ -14,7 +14,7 @@
  * courier that has no cancel API; resend with acknowledgeManualCancel).
  */
 import type { ApiClient } from "../client";
-import type { Order, OrderStage } from "../types";
+import type { Order, OrderStage, PaymentMethod } from "../types";
 
 const base = (workspaceId: string, orderId?: string) =>
   `/workspaces/${workspaceId}/orders${orderId ? `/${orderId}` : ""}`;
@@ -197,7 +197,7 @@ export interface OrderListFilters {
   archived?: "exclude" | "only" | "include";
   tag?: string;
   source?: OrderSource;
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   governorate?: string;
   carrier?: string;
   seen?: boolean;
@@ -325,7 +325,7 @@ export interface OrderDraft {
   items: OrderDraftItem[];
   contact?: { fullName: string; phone: string; email?: string };
   shippingAddress?: { country: string; province?: string; city?: string; addressLine?: string };
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   discountCode?: string;
   /** Minor units. Set by staff to replace the calculated shipping. */
   shippingAmount?: number;

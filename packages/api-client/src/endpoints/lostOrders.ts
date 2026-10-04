@@ -14,6 +14,7 @@
  * createOrder can give.
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
 export const LOST_ORDER_REASONS = [
   "incomplete",
@@ -121,7 +122,7 @@ export interface LostOrderStats {
 export interface LostOrderConvertPayload {
   contact?: { fullName?: string; phone?: string; email?: string | null };
   shippingAddress?: LostOrderAddress;
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   notes?: string;
   items?: { variantId: string; offerId?: string; quantity: number }[];
 }

@@ -14,6 +14,7 @@
  * wait, and may not end on a wait; each step's fields depend on its type.
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
 export type AutomationStepType =
   | "wait"
@@ -38,7 +39,7 @@ export type AutomationStep =
   | { type: "notify_team"; message: string };
 
 export interface AutomationFlowConditions {
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer" | null;
+  paymentMethod?: PaymentMethod | null;
   /** Minor units. */
   minTotalAmount?: number | null;
   productIds?: string[];

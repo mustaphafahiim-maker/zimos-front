@@ -64,6 +64,8 @@ const STRINGS = {
     cod: "Cash on delivery",
     card: "Card",
     wallet: "Wallet",
+    valu: "valU installments",
+    kiosk: "Kiosk (Aman / Masary)",
     bank_transfer: "Bank transfer",
     minTotal: "Order total at least",
     source: "Order came from",
@@ -126,6 +128,8 @@ const STRINGS = {
     cod: "الدفع عند الاستلام",
     card: "بطاقة",
     wallet: "محفظة",
+    valu: "تقسيط valU",
+    kiosk: "الدفع في الكشك (أمان / مصاري)",
     bank_transfer: "تحويل بنكي",
     minTotal: "إجمالي الطلب لا يقل عن",
     source: "مصدر الطلب",
@@ -411,6 +415,8 @@ export function RuleEditorDialog({
                   <option value="cod">{t.cod}</option>
                   <option value="card">{t.card}</option>
                   <option value="wallet">{t.wallet}</option>
+                  <option value="valu">{t.valu}</option>
+                  <option value="kiosk">{t.kiosk}</option>
                   <option value="bank_transfer">{t.bank_transfer}</option>
                 </Select>
               )}

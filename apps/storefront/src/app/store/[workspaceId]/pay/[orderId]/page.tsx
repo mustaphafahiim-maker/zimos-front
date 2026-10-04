@@ -12,6 +12,7 @@ import { useIsClient } from "@/lib/useIsClient";
 import { orderErrorMessage } from "@/lib/placeOrder";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { usePaymentMethodText } from "@/lib/paymentMethodText";
 
 // While the latest attempt is open, ask again this often, for this long. Each
 // ask may make the server check with the gateway (throttled there too).
@@ -132,7 +133,7 @@ function PaymentPage() {
         orderId,
         token,
         {
-          paymentMethod: method.method === "wallet" ? "wallet" : "card",
+          paymentMethod: method.method === "cod" ? "card" : method.method,
           ...(method.provider ? { paymentProvider: method.provider } : {}),
           returnUrl: paymentPageUrl(basePath, orderId),
         },
@@ -148,7 +149,9 @@ function PaymentPage() {
 
   // An order placed in a funnel goes back into it once paid (lib/payments savePaymentReturn).
   const funnelReturn = isClient ? getPaymentReturn(workspaceId, orderId) : null;
-  const methodName = (m: StorefrontPaymentMethod) => (m.method === "wallet" ? t.payment.wallet : t.payment.card);
+  const more = usePaymentMethodText();
+  const methodName = (m: StorefrontPaymentMethod) =>
+    m.method === "wallet" ? t.payment.wallet : m.method === "valu" ? more.valu : m.method === "kiosk" ? more.kiosk : t.payment.card;
   const thankYou = storeHref(basePath, `/orders/${orderId}?number=${encodeURIComponent(status?.orderNumber ?? "")}`);
   const expiresAt =
     status?.expiresAt &&

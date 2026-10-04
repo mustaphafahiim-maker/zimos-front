@@ -933,7 +933,7 @@ export interface CheckoutPayload {
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
    * payments are switched off platform-wide.
    */
-  paymentMethod: "cod" | "card" | "wallet";
+  paymentMethod: "cod" | OnlineMethod;
   /** Which gateway, when more than one offers the method. */
   paymentProvider?: string;
   /** Online methods: where the gateway sends the shopper back to. */
@@ -1319,7 +1319,9 @@ export type FinancialState =
   | "refunded"
   | "partially_refunded";
 export type FulfillmentState = "unfulfilled" | "partially_fulfilled" | "fulfilled" | "returned";
-export type PaymentMethod = "cod" | "card" | "wallet" | "bank_transfer";
+/** Paid through the store's gateway: valU installments and kiosk (Aman / Masary cash) besides card and wallet. */
+export type OnlineMethod = "card" | "wallet" | "valu" | "kiosk";
+export type PaymentMethod = "cod" | OnlineMethod | "bank_transfer";
 
 export interface OrderContactSnapshot {
   fullName?: string;
@@ -1387,7 +1389,7 @@ export interface Payment {
   maskedDisplay: string | null;
   failureReason: string | null;
   /** Gateway attempts only. */
-  method?: "card" | "wallet" | null;
+  method?: OnlineMethod | null;
   mode?: GatewayMode | null;
   providerOrderId?: string | null;
   providerTransactionId?: string | null;
@@ -4527,7 +4529,7 @@ export interface GatewayFieldDescriptor {
   secret?: boolean;
   placeholder?: string;
   /** Settings: the payment method this field turns on. */
-  method?: "card" | "wallet";
+  method?: OnlineMethod;
   type?: "integer";
 }
 
@@ -4538,7 +4540,7 @@ export interface PaymentGatewayConnection {
   mode: GatewayMode;
   settings: Record<string, unknown>;
   /** The methods these settings can take. */
-  methods: Array<"card" | "wallet">;
+  methods: Array<OnlineMethod>;
   /** Paste into each gateway integration (see webhookSetup). */
   webhookUrl: string;
   lastVerifiedAt: string | null;
@@ -4551,7 +4553,7 @@ export interface PaymentGatewayConnection {
 export interface PaymentGatewayInfo {
   code: string;
   name: string;
-  methods: Array<"card" | "wallet">;
+  methods: Array<OnlineMethod>;
   currencies: string[];
   credentialFields: GatewayFieldDescriptor[];
   settingFields: GatewayFieldDescriptor[];
@@ -4597,7 +4599,7 @@ export interface ConnectPaymentGatewayPayload {
 export interface PaymentMethodEntry {
   id: string;
   provider: string | null;
-  method: "cod" | "card" | "wallet";
+  method: "cod" | OnlineMethod;
   enabled: boolean;
   /** false: its gateway is not connected (or cannot take it). Kept in the list, never offered. */
   available: boolean;
@@ -4613,7 +4615,7 @@ export interface PaymentMethodList {
 export interface StorefrontPaymentMethod {
   id: string;
   provider: string | null;
-  method: "cod" | "card" | "wallet";
+  method: "cod" | OnlineMethod;
   mode: GatewayMode;
 }
 
@@ -4624,7 +4626,7 @@ export interface CheckoutResult {
     id: string;
     status: PaymentStatus;
     provider: string;
-    method: "card" | "wallet";
+    method: OnlineMethod;
     mode: GatewayMode;
     /** Send the shopper here. null when the gateway could not start the payment. */
     redirectUrl: string | null;
@@ -4652,7 +4654,7 @@ export interface ShopperPaymentStatus {
     id: string;
     status: PaymentStatus;
     provider: string;
-    method: "card" | "wallet" | null;
+    method: OnlineMethod | null;
     mode: GatewayMode | null;
     redirectUrl: string | null;
     failureReason: string | null;
@@ -5272,7 +5274,7 @@ export type AutomationTrigger =
   | "order.out_for_delivery"
   | "order.delivered";
 
-export type AutomationPaymentMethod = "cod" | "card" | "wallet" | "bank_transfer";
+export type AutomationPaymentMethod = PaymentMethod;
 
 /** An empty object means the rule fires on every order for its trigger. */
 export interface AutomationConditions {
