@@ -19,6 +19,7 @@ import { AppsPage } from "@/pages/AppsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
 import { CarrierAreasPage } from "@/pages/CarrierAreasPage";
 import { ReferralProgramPage } from "@/pages/ReferralProgramPage";
+import { ThemesPage } from "@/pages/ThemesPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
@@ -72,6 +73,7 @@ export default function App() {
                 <Route path="/referral-program" element={gated(P.AGENTS_VIEW, <ReferralProgramPage />)} />
                 <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />
                 <Route path="/templates" element={gated(P.TEMPLATES_VIEW, <TemplatesPage />)} />
+                <Route path="/themes" element={gated(P.TEMPLATES_VIEW, <ThemesPage />)} />
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
                 <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
                 <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />

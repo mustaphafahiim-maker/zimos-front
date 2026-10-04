@@ -13,6 +13,7 @@ import {
   ListChecks,
   Gauge,
   Network,
+  Palette,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -59,6 +60,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: "Marketplace",
     items: [
       { label: "Templates", to: "/templates", icon: LayoutTemplate, permission: P.TEMPLATES_VIEW },
+      { label: "Themes", to: "/themes", icon: Palette, permission: P.TEMPLATES_VIEW },
       { label: "Suppliers", to: "/suppliers", icon: Factory, permission: P.TEMPLATES_VIEW },
       { label: "Apps", to: "/apps", icon: Puzzle, permission: P.TEMPLATES_VIEW },
     ],
