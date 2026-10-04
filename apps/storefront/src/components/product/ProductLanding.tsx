@@ -39,6 +39,15 @@ import {
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import {
+  TransferDetails,
+  asTransferMethod,
+  transferProblem,
+  useDepositQuote,
+  useTransferCopy,
+  type TransferState,
+} from "@/components/checkout/TransferDetails";
+import type { CheckoutPayload, ManualTransferStoreMethod } from "@store-builder/api-client";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useOrderFormFields } from "@/lib/useOrderFormFields";
 import {
@@ -202,6 +211,12 @@ export function ProductLanding({
   const payment = usePaymentMethods(client, workspaceId);
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  // Manual transfer: the whole order, or the deposit a cash-on-delivery order needs (as on /checkout).
+  const transferCopy = useTransferCopy();
+  const transferMethod = asTransferMethod(method);
+  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
+  const needsTransfer = Boolean(transferMethod || deposit);
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
@@ -251,6 +266,13 @@ export function ProductLanding({
       setFormError(t.custom.summary);
       return;
     }
+    if (needsTransfer) {
+      const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
+      if (problem) {
+        setFormError(problem);
+        return;
+      }
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
@@ -273,7 +295,7 @@ export function ProductLanding({
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
-      if (method.method !== "cod") {
+      if (method.method !== "cod" && !transferMethod) {
         const { next, external } = await placeOnlineOrder({
           client,
           workspaceId,
@@ -293,7 +315,10 @@ export function ProductLanding({
       const order = await placeCodOrder({
         client,
         workspaceId,
-        payload,
+        // A transfer rides along: the whole order ("bank_transfer"), or a COD deposit.
+        payload: (needsTransfer && transfer
+          ? { ...payload, ...(transferMethod ? { paymentMethod: "bank_transfer" } : {}), transfer: transfer.state.details }
+          : payload) as CheckoutPayload,
         visitorId,
       });
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
@@ -610,6 +635,26 @@ export function ProductLanding({
               idPrefix={FORM_PREFIX}
             />
           )}
+          {(transferMethod || deposit) && (
+            <TransferDetails
+              key={transferMethod ? transferMethod.id : "deposit"}
+              client={client}
+              workspaceId={workspaceId}
+              methods={transferMethod ? [transferMethod] : deposit!.methods}
+              deposit={transferMethod ? undefined : (deposit!.amountType ?? "shipping")}
+              amountLabel={
+                transferMethod
+                  ? money(total)
+                  : deposit!.amountType === "fixed"
+                    ? money(deposit!.fixedAmount ?? 0)
+                    : shipping.amount > 0
+                      ? money(shipping.amount)
+                      : null
+              }
+              idPrefix={FORM_PREFIX}
+              onChange={(m, state) => setTransfer({ method: m, state })}
+            />
+          )}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
             {formError && (
@@ -622,7 +667,7 @@ export function ProductLanding({
               ? t.payment.redirecting
               : submitting
                 ? t.form.submitting
-                : `${method.method === "cod" ? t.form.submit : t.payment.payNow} — ${money(total)}`}
+                : `${method.method === "cod" || transferMethod ? t.form.submit : t.payment.payNow} — ${money(total)}`}
           </button>
           {method.method === "cod" && (
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
