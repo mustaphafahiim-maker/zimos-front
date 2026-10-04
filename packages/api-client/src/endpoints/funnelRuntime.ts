@@ -11,6 +11,7 @@
  * funnel, unknown session), VALIDATION_ERROR (422 — e.g. accepting an upsell
  * before any checkout on this session).
  */
+import type { FunnelOwnSettings } from "./funnelExtras";
 import type { ApiClient } from "../client";
 import type { FunnelStepTypeDto } from "./funnels";
 import type { PageTree, StorefrontOrderBump } from "../types";
@@ -54,6 +55,8 @@ export interface FunnelRuntimeOffer {
  * render (a republish removed that step).
  */
 export interface FunnelRuntimeState {
+  /** The funnel and its own settings (currency, icon, title); the step page reads them. */
+  funnel?: { id: string; name: string; subdomain: string | null; settings?: FunnelOwnSettings };
   done?: boolean;
   session: FunnelRuntimeSession;
   step?: FunnelRuntimeStep;

@@ -49,6 +49,7 @@ import {
 import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { useFunnelCurrency } from "./FunnelCurrency";
 import { storeHref } from "@/lib/storeHref";
 import { setTrackingContext, track, trackPurchaseOnce } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
@@ -255,6 +256,7 @@ export function FunnelStepActions({
 }) {
   const flow = useAdvance(workspaceId, funnelId, sessionId, step.key);
   const { t, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
 
   // Tag the store's own analytics with this funnel while its steps are on
   // screen. Set during render so the view_content / begin_checkout effects
@@ -276,7 +278,7 @@ export function FunnelStepActions({
         currency: offer.currency,
       });
     } else {
-      track("ViewContent", { contentName: step.name, currency: store?.currency });
+      track("ViewContent", { contentName: step.name, currency: funnelCurrency ?? store?.currency });
     }
   });
 
@@ -374,6 +376,7 @@ function FunnelCheckout({
   flow: Flow;
 }) {
   const { t, money, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const saved = usePlacedOrder(sessionId);
@@ -399,7 +402,7 @@ function FunnelCheckout({
   // What the order engine charges for this line: the offer's price when the
   // line carries the offer, the variant's own price otherwise.
   const unit = offerId && offer ? parseMoney(offer.priceAmount) : variant ? parseMoney(variant.priceAmount) : 0;
-  const currency = (offerId ? offer?.currency : variant?.currency) ?? store?.currency;
+  const currency = (offerId ? offer?.currency : variant?.currency) ?? funnelCurrency ?? store?.currency;
 
   const line: OrderLine | null = variant ? { variantId: variant.id, offerId, quantity: 1 } : null;
   const autosaveLines: OrderLine[] = line && !placed ? [line] : [];
@@ -825,13 +828,14 @@ export function FunnelOrders({
   standalone?: boolean;
 }) {
   const { t, money, store } = useStore();
+  const funnelCurrency = useFunnelCurrency();
   const isClient = useIsClient();
   const placed = usePlacedOrder(sessionId);
   const followOns = useFollowOnOrders(sessionId);
 
   const snapshot = isClient && orderId ? getOrderSnapshot(workspaceId, orderId) : null;
   const orderNumber = snapshot?.orderNumber ?? (placed && placed.id === orderId ? placed.orderNumber : null);
-  const currency = snapshot?.currency ?? store?.currency;
+  const currency = snapshot?.currency ?? funnelCurrency ?? store?.currency;
   const Title = standalone ? "h1" : "h2";
 
   if (!orderId) {
