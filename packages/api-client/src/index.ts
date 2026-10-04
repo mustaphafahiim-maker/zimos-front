@@ -172,3 +172,5 @@ export * from "./endpoints/contentTranslations";
 export * from "./endpoints/pageScripts";
 // A funnel copied as a new draft (the funnel wizard's "Your funnels").
 export * from "./endpoints/funnelTemplates";
+// The theme catalog: the store's view and the platform console's (themes/themesCatalog.js).
+export * from "./endpoints/themes";

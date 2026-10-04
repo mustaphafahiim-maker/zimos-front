@@ -13,6 +13,11 @@ import { useToast } from "@/components/Toast";
 import { accentOf, lookToPreview, readStoreLook } from "./editor/storeLook";
 import { ORIGINAL_LOOK, THEME_CHOICES, THEME_SPECS, type ColorMode, type ThemeChoice } from "./editor/storeThemes";
 import { ThemeSketch } from "./editor/ThemeSketch";
+import { themesList, type CatalogTheme } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
+import { useAsync } from "@/lib/useAsync";
+import { formatMoney } from "@/lib/format";
+import { FilterTabs } from "@/components/FilterTabs";
 import { themeShowcaseTree } from "./themeShowcase";
 
 const STRINGS = {
@@ -38,6 +43,20 @@ const STRINGS = {
     applied: "{name} is now your store's theme.",
     cancel: "Cancel",
     noPreview: "No preview yet",
+    filter: "Show",
+    all: "All",
+    free: "Free",
+    paid: "Paid",
+    category: "Category",
+    anyCategory: "All kinds",
+    paidNote: "Paid themes can't be bought yet — they will be soon.",
+    cat_general: "General",
+    cat_fashion: "Fashion",
+    cat_electronics: "Electronics",
+    cat_furniture: "Furniture",
+    cat_beauty: "Beauty",
+    cat_kids: "Kids",
+    cat_pets: "Pets",
   },
   ar: {
     title: "ثيم المتجر",
@@ -61,6 +80,20 @@ const STRINGS = {
     applied: "أصبح «{name}» ثيم متجرك.",
     cancel: "إلغاء",
     noPreview: "لا توجد معاينة بعد",
+    filter: "اعرض",
+    all: "الكل",
+    free: "مجانية",
+    paid: "مدفوعة",
+    category: "النوع",
+    anyCategory: "كل الأنواع",
+    paidNote: "الثيمات المدفوعة مش متاحة للشراء لسه — قريب.",
+    cat_general: "عام",
+    cat_fashion: "أزياء",
+    cat_electronics: "إلكترونيات",
+    cat_furniture: "أثاث",
+    cat_beauty: "تجميل",
+    cat_kids: "أطفال",
+    cat_pets: "حيوانات أليفة",
   },
 } satisfies Messages;
 
@@ -79,8 +112,26 @@ export function ThemeGallery() {
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const { currentWorkspace } = useWorkspace();
+  const workspaceId = useWorkspaceId();
   const [mode, setMode] = useState<ColorMode>("light");
   const [selected, setSelected] = useState<ThemeChoice | null>(null);
+  const [price, setPrice] = useState<"all" | "free" | "paid">("all");
+  const [category, setCategory] = useState("");
+  // The platform's catalog (themes/themesCatalog.js): which themes, in what order, named how, at what price.
+  const catalog = useAsync(() => themesList(apiClient, workspaceId).catch(() => null), [workspaceId]);
+  const entries = useMemo(() => new Map((catalog.data?.themes ?? []).map((e) => [e.key, e])), [catalog.data]);
+  const offered: ThemeChoice[] = catalog.data
+    ? catalog.data.themes.map((e) => e.key).filter((k): k is ThemeChoice => (THEME_CHOICES as readonly string[]).includes(k))
+    : [...THEME_CHOICES];
+  const categories = [...new Set(offered.map((k) => entries.get(k)?.category).filter((c): c is string => !!c))];
+  const shown = offered.filter((k) => {
+    const e = entries.get(k);
+    if (price === "free" && e?.price) return false;
+    if (price === "paid" && !e?.price) return false;
+    return !category || e?.category === category;
+  });
+  const nameOf = (k: ThemeChoice) => entries.get(k)?.name[locale] || THEME_SPECS[k].name[locale];
+  const descriptionOf = (k: ThemeChoice) => entries.get(k)?.description[locale] || THEME_SPECS[k].description[locale];
   useThemeFonts();
 
   const look = useMemo(() => readStoreLook(currentWorkspace), [currentWorkspace]);
@@ -101,9 +152,22 @@ export function ThemeGallery() {
         <ModeSwitch mode={mode} onChange={setMode} label={t.modes} light={t.light} dark={t.dark} />
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <FilterTabs label={t.filter} value={price} onChange={setPrice} tabs={[{ value: "all", label: t.all }, { value: "free", label: t.free }, { value: "paid", label: t.paid }]} />
+        {categories.length > 1 && (
+          <FilterTabs
+            label={t.category}
+            value={category}
+            onChange={setCategory}
+            tabs={[{ value: "", label: t.anyCategory }, ...categories.map((c) => ({ value: c, label: (t as Record<string, string>)[`cat_${c}`] ?? c }))]}
+          />
+        )}
+      </div>
+
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {THEME_CHOICES.map((key) => {
-          const spec = THEME_SPECS[key];
+        {shown.map((key) => {
+          const spec = { ...THEME_SPECS[key], name: { ...THEME_SPECS[key].name, [locale]: nameOf(key) }, description: { ...THEME_SPECS[key].description, [locale]: descriptionOf(key) } };
+          const entry = entries.get(key);
           const current = look.storeTheme === key;
           return (
             <li
@@ -125,6 +189,9 @@ export function ThemeGallery() {
                   )}
                 </span>
                 <span className="text-xs text-ink-soft">{spec.description[locale]}</span>
+                {entry?.price && !entry.owned && (
+                  <span className="text-xs font-medium text-accent-dark">{formatMoney(entry.price.amount, entry.price.currency)}</span>
+                )}
                 <button
                   type="button"
                   onClick={() => setSelected(key)}
@@ -142,12 +209,21 @@ export function ThemeGallery() {
       <Modal
         open={selected !== null}
         onClose={() => setSelected(null)}
-        title={selected ? THEME_SPECS[selected].name[locale] : ""}
-        description={selected ? THEME_SPECS[selected].description[locale] : undefined}
+        title={selected ? nameOf(selected) : ""}
+        description={selected ? descriptionOf(selected) : undefined}
         className="max-w-6xl"
       >
         {selected && (
-          <ThemePreview key={selected} theme={selected} initialMode={mode} onDone={() => setSelected(null)} />
+          <ThemePreview
+            key={selected}
+            theme={selected}
+            entry={entries.get(selected) ?? null}
+            initialMode={mode}
+            onDone={() => {
+              setSelected(null);
+              void catalog.refresh({ silent: true });
+            }}
+          />
         )}
       </Modal>
     </section>
@@ -195,13 +271,17 @@ function ModeSwitch({
 /** The modal body: the real storefront in this theme, and the switch to it. */
 function ThemePreview({
   theme,
+  entry,
   initialMode,
   onDone,
 }: {
   theme: ThemeChoice;
+  /** Its catalog row: a paid one the store doesn't own can't be used yet. */
+  entry: CatalogTheme | null;
   initialMode: ColorMode;
   onDone: () => void;
 }) {
+  const locked = !!entry?.price && !entry.owned;
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
@@ -289,6 +369,7 @@ function ThemePreview({
 
       <div className="space-y-4 text-sm">
         {error && <Alert variant="danger">{error}</Alert>}
+        {locked && <Alert>{t.paidNote}</Alert>}
         <p className="text-ink-soft">{t.previewNote}</p>
         <ul className="space-y-2 text-ink-soft">
           <li className="rounded-[0.5rem] border border-line bg-paper px-3 py-2">{t.fixed}</li>
@@ -298,7 +379,7 @@ function ThemePreview({
           <Button type="button" variant="outline" onClick={onDone} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="button" onClick={use} disabled={saving || current}>
+          <Button type="button" onClick={use} disabled={saving || current || locked}>
             {current ? t.inUse : saving ? t.using : t.use}
           </Button>
         </div>
