@@ -116,9 +116,11 @@ export function ProductLanding({
   // --- variant selection -------------------------------------------------
   const groups = useMemo(() => optionGroups(product.variants), [product.variants]);
   const initialVariant = product.variants.find((v) => v.inStock) ?? product.variants[0];
-  // page settings → auto_select_variant: off, the shopper picks every option before buying.
+  // Off on the product (page settings) or for the whole store (purchase form → pre-select a variant):
+  // the shopper picks every option before buying.
+  const autoSelect = page.pageSettings.auto_select_variant !== false && formOptionsOf(checkoutSettings).auto_select_variant !== false;
   const [selection, setSelection] = useState<Record<string, string>>(() =>
-    page.pageSettings.auto_select_variant === false && groups.length > 0 ? {} : { ...(initialVariant?.optionValues ?? {}) }
+    !autoSelect && groups.length > 0 ? {} : { ...(initialVariant?.optionValues ?? {}) }
   );
   // What the shopper picked on this page's variant_selector / bundle_selector (lib/pagePicks), after hydration.
   useEffect(() => {
@@ -137,7 +139,7 @@ export function ProductLanding({
     }, [product.variants])
   );
   // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
-  const choosing = page.pageSettings.auto_select_variant === false && groups.some((g) => !selection[g.name]);
+  const choosing = !autoSelect && groups.some((g) => !selection[g.name]);
   const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
   const available = !!variant?.inStock;
 
