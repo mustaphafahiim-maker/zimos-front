@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, ChevronsUpDown, LogOut, Menu, X } from "lucide-react";
-import { cn } from "@store-builder/ui";
+import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Menu, Settings, X } from "lucide-react";
+import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
+import { KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
 import {
   NAV_GROUPS,
   NAV_GROUP_LABELS,
@@ -25,6 +26,9 @@ import { InstallAppPrompt } from "@/components/InstallAppPrompt";
 const STRINGS = {
   en: {
     signOut: "Sign out",
+    accountMenu: "Account menu",
+    settings: "Settings",
+    shortcuts: "Keyboard shortcuts",
     selectStore: "Select a store",
     newStore: "+ New store",
     allStores: "All my stores",
@@ -40,6 +44,9 @@ const STRINGS = {
   },
   ar: {
     signOut: "تسجيل الخروج",
+    accountMenu: "قائمة الحساب",
+    settings: "الإعدادات",
+    shortcuts: "اختصارات الكيبورد",
     selectStore: "اختر متجرًا",
     newStore: "+ متجر جديد",
     allStores: "كل متاجري",
@@ -80,6 +87,7 @@ function readCollapsedGroups(): Record<string, boolean> {
  */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -137,7 +145,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[11px] rtl:tracking-normal"
+                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
@@ -155,7 +163,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
+                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
                         isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
                       )
                     }
@@ -170,7 +178,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         )}
                         <item.icon
                           className={cn(
-                            "size-[18px] shrink-0 text-ink-soft/80 group-hover:text-ink",
+                            "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
                             isActive && "text-primary"
                           )}
                           strokeWidth={1.75}
@@ -186,27 +194,51 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="flex items-center gap-3 border-t border-line px-4 py-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark dark:text-primary">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
-          {user?.fullName && user.email && (
-            <p className="truncate text-xs text-ink-soft" dir="ltr">
-              {user.email}
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => logout()}
-          aria-label={t.signOut}
-          title={t.signOut}
-          className="shrink-0 cursor-pointer rounded-md p-2 text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink"
-        >
-          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
-        </button>
+      <div className="border-t border-line p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                title={t.accountMenu}
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-start transition-colors hover:bg-primary-soft/70"
+              />
+            }
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark dark:text-primary">
+              {(userLabel || "?").charAt(0).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-ink">{userLabel}</span>
+              {user?.fullName && user.email && (
+                <span className="block truncate text-xs text-ink-soft" dir="ltr">
+                  {user.email}
+                </span>
+              )}
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 text-ink-soft" aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="min-w-56">
+            <DropdownMenuItem
+              onClick={() => {
+                onNavigate?.();
+                navigate("/settings");
+              }}
+            >
+              <Settings className="size-4" aria-hidden />
+              {t.settings}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
+              <Keyboard className="size-4" aria-hidden />
+              {t.shortcuts}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => logout()}>
+              <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
+              {t.signOut}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   );
@@ -350,6 +382,7 @@ export function DashboardLayout() {
 
   return (
     <div className="glass-app flex min-h-screen">
+      <KeyboardShortcuts />
       <aside className="zimos-glass zimos-glass-panel glass-nav sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[264px] shrink-0 md:flex md:flex-col">
         <SidebarContent />
       </aside>
