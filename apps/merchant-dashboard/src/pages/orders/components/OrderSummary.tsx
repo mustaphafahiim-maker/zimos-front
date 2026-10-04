@@ -6,6 +6,7 @@ import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
+import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 
 const STRINGS = {
   en: {
@@ -103,7 +104,7 @@ function AmountRow({ label, value, strong }: { label: string; value: string; str
   );
 }
 
-export function OrderSummary({ order }: { order: Order }) {
+export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: () => void }) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const c = order.currency;
@@ -247,10 +248,12 @@ export function OrderSummary({ order }: { order: Order }) {
                 <bdi dir="ltr">{order.contactSnapshot.email}</bdi>
               </p>
             )}
+            <OrderContactTools order={order} onChanged={onChanged} />
           </div>
           <div>
             <h3 className="mb-1 font-medium text-ink">{t.shippingAddress}</h3>
             <p className="text-ink-soft">{addressText}</p>
+            <OrderAddressTools order={order} />
             {address?.notes && (
               <p className="text-ink-soft">
                 {t.note}: {address.notes}

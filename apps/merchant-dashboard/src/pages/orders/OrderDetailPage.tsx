@@ -117,7 +117,7 @@ export function OrderDetailPage() {
 
             <ConfirmationPanel order={data} onChanged={reload} />
 
-            <OrderSummary order={data} />
+            <OrderSummary order={data} onChanged={reload} />
 
             <OrderProtectionSection order={data} />
 

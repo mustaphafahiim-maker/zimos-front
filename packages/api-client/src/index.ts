@@ -122,3 +122,5 @@ export * from "./endpoints/orderListColumns";
 export * from "./endpoints/orderSelection";
 // "Confirm via WhatsApp" on the order page (orders/whatsappConfirm.js).
 export * from "./endpoints/orderWhatsappConfirm";
+// Editing the customer's details on an order (orders/orderService.updateOrderLimited).
+export * from "./endpoints/orderContactEdit";
