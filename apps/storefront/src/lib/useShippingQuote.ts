@@ -1,9 +1,10 @@
 "use client";
 
-import { storefrontQuoteExtras, type StorefrontQuoteExtras } from "@store-builder/api-client";
+import { storefrontQuoteExtras, storefrontShippingQuoteFor, type StorefrontQuoteExtras } from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
+import { getVisitorId } from "./visitorId";
 import { quotePricesShipping, shippingLineFor, type ShippingLine } from "./shippingLine";
 import { quoteOptionsOf, type ShippingOptionChoice } from "./shippingChoice";
 
@@ -67,8 +68,8 @@ export function useShippingQuote({
     if (!active) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: province ?? null, items })
+      // For this visitor: a product A/B test's price counts, as the order will charge it.
+      storefrontShippingQuoteFor(client, workspaceId, { country: "EG", governorate: province ?? null, items }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (!cancelled) setState({ key: requestKey, quote, failed: false });
         })

@@ -9,6 +9,7 @@ import {
   type StorefrontQuoteExtras,
 } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
 
 /*
  * The shopper's side of coupons and order rules (SPEC §10.5–10.6): a
@@ -100,7 +101,8 @@ export function useCouponPreview(
     let cancelled = false;
     const timer = setTimeout(() => {
       const [couponCode, couponItems] = JSON.parse(key) as [string, typeof items];
-      storefrontCouponPreview(client, workspaceId, couponCode, couponItems)
+      // A product A/B test prices the lines for this visitor (lib/productTest).
+      storefrontCouponPreview(client, workspaceId, couponCode, couponItems, { visitorId: getVisitorId(workspaceId) })
         .then((preview) => {
           if (!cancelled) setState({ key, preview });
         })

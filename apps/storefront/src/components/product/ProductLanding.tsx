@@ -61,6 +61,7 @@ import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
 import { CashIcon, CheckIcon } from "../Icons";
 import { customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
 import { readPick, usePick } from "@/lib/pagePicks";
+import { useProductTest } from "@/lib/productTest";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
@@ -78,7 +79,7 @@ const FORM_PREFIX = "quick";
  */
 export function ProductLanding({
   workspaceId,
-  product,
+  product: listedProduct,
   bump: bumpOffer,
   description,
   checkoutSettings,
@@ -92,6 +93,8 @@ export function ProductLanding({
   checkoutSettings: CheckoutSettings;
 }) {
   const { t, money, locale, store } = useStore();
+  // A running A/B test: this visitor's prices (lib/productTest); the price waits until it is known.
+  const { product, pending: testPending } = useProductTest(workspaceId, listedProduct);
   const text = productPageText(locale);
   // The product page's settings (SPEC §7.3), defaults filled in.
   const page = useMemo(() => storefrontProductPage(product), [product]);
@@ -374,7 +377,7 @@ export function ProductLanding({
       {/* Title + price */}
       <div>
         <h1 className="zt-pdp-title text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
-        <div className="zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className={`zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1${testPending ? " invisible" : ""}`}>
           <span className="text-3xl font-bold text-ink" data-sale={compareAtUnit ? "" : undefined}>{money(unit)}</span>
           <ConvertedPrice amountMinor={unit} currency={store?.currency ?? "EGP"} className="basis-full order-last" />
           {compareAtUnit && (

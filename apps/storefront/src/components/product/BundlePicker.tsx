@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ApiClient, StorefrontBundle, StorefrontBundleTier, StorefrontProduct, StorefrontVariant } from "@store-builder/api-client";
+import { storefrontShippingQuoteFor, type ApiClient, type StorefrontBundle, type StorefrontBundleTier, type StorefrontProduct, type StorefrontVariant } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { variantLabel } from "@/lib/product";
+import { getVisitorId } from "@/lib/visitorId";
 import type { OrderLine } from "@/lib/placeOrder";
 import { CartGlyph, CheckIcon } from "../Icons";
 import { btnSecondary, input } from "../ui";
@@ -107,8 +108,7 @@ export function useBundleSelection({
     if (!requestKey) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: null, items: JSON.parse(requestKey) })
+      storefrontShippingQuoteFor(client, workspaceId, { country: "EG", governorate: null, items: JSON.parse(requestKey) }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (cancelled) return;
           const discount = (quote as { bundleDiscountAmount?: number }).bundleDiscountAmount ?? 0;

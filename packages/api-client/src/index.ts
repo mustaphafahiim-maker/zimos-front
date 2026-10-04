@@ -174,3 +174,5 @@ export * from "./endpoints/pageScripts";
 export * from "./endpoints/funnelTemplates";
 // The theme catalog: the store's view and the platform console's (themes/themesCatalog.js).
 export * from "./endpoints/themes";
+// A/B tests on a product page: staff CRUD and the shopper's variant (catalog/productTests.js).
+export * from "./endpoints/productTests";

@@ -98,12 +98,15 @@ export async function storefrontCouponPreview(
   client: ApiClient,
   workspaceId: string,
   code: string,
-  items: { variantId: string; offerId?: string; quantity: number }[]
+  items: { variantId: string; offerId?: string; quantity: number }[],
+  /** A product A/B test prices the lines for this visitor (catalog/productTests.js). */
+  opts: { visitorId?: string } = {}
 ): Promise<StorefrontCouponPreview> {
   const body = await client.request<{ coupon: StorefrontCouponPreview }>(`/store/${workspaceId}/coupon-preview`, {
     method: "POST",
     body: { code, items },
     auth: false,
+    ...(opts.visitorId ? { headers: { "X-Visitor-Id": opts.visitorId } } : {}),
   });
   return body.coupon;
 }

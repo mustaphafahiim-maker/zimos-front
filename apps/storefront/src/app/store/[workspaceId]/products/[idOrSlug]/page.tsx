@@ -16,7 +16,7 @@ import { storefrontProductReviews } from "@store-builder/api-client";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
-import { ProductGallery } from "@/components/product/ProductGallery";
+import { TestedProductGallery } from "@/components/product/TestedProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
 import { ProductVideos } from "@/components/product/ProductVideos";
 import { ProductTabs, type ProductTab } from "@/components/product/ProductTabs";
@@ -25,7 +25,7 @@ import { TrustStrip } from "@/components/TrustStrip";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { orderBumpOf } from "@/lib/commerce";
-import { firstImage, productImages } from "@/lib/product";
+import { firstImage } from "@/lib/product";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -201,7 +201,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
             <CodeSlot name="above_gallery" />
-            <ProductGallery images={productImages(product)} name={product.name} />
+            <TestedProductGallery workspaceId={workspaceId} product={product} />
             <ProductVideos product={product} label={product.name} />
             <CodeSlot name="below_gallery" />
           </div>
