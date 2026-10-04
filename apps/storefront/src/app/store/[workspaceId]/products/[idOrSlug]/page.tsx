@@ -10,7 +10,7 @@ import {
 import { StoreInfoCards } from "@/components/StoreInfoCards";
 import { CodeSlot } from "@/components/CustomCode";
 import { ProductJsonLd } from "@/components/product/ProductJsonLd";
-import { storeOrigin } from "@/lib/domains";
+import { canonicalOrigin } from "@/lib/domains";
 import { ProductContent } from "@/components/product/ProductContent";
 import { storefrontProductReviews } from "@store-builder/api-client";
 import { ProductReviews } from "@/components/product/ProductReviews";
@@ -177,7 +177,7 @@ export default async function ProductPage({ params }: { params: Params }) {
       {/* schema.org Product for search engines and Google Merchant. */}
       <ProductJsonLd
         product={product}
-        url={`${storeOrigin(store.slug)}/products/${product.slug}`}
+        url={`${canonicalOrigin(store)}/products/${product.slug}`}
         currency={store.currency}
         storeName={store.name}
       />

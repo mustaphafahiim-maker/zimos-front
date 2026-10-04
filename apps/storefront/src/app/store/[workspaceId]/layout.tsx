@@ -29,7 +29,7 @@ import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/Custo
 import { storeCustomCode } from "@/lib/headCode";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
-import { storeOrigin } from "@/lib/domains";
+import { canonicalOrigin } from "@/lib/domains";
 import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { StoreShellProvider } from "@/lib/StoreShellContext";
@@ -79,7 +79,7 @@ export async function generateMetadata({
   const ogImage = seo.ogImageUrl || store.logoUrl;
 
   return {
-    metadataBase: new URL(storeOrigin(store.slug)),
+    metadataBase: new URL(canonicalOrigin(store)),
     title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
     ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),

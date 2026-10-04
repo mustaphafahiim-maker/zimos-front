@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   MARKETING_URL,
   STORE_SLUG_HEADER,
+  hostnameOf,
   isRootDomainHost,
   storeSlugFromHost,
 } from "@/lib/domains";
@@ -14,7 +15,7 @@ import {
   isTokenShaped,
   storePreviewCookieOptions,
 } from "@/lib/storePreview";
-import { resolveCustomHost } from "@/lib/customDomains";
+import { primaryHostForPlatformHost, resolveCustomHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
 import { CODE_REF_HEADER } from "@/lib/headCodeParse";
 
@@ -117,6 +118,22 @@ export async function proxy(request: NextRequest) {
       }
       // Another workspace's path on this store's host — not ours to rewrite.
       return next();
+    }
+
+    // The store's primary domain is its one address (SPEC §8.11): a visit on
+    // its platform subdomain or another of its domains moves there, same path
+    // and query. Not for a staff preview, a payment page (a gateway may return
+    // to the host it was given) or anything but a page load.
+    const method = request.method.toUpperCase();
+    if (!preview && (method === "GET" || method === "HEAD") && !/^\/pay(\/|$)/.test(pathname)) {
+      const primary = custom ? custom.primaryHost : await primaryHostForPlatformHost(host);
+      if (primary && primary !== hostnameOf(host)) {
+        const target = new URL(`https://${primary}${pathname}${request.nextUrl.search}`);
+        // Temporary (307), like the marketing redirect below: a browser keeps a permanent
+        // one for good, and a merchant may change or remove the primary domain later.
+        // Search engines still consolidate on it through the canonical links.
+        return NextResponse.redirect(target, 307);
+      }
     }
 
     const url = request.nextUrl.clone();
