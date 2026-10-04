@@ -11,7 +11,7 @@ import {
 } from "@store-builder/api-client";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { unmetPasswordRules } from "@/lib/passwordRules";
 import { UsernameField } from "@/components/UsernameField";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
@@ -270,9 +270,9 @@ export function RegisterPage() {
   const stepNumber = step === "plan" ? 1 : step === "account" ? (planStep ? 2 : 1) : totalSteps;
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className={step === "plan" ? "w-full max-w-xl" : "w-full max-w-sm"}>
           {totalSteps > 1 && (
             <p className="mb-3 text-xs font-medium text-ink-soft">

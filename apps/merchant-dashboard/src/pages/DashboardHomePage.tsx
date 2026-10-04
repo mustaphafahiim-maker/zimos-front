@@ -16,6 +16,7 @@ import { canViewAnalytics } from "@/lib/analyticsAccess";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StoreOverview } from "@/pages/home/StoreOverview";
 import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
+import { SiteAnalytics } from "@/pages/home/SiteAnalytics";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -216,6 +217,12 @@ export function DashboardHomePage() {
           </>
         ) : null}
       </div>
+
+      {analyticsAllowed && (
+        <div className="mt-8">
+          <SiteAnalytics />
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[

@@ -3,8 +3,8 @@ import { cn } from "@store-builder/ui";
 import { useLocale, useT } from "@/i18n/LocaleContext";
 import { LAB_MESSAGES } from "../messages";
 import { BRAND_MESSAGES } from "./messages";
-import { ANGLE_DEG, LOCKUP, MARK, MICRO, markModules, markPaths } from "./geometry";
-import { ZAppIcon, ZLogo, ZMark, ZTaglineLockup, ZWordmark } from "./ZimosBrand";
+import { ANGLE_DEG, LOCKUP, MARK, MICRO, markModules, markPaths } from "@/brand/geometry";
+import { ZAppIcon, ZLogo, ZMark, ZTaglineLockup, ZWordmark } from "@/brand/ZimosBrand";
 import "./brand.css";
 
 type Tone = "white" | "surface" | "navy" | "black" | "blue" | "busy";

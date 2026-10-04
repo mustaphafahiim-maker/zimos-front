@@ -4,7 +4,7 @@ import { Alert, Button } from "@store-builder/ui";
 import { isApiErrorCode } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { UsernameField } from "@/components/UsernameField";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
@@ -84,9 +84,9 @@ export function ChooseUsernamePage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5" noValidate>
           <div>
             <h1 className="font-display text-3xl font-medium text-ink">{t.title}</h1>

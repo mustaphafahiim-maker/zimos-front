@@ -3,10 +3,12 @@ import { cn } from "@store-builder/ui";
 import { CAP, LOCKUP, MARK, MICRO, STEM, WORDMARK, markPaths } from "./geometry";
 
 /**
- * The proposed ZIMOS identity as components: the mark, the wordmark, the
- * lockups and the app icon. A proposal shown in the design lab only — the
- * product keeps the approved exports in `components/ZimosLogo.tsx` until the
- * owner signs this off.
+ * The ZIMOS identity as components: the mark, the wordmark, the lockups and
+ * the app icon, all drawn from `geometry.ts`. `components/ZimosLogo.tsx`
+ * renders these in the dashboard; the design lab shows the full system.
+ *
+ * Colours come from the brand board's own tokens (`--zb-*`) when it is on
+ * screen, and from the product's tokens everywhere else.
  */
 
 const MASTER_PATHS = markPaths(MARK);
@@ -14,12 +16,14 @@ const MICRO_PATHS = markPaths(MICRO);
 
 /** Colours per logo version: [mark, wordmark]. */
 const TONES = {
-  color: ["var(--zb-blue)", "var(--zb-navy)"],
-  navy: ["var(--zb-navy)", "var(--zb-navy)"],
+  color: ["var(--zb-blue, var(--color-primary))", "var(--zb-navy, var(--color-ink))"],
+  navy: ["var(--zb-navy, var(--color-ink))", "var(--zb-navy, var(--color-ink))"],
+  /** The brand colours themselves, for a surface that is light in both themes. */
+  fixed: ["#165DFF", "#081F5C"],
   black: ["#000000", "#000000"],
   white: ["#ffffff", "#ffffff"],
   /** For dark surfaces: the mark keeps its blue, the wordmark turns white. */
-  dark: ["var(--zb-blue)", "#ffffff"],
+  dark: ["var(--zb-blue, #5b8df6)", "#ffffff"],
 } as const;
 export type BrandTone = keyof typeof TONES;
 
@@ -164,7 +168,7 @@ export function ZTaglineLockup({ height = 40, tone = "color", className }: LogoP
       <ZLogo height={height} tone={tone} />
       <span
         className="zb-tagline"
-        style={{ fontSize: Math.max(9, height * 0.22), color: soft ? "rgb(255 255 255 / 0.78)" : "var(--zb-ink-soft)" }}
+        style={{ fontSize: Math.max(9, height * 0.22), color: soft ? "rgb(255 255 255 / 0.78)" : "var(--zb-ink-soft, var(--color-ink-soft))" }}
       >
         Commerce, in motion.
       </span>
@@ -184,11 +188,11 @@ interface AppIconProps {
 
 /** App icon: the Z alone, centred in a Deep Navy container with half the side as padding. */
 export function ZAppIcon({ size = 96, shape = "squircle", surface = "navy", markRatio = 0.5, className }: AppIconProps) {
-  const background = surface === "navy" ? "var(--zb-navy)" : surface === "blue" ? "var(--zb-blue)" : "#ffffff";
-  const color = surface === "white" ? "var(--zb-blue)" : "#ffffff";
+  const background = surface === "navy" ? "var(--zb-navy, #081f5c)" : surface === "blue" ? "var(--zb-blue, #165dff)" : "#ffffff";
+  const color = surface === "white" ? "var(--zb-blue, #165dff)" : "#ffffff";
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center", surface === "white" && "border border-[var(--zb-line)]", className)}
+      className={cn("inline-flex shrink-0 items-center justify-center", surface === "white" && "border border-[var(--zb-line,var(--color-line))]", className)}
       style={{ width: size, height: size, background, color, borderRadius: shape === "circle" ? "50%" : size * 0.225 }}
       aria-hidden
     >

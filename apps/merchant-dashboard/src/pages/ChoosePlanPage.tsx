@@ -4,7 +4,7 @@ import { Alert, Button, Spinner } from "@store-builder/ui";
 import { isApiErrorCode, type PublicPlan } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { PlanPicker, type PlanChoice } from "@/components/plans/PlanPicker";
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -101,9 +101,9 @@ export function ChoosePlanPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-xl">
           <h1 id={headingId} className="font-display text-3xl font-medium text-ink">
             {t.title}

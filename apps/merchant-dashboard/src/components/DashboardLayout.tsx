@@ -14,8 +14,6 @@ import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -114,6 +112,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <ZimosLogo height={24} />
         </Link>
         <StoreSwitcher onNavigate={onNavigate} />
+        {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
       <nav aria-label={t.navLabel} className="shell-scroll flex-1 overflow-y-auto px-3 pb-4">
         <SidebarShortcuts onNavigate={onNavigate} />
@@ -389,27 +388,19 @@ export function DashboardLayout() {
             >
               <Menu className="size-5" aria-hidden />
             </button>
-            <span className="truncate text-sm font-semibold text-ink md:hidden">{storeName}</span>
-            <CommandPalette />
+            <Breadcrumbs />
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* Dashboard-wide locale switch. Lives in the header so it stays
-                reachable on mobile, where the sidebar collapses into the drawer. */}
+            {/* Search, the store's link and alerts. Language and theme are in Settings. */}
+            <CommandPalette />
+            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
             <NotificationsBell />
-            <LanguageSwitch className="hidden sm:inline-flex" />
-            <LanguageSwitch compact className="sm:hidden" />
-            <ThemeToggle />
           </div>
         </header>
 
-        {/* The page sits straight on the backdrop; the breadcrumb is a plain row above it. */}
+        {/* The page sits straight on the backdrop. */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-11 items-center justify-between gap-3 px-4 pt-3 sm:px-6">
-            <Breadcrumbs />
-            {/* The store's public link: on every page, and it follows the store switcher. */}
-            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
-          </div>
           <main className="flex-1 p-4 pb-14 sm:p-6 sm:pb-16">
             {/* Subscription expiring / expired, or the store suspended. */}
             <AccessBanner />

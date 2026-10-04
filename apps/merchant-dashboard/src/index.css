@@ -544,3 +544,131 @@ html.dark {
 .shell-scroll:hover {
   scrollbar-color: color-mix(in srgb, var(--color-ink) 26%, transparent) transparent;
 }
+
+/* ------------------------------------------------------------------ *
+ * Sign-in pages: one Glass card over a slow backdrop in the brand colours.
+ * The pages keep their own forms and logic; this only frames them.
+ * ------------------------------------------------------------------ */
+.auth-glass {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6rem 1rem 2.5rem;
+  background: var(--color-paper);
+}
+.auth-glass-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.auth-glass-stage > * {
+  padding: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-paper-raised) 78%, var(--color-line));
+  border-radius: 1.75rem;
+  background: var(--color-paper-raised);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 30px 70px -34px color-mix(in srgb, var(--color-primary-dark) 55%, transparent);
+}
+@media (min-width: 40rem) {
+  .auth-glass-stage > * {
+    padding: 2.25rem;
+  }
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-glass-stage > * {
+    background: color-mix(in srgb, var(--color-paper-raised) 62%, transparent);
+    -webkit-backdrop-filter: blur(26px);
+    backdrop-filter: blur(26px);
+  }
+}
+.dark .auth-glass-stage > * {
+  border-color: var(--color-line);
+}
+
+/* Fields and buttons take the pill shape of the card. */
+.auth-glass [data-slot="input"] {
+  height: 2.875rem;
+  border-radius: 9999px;
+  padding-inline: 1.125rem;
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 90%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"],
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  min-height: 2.875rem;
+  border-radius: 9999px;
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 12px 22px -14px color-mix(in srgb, var(--color-primary) 85%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+}
+
+.auth-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: auth-float 22s ease-in-out infinite;
+}
+.auth-blob[data-n="1"] {
+  inset-block-end: -9rem;
+  inset-inline-start: -8rem;
+  width: 34rem;
+  height: 26rem;
+  background: var(--color-primary);
+}
+.auth-blob[data-n="2"] {
+  inset-block-start: -7rem;
+  inset-inline-end: -5rem;
+  width: 26rem;
+  height: 24rem;
+  background: var(--color-cyan);
+  animation-duration: 27s;
+  animation-direction: reverse;
+}
+.auth-blob[data-n="3"] {
+  inset-block-end: 3rem;
+  inset-inline-end: 16%;
+  width: 22rem;
+  height: 22rem;
+  background: var(--color-primary-dark);
+  opacity: 0.24;
+  animation-duration: 31s;
+}
+.dark .auth-blob {
+  opacity: 0.32;
+}
+@keyframes auth-float {
+  50% {
+    transform: translate(18px, -22px) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .auth-glass-stage > * {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .auth-blob {
+    display: none;
+  }
+}
