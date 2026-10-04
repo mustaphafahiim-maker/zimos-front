@@ -198,3 +198,5 @@ export * from "./endpoints/funnelGenericPages";
 export * from "./endpoints/digitalMultipart";
 // Switch to cash on delivery with the COD checks: a code, a deposit (payments/codSwitchChecks.js).
 export * from "./endpoints/codSwitch";
+// Unsubscribing from marketing emails (notifications/marketingUnsubscribe.js).
+export * from "./endpoints/marketingUnsubscribe";
