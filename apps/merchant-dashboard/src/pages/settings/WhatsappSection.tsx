@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { WhatsappTemplatesPanel } from "@/components/WhatsappTemplates";
 
 const STRINGS = {
   en: {
@@ -176,11 +177,15 @@ export function WhatsappSection() {
           onRetry={() => integration.refresh()}
         >
           {data && isConnected && !reconnecting ? (
-            <ConnectedView
-              integration={data as WhatsappIntegrationConnected}
-              onReconnect={() => setReconnecting(true)}
-              onDisconnect={() => setConfirmDisconnect(true)}
-            />
+            <>
+              <ConnectedView
+                integration={data as WhatsappIntegrationConnected}
+                onReconnect={() => setReconnecting(true)}
+                onDisconnect={() => setConfirmDisconnect(true)}
+              />
+              {/* The account's templates and their status in Meta (components/WhatsappTemplates.tsx). */}
+              <WhatsappTemplatesPanel />
+            </>
           ) : data ? (
             <div className="space-y-5">
               {!isConnected && <SetupGuide />}

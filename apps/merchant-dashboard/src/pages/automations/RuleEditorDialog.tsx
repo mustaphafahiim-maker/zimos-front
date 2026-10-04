@@ -22,6 +22,7 @@ import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { AUTOMATION_STRINGS, emptyStep, stepProblem, stepTypeLabel, triggerLabel } from "./automationText";
+import { TemplatePicker } from "@/components/WhatsappTemplates";
 
 const STRINGS = {
   en: {
@@ -508,6 +509,12 @@ function StepFields({
     case "whatsapp_template":
       return (
         <div className="space-y-3">
+          {/* A template synced from Meta fills the name, language and variable count. */}
+          <TemplatePicker
+            name={step.template}
+            language={step.language}
+            onPick={(tpl) => onChange({ template: tpl.name, language: tpl.language, params: Array.from({ length: tpl.paramsCount }, (_, i) => step.params[i] ?? "") })}
+          />
           <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
             <TextField label={t.templateName} dir="ltr" hint={t.templateHint} value={step.template} onChange={(e) => onChange({ template: e.target.value.trim() })} />
             <TextField label={t.language} dir="ltr" value={step.language} onChange={(e) => onChange({ language: e.target.value.trim() })} />

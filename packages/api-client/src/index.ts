@@ -142,6 +142,8 @@ export * from "./endpoints/profile";
 export * from "./endpoints/emailChange";
 // Help center, Telegram and tutorial links (platformAdmin/educationLinks.js).
 export * from "./endpoints/education";
+// WhatsApp message templates synced from Meta (whatsapp/whatsappTemplates.js).
+export * from "./endpoints/whatsappTemplates";
 // The thank-you page's download links (digital/digitalRoutes.js).
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).

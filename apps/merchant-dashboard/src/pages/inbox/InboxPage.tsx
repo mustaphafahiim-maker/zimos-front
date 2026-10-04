@@ -39,6 +39,7 @@ import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { TemplatePicker } from "@/components/WhatsappTemplates";
 
 /** There is no realtime channel, so the inbox polls while the tab is visible. */
 const POLL_MS = 10_000;
@@ -940,6 +941,16 @@ function TemplateForm({
           hint={t.phoneHint}
         />
       )}
+      {/* A template synced from Meta fills the name, language and variable count. */}
+      <TemplatePicker
+        name={name}
+        language={language}
+        onPick={(tpl) => {
+          setName(tpl.name);
+          setLanguage(tpl.language);
+          setParams((prev) => Array.from({ length: tpl.paramsCount }, (_, i) => prev[i] ?? ""));
+        }}
+      />
       <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
         <TextField
           label={t.templateName}
