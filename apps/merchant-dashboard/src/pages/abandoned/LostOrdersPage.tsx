@@ -42,6 +42,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { LostOrderProductFilter, LostOrdersBulkBar, useLostOrderSelection } from "./LostOrdersBulk";
 
 /**
  * System role keys carrying orders.manage, which every action here needs
@@ -252,6 +253,7 @@ export function LostOrdersPage() {
   const [source, setSource] = useState<"" | "store" | "funnel">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [productId, setProductId] = useState("");
 
   const filters = useMemo(
     () => ({
@@ -260,10 +262,11 @@ export function LostOrdersPage() {
       source: source || undefined,
       from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
       to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
+      productId: productId || undefined,
     }),
-    [tab, reason, source, from, to]
+    [tab, reason, source, from, to, productId]
   );
-  const filtered = Boolean(reason || source || from || to);
+  const filtered = Boolean(reason || source || from || to || productId);
 
   const [abandonedAfter, setAbandonedAfter] = useState<number | null>(null);
   const list = useCursorList<LostOrder>(
@@ -337,6 +340,7 @@ export function LostOrdersPage() {
     void stats.refresh({ silent: true });
   }
 
+  const selection = useLostOrderSelection(list.items);
   const columns: Column<LostOrder>[] = [
     {
       key: "customer",
@@ -524,7 +528,8 @@ export function LostOrdersPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <LostOrderProductFilter value={productId} onChange={setProductId} />
         <Field label={t.filterReason}>
           {(props) => (
             <Select {...props} value={reason} onChange={(e) => setReason(e.target.value as "" | LostOrderReason)}>
@@ -550,10 +555,17 @@ export function LostOrdersPage() {
         <TextField label={t.to} type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
       </div>
 
+      <LostOrdersBulkBar
+        selection={selection}
+        onDone={() => {
+          list.reload();
+          void stats.refresh({ silent: true });
+        }}
+      />
       <DataState loading={list.loading} error={list.items.length ? null : list.error} onRetry={list.reload}>
         <Card className="p-0">
           <DataTable
-            columns={columns}
+            columns={[selection.column, ...columns]}
             rows={list.items}
             rowKey={(s) => s.id}
             minWidth="68rem"

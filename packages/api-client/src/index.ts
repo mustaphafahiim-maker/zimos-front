@@ -148,3 +148,5 @@ export * from "./endpoints/shippingOptions";
 export * from "./endpoints/push";
 // Each teammate's saved list views (workspaces/savedViews.js).
 export * from "./endpoints/savedViews";
+// Lost orders in bulk (checkoutSessions/lostOrderBulk.js).
+export * from "./endpoints/lostOrdersBulk";
