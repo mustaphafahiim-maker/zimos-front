@@ -4074,7 +4074,8 @@ export interface BlockPhoneResult {
 // ---------------------------------------------------------------------
 
 export interface CaptureCheckoutSessionPayload {
-  contact: { phone: string; fullName?: string; email?: string };
+  /** A name or a phone, at least one. A save without a phone keeps the one already saved. */
+  contact: { phone?: string; fullName?: string; email?: string };
   /** 1–20 lines, quantity 1–100. Priced server-side. */
   items: Array<{ variantId: string; offerId?: string; quantity: number }>;
   source?: "store" | "funnel";
