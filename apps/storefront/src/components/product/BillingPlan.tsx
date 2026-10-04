@@ -27,6 +27,8 @@ const TEXT = {
           ? { week: "كل أسبوعين", month: "كل شهرين", year: "كل سنتين" }[unit]
           : `كل ${n} ${{ week: "أسابيع", month: "شهور", year: "سنين" }[unit]}`,
     subscription: (every: string) => `اشتراك، بيتجدد ${every}`,
+    trial: (days: number, price: string, every: string) => `${days} يوم مجانًا، وبعدها ${price} ${every}`,
+    trialToday: "المنتج مش هيتحسب النهارده — بتدفع بس أي حاجة تانية في الطلب زي الشحن، وأول خصم بعد فترة التجربة. تجربة واحدة لكل عميل.",
     cancelAnytime: "تقدر تلغيه في أي وقت من اللينك اللي هيوصلك.",
     installments: (n: number, price: string, every: string) => `${n} دفعات، ${price} ${every}`,
     total: (total: string) => `الإجمالي ${total}`,
@@ -39,6 +41,8 @@ const TEXT = {
     every: (n: number, unit: BillingInterval) =>
       n === 1 ? `every ${unit}` : `every ${n} ${unit}s`,
     subscription: (every: string) => `Subscription, renews ${every}`,
+    trial: (days: number, price: string, every: string) => `${days} days free, then ${price} ${every}`,
+    trialToday: "The product isn't charged today — you pay only for anything else in the order, like shipping, and the first charge comes after the trial. One trial per customer.",
     cancelAnytime: "Cancel anytime from the link we send you.",
     installments: (n: number, price: string, every: string) => `${n} payments of ${price}, ${every}`,
     total: (total: string) => `${total} in total`,
@@ -65,6 +69,11 @@ export function BillingPlanNote({ plan, unitMinor }: { plan: ProductBillingPlan 
         <>
           <p className="font-semibold">{text.installments(plan.payments, money(unitMinor), every)}</p>
           <p className="text-ink-soft">{text.total(money(unitMinor * plan.payments))}</p>
+        </>
+      ) : plan.trialDays ? (
+        <>
+          <p className="font-semibold">{text.trial(plan.trialDays, money(unitMinor), every)}</p>
+          <p className="text-ink-soft">{text.cancelAnytime}</p>
         </>
       ) : (
         <>
@@ -94,7 +103,7 @@ export function PlanFormTitle() {
   return <>{useText().formTitle}</>;
 }
 
-export function PlanPaymentNote({ blocked }: { blocked: boolean }) {
+export function PlanPaymentNote({ blocked, trialDays }: { blocked: boolean; trialDays?: number }) {
   const text = useText();
   return (
     <div role={blocked ? "alert" : undefined} className={`mt-3 rounded-xl px-4 py-3 text-sm ${blocked ? "bg-danger-soft text-danger" : "bg-primary-soft text-ink"}`}>
@@ -104,6 +113,7 @@ export function PlanPaymentNote({ blocked }: { blocked: boolean }) {
         <>
           <p className="font-semibold">{text.cardOnly}</p>
           <p className="text-ink-soft">{text.cardSaved}</p>
+          {trialDays ? <p className="mt-1 text-ink-soft">{text.trialToday}</p> : null}
         </>
       )}
     </div>

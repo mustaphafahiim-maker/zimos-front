@@ -26,14 +26,14 @@ export function PaymentMethodPicker({
   onChange: (id: string) => void;
   idPrefix: string;
   /** A product on a plan is in the order: card only, saved without a tick (product/BillingPlan). */
-  plan?: { blocked: boolean } | null;
+  plan?: { blocked: boolean; trialDays?: number } | null;
 }) {
   const { t, store } = useStore();
   const workspaceId = store?.workspaceId ?? "";
   const transferCopy = useTransferCopy();
   const [saveCard, setSaveCard] = useSaveCard(workspaceId);
   const cardChosen = !plan && methods.some((m) => m.id === value && m.method === "card");
-  const planNote = plan ? <PlanPaymentNote blocked={plan.blocked} /> : null;
+  const planNote = plan ? <PlanPaymentNote blocked={plan.blocked} trialDays={plan.trialDays} /> : null;
 
   const copy = (m: StorefrontPaymentMethod) =>
     asTransferMethod(m)

@@ -5,6 +5,7 @@ import { ApiError, subscriptionPortalCancel, subscriptionPortalGet, type Subscri
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { btnPrimary, btnSecondary, card, container } from "./ui";
+import { SubscriptionCardPanel } from "./SubscriptionCard";
 
 const STRINGS = {
   en: {
@@ -59,7 +60,8 @@ const STRINGS = {
 
 /**
  * The customer's page for one subscription or installment plan (SPEC §18.1):
- * what it charges, when, and a cancel button for subscriptions. The token in
+ * what it charges, when, the card it is charged to (and changing it), and a
+ * cancel button for subscriptions. The token in
  * the address is the credential.
  */
 export function SubscriptionPortal({ workspaceId, token }: { workspaceId: string; token: string }) {
@@ -144,6 +146,9 @@ export function SubscriptionPortal({ workspaceId, token }: { workspaceId: string
                 {sub.installmentsTotal ? t.paidSoFar(sub.paymentsMade, sub.installmentsTotal) : t.payments(sub.paymentsMade)}
               </div>
             </dl>
+
+            {/* The card renewals are charged to, and changing it (SubscriptionCard.tsx). */}
+            <SubscriptionCardPanel workspaceId={workspaceId} token={token} sub={sub} onChange={setSub} />
 
             {sub.canCancel &&
               (confirming ? (

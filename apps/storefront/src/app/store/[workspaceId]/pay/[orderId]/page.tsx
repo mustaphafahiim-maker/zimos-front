@@ -23,7 +23,8 @@ const POLL_FOR_MS = 2 * 60 * 1000;
  * signature / paymentStatus; the sandbox gateway: sbx_sig); their presence
  * means "just came back". The server works out which gateway signed them.
  */
-const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig"];
+// sbx_setup_sig: the sandbox's "save a card" page, for a free trial with nothing to pay.
+const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig", "sbx_setup_sig"];
 
 function gatewayQuery(search: URLSearchParams): Record<string, string> | null {
   if (!GATEWAY_REDIRECT_MARKERS.some((key) => search.has(key))) return null;

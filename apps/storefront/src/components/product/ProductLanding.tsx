@@ -677,7 +677,7 @@ export function ProductLanding({
 
           {(payment.methods.length > 1 || plan) && (
             <PaymentMethodPicker
-              plan={plan ? { blocked: payment.blocked } : null}
+              plan={plan ? { blocked: payment.blocked, trialDays: plan.mode === "subscription" ? plan.trialDays : undefined } : null}
               methods={payment.methods}
               value={method.id}
               onChange={setMethodId}

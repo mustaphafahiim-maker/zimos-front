@@ -17,7 +17,8 @@ export type BillingInterval = "week" | "month" | "year";
 
 /** How a product is paid for. The variant's price is what each payment charges. */
 export type ProductBillingPlan =
-  | { mode: "subscription"; interval: BillingInterval; intervalCount?: number }
+  /** trialDays: days free before the first charge (the first order charges nothing for it). */
+  | { mode: "subscription"; interval: BillingInterval; intervalCount?: number; trialDays?: number }
   | { mode: "installments"; interval: BillingInterval; intervalCount?: number; payments: number };
 
 /** A public product's plan (GET /store/:id/products…: `billingPlan`, null when sold once). */
@@ -101,6 +102,10 @@ export interface SubscriptionPortal {
   installmentsTotal: number | null;
   installmentsRemaining: number | null;
   canCancel: boolean;
+  /** The card renewals are charged to; null when there is none. */
+  card?: { brand: string | null; last4: string | null; expiresAt: string | null } | null;
+  /** The customer may replace the card on the payment provider's page. */
+  canUpdateCard?: boolean;
 }
 
 const subscriptionsBase = (workspaceId: string) => `/workspaces/${workspaceId}/subscriptions`;
@@ -147,6 +152,34 @@ export async function productPlanSet(client: ApiClient, workspaceId: string, pro
 export async function subscriptionPortalGet(client: ApiClient, workspaceRef: string, token: string): Promise<SubscriptionPortal> {
   const { subscription } = await client.request<{ subscription: SubscriptionPortal }>(`/store/${workspaceRef}/subscriptions/${token}`, { auth: false });
   return subscription;
+}
+
+/**
+ * Starts a card update from the portal: send the customer to `redirectUrl`.
+ * `returnUrl` is the portal page; the provider sends them back to it with
+ * its answer in the query string, for subscriptionPortalCardReturn.
+ * Codes: SUBSCRIPTION_ENDED (409), CARD_SETUP_NOT_SUPPORTED (422).
+ */
+export async function subscriptionPortalCardStart(client: ApiClient, workspaceRef: string, token: string, returnUrl: string): Promise<{ redirectUrl: string }> {
+  return client.request<{ redirectUrl: string }>(`/store/${workspaceRef}/subscriptions/${token}/card`, { method: "POST", body: { returnUrl }, auth: false });
+}
+
+/**
+ * Back from the provider's page. A subscription waiting on a failed renewal
+ * is charged on the new card at once (`renewal`: "renewed", "past_due", …).
+ * Codes: CARD_NOT_SAVED (422), CARD_SETUP_NOT_STARTED (409).
+ */
+export async function subscriptionPortalCardReturn(
+  client: ApiClient,
+  workspaceRef: string,
+  token: string,
+  query: Record<string, string>
+): Promise<{ subscription: SubscriptionPortal; renewal: string | null }> {
+  return client.request<{ subscription: SubscriptionPortal; renewal: string | null }>(`/store/${workspaceRef}/subscriptions/${token}/card/return`, {
+    method: "POST",
+    body: { query },
+    auth: false,
+  });
 }
 
 export async function subscriptionPortalCancel(client: ApiClient, workspaceRef: string, token: string): Promise<SubscriptionPortal> {
