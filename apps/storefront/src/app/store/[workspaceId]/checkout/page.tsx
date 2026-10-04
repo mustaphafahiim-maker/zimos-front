@@ -44,6 +44,8 @@ import { track } from "@/lib/track";
 import { useCatalog } from "@/lib/useCatalog";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useShippingChoice } from "@/lib/shippingChoice";
+import { ShippingOptionPicker } from "@/components/ShippingOptionPicker";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { LineCustomizations } from "@/components/LineCustomizations";
@@ -138,7 +140,9 @@ export default function CheckoutPage() {
   // The bump counts toward the parcel's weight as soon as it's ticked.
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
   if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
-  const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines });
+  // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines }));
+  const shipping = shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
@@ -196,6 +200,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
+        ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
@@ -287,6 +292,7 @@ export default function CheckoutPage() {
                 fields={fields}
                 showAltPhone
               />
+              <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
             </div>
             <CodeSlot name="below_form" />
           </section>

@@ -32,6 +32,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
 import { ShippingSettingsSection } from "./ShippingSettingsSection";
 import { ShippingProfilesSection } from "./ShippingProfilesSection";
+import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { WeightTiersSection } from "./WeightTiersSection";
 
 // Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
@@ -409,6 +410,8 @@ function ShippingTaxBody() {
       <ShippingSettingsSection onSaved={refreshWorkspace} />
 
       <ShippingProfilesSection />
+
+      <ShippingOptionsSection />
 
       <CarrierConnectionsSection />
 

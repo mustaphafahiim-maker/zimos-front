@@ -142,3 +142,5 @@ export * from "./endpoints/profile";
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
 export * from "./endpoints/shippingProfiles";
+// Shipping options the shopper chooses between (shipping/shippingOptions.js).
+export * from "./endpoints/shippingOptions";

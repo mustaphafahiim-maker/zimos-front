@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
 import { quotePricesShipping, shippingLineFor, type ShippingLine } from "./shippingLine";
+import { quoteOptionsOf, type ShippingOptionChoice } from "./shippingChoice";
 
 const DEBOUNCE_MS = 300;
 
@@ -24,6 +25,8 @@ export interface ShippingQuoteState {
   freeShipping: FreeShippingProgress | null;
   /** The automatic discount, the minimum order and the bundle saving the quote reports (lane 3). */
   extras: StorefrontQuoteExtras;
+  /** The store's shipping options for this cart (standard first); absent or [] = no choice (shippingChoice.ts). */
+  options?: ShippingOptionChoice[];
 }
 
 /**
@@ -90,5 +93,6 @@ export function useShippingQuote({
 
   const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras };
+  const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options };
 }

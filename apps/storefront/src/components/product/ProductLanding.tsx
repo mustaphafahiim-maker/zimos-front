@@ -14,6 +14,8 @@ import { useCart } from "@/lib/CartProvider";
 import { storeHref } from "@/lib/storeHref";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useShippingChoice } from "@/lib/shippingChoice";
+import { ShippingOptionPicker } from "../ShippingOptionPicker";
 import { ShippingFee } from "@/components/checkout/ShippingFee";
 import { bundlePricing, bundleTiers, type OrderBumpOffer } from "@/lib/commerce";
 import {
@@ -182,7 +184,9 @@ export function ProductLanding({
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
-  const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines });
+  // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: autosaveLines }));
+  const shipping = shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
@@ -232,6 +236,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...shippingChoice.payload,
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -516,6 +521,7 @@ export function ProductLanding({
             onChange={onFieldChange}
             fields={fields}
           />
+          <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
