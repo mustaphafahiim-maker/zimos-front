@@ -30,6 +30,9 @@ const STRINGS = {
     backupCode: "Backup code",
     backupHint: "One of the codes you saved, like ABCD-EFGH. Each works once.",
     codeNotSent: "We already sent several codes, so no new one was sent. Use a backup code, or wait a few minutes and sign in again.",
+    // A browser new to the account (backend auth/newDeviceSignIn.js).
+    newDevice: "You are signing in from a device we don't know yet.",
+    newDeviceWait: "We already sent several codes, so no new one was sent. Wait a few minutes and sign in again.",
   },
   ar: {
     title: "خطوة كمان",
@@ -50,6 +53,8 @@ const STRINGS = {
     backupCode: "رمز احتياطي",
     backupHint: "واحد من الرموز اللي حفظتها، زي ABCD-EFGH. كل رمز بيشتغل مرة واحدة.",
     codeNotSent: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استخدم رمز احتياطي، أو استنى كام دقيقة وسجّل دخول تاني.",
+    newDevice: "إنت بتسجّل دخول من جهاز لسه منعرفوش.",
+    newDeviceWait: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استنى كام دقيقة وسجّل دخول تاني.",
   },
 } satisfies Messages;
 
@@ -66,8 +71,11 @@ export function TwoFactorStep({
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(true);
   // Too many codes were sent lately: none went out this time, only a backup code can finish (twoFactorRecovery.js).
-  const codeNotSent = (challenge as TwoFactorChallenge & { codeNotSent?: boolean }).codeNotSent === true;
-  const [backup, setBackup] = useState(codeNotSent);
+  const extra = challenge as TwoFactorChallenge & { codeNotSent?: boolean; newDevice?: boolean };
+  const codeNotSent = extra.codeNotSent === true;
+  // A new-device code is for an account without two-step sign-in: it has no backup codes.
+  const newDevice = extra.newDevice === true;
+  const [backup, setBackup] = useState(codeNotSent && !newDevice);
   const ready = backup ? code.replace(/[^A-Z0-9]/g, "").length === 8 : code.length === 6;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +100,11 @@ export function TwoFactorStep({
       <div>
         <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
         <p className="mt-2 text-sm text-ink-soft">
+          {newDevice && <span className="mb-1 block font-medium text-ink">{t.newDevice}</span>}
           {codeNotSent
-            ? t.codeNotSent
+            ? newDevice
+              ? t.newDeviceWait
+              : t.codeNotSent
             : challenge.channel === "email"
             ? fmt(t.emailBody, { email: challenge.sentTo ?? "" })
             : challenge.channel === "whatsapp" || challenge.channel === "sms"
@@ -133,17 +144,19 @@ export function TwoFactorStep({
           />
         )}
         {backup && <p className="text-xs text-ink-soft">{t.backupHint}</p>}
-        <button
-          type="button"
-          onClick={() => {
-            setBackup(!backup);
-            setCode("");
-            setError(null);
-          }}
-          className="text-xs font-medium text-primary hover:underline"
-        >
-          {backup ? t.useCode : t.useBackup}
-        </button>
+        {!newDevice && (
+          <button
+            type="button"
+            onClick={() => {
+              setBackup(!backup);
+              setCode("");
+              setError(null);
+            }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {backup ? t.useCode : t.useBackup}
+          </button>
+        )}
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
