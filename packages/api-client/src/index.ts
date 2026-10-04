@@ -132,3 +132,5 @@ export * from "./endpoints/storefrontCurrencies";
 export * from "./endpoints/exportFiles";
 // The merchant's own phone, confirmed by a code (auth verify-phone).
 export * from "./endpoints/phoneVerification";
+// Two-step sign-in by a WhatsApp code (auth/twoFactorWhatsapp.js).
+export * from "./endpoints/twoFactorWhatsapp";

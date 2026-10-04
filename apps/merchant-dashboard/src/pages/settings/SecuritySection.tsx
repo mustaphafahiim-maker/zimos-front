@@ -16,6 +16,7 @@ import {
   supportAccessRevoke,
   type SignedInDevice,
   type TwoFactorStatus,
+  twoFactorEnableWhatsapp,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -23,6 +24,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -58,6 +60,10 @@ const STRINGS = {
     appMode: "Authenticator app",
     useEmail: "Use a code by email",
     useApp: "Use an authenticator app",
+    whatsappMode: "Code on WhatsApp",
+    useWhatsapp: "Use a code on WhatsApp",
+    whatsappOn: "Sign-in codes now go to your phone on WhatsApp.",
+    needPhone: "Verify your phone under \u201cYour account\u201d to get codes on WhatsApp.",
     turnOff: "Turn off",
     remembered: "{count} remembered device(s)",
     forget: "Forget them",
@@ -108,6 +114,10 @@ const STRINGS = {
     off: "متوقف",
     emailMode: "كود بالإيميل",
     appMode: "تطبيق المصادقة",
+    whatsappMode: "كود على واتساب",
+    useWhatsapp: "استخدم كود على واتساب",
+    whatsappOn: "أكواد الدخول توصل دلوقتي على واتساب موبايلك.",
+    needPhone: "وثّق موبايلك من «حسابك» علشان توصلك الأكواد على واتساب.",
     useEmail: "استخدم كود بالإيميل",
     useApp: "استخدم تطبيق مصادقة",
     turnOff: "إيقاف",
@@ -257,7 +267,7 @@ function DevicesPanel({ t }: { t: T }) {
 
 // ───────────────────────────── two-step ─────────────────────────────
 
-type Step = { kind: "password"; next: "email" | "totp" | "off" } | { kind: "scan"; secret: string; qr: string | null } | null;
+type Step = { kind: "password"; next: "email" | "totp" | "whatsapp" | "off" } | { kind: "scan"; secret: string; qr: string | null } | null;
 
 function TwoStepPanel({ t }: { t: T }) {
   const toast = useToast();
@@ -270,7 +280,10 @@ function TwoStepPanel({ t }: { t: T }) {
   const [error, setError] = useState<string | null>(null);
 
   const data = status.data;
-  const modeLabel: Record<TwoFactorStatus["mode"], string> = { off: t.off, email: t.emailMode, totp: t.appMode };
+  const modeLabel: Record<TwoFactorStatus["mode"], string> = { off: t.off, email: t.emailMode, totp: t.appMode, whatsapp: t.whatsappMode };
+  // The WhatsApp code goes to the verified phone (PhoneVerification in "Your account").
+  const { user } = useAuth();
+  const phoneVerified = Boolean(user?.phone && user?.phoneVerifiedAt);
 
   function close() {
     setStep(null);
@@ -280,19 +293,23 @@ function TwoStepPanel({ t }: { t: T }) {
   }
 
   // An account without a password (Google sign-in) is not asked for one.
-  function start(next: "email" | "totp" | "off") {
+  function start(next: "email" | "totp" | "whatsapp" | "off") {
     setError(null);
     if (data && !data.hasPassword) void run(next, "");
     else setStep({ kind: "password", next });
   }
 
-  async function run(next: "email" | "totp" | "off", pass: string) {
+  async function run(next: "email" | "totp" | "whatsapp" | "off", pass: string) {
     setBusy(true);
     setError(null);
     try {
       if (next === "email") {
         status.setData(await securityEnableEmailCode(apiClient, pass));
         toast.success(t.emailOn);
+        close();
+      } else if (next === "whatsapp") {
+        status.setData(await twoFactorEnableWhatsapp(apiClient, pass));
+        toast.success(t.whatsappOn);
         close();
       } else if (next === "off") {
         status.setData(await securityDisableTwoFactor(apiClient, pass));
@@ -359,6 +376,11 @@ function TwoStepPanel({ t }: { t: T }) {
                 {data.mode !== "email" && (
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => start("email")}>
                     {t.useEmail}
+                  </Button>
+                )}
+                {data.mode !== "whatsapp" && (
+                  <Button size="sm" variant="outline" disabled={busy || !phoneVerified} title={phoneVerified ? undefined : t.needPhone} onClick={() => start("whatsapp")}>
+                    {t.useWhatsapp}
                   </Button>
                 )}
                 {data.mode !== "totp" && (
