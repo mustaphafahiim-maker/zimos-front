@@ -36,6 +36,7 @@ import {
 import { BostaTierMapField } from "./BostaTierMapField";
 import { CarrierBookingSettings } from "./CarrierBookingSettings";
 import { CarrierAreas } from "./CarrierAreas";
+import { useCarrierFilter } from "./CarrierFilter";
 import { pruneTierMap, useWeightTiers } from "./weightTiers";
 
 const STRINGS = {
@@ -305,6 +306,7 @@ export function CarrierConnectionsSection() {
     [workspaceId, roleAllows]
   );
   const list = carriers.data;
+  const filter = useCarrierFilter(list?.carriers ?? []);
   const canManage = roleAllows && !forbidden;
 
   return (
@@ -327,7 +329,9 @@ export function CarrierConnectionsSection() {
             ) : (
               <>
                 {forbidden && <Alert>{t.viewOnlyForbidden}</Alert>}
-                {list?.carriers.map((carrier) => (
+                {filter.bar}
+                {filter.empty}
+                {filter.filtered.map((carrier) => (
                   <CarrierCard
                     key={carrier.code}
                     carrier={carrier}

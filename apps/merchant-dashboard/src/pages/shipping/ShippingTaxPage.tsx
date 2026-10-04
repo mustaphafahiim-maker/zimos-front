@@ -33,6 +33,7 @@ import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
 import { ShippingSettingsSection } from "./ShippingSettingsSection";
 import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
+import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
 import { WeightTiersSection } from "./WeightTiersSection";
 
 // Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
@@ -400,6 +401,8 @@ function ShippingTaxBody() {
     reloadTax();
   }
 
+  const [tab, setTab] = useShippingTab();
+
   return (
     <div className="max-w-5xl space-y-12">
       <PageHeader
@@ -407,27 +410,34 @@ function ShippingTaxBody() {
         description={tr.description}
       />
 
-      <ShippingSettingsSection onSaved={refreshWorkspace} />
+      <ShippingTabsBar value={tab} onChange={setTab} />
 
-      <ShippingProfilesSection />
+      {tab === "rates" && <ShippingSettingsSection onSaved={refreshWorkspace} />}
 
-      <ShippingOptionsSection />
+      {tab === "rates" && <ShippingProfilesSection />}
 
-      <CarrierConnectionsSection />
+      {tab === "options" && <ShippingOptionsSection />}
 
-      <StoreShippingTaxSettings
-        taxEnabled={taxEnabled}
-        onTaxEnabledChange={setTaxEnabled}
-        onSaved={refreshWorkspace}
-      />
+      {tab === "carriers" && <CarrierConnectionsSection />}
 
-      <WeightTiersSection
-        zones={zoneList}
-        workspace={currentWorkspace}
-        currency="EGP"
-        onWorkspaceChanged={refreshWorkspace}
-      />
+      {tab === "taxes" && (
+        <StoreShippingTaxSettings
+          taxEnabled={taxEnabled}
+          onTaxEnabledChange={setTaxEnabled}
+          onSaved={refreshWorkspace}
+        />
+      )}
 
+      {tab === "rates" && (
+        <WeightTiersSection
+          zones={zoneList}
+          workspace={currentWorkspace}
+          currency="EGP"
+          onWorkspaceChanged={refreshWorkspace}
+        />
+      )}
+
+      {tab === "rates" && (
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-lg font-medium text-ink">{tr.zonesHeading}</h2>
@@ -459,6 +469,9 @@ function ShippingTaxBody() {
         </DataState>
       </section>
 
+      )}
+
+      {tab === "taxes" && (
       <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -519,6 +532,7 @@ function ShippingTaxBody() {
           </div>
         </DataState>
       </section>
+      )}
 
       <Modal
         open={zoneForm !== null}
