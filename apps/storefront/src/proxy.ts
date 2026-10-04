@@ -15,6 +15,7 @@ import {
   storePreviewCookieOptions,
 } from "@/lib/storePreview";
 import { resolveCustomHost } from "@/lib/customDomains";
+import { STORE_REF_HEADER } from "@/lib/documentLocale";
 
 /**
  * Paths that are served as they are, whatever the host: Next's own internals,
@@ -84,6 +85,7 @@ export async function proxy(request: NextRequest) {
   const preview = fromLink ?? (isTokenShaped(stored) ? stored : null);
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
+  headers.delete(STORE_REF_HEADER);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -122,10 +124,16 @@ export async function proxy(request: NextRequest) {
         ? `/store/${slug}/f/${encodeURIComponent(custom.homeFunnelRef)}`
         : `/store/${slug}${pathname === "/" ? "" : pathname}`;
     headers.set(STORE_SLUG_HEADER, slug);
+    headers.set(STORE_REF_HEADER, slug);
     return keep(NextResponse.rewrite(url, { request: { headers } }));
   }
 
-  if (isInternalPath) return next();
+  if (isInternalPath) {
+    // /store/<workspaceId>/…: the root layout's <html lang dir> (lib/documentLocale).
+    const ref = pathname.split("/")[2];
+    if (ref) headers.set(STORE_REF_HEADER, ref);
+    return next();
+  }
 
   // No store in the host, and this app has no front page of its own to show.
   // Temporary, not permanent: a browser caches a permanent redirect for the

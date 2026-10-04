@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/CartProvider";
+import { documentLocale } from "@/lib/documentLocale";
 
 export const metadata: Metadata = {
   title: "Zimos Store",
@@ -11,13 +12,15 @@ export const metadata: Metadata = {
 const themeScript = `(function(){try{var e=document.documentElement,s=null;try{s=localStorage.getItem("theme")}catch(_){}var d=s==="dark"||(s!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light"}catch(_){}})();`;
 
 /**
- * The root layout can't know which store (or which locale) a request is for, so
- * `lang`/`dir` here are only the neutral default. Store routes set the real
- * values on their own wrapper and sync them onto <html> (see DocumentLocale).
+ * `lang`/`dir` come from the store the proxy named (lib/documentLocale), so
+ * the server's HTML already carries the shopper's language; anything that is
+ * not a store gets the neutral default. Store routes still sync them onto
+ * <html> when the shopper switches language (see DocumentLocale).
  */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { lang, dir } = await documentLocale();
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning className="h-full antialiased">
+    <html lang={lang} dir={dir} suppressHydrationWarning className="h-full antialiased">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
