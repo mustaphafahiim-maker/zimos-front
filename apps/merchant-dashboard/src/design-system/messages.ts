@@ -9,6 +9,7 @@ export const LAB_MESSAGES = {
     intro:
       "One component language for ZIMOS. Glass for navigation and floating controls; solid surfaces for the work itself.",
     demo: "Sample data only · no store connection",
+    brand: "Brand identity",
     orders: "Orders",
     foundation: "Foundation",
     components: "Components",
@@ -130,6 +131,7 @@ export const LAB_MESSAGES = {
     intro:
       "لغة تصميم واحدة لزيموس. الزجاج للقوائم والأدوات العائمة، والأسطح الواضحة للشغل والبيانات.",
     demo: "بيانات تجريبية فقط · بدون اتصال بمتجر",
+    brand: "هوية العلامة",
     orders: "الطلبات",
     foundation: "أساس التصميم",
     components: "المكونات",

@@ -1,4 +1,5 @@
 import {
+  Hexagon,
   LayoutGrid,
   Layers,
   Palette,
@@ -10,6 +11,7 @@ import { NAV_GROUPS } from "@/lib/navigation";
 // Do not duplicate commerce icon meanings. The existing product navigation
 // registry is authoritative; this map only adds the lab's section names.
 export const LAB_NAV = [
+  { id: "brand", icon: Hexagon },
   { id: "orders", icon: ShoppingBag },
   { id: "foundation", icon: Palette },
   { id: "components", icon: LayoutGrid },

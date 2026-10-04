@@ -49,6 +49,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { NAV_LABELS } from "@/lib/navigation";
 import { LAB_MESSAGES } from "./messages";
 import { LAB_NAV, COMMERCE_ICONS } from "./icon-map";
+import { BrandBoard } from "./brand/BrandBoard";
 import "@store-builder/ui/styles.css";
 import "./lab.css";
 
@@ -230,7 +231,7 @@ function Lab() {
   const toast = useToast();
   const [glass, setGlass] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("orders");
+  const [activeSection, setActiveSection] = useState<string>(LAB_NAV[0].id);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
   const [state, setState] = useState<State>("ready");
@@ -402,6 +403,17 @@ function Lab() {
                   {t.intro}
                 </p>
               </div>
+              <section
+                id="brand"
+                className="space-y-4"
+                aria-labelledby="brand-title"
+              >
+                <h2 id="brand-title" className="text-xl font-semibold">
+                  {t.brand}
+                </h2>
+                <BrandBoard />
+              </section>
+
               <section
                 id="orders"
                 className="space-y-4"
