@@ -128,3 +128,5 @@ export * from "./endpoints/orderContactEdit";
 export * from "./endpoints/orderCancelRefund";
 // The storefront's display currencies (currencies/fxService.getForStorefront).
 export * from "./endpoints/storefrontCurrencies";
+// Files built in the background: the orders export (orders/exportFiles.js).
+export * from "./endpoints/exportFiles";

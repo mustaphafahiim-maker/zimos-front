@@ -24,6 +24,8 @@ export const NOTIFICATION_STRINGS = {
     stockLowBody: "{available} left in stock.",
     integrationFailedTitle: "Could not reach {integration}",
     exportReadyTitle: "Your file is ready: {name}",
+    exportFailedTitle: "Couldn't prepare your file: {name}",
+    exportFailedBody: "Export again, or narrow the filters.",
     autoBookingFailedTitle: "Order {orderNumber} wasn't booked with {integration} automatically",
     autoBookingFailedBody: "{reason} Book it from the order page.",
     batchDoneTitle: "Booked {booked} of {total} orders with {carrier}",
@@ -45,6 +47,8 @@ export const NOTIFICATION_STRINGS = {
     stockLowBody: "المتاح {available} قطعة.",
     integrationFailedTitle: "تعذّر الاتصال بـ {integration}",
     exportReadyTitle: "الملف جاهز: {name}",
+    exportFailedTitle: "تعذّر تجهيز الملف: {name}",
+    exportFailedBody: "جرّب التصدير مرة أخرى، أو ضيّق الفلاتر.",
     autoBookingFailedTitle: "لم يُحجز الطلب {orderNumber} تلقائيًا مع {integration}",
     autoBookingFailedBody: "{reason} احجزه من صفحة الطلب.",
     batchDoneTitle: "تم حجز {booked} من {total} طلب مع {carrier}",
@@ -96,6 +100,7 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       };
     case "export.ready":
       if (!d.name) break;
+      if (d.failed) return { title: fmt(t.exportFailedTitle, { name: str(d.name) }), body: t.exportFailedBody };
       return { title: fmt(t.exportReadyTitle, { name: str(d.name) }), body: null };
   }
   return { title: n.title, body: n.body };

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { Alert, Button, Spinner } from "@store-builder/ui";
-import type { OrderExportCatalogue, OrderExportParams } from "@store-builder/api-client";
+import { exportFileStartOrders, type OrderExportCatalogue, type OrderExportParams } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -30,6 +30,9 @@ const STRINGS = {
     download: "Download CSV",
     downloading: "Preparing…",
     done: "Your orders file was downloaded.",
+    prepare: "Prepare file",
+    background: "The file is built in the background: the link arrives in your notifications and by email, and works for 7 days.",
+    queued: "We're preparing your file. You'll get a notification with the link.",
   },
   ar: {
     open: "تصدير",
@@ -51,6 +54,9 @@ const STRINGS = {
     download: "تنزيل CSV",
     downloading: "جارٍ التجهيز…",
     done: "تم تنزيل ملف الطلبات.",
+    prepare: "تجهيز الملف",
+    background: "يُجهَّز الملف في الخلفية: يصلك الرابط في الإشعارات وبالبريد، ويعمل لمدة 7 أيام.",
+    queued: "جارٍ تجهيز الملف. سيصلك إشعار بالرابط.",
   },
 } satisfies Messages;
 
@@ -149,6 +155,8 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
     setSelected((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
   }
 
+  const background = !filters.ids;
+
   async function download() {
     if (!catalogue) return;
     setBusy(true);
@@ -159,6 +167,13 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
       const params = { ...filters, columns, rowPer, lang: locale === "ar" ? "ar" : "en", format } as Parameters<
         typeof apiClient.exportOrdersCsv
       >[1];
+      // The whole list is built in the background (SPEC §4.3); ticked orders download now.
+      if (background) {
+        await exportFileStartOrders(apiClient, workspaceId, { ...params, format });
+        toast.success(t.queued);
+        onClose();
+        return;
+      }
       const blob = await apiClient.exportOrdersCsv(workspaceId, params);
       saveBlob(blob, `orders-${new Date().toISOString().slice(0, 10)}.${format}`);
       toast.success(t.done);
@@ -186,7 +201,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
             {t.cancel}
           </Button>
           <Button onClick={download} disabled={busy || !catalogue || chosen === 0}>
-            {busy ? t.downloading : format === "xlsx" ? t.download.replace("CSV", "Excel") : t.download}
+            {busy ? t.downloading : background ? t.prepare : format === "xlsx" ? t.download.replace("CSV", "Excel") : t.download}
           </Button>
         </>
       }
@@ -202,6 +217,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
           <p className="text-sm text-ink-soft">
             {picked ? fmt(t.scopeSelected, { count: picked }) : filtered ? t.scopeFiltered : t.scopeAll} {fmt(t.limit, { max: catalogue.maxOrders.toLocaleString() })}
           </p>
+          {background && <p className="text-sm text-ink-soft">{t.background}</p>}
 
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-ink">{locale === "ar" ? "صيغة الملف" : "File format"}</legend>
