@@ -160,3 +160,5 @@ export * from "./endpoints/storeApp";
 export * from "./endpoints/orderPush";
 // ZIMOS's referral program for merchants (referrals/merchantReferrals.js).
 export * from "./endpoints/merchantReferrals";
+// The customer service bot on WhatsApp (whatsapp/bot/botService.js).
+export * from "./endpoints/waBot";

@@ -32,6 +32,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
 import { useInboxLive } from "./useInboxLive";
 import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, QuickRepliesMenu, type InboxScope } from "./InboxExtras";
+import { BotBadge, BotSettingsLink, BotToggle } from "./WaBot";
+import { waBotSentOf } from "@store-builder/api-client";
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
@@ -197,7 +199,7 @@ export function InboxPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<BotSettingsLink />} />
       <AppOffNotice app="whatsapp" />
       <DataState
         loading={integration.loading}
@@ -671,6 +673,7 @@ function Thread({
           </Link>
         )}
         <CustomerPanelButton className="xl:hidden" onClick={() => setPanelOpen(true)} />
+        <BotToggle conversation={conversation} onChange={(botPaused) => onPatch({ botPaused } as Partial<WhatsappConversation>)} />
         <AssigneeSelect
           conversation={conversation as InboxConversation}
           onAssigned={(assignedTo) => {
@@ -748,6 +751,7 @@ function Bubble({ message: m }: { message: WhatsappMessage }) {
           m.status === "failed" && "ring-1 ring-danger/40"
         )}
       >
+        {waBotSentOf(m) && <BotBadge />}
         {m.templateName && (
           <p className="mb-0.5 text-[11px] font-medium text-ink-soft">
             {fmt(t.template, { name: m.templateName })}

@@ -98,6 +98,7 @@ const SettlementsPage = lazy(() =>
   import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
 const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
@@ -195,6 +196,7 @@ export default function App() {
                       />
                       <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
                       <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
+                      <Route path="/inbox/bot" element={<LazyRoute><WaBotPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
