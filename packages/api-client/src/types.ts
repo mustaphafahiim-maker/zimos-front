@@ -406,6 +406,7 @@ export const PAGE_ELEMENT_TYPES = [
   "toggle",
   "carousel",
   "stars_display",
+  "currency_converter",
   "price",
   "reviews_list",
   "cod_form",
@@ -937,6 +938,8 @@ export interface CheckoutPayload {
   paymentProvider?: string;
   /** Online methods: where the gateway sends the shopper back to. */
   returnUrl?: string;
+  /** The shopper agreed to keep the card (card payments; the gateway keeps it once paid). */
+  saveCard?: boolean;
   discountCode?: string;
   funnelId?: string;
   websiteId?: string;
@@ -4074,7 +4077,8 @@ export interface BlockPhoneResult {
 // ---------------------------------------------------------------------
 
 export interface CaptureCheckoutSessionPayload {
-  contact: { phone: string; fullName?: string; email?: string };
+  /** A name or a phone, at least one. A save without a phone keeps the one already saved. */
+  contact: { phone?: string; fullName?: string; email?: string };
   /** 1–20 lines, quantity 1–100. Priced server-side. */
   items: Array<{ variantId: string; offerId?: string; quantity: number }>;
   source?: "store" | "funnel";

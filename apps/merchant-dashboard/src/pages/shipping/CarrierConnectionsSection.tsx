@@ -34,6 +34,8 @@ import {
   rememberCarrierEnvironment,
 } from "./carriers";
 import { BostaTierMapField } from "./BostaTierMapField";
+import { CarrierBookingSettings } from "./CarrierBookingSettings";
+import { CarrierAreas } from "./CarrierAreas";
 import { pruneTierMap, useWeightTiers } from "./weightTiers";
 
 const STRINGS = {
@@ -718,6 +720,25 @@ function CarrierCard({
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
+      )}
+
+      {canManage && connection && mode === "view" && (
+        <CarrierBookingSettings
+          carrierCode={carrier.code}
+          name={name}
+          connection={connection}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+          onChanged={onChanged}
+        />
+      )}
+
+      {connection && mode === "view" && (
+        <CarrierAreas
+          carrierCode={carrier.code}
+          name={name}
+          canManage={canManage}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+        />
       )}
 
       {canManage && mode === "key" && (

@@ -145,10 +145,13 @@ function useAdvance(workspaceId: string, funnelId: string, sessionId: string, st
         fromStepKey: stepKey,
         outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}) },
       });
-      if (res.followOnOrder) {
+      // A one-click offer charged to a saved card that was declined is not a purchase (SPEC §9.5).
+      const declined = (res.followOnOrder as { payment?: { status?: string } } | undefined)?.payment?.status === "declined";
+      if (res.followOnOrder && !declined) {
         rememberFollowOn(sessionId, res.followOnOrder);
         trackPurchaseOnce(res.followOnOrder.id, { valueMinor: parseMoney(res.followOnOrder.totalAmount), numItems: 1 });
       }
+      if (declined) setError(t.funnel.oneClickDeclined);
       if (res.mergedOrder) {
         // Joined the checkout order: the thank-you page shows its new total,
         // and the purchase is the added line alone (keyed by that line, since

@@ -92,7 +92,11 @@ export interface AiOutputs {
 }
 
 /** What "apply" created from the result. */
-export type AiApplied = { type: "product"; id: string } | { type: "page"; id: string; websiteId: string; path: string };
+export type AiApplied =
+  | { type: "product"; id: string }
+  | { type: "page"; id: string; websiteId: string; path: string }
+  /** `page` applied with target "funnel": a new draft funnel (sales → checkout → thank you). */
+  | { type: "funnel"; id: string };
 
 export interface AiJob<F extends AiFeature = AiFeature> {
   id: string;
@@ -163,13 +167,15 @@ export async function aiListJobs(client: ApiClient, workspaceId: string, params:
 
 /**
  * `product`: creates a draft product (`overrides` carries the merchant's
- * edits). `page`: creates an unpublished page at `path` on the store website.
+ * edits). `page`: creates an unpublished page at `path` on the store website,
+ * or with `target: "funnel"` a new draft funnel named `name` whose sales step
+ * is the page.
  */
 export async function aiApply<F extends "product" | "page">(
   client: ApiClient,
   workspaceId: string,
   jobId: string,
-  payload: { overrides?: Partial<AiProductOutput>; path?: string } = {}
+  payload: { overrides?: Partial<AiProductOutput>; path?: string; target?: "website" | "funnel"; name?: string; subdomain?: string } = {}
 ): Promise<AiJob<F>> {
   const { job } = await client.request<{ job: AiJob<F> }>(`${aiBase(workspaceId)}/jobs/${jobId}/apply`, { method: "POST", body: payload });
   return job;

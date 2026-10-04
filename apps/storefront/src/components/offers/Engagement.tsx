@@ -11,6 +11,7 @@ import {
 } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
 import { StoreLink } from "../StoreRoute";
 import { CheckIcon } from "../Icons";
 import { btnPrimary, btnSecondary, card, container, input, label as labelClass } from "../ui";
@@ -211,6 +212,8 @@ function NewsletterFields({
         ...(website ? { website } : {}),
       });
       setResult({ couponCode: answer.couponCode });
+      // A sign-up is the ad platforms' Lead (SPEC §13.2), like a funnel opt-in; never a bot's.
+      if (!website) track("Lead", { contentName: "newsletter" });
       onDone();
     } catch {
       setError(text.failed);

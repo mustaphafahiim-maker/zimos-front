@@ -34,13 +34,13 @@ import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
 import { OrderListDocuments } from "./components/OrderDocuments";
-import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
+import { OrderColumnCell } from "./components/OrderColumnCell";
+import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
   useColumnLabel,
   useOrderExtraFilters,
   useOrderListPrefs,
-  useSourceLabel,
   type OrderColumn,
 } from "./components/OrderListFilters";
 
@@ -51,8 +51,11 @@ const STRINGS = {
     tabsLabel: "Filter orders by stage",
     tabAll: "All",
     searchLabel: "Search orders",
-    searchPlaceholder: "Order number, name, email or phone",
-    searchHint: "Matches the order number, customer name or email, or the full phone number.",
+    searchPlaceholder: "Order number, name, email, phone or waybill",
+    searchHint: "Matches the order number, customer name or email, the full phone number, or a courier waybill number.",
+    today: "Today",
+    last7: "Last 7 days",
+    last30: "Last 30 days",
     searchTooShort: "Type at least 2 characters to search.",
     clearSearch: "Clear search",
     from: "From",
@@ -90,8 +93,11 @@ const STRINGS = {
     tabsLabel: "تصفية الأوردرات حسب المرحلة",
     tabAll: "الكل",
     searchLabel: "البحث في الأوردرات",
-    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف",
-    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا.",
+    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف أو البوليصة",
+    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا، أو رقم بوليصة الشحن.",
+    today: "اليوم",
+    last7: "آخر 7 أيام",
+    last30: "آخر 30 يومًا",
     searchTooShort: "اكتب حرفين على الأقل للبحث.",
     clearSearch: "مسح البحث",
     from: "من",
@@ -285,7 +291,7 @@ export function OrdersListPage() {
 
       <SortPicker value={sort} onChange={setSort} />
 
-      <RiskFilter />
+      <RiskFilter counts={orderRiskCountsOf(pipeline.data)} />
 
       <StageTabs
         value={stage}
@@ -459,6 +465,29 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
             aria-describedby={datesHintId}
             className="h-11 w-auto"
           />
+          {/* Shortcuts, in UTC like the dates themselves. */}
+          {([
+            ["today", 0],
+            ["last7", 6],
+            ["last30", 29],
+          ] as const).map(([key, back]) => {
+            const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+            const from = day(back);
+            const to = day(0);
+            const active = filters.from === from && filters.to === to;
+            return (
+              <Button
+                key={key}
+                variant={active ? "secondary" : "ghost"}
+                size="sm"
+                className="min-h-11"
+                aria-pressed={active}
+                onClick={() => update({ from, to })}
+              >
+                {t[key]}
+              </Button>
+            );
+          })}
           {(filters.from || filters.to) && (
             <Button
               variant="ghost"
@@ -608,8 +637,6 @@ function OrdersTable({
 }) {
   const t = useT(STRINGS);
   const columnLabel = useColumnLabel();
-  const sourceLabel = useSourceLabel();
-  const show = (column: OrderColumn) => columns.includes(column);
   const labels = useOrderLabels();
   const paymentLabel = usePaymentLabel();
   // One clock for the whole list, so every row's "3 hours ago" moves together.
@@ -688,32 +715,7 @@ function OrdersTable({
               <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colOrder}
               </th>
-              {show("customer") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colCustomer}
-                </th>
-              )}
-              {show("total") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTotal}
-                </th>
-              )}
-              {show("payment") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colPayment}
-                </th>
-              )}
-              {show("stage") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colStage}
-                </th>
-              )}
-              {show("timeline") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTimeline}
-                </th>
-              )}
-              {(["tags", "source", "governorate"] as const).filter(show).map((column) => (
+              {columns.map((column) => (
                 <th key={column} scope="col" className="px-4 py-3 text-start font-medium">
                   {columnLabel(column)}
                 </th>
@@ -751,53 +753,15 @@ function OrdersTable({
                   </Link>
                   {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} className="ms-2" />}
                 </td>
-                {show("customer") && (
-                <td className="px-4 py-3 text-ink-soft">
-                  <div className="text-ink">{order.contactSnapshot?.fullName || "—"}</div>
-                  {order.contactSnapshot?.phone && (
-                    <div className="text-xs">
-                      <span className="sr-only">{t.phoneLabel}: </span>
-                      <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
-                    </div>
-                  )}
-                </td>
-                )}
-                {show("total") && (
-                  <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
-                )}
-                {show("payment") && <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>}
-                {show("stage") && (
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {order.stage && stageLabel && (
-                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
-                    )}
-                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                <RiskBadge order={order} />
-                <OrderNetworkRate order={order} />
-                  </div>
-                </td>
-                )}
-                {show("timeline") && (
-                  <td className="px-4 py-3">
-                    <OrderTimelineLines order={order} now={now} />
-                  </td>
-                )}
-                {show("tags") && (
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {meta.tags.length === 0 ? (
-                        <span className="text-ink-soft">—</span>
-                      ) : (
-                        meta.tags.map((tag) => <StatusBadge key={tag} value={tag} tone="info" text={tag} />)
-                      )}
-                    </div>
-                  </td>
-                )}
-                {show("source") && <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>}
-                {show("governorate") && (
-                  <td className="px-4 py-3 text-xs text-ink-soft">{order.shippingAddressSnapshot?.province || "—"}</td>
-                )}
+                {columns.map((column) => (
+                  <OrderColumnCell
+                    key={column}
+                    column={column}
+                    row={{ order, stageLabel, flagged, meta }}
+                    paymentLabel={paymentLabel(order)}
+                    now={now}
+                  />
+                ))}
               </tr>
             ))}
           </tbody>

@@ -100,8 +100,6 @@ export * from "./endpoints/orderEmails";
 export * from "./endpoints/coupons";
 // Lost orders: refused and unfinished checkouts, recovery (lane 2).
 export * from "./endpoints/lostOrders";
-// WhatsApp campaigns to consenting contacts.
-export * from "./endpoints/whatsappCampaigns";
 // Social proof, newsletter sign-up, referral results (lane 3).
 export * from "./endpoints/engagement";
 // Product feed, Google Merchant checklist, offers summary (lane 3).
@@ -110,3 +108,37 @@ export * from "./endpoints/feeds";
 export * from "./endpoints/orderTracking";
 // Funnel share codes, import, map draft and issues (lane 5).
 export * from "./endpoints/funnelExtras";
+// Default courier, automatic booking, inspection and courier notes (shipping/carrierBooking.js).
+export * from "./endpoints/carrierBooking";
+// Where each governorate/city is on a courier's own list (shipping/carrierRegionMap.js).
+export * from "./endpoints/carrierRegions";
+// "Ship selected" with a connected courier, as a queued batch (shipping/bulkShipping.js).
+export * from "./endpoints/shipmentBatches";
+// The orders list's risk tab counts (orders/orderService.orderPipeline).
+export * from "./endpoints/orderRiskCounts";
+// The orders list rows' extra fields: IP country, data quality, latest shipment.
+export * from "./endpoints/orderListColumns";
+// Many invoices in one PDF for the ticked orders (orders/orderInvoicesPdf.js).
+export * from "./endpoints/orderSelection";
+// "Confirm via WhatsApp" on the order page (orders/whatsappConfirm.js).
+export * from "./endpoints/orderWhatsappConfirm";
+// Editing the customer's details on an order (orders/orderService.updateOrderLimited).
+export * from "./endpoints/orderContactEdit";
+// Cancel with a refund, and "notify the customer" on cancel and refund (orders/orderCancelRefund.js).
+export * from "./endpoints/orderCancelRefund";
+// The storefront's display currencies (currencies/fxService.getForStorefront).
+export * from "./endpoints/storefrontCurrencies";
+// Files built in the background: the orders export (orders/exportFiles.js).
+export * from "./endpoints/exportFiles";
+// The merchant's own phone, confirmed by a code (auth verify-phone).
+export * from "./endpoints/phoneVerification";
+// Two-step sign-in by a WhatsApp code (auth/twoFactorWhatsapp.js).
+export * from "./endpoints/twoFactorWhatsapp";
+// Account settings: timezone, contact-form email, legal details (workspaces/accountSettings.js).
+export * from "./endpoints/accountSettings";
+// The signed-in person's name and picture (auth/profileRoutes.js).
+export * from "./endpoints/profile";
+// The thank-you page's download links (digital/digitalRoutes.js).
+export * from "./endpoints/storefrontDownloads";
+// Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
+export * from "./endpoints/shippingProfiles";

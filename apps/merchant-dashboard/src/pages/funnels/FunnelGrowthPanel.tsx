@@ -99,7 +99,7 @@ const STRINGS = {
     active: "Active",
     // settings
     settingsIntro: "This funnel's own icon and search title. Left empty, the store's are used.",
-    currency: "Currency label (3 letters)",
+    currency: "Currency (3 letters) — what this funnel sells in; its offers must be priced in it",
     favicon: "Icon link",
     seoTitle: "Search title",
     seoDescription: "Search description",
@@ -159,7 +159,7 @@ const STRINGS = {
     addRule: "إضافة تحويل",
     active: "مفعّل",
     settingsIntro: "أيقونة هذا المسار وعنوانه في البحث. إن تُركت فارغة تُستخدم بيانات المتجر.",
-    currency: "رمز العملة (3 حروف)",
+    currency: "العملة (3 حروف) — عملة بيع هذا الفانل؛ لازم تكون عروضه مسعّرة بيها",
     favicon: "رابط الأيقونة",
     seoTitle: "عنوان البحث",
     seoDescription: "وصف البحث",

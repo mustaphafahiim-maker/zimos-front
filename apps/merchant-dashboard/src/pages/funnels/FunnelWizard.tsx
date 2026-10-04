@@ -18,6 +18,8 @@ import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { STARTER_TEMPLATE_IDS, createFunnelFromStarter, starterPlan, useFunnelErrorMessage, type StarterTemplateId } from "./funnelAdapter";
+import { AI_FUNNEL_DEFAULTS, AiFunnelFields, AiTemplateCard, createAiFunnel, useAiFunnelText, type AiFunnelSettings } from "./AiFunnelOption";
+import { useAiErrorText } from "@/lib/aiRun";
 import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
 
@@ -131,6 +133,11 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [goal, setGoal] = useState<Goal>("sell");
   const [templateId, setTemplateId] = useState<StarterTemplateId>("blank");
+  // The "AI template" card (AiFunnelOption.tsx): the AI writes the sales page.
+  const [ai, setAi] = useState(false);
+  const [aiSettings, setAiSettings] = useState<AiFunnelSettings>(AI_FUNNEL_DEFAULTS);
+  const aiText = useAiFunnelText();
+  const aiError = useAiErrorText();
   const [productId, setProductId] = useState("");
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
@@ -180,6 +187,16 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
     if (subdomain && !LINK.test(subdomain)) return setError(t.linkInvalid);
     setBusy(true);
     setError(null);
+    if (ai) {
+      try {
+        const id = await createAiFunnel(workspaceId, { productId, name: name.trim(), subdomain: subdomain || undefined, settings: aiSettings });
+        toast.success(fmt(t.created, { name: name.trim() }));
+        return onCreated(id);
+      } catch (err) {
+        setError(aiError(err));
+        return setBusy(false);
+      }
+    }
     let funnel: FunnelDto;
     try {
       funnel = await createFunnelFromStarter(workspaceId, name.trim(), templateId, locale, subdomain || undefined);
@@ -293,6 +310,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                       onChange={() => {
                         setGoal(value);
                         setTemplateId("blank");
+                        setAi(false);
                       }}
                     />
                     <p className="text-sm font-semibold text-ink">{label}</p>
@@ -301,8 +319,9 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 ))}
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
+                {goal === "sell" && <AiTemplateCard active={ai} onSelect={() => setAi(true)} />}
                 {fitting.map((tpl) => {
-                  const active = tpl.id === templateId;
+                  const active = !ai && tpl.id === templateId;
                   return (
                     <label
                       key={tpl.id}
@@ -311,7 +330,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                         active ? "border-primary bg-primary-soft ring-1 ring-primary/30" : "border-line hover:border-primary/50"
                       )}
                     >
-                      <input type="radio" name="funnel-template" className="sr-only" checked={active} onChange={() => setTemplateId(tpl.id)} />
+                      <input type="radio" name="funnel-template" className="sr-only" checked={active} onChange={() => { setTemplateId(tpl.id); setAi(false); }} />
                       <p className={cn("text-sm font-semibold", active ? "text-primary-dark" : "text-ink")}>{tpl.name}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">{tpl.description}</p>
                       <StepChain types={tpl.types} className="mt-2" />
@@ -334,6 +353,11 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 ))}
               </Select>
               <p className="text-xs text-ink-soft">{goal === "leads" ? t.goalLeadsHint : t.productHint}</p>
+              {ai && (
+                <div className="pt-2">
+                  <AiFunnelFields value={aiSettings} onChange={setAiSettings} />
+                </div>
+              )}
             </div>
           )}
 
@@ -362,6 +386,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 type="button"
                 onClick={() => {
                   setError(null);
+                  if (step === 2 && ai && !productId) return setError(aiText.needsProduct);
                   setStep((s) => (s + 1) as 2 | 3);
                 }}
               >

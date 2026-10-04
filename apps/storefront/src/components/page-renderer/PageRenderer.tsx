@@ -48,6 +48,7 @@ import {
   PriceElement,
   ReviewsListElement,
   StarsDisplayElement,
+  CurrencyConverterElement,
   TabsElement,
   TextLinkElement,
   ToggleElement,
@@ -243,6 +244,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <CarouselElement props={props} />;
     case "stars_display":
       return <StarsDisplayElement props={props} t={t} />;
+    case "currency_converter":
+      return <CurrencyConverterElement props={props} t={t} />;
     case "price":
       return <PriceElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />;
     case "reviews_list":

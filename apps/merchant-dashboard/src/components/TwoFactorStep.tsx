@@ -14,6 +14,8 @@ const STRINGS = {
     title: "One more step",
     emailBody: "We sent a 6-digit code to {email}. Enter it to finish signing in.",
     appBody: "Enter the 6-digit code from your authenticator app.",
+    whatsappBody: "We sent a 6-digit code to {phone} on WhatsApp. Enter it to finish signing in.",
+    smsBody: "We sent a 6-digit code to {phone} by SMS. Enter it to finish signing in.",
     code: "Code",
     remember: "Remember this device for 60 days",
     verify: "Sign in",
@@ -27,6 +29,8 @@ const STRINGS = {
     title: "خطوة كمان",
     emailBody: "بعتنا كود من ٦ أرقام على {email}. اكتبه عشان تكمل الدخول.",
     appBody: "اكتب الكود من ٦ أرقام اللي في تطبيق المصادقة.",
+    whatsappBody: "بعتنا كود من ٦ أرقام على واتساب لرقم {phone}. اكتبه عشان تكمل الدخول.",
+    smsBody: "بعتنا كود من ٦ أرقام برسالة لرقم {phone}. اكتبه عشان تكمل الدخول.",
     code: "الكود",
     remember: "افتكر الجهاز ده لمدة ٦٠ يوم",
     verify: "دخول",
@@ -73,7 +77,11 @@ export function TwoFactorStep({
       <div>
         <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
         <p className="mt-2 text-sm text-ink-soft">
-          {challenge.channel === "email" ? fmt(t.emailBody, { email: challenge.sentTo ?? "" }) : t.appBody}
+          {challenge.channel === "email"
+            ? fmt(t.emailBody, { email: challenge.sentTo ?? "" })
+            : challenge.channel === "whatsapp" || challenge.channel === "sms"
+              ? fmt(challenge.channel === "whatsapp" ? t.whatsappBody : t.smsBody, { phone: challenge.sentTo ?? "" })
+              : t.appBody}
         </p>
       </div>
       {error && <Alert variant="danger">{error}</Alert>}

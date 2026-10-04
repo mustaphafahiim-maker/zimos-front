@@ -224,6 +224,8 @@ function isTab(value: unknown): value is LostOrderTab {
 }
 
 /** Digits with the country code, for a wa.me link. Egyptian local numbers get 20. */
+const reachable = (phone: string | null | undefined) => Boolean(phone && /\d{6,}/.test(phone));
+
 function whatsappNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("00")) return digits.slice(2);
@@ -425,6 +427,9 @@ export function LostOrdersPage() {
       align: "end",
       cell: (s) => (
         <div className="flex flex-wrap justify-end gap-1.5">
+          {/* A lost order captured from a name alone has no number to reach. */}
+          {reachable(s.phone) && (
+            <>
           <a
             href={whatsappHref(s)}
             target="_blank"
@@ -446,6 +451,8 @@ export function LostOrdersPage() {
           >
             <Phone className="size-4" aria-hidden />
           </a>
+            </>
+          )}
           {canManage && s.status !== "converted" && (
             <>
               <Button variant="outline" size="sm" className="min-h-9" onClick={() => setConverting(s)}>

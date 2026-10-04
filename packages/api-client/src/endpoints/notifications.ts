@@ -19,6 +19,7 @@ export type MerchantNotificationType =
   | "stock.low"
   | "integration.failed"
   | "export.ready"
+  | "shipping.batch_done"
   | "announcement"
   | "automation";
 

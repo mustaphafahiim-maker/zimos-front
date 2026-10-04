@@ -24,6 +24,7 @@ import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import { useCatalogLabels } from "../catalogLabels";
 import { ProductImagesSection } from "./ProductImagesSection";
+import { AiDescriptionButton } from "./AiDescriptionButton";
 
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"];
 const TYPES: ProductType[] = ["physical", "digital", "service"];
@@ -296,6 +297,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                 />
               )}
             </Field>
+            <AiDescriptionButton name={name} onWritten={(output) => setDescription(output.description)} />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.status} error={fieldErrors.status}>

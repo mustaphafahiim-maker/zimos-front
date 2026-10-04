@@ -26,7 +26,6 @@ import {
   Package,
   PiggyBank,
   Settings,
-  Send,
   ShieldAlert,
   ShoppingBag,
   ShoppingCart,
@@ -68,7 +67,6 @@ export type NavKey =
   | "settlements"
   | "inbox"
   | "automations"
-  | "campaigns"
   | "marketing"
   | "profit"
   | "ads"
@@ -161,9 +159,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
-      { key: "campaigns", to: "/campaigns", icon: Send },
       { key: "automations", to: "/automations", icon: Bot },
-      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "affiliates", to: "/affiliates", icon: UsersRound },
       { key: "ai", to: "/ai", icon: Sparkles },
     ],
@@ -187,6 +183,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
@@ -266,10 +263,9 @@ export const NAV_LABELS = {
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
-    campaigns: "WhatsApp campaigns",
     marketing: "Marketing",
     profit: "Profit",
-    ads: "Ad campaigns",
+    ads: "Ad spend",
     media: "Media library",
     digital: "Digital products",
     ai: "AI studio",
@@ -307,10 +303,9 @@ export const NAV_LABELS = {
     settlements: "تحصيل الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
-    campaigns: "حملات واتساب",
     marketing: "التسويق",
     profit: "الأرباح",
-    ads: "الحملات الإعلانية",
+    ads: "مصاريف الإعلانات",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",

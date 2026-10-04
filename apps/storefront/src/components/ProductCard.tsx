@@ -1,5 +1,6 @@
 "use client";
 
+import { ConvertedPrice } from "./ConvertedPrice";
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
@@ -179,6 +180,7 @@ export function ProductCard({
           <span className="text-base font-bold text-ink">
             {price !== undefined ? formatPrice(price, currency, locale) : "—"}
           </span>
+          {price !== undefined && <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />}
           {compareAt && (
             <span className="text-sm text-ink-soft line-through">
               {formatPrice(compareAt, currency, locale)}

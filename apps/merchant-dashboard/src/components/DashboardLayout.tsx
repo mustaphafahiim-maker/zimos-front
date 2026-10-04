@@ -11,6 +11,7 @@ import {
   findNavItem,
   isNavItemVisible,
 } from "@/lib/navigation";
+import { profileAvatarOf } from "@store-builder/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -225,9 +226,13 @@ function AccountMenu() {
           />
         }
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </span>
+        {profileAvatarOf(user) ? (
+          <img src={profileAvatarOf(user) ?? undefined} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+            {(userLabel || "?").charAt(0).toUpperCase()}
+          </span>
+        )}
         <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
         <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
       </DropdownMenuTrigger>

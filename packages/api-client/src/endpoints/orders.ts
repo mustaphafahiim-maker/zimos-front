@@ -202,11 +202,22 @@ export interface OrderListFilters {
   carrier?: string;
   seen?: boolean;
   test?: boolean;
+  /** Orders containing this product. */
+  productId?: string;
+  funnelId?: string;
+  dataQuality?: "good" | "low";
+  /** Two letters, any case. */
+  ipCountry?: string;
+  /** A discount code the order used, any case. */
+  discountCode?: string;
+  /** The visit's utm_source / utm_campaign (last touch, else first), any case. */
+  utmSource?: string;
+  utmCampaign?: string;
 }
 
 // -------------------------------------------------- timeline, neighbours --
 
-export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook";
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier";
 
 export interface OrderTimelineEvent {
   id: string;
@@ -216,7 +227,8 @@ export interface OrderTimelineEvent {
   /**
    * status: { from, to, reason } · audit: { action, entity, before, after } ·
    * note: { body, visibility } · automation: { trigger, status, detail } ·
-   * webhook: { eventType, status, attempts, responseStatus }
+   * webhook: { eventType, status, attempts, responseStatus } ·
+   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId }
    */
   data: Record<string, unknown>;
 }

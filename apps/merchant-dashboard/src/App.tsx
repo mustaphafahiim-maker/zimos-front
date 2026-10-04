@@ -27,6 +27,8 @@ import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
+import { ShipmentBatchPage } from "@/pages/orders/ShipmentBatchPage";
+import { ExportFilePage } from "@/pages/exports/ExportFilePage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
@@ -98,7 +100,6 @@ const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
 const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
-const CampaignsPage = lazy(() => import("@/pages/campaigns/CampaignsPage").then((m) => ({ default: m.CampaignsPage })));
 const ProfitPage = lazy(() => import("@/pages/profit/RealProfitPage").then((m) => ({ default: m.RealProfitPage })));
 const ProfitCostsPage = lazy(() =>
   import("@/pages/profit/ProfitCostsPage").then((m) => ({ default: m.ProfitCostsPage }))
@@ -137,6 +138,8 @@ export default function App() {
 
                       <Route path="/orders" element={<OrdersListPage />} />
                       <Route path="/orders/new" element={<ManualOrderPage />} />
+                      <Route path="/orders/shipment-batches/:batchId" element={<ShipmentBatchPage />} />
+                      <Route path="/exports/:exportId" element={<ExportFilePage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
@@ -189,7 +192,6 @@ export default function App() {
                       <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
                       <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
-                      <Route path="/campaigns" element={<LazyRoute><CampaignsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
                       <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />

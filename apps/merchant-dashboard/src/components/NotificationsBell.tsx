@@ -10,6 +10,7 @@ import {
   PackageMinus,
   PlugZap,
   ShoppingBag,
+  Truck,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -72,6 +73,7 @@ const ICONS: Record<string, LucideIcon> = {
   "stock.low": PackageMinus,
   "integration.failed": PlugZap,
   "export.ready": Download,
+  "shipping.batch_done": Truck,
   announcement: Megaphone,
   automation: Megaphone,
 };
