@@ -74,8 +74,9 @@ function readCollapsedGroups(): Record<string, boolean> {
  * mobile drawer. `onNavigate` lets the drawer close itself when a link is
  * followed. Same approach as the platform-admin console.
  *
- * The sidebar is a dark surface in both themes: its container carries the
- * `dark` class, so the shared controls inside it draw with the dark tokens.
+ * The sidebar and the top bar are Glass panels over the app backdrop
+ * (`.glass-app`, `.glass-nav` in index.css): they follow the theme, so the
+ * controls inside them draw with the ordinary tokens.
  */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { logout, user } = useAuth();
@@ -127,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           return (
             <div
               key={group.id}
-              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-white/10 pt-4"))}
+              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
             >
               {heading && (
                 <button
@@ -135,7 +136,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.16em] text-white/45 uppercase transition-colors hover:text-white/80 rtl:font-sans rtl:text-[11px] rtl:tracking-normal"
+                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[11px] rtl:tracking-normal"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
@@ -153,8 +154,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white",
-                        isActive && "bg-white/[0.11] font-semibold text-white"
+                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
+                        isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
                       )
                     }
                   >
@@ -163,13 +164,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         {isActive && (
                           <span
                             aria-hidden
-                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-accent"
+                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
                           />
                         )}
                         <item.icon
                           className={cn(
-                            "size-[18px] shrink-0 text-white/55 group-hover:text-white/90",
-                            isActive && "text-white"
+                            "size-[18px] shrink-0 text-ink-soft/80 group-hover:text-ink",
+                            isActive && "text-primary"
                           )}
                           strokeWidth={1.75}
                           aria-hidden
@@ -184,14 +185,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="flex items-center gap-3 border-t border-white/10 px-4 py-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
+      <div className="flex items-center gap-3 border-t border-line px-4 py-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark dark:text-primary">
           {(userLabel || "?").charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">{userLabel}</p>
+          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
           {user?.fullName && user.email && (
-            <p className="truncate text-xs text-white/50" dir="ltr">
+            <p className="truncate text-xs text-ink-soft" dir="ltr">
               {user.email}
             </p>
           )}
@@ -201,7 +202,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           onClick={() => logout()}
           aria-label={t.signOut}
           title={t.signOut}
-          className="shrink-0 cursor-pointer rounded-md p-2 text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
+          className="shrink-0 cursor-pointer rounded-md p-2 text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink"
         >
           <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
         </button>
@@ -234,18 +235,18 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         onClick={() => setOpen((v) => !v)}
         aria-label={t.switchStore}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.08] px-2.5 py-2 text-start transition-colors hover:bg-white/[0.12]"
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-paper-raised/60 px-2.5 py-2 text-start transition-colors hover:bg-primary-soft"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#2563eb] text-sm font-semibold text-white">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
           {name.charAt(0).toUpperCase()}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{name}</span>
-        <ChevronsUpDown className="size-4 shrink-0 text-white/50" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{name}</span>
+        <ChevronsUpDown className="size-4 shrink-0 text-ink-soft" aria-hidden />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onMouseDown={() => setOpen(false)} aria-hidden />
-          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-line bg-paper-raised py-1 shadow-xl">
+          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto zimos-glass rounded-xl py-1 shadow-xl">
             {workspaces.map((workspace) => (
               <button
                 key={workspace.id}
@@ -347,8 +348,8 @@ export function DashboardLayout() {
   }, [mobileOpen]);
 
   return (
-    <div className="shell-bar flex min-h-screen">
-      <aside className="dark shell-surface sticky top-0 hidden h-dvh w-[264px] shrink-0 md:flex md:flex-col">
+    <div className="glass-app flex min-h-screen">
+      <aside className="zimos-glass zimos-glass-panel glass-nav sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[264px] shrink-0 md:flex md:flex-col">
         <SidebarContent />
       </aside>
 
@@ -361,13 +362,13 @@ export function DashboardLayout() {
             aria-modal="true"
             aria-label={t.navLabel}
             onMouseDown={(e) => e.stopPropagation()}
-            className="dark shell-surface animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-lg"
+            className="zimos-glass glass-nav animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-lg"
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label={t.closeNav}
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
               <X className="size-4" aria-hidden />
             </button>
@@ -377,18 +378,18 @@ export function DashboardLayout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="dark shell-bar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5">
+        <header className="zimos-glass glass-nav glass-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5 md:top-3 md:mx-3 md:mt-3">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label={t.openNav}
               aria-expanded={mobileOpen}
-              className="shrink-0 cursor-pointer rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white md:hidden"
+              className="shrink-0 cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink md:hidden"
             >
               <Menu className="size-5" aria-hidden />
             </button>
-            <span className="truncate text-sm font-semibold text-white md:hidden">{storeName}</span>
+            <span className="truncate text-sm font-semibold text-ink md:hidden">{storeName}</span>
             <CommandPalette />
           </div>
 
@@ -402,9 +403,9 @@ export function DashboardLayout() {
           </div>
         </header>
 
-        {/* The page: an inset panel in the frame, with the breadcrumb strip on top. */}
-        <div className="flex min-w-0 flex-1 flex-col bg-paper md:rounded-ss-2xl">
-          <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line bg-paper-raised px-4 py-1.5 sm:px-6 md:rounded-ss-2xl">
+        {/* The page sits straight on the backdrop; the breadcrumb is a plain row above it. */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-11 items-center justify-between gap-3 px-4 pt-3 sm:px-6">
             <Breadcrumbs />
             {/* The store's public link: on every page, and it follows the store switcher. */}
             {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}

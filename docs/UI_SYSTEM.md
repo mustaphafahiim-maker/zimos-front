@@ -168,11 +168,35 @@ Until the owner signs it off, the product keeps the approved logo files
 Rolling it out is a separate, bounded change: the logo component and
 favicons, then the tokens.
 
-The brief rules out glass, glow, gradients as structure and 3D. Where it and
-the Glass material below disagree, the brief is the newer decision: keep
-Glass in the lab until the owner chooses, and do not add it to product
-screens. The shared `Button` already follows the brief — flat, one weight, a
-clear edge.
+The brief rules out glass, glow, gradients as structure and 3D for the logo.
+For the product surface the owner chose Glass on 2026-10-04 (below); the mark
+itself stays flat.
+
+## Glass in the merchant dashboard
+
+Adopted in one bounded change to the frame, not page by page:
+
+- `components/DashboardLayout.tsx`: the sidebar and the top bar are
+  `zimos-glass glass-nav` panels that follow the theme (no more navy frame with
+  a forced `dark` class), floating with a 12px inset from `md` up.
+- `index.css`, under "Glass dashboard": `.glass-app` paints the backdrop and
+  makes every shared `Card` translucent through `--card`; outline buttons get
+  a translucent fill and a highlight; menus, selects, popovers, dialogs and
+  `Modal` are glass with blur.
+- Blur is used only on the frame and on overlays. Cards and buttons are
+  translucent without it, so a table full of them stays cheap to draw.
+- Routing, role visibility, the store switcher and the mobile drawer are
+  unchanged.
+
+The light tokens moved to the brief's palette in the same change: ink
+`#081F5C`, primary `#165DFF`, paper `#F6F9FF`, and a new `--color-cyan` used
+only in the backdrop. The table under "Current dashboard foundations" above
+predates this; `index.css` is authoritative.
+
+Everything falls back to solid surfaces under `prefers-reduced-transparency`,
+forced colours, or `data-glass="off"` on `<html>`. A page that puts its own
+background on a `Card` keeps it. Surfaces drawn with raw `bg-paper-raised`
+classes instead of `Card` stay solid.
 
 ## Review before rollout
 

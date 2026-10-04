@@ -33,7 +33,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "w-full max-w-lg rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-xl",
+          "zimos-glass glass-dialog w-full max-w-lg rounded-[var(--radius-card)]",
           className
         )}
         onMouseDown={(e) => e.stopPropagation()}

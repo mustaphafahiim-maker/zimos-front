@@ -28,11 +28,11 @@
 :root {
   color-scheme: light;
 
-  --color-ink: #131a2b;
-  --color-ink-soft: #4b5468;
-  --color-paper: #f5f6fa;
+  --color-ink: #081f5c;
+  --color-ink-soft: #56648c;
+  --color-paper: #f6f9ff;
   --color-paper-raised: #ffffff;
-  --color-line: #e3e6ee;
+  --color-line: #e3e8f2;
   /* Border for interactive controls (inputs, selects, textareas, checkboxes).
      WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
      --color-line is a decorative hairline (~1.3:1) and fails that, so controls
@@ -40,9 +40,11 @@
      ramp, so the palette identity is unchanged. */
   --color-line-strong: #868b98;
 
-  --color-primary: #2563EB;
-  --color-primary-dark: #1E3A8A;
-  --color-primary-soft: #E8F0FE;
+  --color-primary: #165DFF;
+  --color-primary-dark: #081F5C;
+  --color-primary-soft: #EAF0FF;
+  /* Used in small amounts: the backdrop, indicators, charts. Not for text on white. */
+  --color-cyan: #12c8da;
 
   --color-accent: #e2a33d;
   /* Badge text on accent-soft — deep enough to hold 4.5:1 there. */
@@ -63,12 +65,6 @@
 
   --radius-card: 0.75rem;
 
-  /* The dashboard frame: the sidebar and the top bar share one deep navy
-     surface and the page sits in it as an inset panel. Set on <html> (not
-     `.dark`) because the frame itself carries the `.dark` class so the
-     controls inside it draw with the dark tokens in both themes. */
-  --shell-from: #111c38;
-  --shell-to: #0a1226;
   --shadow-card: 0 1px 3px rgb(16 24 40 / 0.05), 0 1px 2px rgb(16 24 40 / 0.03);
 
   /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
@@ -111,8 +107,6 @@
 }
 
 html.dark {
-  --shell-from: #080d1b;
-  --shell-to: #05080f;
   --shadow-card: none;
 }
 
@@ -416,25 +410,130 @@ html.dark {
   }
 }
 
-/* The dashboard frame (sidebar + top bar). */
-.shell-surface {
-  background: linear-gradient(180deg, var(--shell-from) 0%, var(--shell-to) 100%);
+/* ------------------------------------------------------------------ *
+ * Glass dashboard (docs/UI_SYSTEM.md).
+ *
+ * The frame — sidebar, top bar, menus, dialogs — is the Glass material of
+ * @store-builder/ui/styles.css over a soft backdrop. Cards and outline
+ * buttons are translucent without blur, so tables, numbers and forms stay
+ * as readable as on a solid surface and a page of them costs nothing to
+ * draw. With reduced transparency, forced colours or data-glass="off",
+ * everything below falls back to the solid surfaces.
+ * ------------------------------------------------------------------ */
+.glass-app {
+  /* Cards are tinted by the backdrop instead of sitting on it as white boxes. */
+  --card: color-mix(in srgb, var(--color-paper-raised) 84%, transparent);
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%, color-mix(in srgb, var(--color-primary) 17%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 12%, color-mix(in srgb, var(--color-cyan) 15%, transparent), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 55% 100%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 62%),
+    var(--color-paper);
+  background-attachment: fixed;
 }
 
-.shell-bar {
-  background: var(--shell-from);
+/* Navigation glass is clearer than floating glass: only the backdrop is behind it. */
+.zimos-glass.glass-nav {
+  --glass-opacity: 64%;
+  --glass-blur: 22px;
+  --glass-shadow: 0 14px 34px -22px color-mix(in srgb, var(--color-ink) 38%, transparent);
+  border-color: color-mix(in srgb, var(--color-paper-raised) 72%, var(--color-line));
+}
+.dark .zimos-glass.glass-nav {
+  --glass-opacity: 60%;
+  border-color: var(--color-line);
+}
+.glass-nav.zimos-glass-panel {
+  border-radius: 1rem;
+}
+/* The top bar spans the screen on a phone and floats, rounded, from md up. */
+.glass-topbar {
+  border-width: 0 0 1px;
+}
+@media (min-width: 48rem) {
+  .glass-topbar {
+    border-width: 1px;
+    border-radius: 1rem;
+  }
 }
 
-/* Inside the frame the dark tokens apply; lift the raised surface a little so
-   menus opened from the frame read as panels on it. */
-.shell-surface.dark,
-.shell-bar.dark {
-  --color-paper: #0d1730;
-  --color-paper-raised: #17233f;
-  --color-line: rgb(255 255 255 / 0.12);
-  --color-primary-soft: rgb(255 255 255 / 0.09);
-  --color-ink-soft: rgb(255 255 255 / 0.74);
-  color: var(--color-ink);
+.glass-app [data-slot="card"] {
+  --tw-ring-color: color-mix(in srgb, var(--color-paper-raised) 60%, var(--color-line));
+  --tw-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 14px 30px -22px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
+.dark .glass-app [data-slot="card"] {
+  --tw-ring-color: var(--color-line);
+  --tw-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 9%, transparent);
+}
+
+/* Secondary actions: a clear edge and a calm highlight, no blur. */
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 88%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass):hover:not(:disabled),
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass)[aria-expanded="true"] {
+  background: var(--color-primary-soft);
+}
+.dark .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+/* The main action catches a little light along its top edge. */
+.glass-app [data-slot="button"][data-variant="default"],
+.glass-app [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 10px 18px -12px color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+
+/* Menus, selects, popovers and dialogs are portalled outside .glass-app. */
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"],
+[data-slot="popover-content"],
+[data-slot="dialog-content"],
+[data-slot="sheet-content"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.zimos-glass.glass-dialog {
+  --glass-opacity: 90%;
+  --glass-shadow: 0 24px 60px -24px color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .glass-app {
+    --card: var(--color-paper-raised);
+    background: var(--color-paper);
+  }
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+[data-glass="off"] .glass-app {
+  --card: var(--color-paper-raised);
+  background: var(--color-paper);
+}
+[data-glass="off"] .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+[data-glass="off"] [data-slot="dropdown-menu-content"],
+[data-glass="off"] [data-slot="select-content"],
+[data-glass="off"] [data-slot="popover-content"],
+[data-glass="off"] [data-slot="dialog-content"],
+[data-glass="off"] [data-slot="sheet-content"] {
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Thin scrollbar that only shows while the sidebar is hovered. */
@@ -443,5 +542,5 @@ html.dark {
   scrollbar-color: transparent transparent;
 }
 .shell-scroll:hover {
-  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-ink) 26%, transparent) transparent;
 }
