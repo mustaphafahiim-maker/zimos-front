@@ -120,3 +120,5 @@ export * from "./endpoints/orderRiskCounts";
 export * from "./endpoints/orderListColumns";
 // Many invoices in one PDF for the ticked orders (orders/orderInvoicesPdf.js).
 export * from "./endpoints/orderSelection";
+// "Confirm via WhatsApp" on the order page (orders/whatsappConfirm.js).
+export * from "./endpoints/orderWhatsappConfirm";

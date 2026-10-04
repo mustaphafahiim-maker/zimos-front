@@ -11,6 +11,7 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
 import { OrderActions } from "./components/OrderActions";
+import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
 import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
@@ -107,6 +108,7 @@ export function OrderDetailPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <OrderActions order={data} onChanged={reload} />
+              <WhatsappConfirmButton order={data} onChanged={reload} />
               <EditItemsButton order={data} onChanged={reload} />
               <FulfillButton order={data} onChanged={reload} />
               <OrderMetaActions order={data} onChanged={reload} />
