@@ -196,3 +196,5 @@ export * from "./endpoints/offerStats";
 export * from "./endpoints/funnelGenericPages";
 // Large digital files, uploaded in parts straight to storage (digital/multipartUploads.js).
 export * from "./endpoints/digitalMultipart";
+// Switch to cash on delivery with the COD checks: a code, a deposit (payments/codSwitchChecks.js).
+export * from "./endpoints/codSwitch";

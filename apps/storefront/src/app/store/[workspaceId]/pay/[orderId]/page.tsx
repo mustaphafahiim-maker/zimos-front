@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import type { ShopperPaymentStatus, StorefrontPaymentMethod } from "@store-builder/api-client";
+import { codSwitchDeposit, type ShopperPaymentStatus, type StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CheckIcon } from "@/components/Icons";
+import { CodSwitch } from "@/components/payment/CodSwitch";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
@@ -247,16 +248,20 @@ function PaymentPage() {
                     </button>
                   ))}
                 {status.canSwitchToCod && token && (
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() =>
-                      void act("cod", () => client.switchOrderToCod(workspaceId, orderId, token, preview))
-                    }
-                    className={btnSecondary}
-                  >
-                    {busy === "cod" ? t.payment.switching : t.payment.switchToCod}
-                  </button>
+                  <CodSwitch
+                    client={client}
+                    workspaceId={workspaceId}
+                    orderId={orderId}
+                    token={token}
+                    previewToken={preview}
+                    deposit={codSwitchDeposit(status)}
+                    disabled={busy !== null && busy !== "cod"}
+                    label={t.payment.switchToCod}
+                    busyLabel={t.payment.switching}
+                    onBusy={(on) => setBusy(on ? "cod" : null)}
+                    onDone={setStatus}
+                    errorText={(err) => orderErrorMessage(err, t.form.errors)}
+                  />
                 )}
               </div>
             </div>
