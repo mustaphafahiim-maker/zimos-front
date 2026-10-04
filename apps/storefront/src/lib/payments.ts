@@ -2,6 +2,7 @@
 
 import { wantsSaveCard } from "./saveCard";
 import { botGuardFields } from "./botGuard";
+import { adMatchFields } from "./adMatch";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { storefrontPaymentMethodsFor, type ApiClient, type CheckoutPayload, type CheckoutResult, type StorefrontPaymentMethod } from "@store-builder/api-client";
@@ -181,6 +182,8 @@ export async function placeOnlineOrder({
     ...(method.method === "card" && wantsSaveCard(workspaceId) ? { saveCard: true } : {}),
     // The bot guard's token and honeypot (lib/botGuard).
     ...(await botGuardFields(client, workspaceId)),
+    // The ad platforms' browser ids, for the server-side Purchase (lib/adMatch).
+    ...adMatchFields(workspaceId),
   };
   // The return URL names the order, which only exists once the checkout
   // answers: the server fills in the {orderId} placeholder.
