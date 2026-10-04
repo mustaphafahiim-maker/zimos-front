@@ -17,7 +17,7 @@ import type { PageTree } from "../types";
 export const AI_DIALECTS = ["egyptian", "gulf", "msa", "english", "french"] as const;
 export type AiDialect = (typeof AI_DIALECTS)[number];
 
-export type AiFeature = "product" | "page" | "translate" | "policies";
+export type AiFeature = "product" | "page" | "translate" | "policies" | "page_review" | "ad_creatives" | "store_builder" | "wa_reply";
 export type AiJobStatus = "queued" | "running" | "succeeded" | "failed";
 
 export interface AiProductInput {
@@ -77,11 +77,75 @@ export interface AiPoliciesOutput {
   privacy: string;
 }
 
+// --- P2 (backend ai/featuresP2.js) ---------------------------------------
+
+/** A store page by id, or a funnel step by its funnel and key; its last 30 days are read on the server. */
+export type AiPageReviewInput =
+  | { source: "page"; pageId: string; dialect?: AiDialect }
+  | { source: "step"; funnelId: string; stepKey: string; dialect?: AiDialect };
+
+export interface AiPageReviewOutput {
+  score: number;
+  summary: string;
+  recommendations: { title: string; detail: string; severity: "high" | "medium" | "low" }[];
+}
+
+export interface AiAdCreativesInput {
+  productId: string;
+  platform?: "facebook" | "instagram" | "tiktok";
+  angle?: string;
+  dialect?: AiDialect;
+}
+
+export interface AiAdBanner {
+  /** Always one of the product's own pictures. */
+  imageUrl: string;
+  headline: string;
+  subline: string;
+  badge: string;
+  format: "square" | "story" | "landscape";
+}
+
+export interface AiAdCreativesOutput {
+  headlines: string[];
+  primaryTexts: string[];
+  /** Empty when the product has no pictures. */
+  banners: AiAdBanner[];
+}
+
+export interface AiStoreBuilderInput {
+  niche: string;
+  storeName: string;
+  /** "#rrggbb" */
+  color?: string;
+  dialect?: AiDialect;
+}
+
+export interface AiStoreBuilderOutput {
+  theme: { key: string; primaryColor: string };
+  home: { title: string; tree: PageTree };
+  collections: { name: string; description: string }[];
+  policies: { shipping: string; returns: string; privacy: string };
+}
+
+export interface AiWaReplyInput {
+  conversationId: string;
+  dialect?: AiDialect;
+}
+
+export interface AiWaReplyOutput {
+  reply: string;
+}
+
 export interface AiInputs {
   product: AiProductInput;
   page: AiPageInput;
   translate: AiTranslateInput;
   policies: AiPoliciesInput;
+  page_review: AiPageReviewInput;
+  ad_creatives: AiAdCreativesInput;
+  store_builder: AiStoreBuilderInput;
+  wa_reply: AiWaReplyInput;
 }
 
 export interface AiOutputs {
@@ -89,6 +153,10 @@ export interface AiOutputs {
   page: AiPageOutput;
   translate: AiTranslateOutput;
   policies: AiPoliciesOutput;
+  page_review: AiPageReviewOutput;
+  ad_creatives: AiAdCreativesOutput;
+  store_builder: AiStoreBuilderOutput;
+  wa_reply: AiWaReplyOutput;
 }
 
 /** What "apply" created from the result. */
@@ -96,7 +164,9 @@ export type AiApplied =
   | { type: "product"; id: string }
   | { type: "page"; id: string; websiteId: string; path: string }
   /** `page` applied with target "funnel": a new draft funnel (sales → checkout → thank you). */
-  | { type: "funnel"; id: string };
+  | { type: "funnel"; id: string }
+  /** store_builder: an unpublished page and hidden collections. */
+  | { type: "store"; pageId: string; websiteId: string; path: string; collectionIds: string[] };
 
 export interface AiJob<F extends AiFeature = AiFeature> {
   id: string;
@@ -171,7 +241,7 @@ export async function aiListJobs(client: ApiClient, workspaceId: string, params:
  * or with `target: "funnel"` a new draft funnel named `name` whose sales step
  * is the page.
  */
-export async function aiApply<F extends "product" | "page">(
+export async function aiApply<F extends "product" | "page" | "store_builder">(
   client: ApiClient,
   workspaceId: string,
   jobId: string,

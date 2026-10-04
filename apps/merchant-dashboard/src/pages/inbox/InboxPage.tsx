@@ -32,6 +32,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
 import { useInboxLive } from "./useInboxLive";
 import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, QuickRepliesMenu, type InboxScope } from "./InboxExtras";
+import { SuggestReplyButton } from "./SuggestReply";
 import { BotBadge, BotSettingsLink, BotToggle } from "./WaBot";
 import { waBotSentOf } from "@store-builder/api-client";
 import { Modal } from "@/components/Modal";
@@ -853,6 +854,7 @@ function Composer({
   return (
     <form onSubmit={sendText} className="flex items-end gap-2 border-t border-line p-3">
       <QuickRepliesMenu onPick={setText} draft={text} />
+      <SuggestReplyButton conversationId={conversation.id} onSuggest={setText} />
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
