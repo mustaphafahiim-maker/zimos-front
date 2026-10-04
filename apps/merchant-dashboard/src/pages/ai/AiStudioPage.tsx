@@ -34,6 +34,7 @@ import { Textarea } from "@/components/Textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
+import { ImageListField } from "@/pages/website/editor/ImageField";
 
 const STRINGS = {
   en: {
@@ -68,6 +69,8 @@ const STRINGS = {
     link: "Source link (optional)",
     notes: "What should it know? (optional)",
     notesHint: "Material, sizes, who it is for, what is in the box.",
+    photos: "Product photos (optional)",
+    photosHint: "Up to 6. The AI describes what they show, and they become the draft product's photos.",
     fName: "Name",
     fDescription: "Description",
     fFeatures: "Features",
@@ -139,6 +142,8 @@ const STRINGS = {
     link: "رابط المصدر (اختياري)",
     notes: "ما الذي يجب أن يعرفه؟ (اختياري)",
     notesHint: "الخامة، المقاسات، لمن المنتج، محتويات العبوة.",
+    photos: "صور المنتج (اختياري)",
+    photosHint: "حتى 6 صور. يصف الذكاء الاصطناعي ما يظهر فيها، وتصبح صور مسودة المنتج.",
     fName: "الاسم",
     fDescription: "الوصف",
     fFeatures: "المميزات",
@@ -273,7 +278,7 @@ function ProductTool({ onDone }: { onDone: () => void }) {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const gen = useGeneration("product", onDone);
-  const [form, setForm] = useState({ name: "", price: "", link: "", notes: "", dialect: "egyptian" as AiDialect });
+  const [form, setForm] = useState({ name: "", price: "", link: "", notes: "", imageUrls: [] as string[], dialect: "egyptian" as AiDialect });
   const [draft, setDraft] = useState<AiProductOutput | null>(null);
   const [applying, setApplying] = useState(false);
 
@@ -288,6 +293,7 @@ function ProductTool({ onDone }: { onDone: () => void }) {
       price: form.price.trim() || undefined,
       link: form.link.trim() || undefined,
       notes: form.notes.trim() || undefined,
+      imageUrls: form.imageUrls.length ? form.imageUrls : undefined,
       dialect: form.dialect,
     });
   }
@@ -322,6 +328,8 @@ function ProductTool({ onDone }: { onDone: () => void }) {
           <Field label={t.notes} hint={t.notesHint}>
             {(props) => <Textarea {...props} rows={3} maxLength={2000} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}
           </Field>
+          {/* §19.2: the photos go to the model and become the draft's media. */}
+          <ImageListField label={t.photos} hint={t.photosHint} value={form.imageUrls} onChange={(imageUrls) => setForm({ ...form, imageUrls: imageUrls.slice(0, 6) })} />
           <DialectField value={form.dialect} onChange={(dialect) => setForm({ ...form, dialect })} />
           <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={form.name.trim().length < 2} />
         </form>
