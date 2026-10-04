@@ -578,12 +578,25 @@ export function FunnelEditorPage() {
                   {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
-                  <FunnelIssuesButton
-                    funnelId={funnelId}
-                    version={Number(!dirty)}
-                    stepNames={Object.fromEntries(funnel.steps.map((s) => [s.key, s.name]))}
-                  />
+                  {publicUrl && (
+                    <Button variant="outline" onClick={preview}>
+                      <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
+                    </Button>
+                  )}
+                  <Button onClick={() => void save()} disabled={!dirty || busy}>
+                    {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
+                    {saving ? (progress && progress.total > 0 ? fmt(t.savingProgress, { done: progress.done, total: progress.total }) : c.saving) : c.save}
+                  </Button>
+                  <Button variant="outline" onClick={() => void publish()} disabled={busy}>
+                    {statusBusy ? <Spinner className="size-4" /> : <Rocket className="size-4" aria-hidden />}
+                    {funnel.status === "draft" ? t.publish : t.republish}
+                  </Button>
+                </div>
+              </div>
+              {/* Tools on their own, quieter row: how you look at the funnel and what is wrong
+                  with it at the start, the less frequent actions at the end. */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <div role="group" aria-label={t.views} className="inline-flex rounded-xl border border-line bg-paper p-0.5">
                     {(["flow", "page"] as const).map((v) => {
                       const Glyph = v === "flow" ? Workflow : PencilRuler;
@@ -616,6 +629,14 @@ export function FunnelEditorPage() {
                     {allProblems.length === 0 ? <CircleCheck className="size-3.5" aria-hidden /> : <TriangleAlert className="size-3.5" aria-hidden />}
                     {allProblems.length === 0 ? t.readyToPublish : allProblems.length === 1 ? t.oneToFix : fmt(t.toFix, { n: allProblems.length })}
                   </button>
+                  <FunnelIssuesButton
+                    funnelId={funnelId}
+                    version={Number(!dirty)}
+                    stepNames={Object.fromEntries(funnel.steps.map((s) => [s.key, s.name]))}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
                   <HistoryMenu
                     workspaceId={workspaceId}
                     funnel={funnel}
@@ -624,15 +645,6 @@ export function FunnelEditorPage() {
                       void reloadFromServer().catch((err) => toast.error(describeError(err)));
                     }}
                   />
-                  {publicUrl && (
-                    <Button variant="outline" onClick={preview}>
-                      <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
-                    </Button>
-                  )}
-                  <Button onClick={() => void save()} disabled={!dirty || busy}>
-                    {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                    {saving ? (progress && progress.total > 0 ? fmt(t.savingProgress, { done: progress.done, total: progress.total }) : c.saving) : c.save}
-                  </Button>
                   {funnel.status === "published" ? (
                     <Button variant="outline" onClick={() => void setStatus("paused")} disabled={busy}>
                       <Pause className="size-4" aria-hidden /> {t.pause}
@@ -642,10 +654,6 @@ export function FunnelEditorPage() {
                       <Play className="size-4" aria-hidden /> {t.resume}
                     </Button>
                   ) : null}
-                  <Button variant="outline" onClick={() => void publish()} disabled={busy}>
-                    {statusBusy ? <Spinner className="size-4" /> : <Rocket className="size-4" aria-hidden />}
-                    {funnel.status === "draft" ? t.publish : t.republish}
-                  </Button>
                 </div>
               </div>
               {saveError && (
