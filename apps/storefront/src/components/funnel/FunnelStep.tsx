@@ -74,6 +74,7 @@ import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 import { PolicyLinks } from "@/components/PolicyLinks";
 import { OfferVariantPicker } from "@/components/offers/OfferVariantPicker";
+import { OfferTimer, useOfferCountdown } from "@/components/offers/OfferTimer";
 import { variantImageOf } from "@/lib/variantImage";
 
 /**
@@ -836,6 +837,9 @@ function FunnelOfferCard({
 
   const firstLine = offer?.lines[0];
   const product = firstLine ? byVariant.get(firstLine.variantId) : undefined;
+  // The offer's real countdown (offers/offerCountdown.js): once it ends the offer can only be declined.
+  const countdown = useOfferCountdown(offer?.expiresAt);
+  const open = !countdown.ended;
   // The option the shopper takes it in (a one-line offer of a product with several, OfferVariantPicker).
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosenVariantId = offer && offer.lines.length === 1 ? (chosenId ?? firstLine?.variantId ?? "") : "";
@@ -890,6 +894,7 @@ function FunnelOfferCard({
                 <OfferVariantPicker product={product} value={chosenVariantId} onChange={setChosenId} disabled={!!flow.pending} />
               )}
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{joinsOrder ? t.funnel.offerJoinsHint : t.funnel.offerHint}</p>
+              <OfferTimer {...countdown} />
             </>
           ) : (
             <h2 id="funnel-offer-title" className="text-base font-medium text-ink-soft">
@@ -898,7 +903,7 @@ function FunnelOfferCard({
           )}
 
           <PageOfferActions
-            canAccept={!!offer && canAccept}
+            canAccept={!!offer && canAccept && open}
             pending={!!flow.pending}
             onAction={(type) => void flow.advance(type, undefined, undefined, type === "accepted_offer" && chosenVariantId ? chosenVariantId : undefined)}
           />
@@ -909,7 +914,7 @@ function FunnelOfferCard({
               </p>
             )}
             <ErrorBox message={flow.error} />
-            {offer && canAccept && (
+            {offer && canAccept && open && (
               <button
                 type="button"
                 onClick={() => void flow.advance("accepted_offer", undefined, undefined, chosenVariantId || undefined)}

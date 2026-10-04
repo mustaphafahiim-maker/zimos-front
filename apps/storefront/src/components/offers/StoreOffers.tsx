@@ -26,6 +26,7 @@ import { CheckIcon } from "../Icons";
 import { ProductCard } from "../ProductCard";
 import { btnPrimary, btnSecondary, card } from "../ui";
 import { OfferVariantPicker, useOfferProduct } from "./OfferVariantPicker";
+import { OfferTimer, useOfferCountdown } from "./OfferTimer";
 
 /*
  * The shopper's side of the offer rules (backend modules/offers): a
@@ -221,6 +222,8 @@ export function ThankYouUpsell({
   // The option the shopper takes it in (OfferVariantPicker), for a product with several.
   const product = useOfferProduct(workspaceId, offer ? (offer.productSlug ?? offer.productId) : null);
   const [chosenId, setChosenId] = useState<string | null>(null);
+  // The offer's real countdown from the order (offers/offerCountdown.js).
+  const countdown = useOfferCountdown(offer?.expiresAt);
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -296,11 +299,12 @@ export function ThankYouUpsell({
         </div>
       </div>
       <OfferVariantPicker product={product} value={chosenId ?? offer.variantId} onChange={setChosenId} disabled={state === "busy"} />
+      <OfferTimer {...countdown} />
       <p role="alert" className="mt-3 text-sm font-medium text-danger empty:hidden">
         {error}
       </p>
       <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <button type="button" className={btnPrimary} disabled={state === "busy"} onClick={() => void accept()}>
+        <button type="button" className={btnPrimary} disabled={state === "busy" || countdown.ended} onClick={() => void accept()}>
           {state === "busy" ? text.upsellAdding : text.upsellAdd(money(price, offer.currency))}
         </button>
         <button type="button" className={btnSecondary} disabled={state === "busy"} onClick={() => setState("declined")}>

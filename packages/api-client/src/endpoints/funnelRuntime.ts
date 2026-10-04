@@ -46,6 +46,9 @@ export interface FunnelRuntimeOffer {
   currency: string;
   badge: string | null;
   lines: Array<{ variantId: string; quantity: number }>;
+  /** The offer's real countdown (offers/offerCountdown.js): its length, and when it ends for this session. */
+  countdownMinutes?: number | null;
+  expiresAt?: string | null;
 }
 
 /**

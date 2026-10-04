@@ -110,6 +110,9 @@ export interface StorefrontCrossSell {
 
 export interface StorefrontUpsell extends StorefrontOrderBump {
   ruleId: string;
+  /** The offer's real countdown from the order (offers/offerCountdown.js); null without one. */
+  countdownMinutes?: number | null;
+  expiresAt?: string | null;
 }
 
 export interface StorefrontUpsellAccepted {
