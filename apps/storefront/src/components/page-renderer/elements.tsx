@@ -385,7 +385,9 @@ export function TestimonialElement({ props, t }: { props: Props; t: Dictionary }
 }
 
 export function CountdownElement({ props }: { props: Props }) {
-  return <Countdown label={str(props, "label")} endsInHours={num(props, "endsInHours", 24, 1, 8760)} />;
+  return (
+    <Countdown label={str(props, "label")} endsAt={str(props, "endsAt") || null} endsInHours={num(props, "endsInHours", 24, 1, 8760)} />
+  );
 }
 
 /**

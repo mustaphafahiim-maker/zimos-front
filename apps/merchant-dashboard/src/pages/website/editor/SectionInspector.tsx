@@ -528,6 +528,31 @@ function ElementField({
         </Field>
       );
 
+    case "datetime": {
+      // datetime-local speaks the editor's own clock; the prop is an ISO date.
+      const parsed = typeof raw === "string" && raw ? new Date(raw) : null;
+      const local =
+        parsed && !Number.isNaN(parsed.getTime())
+          ? new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : "";
+      return (
+        <Field label={label} hint={hint}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="datetime-local"
+              value={local}
+              onChange={(e) => {
+                const v = e.target.value;
+                const at = v ? new Date(v) : null;
+                onChange(spec.key, at && !Number.isNaN(at.getTime()) ? at.toISOString() : "");
+              }}
+            />
+          )}
+        </Field>
+      );
+    }
+
     case "boolean":
       return (
         <label className="flex items-center gap-2 py-1 text-sm text-ink">

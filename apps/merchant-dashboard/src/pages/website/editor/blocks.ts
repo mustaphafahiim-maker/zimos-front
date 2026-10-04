@@ -107,6 +107,8 @@ export type FieldSpec =
   | { key: string; label: string; kind: "text"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "textarea"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "number"; min?: number; max?: number; hint?: string }
+  // A date and time, stored as an ISO string ("" = not set).
+  | { key: string; label: string; kind: "datetime"; hint?: string }
   | { key: string; label: string; kind: "boolean"; hint?: string }
   | {
       key: string;
@@ -366,7 +368,15 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { label: "ينتهي العرض خلال", endsInHours: 24 },
     fields: [
       { key: "label", label: "Label", kind: "text" },
-      { key: "endsInHours", label: "Ends in (hours)", kind: "number", min: 1, max: 8760 },
+      { key: "endsAt", label: "Ends at", kind: "datetime", hint: "A fixed date and time — the same for every visitor." },
+      {
+        key: "endsInHours",
+        label: "Or: ends this many hours after publishing",
+        kind: "number",
+        min: 1,
+        max: 8760,
+        hint: "Used when no date is set: publishing turns it into a fixed date.",
+      },
       { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
     ],
   },

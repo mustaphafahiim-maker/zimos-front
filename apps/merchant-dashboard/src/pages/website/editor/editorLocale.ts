@@ -119,7 +119,8 @@ const FIELD_LABEL_AR: Record<string, string> = {
   quote: "كلام العميل",
   author: "الاسم",
   rating: "التقييم",
-  endsInHours: "ينتهي بعد (ساعات)",
+  endsInHours: "أو: ينتهي بعد عدد الساعات دي من النشر",
+  endsAt: "ينتهي في",
   submitLabel: "نص زرار الإرسال",
   successMessage: "الرسالة بعد الإرسال",
   tags: "وسوم تُضاف لجهة الاتصال (افصل بفاصلة)",
@@ -148,6 +149,8 @@ const FIELD_LABEL_AR: Record<string, string> = {
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
+  "countdown.endsAt": "تاريخ ووقت ثابتين — نفس الموعد لكل زائر.",
+  "countdown.endsInHours": "لو مفيش تاريخ: النشر بيحوّله لتاريخ ثابت.",
   "button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
   "upsell_accept_button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
   "upsell_decline_link.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
