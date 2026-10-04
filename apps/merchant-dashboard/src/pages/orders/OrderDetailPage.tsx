@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
 import { OrderActions } from "./components/OrderActions";
 import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
+import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
 import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
@@ -118,6 +119,8 @@ export function OrderDetailPage() {
             <ConfirmationPanel order={data} onChanged={reload} />
 
             <OrderSummary order={data} onChanged={reload} />
+
+            <OrderDiscountsCard order={data} />
 
             <OrderProtectionSection order={data} />
 
