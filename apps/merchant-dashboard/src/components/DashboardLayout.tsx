@@ -86,8 +86,6 @@ function readCollapsedGroups(): Record<string, boolean> {
  * controls inside them draw with the ordinary tokens.
  */
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { logout, user } = useAuth();
-  const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -108,7 +106,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // Collapsing a group hides everything in it except the page you are on, so
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
-  const userLabel = user?.fullName ?? user?.email ?? "";
 
   return (
     <>
@@ -194,52 +191,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="border-t border-line p-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button
-                type="button"
-                title={t.accountMenu}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-start transition-colors hover:bg-primary-soft/70"
-              />
-            }
-          >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark dark:text-primary">
-              {(userLabel || "?").charAt(0).toUpperCase()}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-ink">{userLabel}</span>
-              {user?.fullName && user.email && (
-                <span className="block truncate text-xs text-ink-soft" dir="ltr">
-                  {user.email}
-                </span>
-              )}
-            </span>
-            <ChevronsUpDown className="size-4 shrink-0 text-ink-soft" aria-hidden />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="min-w-56">
-            <DropdownMenuItem
-              onClick={() => {
-                onNavigate?.();
-                navigate("/settings");
-              }}
-            >
-              <Settings className="size-4" aria-hidden />
-              {t.settings}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
-              <Keyboard className="size-4" aria-hidden />
-              {t.shortcuts}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => logout()}>
-              <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
-              {t.signOut}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </>
   );
 }
@@ -248,6 +199,62 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
  * The store being worked on, at the top of the sidebar: its name on a glass
  * card, and behind it the list of the merchant's other stores.
  */
+/**
+ * Who is signed in, at the end of the top bar. The avatar opens the account
+ * menu: settings, the keyboard shortcuts and sign out — which is why there is
+ * no sign-out button on show anywhere.
+ */
+function AccountMenu() {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+  const t = useT(STRINGS);
+  const userLabel = user?.fullName ?? user?.email ?? "";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            title={t.accountMenu}
+            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
+          />
+        }
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+          {(userLabel || "?").charAt(0).toUpperCase()}
+        </span>
+        <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
+        <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end" className="min-w-60">
+        <div className="px-2 py-1.5">
+          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
+          {user?.fullName && user.email && (
+            <p className="truncate text-xs text-ink-soft" dir="ltr">
+              {user.email}
+            </p>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate("/settings")}>
+          <Settings className="size-4" aria-hidden />
+          {t.settings}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
+          <Keyboard className="size-4" aria-hidden />
+          {t.shortcuts}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={() => logout()}>
+          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
+          {t.signOut}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   const { currentWorkspace, workspaces, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
@@ -431,6 +438,7 @@ export function DashboardLayout() {
             <CommandPalette />
             {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
             <NotificationsBell />
+            <AccountMenu />
           </div>
         </header>
 
