@@ -13,6 +13,7 @@ import { getStoreMeta } from "@/lib/storeMeta";
 import { CheckoutSummaryBlock, FunnelActionButton, OrderSummaryBlock, TabsBlock } from "./builderClient";
 import { GallerySlideshow } from "./GallerySlideshow";
 import type { PageRendererFunnel } from "./PageRenderer";
+import { FunnelCodForm } from "../funnel/FunnelCodForm";
 import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import { type Props, bool, num, qaList, resolveHref, safeUrl, str, strList } from "./props";
@@ -210,7 +211,12 @@ export async function CodFormElement({
   funnel?: PageRendererFunnel;
   editable?: boolean;
 }) {
-  if (funnel) return null;
+  // In a funnel: the funnel's own order form, which moves the shopper on (components/funnel/FunnelCodForm).
+  if (funnel) {
+    if (editable) return null;
+    const funnelProduct = await productFor(workspaceId, str(props, "productId"));
+    return funnelProduct ? <FunnelCodForm product={funnelProduct} title={str(props, "title")} /> : null;
+  }
   const [store, product] = await Promise.all([
     getStoreMeta(workspaceId).catch(() => null),
     productFor(workspaceId, str(props, "productId")),

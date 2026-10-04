@@ -16,6 +16,18 @@ import {
 } from "@store-builder/api-client";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import {
+  TransferDetails,
+  asTransferMethod,
+  transferProblem,
+  useDepositQuote,
+  useTransferCopy,
+  type TransferState,
+} from "@/components/checkout/TransferDetails";
+import type { CheckoutPayload, ManualTransferStoreMethod } from "@store-builder/api-client";
+import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { getVisitorId } from "@/lib/visitorId";
 import { BoxIcon, CashIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
@@ -94,7 +106,7 @@ const island = `${container} scroll-mt-24`;
  * response can't answer the *next* step: the server refuses it with
  * STEP_MISMATCH, and this re-reads where the session is and refreshes onto it.
  */
-function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
+export function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { t } = useStore();
@@ -356,7 +368,7 @@ const FORM_PREFIX = "funnel";
  * The order is remembered for this session and step the moment it exists, so a
  * failed advance or a reload only ever retries the advance, never the order.
  */
-function FunnelCheckout({
+export function FunnelCheckout({
   workspaceId,
   funnelId,
   sessionId,
@@ -365,6 +377,8 @@ function FunnelCheckout({
   product,
   bumpOffer,
   flow,
+  embedded = false,
+  title,
 }: {
   workspaceId: string;
   funnelId: string;
@@ -375,6 +389,10 @@ function FunnelCheckout({
   /** The step's order bump (funnel_steps.bump_offer_id), or null. */
   bumpOffer: OrderBumpOffer | null;
   flow: Flow;
+  /** Drawn inside the page (a cod_form element): no section of its own. */
+  embedded?: boolean;
+  /** The form's heading; the checkout title when unset. */
+  title?: string;
 }) {
   const { t, money, store } = useStore();
   const funnelCurrency = useFunnelCurrency();
@@ -394,6 +412,19 @@ function FunnelCheckout({
   // Refused by the server since this step loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
   const bump = bumpGone ? null : bumpOffer;
+  const basePath = useStoreBasePath();
+
+  // The methods this funnel offers (payment rules → methods per funnel): cash on
+  // delivery, the store's gateways, manual transfers.
+  const payment = usePaymentMethods(client, workspaceId, funnelId);
+  const [methodId, setMethodId] = useState<string | null>(null);
+  const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  const transferCopy = useTransferCopy();
+  const transferMethod = asTransferMethod(method);
+  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
+  const needsTransfer = Boolean(transferMethod || deposit);
+  const onlyCod = payment.methods.length === 1 && payment.methods[0].method === "cod";
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
@@ -452,6 +483,13 @@ function FunnelCheckout({
       setFormError(t.form.errors.unavailable);
       return;
     }
+    if (needsTransfer) {
+      const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
+      if (problem) {
+        setFormError(problem);
+        return;
+      }
+    }
 
     submittingRef.current = true;
     setSubmitting(true);
@@ -466,7 +504,32 @@ function FunnelCheckout({
     };
     let order;
     try {
-      order = await placeCodOrder({ client, workspaceId, payload });
+      if (method && method.method !== "cod" && !transferMethod) {
+        // Paid online: the gateway's page, then the payment page, which sends the
+        // shopper back here to go on (the server moves a card order on once paid).
+        const { result, next } = await placeOnlineOrder({
+          client,
+          workspaceId,
+          basePath,
+          payload: payload as CheckoutPayload,
+          method,
+          visitorId: getVisitorId(workspaceId),
+          returnTo: `/f/${funnelId}/${sessionId}#${FUNNEL_ACTIONS_ID}`,
+        });
+        rememberPlacedOrder(sessionId, { id: result.order.id, orderNumber: result.order.orderNumber, stepKey });
+        // The gateway's page, or our payment page when the gateway could not start (already store-prefixed).
+        window.location.assign(next);
+        return;
+      }
+      // A transfer rides along: the whole order ("bank_transfer") or a COD deposit.
+      order = await placeCodOrder({
+        client,
+        workspaceId,
+        payload: (needsTransfer && transfer
+          ? { ...payload, ...(transferMethod ? { paymentMethod: "bank_transfer" } : {}), transfer: transfer.state.details }
+          : payload) as CheckoutPayload,
+        visitorId: getVisitorId(workspaceId),
+      });
     } catch (err) {
       submittingRef.current = false;
       if (isOrderBumpRefused(err)) {
@@ -522,10 +585,14 @@ function FunnelCheckout({
   const busy = submitting || !!flow.pending;
 
   return (
-    <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`} aria-labelledby="funnel-checkout-title">
+    <section
+      id={embedded ? undefined : FUNNEL_ACTIONS_ID}
+      className={embedded ? undefined : `${island} pb-16 pt-6`}
+      aria-labelledby={`funnel-checkout-title-${stepKey}${embedded ? "-page" : ""}`}
+    >
       <form onSubmit={handleSubmit} noValidate className={`${card} mx-auto max-w-2xl p-5 sm:p-8`}>
-        <h2 id="funnel-checkout-title" className="font-display text-xl font-bold text-ink sm:text-2xl">
-          {t.funnel.checkoutTitle}
+        <h2 id={`funnel-checkout-title-${stepKey}${embedded ? "-page" : ""}`} className="font-display text-xl font-bold text-ink sm:text-2xl">
+          {title?.trim() || t.funnel.checkoutTitle}
         </h2>
 
         <div className="mt-5 flex items-center gap-4 rounded-xl border border-line p-3">
@@ -580,14 +647,39 @@ function FunnelCheckout({
           />
         </fieldset>
 
-        {/* Cash on delivery is the only method the checkout accepts — a fact, not a choice. */}
-        <div className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
-          <CashIcon className="shrink-0 text-primary" />
-          <p>
-            <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
-            <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
-          </p>
-        </div>
+        {onlyCod || !method ? (
+          // Cash on delivery is the only method this funnel takes — a fact, not a choice.
+          <div className="mt-5 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+            <CashIcon className="shrink-0 text-primary" />
+            <p>
+              <span className="block text-sm font-semibold text-ink">{t.checkout.cod}</span>
+              <span className="block text-xs text-ink-soft">{t.checkout.codHint}</span>
+            </p>
+          </div>
+        ) : (
+          <fieldset className="mt-5" disabled={!!placed || busy}>
+            <legend className={labelClass}>{t.checkout.payment}</legend>
+            <PaymentMethodPicker methods={payment.methods} value={method.id} onChange={setMethodId} idPrefix={FORM_PREFIX} />
+          </fieldset>
+        )}
+        {!placed && (transferMethod || deposit) && (
+          <TransferDetails
+            key={transferMethod ? transferMethod.id : "deposit"}
+            client={client}
+            workspaceId={workspaceId}
+            methods={transferMethod ? [transferMethod] : deposit!.methods}
+            deposit={transferMethod ? undefined : (deposit!.amountType ?? "shipping")}
+            amountLabel={
+              transferMethod
+                ? null
+                : deposit!.amountType === "fixed"
+                  ? money(deposit!.fixedAmount ?? 0, currency)
+                  : null
+            }
+            idPrefix={FORM_PREFIX}
+            onChange={(m, state) => setTransfer({ method: m, state })}
+          />
+        )}
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
 
         {bump && !placed && (

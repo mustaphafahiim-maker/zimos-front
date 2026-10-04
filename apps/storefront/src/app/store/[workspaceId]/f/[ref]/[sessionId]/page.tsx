@@ -14,6 +14,7 @@ import { FUNNEL_ACTIONS_ID, FunnelOrders, FunnelStepActions } from "@/components
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
 import { StepTransition } from "@/components/funnel/StepTransition";
 import { PageRenderer } from "@/components/page-renderer";
+import { FunnelSessionProvider } from "@/lib/funnelSessionContext";
 import { PageScripts } from "@/components/PageScripts";
 import { scriptsOf } from "@/lib/pageScripts";
 import { funnelErrorKind, type FunnelErrorKind } from "@/lib/funnelErrors";
@@ -176,13 +177,18 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
       {!done && <FunnelProgress completed={session.path.length} />}
       <FunnelCurrencyProvider currency={currency}>
         <StepTransition key={stepKey}>
-          <PageRenderer
-            tree={tree}
-            workspaceId={workspaceId}
-            currency={currency}
-            locale={locale}
-            funnel={{ nextHref }}
-          />
+          {/* The page's own funnel elements (a COD form on a sales page) act on this session. */}
+          <FunnelSessionProvider
+            value={{ workspaceId, funnelId: ref, sessionId, stepKey: step.key, stepType: done ? "done" : step.stepType, sessionOrderId: session.orderId }}
+          >
+            <PageRenderer
+              tree={tree}
+              workspaceId={workspaceId}
+              currency={currency}
+              locale={locale}
+              funnel={{ nextHref }}
+            />
+          </FunnelSessionProvider>
           {done ? (
             <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} />
           ) : (

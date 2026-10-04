@@ -7,7 +7,7 @@ import { CheckIcon } from "@/components/Icons";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getPaymentToken, paymentPageUrl, savePaymentToken, usePreviewToken } from "@/lib/payments";
+import { getPaymentReturn, getPaymentToken, paymentPageUrl, savePaymentToken, usePreviewToken } from "@/lib/payments";
 import { useIsClient } from "@/lib/useIsClient";
 import { orderErrorMessage } from "@/lib/placeOrder";
 import { useStore } from "@/lib/StoreContext";
@@ -20,10 +20,10 @@ const POLL_FOR_MS = 2 * 60 * 1000;
 
 /**
  * Signed fields a gateway puts on the redirect (Paymob: hmac / id; Kashier:
- * signature / paymentStatus); their presence means "just came back". The
- * server works out which gateway signed them.
+ * signature / paymentStatus; the sandbox gateway: sbx_sig); their presence
+ * means "just came back". The server works out which gateway signed them.
  */
-const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus"];
+const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig"];
 
 function gatewayQuery(search: URLSearchParams): Record<string, string> | null {
   if (!GATEWAY_REDIRECT_MARKERS.some((key) => search.has(key))) return null;
@@ -145,6 +145,8 @@ function PaymentPage() {
     }
   }
 
+  // An order placed in a funnel goes back into it once paid (lib/payments savePaymentReturn).
+  const funnelReturn = isClient ? getPaymentReturn(workspaceId, orderId) : null;
   const methodName = (m: StorefrontPaymentMethod) => (m.method === "wallet" ? t.payment.wallet : t.payment.card);
   const thankYou = storeHref(basePath, `/orders/${orderId}?number=${encodeURIComponent(status?.orderNumber ?? "")}`);
   const expiresAt =
@@ -172,9 +174,15 @@ function PaymentPage() {
                 <CheckIcon /> {t.payment.paid}
               </p>
               <p className="text-sm text-ink-soft">{t.payment.paidHint}</p>
-              <StoreLink href={`/orders/${orderId}?number=${encodeURIComponent(status.orderNumber)}`} className={btnPrimary}>
-                {t.payment.viewOrder}
-              </StoreLink>
+              {funnelReturn ? (
+                <StoreLink href={funnelReturn} className={btnPrimary}>
+                  {t.funnel.continue}
+                </StoreLink>
+              ) : (
+                <StoreLink href={`/orders/${orderId}?number=${encodeURIComponent(status.orderNumber)}`} className={btnPrimary}>
+                  {t.payment.viewOrder}
+                </StoreLink>
+              )}
             </div>
           ) : status.status === "cod" ? (
             <div className="space-y-4">
@@ -182,9 +190,15 @@ function PaymentPage() {
                 <CheckIcon /> {t.payment.codDone}
               </p>
               <p className="text-sm text-ink-soft">{t.payment.codDoneHint}</p>
-              <a href={thankYou} className={btnPrimary}>
-                {t.payment.viewOrder}
-              </a>
+              {funnelReturn ? (
+                <StoreLink href={funnelReturn} className={btnPrimary}>
+                  {t.funnel.continue}
+                </StoreLink>
+              ) : (
+                <a href={thankYou} className={btnPrimary}>
+                  {t.payment.viewOrder}
+                </a>
+              )}
             </div>
           ) : status.status === "expired" || status.status === "cancelled" ? (
             <div className="space-y-4">

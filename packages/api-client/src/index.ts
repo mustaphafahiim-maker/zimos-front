@@ -176,3 +176,5 @@ export * from "./endpoints/funnelTemplates";
 export * from "./endpoints/themes";
 // A/B tests on a product page: staff CRUD and the shopper's variant (catalog/productTests.js).
 export * from "./endpoints/productTests";
+// The payment methods a funnel's checkout offers (payments/paymentRulesService.js).
+export * from "./endpoints/funnelPayments";
