@@ -20,6 +20,7 @@ const STRINGS = {
     storage: "Storage",
     members: "Team",
     domains: "Domains",
+    leads: "New leads",
     of: "{used} of {limit}",
     updated: "Updated {when}",
     kb: "{n} KB",
@@ -34,6 +35,7 @@ const STRINGS = {
     storage: "التخزين",
     members: "الفريق",
     domains: "الدومينات",
+    leads: "عملاء محتملون جدد",
     of: "{used} من {limit}",
     updated: "آخر تحديث {when}",
     kb: "{n} كيلوبايت",
@@ -78,6 +80,12 @@ export function UsageBlock() {
       label: t.domains,
       value: withLimit(data.seats.domains, data.limits.domains),
       ratio: data.limits.domains && data.seats.domains !== null ? data.seats.domains / data.limits.domains : null,
+    },
+    {
+      // Contacts collected by forms and the newsletter this month (the plan's `leads` limit).
+      label: t.leads,
+      value: withLimit(data.seats.leads ?? null, data.limits.leads ?? null),
+      ratio: data.limits.leads && data.seats.leads != null ? data.seats.leads / data.limits.leads : null,
     },
   ];
 

@@ -17,6 +17,11 @@ export const NOTIFICATION_STRINGS = {
     type_shipping_batch_done: "Bulk shipping finished",
     type_announcement: "Announcements from Zimos",
     type_automation: "Alerts from your automations",
+    type_plan_limit_reached: "Plan limits reached",
+    limitLeadsTitle: "Your plan's new leads for this month are used up ({allowed})",
+    limitLeadsBody: "Forms and the newsletter won't add new contacts until next month or a plan change. People you already know can still sign up.",
+    limitStorageTitle: "Your plan's file storage is full",
+    limitStorageBody: "Delete files you don't need, or change the plan, to upload new ones.",
     orderNewTitle: "New order {orderNumber}",
     orderSuspiciousTitle: "Suspicious order {orderNumber}",
     orderSuspiciousBody: "The protection rules flagged this order for review before it is confirmed.",
@@ -44,6 +49,11 @@ export const NOTIFICATION_STRINGS = {
     type_shipping_batch_done: "انتهاء الشحن المجمّع",
     type_announcement: "إعلانات زيموس",
     type_automation: "تنبيهات الأتمتة",
+    type_plan_limit_reached: "الوصول لحدود الباقة",
+    limitLeadsTitle: "خلص عدد العملاء المحتملين الجدد في باقتك للشهر ده ({allowed})",
+    limitLeadsBody: "النماذج والنشرة البريدية مش هتضيف عملاء جدد لحد الشهر الجاي أو تغيير الباقة. اللي تعرفهم قبل كده يقدروا يشتركوا عادي.",
+    limitStorageTitle: "مساحة الملفات في باقتك اتملت",
+    limitStorageBody: "امسح ملفات مش محتاجها أو غيّر الباقة علشان ترفع ملفات جديدة.",
     orderNewTitle: "طلب جديد {orderNumber}",
     orderSuspiciousTitle: "طلب مشتبه به {orderNumber}",
     orderSuspiciousBody: "قواعد الحماية علّمت هذا الطلب للمراجعة قبل تأكيده.",
@@ -111,6 +121,10 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
         title: fmt(t.batchDoneTitle, { booked: str(d.booked), total: str(d.total), carrier: str(d.carrierName) || str(d.carrierCode) }),
         body: Number(d.failed) > 0 ? fmt(t.batchFailedBody, { failed: str(d.failed) }) : null,
       };
+    case "plan.limit_reached":
+      if (d.limit === "leads") return { title: fmt(t.limitLeadsTitle, { allowed: str(d.allowed) }), body: t.limitLeadsBody };
+      if (d.limit === "storage_bytes") return { title: t.limitStorageTitle, body: t.limitStorageBody };
+      break;
     case "export.ready":
       if (!d.name) break;
       if (d.failed) return { title: fmt(t.exportFailedTitle, { name: str(d.name) }), body: t.exportFailedBody };

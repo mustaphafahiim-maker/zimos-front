@@ -25,7 +25,8 @@ export interface WorkspaceUsage {
   period: string;
   current: UsagePeriod;
   history: UsagePeriod[];
-  seats: { members: number | null; domains: number | null };
+  /** leads = new contacts from forms and the newsletter this month (the `leads` limit). */
+  seats: { members: number | null; domains: number | null; leads?: number | null };
   limits: Record<PlanLimitKey, number | null>;
 }
 
