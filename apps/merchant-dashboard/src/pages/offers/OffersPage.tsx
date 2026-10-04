@@ -170,7 +170,8 @@ export function OffersPage() {
   ];
   return (
     <div className="max-w-4xl">
-      <PageHeader title={t.title} description={summary ? `${t.description} ${fmt(t.period, { days: summary.days })}` : t.description} />
+      <PageHeader
+        tutorial="offers" title={t.title} description={summary ? `${t.description} ${fmt(t.period, { days: summary.days })}` : t.description} />
       <AppOffNotice app="offers" />
       <div className="grid gap-3 sm:grid-cols-2">
         {tools.map((tool) => (

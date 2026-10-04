@@ -249,6 +249,7 @@ export function AutomationsPage() {
   return (
     <div className="min-w-0 max-w-6xl">
       <PageHeader
+        tutorial="automations"
         title={t.title}
         description={t.description}
         actions={

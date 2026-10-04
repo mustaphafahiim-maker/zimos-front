@@ -406,6 +406,7 @@ function ShippingTaxBody() {
   return (
     <div className="max-w-5xl space-y-12">
       <PageHeader
+        tutorial="shipping"
         title={tr.title}
         description={tr.description}
       />

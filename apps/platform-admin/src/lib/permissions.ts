@@ -22,6 +22,8 @@ export const P = {
   SYSTEM_VIEW: "system.view",
   FEATURE_FLAGS_VIEW: "feature_flags.view",
   ANNOUNCEMENTS_VIEW: "announcements.view",
+  // Also the education links (pages/EducationLinksPage.tsx).
+  ANNOUNCEMENTS_MANAGE: "announcements.manage",
   SERVICE_LISTINGS_VIEW: "service_listings.view",
   SUPPORT_VIEW: "support.view",
   AUDIT_LOG_VIEW: "audit_log.view",

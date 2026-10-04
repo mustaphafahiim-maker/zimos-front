@@ -192,7 +192,8 @@ export function PaymentsPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        tutorial="payments" title={t.title} description={t.description} />
       {!roleAllows ? (
         <Alert>{t.viewOnly}</Alert>
       ) : (

@@ -86,7 +86,8 @@ export function MarketingPage() {
 
   return (
     <div className="min-w-0 max-w-4xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        tutorial="marketing" title={t.title} description={t.description} />
       <AppOffNotice app="tracking_pixels" />
 
       <TrackingPixelsSection key={workspaceId} onEventsChanged={bumpLog} />

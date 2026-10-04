@@ -86,6 +86,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     items: [
       { label: "Tickets", to: "/tickets", icon: LifeBuoy, permission: P.SUPPORT_VIEW },
       { label: "Announcements", to: "/announcements", icon: Megaphone, permission: P.ANNOUNCEMENTS_VIEW },
+      { label: "Education links", to: "/education", icon: LifeBuoy, permission: P.ANNOUNCEMENTS_VIEW },
       { label: "Service listings", to: "/service-listings", icon: Handshake, permission: P.SERVICE_LISTINGS_VIEW },
     ],
   },

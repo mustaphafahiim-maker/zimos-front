@@ -63,7 +63,8 @@ export function FraudPage() {
 
   return (
     <div className="max-w-5xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        tutorial="fraud" title={t.title} description={t.description} />
       <AppOffNotice app="fraud_protection" />
 
       <Tabs value={tab} onValueChange={selectTab}>

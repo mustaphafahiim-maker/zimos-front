@@ -285,6 +285,7 @@ export function CatalogProductsPage() {
   return (
     <div className="max-w-6xl">
       <PageHeader
+        tutorial="products"
         title={t.title}
         description={t.description}
         actions={

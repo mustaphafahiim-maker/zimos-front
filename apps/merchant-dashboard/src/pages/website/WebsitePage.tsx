@@ -652,7 +652,7 @@ export function WebsitePage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} tutorial="website" />
 
       <ExistingSites />
 

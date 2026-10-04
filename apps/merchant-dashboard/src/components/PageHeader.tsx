@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import type { TutorialTopic } from "@store-builder/api-client";
+import { TutorialLink } from "./Education";
 
 interface PageHeaderProps {
   title: string;
@@ -11,9 +13,11 @@ interface PageHeaderProps {
   /** Renders a "← label" link above the title. */
   back?: { to: string; label: string };
   actions?: ReactNode;
+  /** The page's tutorial video, shown under the description when the platform team has set one (Education.tsx). */
+  tutorial?: TutorialTopic;
 }
 
-export function PageHeader({ title, titleMeta, titleBadge, description, back, actions }: PageHeaderProps) {
+export function PageHeader({ title, titleMeta, titleBadge, description, back, actions, tutorial }: PageHeaderProps) {
   return (
     <div className="mb-6">
       {back && (
@@ -36,6 +40,7 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
             {titleBadge && <span className="ms-2 align-middle">{titleBadge}</span>}
           </h1>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
+          {tutorial && <TutorialLink topic={tutorial} />}
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>

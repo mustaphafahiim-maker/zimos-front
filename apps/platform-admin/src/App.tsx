@@ -19,6 +19,7 @@ import { AppsPage } from "@/pages/AppsPage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
 import { CarrierAreasPage } from "@/pages/CarrierAreasPage";
 import { ReferralProgramPage } from "@/pages/ReferralProgramPage";
+import { EducationLinksPage } from "@/pages/EducationLinksPage";
 import { ThemesPage } from "@/pages/ThemesPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
@@ -85,6 +86,7 @@ export default function App() {
                 <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
                 <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
                 <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
+                <Route path="/education" element={gated(P.ANNOUNCEMENTS_VIEW, <EducationLinksPage />)} />
                 <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
                 <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
                 <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />
