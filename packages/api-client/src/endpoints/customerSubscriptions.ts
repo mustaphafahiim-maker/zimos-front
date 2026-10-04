@@ -74,6 +74,8 @@ export interface CustomerSubscription {
 export interface SubscriptionsOverview {
   currency: string;
   total: number;
+  /** On a free trial (not charged yet). */
+  trialing: number;
   active: number;
   pastDue: number;
   paused: number;

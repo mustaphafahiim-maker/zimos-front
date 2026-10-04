@@ -45,6 +45,7 @@ const STRINGS = {
     kpiActive: "Active",
     kpiActiveHint: "{amount} per period",
     kpiPastDue: "Payment failed",
+    kpiTrialing: "On a free trial",
     kpiNew: "New this month",
     kpiRevenue: "Collected",
     colCustomer: "Customer",
@@ -110,6 +111,7 @@ const STRINGS = {
     tabList: "الاشتراكات",
     tabPlans: "خطط المنتجات",
     kpiActive: "نشطة",
+    kpiTrialing: "في فترة تجربة",
     kpiActiveHint: "{amount} كل فترة",
     kpiPastDue: "فشل الدفع",
     kpiNew: "جديدة هذا الشهر",
@@ -317,13 +319,14 @@ function SubscriptionsTab({ onGoToPlans }: { onGoToPlans: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard
           label={t.kpiActive}
           value={String(overview.data?.active ?? "—")}
           hint={overview.data ? fmt(t.kpiActiveHint, { amount: formatMoney(overview.data.activeAmount, currency) }) : undefined}
           icon={<Repeat aria-hidden />}
         />
+        <KpiCard label={t.kpiTrialing} value={String(overview.data?.trialing ?? "—")} />
         <KpiCard label={t.kpiPastDue} value={String(overview.data?.pastDue ?? "—")} />
         <KpiCard label={t.kpiNew} value={String(overview.data?.newThisMonth ?? "—")} />
         <KpiCard label={t.kpiRevenue} value={overview.data ? formatMoney(overview.data.revenue, currency) : "—"} />
@@ -335,7 +338,7 @@ function SubscriptionsTab({ onGoToPlans }: { onGoToPlans: () => void }) {
             <option value="">
               {t.statusFilter}: {t.anyStatus}
             </option>
-            {(["active", "past_due", "paused", "cancelled", "completed"] as const).map((key) => (
+            {(["trialing", "active", "past_due", "paused", "cancelled", "completed"] as const).map((key) => (
               <option key={key} value={key}>
                 {t[`status_${key}`]}
               </option>
