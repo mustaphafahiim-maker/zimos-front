@@ -123,6 +123,7 @@ import {
 import { pageElementCount } from "./funnelPages";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
 import { StepChain } from "./StepChain";
+import { StepStatsLine, StepThumbnail, useFlowZoom, useStepStats } from "./FlowMapTools";
 
 // ------------------------------------------------------------------ meta --
 
@@ -1153,6 +1154,9 @@ function FlowCanvas({
   const byKey = useMemo(() => new Map(funnel.steps.map((s) => [s.key, s])), [funnel.steps]);
   const width = Math.max(900, ...funnel.steps.map((s) => s.x + CARD_W + 120));
   const height = Math.max(520, ...funnel.steps.map((s) => s.y + CARD_H + 120));
+  // Zoom, pan and each step's numbers (FlowMapTools).
+  const map = useFlowZoom(containerRef, { width, height });
+  const stats = useStepStats(funnel.id || null);
 
   // Connectors between the same two steps (an offer's "yes" and "no" both
   // going to thank-you) fan out, so neither line nor label hides the other.
@@ -1189,11 +1193,7 @@ function FlowCanvas({
 
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>, step: UiStep) {
     if (e.button !== 0) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
-    const scrollTop = containerRef.current?.scrollTop ?? 0;
-    const px = e.clientX - (rect?.left ?? 0) + scrollLeft;
-    const py = e.clientY - (rect?.top ?? 0) + scrollTop;
+    const { x: px, y: py } = map.toMap(e);
     drag.current = { key: step.key, dx: px - step.x, dy: py - step.y, moved: false };
     e.currentTarget.setPointerCapture(e.pointerId);
     onSelect(step.key);
@@ -1202,11 +1202,7 @@ function FlowCanvas({
   function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     const d = drag.current;
     if (!d) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
-    const scrollTop = containerRef.current?.scrollTop ?? 0;
-    const px = e.clientX - (rect?.left ?? 0) + scrollLeft;
-    const py = e.clientY - (rect?.top ?? 0) + scrollTop;
+    const { x: px, y: py } = map.toMap(e);
     d.moved = true;
     onMove(d.key, Math.max(0, Math.round(px - d.dx)), Math.max(0, Math.round(py - d.dy)));
   }
@@ -1229,6 +1225,8 @@ function FlowCanvas({
         <Button size="xs" variant="outline" onClick={onTidy} disabled={funnel.steps.length < 2} title={t.tidyHint}>
           <WandSparkles className="size-3" aria-hidden /> {t.tidy}
         </Button>
+        {map.controls}
+        {stats.picker}
         <ul className="ms-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-soft">
           <li className="inline-flex items-center gap-1.5">
             <LegendLine condition="accepted_offer" /> {t.legendYes}
@@ -1254,7 +1252,12 @@ function FlowCanvas({
         {funnel.steps.length === 0 ? (
           <TemplatePicker onApply={onApplyTemplate} />
         ) : (
-          <div className="relative" style={{ width, height }}>
+          <div style={{ width: width * map.zoom, height: height * map.zoom }}>
+          <div
+            className={cn("relative", map.panning ? "cursor-grabbing" : "cursor-grab")}
+            style={{ width, height, transform: `scale(${map.zoom})`, transformOrigin: "0 0" }}
+            {...map.panHandlers}
+          >
             <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
               <defs>
                 {CONDITION_ORDER.map((cond) => (
@@ -1367,10 +1370,19 @@ function FlowCanvas({
                         </span>
                       </p>
                     )}
-                    <p className={cn("mt-auto flex items-center gap-1.5 text-xs", empty ? "text-danger" : "text-ink-soft")}>
-                      <FileText className="size-3.5 shrink-0" aria-hidden />
-                      {empty ? t.emptyPage : sectionCount === 1 ? t.oneSection : fmt(t.sections, { n: sectionCount })}
-                    </p>
+                    {empty ? (
+                      <p className="flex items-center gap-1.5 text-xs text-danger">
+                        <FileText className="size-3.5 shrink-0" aria-hidden />
+                        {t.emptyPage}
+                      </p>
+                    ) : (
+                      <div title={sectionCount === 1 ? t.oneSection : fmt(t.sections, { n: sectionCount })}>
+                        <StepThumbnail tree={s.tree} />
+                      </div>
+                    )}
+                    <div className="mt-auto">
+                      <StepStatsLine stats={stats.byKey.get(s.key)} />
+                    </div>
                   </div>
                 </div>
               );
@@ -1409,6 +1421,7 @@ function FlowCanvas({
                 </div>
               </>
             )}
+          </div>
           </div>
         )}
       </div>

@@ -20,7 +20,8 @@ import { pageElementCount, stepPageTree } from "./funnelPages";
 
 /** Canvas card size and grid. Cards are laid out left to right in flow order. */
 export const FLOW_CARD_W = 224;
-export const FLOW_CARD_H = 132;
+// Room for the page thumbnail and the step's numbers (FlowMapTools).
+export const FLOW_CARD_H = 172;
 const GAP_X = 340;
 const GAP_Y = 176;
 const ORIGIN_X = 40;
