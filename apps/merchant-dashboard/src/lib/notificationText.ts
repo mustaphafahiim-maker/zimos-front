@@ -23,6 +23,10 @@ export const NOTIFICATION_STRINGS = {
     stockLowTitle: "Running low: {label}",
     stockLowBody: "{available} left in stock.",
     integrationFailedTitle: "Could not reach {integration}",
+    reasonAuth: "The key or login was refused. Connect it again in settings.",
+    reasonPermission: "The account lacks a permission this needs. Check the key's permissions with the provider.",
+    reasonUnavailable: "The service didn't answer. It is tried again on its own; if it keeps happening, contact the provider.",
+    reasonSignature: "Notifications arrived whose signature doesn't match the saved secret. Check the webhook secret in settings.",
     exportReadyTitle: "Your file is ready: {name}",
     exportFailedTitle: "Couldn't prepare your file: {name}",
     exportFailedBody: "Export again, or narrow the filters.",
@@ -46,6 +50,10 @@ export const NOTIFICATION_STRINGS = {
     stockLowTitle: "المخزون قارب على النفاد: {label}",
     stockLowBody: "المتاح {available} قطعة.",
     integrationFailedTitle: "تعذّر الاتصال بـ {integration}",
+    reasonAuth: "المفتاح أو بيانات الدخول لم تعد مقبولة. أعد الربط من الإعدادات.",
+    reasonPermission: "الحساب لا يملك صلاحية لهذا الإجراء. راجع صلاحيات المفتاح لدى مزوّد الخدمة.",
+    reasonUnavailable: "الخدمة لم ترد. يُعاد المحاولة تلقائيًا، وإن استمر ذلك تواصل مع مزوّد الخدمة.",
+    reasonSignature: "وصلت إشعارات لم يتطابق توقيعها مع المفتاح المحفوظ. تأكد من مفتاح الـ webhook في الإعدادات.",
     exportReadyTitle: "الملف جاهز: {name}",
     exportFailedTitle: "تعذّر تجهيز الملف: {name}",
     exportFailedBody: "جرّب التصدير مرة أخرى، أو ضيّق الفلاتر.",
@@ -90,6 +98,11 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
           title: fmt(t.autoBookingFailedTitle, { orderNumber: str(d.orderNumber), integration: str(d.integration) }),
           body: fmt(t.autoBookingFailedBody, { reason: str(d.reason) }).trim(),
         };
+      }
+      // gateway / carrier / whatsapp alerts (notifications/integrationAlerts.js) name a reason.
+      if (d.kind) {
+        const why: Record<string, string> = { auth: t.reasonAuth, permission: t.reasonPermission, unavailable: t.reasonUnavailable, signature: t.reasonSignature };
+        return { title: fmt(t.integrationFailedTitle, { integration: str(d.integration) }), body: why[str(d.reason)] ?? null };
       }
       return { title: fmt(t.integrationFailedTitle, { integration: str(d.integration) }), body: str(d.message) || null };
     case "shipping.batch_done":
