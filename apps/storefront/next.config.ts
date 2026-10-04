@@ -45,7 +45,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@store-builder/api-client", "@store-builder/ui", "@store-builder/image-tools"],
+  transpilePackages: ["@store-builder/api-client", "@store-builder/ui", "@store-builder/image-tools", "@store-builder/error-reporter"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@store-builder/api-client": "^0.1.0",
+    "@store-builder/error-reporter": "^0.1.0",
     "@store-builder/image-tools": "^0.1.0",
     "next": "16.3.4",
     "react": "19.2.8",
