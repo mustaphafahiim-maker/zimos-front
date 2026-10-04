@@ -72,6 +72,7 @@ import { useIsClient } from "@/lib/useIsClient";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { contentIdOf, lineContentId } from "@/lib/contentId";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
+import { PolicyLinks } from "@/components/PolicyLinks";
 
 /**
  * What the shopper *does* on a running funnel's step, drawn under the page the
@@ -787,6 +788,8 @@ export function FunnelCheckout({
             </p>
           )}
           <ErrorBox message={formError ?? flow.error} />
+          {/* "By placing your order you agree to…", as on the store checkout. */}
+          <PolicyLinks />
           <button type="submit" disabled={busy} aria-busy={busy} className={btnPrimaryLg}>
             {busy ? t.checkout.placing : placed ? t.funnel.continue : t.checkout.place}
           </button>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FunnelHeader } from "@/components/funnel/FunnelHeader";
+import { FunnelPolicies } from "@/components/funnel/FunnelPolicies";
 import { PoweredByZimos } from "@/components/PoweredByZimos";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
@@ -43,7 +44,9 @@ export default async function FunnelLayout({
       <FunnelHeader store={store} />
       <div className="flex flex-1 flex-col">{children}</div>
       <footer className="mt-auto border-t border-line bg-paper-raised">
-        <div className={`${container} flex justify-center py-3`}>
+        <div className={`${container} flex flex-col items-center gap-2 py-3`}>
+          {/* The store's policies: required by ad platforms, and the store footer is hidden here. */}
+          <FunnelPolicies />
           <PoweredByZimos label={t.footer.poweredBy} />
         </div>
       </footer>
