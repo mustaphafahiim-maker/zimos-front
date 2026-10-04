@@ -43,7 +43,10 @@ const STRINGS = {
     salesChart: "Sales per day",
     chartSummary: "{what} for {window}",
     tableTitle: "By {dimension}",
-    tableDesc: "Orders are matched to the UTM values of the visit that placed them.",
+    tableDesc: "Each order counts once, for the touch you pick: the last ad or link before buying, or the first that brought the shopper.",
+    touchLabel: "Credit the sale to",
+    touchLast: "Last touch",
+    touchFirst: "First touch",
     visitors: "Visitors",
     orders: "Orders",
     sales: "Sales",
@@ -79,7 +82,10 @@ const STRINGS = {
     salesChart: "المبيعات يوميًا",
     chartSummary: "{what} خلال {window}",
     tableTitle: "حسب {dimension}",
-    tableDesc: "يُنسب كل طلب إلى قيم UTM الخاصة بالزيارة التي أنشأته.",
+    tableDesc: "يُحتسب كل طلب مرة واحدة حسب ما تختاره: آخر إعلان أو رابط قبل الشراء، أو أول ما جاء بالعميل.",
+    touchLabel: "نسب البيع إلى",
+    touchLast: "آخر نقطة تواصل",
+    touchFirst: "أول نقطة تواصل",
     visitors: "الزوار",
     orders: "الطلبات",
     sales: "المبيعات",
@@ -113,6 +119,7 @@ export function AttributionPage() {
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [groupBy, setGroupBy] = useState<InsightsAttributionGroup>("source");
   const [funnelId, setFunnelId] = useState("");
+  const [touch, setTouch] = useState<"last" | "first">("last");
   const [draft, setDraft] = useState({ source: "", campaign: "" });
   const [filters, setFilters] = useState({ source: "", campaign: "" });
 
@@ -122,11 +129,12 @@ export function AttributionPage() {
       insightsGetAttribution(apiClient, workspaceId, {
         ...rangeWindows(range).current,
         groupBy,
+        touch,
         funnelId: funnelId || undefined,
         utm_source: filters.source || undefined,
         utm_campaign: filters.campaign || undefined,
       }),
-    [workspaceId, range, groupBy, funnelId, filters.source, filters.campaign]
+    [workspaceId, range, groupBy, touch, funnelId, filters.source, filters.campaign]
   );
   const data = report.data;
   const currency = data?.currency ?? "EGP";
@@ -193,6 +201,15 @@ export function AttributionPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <RangeSwitch value={range} onChange={setRange} />
+        <Select
+          aria-label={t.touchLabel}
+          value={touch}
+          onChange={(e) => setTouch(e.target.value === "first" ? "first" : "last")}
+          className="h-9 w-auto max-w-[14rem] font-medium"
+        >
+          <option value="last">{t.touchLast}</option>
+          <option value="first">{t.touchFirst}</option>
+        </Select>
         {(funnels.data?.length ?? 0) > 0 && (
           <Select
             aria-label={t.funnelFilter}
