@@ -130,3 +130,5 @@ export * from "./endpoints/orderCancelRefund";
 export * from "./endpoints/storefrontCurrencies";
 // Files built in the background: the orders export (orders/exportFiles.js).
 export * from "./endpoints/exportFiles";
+// The merchant's own phone, confirmed by a code (auth verify-phone).
+export * from "./endpoints/phoneVerification";

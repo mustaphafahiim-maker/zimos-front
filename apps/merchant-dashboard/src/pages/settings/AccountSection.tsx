@@ -10,6 +10,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CopyButton } from "@/components/CopyButton";
 import { UsernameField } from "@/components/UsernameField";
 import { useToast } from "@/components/Toast";
+import { PhoneVerification } from "./PhoneVerification";
 
 /** How often a username may be changed (the backend's CHANGE_INTERVAL_DAYS). */
 const CHANGE_INTERVAL_DAYS = 30;
@@ -112,6 +113,7 @@ export function AccountSection() {
             <bdi dir="ltr">{user.email}</bdi>
           </dd>
         </div>
+        <PhoneVerification />
         <div className="sm:col-span-2">
           <dt className="text-ink-soft">{t.id}</dt>
           <dd className="mt-0.5 flex flex-wrap items-center gap-2">
