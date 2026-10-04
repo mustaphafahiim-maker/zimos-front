@@ -1,6 +1,6 @@
 "use client";
 
-import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
+import { storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { SocialLinks } from "./SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
@@ -8,6 +8,7 @@ import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
 import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
 import { cardTitle, storeCards } from "@/lib/storePromises";
+import { pageAndPolicyGroups } from "@/lib/footerLinks";
 import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { container } from "./ui";
@@ -58,26 +59,8 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
       ])
     : [];
   // Settings → store settings: the pages flagged "show in footer" and the
-  // legal policies the store has written, each as its own column.
-  const design = storefrontDesignMeta(store);
-  const footerPages = design.navPages.filter((p) => p.showInFooter);
-  if (footerPages.length > 0) {
-    groups.push({
-      title: t.footer.pages,
-      links: footerPages.map((p) => ({ key: `page:${p.path}`, label: p.title, href: p.path, external: false })),
-    });
-  }
-  if (design.legal.length > 0) {
-    groups.push({
-      title: t.policies.title,
-      links: design.legal.map((key) => ({
-        key: `policy:${key}`,
-        label: t.policies[key],
-        href: `/policies/${key.replace(/_/g, "-")}`,
-        external: false,
-      })),
-    });
-  }
+  // legal policies the store has written, each as its own column (lib/footerLinks).
+  groups.push(...pageAndPolicyGroups(store, t));
   const about = footer.text ?? store.tagline;
   const blocks = (footer.showBrand ? 1 : 0) + groups.length + (footer.showHelp ? 1 : 0);
 

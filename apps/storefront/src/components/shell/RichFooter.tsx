@@ -5,6 +5,7 @@ import { ShellLink } from "@/components/ShellLink";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { resolveShellLinks, type FooterShell } from "@/lib/storeShell";
+import { pageAndPolicyGroups } from "@/lib/footerLinks";
 
 /**
  * The fuller footer (`themeSettings.footer.layout: "rich"`): the store's logo
@@ -57,9 +58,11 @@ export function RichFooter({
     .map(([platform, url]) => ({ platform, url: text(url, 500) }))
     .filter((item) => /^https?:\/\//i.test(item.url) && SOCIAL[item.platform])
     .slice(0, 6);
-  const groups = footer.showLinks
-    ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) }))
-    : [];
+  const groups = [
+    ...(footer.showLinks ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) })) : []),
+    // The footer pages and the store's policies, as the plain footer shows them (lib/footerLinks).
+    ...pageAndPolicyGroups(store, t),
+  ];
 
   return (
     <footer data-zimos-shell="footer" className="zs-footer mt-auto">
@@ -137,6 +140,18 @@ export function RichFooter({
 
       <div className="zs-footer__bottom">
         <p>{t.footer.rights(store.name, year)}</p>
+        {/* The social accounts sit with the brand; without it, here. */}
+        {!footer.showBrand && social.length > 0 && (
+          <div className="zs-footer__social">
+            {social.map((item) => (
+              <a key={item.platform} href={item.url} target="_blank" rel="noopener noreferrer nofollow" aria-label={SOCIAL[item.platform].label}>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  {SOCIAL[item.platform].icon}
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
         {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
       </div>
     </footer>
