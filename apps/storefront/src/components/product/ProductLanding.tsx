@@ -78,6 +78,7 @@ import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
 import { OfferCountdown } from "./OfferCountdown";
 import { OptionPicker } from "./OptionPicker";
+import { setChosenVariantImage, variantImageOf } from "@/lib/variantImage";
 import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 
@@ -153,6 +154,11 @@ export function ProductLanding({
   const choosing = !autoSelect && groups.some((g) => !selection[g.name]);
   const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
   const available = !!variant?.inStock;
+  // The gallery leads with the chosen variant's own picture (lib/variantImage).
+  const chosenImage = variantImageOf(variant);
+  useEffect(() => {
+    setChosenVariantImage(product.id, chosenImage);
+  }, [product.id, chosenImage]);
 
   function isValueAvailable(name: string, value: string) {
     return product.variants.some(
