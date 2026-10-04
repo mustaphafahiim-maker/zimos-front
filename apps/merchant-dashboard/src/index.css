@@ -690,3 +690,95 @@ html.dark {
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Comfort. Every page inside the dashboard gets room to breathe: wider
+ * gutters, a centred column, taller rows and fields, and soft hover
+ * states. One layer for all pages, so none has to be restyled on its own.
+ * ------------------------------------------------------------------ */
+html {
+  scroll-behavior: smooth;
+}
+.glass-app main {
+  padding: 1.25rem 1rem 4rem;
+}
+@media (min-width: 40rem) {
+  .glass-app main {
+    padding: 1.75rem 2rem 4.5rem;
+  }
+}
+/* On a wide screen the page column sits in the middle, not against one edge. */
+.glass-app main .page-in > [class*="max-w-"] {
+  margin-inline: auto;
+}
+.glass-app main h1 {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Tables: taller rows, and the row under the pointer is easy to follow. */
+.glass-app main table th {
+  padding-block: 0.75rem;
+}
+.glass-app main table td {
+  padding-block: 0.9375rem;
+}
+.glass-app main tbody tr {
+  transition: background-color 140ms ease;
+}
+.glass-app main tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 55%, transparent);
+}
+
+/* Fields, selects, filter tabs and default buttons share one comfortable height. */
+.glass-app main [data-slot="input"],
+.glass-app main [data-slot="select-trigger"],
+.glass-app main select {
+  min-height: 2.5rem;
+  border-radius: 0.625rem;
+}
+.glass-app main [data-slot="button"].h-9 {
+  height: 2.5rem;
+  padding-inline: 0.875rem;
+}
+.glass-app main [role="group"] > button {
+  min-height: 2.25rem;
+  padding-inline: 0.875rem;
+}
+
+/* Cards are a little rounder; a card that is a link lifts when pointed at. */
+.glass-app main [data-slot="card"] {
+  border-radius: 1rem;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.glass-app main a > [data-slot="card"]:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .glass-app main tbody tr,
+  .glass-app main [data-slot="card"] {
+    transition: none;
+  }
+  .glass-app main a > [data-slot="card"]:hover {
+    transform: none;
+  }
+}
+
+/* A visually hidden label inside a sideways-scrolling area (a table header,
+   say) is positioned against that area, so it is clipped with it instead of
+   widening the whole page on a phone. In the base layer: an element that sets
+   its own position keeps it. */
+@layer base {
+  .glass-app main .overflow-x-auto,
+  .glass-app main .overflow-auto {
+    position: relative;
+  }
+}

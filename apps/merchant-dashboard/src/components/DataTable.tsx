@@ -45,7 +45,9 @@ export function DataTable<T>({
 
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="overflow-x-auto">
+      {/* relative: a visually hidden header inside the table is positioned against
+          this box, so it is clipped with the table instead of widening the page. */}
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-line text-xs text-ink-soft">
