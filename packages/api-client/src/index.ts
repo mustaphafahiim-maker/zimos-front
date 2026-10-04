@@ -138,3 +138,5 @@ export * from "./endpoints/twoFactorWhatsapp";
 export * from "./endpoints/accountSettings";
 // The signed-in person's name and picture (auth/profileRoutes.js).
 export * from "./endpoints/profile";
+// The thank-you page's download links (digital/digitalRoutes.js).
+export * from "./endpoints/storefrontDownloads";

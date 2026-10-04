@@ -19,6 +19,7 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { ThankYouUpsell } from "@/components/offers/StoreOffers";
+import { ThankYouDownloads } from "@/components/ThankYouDownloads";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -110,6 +111,9 @@ function Confirmation() {
 
         {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
         <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* A paid online order's digital products, as soon as the payment is captured. */}
+        <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
