@@ -58,11 +58,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     (product.description
       ? product.description.replace(/\s+/g, " ").slice(0, 160)
       : getDictionary(locale).meta.storeDescription(store.name));
-  const image = firstImage(product);
+  // The merchant's sharing image and "hide from search engines" (product form → Search engines and sharing).
+  const image = seoString(product.seo, "imageUrl") ?? firstImage(product);
+  const noindex = (product.seo as Record<string, unknown> | undefined)?.noindex === true;
 
   return {
     title,
     description,
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",

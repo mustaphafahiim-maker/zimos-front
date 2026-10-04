@@ -16,6 +16,7 @@ import { ProductCollectionsSection } from "./components/ProductCollectionsSectio
 import { CustomFieldsSection } from "./components/CustomFieldsSection";
 import type { CatalogProduct } from "@store-builder/api-client";
 import { ProductPageSettingsSection } from "./components/ProductPageSettingsSection";
+import { ProductSeoSection } from "./components/ProductSeoSection";
 import { ProductOptionsDisplaySection } from "./components/ProductOptionsDisplaySection";
 import { ProductCmsSection } from "./components/ProductCmsSection";
 import { VariantBulkEditor } from "./components/VariantBulkEditor";
@@ -128,6 +129,7 @@ export function ProductEditPage() {
               onChanged={reload}
             />
             <ProductPageSettingsSection product={data as unknown as CatalogProduct} onChanged={reload} />
+            <ProductSeoSection product={data} onChanged={reload} />
             <ProductCmsSection product={data as unknown as CatalogProduct} onChanged={reload} />
           </div>
         )}
