@@ -170,3 +170,5 @@ export * from "./endpoints/reviewImport";
 export * from "./endpoints/contentTranslations";
 // A page's or funnel step's own scripts (customCode/pageScripts.js).
 export * from "./endpoints/pageScripts";
+// A funnel copied as a new draft (the funnel wizard's "Your funnels").
+export * from "./endpoints/funnelTemplates";
