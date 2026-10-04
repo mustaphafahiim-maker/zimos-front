@@ -408,3 +408,75 @@
     transition: none !important;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Product showcase: real dashboard screens in a glass frame over two
+ * soft glows in the brand colours.
+ * ------------------------------------------------------------------ */
+.showcase-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.35;
+}
+.showcase-glow[data-n="1"] {
+  inset-block-start: 6rem;
+  inset-inline-start: -10rem;
+  width: 34rem;
+  height: 30rem;
+  background: var(--color-primary);
+}
+.showcase-glow[data-n="2"] {
+  inset-block-end: 4rem;
+  inset-inline-end: -8rem;
+  width: 30rem;
+  height: 28rem;
+  background: var(--color-cyan, var(--color-primary));
+}
+.dark .showcase-glow {
+  opacity: 0.2;
+}
+.showcase-frame {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-paper-raised) 70%, var(--color-line));
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 90%, transparent),
+    0 40px 80px -40px color-mix(in srgb, var(--color-primary-dark) 55%, transparent);
+  padding: 0.5rem;
+}
+.showcase-frame img {
+  border-radius: 0.875rem;
+}
+.showcase-chrome {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem 0.625rem;
+}
+.showcase-chrome i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+.showcase-tick {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+  background: var(--color-primary);
+  transform: skewX(-29deg);
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .showcase-frame {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .showcase-glow {
+    display: none;
+  }
+}
