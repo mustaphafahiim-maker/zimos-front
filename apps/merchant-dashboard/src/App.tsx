@@ -17,6 +17,7 @@ import { GoLiveDialog } from "@/components/GoLiveDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
+import { EmailChangeConfirmPage } from "@/pages/EmailChangeConfirmPage";
 import { WorkspacePickerPage } from "@/pages/WorkspacePickerPage";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { EditorLayout } from "@/components/EditorLayout";
@@ -129,6 +130,7 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/account/email-change" element={<EmailChangeConfirmPage />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/choose-username" element={<ChooseUsernamePage />} />

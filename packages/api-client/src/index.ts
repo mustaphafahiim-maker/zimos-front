@@ -138,6 +138,8 @@ export * from "./endpoints/twoFactorWhatsapp";
 export * from "./endpoints/accountSettings";
 // The signed-in person's name and picture (auth/profileRoutes.js).
 export * from "./endpoints/profile";
+// Changing the sign-in email, confirmed from the new address (auth/emailChange.js).
+export * from "./endpoints/emailChange";
 // The thank-you page's download links (digital/digitalRoutes.js).
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
