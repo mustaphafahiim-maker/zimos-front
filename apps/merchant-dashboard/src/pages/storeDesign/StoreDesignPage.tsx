@@ -1,3 +1,4 @@
+import { StoreLivePreview } from "./StoreLivePreview";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { FilterTabs } from "@/components/FilterTabs";
@@ -72,6 +73,9 @@ export function StoreDesignPage() {
         onChange={(value) => navigate(`/store-settings/${value}`)}
         className="mb-5"
       />
+      {/* The settings, and beside them (wide screens) the real store to check them against. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
       {/* Keyed by workspace so a store switch never shows the previous store's draft. */}
       {active === "checkout-form" && <CheckoutFormTab key={workspaceId} />}
       {active === "thank-you" && <ThankYouTab key={workspaceId} />}
@@ -83,6 +87,9 @@ export function StoreDesignPage() {
       {active === "custom-code" && <CustomCodeTab key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
+        </div>
+        <StoreLivePreview workspaceId={workspaceId} className="sticky top-24 hidden xl:block" />
+      </div>
     </div>
   );
 }
