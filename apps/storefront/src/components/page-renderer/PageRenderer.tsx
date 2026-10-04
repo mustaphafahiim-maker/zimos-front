@@ -7,6 +7,8 @@ import type {
   PageTree,
 } from "@store-builder/api-client";
 import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
+import { setRequestMoneyFormat, type MoneyFormat } from "@/lib/moneyFormat";
+import { getStoreMeta } from "@/lib/storeMeta";
 import {
   CartElement,
   CollectionListElement,
@@ -428,6 +430,8 @@ export async function PageRenderer({
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
+  // The store's currency format, for the prices the elements below write on the server (lib/moneyFormat).
+  setRequestMoneyFormat(((await getStoreMeta(workspaceId).catch(() => null)) as { currencyFormat?: MoneyFormat } | null)?.currencyFormat ?? null);
   const ctx: Ctx = {
     workspaceId,
     currency,

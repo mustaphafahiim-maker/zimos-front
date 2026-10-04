@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import type { MoneyFormat } from "./moneyFormat";
 import type {
   CheckoutSettings,
   LegalPolicyKey,
@@ -25,6 +26,8 @@ export interface StoreInfo {
   slug: string;
   name: string;
   currency: string;
+  /** Where the currency symbol goes and whether decimals show (GET /store/:ws `currencyFormat`). */
+  currencyFormat?: MoneyFormat | null;
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
@@ -54,7 +57,7 @@ function build(locale: Locale, store: StoreInfo | null): StoreContextValue {
     intlLocale: intlLocaleFor(locale),
     t: getDictionary(locale),
     store,
-    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale),
+    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale, store?.currencyFormat ?? null),
   };
 }
 

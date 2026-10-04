@@ -150,6 +150,8 @@ export default async function StoreLayout({
     slug: store.slug,
     name: store.name,
     currency: store.currency,
+    // Where the symbol goes and whether decimals show (dashboard → currencies; lib/moneyFormat).
+    currencyFormat: (store as { currencyFormat?: StoreInfo["currencyFormat"] }).currencyFormat ?? null,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
     // Re-resolved rather than trusted: an older API without `checkout` must

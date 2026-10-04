@@ -1,3 +1,4 @@
+import { formatWithFormat, isCustomFormat, requestMoneyFormat, type MoneyFormat } from "./moneyFormat";
 import { formatMoney } from "@store-builder/api-client";
 
 /**
@@ -37,8 +38,11 @@ export function intlLocaleFor(locale: Locale): string {
 export function formatPrice(
   amountMinor: number | string | null | undefined,
   currency: string,
-  locale: Locale
+  locale: Locale,
+  /** The store's currency format; on the server the page renderer's, when not given (lib/moneyFormat). */
+  format: MoneyFormat | null = requestMoneyFormat()
 ): string {
+  if (isCustomFormat(format)) return formatWithFormat(amountMinor, currency, intlLocaleFor(locale), format);
   return formatMoney(amountMinor, currency, intlLocaleFor(locale));
 }
 

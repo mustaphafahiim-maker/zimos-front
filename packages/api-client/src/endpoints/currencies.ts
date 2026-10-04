@@ -72,3 +72,13 @@ export async function currenciesGetForStore(client: ApiClient, workspaceId: stri
   const { currencies } = await client.request<{ currencies: CurrencyStorefront }>(`/store/${workspaceId}/currencies`, { auth: false });
   return currencies;
 }
+
+/**
+ * The store's own currency, until its first order (currencies/baseCurrency.js).
+ * Every variant and offer moves to it with the same amounts; 409
+ * BASE_CURRENCY_LOCKED once the store has an order.
+ */
+export async function currenciesSetBase(client: ApiClient, workspaceId: string, currency: string): Promise<CurrencyDashboard> {
+  const { currencies } = await client.request<{ currencies: CurrencyDashboard }>(`${base(workspaceId)}/base`, { method: "PUT", body: { currency } });
+  return currencies;
+}

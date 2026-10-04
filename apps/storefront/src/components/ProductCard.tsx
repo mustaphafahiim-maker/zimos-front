@@ -4,6 +4,7 @@ import { ConvertedPrice } from "./ConvertedPrice";
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
+import { useStore } from "@/lib/StoreContext";
 import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
 import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
@@ -24,6 +25,8 @@ export function ProductCard({
   from?: string;
 }) {
   const t = getDictionary(locale);
+  // The store's currency format (lib/moneyFormat), from the store context.
+  const storeFormat = useStore().store?.currencyFormat ?? null;
   const price = priceOf(product);
   const compareAt = compareAtOf(product);
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
@@ -181,12 +184,12 @@ export function ProductCard({
         </h3>
         <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
           <span className="text-base font-bold text-ink">
-            {price !== undefined ? formatPrice(price, currency, locale) : "—"}
+            {price !== undefined ? formatPrice(price, currency, locale, storeFormat) : "—"}
           </span>
           {price !== undefined && <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />}
           {compareAt && (
             <span className="text-sm text-ink-soft line-through">
-              {formatPrice(compareAt, currency, locale)}
+              {formatPrice(compareAt, currency, locale, storeFormat)}
             </span>
           )}
         </p>
