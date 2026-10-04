@@ -3,11 +3,13 @@ import { RefundLinesPicker } from "./FulfillAndRefundLines";
 import { RefreshCw } from "lucide-react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, Payment, PaymentTimeline, Refund } from "@store-builder/api-client";
+import { ordersRefundWithNotify } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { ManualTransfersCard } from "./ManualTransfersCard";
@@ -446,6 +448,7 @@ function RefundDialog({
   const max = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
   const [amount, setAmount] = useState(minorToMajorInput(initial.amount ?? max));
   const [reason, setReason] = useState("");
+  const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -461,8 +464,9 @@ function RefundDialog({
     setBusy(true);
     setError(null);
     try {
-      const refund = await apiClient.refundOrder(workspaceId, order.id, {
+      const refund = await ordersRefundWithNotify(apiClient, workspaceId, order.id, {
         amount: minor,
+        notifyCustomer: notify,
         ...(reason.trim() ? { reason: reason.trim() } : {}),
         ...(viaGateway && paymentId ? { paymentId } : {}),
       });
@@ -524,6 +528,7 @@ function RefundDialog({
             <Textarea id={id} value={reason} maxLength={300} placeholder={t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
           )}
         </Field>
+        <NotifyCustomerToggle checked={notify} onChange={setNotify} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onClose}>

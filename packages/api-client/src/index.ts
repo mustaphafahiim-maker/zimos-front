@@ -124,3 +124,5 @@ export * from "./endpoints/orderSelection";
 export * from "./endpoints/orderWhatsappConfirm";
 // Editing the customer's details on an order (orders/orderService.updateOrderLimited).
 export * from "./endpoints/orderContactEdit";
+// Cancel with a refund, and "notify the customer" on cancel and refund (orders/orderCancelRefund.js).
+export * from "./endpoints/orderCancelRefund";
