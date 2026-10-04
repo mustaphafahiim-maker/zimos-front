@@ -6,6 +6,7 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { variantLabel } from "@/lib/product";
 import { input, label as labelClass } from "../ui";
+import { pickText } from "@/lib/i18n";
 
 const TEXT = {
   ar: { choose: "اختار النوع", soldOut: "نفذ" },
@@ -31,7 +32,7 @@ export function OfferVariantPicker({
   disabled?: boolean;
 }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const id = useId();
   const variants = (product?.variants ?? []).filter((v) => variantLabel(v));
   if (variants.length < 2) return null;

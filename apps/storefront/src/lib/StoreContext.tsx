@@ -31,6 +31,8 @@ export interface StoreInfo {
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
+  /** The languages the store offers (default first), as GET /store/:ws `languages` gives them; French joins the switch from here. */
+  languages?: string[];
   /** Which optional checkout fields the merchant shows/requires (GET /store/:ws `checkout`). */
   checkout: CheckoutSettings;
   /** The thank-you page settings (GET /store/:ws `thankYou`); absent means the built-in page. */

@@ -30,7 +30,7 @@ import { storeCustomCode } from "@/lib/headCode";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { canonicalOrigin } from "@/lib/domains";
-import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
+import { dirFor, getDictionary, intlLocaleFor, arOrEn } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
@@ -154,6 +154,8 @@ export default async function StoreLayout({
     currencyFormat: (store as { currencyFormat?: StoreInfo["currencyFormat"] }).currencyFormat ?? null,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    // Offered languages: French joins the language switch when it is one (lib/i18n switchLocales).
+    languages: (store as { languages?: string[] }).languages ?? [],
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
     checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
@@ -235,7 +237,7 @@ export default async function StoreLayout({
             <CouponFromLink workspaceId={workspaceId} />
             <BackToTop label={t.common.backToTop} />
             {/* The store as an app for shoppers (Settings → Store app). */}
-            <StoreAppInstall app={storefrontStoreApp(store)} locale={locale} />
+            <StoreAppInstall app={storefrontStoreApp(store)} locale={arOrEn(locale)} />
             {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
             <ThemeChrome store={store} />
           </div>

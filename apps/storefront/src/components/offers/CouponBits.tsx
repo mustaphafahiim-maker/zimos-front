@@ -10,6 +10,7 @@ import {
 } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
+import { pickText } from "@/lib/i18n";
 
 /*
  * The shopper's side of coupons and order rules (SPEC §10.5–10.6): a
@@ -138,7 +139,7 @@ export function DiscountRows({
   currency?: string;
 }) {
   const { locale, money } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   if (coupon?.valid) {
     return (
       <div className="flex justify-between gap-3 text-success">
@@ -168,7 +169,7 @@ export function DiscountRows({
 /** Says how much more to add when the order is below the store's minimum. */
 export function MinimumOrderNotice({ extras, currency, className = "" }: { extras: StorefrontQuoteExtras; currency?: string; className?: string }) {
   const { locale, money } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const minimum = extras.minimumOrder;
   if (!minimum || minimum.met) return null;
   return (
@@ -181,7 +182,7 @@ export function MinimumOrderNotice({ extras, currency, className = "" }: { extra
 /** The bar under "you're X away from free shipping". */
 export function FreeShippingBar({ progress }: { progress: FreeShippingProgress | null }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   if (!progress || progress.thresholdAmount <= 0) return null;
   const done = progress.qualified ? 100 : Math.max(4, Math.min(100, Math.round(((progress.thresholdAmount - progress.remainingAmount) / progress.thresholdAmount) * 100)));
   return (

@@ -17,6 +17,7 @@ import {
   type FieldProblem,
 } from "@/lib/customFields";
 import { btnSecondary, focusRing, input as inputClass, label as labelClass } from "../ui";
+import { arOrEn } from "@/lib/i18n";
 
 /**
  * The product's custom fields on its page: what the shopper types or the photo
@@ -190,7 +191,7 @@ export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
     <div className="space-y-4">
       {state.fields.map((field) => {
         const id = state.idFor(field.id);
-        const label = fieldLabel(field, locale);
+        const label = fieldLabel(field, arOrEn(locale));
         const problem = problemText(field, state.problems[field.id]);
         const errorId = `${id}-error`;
         const hintId = `${id}-hint`;
@@ -279,7 +280,7 @@ export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
           id,
           value,
           dir: "auto" as const,
-          placeholder: fieldPlaceholder(field, locale),
+          placeholder: fieldPlaceholder(field, arOrEn(locale)),
           "aria-invalid": problem ? true : undefined,
           "aria-required": field.required || undefined,
           "aria-describedby": `${hintId}${problem ? ` ${errorId}` : ""}`,

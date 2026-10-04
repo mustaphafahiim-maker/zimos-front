@@ -28,6 +28,7 @@ import { btnPrimary, btnSecondary, card } from "../ui";
 import { OfferVariantPicker, useOfferProduct } from "./OfferVariantPicker";
 import { OfferTimer, useOfferCountdown } from "./OfferTimer";
 import { trackOfferView, useOfferView } from "@/lib/offerViews";
+import { pickText } from "@/lib/i18n";
 
 /*
  * The shopper's side of the offer rules (backend modules/offers): a
@@ -173,7 +174,7 @@ export function CrossSellStrip({
   placement: CrossSellPlacement;
 }) {
   const { locale, store } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const key = [...productIds].sort().join(",");
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   // The rule that filled the strip (null: bought together), for its numbers (lib/offerViews).
@@ -237,7 +238,7 @@ export function ThankYouUpsell({
   onAccepted?: (order: StorefrontUpsellAccepted) => void;
 }) {
   const { locale, money } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const [offer, setOffer] = useState<StorefrontUpsell | null>(null);
   const [state, setState] = useState<"idle" | "busy" | "declined">("idle");
   const [accepted, setAccepted] = useState<StorefrontUpsellAccepted | null>(null);
@@ -367,7 +368,7 @@ function pageMatches(pages: StorefrontExitDownsell["pages"], pathname: string): 
  */
 export function ExitDownsell({ workspaceId }: { workspaceId: string }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const pathname = usePathname() ?? "";
   const [config, setConfig] = useState<StorefrontExitDownsell | null>(null);
   const [open, setOpen] = useState(false);

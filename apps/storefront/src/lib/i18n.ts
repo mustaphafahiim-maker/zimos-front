@@ -1,5 +1,6 @@
 import { formatWithFormat, isCustomFormat, requestMoneyFormat, type MoneyFormat } from "./moneyFormat";
 import { formatMoney } from "@store-builder/api-client";
+import { fr } from "./i18nFr";
 
 /**
  * Storefront UI strings. Every customer-facing label lives here, in both
@@ -10,13 +11,14 @@ import { formatMoney } from "@store-builder/api-client";
  * Client components: `useStore().t` (src/lib/StoreContext.tsx).
  */
 
-export type Locale = "ar" | "en";
-export const LOCALES: readonly Locale[] = ["ar", "en"] as const;
+// French (lib/i18nFr.ts): a store whose default language is French opens in it (SPEC §8.10).
+export type Locale = "ar" | "en" | "fr";
+export const LOCALES: readonly Locale[] = ["ar", "en", "fr"] as const;
 export const DEFAULT_LOCALE: Locale = "ar";
 export const LOCALE_COOKIE = "zimos_store_locale";
 
 export function isLocale(value: unknown): value is Locale {
-  return value === "ar" || value === "en";
+  return value === "ar" || value === "en" || value === "fr";
 }
 
 /** "ar-EG", "en", "en-US" … → the UI locale; anything else → null. */
@@ -32,7 +34,40 @@ export function dirFor(locale: Locale): "rtl" | "ltr" {
 
 /** BCP-47 tag for Intl formatting — the storefront serves Egyptian merchants. */
 export function intlLocaleFor(locale: Locale): string {
-  return locale === "ar" ? "ar-EG" : "en-EG";
+  return locale === "ar" ? "ar-EG" : locale === "fr" ? "fr" : "en-EG";
+}
+
+/**
+ * A component's own strings by language ({ ar, en } and maybe fr): a language
+ * it has no strings for reads English, except Arabic itself.
+ */
+export function pickText<T extends { ar: unknown; en: unknown; fr?: unknown }>(texts: T, locale: Locale): T["ar"] | T["en"] {
+  if (locale === "fr" && texts.fr !== undefined) return texts.fr as T["en"];
+  return locale === "ar" ? texts.ar : texts.en;
+}
+
+/**
+ * The interface languages the language switch goes through: Arabic and
+ * English always, French when the store offers it (dashboard → Languages,
+ * GET /store/:ws `languages`).
+ */
+export function switchLocales(storeLanguages: readonly string[] | null | undefined): Locale[] {
+  return (storeLanguages ?? []).some((l) => parseLocale(l) === "fr") ? ["ar", "en", "fr"] : ["ar", "en"];
+}
+
+/** The language after `current` in the switch, and how the switch shows and says it. */
+export function nextLocale(current: Locale, storeLanguages: readonly string[] | null | undefined): Locale {
+  const list = switchLocales(storeLanguages);
+  return list[(list.indexOf(current) + 1) % list.length] ?? "ar";
+}
+export const LOCALE_SHORT: Record<Locale, string> = { ar: "ع", en: "EN", fr: "FR" };
+export function switchLabel(t: Dictionary, next: Locale): string {
+  return next === "en" ? t.common.switchToEnglish : next === "fr" ? t.common.switchToFrench : t.common.switchToArabic;
+}
+
+/** For data written in Arabic and English only (governorates, merchant labels): French reads English. */
+export function arOrEn(locale: Locale): "ar" | "en" {
+  return locale === "ar" ? "ar" : "en";
 }
 
 export function formatPrice(
@@ -68,6 +103,7 @@ const en = {
     language: "Language",
     switchToArabic: "Switch to Arabic",
     switchToEnglish: "Switch to English",
+    switchToFrench: "Switch to French",
     themeLight: "Switch to light mode",
     themeDark: "Switch to dark mode",
     cartWithCount: (n: number) => `Cart — ${n} item${n === 1 ? "" : "s"}`,
@@ -601,6 +637,7 @@ const ar: Dictionary = {
     language: "اللغة",
     switchToArabic: "التبديل للعربية",
     switchToEnglish: "التبديل للإنجليزية",
+    switchToFrench: "التبديل للفرنسية",
     themeLight: "الوضع الفاتح",
     themeDark: "الوضع الداكن",
     cartWithCount: (n) => `السلة — ${arNum(n)} منتج`,
@@ -1110,7 +1147,7 @@ const ar: Dictionary = {
   },
 };
 
-const DICTIONARIES: Record<Locale, Dictionary> = { ar, en };
+const DICTIONARIES: Record<Locale, Dictionary> = { ar, en, fr };
 
 /** Works anywhere — server components, client components, plain modules. */
 export function getDictionary(locale: Locale): Dictionary {

@@ -12,6 +12,7 @@ import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { ReviewPhotoPicker, useReviewPhotos } from "./ReviewPhotoPicker";
 import { btnPrimary, btnSecondary, card, input, label as labelClass } from "../ui";
+import { pickText } from "@/lib/i18n";
 
 /**
  * Reviews on the product page (SPEC §7.7): the average and how the stars
@@ -109,7 +110,7 @@ export function ProductReviews({
   formOnly?: boolean;
 }) {
   const { locale, intlLocale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const [open, setOpen] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");

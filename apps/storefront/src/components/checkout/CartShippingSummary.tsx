@@ -10,6 +10,7 @@ import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useStoreCountry } from "@/lib/storeCountry";
 import { input } from "@/components/ui";
 import { FreeShippingHint, ShippingFee } from "./ShippingFee";
+import { arOrEn } from "@/lib/i18n";
 
 /**
  * The money half of the cart (drawer and page): subtotal, shipping, and the
@@ -64,7 +65,7 @@ export function CartShippingSummary({
             <option value="">{t.cart.shipToPlaceholder}</option>
             {GOVERNORATES.map((g) => (
               <option key={g.code} value={g.code}>
-                {g[locale]}
+                {g[arOrEn(locale)]}
               </option>
             ))}
           </select>

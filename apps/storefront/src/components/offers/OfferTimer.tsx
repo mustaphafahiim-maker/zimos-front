@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/StoreContext";
+import { pickText } from "@/lib/i18n";
 
 const TEXT = {
   ar: { endsIn: "العرض بينتهي خلال", ended: "العرض ده انتهى." },
@@ -37,7 +38,7 @@ const two = (n: number) => String(n).padStart(2, "0");
 /** "Offer ends in 09:41", or "This offer has ended." */
 export function OfferTimer({ left, ended }: { left: number | null; ended: boolean }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   if (left === null) return null;
   if (ended) {
     return (

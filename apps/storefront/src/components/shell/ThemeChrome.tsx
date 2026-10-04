@@ -6,7 +6,7 @@ import type { StorefrontMeta } from "@store-builder/api-client";
 import { WhatsAppIcon } from "@/components/Icons";
 import { StoreLink } from "@/components/StoreRoute";
 import { useCart } from "@/lib/CartProvider";
-import { LOCALE_COOKIE } from "@/lib/i18n";
+import { LOCALE_COOKIE, nextLocale, switchLabel } from "@/lib/i18n";
 import { useStore } from "@/lib/StoreContext";
 
 /**
@@ -40,7 +40,7 @@ export function ThemeChrome({ store }: { store: StorefrontMeta }) {
   if (/\/f\//.test(pathname)) return null;
   if (!toolbar && !whatsapp && floating.language !== true) return null;
 
-  const next = locale === "ar" ? "en" : "ar";
+  const next = nextLocale(locale, (store as { languages?: string[] }).languages);
   function switchLanguage() {
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     startTransition(() => router.refresh());
@@ -62,7 +62,7 @@ export function ThemeChrome({ store }: { store: StorefrontMeta }) {
               onClick={switchLanguage}
               disabled={pending}
               lang={next}
-              aria-label={next === "en" ? t.common.switchToEnglish : t.common.switchToArabic}
+              aria-label={switchLabel(t, next)}
             >
               <svg viewBox="0 0 24 24" aria-hidden>
                 <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.7" />
