@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Columns3, Palette, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Columns3, Copy, Palette, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import type { PageColumn, PageElement, PageElementType, PageRow, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
@@ -28,6 +28,7 @@ import {
   type SectionSettingSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
+import { duplicateElement } from "./canvasTools";
 import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
 import { SaveSectionPanel } from "./SavedSections";
 import { BindingFields } from "./DataBinding";
@@ -1010,11 +1011,14 @@ export function SectionInspector({
   onClose,
   namedStyles,
   onNamedStylesChange,
+  onDuplicate,
 }: {
   section: PageSection;
   onChange: (next: PageSection) => void;
   onDelete: () => void;
   onClose: () => void;
+  /** Puts a copy of the section right after it (editor/canvasTools.ts). */
+  onDuplicate?: () => void;
   /** The page's named styles (tree.globalStyles.named) and how to change them. */
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
@@ -1040,13 +1044,25 @@ export function SectionInspector({
       namedStyles={namedStyles}
       onNamedStylesChange={onNamedStylesChange}
       actions={
-        <ElementMoveButtons
-          section={section}
-          elementId={element.id}
-          label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
-          ui={ui}
-          onChange={onChange}
-        />
+        <>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            title={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            onClick={() => onChange(duplicateElement(section, element.id))}
+          >
+            <Copy className="size-3.5" aria-hidden />
+          </Button>
+          <ElementMoveButtons
+            section={section}
+            elementId={element.id}
+            label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
+            ui={ui}
+            onChange={onChange}
+          />
+        </>
       }
     />
   );
@@ -1102,8 +1118,14 @@ export function SectionInspector({
 
       <SaveSectionPanel section={section} onChange={onChange} />
 
-      <div className="border-t border-line px-4 py-3">
-        <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
+      <div className="flex gap-2 border-t border-line px-4 py-3">
+        {onDuplicate && (
+          <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDuplicate}>
+            <Copy className="size-4" aria-hidden />
+            {ui.duplicateSection}
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDelete}>
           <Trash2 className="size-4" aria-hidden />
           {ui.deleteSection}
         </Button>

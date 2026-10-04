@@ -36,6 +36,7 @@ import { PageTabs } from "./PageTabs";
 import { PageSettingsButton } from "./PageSettingsDialog";
 import { ResizableSplit } from "./ResizableSplit";
 import { applyCanvasEdit, nudgeElement } from "./canvasEdits";
+import { duplicateSection, inlineTextIds, setElementText } from "./canvasTools";
 import { ShellPanel } from "./ShellPanels";
 import {
   createSection,
@@ -725,6 +726,11 @@ function WebsiteEditor() {
               setTreeMeta((prev) => ({ ...prev, globalStyles: { ...(prev.globalStyles ?? {}), named } }))
             }
             onDelete={() => setPendingDelete(selected)}
+            onDuplicate={() => {
+              const copy = duplicateSection(selected);
+              setSections((prev) => insertSection(prev, copy, prev.findIndex((s) => s.id === selected.id) + 1));
+              selectSection(copy.id, { scroll: true });
+            }}
             onClose={() => {
               setSelectedId(null);
               setEndOpen(false);
@@ -973,6 +979,7 @@ function WebsiteEditor() {
                     frameTitle: ui.previewFrame,
                     lightMode: ui.previewLightMode,
                     darkMode: ui.previewDarkMode,
+                    xray: ui.previewXray,
                   }}
                   colorMode={previewMode}
                   onColorModeChange={setPreviewMode}
@@ -990,6 +997,7 @@ function WebsiteEditor() {
                       resizeColumns: ui.canvasResizeColumns,
                       resizeImage: ui.canvasResizeImage,
                       auto: ui.canvasAuto,
+                      editText: ui.canvasEditText,
                     },
                     theme: lookToPreview(look),
                     scrollRequest,
@@ -1007,6 +1015,9 @@ function WebsiteEditor() {
                     onSelect: (id) => selectSection(id, { scroll: false }),
                     onCanvasEdit: (edit) => applyCanvas(edit),
                     onCanvasStep: stepCanvas,
+                    // Double-click text editing on the page (canvasTools.ts): one undo step per edit.
+                    inlineText: inlineTextIds(sections),
+                    onTextEdit: (elementId, text) => setSections((prev) => setElementText(prev, elementId, text)),
                     onInsert: requestInsert,
                     onMoveSection: moveSectionBy,
                     dragActive: draggingPreset !== null,

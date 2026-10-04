@@ -8,15 +8,8 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Eye, PackageCheck, Redo2, Undo2 } from "lucide-react";
 import { Button } from "@store-builder/ui";
 import type { PageSection, PageTree } from "@store-builder/api-client";
@@ -29,13 +22,7 @@ import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { BlockLibrary } from "../website/editor/BlockLibrary";
 import { SectionCard } from "../website/editor/SectionCard";
 import { SectionInspector } from "../website/editor/SectionInspector";
-import {
-  createSection,
-  insertSection,
-  moveSection,
-  sectionLabel,
-  type BlockPreset,
-} from "../website/editor/blocks";
+import { createSection, insertSection, moveSection, sectionLabel, type BlockPreset } from "../website/editor/blocks";
 import { EditorLocaleContext, editorUi } from "../website/editor/editorLocale";
 import { LayerList } from "../website/editor/LayerList";
 import { ResizableSplit } from "../website/editor/ResizableSplit";
@@ -43,6 +30,9 @@ import { SavedSectionsLibrary } from "../website/editor/SavedSections";
 import { PageProductField } from "../website/editor/DataBinding";
 import { namedStylesOf } from "../website/editor/ElementStylePanel";
 import { useStepHistory } from "./useStepHistory";
+import { duplicateSection, inlineTextIds, setElementText } from "../website/editor/canvasTools";
+import { applyCanvasEdit, nudgeElement } from "../website/editor/canvasEdits";
+import { stepEdit } from "@/lib/canvasDrag";
 import { PageSettingsButton } from "../website/editor/PageSettingsDialog";
 import { PAGE_STRINGS, STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
 import type { UiStep } from "./funnelAdapter";
@@ -59,7 +49,10 @@ import type { UiStep } from "./funnelAdapter";
  *
  * The website editor's tools work here too (item 94): undo / redo
  * (useStepHistory), the layer list with its "add a section here" slots, the
- * page's product, named styles and the saved sections library.
+ * page's product, named styles and the saved sections library. Its preview
+ * is the website editor's canvas too (item 95): sections are picked, added,
+ * dragged and resized on the page, text is edited with a double-click, and
+ * X-ray outlines every box.
  */
 
 /** Sets `productId` on every product card that doesn't name a product yet. */
@@ -73,13 +66,9 @@ function fillProductCards(tree: PageTree, productId: string): PageTree {
         columns: (r.columns ?? []).map((c) => ({
           ...c,
           elements: (c.elements ?? []).map((el) =>
-            el.type === "product_card" &&
-            !(
-              typeof el.props?.productId === "string" &&
-              el.props.productId.trim()
-            )
+            el.type === "product_card" && !(typeof el.props?.productId === "string" && el.props.productId.trim())
               ? { ...el, props: { ...el.props, productId } }
-              : el,
+              : el
           ),
         })),
       })),
@@ -91,16 +80,9 @@ function hasUnsetProductCard(tree: PageTree): boolean {
   return tree.sections.some((s) =>
     (s.rows ?? []).some((r) =>
       (r.columns ?? []).some((c) =>
-        (c.elements ?? []).some(
-          (el) =>
-            el.type === "product_card" &&
-            !(
-              typeof el.props?.productId === "string" &&
-              el.props.productId.trim()
-            ),
-        ),
-      ),
-    ),
+        (c.elements ?? []).some((el) => el.type === "product_card" && !(typeof el.props?.productId === "string" && el.props.productId.trim()))
+      )
+    )
   );
 }
 
@@ -134,14 +116,8 @@ export function FunnelStepPageEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [libraryCollapsed, setLibraryCollapsed] = useSessionBool(
-    "zimos:funnel-page-editor:library-collapsed",
-    false,
-  );
-  const [inspectorCollapsed, setInspectorCollapsed] = useSessionBool(
-    "zimos:funnel-page-editor:inspector-collapsed",
-    false,
-  );
+  const [libraryCollapsed, setLibraryCollapsed] = useSessionBool("zimos:funnel-page-editor:library-collapsed", false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useSessionBool("zimos:funnel-page-editor:inspector-collapsed", false);
 
   // A different step is a different page: drop the section selection with it.
   const [seededKey, setSeededKey] = useState(step.key);
@@ -156,20 +132,17 @@ export function FunnelStepPageEditor({
 
   const { change } = history;
   const setSections = useCallback(
-    (next: PageSection[], key?: string) =>
-      change({ ...step.tree, sections: next }, key),
-    [change, step.tree],
+    (next: PageSection[], key?: string) => {
+      // An edit that changes nothing (a drop in place) records no undo step.
+      if (next !== step.tree.sections) change({ ...step.tree, sections: next }, key);
+    },
+    [change, step.tree]
   );
-  const pageProductId =
-    typeof (step.tree as { productId?: unknown }).productId === "string"
-      ? ((step.tree as { productId?: string }).productId ?? "")
-      : "";
+  const pageProductId = typeof (step.tree as { productId?: unknown }).productId === "string" ? ((step.tree as { productId?: string }).productId ?? "") : "";
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   function handleDragEnd(event: DragEndEvent) {
@@ -191,27 +164,20 @@ export function FunnelStepPageEditor({
 
   /** Into the slot picked in the layer list, else at the end. */
   function insert(section: PageSection) {
-    setSections(
-      insertSection(sections, section, insertIndex ?? sections.length),
-    );
+    setSections(insertSection(sections, section, insertIndex ?? sections.length));
     setInsertIndex(null);
     selectSection(section.id);
   }
 
   function setPageProduct(productId: string) {
-    const { productId: _old, ...rest } = step.tree as PageTree & {
-      productId?: string;
-    };
+    const { productId: _old, ...rest } = step.tree as PageTree & { productId?: string };
     void _old;
     change((productId ? { ...rest, productId } : rest) as PageTree);
   }
 
   function updateSection(next: PageSection) {
     // One undo step per burst of typing in a section, as in the website editor.
-    setSections(
-      sections.map((s) => (s.id === next.id ? next : s)),
-      `section:${next.id}`,
-    );
+    setSections(sections.map((s) => (s.id === next.id ? next : s)), `section:${next.id}`);
   }
 
   function deleteSection(section: PageSection) {
@@ -225,13 +191,13 @@ export function FunnelStepPageEditor({
       section={selected}
       onChange={updateSection}
       namedStyles={namedStylesOf(step.tree.globalStyles)}
-      onNamedStylesChange={(named) =>
-        change({
-          ...step.tree,
-          globalStyles: { ...(step.tree.globalStyles ?? {}), named },
-        })
-      }
+      onNamedStylesChange={(named) => change({ ...step.tree, globalStyles: { ...(step.tree.globalStyles ?? {}), named } })}
       onDelete={() => setPendingDelete(selected)}
+      onDuplicate={() => {
+        const copy = duplicateSection(selected);
+        setSections(insertSection(sections, copy, sections.findIndex((s) => s.id === selected.id) + 1));
+        selectSection(copy.id);
+      }}
       onClose={() => setSelectedId(null)}
     />
   );
@@ -261,9 +227,7 @@ export function FunnelStepPageEditor({
                 insertIndex={insertIndex}
                 onSelect={(id) => selectSection(id)}
                 onDelete={setPendingDelete}
-                onMove={(from, to) =>
-                  setSections(moveSection(sections, from, to))
-                }
+                onMove={(from, to) => setSections(moveSection(sections, from, to))}
                 onInsertAt={setInsertIndex}
                 open={layersOpen}
                 onOpenChange={setLayersOpen}
@@ -271,16 +235,9 @@ export function FunnelStepPageEditor({
             }
             bottom={
               <>
-                <PageProductField
-                  value={pageProductId}
-                  onChange={setPageProduct}
-                />
+                <PageProductField value={pageProductId} onChange={setPageProduct} />
                 <SavedSectionsLibrary onInsert={insert} />
-                <BlockLibrary
-                  onAdd={addBlock}
-                  insertPosition={insertIndex === null ? null : insertIndex + 1}
-                  onCancelInsert={() => setInsertIndex(null)}
-                />
+                <BlockLibrary onAdd={addBlock} insertPosition={insertIndex === null ? null : insertIndex + 1} onCancelInsert={() => setInsertIndex(null)} />
               </>
             }
           />
@@ -290,19 +247,10 @@ export function FunnelStepPageEditor({
           <div className="mx-auto max-w-2xl">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-1">
-                <label
-                  htmlFor="page-step"
-                  className="text-xs font-semibold uppercase tracking-wide text-ink-soft"
-                >
+                <label htmlFor="page-step" className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
                   {t.step}
                 </label>
-                <Select
-                  id="page-step"
-                  value={step.key}
-                  onChange={(e) => onSelectStep(e.target.value)}
-                  className="h-9 max-w-sm"
-                  dir="auto"
-                >
+                <Select id="page-step" value={step.key} onChange={(e) => onSelectStep(e.target.value)} className="h-9 max-w-sm" dir="auto">
                   {steps.map((s) => (
                     <option key={s.key} value={s.key}>
                       {s.name} · {STEP_TYPE_LABELS[locale][s.type]}
@@ -311,24 +259,10 @@ export function FunnelStepPageEditor({
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label={ui.undo}
-                  title={`${ui.undo} (Ctrl+Z)`}
-                  disabled={!history.canUndo}
-                  onClick={history.undo}
-                >
+                <Button size="icon" variant="ghost" aria-label={ui.undo} title={`${ui.undo} (Ctrl+Z)`} disabled={!history.canUndo} onClick={history.undo}>
                   <Undo2 className="size-4 rtl:-scale-x-100" aria-hidden />
                 </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label={ui.redo}
-                  title={`${ui.redo} (Ctrl+Shift+Z)`}
-                  disabled={!history.canRedo}
-                  onClick={history.redo}
-                >
+                <Button size="icon" variant="ghost" aria-label={ui.redo} title={`${ui.redo} (Ctrl+Shift+Z)`} disabled={!history.canRedo} onClick={history.redo}>
                   <Redo2 className="size-4 rtl:-scale-x-100" aria-hidden />
                 </Button>
                 <Button variant="outline" onClick={onBack}>
@@ -338,70 +272,35 @@ export function FunnelStepPageEditor({
                   {t.backToFlow}
                 </Button>
                 {onSeoChange && (
-                  <PageSettingsButton
-                    key={step.key}
-                    name={step.name}
-                    seo={step.seo}
-                    scripts={{ kind: "step", id: step.id }}
-                    onSaveSeo={onSeoChange}
-                  />
+                  <PageSettingsButton key={step.key} name={step.name} seo={step.seo} scripts={{ kind: "step", id: step.id }} onSaveSeo={onSeoChange} />
                 )}
-                <Button
-                  variant={previewOpen ? "secondary" : "outline"}
-                  aria-pressed={previewOpen}
-                  onClick={() => setPreviewOpen((o) => !o)}
-                >
+                <Button variant={previewOpen ? "secondary" : "outline"} aria-pressed={previewOpen} onClick={() => setPreviewOpen((o) => !o)}>
                   <Eye className="size-4" aria-hidden /> {t.preview}
                 </Button>
               </div>
             </div>
 
-            <h2
-              className="font-display text-lg font-semibold text-ink"
-              dir="auto"
-            >
+            <h2 className="font-display text-lg font-semibold text-ink" dir="auto">
               {fmt(t.pageOf, { name: step.name })}
             </h2>
             <p className="mb-4 text-sm text-ink-soft">{t.pageHint}</p>
 
             {offerProduct && hasUnsetProductCard(step.tree) && (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary-soft px-4 py-3">
-                <p
-                  className="min-w-0 flex-1 text-sm text-primary-dark dark:text-primary"
-                  dir="auto"
-                >
+                <p className="min-w-0 flex-1 text-sm text-primary-dark dark:text-primary" dir="auto">
                   {fmt(t.useProductHint, { product: offerProduct.name })}
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    change(fillProductCards(step.tree, offerProduct.id))
-                  }
-                >
-                  <PackageCheck className="size-4" aria-hidden />{" "}
-                  <span dir="auto">
-                    {fmt(t.useProduct, { product: offerProduct.name })}
-                  </span>
+                <Button size="sm" variant="outline" onClick={() => change(fillProductCards(step.tree, offerProduct.id))}>
+                  <PackageCheck className="size-4" aria-hidden /> <span dir="auto">{fmt(t.useProduct, { product: offerProduct.name })}</span>
                 </Button>
               </div>
             )}
 
             {sections.length === 0 ? (
-              <div className="rounded-[var(--radius-card)] border border-dashed border-danger/40 bg-danger-soft/40 px-6 py-12 text-center text-sm text-ink-soft">
-                {t.empty}
-              </div>
+              <div className="rounded-[var(--radius-card)] border border-dashed border-danger/40 bg-danger-soft/40 px-6 py-12 text-center text-sm text-ink-soft">{t.empty}</div>
             ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={sections.map((s) => s.id)}
-                  strategy={verticalListSortingStrategy}
-                >
+              <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={handleDragEnd}>
+                <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-3">
                     {sections.map((section) => (
                       <SectionCard
@@ -433,18 +332,12 @@ export function FunnelStepPageEditor({
           collapseLabel={t.collapsePanel}
           expandLabel={t.expandPanel}
         >
-          {inspector || (
-            <p className="px-4 py-6 text-sm text-ink-soft">{t.selectSection}</p>
-          )}
+          {inspector || <p className="px-4 py-6 text-sm text-ink-soft">{t.selectSection}</p>}
         </CollapsiblePane>
       </div>
 
       {/* Below xl the inspector can't sit beside the page, so it overlays. */}
-      {selected && (
-        <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-s border-line bg-paper-raised shadow-xl xl:hidden">
-          {inspector}
-        </div>
-      )}
+      {selected && <div className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-s border-line bg-paper-raised shadow-xl xl:hidden">{inspector}</div>}
 
       {previewOpen && (
         <div className="fixed inset-y-0 end-0 z-40 w-full border-s border-line shadow-xl lg:w-1/2">
@@ -459,6 +352,43 @@ export function FunnelStepPageEditor({
               mobile: t.mobile,
               close: t.close,
               frameTitle: t.frameTitle,
+              xray: ui.previewXray,
+            }}
+            // The website editor's canvas (item 95): pick, insert, drag and resize, double-click text, X-ray.
+            canvas={{
+              selectedId,
+              labels: Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)])),
+              strings: {
+                addAbove: ui.addAbove,
+                addBelow: ui.addBelow,
+                moveUp: ui.moveSectionUp,
+                moveDown: ui.moveSectionDown,
+                dragSection: ui.canvasDragSection,
+                dragElement: ui.canvasDragElement,
+                resizeHeight: ui.canvasResizeHeight,
+                resizeColumns: ui.canvasResizeColumns,
+                resizeImage: ui.canvasResizeImage,
+                auto: ui.canvasAuto,
+                editText: ui.canvasEditText,
+              },
+              onSelect: (id) => selectSection(id),
+              onInsert: setInsertIndex,
+              onMoveSection: (id, direction) => {
+                const from = sections.findIndex((s) => s.id === id);
+                const to = direction === "up" ? from - 1 : from + 1;
+                if (from >= 0 && to >= 0 && to < sections.length) setSections(moveSection(sections, from, to));
+              },
+              onCanvasEdit: (edit) => setSections(applyCanvasEdit(sections, edit)),
+              onCanvasStep: (canvasStep) => {
+                if (canvasStep.kind === "element") {
+                  setSections(nudgeElement(sections, canvasStep.sectionId, canvasStep.elementId, canvasStep.delta));
+                  return;
+                }
+                const edit = stepEdit(canvasStep);
+                if (edit) setSections(applyCanvasEdit(sections, edit), `canvas:${canvasStep.kind}:${canvasStep.sectionId}`);
+              },
+              inlineText: inlineTextIds(sections),
+              onTextEdit: (elementId, text) => setSections(setElementText(sections, elementId, text)),
             }}
             onClose={() => setPreviewOpen(false)}
           />
@@ -468,13 +398,7 @@ export function FunnelStepPageEditor({
       <ConfirmDialog
         open={pendingDelete !== null}
         title={t.deleteSectionTitle}
-        description={
-          pendingDelete
-            ? fmt(t.deleteSectionDescription, {
-                name: sectionLabel(pendingDelete, locale),
-              })
-            : undefined
-        }
+        description={pendingDelete ? fmt(t.deleteSectionDescription, { name: sectionLabel(pendingDelete, locale) }) : undefined}
         confirmLabel={t.deleteSection}
         destructive
         onCancel={() => setPendingDelete(null)}
