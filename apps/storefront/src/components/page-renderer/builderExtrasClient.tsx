@@ -146,3 +146,128 @@ export function BundleChoice({
     </div>
   );
 }
+
+/**
+ * `popup`: a window over the page. Any link to "#popup-<key>" opens it; with
+ * the "delay" or "exit" trigger it also opens by itself, once a visit. In the
+ * editor's preview it sits in the page as a dashed card, so it can be edited.
+ */
+export function PopupBlock({
+  popupKey,
+  title,
+  text,
+  image,
+  buttonLabel,
+  buttonHref,
+  trigger,
+  delaySeconds,
+  editable,
+}: {
+  popupKey: string;
+  title: string;
+  text: string;
+  image: string | null;
+  buttonLabel: string;
+  buttonHref: string | null;
+  trigger: "click" | "delay" | "exit";
+  delaySeconds: number;
+  editable: boolean;
+}) {
+  const { t } = useStore();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (editable) return;
+    const onClick = (e: MouseEvent) => {
+      const link = e.target instanceof Element ? e.target.closest(`a[href="#popup-${popupKey}"]`) : null;
+      if (link) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    // Capture: ahead of the link's own handler, which then sees the click handled.
+    document.addEventListener("click", onClick, true);
+    const seenKey = `zimos:popup:${window.location.pathname}:${popupKey}`;
+    const seen = () => {
+      try {
+        return window.sessionStorage.getItem(seenKey) === "1";
+      } catch {
+        return false;
+      }
+    };
+    const show = () => {
+      if (seen()) return;
+      try {
+        window.sessionStorage.setItem(seenKey, "1");
+      } catch {
+        /* shown anyway */
+      }
+      setOpen(true);
+    };
+    const timer = trigger === "delay" ? window.setTimeout(show, delaySeconds * 1000) : undefined;
+    const onLeave = (e: MouseEvent) => {
+      if (!e.relatedTarget && e.clientY <= 0) show();
+    };
+    if (trigger === "exit") document.addEventListener("mouseout", onLeave);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("mouseout", onLeave);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [editable, popupKey, trigger, delaySeconds]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const body = (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {image && <img src={image} alt="" className="mb-4 max-h-60 w-full rounded-xl object-cover" />}
+      {title.trim() && <h3 className="text-xl font-bold text-ink">{title}</h3>}
+      {text.trim() && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-soft">{text}</p>}
+      {buttonLabel.trim() && buttonHref && (
+        <a href={buttonHref} onClick={() => setOpen(false)} className={`mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary ${focusRing}`}>
+          {buttonLabel}
+        </a>
+      )}
+    </>
+  );
+
+  if (editable) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-line p-5" data-popup-key={popupKey}>
+        <p className="mb-2 font-mono text-[11px] text-ink-soft" dir="ltr">
+          #popup-{popupKey} · {trigger}
+        </p>
+        {body}
+      </div>
+    );
+  }
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" onMouseDown={() => setOpen(false)}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || popupKey}
+        className="relative w-full max-w-md rounded-2xl bg-paper-raised p-6 shadow-xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          autoFocus
+          aria-label={t.common.close}
+          onClick={() => setOpen(false)}
+          className={`absolute end-3 top-3 flex size-11 items-center justify-center rounded-full text-xl text-ink-soft hover:bg-paper ${focusRing}`}
+        >
+          ×
+        </button>
+        {body}
+      </div>
+    </div>
+  );
+}

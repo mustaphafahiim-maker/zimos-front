@@ -265,7 +265,9 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
       // Gallery with thumbnails, variant and bundle pickers, review form (./builderExtras).
-      if (EXTRA_ELEMENT_TYPES.has(element.type)) return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} />;
+      if (EXTRA_ELEMENT_TYPES.has(element.type)) {
+        return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;
+      }
       // The showcase sections (./showcase) draw their own types; anything
       // else is a type this renderer does not know, and a tree written for a
       // newer one must not blank the page — so it draws nothing.

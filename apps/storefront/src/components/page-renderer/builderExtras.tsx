@@ -4,8 +4,8 @@ import { bundleTiers } from "@/lib/commerce";
 import { productImages } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storefrontProductReviews } from "@store-builder/api-client";
-import { BundleChoice, GalleryWithThumbs, VariantChips } from "./builderExtrasClient";
-import { type Props, bool, safeUrl, str } from "./props";
+import { BundleChoice, GalleryWithThumbs, PopupBlock, VariantChips } from "./builderExtrasClient";
+import { type Props, bool, num, resolveHref, safeUrl, str } from "./props";
 
 /**
  * The builder elements of backend pages/builderExtras.js (SPEC §9.3, item
@@ -14,7 +14,7 @@ import { type Props, bool, safeUrl, str } from "./props";
  * the store's newest. Each draws nothing when it has nothing to show.
  */
 
-export const EXTRA_ELEMENT_TYPES = new Set(["image_gallery", "variant_selector", "bundle_selector", "review_form"]);
+export const EXTRA_ELEMENT_TYPES = new Set(["image_gallery", "variant_selector", "bundle_selector", "review_form", "popup"]);
 
 async function productFor(workspaceId: string, productId: string): Promise<StorefrontProductDetail | null> {
   try {
@@ -34,8 +34,35 @@ function Title({ text }: { text: string }) {
   return text.trim() ? <h3 className="mb-3 text-lg font-semibold text-ink">{text}</h3> : null;
 }
 
-export async function BuilderExtraElement({ type, props, workspaceId }: { type: string; props: Props; workspaceId: string }) {
+export async function BuilderExtraElement({
+  type,
+  props,
+  workspaceId,
+  editable = false,
+}: {
+  type: string;
+  props: Props;
+  workspaceId: string;
+  editable?: boolean;
+}) {
   const title = str(props, "title");
+
+  if (type === "popup") {
+    const trigger = str(props, "trigger");
+    return (
+      <PopupBlock
+        popupKey={str(props, "key") || "popup"}
+        title={title}
+        text={str(props, "text")}
+        image={safeUrl(str(props, "image"))}
+        buttonLabel={str(props, "buttonLabel")}
+        buttonHref={resolveHref(str(props, "buttonHref"))}
+        trigger={trigger === "delay" || trigger === "exit" ? trigger : "click"}
+        delaySeconds={num(props, "delaySeconds", 5, 1, 120)}
+        editable={editable}
+      />
+    );
+  }
 
   if (type === "image_gallery") {
     const own = (Array.isArray(props.images) ? props.images : []).map((u) => (typeof u === "string" ? safeUrl(u) : null)).filter((u): u is string => !!u);

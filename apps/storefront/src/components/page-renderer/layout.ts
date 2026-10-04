@@ -133,6 +133,11 @@ export const COLUMN_ALIGN: Record<string, string> = {
 };
 
 /** Where a column sits when its neighbour is taller. Only from `md`, where columns sit side by side. */
+export const COLUMN_LAYOUT: Record<string, string> = { stack: "flex-col", inline: "flex-row flex-wrap items-center" };
+export const COLUMN_GAP: Record<string, string> = { tight: "gap-2", normal: "gap-4", loose: "gap-8" };
+// Only side by side has a row to line up; stacked keeps its alignment setting.
+export const COLUMN_JUSTIFY: Record<string, string> = { start: "", center: "[&.flex-row]:justify-center", between: "[&.flex-row]:justify-between", end: "[&.flex-row]:justify-end" };
+
 export const COLUMN_VERTICAL: Record<string, string> = {
   start: "",
   center: "md:self-center",
@@ -270,5 +275,9 @@ export function columnClasses(settings: unknown, spanClass: string): string {
   const surface = settingClass(settings, "surface", COLUMN_SURFACE, "none");
   const align = settingClass(settings, "align", COLUMN_ALIGN, "start");
   const vertical = settingClass(settings, "verticalAlign", COLUMN_VERTICAL, "start");
-  return `flex min-w-0 flex-col gap-4 ${spanClass} ${surface} ${align} ${vertical}`.replace(/\s+/g, " ").trimEnd();
+  // A column is the "container" of SPEC §9.3: stacked, or side by side and wrapping.
+  const layout = settingClass(settings, "layout", COLUMN_LAYOUT, "stack");
+  const gap = settingClass(settings, "itemGap", COLUMN_GAP, "normal");
+  const justify = settingClass(settings, "justify", COLUMN_JUSTIFY, "start");
+  return `flex min-w-0 ${layout} ${gap} ${spanClass} ${surface} ${align} ${vertical} ${justify}`.replace(/\s+/g, " ").trimEnd();
 }

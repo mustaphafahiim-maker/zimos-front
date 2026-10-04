@@ -76,7 +76,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
-import { EXTRA_ELEMENT_SPECS, EXTRA_PRESETS } from "./builderExtraBlocks";
+import { COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
 /**
@@ -901,6 +901,9 @@ export const COLUMN_SETTING_SPECS: SectionSettingSpec[] = [
     ],
   },
 ];
+
+// Every column is a flex container: its items' layout (builderExtraBlocks.ts).
+COLUMN_SETTING_SPECS.push(...COLUMN_LAYOUT_SPECS);
 
 export const ROW_SETTING_SPECS: SectionSettingSpec[] = [
   {

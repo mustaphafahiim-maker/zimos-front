@@ -519,6 +519,8 @@ Object.assign(FIELD_LABEL_AR, EXTRA_AR.fields);
 Object.assign(FIELD_HINT_AR, EXTRA_AR.hints);
 Object.assign(OPTION_LABEL_AR, EXTRA_AR.options);
 Object.assign(PRESET_AR, EXTRA_AR.presets);
+Object.assign(SECTION_SETTING_LABEL_AR, EXTRA_AR.sectionLabels);
+Object.assign(SECTION_SETTING_OPTION_AR, EXTRA_AR.sectionOptions);
 
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
   return locale === "ar" ? (ELEMENT_LABEL_AR[type] ?? fallback) : fallback;
