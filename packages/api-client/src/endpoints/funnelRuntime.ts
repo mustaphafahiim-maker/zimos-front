@@ -130,6 +130,8 @@ export interface FunnelRuntimeAdvancePayload {
     orderId?: string;
     /** clicked_through: the page button that was pressed, for links drawn from one button. */
     sourceElementId?: string;
+    /** accepted_offer: the variant the shopper chose for a one-line offer. */
+    variantId?: string;
   };
 }
 

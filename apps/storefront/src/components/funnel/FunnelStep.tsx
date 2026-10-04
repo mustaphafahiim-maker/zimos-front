@@ -73,6 +73,8 @@ import { contentIdOf, lineContentId } from "@/lib/contentId";
 import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 import { PolicyLinks } from "@/components/PolicyLinks";
+import { OfferVariantPicker } from "@/components/offers/OfferVariantPicker";
+import { variantImageOf } from "@/lib/variantImage";
 
 /**
  * What the shopper *does* on a running funnel's step, drawn under the page the
@@ -153,7 +155,7 @@ export function useAdvance(workspaceId: string, funnelId: string, sessionId: str
     }
   }
 
-  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string, sourceElementId?: string) {
+  async function advance(type: FunnelRuntimeOutcomeType, orderId?: string, sourceElementId?: string, variantId?: string) {
     if (busy.current) return;
     busy.current = true;
     setPending(type);
@@ -161,7 +163,7 @@ export function useAdvance(workspaceId: string, funnelId: string, sessionId: str
     try {
       const res = await funnelRuntimeAdvance(createStorefrontApiClient(), workspaceId, funnelId, sessionId, {
         fromStepKey: stepKey,
-        outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}) },
+        outcome: { type, ...(orderId ? { orderId } : {}), ...(sourceElementId ? { sourceElementId } : {}), ...(variantId ? { variantId } : {}) },
       });
       // A one-click offer charged to a saved card that was declined is not a purchase (SPEC §9.5).
       const declined = (res.followOnOrder as { payment?: { status?: string } } | undefined)?.payment?.status === "declined";
@@ -834,8 +836,11 @@ function FunnelOfferCard({
 
   const firstLine = offer?.lines[0];
   const product = firstLine ? byVariant.get(firstLine.variantId) : undefined;
-  const variant = product?.variants.find((v) => v.id === firstLine?.variantId);
-  const image = product ? firstImage(product) : null;
+  // The option the shopper takes it in (a one-line offer of a product with several, OfferVariantPicker).
+  const [chosenId, setChosenId] = useState<string | null>(null);
+  const chosenVariantId = offer && offer.lines.length === 1 ? (chosenId ?? firstLine?.variantId ?? "") : "";
+  const variant = product?.variants.find((v) => v.id === (chosenVariantId || firstLine?.variantId));
+  const image = product ? (variantImageOf(variant) ?? firstImage(product)) : null;
   const quantity = offer?.lines.reduce((sum, l) => sum + (l.quantity || 0), 0) ?? 0;
   const compareAtTotal =
     variant?.compareAtAmount != null ? parseMoney(variant.compareAtAmount) * Math.max(1, quantity) : null;
@@ -881,6 +886,9 @@ function FunnelOfferCard({
               {price !== null && compareAt !== null && (
                 <p className="mt-1 text-sm font-medium text-success">{t.upsell.save(money(compareAt - price, offer.currency))}</p>
               )}
+              {chosenVariantId && (
+                <OfferVariantPicker product={product} value={chosenVariantId} onChange={setChosenId} disabled={!!flow.pending} />
+              )}
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">{joinsOrder ? t.funnel.offerJoinsHint : t.funnel.offerHint}</p>
             </>
           ) : (
@@ -889,7 +897,11 @@ function FunnelOfferCard({
             </h2>
           )}
 
-          <PageOfferActions canAccept={!!offer && canAccept} pending={!!flow.pending} onAction={(type) => void flow.advance(type)} />
+          <PageOfferActions
+            canAccept={!!offer && canAccept}
+            pending={!!flow.pending}
+            onAction={(type) => void flow.advance(type, undefined, undefined, type === "accepted_offer" && chosenVariantId ? chosenVariantId : undefined)}
+          />
           <div className="mt-6 space-y-2">
             {offer && !canAccept && (
               <p role="status" className="rounded-xl bg-paper px-4 py-3 text-sm text-ink-soft">
@@ -900,7 +912,7 @@ function FunnelOfferCard({
             {offer && canAccept && (
               <button
                 type="button"
-                onClick={() => void flow.advance("accepted_offer")}
+                onClick={() => void flow.advance("accepted_offer", undefined, undefined, chosenVariantId || undefined)}
                 disabled={!!flow.pending}
                 aria-busy={flow.pending === "accepted_offer"}
                 className={btnPrimaryLg}

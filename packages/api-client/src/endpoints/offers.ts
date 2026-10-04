@@ -244,11 +244,13 @@ export async function storefrontAcceptUpsell(
   workspaceId: string,
   orderId: string,
   orderNumber: string,
-  offerId: string
+  offerId: string,
+  /** The option the shopper chose for a one-line offer. */
+  variantId?: string
 ): Promise<StorefrontUpsellAccepted> {
   const body = await client.request<{ order: StorefrontUpsellAccepted }>(`${store(workspaceId)}/orders/${orderId}/upsell`, {
     method: "POST",
-    body: { number: orderNumber, offerId },
+    body: { number: orderNumber, offerId, ...(variantId ? { variantId } : {}) },
     auth: false,
   });
   return body.order;

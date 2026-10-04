@@ -25,6 +25,7 @@ import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { CheckIcon } from "../Icons";
 import { ProductCard } from "../ProductCard";
 import { btnPrimary, btnSecondary, card } from "../ui";
+import { OfferVariantPicker, useOfferProduct } from "./OfferVariantPicker";
 
 /*
  * The shopper's side of the offer rules (backend modules/offers): a
@@ -217,6 +218,9 @@ export function ThankYouUpsell({
   const [state, setState] = useState<"idle" | "busy" | "declined">("idle");
   const [accepted, setAccepted] = useState<StorefrontUpsellAccepted | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The option the shopper takes it in (OfferVariantPicker), for a product with several.
+  const product = useOfferProduct(workspaceId, offer ? (offer.productSlug ?? offer.productId) : null);
+  const [chosenId, setChosenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -238,7 +242,7 @@ export function ThankYouUpsell({
     setState("busy");
     setError(null);
     try {
-      const order = await storefrontAcceptUpsell(createStorefrontApiClient(), workspaceId, orderId, orderNumber, offer.offerId);
+      const order = await storefrontAcceptUpsell(createStorefrontApiClient(), workspaceId, orderId, orderNumber, offer.offerId, chosenId ?? undefined);
       setAccepted(order);
       onAccepted?.(order);
     } catch (err) {
@@ -291,6 +295,7 @@ export function ThankYouUpsell({
           </p>
         </div>
       </div>
+      <OfferVariantPicker product={product} value={chosenId ?? offer.variantId} onChange={setChosenId} disabled={state === "busy"} />
       <p role="alert" className="mt-3 text-sm font-medium text-danger empty:hidden">
         {error}
       </p>
