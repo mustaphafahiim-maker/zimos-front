@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
+import { LocaleProvider } from "@/i18n/LocaleContext";
+import { NotificationsPage } from "@/pages/NotificationsPage";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequirePermission } from "@/routes/RequirePermission";
 import { ToastProvider } from "@/components/Toast";
@@ -45,58 +47,61 @@ function gated(permission: string, element: ReactNode) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
+    <LocaleProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route
-                  path="/"
-                  element={
-                    <RequirePermission permission={P.OVERVIEW_VIEW} redirect>
-                      <OverviewPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route path="/workspaces" element={gated(P.WORKSPACES_VIEW, <WorkspacesPage />)} />
-                <Route path="/workspaces/:id" element={gated(P.WORKSPACES_VIEW, <WorkspaceDetailPage />)} />
-                <Route path="/users" element={gated(P.WORKSPACES_VIEW, <UsersPage />)} />
-                <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
-                <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
-                <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
-                <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
-                <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofPage />)} />
-                <Route path="/payment-methods" element={gated(P.PAYMENTS_RECORD, <PaymentMethodsPage />)} />
-                <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
-                <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
-                <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />
-                <Route path="/templates" element={gated(P.TEMPLATES_VIEW, <TemplatesPage />)} />
-                <Route path="/themes" element={gated(P.TEMPLATES_VIEW, <ThemesPage />)} />
-                <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
-                <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
-                <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
-                <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />
-                <Route path="/payment-gateways" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="payment" />)} />
-                <Route path="/whatsapp-numbers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="whatsapp" />)} />
-                <Route path="/fraud-signals" element={gated(P.RISK_VIEW, <FraudSignalsPage />)} />
-                <Route path="/blocklist" element={gated(P.RISK_VIEW, <BlocklistPage />)} />
-                <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
-                <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
-                <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
-                <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
-                <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
-                <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />
-                <Route path="/system-health" element={gated(P.SYSTEM_VIEW, <SystemHealthPage />)} />
-                <Route path="/admin-users" element={gated(P.ADMINS_VIEW, <AdminUsersPage />)} />
-                <Route path="*" element={<NotFoundPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route
+                    path="/"
+                    element={
+                      <RequirePermission permission={P.OVERVIEW_VIEW} redirect>
+                        <OverviewPage />
+                      </RequirePermission>
+                    }
+                  />
+                  <Route path="/workspaces" element={gated(P.WORKSPACES_VIEW, <WorkspacesPage />)} />
+                  <Route path="/workspaces/:id" element={gated(P.WORKSPACES_VIEW, <WorkspaceDetailPage />)} />
+                  <Route path="/users" element={gated(P.WORKSPACES_VIEW, <UsersPage />)} />
+                  <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
+                  <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
+                  <Route path="/notifications" element={gated(P.OVERVIEW_VIEW, <NotificationsPage />)} />
+                  <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
+                  <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
+                  <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofPage />)} />
+                  <Route path="/payment-methods" element={gated(P.PAYMENTS_RECORD, <PaymentMethodsPage />)} />
+                  <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
+                  <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
+                  <Route path="/my-referrals" element={gated(P.REFERRALS_VIEW_OWN, <MyReferralsPage />)} />
+                  <Route path="/templates" element={gated(P.TEMPLATES_VIEW, <TemplatesPage />)} />
+                  <Route path="/themes" element={gated(P.TEMPLATES_VIEW, <ThemesPage />)} />
+                  <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
+                  <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
+                  <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
+                  <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />
+                  <Route path="/payment-gateways" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="payment" />)} />
+                  <Route path="/whatsapp-numbers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="whatsapp" />)} />
+                  <Route path="/fraud-signals" element={gated(P.RISK_VIEW, <FraudSignalsPage />)} />
+                  <Route path="/blocklist" element={gated(P.RISK_VIEW, <BlocklistPage />)} />
+                  <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
+                  <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
+                  <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
+                  <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />
+                  <Route path="/feature-flags" element={gated(P.FEATURE_FLAGS_VIEW, <FeatureFlagsPage />)} />
+                  <Route path="/audit-log" element={gated(P.AUDIT_LOG_VIEW, <AuditLogPage />)} />
+                  <Route path="/system-health" element={gated(P.SYSTEM_VIEW, <SystemHealthPage />)} />
+                  <Route path="/admin-users" element={gated(P.ADMINS_VIEW, <AdminUsersPage />)} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+            </Routes>
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </LocaleProvider>
   );
 }

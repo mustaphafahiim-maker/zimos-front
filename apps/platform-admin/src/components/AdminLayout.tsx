@@ -5,6 +5,7 @@ import { Spinner, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Status } from "@/components/StatusBadge";
 import * as adminApi from "@/lib/adminApi";
@@ -336,6 +337,7 @@ export function AdminLayout() {
               <span className="size-1.5 rounded-full bg-accent" aria-hidden />
               {envLabel}
             </span>
+            {can(P.OVERVIEW_VIEW) && <NotificationBell />}
             <ThemeToggle />
             <UserMenu />
           </div>

@@ -3,6 +3,7 @@ import {
   Activity,
   Ban,
   Banknote,
+  Bell,
   Building2,
   CreditCard,
   Factory,
@@ -36,7 +37,13 @@ export interface NavItem {
 }
 
 export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
-  { label: null, items: [{ label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW }] },
+  {
+    label: null,
+    items: [
+      { label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW },
+      { label: "Notifications", to: "/notifications", icon: Bell, permission: P.OVERVIEW_VIEW },
+    ],
+  },
   {
     label: "Merchants",
     items: [

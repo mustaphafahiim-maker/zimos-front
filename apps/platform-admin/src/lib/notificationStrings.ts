@@ -1,0 +1,71 @@
+import type { NotificationType } from "@/lib/notificationsApi";
+
+/** The console's notification strings, English and Arabic (MSA, as the merchant dashboard). */
+export const NOTIFICATION_STRINGS = {
+  en: {
+    title: "Notifications",
+    description: "What happened on the platform: sign-ups, stores, subscriptions, payments and tickets.",
+    bell: "Notifications",
+    empty: "No notifications.",
+    emptyUnread: "No unread notifications.",
+    viewAll: "View all",
+    markAllRead: "Mark all read",
+    markRead: "Mark read",
+    unreadOnly: "Unread only",
+    allTypes: "All types",
+    loadMore: "Load more",
+    settings: "Settings",
+    settingsHint: "Choose which notifications you see. Email is saved for later: no email is sent yet.",
+    inApp: "In the console",
+    email: "Email",
+    save: "Save",
+    saved: "Settings saved.",
+    unreadCount: "{count} unread",
+    type_user_signup: "New sign-up",
+    type_workspace_created: "New store",
+    type_subscription_activated: "Subscription activated",
+    type_subscription_expiring: "Subscription ending soon",
+    type_subscription_expired: "Subscription ended",
+    type_payment_proof_submitted: "Payment proof sent",
+    type_payment_failed: "Payment failed",
+    type_support_ticket: "Support ticket",
+    type_referral_signup: "Referral sign-up",
+    type_user_suspended: "Account suspended",
+  },
+  ar: {
+    title: "الإشعارات",
+    description: "ما يحدث على المنصة: التسجيلات والمتاجر والاشتراكات والمدفوعات والتذاكر.",
+    bell: "الإشعارات",
+    empty: "لا توجد إشعارات.",
+    emptyUnread: "لا توجد إشعارات غير مقروءة.",
+    viewAll: "عرض الكل",
+    markAllRead: "تحديد الكل كمقروء",
+    markRead: "تحديد كمقروء",
+    unreadOnly: "غير المقروءة فقط",
+    allTypes: "كل الأنواع",
+    loadMore: "عرض المزيد",
+    settings: "الإعدادات",
+    settingsHint: "اختر الإشعارات التي تظهر لك. خيار البريد يُحفظ فقط: لا يُرسل أي بريد حاليًا.",
+    inApp: "في لوحة التحكم",
+    email: "البريد",
+    save: "حفظ",
+    saved: "تم حفظ الإعدادات.",
+    unreadCount: "{count} غير مقروءة",
+    type_user_signup: "تسجيل جديد",
+    type_workspace_created: "متجر جديد",
+    type_subscription_activated: "تفعيل اشتراك",
+    type_subscription_expiring: "اشتراك ينتهي قريبًا",
+    type_subscription_expired: "انتهاء اشتراك",
+    type_payment_proof_submitted: "إرسال إثبات دفع",
+    type_payment_failed: "فشل دفع",
+    type_support_ticket: "تذكرة دعم",
+    type_referral_signup: "تسجيل بإحالة",
+    type_user_suspended: "إيقاف حساب",
+  },
+};
+
+export type NotificationStrings = (typeof NOTIFICATION_STRINGS)["en"];
+
+export function typeLabel(t: NotificationStrings, type: NotificationType | string): string {
+  return (t as Record<string, string>)[`type_${type}`] ?? type;
+}
