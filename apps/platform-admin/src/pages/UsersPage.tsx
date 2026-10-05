@@ -9,11 +9,55 @@ import { SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { CopyId } from "@/components/CopyId";
 import { UserStateBadge } from "@/components/userModeration";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate } from "@/lib/format";
 
 const PAGE_SIZE = 25;
+
+const STRINGS = {
+  en: {
+    title: "Users",
+    description: "Every account on the platform, and the stores they own or work in.",
+    searchPlaceholder: "Name, username, email, ID or store",
+    showDeleted: "Show deleted",
+    countOne: "{count} user",
+    countMany: "{count} users",
+    noMatch: "No user matches “{q}”.",
+    empty: "No users yet.",
+    colUser: "User",
+    colEmail: "Email",
+    colId: "ID",
+    colStores: "Stores",
+    colJoined: "Joined",
+    noUsername: "no username yet",
+    pages: "Pages",
+    previous: "Previous",
+    next: "Next",
+    page: "Page {page}",
+  },
+  ar: {
+    title: "المستخدمون",
+    description: "جميع الحسابات على المنصة، والمتاجر التي يملكونها أو يعملون فيها.",
+    searchPlaceholder: "الاسم أو اسم المستخدم أو البريد أو المعرّف أو المتجر",
+    showDeleted: "إظهار المحذوفين",
+    countOne: "مستخدم واحد",
+    countMany: "عدد المستخدمين: {count}",
+    noMatch: "لا يوجد مستخدم يطابق «{q}».",
+    empty: "لا يوجد مستخدمون بعد.",
+    colUser: "المستخدم",
+    colEmail: "البريد الإلكتروني",
+    colId: "المعرّف",
+    colStores: "المتاجر",
+    colJoined: "تاريخ الانضمام",
+    noUsername: "بلا اسم مستخدم بعد",
+    pages: "الصفحات",
+    previous: "السابق",
+    next: "التالي",
+    page: "صفحة {page}",
+  },
+} satisfies Messages;
 
 /** A store chip: its name, the person's role there and the subscription state. */
 export function StoreChip({ store }: { store: AdminUserStore }) {
@@ -44,13 +88,16 @@ export function StoreChip({ store }: { store: AdminUserStore }) {
  * Every account on the platform, one search box for all of it: name (Arabic
  * spelled any way), username, email, id (whole or its first 8+ characters),
  * or a store's name / address / id — which lists the people behind it. The
- * search and the page live in the URL, so a result can be linked to.
+ * search, the page and "Show deleted" live in the URL, so a result can be
+ * linked to. Deleted accounts are hidden unless "Show deleted" is on.
  */
 export function UsersPage() {
+  const t = useT(STRINGS);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const page = Math.max(1, Number(params.get("page")) || 1);
+  const showDeleted = params.get("deleted") === "1";
   const [draft, setDraft] = useState(q);
 
   // Typing settles for a moment before it becomes a search (and a URL).
@@ -59,12 +106,16 @@ export function UsersPage() {
       if (draft.trim() === q) return;
       const next = new URLSearchParams();
       if (draft.trim()) next.set("q", draft.trim());
+      if (showDeleted) next.set("deleted", "1");
       setParams(next, { replace: true });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [draft, q, setParams]);
+  }, [draft, q, showDeleted, setParams]);
 
-  const { data, loading, error, refresh } = useAsync(() => adminApi.searchUsers({ q, page, limit: PAGE_SIZE }), [q, page]);
+  const { data, loading, error, refresh } = useAsync(
+    () => adminApi.searchUsers({ q, page, limit: PAGE_SIZE, includeDeleted: showDeleted }),
+    [q, page, showDeleted]
+  );
 
   const goTo = (p: number) => {
     const next = new URLSearchParams(params);
@@ -72,26 +123,39 @@ export function UsersPage() {
     setParams(next);
   };
 
+  // Back to the first page: the count changes.
+  const setShowDeleted = (on: boolean) => {
+    const next = new URLSearchParams(params);
+    next.delete("page");
+    if (on) next.set("deleted", "1");
+    else next.delete("deleted");
+    setParams(next);
+  };
+
   return (
     <div>
-      <PageHeader title="Users" description="Every account on the platform, and the stores they own or work in." />
+      <PageHeader title={t.title} description={t.description} />
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <SearchInput
           value={draft}
           onChange={setDraft}
-          placeholder="Name, username, email, ID or store"
+          placeholder={t.searchPlaceholder}
           className="sm:w-96"
         />
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+          <input type="checkbox" className="size-4" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} />
+          {t.showDeleted}
+        </label>
         {data && (
           <span className="text-sm text-ink-soft sm:ms-auto" aria-live="polite">
-            {data.total} {data.total === 1 ? "user" : "users"}
+            {fmt(data.total === 1 ? t.countOne : t.countMany, { count: data.total })}
           </span>
         )}
       </div>
 
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
         {data && data.users.length === 0 ? (
-          <EmptyBlock message={q ? `No user matches “${q}”.` : "No users yet."} />
+          <EmptyBlock message={q ? fmt(t.noMatch, { q }) : t.empty} />
         ) : (
           data && (
             <>
@@ -99,11 +163,11 @@ export function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <Th>User</Th>
-                      <Th>Email</Th>
-                      <Th>ID</Th>
-                      <Th>Stores</Th>
-                      <Th>Joined</Th>
+                      <Th>{t.colUser}</Th>
+                      <Th>{t.colEmail}</Th>
+                      <Th>{t.colId}</Th>
+                      <Th>{t.colStores}</Th>
+                      <Th>{t.colJoined}</Th>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -118,7 +182,7 @@ export function UsersPage() {
                             <bdi>{u.fullName}</bdi>
                           </Link>
                           <span dir="ltr" className="text-xs text-ink-soft">
-                            {u.username ? `@${u.username}` : "no username yet"}
+                            {u.username ? `@${u.username}` : t.noUsername}
                           </span>
                           <span className="ms-2">
                             <UserStateBadge status={u.status} deleted={u.deleted} />
@@ -148,13 +212,13 @@ export function UsersPage() {
                 </Table>
               </Panel>
               {(data.page > 1 || data.hasMore) && (
-                <nav aria-label="Pages" className="mt-4 flex items-center justify-end gap-2">
+                <nav aria-label={t.pages} className="mt-4 flex items-center justify-end gap-2">
                   <Button variant="outline" size="sm" disabled={data.page <= 1} onClick={() => goTo(data.page - 1)}>
-                    <ChevronLeft className="rtl:rotate-180" aria-hidden /> Previous
+                    <ChevronLeft className="rtl:rotate-180" aria-hidden /> {t.previous}
                   </Button>
-                  <span className="text-sm text-ink-soft">Page {data.page}</span>
+                  <span className="text-sm text-ink-soft">{fmt(t.page, { page: data.page })}</span>
                   <Button variant="outline" size="sm" disabled={!data.hasMore} onClick={() => goTo(data.page + 1)}>
-                    Next <ChevronRight className="rtl:rotate-180" aria-hidden />
+                    {t.next} <ChevronRight className="rtl:rotate-180" aria-hidden />
                   </Button>
                 </nav>
               )}
