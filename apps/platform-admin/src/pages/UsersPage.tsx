@@ -8,6 +8,7 @@ import { DataState, EmptyBlock } from "@/components/DataState";
 import { SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { CopyId } from "@/components/CopyId";
+import { UserStateBadge } from "@/components/userModeration";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate } from "@/lib/format";
@@ -118,6 +119,9 @@ export function UsersPage() {
                           </Link>
                           <span dir="ltr" className="text-xs text-ink-soft">
                             {u.username ? `@${u.username}` : "no username yet"}
+                          </span>
+                          <span className="ms-2">
+                            <UserStateBadge status={u.status} deleted={u.deleted} />
                           </span>
                         </Td>
                         <Td className="break-all text-ink-soft">

@@ -6,6 +6,7 @@ import { DetailRow } from "@/components/Drawer";
 import { Panel, Td, Th } from "@/components/Panel";
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { CopyId } from "@/components/CopyId";
+import { UserModerationActions, UserStateBadge } from "@/components/userModeration";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatRelative } from "@/lib/format";
@@ -56,7 +57,12 @@ export function UserDetailPage() {
                 </DetailRow>
                 <DetailRow label="Status">
                   <Status value={user.status} />
+                  <span className="ms-2">
+                    <UserStateBadge status={user.status} deleted={Boolean(user.deletedAt)} />
+                  </span>
                 </DetailRow>
+                {user.suspendedReason && <DetailRow label="Suspension reason">{user.suspendedReason}</DetailRow>}
+                {user.deletedAt && <DetailRow label="Deleted">{formatDate(user.deletedAt)}</DetailRow>}
                 <DetailRow label="Platform role">{user.platformRole ?? "—"}</DetailRow>
                 <DetailRow label="Joined">
                   {formatDate(user.createdAt)}
@@ -64,6 +70,9 @@ export function UserDetailPage() {
                 </DetailRow>
                 <DetailRow label="Last sign-in">{user.lastLoginAt ? formatRelative(user.lastLoginAt) : "—"}</DetailRow>
               </dl>
+              <div className="mt-4">
+                <UserModerationActions user={user} onChanged={() => void refresh()} />
+              </div>
             </Panel>
 
             <Panel title="Stores" flush={user.workspaces.length > 0}>

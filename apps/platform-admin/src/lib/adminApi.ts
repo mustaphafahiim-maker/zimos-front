@@ -180,6 +180,18 @@ export function getUser(userId: string): Promise<AdminUserDetail> {
   return apiClient.adminGetUser(userId);
 }
 
+export function suspendUser(userId: string, reason: string) {
+  return apiClient.adminSuspendUser(userId, reason);
+}
+
+export function unsuspendUser(userId: string, reason?: string) {
+  return apiClient.adminUnsuspendUser(userId, reason);
+}
+
+export function deleteUser(userId: string, body: { reason?: string; stores?: "suspend" }) {
+  return apiClient.adminDeleteUser(userId, body);
+}
+
 // ----------------------------------------------------------------------- plans
 
 export function listPlans(): Promise<AdminPlan[]> {

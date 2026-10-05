@@ -2665,6 +2665,8 @@ export interface AdminUserRow {
   createdAt: string;
   lastLoginAt: string | null;
   emailVerified: boolean;
+  /** Soft-deleted from the console (anonymised, status suspended). */
+  deleted?: boolean;
   workspaces: AdminUserStore[];
 }
 
@@ -2680,6 +2682,19 @@ export interface AdminUserSearchPage {
 export interface AdminUserDetail extends AdminUserRow {
   phone: string | null;
   usernameChangedAt: string | null;
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
+  deletedAt?: string | null;
+}
+
+/** POST /admin/users/:id/{suspend,unsuspend,delete} */
+export interface AdminUserModeration {
+  id: string;
+  status: string;
+  suspendedAt: string | null;
+  suspendedReason: string | null;
+  deletedAt: string | null;
+  suspendedStores?: string[];
 }
 
 export interface AdminPlan {
