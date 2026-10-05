@@ -210,3 +210,5 @@ export * from "./endpoints/shippingPlaces";
 export * from "./endpoints/productListSources";
 // A rejected transfer sent again from the tracking page (payments/transferResubmit.js).
 export * from "./endpoints/transferResubmit";
+// The order page's Supplier card and each supplier's forwarding settings (dropship/dropshipOrders.js).
+export * from "./endpoints/dropshipOrders";

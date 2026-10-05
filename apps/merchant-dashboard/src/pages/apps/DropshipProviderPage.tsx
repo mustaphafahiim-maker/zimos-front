@@ -18,6 +18,7 @@ import { useToast } from "@/components/Toast";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Section } from "@/components/Section";
+import { DropshipForwardSettings } from "./DropshipForwardSettings";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -237,6 +238,8 @@ function ProviderCard({ t, provider, onChanged }: { t: T; provider: DropshipProv
               </Alert>
             )}
           </form>
+
+          <DropshipForwardSettings provider={provider} onChanged={onChanged} />
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-ink">{t.stockTitle}</h3>

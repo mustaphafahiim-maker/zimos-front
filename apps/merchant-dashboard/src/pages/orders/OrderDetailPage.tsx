@@ -16,6 +16,7 @@ import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
 import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
+import { OrderSupplierCard } from "./components/OrderSupplierCard";
 import { ReturnsSection } from "./components/ReturnsSection";
 import { PaymentsSection } from "./components/PaymentsSection";
 import { StatusChanger } from "./components/StatusChanger";
@@ -139,6 +140,8 @@ export function OrderDetailPage() {
             <OrderDigitalSection orderId={data.id} paid={data.financialState === "paid"} />
 
             <ShipmentsSection order={data} onChanged={reload} />
+
+            <OrderSupplierCard order={data} onChanged={reload} />
 
             <ReturnsSection order={data} onOrderMaybeChanged={reload} />
 

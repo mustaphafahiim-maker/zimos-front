@@ -66,6 +66,10 @@ const STRINGS = {
     "a_shipment.create": "Shipment created",
     "a_shipment.update": "Shipment updated",
     "a_refund.create": "Refund recorded",
+    "a_dropship.push_order": "Sent to the supplier",
+    "a_dropship.status_update": "The supplier updated the order",
+    "a_dropship.forward_failed": "Could not send to the supplier",
+    supplierStatus: "At the supplier: {status}",
     waybill: "Tracking number {number}",
     courier: "Courier: {name}",
     tags: "Tags: {tags}",
@@ -119,6 +123,10 @@ const STRINGS = {
     "a_shipment.create": "تم إنشاء شحنة",
     "a_shipment.update": "تم تحديث الشحنة",
     "a_refund.create": "تم تسجيل استرداد",
+    "a_dropship.push_order": "اتبعت للمورّد",
+    "a_dropship.status_update": "المورّد حدّث الأوردر",
+    "a_dropship.forward_failed": "معرفناش نبعته للمورّد",
+    supplierStatus: "عند المورّد: {status}",
     waybill: "رقم التتبع {number}",
     courier: "شركة الشحن: {name}",
     tags: "التاجز: {tags}",
@@ -144,6 +152,9 @@ function auditDetail(t: Strings, after: Record<string, unknown> | null): string 
   if (typeof after.waybillNumber === "string") parts.push(fmt(t.waybill, { number: after.waybillNumber }));
   if (Array.isArray(after.tags)) parts.push(fmt(t.tags, { tags: after.tags.join("، ") || "—" }));
   if (typeof after.cancellationReason === "string") parts.push(after.cancellationReason);
+  if (typeof after.externalStatus === "string") parts.push(fmt(t.supplierStatus, { status: humanize(after.externalStatus) }));
+  if (typeof after.externalOrderId === "string") parts.push(after.externalOrderId);
+  if (typeof after.error === "string") parts.push(after.error);
   return parts.length ? parts.join(" · ") : null;
 }
 
