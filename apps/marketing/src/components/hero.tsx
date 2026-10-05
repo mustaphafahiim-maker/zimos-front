@@ -23,12 +23,7 @@ export function Hero({
         className={`${container} grid gap-14 pt-12 pb-20 sm:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:items-center lg:gap-12 lg:pt-24 lg:pb-28`}
       >
         <div className="max-w-xl">
-          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-paper-raised/80 px-3 py-1 text-sm font-medium text-ink-soft">
-            <span aria-hidden className="size-1.5 rounded-full bg-primary" />
-            {copy.kicker}
-          </p>
-
-          <h1 id="hero-heading" className="mt-6 text-5xl font-bold text-ink sm:text-6xl lg:text-7xl">
+          <h1 id="hero-heading" className="text-5xl font-bold text-ink sm:text-6xl lg:text-7xl">
             {copy.headline}
           </h1>
           {brand.loopLatin ? (

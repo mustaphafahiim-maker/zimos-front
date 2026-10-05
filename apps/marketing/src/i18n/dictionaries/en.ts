@@ -35,7 +35,6 @@ export const en: Dictionary = {
   },
 
   hero: {
-    kicker: "The commerce platform for cash-on-delivery brands",
     headline: "Build. Sell. Grow.",
     subheadline:
       "Your store, orders, shipping and profit on one platform. Launch your store and sales funnels, confirm every cash-on-delivery order before it ships, ship with local couriers, and see what each delivered order really earned.",
