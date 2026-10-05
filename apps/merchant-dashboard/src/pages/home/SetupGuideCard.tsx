@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, Circle, X } from "lucide-react";
 import { Card, cn } from "@store-builder/ui";
 import { dashboardSetupGuide, type SetupStepKey } from "@store-builder/api-client";
+import { CUSTOM_DOMAINS_ENABLED } from "@/lib/features";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -85,7 +86,9 @@ export function SetupGuideCard() {
   // The home page already has its own loading and error states; the guide is
   // an extra, so it only appears once it has something to say.
   if (hidden || !guide.data || guide.data.done) return null;
-  const { steps, completed, total, percent } = guide.data;
+  const { completed, total, percent } = guide.data;
+  // The own-domain step (optional) only while merchant domains are switched on.
+  const steps = guide.data.steps.filter((step) => CUSTOM_DOMAINS_ENABLED || step.key !== "domain");
 
   function hide() {
     setHidden(true);
