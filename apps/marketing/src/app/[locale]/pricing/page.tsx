@@ -8,6 +8,7 @@ import { Service } from "@/components/service";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { container } from "@/components/ui";
+import { ogImage } from "@/lib/og";
 import { getPublicPlans } from "@/lib/plans";
 
 type Params = { params: Promise<{ locale: string }> };
@@ -24,7 +25,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: pricing.pageTitle,
     description: pricing.pageDescription,
     alternates: { canonical: `/${locale}/pricing`, languages: { ar: "/ar/pricing", en: "/en/pricing" } },
-    openGraph: { title: pricing.pageTitle, description: pricing.pageDescription, type: "website" },
+    openGraph: {
+      title: pricing.pageTitle,
+      description: pricing.pageDescription,
+      type: "website",
+      url: `/${locale}/pricing`,
+      images: [ogImage(locale)],
+    },
   };
 }
 

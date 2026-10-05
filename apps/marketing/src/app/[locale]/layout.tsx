@@ -5,6 +5,7 @@ import { fontVariables } from "../fonts";
 import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { I18nProvider } from "@/i18n/provider";
+import { ogImage } from "@/lib/og";
 import { SITE_URL } from "@/lib/urls";
 import { SiteAnalytics } from "@/components/site-analytics";
 
@@ -47,6 +48,13 @@ export async function generateMetadata({
       siteName: "ZIMOS",
       locale: locale === "ar" ? "ar_EG" : "en_US",
       type: "website",
+      url: `/${locale}`,
+      images: [ogImage(locale)],
+    },
+    // Title and description come from each page's Open Graph tags.
+    twitter: {
+      card: "summary_large_image",
+      images: [ogImage(locale).url],
     },
   };
 }
