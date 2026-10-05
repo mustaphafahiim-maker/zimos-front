@@ -35,8 +35,8 @@ const STRINGS = {
     importButton: "Import courier statement",
     importTitle: "Import a courier statement",
     importDesc: "Upload the statement the courier sent with the transfer. Each waybill is matched to its order and the differences are listed before anything is saved.",
-    columns: "A CSV file with a waybill column and a collected-amount column; a fee column is optional. From Excel, use Save as → CSV.",
-    chooseFile: "Choose a CSV file",
+    columns: "The courier's Excel (.xlsx) or CSV file as it came: a waybill column and a collected-amount column, a fee column if it has one. Title lines above the table and the totals line are skipped.",
+    chooseFile: "Choose the statement file",
     reference: "Statement reference",
     check: "Match waybills",
     create: "Create settlement with {n} orders",
@@ -80,8 +80,8 @@ const STRINGS = {
     importButton: "استيراد كشف شركة الشحن",
     importTitle: "استيراد كشف شركة الشحن",
     importDesc: "ارفع الكشف الذي أرسلته شركة الشحن مع التحويل. تُطابَق كل بوليصة مع طلبها وتُعرض الفروقات قبل حفظ أي شيء.",
-    columns: "ملف CSV به عمود لرقم البوليصة وعمود للمبلغ المحصَّل، وعمود الرسوم اختياري. من Excel اختر حفظ باسم ← CSV.",
-    chooseFile: "اختر ملف CSV",
+    columns: "ملف Excel (.xlsx) أو CSV من شركة الشحن زي ما وصلك: عمود لرقم البوليصة وعمود للمبلغ المحصَّل، وعمود الرسوم لو موجود. سطور العنوان فوق الجدول وسطر الإجمالي بيتم تخطيهم.",
+    chooseFile: "اختر ملف الكشف",
     reference: "مرجع الكشف",
     check: "طابِق البوالص",
     create: "أنشئ تسوية بـ {n} طلب",
@@ -211,7 +211,8 @@ function StatementModal({
   const input = useRef<HTMLInputElement>(null);
   const [carrierCode, setCarrierCode] = useState(carriers.length === 1 ? carriers[0] : "");
   const [reference, setReference] = useState("");
-  const [csv, setCsv] = useState("");
+  // The courier's file as it came (Excel or CSV), base64: the server reads it.
+  const [fileBase64, setFileBase64] = useState("");
   const [fileName, setFileName] = useState("");
   const [report, setReport] = useState<StatementReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +225,10 @@ function StatementModal({
     setError(null);
     if (file.size > 1_000_000) return setError(t.fileTooBig);
     setFileName(file.name);
-    setCsv(await file.text());
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    setFileBase64(btoa(binary));
   }
 
   async function match() {
@@ -232,7 +236,7 @@ function StatementModal({
     setBusy(true);
     setError(null);
     try {
-      setReport(await statementMatch(apiClient, workspaceId, { csv, carrierCode }));
+      setReport(await statementMatch(apiClient, workspaceId, { fileBase64, fileName, carrierCode }));
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -243,7 +247,7 @@ function StatementModal({
     setBusy(true);
     setError(null);
     try {
-      const result = await statementImport(apiClient, workspaceId, { csv, carrierCode, reference: reference.trim() || null });
+      const result = await statementImport(apiClient, workspaceId, { fileBase64, fileName, carrierCode, reference: reference.trim() || null });
       toast.success(t.created);
       onCreated(result.settlementId);
     } catch (err) {
@@ -277,7 +281,7 @@ function StatementModal({
               {fmt(t.create, { n: settleable })}
             </Button>
           ) : (
-            <Button onClick={() => void match()} disabled={busy || !csv}>
+            <Button onClick={() => void match()} disabled={busy || !fileBase64}>
               {t.check}
             </Button>
           )}
@@ -309,7 +313,7 @@ function StatementModal({
           <TextField label={t.reference} dir="ltr" value={reference} maxLength={120} onChange={(e) => setReference(e.target.value)} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => void onFile(e)} />
+          <input ref={input} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="sr-only" onChange={(e) => void onFile(e)} />
           <Button variant="outline" onClick={() => input.current?.click()}>
             <Upload className="size-4" aria-hidden />
             {t.chooseFile}

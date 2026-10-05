@@ -7,9 +7,12 @@
  * settlement write). All exported names in this file are prefixed with
  * `statement` / `Statement`.
  *
- * The statement is sent as CSV text with at least a waybill column and a
- * collected-amount column; a fee column is optional. Amounts in the file are
- * major units; every amount in the answers is integer minor units.
+ * The statement is sent as the courier's own file — Excel (.xlsx, its first
+ * sheet) or CSV, base64 in `fileBase64` with its `fileName`, at most 1 MB —
+ * or as CSV text (`csv`). It needs a waybill column and a collected-amount
+ * column; a fee column is optional. Title lines above the table and a totals
+ * line under it are skipped. Amounts in the file are major units; every
+ * amount in the answers is integer minor units.
  */
 import type { ApiClient } from "../client";
 
@@ -73,14 +76,16 @@ export interface StatementReport {
   missingFromStatement: StatementMissingOrder[];
 }
 
-export interface StatementImportPayload {
-  csv: string;
+/** The statement: the courier's file (base64, .xlsx or .csv) or CSV text. */
+export type StatementSource = { csv: string; fileBase64?: never; fileName?: never } | { fileBase64: string; fileName?: string; csv?: never };
+
+export type StatementImportPayload = StatementSource & {
   carrierCode: string;
   reference?: string | null;
   periodStart?: string | null;
   periodEnd?: string | null;
   notes?: string | null;
-}
+};
 
 export interface StatementHeldCarrier {
   carrierCode: string;
@@ -104,7 +109,7 @@ const base = (workspaceId: string) => `/workspaces/${workspaceId}/settlements`;
 export async function statementMatch(
   client: ApiClient,
   workspaceId: string,
-  payload: { csv: string; carrierCode?: string }
+  payload: StatementSource & { carrierCode?: string }
 ): Promise<StatementReport> {
   const { report } = await client.request<{ report: StatementReport }>(`${base(workspaceId)}/statement/match`, {
     method: "POST",
