@@ -15,6 +15,7 @@
  *   { type: "zimos:canvas-drag", phase, … }               drag / resize on the page itself (lib/canvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *   { type: "zimos:color-mode", mode }                    the page went light or dark (its own switch, or the OS)
+ *   { type: "zimos:edit-text", elementId, text }          a double-click text edit was committed (item 95)
  *
  * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
@@ -95,7 +96,8 @@ export type FrameMessage =
   | { type: "zimos:move-section"; sectionId: string; direction: "up" | "down" }
   | { type: "zimos:section-rects"; sections: SectionRect[] }
   | CanvasDragMessage
-  | { type: "zimos:canvas-step"; step: CanvasStep };
+  | { type: "zimos:canvas-step"; step: CanvasStep }
+  | { type: "zimos:edit-text"; elementId: string; text: string };
 
 /**
  * The canvas's own words, in the editor's language: the section outline's
@@ -114,6 +116,8 @@ export interface CanvasStrings {
   resizeImage?: string;
   /** The size badge for "no minimum height". */
   auto?: string;
+  /** The tooltip on text that a double-click edits. */
+  editText?: string;
 }
 
 export interface EditorStateMessage {
@@ -128,6 +132,10 @@ export interface EditorStateMessage {
   shell: ShellPreview | null;
   /** Null leaves the frame on its own (stored or system) mode. */
   colorMode: ColorMode | null;
+  /** Outlines every section, row, column and element (item 95). */
+  xray?: boolean;
+  /** The elements whose text a double-click edits on the page. */
+  inlineText?: string[];
 }
 
 export interface ScrollToSectionMessage {
@@ -217,6 +225,10 @@ export function readFrameMessage(
       const step = readCanvasStep(data.step);
       return step ? { type: "zimos:canvas-step", step } : null;
     }
+    case "zimos:edit-text":
+      return isId(data.elementId) && typeof data.text === "string" && data.text.length <= 4000
+        ? { type: "zimos:edit-text", elementId: data.elementId, text: data.text }
+        : null;
     default:
       return null;
   }

@@ -120,6 +120,7 @@ const HUMANIZE: Record<string, string> = {
   arrived_late: "Arrived late",
   bank_transfer: "Bank transfer",
   cod: "Cash on delivery",
+  valu: "valU",
 };
 
 /** "partially_paid" -> "Partially paid" */

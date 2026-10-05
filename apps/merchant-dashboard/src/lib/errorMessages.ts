@@ -31,6 +31,7 @@ const STRINGS = {
     VALIDATION_ERROR: "Some fields need attention. Check the highlighted values and try again.",
     UNAUTHENTICATED: "Your session has ended. Sign in again to continue.",
     FORBIDDEN: "You don't have permission to do that. Ask the store owner to update your role.",
+    APP_NOT_INSTALLED: "This needs an app your store has uninstalled. Install it again from the Apps page.",
     SUBSCRIPTION_REQUIRED:
       "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Subscription.",
     STORE_SUSPENDED:
@@ -138,6 +139,7 @@ const STRINGS = {
     VALIDATION_ERROR: "بعض الحقول تحتاج إلى مراجعة. راجع القيم المحددة وحاول مرة أخرى.",
     UNAUTHENTICATED: "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
     FORBIDDEN: "ليست لديك صلاحية للقيام بذلك. اطلب من مالك المتجر تحديث دورك.",
+    APP_NOT_INSTALLED: "هذا يحتاج تطبيقًا ألغيت تثبيته من متجرك. ثبّته مرة أخرى من صفحة التطبيقات.",
     SUBSCRIPTION_REQUIRED:
       "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع قسم الاشتراك.",
     STORE_SUSPENDED: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
