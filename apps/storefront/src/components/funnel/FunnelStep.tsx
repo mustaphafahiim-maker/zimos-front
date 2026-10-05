@@ -15,6 +15,7 @@ import {
   type StorefrontProduct,
 } from "@store-builder/api-client";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
+import { ProductBumpCards, useProductBumps } from "@/components/offers/StoreOffers";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
@@ -464,9 +465,15 @@ export function FunnelCheckout({
   const unit = offerId && offer ? parseMoney(offer.priceAmount) : variant ? parseMoney(variant.priceAmount) : 0;
   const currency = (offerId ? offer?.currency : variant?.currency) ?? funnelCurrency ?? store?.currency;
 
+  // The product's own order bumps (Offers → Order bumps), in this order's currency, beside the step's.
+  const productBumps = useProductBumps(client, workspaceId, product?.id ?? "", bump?.offerId, currency);
+  const productBumpsAmount = productBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
+  const addOnsAmount = (bumpOn && bump ? bump.priceAmount : 0) + productBumpsAmount;
+
   const line: OrderLine | null = variant ? { variantId: variant.id, offerId, quantity: 1 } : null;
   const autosaveLines: OrderLine[] = line && !placed ? [line] : [];
   if (autosaveLines.length > 0 && bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  if (autosaveLines.length > 0) for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({
     client,
     workspaceId,
@@ -532,8 +539,9 @@ export function FunnelCheckout({
     const payload = {
       ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       funnelId,
-      // The server adds the step's bump to this order from its offer.
+      // The server adds the step's bump and the product's ticked ones to this order from their offers.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+      ...(productBumps.selected.length > 0 ? { orderBumps: productBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     let order;
@@ -569,6 +577,7 @@ export function FunnelCheckout({
       if (isOrderBumpRefused(err)) {
         setBumpOn(false);
         setBumpGone(true);
+        productBumps.reset();
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalidFromServer = FIELD_ORDER.filter((k) => fromServer[k]);
@@ -598,7 +607,7 @@ export function FunnelCheckout({
       currency: order.currency,
       contentIds: (order.items ?? []).map((i) => lineContentId(i)).filter((id): id is string => !!id),
       contentName: product.name,
-      numItems: bumpOn && bump ? 2 : 1,
+      numItems: 1 + (bumpOn && bump ? 1 : 0) + productBumps.selected.length,
     });
     submittingRef.current = false;
     setSubmitting(false);
@@ -768,28 +777,37 @@ export function FunnelCheckout({
             )}
             {couponOff > 0 && variant && (
               <p className="mt-2 text-sm font-semibold text-ink">
-                {t.checkout.subtotal}: {money(unit + (bumpOn && bump ? bump.priceAmount : 0) - couponOff, currency)}
+                {t.checkout.subtotal}: {money(unit + addOnsAmount - couponOff, currency)}
               </p>
             )}
           </div>
         )}
 
-        {bump && !placed && (
+        {(bump || productBumps.bumps.length > 0) && !placed && (
           <div className="mt-5 space-y-3">
-            <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
-            {bumpOn && variant && (
+            {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
+            <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
+            {addOnsAmount > 0 && variant && (
               <dl className="space-y-1.5 rounded-xl bg-paper px-4 py-3 text-sm">
                 <div className="flex justify-between gap-3">
                   <dt className="text-ink-soft">{product.name}</dt>
                   <dd className="shrink-0 text-ink">{money(unit, currency)}</dd>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-ink-soft">{bump.name}</dt>
-                  <dd className="shrink-0 text-ink">{money(bump.priceAmount, currency)}</dd>
-                </div>
+                {bumpOn && bump && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-ink-soft">{bump.name}</dt>
+                    <dd className="shrink-0 text-ink">{money(bump.priceAmount, currency)}</dd>
+                  </div>
+                )}
+                {productBumps.selected.map((b) => (
+                  <div key={b.offerId} className="flex justify-between gap-3">
+                    <dt className="text-ink-soft">{b.name}</dt>
+                    <dd className="shrink-0 text-ink">{money(b.priceAmount, currency)}</dd>
+                  </div>
+                ))}
                 <div className="flex justify-between gap-3 border-t border-line pt-1.5 font-semibold text-ink">
                   <dt>{t.checkout.subtotal}</dt>
-                  <dd className="shrink-0">{money(unit + bump.priceAmount, currency)}</dd>
+                  <dd className="shrink-0">{money(unit + addOnsAmount, currency)}</dd>
                 </div>
               </dl>
             )}

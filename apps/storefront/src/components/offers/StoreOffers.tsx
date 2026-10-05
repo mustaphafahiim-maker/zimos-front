@@ -99,16 +99,28 @@ export interface ProductBumpsState {
  * A product's own order bumps. `exclude` is the store-wide bump's offer, which
  * the page already shows. A rule marked "ticked by default" starts ticked.
  */
-export function useProductBumps(client: ApiClient, workspaceId: string, productId: string, exclude?: string | null): ProductBumpsState {
+export function useProductBumps(
+  client: ApiClient,
+  workspaceId: string,
+  productId: string,
+  exclude?: string | null,
+  /** The order's currency: an add-on priced in another one is not offered (a funnel selling in its own). */
+  currency?: string | null
+): ProductBumpsState {
   const [rows, setRows] = useState<StorefrontProductBump[]>([]);
   const [on, setOn] = useState<Record<string, boolean>>({});
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    if (!productId) {
+      setRows([]);
+      return;
+    }
     storefrontProductBumps(client, workspaceId, productId)
-      .then((list) => {
+      .then((all) => {
         if (cancelled) return;
+        const list = currency ? all.filter((b) => !b.currency || b.currency === currency) : all;
         setRows(list);
         // After a refusal nothing is ticked for the shopper again.
         setOn(version === 0 ? Object.fromEntries(list.filter((b) => b.preChecked).map((b) => [b.offerId, true])) : {});
@@ -119,7 +131,7 @@ export function useProductBumps(client: ApiClient, workspaceId: string, productI
     return () => {
       cancelled = true;
     };
-  }, [client, workspaceId, productId, version]);
+  }, [client, workspaceId, productId, version, currency]);
 
   // Each bump on screen counts as seen (lib/offerViews).
   useEffect(() => {

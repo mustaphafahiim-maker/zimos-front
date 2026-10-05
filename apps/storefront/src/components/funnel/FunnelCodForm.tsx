@@ -2,13 +2,16 @@
 
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { useFunnelSession, type FunnelSessionInfo } from "@/lib/funnelSessionContext";
+import { orderBumpOf } from "@/lib/commerce";
 import { FunnelCheckout, useAdvance } from "./FunnelStep";
 
 /**
  * A `cod_form` element on a funnel page (SPEC §9.2: a sales step can hold its
  * own order form): the funnel checkout's form for this product, placing the
  * order in the funnel and following the step's "order" link. A checkout step
- * already has that form under its page, so there it draws nothing.
+ * already has that form under its page, so there it draws nothing. The
+ * step's order bump (set on the sales step) and the product's own bumps show
+ * above its order button.
  */
 export function FunnelCodForm({ product, title }: { product: StorefrontProduct; title: string }) {
   const session = useFunnelSession();
@@ -26,7 +29,7 @@ function Form({ session, product, title }: { session: FunnelSessionInfo; product
       stepKey={session.stepKey}
       sessionOrderId={session.sessionOrderId}
       product={product}
-      bumpOffer={null}
+      bumpOffer={orderBumpOf(session.bump, [product.id])}
       flow={flow}
       embedded
       title={title}

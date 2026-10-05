@@ -49,6 +49,8 @@ import { stepPageTree, type StepPageVariant } from "./funnelPages";
 
 export type { FunnelStatus };
 export type UiStepType = FunnelStepTypeDto;
+/** The steps with an order form, and so an order bump: checkout, and a sales page's COD form. */
+export const BUMP_STEP_TYPES: readonly UiStepType[] = ["checkout", "sales"];
 export type UiEdgeCondition = FunnelEdgeConditionType;
 
 export interface UiStep {
@@ -264,7 +266,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           name: s.name.trim() || s.key,
           builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
-          ...(s.type === "checkout" && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
+          ...(BUMP_STEP_TYPES.includes(s.type) && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
           seo: withCanvas(s, order),
         })
       );
@@ -276,8 +278,8 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
-    // A step that stops being a checkout loses its bump on the server by itself.
-    if (s.bumpOfferId !== before.bumpOfferId && (s.type === "checkout" || s.bumpOfferId === null)) {
+    // A step that stops having an order form loses its bump on the server by itself.
+    if (s.bumpOfferId !== before.bumpOfferId && (BUMP_STEP_TYPES.includes(s.type) || s.bumpOfferId === null)) {
       patch.bumpOfferId = s.bumpOfferId;
     }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;

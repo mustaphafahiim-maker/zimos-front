@@ -1624,8 +1624,8 @@ function StepInspector({
             value={step.type}
             onChange={(e) => {
               const type = e.target.value as UiStepType;
-              // Only a checkout step has a form to offer a bump on.
-              onChange(type === "checkout" ? { type } : { type, bumpOfferId: null });
+              // Only a step with an order form (checkout, a sales page's COD form) offers a bump.
+              onChange(type === "checkout" || type === "sales" ? { type } : { type, bumpOfferId: null });
             }}
           >
             {STEP_TYPE_ORDER.map((type) => (
@@ -1687,10 +1687,11 @@ function StepInspector({
           </div>
         )}
 
-        {step.type === "checkout" && (
+        {(step.type === "checkout" || step.type === "sales") && (
           <div className="space-y-2 rounded-2xl border border-line bg-paper p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.bump}</p>
             <p className="text-xs text-ink-soft">{t.bumpHint}</p>
+            {step.type === "sales" && <p className="text-xs text-ink-soft">{t.bumpHintSales}</p>}
             <OfferPicker
               workspaceId={workspaceId}
               value={step.bumpOfferId}

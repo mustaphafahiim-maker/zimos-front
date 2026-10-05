@@ -184,7 +184,15 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
         <StepTransition key={stepKey}>
           {/* The page's own funnel elements (a COD form on a sales page) act on this session. */}
           <FunnelSessionProvider
-            value={{ workspaceId, funnelId: ref, sessionId, stepKey: step.key, stepType: done ? "done" : step.stepType, sessionOrderId: session.orderId }}
+            value={{
+              workspaceId,
+              funnelId: ref,
+              sessionId,
+              stepKey: step.key,
+              stepType: done ? "done" : step.stepType,
+              sessionOrderId: session.orderId,
+              bump: data.bump ?? null,
+            }}
           >
             <HtmlBlocksProvider blocks={htmlBlocksOf(step)}>
               <PageRenderer

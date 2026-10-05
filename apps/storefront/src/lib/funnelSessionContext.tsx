@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import type { StorefrontOrderBump } from "@store-builder/api-client";
 
 /**
  * Which funnel session and step a page is being shown in, for the page's own
@@ -15,6 +16,8 @@ export interface FunnelSessionInfo {
   stepKey: string;
   stepType: string;
   sessionOrderId: string | null;
+  /** The step's order bump (a sales step's, for a COD form on its page), as the runtime sent it. */
+  bump?: StorefrontOrderBump | null;
 }
 
 const FunnelSessionContext = createContext<FunnelSessionInfo | null>(null);
