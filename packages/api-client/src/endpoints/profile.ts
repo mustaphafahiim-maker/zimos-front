@@ -13,9 +13,16 @@ export type ProfileUser = AuthUser & { avatarUrl?: string | null };
 
 export async function profileUpdate(
   client: ApiClient,
-  input: { fullName?: string; avatarUrl?: string | null },
+  /** `locale`: the dashboard language they use — their push, email and WhatsApp notifications are written in it. */
+  input: { fullName?: string; avatarUrl?: string | null; locale?: "ar" | "en" | null },
 ): Promise<{ user: ProfileUser }> {
   return client.request<{ user: ProfileUser }>(`/auth/me/profile`, { method: "PATCH", body: input });
+}
+
+/** The dashboard language the server has for them (null: not sent yet). */
+export function profileLocaleOf(user: AuthUser | null | undefined): "ar" | "en" | null {
+  const value = (user as (AuthUser & { locale?: string | null }) | null | undefined)?.locale;
+  return value === "ar" || value === "en" ? value : null;
 }
 
 /** The person's picture, or null to show their initial. */

@@ -23,6 +23,7 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
+import { useTeammateLocale } from "@/lib/useTeammateLocale";
 
 const STRINGS = {
   en: {
@@ -370,6 +371,8 @@ function Breadcrumbs() {
 
 export function DashboardLayout() {
   const { currentWorkspace } = useWorkspace();
+  // The teammate's language, for the notifications that leave the dashboard.
+  useTeammateLocale();
   const location = useLocation();
   const t = useT(STRINGS);
   const [focus, setFocus] = useState(() => {

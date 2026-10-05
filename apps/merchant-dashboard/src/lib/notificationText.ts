@@ -22,7 +22,9 @@ export const NOTIFICATION_STRINGS = {
     limitLeadsBody: "Forms and the newsletter won't add new contacts until next month or a plan change. People you already know can still sign up.",
     limitStorageTitle: "Your plan's file storage is full",
     limitStorageBody: "Delete files you don't need, or change the plan, to upload new ones.",
+    lang: "en",
     orderNewTitle: "New order {orderNumber}",
+    orderNewMore: "{product} +{n} more",
     orderSuspiciousTitle: "Suspicious order {orderNumber}",
     orderSuspiciousBody: "The protection rules flagged this order for review before it is confirmed.",
     stockLowTitle: "Running low: {label}",
@@ -54,7 +56,9 @@ export const NOTIFICATION_STRINGS = {
     limitLeadsBody: "النماذج والنشرة البريدية مش هتضيف عملاء جدد لحد الشهر الجاي أو تغيير الباقة. اللي تعرفهم قبل كده يقدروا يشتركوا عادي.",
     limitStorageTitle: "مساحة الملفات في باقتك اتملت",
     limitStorageBody: "امسح ملفات مش محتاجها أو غيّر الباقة علشان ترفع ملفات جديدة.",
+    lang: "ar",
     orderNewTitle: "طلب جديد {orderNumber}",
+    orderNewMore: "{product} و{n} غيره",
     orderSuspiciousTitle: "طلب مشتبه به {orderNumber}",
     orderSuspiciousBody: "قواعد الحماية علّمت هذا الطلب للمراجعة قبل تأكيده.",
     stockLowTitle: "المخزون قارب على النفاد: {label}",
@@ -87,6 +91,16 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
   switch (n.type) {
     case "order.new":
       if (!d.orderNumber) break;
+      // SPEC §20.1: the product, the total and the governorate (older rows: the customer and the total).
+      if (d.product !== undefined) {
+        const more = Number(d.moreProducts) || 0;
+        const product = str(d.product);
+        const place = d.governorate && typeof d.governorate === "object" ? str((d.governorate as Record<string, unknown>)[t.lang]) : str(d.governorate);
+        return {
+          title: fmt(t.orderNewTitle, { orderNumber: str(d.orderNumber) }),
+          body: [more && product ? fmt(t.orderNewMore, { product, n: more }) : product, str(d.total), place].filter(Boolean).join(" · ") || null,
+        };
+      }
       return {
         title: fmt(t.orderNewTitle, { orderNumber: str(d.orderNumber) }),
         body: [str(d.customerName), str(d.total)].filter(Boolean).join(" — ") || null,
