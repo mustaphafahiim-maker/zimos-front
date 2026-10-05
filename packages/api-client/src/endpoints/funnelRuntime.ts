@@ -11,6 +11,7 @@
  * funnel, unknown session), VALIDATION_ERROR (422 — e.g. accepting an upsell
  * before any checkout on this session).
  */
+import type { FunnelOwnSettings } from "./funnelExtras";
 import type { ApiClient } from "../client";
 import type { FunnelStepTypeDto } from "./funnels";
 import type { PageTree, StorefrontOrderBump } from "../types";
@@ -45,6 +46,9 @@ export interface FunnelRuntimeOffer {
   currency: string;
   badge: string | null;
   lines: Array<{ variantId: string; quantity: number }>;
+  /** The offer's real countdown (offers/offerCountdown.js): its length, and when it ends for this session. */
+  countdownMinutes?: number | null;
+  expiresAt?: string | null;
 }
 
 /**
@@ -54,6 +58,8 @@ export interface FunnelRuntimeOffer {
  * render (a republish removed that step).
  */
 export interface FunnelRuntimeState {
+  /** The funnel and its own settings (currency, icon, title); the step page reads them. */
+  funnel?: { id: string; name: string; subdomain: string | null; settings?: FunnelOwnSettings };
   done?: boolean;
   session: FunnelRuntimeSession;
   step?: FunnelRuntimeStep;
@@ -125,6 +131,10 @@ export interface FunnelRuntimeAdvancePayload {
     type: FunnelRuntimeOutcomeType;
     /** completed_checkout: the order just placed on this step. */
     orderId?: string;
+    /** clicked_through: the page button that was pressed, for links drawn from one button. */
+    sourceElementId?: string;
+    /** accepted_offer: the variant the shopper chose for a one-line offer. */
+    variantId?: string;
   };
 }
 

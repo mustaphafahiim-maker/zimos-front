@@ -414,6 +414,7 @@ export const PAGE_ELEMENT_TYPES = [
   "map",
   "social_icons",
   "product_card",
+  "shoppable_image",
   "product_list",
   "collection_list",
   "cart",
@@ -425,6 +426,32 @@ export const PAGE_ELEMENT_TYPES = [
   // Storefront sections (backend pageTree.js accepts these too).
   "marquee",
   "comparison",
+  // Builder elements of SPEC §9.3 (backend pageTree.js accepts these too).
+  "text_link",
+  "tabs",
+  "toggle",
+  "carousel",
+  "stars_display",
+  "price",
+  "reviews_list",
+  "cod_form",
+  "checkout_summary",
+  "order_summary",
+  "upsell_accept_button",
+  "upsell_decline_link",
+  // SPEC §9.4: one block per item of a product list.
+  "repeater",
+  // Showcase sections — full-width storefront bands (backend showcaseElements.js).
+  "hero_slider",
+  "category_tiles",
+  "trust_strip",
+  "bundle_cards",
+  "need_picker",
+  "product_rail",
+  "video_reels",
+  "product_shelf",
+  "product_cards",
+  "image_banner",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */
@@ -931,11 +958,13 @@ export interface CheckoutPayload {
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
    * payments are switched off platform-wide.
    */
-  paymentMethod: "cod" | "card" | "wallet";
+  paymentMethod: "cod" | OnlineMethod;
   /** Which gateway, when more than one offers the method. */
   paymentProvider?: string;
   /** Online methods: where the gateway sends the shopper back to. */
   returnUrl?: string;
+  /** The shopper agreed to keep the card (card payments; the gateway keeps it once paid). */
+  saveCard?: boolean;
   discountCode?: string;
   funnelId?: string;
   websiteId?: string;
@@ -1315,7 +1344,9 @@ export type FinancialState =
   | "refunded"
   | "partially_refunded";
 export type FulfillmentState = "unfulfilled" | "partially_fulfilled" | "fulfilled" | "returned";
-export type PaymentMethod = "cod" | "card" | "wallet" | "bank_transfer";
+/** Paid through the store's gateway: valU installments and kiosk (Aman / Masary cash) besides card and wallet. */
+export type OnlineMethod = "card" | "wallet" | "valu" | "kiosk";
+export type PaymentMethod = "cod" | OnlineMethod | "bank_transfer";
 
 export interface OrderContactSnapshot {
   fullName?: string;
@@ -1383,7 +1414,7 @@ export interface Payment {
   maskedDisplay: string | null;
   failureReason: string | null;
   /** Gateway attempts only. */
-  method?: "card" | "wallet" | null;
+  method?: OnlineMethod | null;
   mode?: GatewayMode | null;
   providerOrderId?: string | null;
   providerTransactionId?: string | null;
@@ -4360,7 +4391,8 @@ export interface BlockPhoneResult {
 // ---------------------------------------------------------------------
 
 export interface CaptureCheckoutSessionPayload {
-  contact: { phone: string; fullName?: string; email?: string };
+  /** A name or a phone, at least one. A save without a phone keeps the one already saved. */
+  contact: { phone?: string; fullName?: string; email?: string };
   /** 1–20 lines, quantity 1–100. Priced server-side. */
   items: Array<{ variantId: string; offerId?: string; quantity: number }>;
   source?: "store" | "funnel";
@@ -4809,7 +4841,7 @@ export interface GatewayFieldDescriptor {
   secret?: boolean;
   placeholder?: string;
   /** Settings: the payment method this field turns on. */
-  method?: "card" | "wallet";
+  method?: OnlineMethod;
   type?: "integer";
 }
 
@@ -4820,7 +4852,7 @@ export interface PaymentGatewayConnection {
   mode: GatewayMode;
   settings: Record<string, unknown>;
   /** The methods these settings can take. */
-  methods: Array<"card" | "wallet">;
+  methods: Array<OnlineMethod>;
   /** Paste into each gateway integration (see webhookSetup). */
   webhookUrl: string;
   lastVerifiedAt: string | null;
@@ -4833,7 +4865,7 @@ export interface PaymentGatewayConnection {
 export interface PaymentGatewayInfo {
   code: string;
   name: string;
-  methods: Array<"card" | "wallet">;
+  methods: Array<OnlineMethod>;
   currencies: string[];
   credentialFields: GatewayFieldDescriptor[];
   settingFields: GatewayFieldDescriptor[];
@@ -4879,7 +4911,7 @@ export interface ConnectPaymentGatewayPayload {
 export interface PaymentMethodEntry {
   id: string;
   provider: string | null;
-  method: "cod" | "card" | "wallet";
+  method: "cod" | OnlineMethod;
   enabled: boolean;
   /** false: its gateway is not connected (or cannot take it). Kept in the list, never offered. */
   available: boolean;
@@ -4895,7 +4927,7 @@ export interface PaymentMethodList {
 export interface StorefrontPaymentMethod {
   id: string;
   provider: string | null;
-  method: "cod" | "card" | "wallet";
+  method: "cod" | OnlineMethod;
   mode: GatewayMode;
 }
 
@@ -4906,7 +4938,7 @@ export interface CheckoutResult {
     id: string;
     status: PaymentStatus;
     provider: string;
-    method: "card" | "wallet";
+    method: OnlineMethod;
     mode: GatewayMode;
     /** Send the shopper here. null when the gateway could not start the payment. */
     redirectUrl: string | null;
@@ -4934,7 +4966,7 @@ export interface ShopperPaymentStatus {
     id: string;
     status: PaymentStatus;
     provider: string;
-    method: "card" | "wallet" | null;
+    method: OnlineMethod | null;
     mode: GatewayMode | null;
     redirectUrl: string | null;
     failureReason: string | null;
@@ -5315,4 +5347,402 @@ export interface FunnelAnalyticsDetail extends FunnelAnalyticsTotals {
   steps: FunnelAnalyticsStep[];
   sources: FunnelAnalyticsSource[];
   series: FunnelAnalyticsSeriesPoint[];
+}
+
+// ===========================================================================
+// Merchant operations added on top of upstream: COD settlements, WhatsApp
+// Cloud API, order automations, browser ad pixels and the media library list.
+// Backend: src/modules/{settlements,whatsapp,automations,media} and the
+// `tracking_pixels` key of PATCH /workspaces/:id.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// COD settlements — /workspaces/:ws/settlements
+//
+// Every amount here is an integer in MINOR units (piastres), like the rest of
+// the order money in this file. `netAmount` is `collectedAmount - feesAmount`,
+// computed by the server from the lines — never recompute it client-side.
+// ---------------------------------------------------------------------------
+
+export type SettlementStatus = "draft" | "confirmed";
+
+/** `GET /settlements/summary` -> `{ summary: {...} }`. */
+export interface SettlementSummary {
+  unsettledOrders: number;
+  /** Still owed by couriers across every delivered, unsettled COD order. */
+  dueFromCouriers: number;
+  /** Net of confirmed settlements only — drafts record nothing. */
+  received: number;
+  courierFees: number;
+  draftSettlements: number;
+}
+
+/** One delivered COD order that is not on any settlement yet. */
+export interface UnsettledOrder {
+  orderId: string;
+  orderNumber: string;
+  customerName: string | null;
+  /** Carrier of the delivering shipment, which is how rows are grouped. */
+  carrierCode: string;
+  shipmentId: string | null;
+  waybillNumber: string | null;
+  deliveredAt: string | null;
+  currency: string;
+  totalAmount: number;
+  amountPaid: number;
+  /** `totalAmount - amountPaid`, floored at 0. The default collected amount. */
+  dueAmount: number;
+}
+
+export interface UnsettledCarrier {
+  carrierCode: string;
+  orders: number;
+  dueAmount: number;
+}
+
+export interface UnsettledResponse {
+  orders: UnsettledOrder[];
+  carriers: UnsettledCarrier[];
+}
+
+export interface SettlementListItem {
+  id: string;
+  carrierCode: string;
+  reference: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  status: SettlementStatus;
+  /**
+   * Absent on rows the server stored before it recorded one. Fall back to the
+   * workspace currency rather than assuming EGP at the call site.
+   */
+  currency?: string;
+  collectedAmount: number;
+  feesAmount: number;
+  netAmount: number;
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface SettlementLine {
+  orderId: string;
+  /** Null when the order behind the line has since been removed. */
+  orderNumber: string | null;
+  customerName: string | null;
+  orderTotal: number | null;
+  financialState: string | null;
+  collectedAmount: number;
+  feeAmount: number;
+}
+
+export interface SettlementDetail extends SettlementListItem {
+  notes: string | null;
+  lines: SettlementLine[];
+}
+
+export interface SettlementListResponse {
+  settlements: SettlementListItem[];
+  nextCursor: string | null;
+}
+
+export interface SettlementLinePayload {
+  orderId: string;
+  /** Omit to settle the order's full `dueAmount`. Never more than it (422). */
+  collectedAmount?: number;
+  feeAmount: number;
+}
+
+export interface CreateSettlementPayload {
+  carrierCode: string;
+  reference?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  notes?: string | null;
+  lines: SettlementLinePayload[];
+}
+
+/** Drafts only. Sending `lines` replaces every line on the settlement. */
+export type UpdateSettlementPayload = Partial<CreateSettlementPayload>;
+
+// ---------------------------------------------------------------------------
+// WhatsApp Cloud API — /workspaces/:ws/whatsapp
+// ---------------------------------------------------------------------------
+
+export type WhatsappIntegrationStatus = "connected" | "error";
+
+export interface WhatsappIntegrationConnected {
+  connected: true;
+  status: WhatsappIntegrationStatus;
+  phoneNumberId: string;
+  businessAccountId: string | null;
+  displayPhoneNumber: string | null;
+  verifiedName: string | null;
+  /** Masked — the real token never leaves the server. */
+  accessTokenMask: string | null;
+  /** False means inbound webhook signatures cannot be verified. */
+  appSecretSet: boolean;
+  webhook: { url: string; verifyToken: string };
+  lastVerifiedAt: string | null;
+  lastError: string | null;
+}
+
+/**
+ * A workspace with no integration row answers the bare `{ connected: false }`,
+ * so narrow on `connected` before reading any other field.
+ */
+export type WhatsappIntegration = { connected: false } | WhatsappIntegrationConnected;
+
+export interface ConnectWhatsappPayload {
+  phoneNumberId: string;
+  accessToken: string;
+  businessAccountId?: string;
+  appSecret?: string;
+}
+
+export type WhatsappConversationStatus = "open" | "closed";
+
+export interface WhatsappConversation {
+  id: string;
+  /** Normalized, digits only, with country code. */
+  phone: string;
+  customerName: string | null;
+  customerId: string | null;
+  status: WhatsappConversationStatus;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  /**
+   * Whether the customer messaged within the last 24 hours. False means
+   * WhatsApp only allows an approved template, not free text.
+   */
+  canReply: boolean;
+}
+
+export interface WhatsappConversationListParams {
+  status?: WhatsappConversationStatus;
+  search?: string;
+  limit?: number;
+  before?: string;
+}
+
+export interface WhatsappConversationListResponse {
+  conversations: WhatsappConversation[];
+  nextCursor: string | null;
+}
+
+export type WhatsappMessageStatus = "received" | "sent" | "delivered" | "read" | "failed";
+
+export interface WhatsappMessage {
+  id: string;
+  direction: "in" | "out";
+  /** "text" for anything renderable; the raw Meta type otherwise. */
+  type: string;
+  body: string | null;
+  templateName: string | null;
+  status: WhatsappMessageStatus;
+  error: string | null;
+  createdAt: string;
+}
+
+/** Messages come back oldest -> newest; `nextCursor` pages further back. */
+export interface WhatsappMessageListResponse {
+  messages: WhatsappMessage[];
+  nextCursor: string | null;
+}
+
+export interface WhatsappTemplatePayload {
+  /** The approved template name in Meta: lowercase, digits, underscores. */
+  name: string;
+  language: string;
+  /** Fills the template's numbered placeholders, in order. */
+  params: string[];
+}
+
+/** Exactly one of `text` / `template` — the API rejects both or neither. */
+export type SendWhatsappPayload =
+  | { to: string; text: string }
+  | { to: string; template: WhatsappTemplatePayload };
+
+export interface SentWhatsappMessage {
+  id: string;
+  conversationId: string;
+  direction: "in" | "out";
+  type: string;
+  body: string | null;
+  status: WhatsappMessageStatus;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Order automations — /workspaces/:ws/automations
+// ---------------------------------------------------------------------------
+
+export type AutomationTrigger =
+  | "order.created"
+  | "order.confirmed"
+  | "order.rejected"
+  | "order.cancelled"
+  | "order.shipped"
+  | "order.out_for_delivery"
+  | "order.delivered";
+
+export type AutomationPaymentMethod = PaymentMethod;
+
+/** An empty object means the rule fires on every order for its trigger. */
+export interface AutomationConditions {
+  paymentMethod?: AutomationPaymentMethod | null;
+  /** Minor units. */
+  minTotalAmount?: number | null;
+}
+
+export interface AutomationWhatsappAction {
+  type: "whatsapp_template";
+  template: string;
+  language: string;
+  /** Each entry may carry `{{token}}` placeholders the engine renders. */
+  params: string[];
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: AutomationTrigger;
+  isActive: boolean;
+  conditions: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+  createdAt: string;
+  updatedAt: string;
+  stats: { sent: number; skipped: number; failed: number; lastRunAt: string | null };
+}
+
+/**
+ * `triggers` and `tokens` are the server's own vocabularies, sent alongside
+ * the rules so a new trigger needs no release here. Treat both as open sets.
+ */
+export interface AutomationListResponse {
+  rules: AutomationRule[];
+  triggers: AutomationTrigger[];
+  tokens: string[];
+}
+
+export interface AutomationRulePayload {
+  name: string;
+  trigger: AutomationTrigger;
+  isActive?: boolean;
+  conditions?: AutomationConditions;
+  actions: AutomationWhatsappAction[];
+}
+
+export type AutomationRunStatus = "sent" | "skipped" | "failed";
+
+export interface AutomationRun {
+  id: string;
+  ruleId: string;
+  trigger: AutomationTrigger;
+  status: AutomationRunStatus;
+  /** Why it skipped, or the send error. */
+  detail: string | null;
+  createdAt: string;
+  order: { id: string; orderNumber: string | null } | null;
+}
+
+export interface AutomationRunListParams {
+  ruleId?: string;
+  status?: AutomationRunStatus;
+  limit?: number;
+  before?: string;
+}
+
+export interface AutomationRunListResponse {
+  runs: AutomationRun[];
+  nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Browser ad pixels — the `tracking_pixels` key of workspace settings
+// ---------------------------------------------------------------------------
+
+/**
+ * Browser ad pixels loaded on the public store. IDs only, never secrets — the
+ * storefront echoes them back in its public `tracking` block. The backend
+ * validates each against the network's own format and rejects anything else
+ * with a 422, so a typo fails the save rather than silently breaking tracking.
+ */
+export interface TrackingPixels {
+  /** Meta (Facebook) pixel ID — 5–20 digits. */
+  meta?: string | null;
+  /** TikTok pixel ID — 10–30 upper-case letters and digits. */
+  tiktok?: string | null;
+  /** Snapchat pixel ID — a UUID-shaped string. */
+  snapchat?: string | null;
+  /** Google tag — `G-`, `AW-` or `GT-` followed by 4–20 characters. */
+  google_tag?: string | null;
+}
+
+/**
+ * Settings keys written by updateWorkspaceSettings. Sent as a partial merge:
+ * an omitted key keeps its stored value, `null` clears it.
+ */
+export interface UpdateWorkspaceSettingsPayload {
+  tracking_pixels?: TrackingPixels | null;
+}
+
+// ---------------------------------------------------------------------------
+// Media library — GET/DELETE /workspaces/:ws/media
+// `uploadMedia` adds to the same library. Deleting removes the library entry.
+// ---------------------------------------------------------------------------
+
+export interface MediaAsset {
+  id: string;
+  /** Absolute URL. */
+  url: string;
+  mimeType: string;
+  /** Bytes. */
+  size: number;
+  createdAt: string;
+}
+
+export interface MediaListParams {
+  /** 1–100. */
+  limit?: number;
+  /** The `nextCursor` of the previous page (the id of its last asset). */
+  before?: string;
+}
+
+export interface MediaListResponse {
+  media: MediaAsset[];
+  nextCursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Orders export — GET /workspaces/:ws/orders/export(.columns)
+// ---------------------------------------------------------------------------
+
+export interface OrderExportColumn {
+  key: string;
+  label: { en: string; ar: string };
+  /** Only meaningful on a one-row-per-item file. */
+  perItem: boolean;
+}
+
+export interface OrderExportCatalogue {
+  columns: OrderExportColumn[];
+  /** The columns a file gets when none are named, per row mode. */
+  defaults: { order: string[]; item: string[] };
+  /** A file stops after this many orders; narrow the dates to get the rest. */
+  maxOrders: number;
+}
+
+/** The orders list's own filters, plus what the file should look like. */
+export interface OrderExportParams extends OrderSearchParams {
+  sort?: OrderSort;
+  stage?: OrderStage;
+  confirmationState?: ConfirmationState;
+  financialState?: FinancialState;
+  fulfillmentState?: FulfillmentState;
+  columns?: string[];
+  /** One row per order (default) or one per order line. */
+  rowPer?: "order" | "item";
+  /** Language of the header row and the status words. */
+  lang?: "en" | "ar";
 }
