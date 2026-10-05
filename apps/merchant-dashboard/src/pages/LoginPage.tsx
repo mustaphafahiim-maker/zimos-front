@@ -4,7 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import type { VerificationChallenge } from "@store-builder/api-client";
@@ -153,9 +153,9 @@ export function LoginPage() {
 
   if (challenge) {
     return (
-      <div className="flex min-h-screen">
-        <BrandPanel />
-        <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+      <div className="auth-glass">
+        <AuthBackdrop />
+        <div className="auth-glass-stage">
           <div className="w-full max-w-sm">
             <VerifyCodePanel
               challenge={challenge}
@@ -171,9 +171,9 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-sm">
           <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
           <p className="mt-2 text-sm text-ink-soft">{t.subtitle}</p>
