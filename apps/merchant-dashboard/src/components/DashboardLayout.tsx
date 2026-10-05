@@ -138,7 +138,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
             aria-expanded={!isClosed}
             aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-            className="mb-1 flex min-h-11 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-xs font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink md:min-h-8 rtl:font-sans rtl:text-sm rtl:tracking-normal"
+            className="mb-1 flex min-h-10 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink md:min-h-8 rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
           >
             <span className="flex-1 text-start">{heading}</span>
             <ChevronDown
@@ -156,7 +156,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  "group relative flex min-h-11 items-center gap-3 rounded-[10px] px-3 py-2 text-base font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
+                  "group relative flex min-h-10 items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
                   isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
                 )
               }
@@ -198,7 +198,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <ZimosLogo height={24} />
         </Link>
-        <StoreSwitcher onNavigate={onNavigate} />
+        {/* The store switcher and, beside it, the light/dark toggle. */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <StoreSwitcher onNavigate={onNavigate} />
+          </div>
+          <ThemeToggle />
+        </div>
         {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
       {/* The whole list scrolls in the height left; the last group (My Plan,
@@ -207,10 +213,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => renderGroup(group, index > 0))}
       </nav>
-      {/* The theme toggle. Sign out is in the account menu in the top bar. */}
-      <div className="flex items-center justify-end border-t border-line px-3 py-3">
-        <ThemeToggle />
-      </div>
     </>
   );
 }
@@ -297,7 +299,7 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <div className="relative mt-4">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
