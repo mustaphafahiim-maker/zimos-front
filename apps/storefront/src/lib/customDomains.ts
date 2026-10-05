@@ -49,12 +49,15 @@ export async function resolveCustomHost(host: string | null | undefined): Promis
 /**
  * The canonical host of the store served on a platform subdomain
  * (`<slug>.zimos.co`), when it has a primary domain — the proxy redirects
- * there. Null for a store without one, and for development hosts.
+ * there. A store's previous address (it changed its subdomain; backend
+ * workspaces/slugHistory.js) goes to where the store is now. Null for a store
+ * served as itself, and for development hosts.
  */
 export async function primaryHostForPlatformHost(host: string | null | undefined): Promise<string | null> {
   const hostname = hostnameOf(host);
   if (!storeSlugFromHost(hostname) || hostname.endsWith(".localhost") || hostname.includes(":")) return null;
-  return (await lookup(hostname))?.primaryHost ?? null;
+  const hit = await lookup(hostname);
+  return hit?.primaryHost ?? hit?.redirectTo ?? null;
 }
 
 async function lookup(hostname: string): Promise<ResolvedHost | null> {

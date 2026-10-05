@@ -37,6 +37,7 @@ import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { AccountSettingsSection } from "./AccountSettingsSection";
+import { StoreAddressSection } from "./StoreAddressSection";
 import { SecuritySection } from "./SecuritySection";
 import { TeamInviteForm } from "./TeamInviteForm";
 import { TeamMemberGroups } from "./TeamMemberGroups";
@@ -200,6 +201,8 @@ export function SettingsPage() {
       <AppearanceSection />
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+      {/* The store's address (<slug>.zimos.co), part of the account settings (SPEC §17.3). */}
+      <StoreAddressSection key={`store-address-${workspaceId}`} />
       <AccountSettingsSection key={`account-settings-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />

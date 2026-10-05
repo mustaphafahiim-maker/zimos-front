@@ -212,3 +212,5 @@ export * from "./endpoints/productListSources";
 export * from "./endpoints/transferResubmit";
 // The order page's Supplier card and each supplier's forwarding settings (dropship/dropshipOrders.js).
 export * from "./endpoints/dropshipOrders";
+// The store's address: check, change, the previous ones (workspaces/slugHistory.js).
+export * from "./endpoints/storeAddress";
