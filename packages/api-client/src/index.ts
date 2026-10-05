@@ -206,3 +206,5 @@ export * from "./endpoints/twoFactorRecovery";
 export * from "./endpoints/funnelOptIn";
 // The places a store prices shipping by, and the ones it does not deliver to (shipping/shippingPlaces.js).
 export * from "./endpoints/shippingPlaces";
+// The builder product list's sources: newest, featured, best selling (storefront/productSearch.js).
+export * from "./endpoints/productListSources";

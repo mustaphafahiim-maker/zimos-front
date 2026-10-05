@@ -1,4 +1,4 @@
-import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
+import { ApiError, type StorefrontProduct, PRODUCT_LIST_SOURCES, storefrontProductsBySource, type ProductListSource } from "@store-builder/api-client";
 import { storeGetShoppableImage, type PublicShoppableImage } from "@store-builder/api-client";
 import { ShoppableImageView } from "@/components/ShoppableImageView";
 import { AddToCartButton } from "@/components/AddToCartButton";
@@ -31,11 +31,11 @@ function funnelHref(funnel: PageRendererFunnel | undefined): string | null {
  * is one path, and a link out of it is a shopper lost.
  */
 
-/** The catalogue's first `limit` products; null when the call failed (not the same as "none"). */
-async function listProducts(workspaceId: string, limit: number): Promise<StorefrontProduct[] | null> {
+/** The catalogue's first `limit` products in the source's order; null when the call failed (not the same as "none"). */
+async function listProducts(workspaceId: string, limit: number, source: ProductListSource): Promise<StorefrontProduct[] | null> {
   try {
     const client = await createServerStorefrontApiClient();
-    const { products } = await client.listStorefrontProducts(workspaceId, { limit });
+    const { products } = await storefrontProductsBySource(client, workspaceId, { source, limit });
     return products;
   } catch {
     return null;
@@ -70,12 +70,10 @@ export function EmptyBlock({ title, message }: { title: string; message: string 
 /**
  * `product_list`.
  *
- * `source` ("newest" | "featured" | "best_selling") is stored by the editor but
- * cannot be honoured yet: the public products endpoint takes only
- * collection/tag/search/limit and always orders by id (see
- * storefrontService.listProducts). All three therefore render the same
- * catalogue order — the alternative, silently mislabelling an arbitrary list as
- * "best selling", would be worse. Wire this up when the API grows a sort param.
+ * `source` ("newest" | "featured" | "best_selling") orders the list
+ * (api-client productListSources): newest first; the merchant's featured
+ * products first; or the best sellers of the last 90 days first. An unknown
+ * source is the newest.
  */
 export async function ProductListElement({
   props,
@@ -92,7 +90,9 @@ export async function ProductListElement({
 }) {
   const limit = num(props, "limit", 8, 1, 48);
   const columns = num(props, "columns", 4, 1, 6);
-  const products = await listProducts(workspaceId, limit);
+  const wanted = str(props, "source");
+  const source = (PRODUCT_LIST_SOURCES as readonly string[]).includes(wanted) ? (wanted as ProductListSource) : "newest";
+  const products = await listProducts(workspaceId, limit, source);
   if (!products) return null;
   if (products.length === 0) {
     return <EmptyBlock title={str(props, "title")} message={getDictionary(locale).renderer.emptyProducts} />;
@@ -208,7 +208,7 @@ export async function ProductCardElement({
   } else {
     // No product picked: the newest one — or, in a store with none yet, the
     // empty state (the block stays where the product will appear).
-    const newest = await listProducts(workspaceId, 1);
+    const newest = await listProducts(workspaceId, 1, "newest");
     if (newest && newest.length === 0) return <EmptyBlock title={str(props, "title")} message={t.renderer.emptyProducts} />;
     product = newest?.[0] ?? null;
   }
