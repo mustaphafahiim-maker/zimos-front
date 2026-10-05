@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/i18n/LocaleContext";
 import { NotificationsPage } from "@/pages/NotificationsPage";
+import { SiteTrafficPage } from "@/pages/SiteTrafficPage";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequirePermission } from "@/routes/RequirePermission";
 import { ToastProvider } from "@/components/Toast";
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
                   <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
                   <Route path="/notifications" element={gated(P.OVERVIEW_VIEW, <NotificationsPage />)} />
+          <Route path="/site-traffic" element={gated(P.OVERVIEW_VIEW, <SiteTrafficPage />)} />
                   <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
                   <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
                   <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofPage />)} />

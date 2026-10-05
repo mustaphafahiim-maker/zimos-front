@@ -21,6 +21,9 @@ import { TermsConsent } from "@/components/plans/TermsConsent";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { rememberPlanChoice } from "@/lib/planChoice";
 
+// Same shape the API accepts for siteSessionId; anything else is not sent.
+const SITE_SESSION_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
+
 const STRINGS = {
   en: {
     title: "Create your account",
@@ -138,6 +141,8 @@ export function RegisterPage() {
   const { register, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  // The marketing-site session this visit came from (?sv=), sent with the sign-up.
+  const siteSessionId = SITE_SESSION_PATTERN.test(params.get("sv") ?? "") ? params.get("sv") : null;
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const planHeadingId = useId();
@@ -254,6 +259,7 @@ export function RegisterPage() {
         acceptTerms: true,
         locale,
         ...(planStep && selectedPlan ? { planId: selectedPlan.id, billingCycle: choice.billingCycle } : {}),
+        ...(siteSessionId ? { siteSessionId } : {}),
       });
       if (next) {
         setChallenge(next);

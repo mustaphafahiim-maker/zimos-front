@@ -38,6 +38,7 @@ export const SHELL_STRINGS = {
 export const NAV_LABELS_AR: Record<string, string> = {
   Overview: "نظرة عامة",
   Notifications: "الإشعارات",
+  "Site traffic": "زيارات الموقع",
   Merchants: "التجار",
   Workspaces: "المتاجر",
   Users: "المستخدمون",
