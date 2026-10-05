@@ -492,7 +492,10 @@ export function DashboardLayout() {
           {/* One crashing page shows an error here; the sidebar and header
               stay up so the merchant can move on. */}
           <RouteErrorBoundary resetKey={location.pathname}>
-            <Outlet />
+            {/* Settles in when moving between sections; centres the page column (index.css). */}
+            <div key={location.pathname.split("/")[1] ?? ""} className="page-in">
+              <Outlet />
+            </div>
           </RouteErrorBoundary>
         </main>
       </div>

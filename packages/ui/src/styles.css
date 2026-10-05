@@ -1,0 +1,80 @@
+/* Opt-in CSS glass: this is translucency + blur, not optical refraction.
+   All colours derive from the host's existing semantic tokens.
+   No global :root, body or shared component styles are changed. */
+.zimos-glass {
+  --glass-opacity: 84%;
+  --glass-blur: 16px;
+  --glass-duration: 180ms;
+  --glass-shadow: 0 8px 24px
+    color-mix(in srgb, var(--color-ink) 8%, transparent);
+  --glass-highlight: inset 0 1px 0
+    color-mix(in srgb, var(--color-paper-raised) 90%, transparent);
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+
+.dark .zimos-glass,
+.zimos-glass.dark {
+  --glass-opacity: 92%;
+  --glass-highlight: inset 0 1px 0
+    color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+
+@supports (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .zimos-glass {
+    background: color-mix(
+      in srgb,
+      var(--color-paper-raised) var(--glass-opacity),
+      transparent
+    );
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
+}
+
+.zimos-glass-panel {
+  border-radius: var(--radius-card, var(--radius));
+}
+.zimos-glass-button {
+  --glass-blur: 8px;
+  --glass-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  border-color: var(--color-line-strong, var(--input));
+  transition:
+    background-color var(--glass-duration) ease,
+    box-shadow var(--glass-duration) ease;
+}
+.zimos-glass-button:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+.zimos-glass-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Also works for portalled dialog/menu content inside this scoped provider. */
+[data-glass="off"] .zimos-glass {
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .zimos-glass {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zimos-glass {
+    --glass-duration: 0ms;
+    animation: none;
+    transition: none;
+  }
+}
