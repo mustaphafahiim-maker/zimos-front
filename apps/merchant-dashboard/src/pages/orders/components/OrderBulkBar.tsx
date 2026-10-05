@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   ORDER_STAGES,
+  ORDER_STAGES_THAT_NOTIFY,
   ordersBulk,
   type OrderBulkAction,
   type OrderBulkPayload,
@@ -20,6 +21,7 @@ import { useOrderErrorMessage } from "../orderErrors";
 import { SelectionDocuments } from "./OrderDocuments";
 import { BulkShipDialog } from "./BulkShipDialog";
 import { SelectionExtras } from "./SelectionExtras";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 
 const STRINGS = {
   en: {
@@ -119,6 +121,8 @@ export function OrderBulkBar({
   const [action, setAction] = useState<OrderBulkAction | null>(null);
   const [status, setStatus] = useState<OrderStage>("ready_to_ship");
   const [reason, setReason] = useState("");
+  // SPEC §4.6: tell every customer, or change the orders quietly.
+  const [notify, setNotify] = useState(true);
   const [tag, setTag] = useState("");
   const [courier, setCourier] = useState("");
   const [courierName, setCourierName] = useState("");
@@ -137,7 +141,13 @@ export function OrderBulkBar({
   if (selectedIds.length === 0 && !result) return null;
 
   function payload(): OrderBulkPayload | null {
-    if (action === "set_status") return { status, reason: reason.trim() || undefined };
+    if (action === "set_status") {
+      return {
+        status,
+        reason: reason.trim() || undefined,
+        ...(ORDER_STAGES_THAT_NOTIFY.includes(status) ? { notifyCustomer: notify } : {}),
+      };
+    }
     if (action === "add_tag" || action === "remove_tag") return tag.trim() ? { tags: [tag.trim()] } : null;
     if (action === "ship") {
       const code = courier || courierName.trim();
@@ -230,6 +240,7 @@ export function OrderBulkBar({
                 )}
               </Field>
               <TextField label={t.reason} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+              {ORDER_STAGES_THAT_NOTIFY.includes(status) && <NotifyCustomerToggle checked={notify} onChange={setNotify} />}
             </>
           )}
 

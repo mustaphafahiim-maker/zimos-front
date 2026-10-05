@@ -55,7 +55,29 @@ export interface OrderStatusChangePayload {
   carrierCode?: string;
   waybillNumber?: string;
   trackingUrl?: string;
+  /**
+   * Tell the customer (SPEC §4.6): false changes the order quietly (no email,
+   * push or automation); true sends the stage's order email even while its
+   * template is off; unset follows the store's settings.
+   */
+  notifyCustomer?: boolean;
 }
+
+/**
+ * The moves that reach the customer (an email, a push, the store's
+ * automations), so the "Notify the customer" choice means something:
+ * confirmed, the follow-up calls, each shipping step and the cancellation.
+ * Reopening and "back to the queue" tell the customer nothing.
+ */
+export const ORDER_STAGES_THAT_NOTIFY: readonly OrderStage[] = [
+  "ready_to_ship",
+  "needs_follow_up",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "returned",
+  "cancelled",
+];
 
 /** Moves the order to another stage. Answers the order as GET one does. */
 export async function ordersChangeStatus(
@@ -278,6 +300,8 @@ export interface OrderBulkPayload {
   /** ship: a connected courier's code, or a name for a manual shipment. */
   carrierCode?: string;
   notes?: string;
+  /** set_status: as OrderStatusChangePayload.notifyCustomer, for every order. */
+  notifyCustomer?: boolean;
 }
 
 export interface OrderBulkResult {
