@@ -87,6 +87,7 @@ import type {
   AdminSubscription,
   AdminWorkspaceOverview,
   AdminUserDetail,
+  AdminUserModeration,
   AdminUserSearchPage,
   AdminManualSubscription,
   AdminManualActionResult,
@@ -1411,6 +1412,24 @@ export class ApiClient {
 
   async adminGetUser(userId: string) {
     const { user } = await this.request<{ user: AdminUserDetail }>(`/admin/users/${userId}`);
+    return user;
+  }
+
+  /** workspaces.manage; a reason is required. 409 USER_ALREADY_SUSPENDED, CANNOT_ACT_ON_SELF. */
+  async adminSuspendUser(userId: string, reason: string) {
+    const { user } = await this.request<{ user: AdminUserModeration }>(`/admin/users/${userId}/suspend`, { method: "POST", body: { reason, confirm: true } });
+    return user;
+  }
+
+  /** workspaces.manage. 409 USER_NOT_SUSPENDED, USER_DELETED. */
+  async adminUnsuspendUser(userId: string, reason?: string) {
+    const { user } = await this.request<{ user: AdminUserModeration }>(`/admin/users/${userId}/unsuspend`, { method: "POST", body: { reason: reason || null, confirm: true } });
+    return user;
+  }
+
+  /** workspaces.manage. Soft delete; 409 OWNS_STORES unless stores is "suspend". */
+  async adminDeleteUser(userId: string, body: { reason?: string; stores?: "suspend" }) {
+    const { user } = await this.request<{ user: AdminUserModeration }>(`/admin/users/${userId}/delete`, { method: "POST", body: { ...body, confirm: true } });
     return user;
   }
 

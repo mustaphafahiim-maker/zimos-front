@@ -54,7 +54,6 @@ export interface Dictionary {
   };
 
   hero: {
-    kicker: string;
     /** Main headline — the "Build. Sell. Grow." phrase. */
     headline: string;
     subheadline: string;
