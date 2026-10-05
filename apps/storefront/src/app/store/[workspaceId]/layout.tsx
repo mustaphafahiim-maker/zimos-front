@@ -24,6 +24,7 @@ import {
   storefrontDesignMeta,
   storefrontGeneralMeta,
   storefrontStoreApp,
+  hiddenPlacesOf,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
 import { storeCustomCode } from "@/lib/headCode";
@@ -164,6 +165,8 @@ export default async function StoreLayout({
     orderBump: store.orderBump ?? null,
     // The order form's country (lib/storeCountry).
     country: storefrontGeneralMeta(store).general.country,
+    // The places it does not deliver to: left out of the checkout's list (lib/useShippingPlaces).
+    hiddenPlaces: hiddenPlacesOf(store),
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.

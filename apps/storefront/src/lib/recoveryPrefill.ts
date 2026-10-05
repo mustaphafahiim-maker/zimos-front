@@ -1,5 +1,5 @@
 import type { LostOrderRecovery } from "@store-builder/api-client";
-import { GOVERNORATES } from "./egypt";
+import { placesFor } from "./places";
 import type { OrderFormValues } from "./orderForm";
 
 /**
@@ -14,7 +14,7 @@ import type { OrderFormValues } from "./orderForm";
  */
 function governorateCode(province: string): string | null {
   const text = province.trim().toLowerCase();
-  const match = GOVERNORATES.find(
+  const match = [...placesFor("EG"), ...placesFor("SA")].find(
     (gov) => gov.code.toLowerCase() === text || text.includes(gov.en.toLowerCase()) || province.includes(gov.ar)
   );
   return match ? match.code : null;

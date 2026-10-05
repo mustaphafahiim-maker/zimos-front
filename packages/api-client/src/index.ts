@@ -204,3 +204,5 @@ export * from "./endpoints/marketingUnsubscribe";
 export * from "./endpoints/twoFactorRecovery";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
+// The places a store prices shipping by, and the ones it does not deliver to (shipping/shippingPlaces.js).
+export * from "./endpoints/shippingPlaces";

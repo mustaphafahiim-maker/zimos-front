@@ -43,6 +43,8 @@ export interface StoreInfo {
   orderBump: StorefrontOrderBump | null;
   /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
   country?: string | null;
+  /** The place codes the store does not deliver to (GET /store/:ws `hiddenPlaces`; lib/useShippingPlaces). */
+  hiddenPlaces?: string[];
 }
 
 export interface StoreContextValue {

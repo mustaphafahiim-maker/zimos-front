@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { CheckoutFormField } from "@store-builder/api-client";
-import { GOVERNORATES } from "@/lib/egypt";
+import { useShippingPlaces } from "@/lib/useShippingPlaces";
 import {
   FORM_COUNTRIES,
   FORM_FIELD_OF,
@@ -113,6 +113,8 @@ export function OrderFormFields({
 }) {
   const { t, locale } = useStore();
   const egypt = isEgyptForm(values);
+  // The platform's places for the form's country, less the ones the store does not deliver to.
+  const places = useShippingPlaces(values.country || "EG");
   const list = formOf(fields, { showAltPhone });
   const shownKeys = new Set(list.map((f) => f.key));
 
@@ -242,7 +244,7 @@ export function OrderFormFields({
       case "government":
         return (
           <Field key={f.key} {...common} hint={help || undefined}>
-            {egypt ? (
+            {places.length > 0 ? (
               <div className="relative">
                 <select
                   {...a11y(field, !!help)}
@@ -253,7 +255,7 @@ export function OrderFormFields({
                   className={`${input} cursor-pointer appearance-none pe-10`}
                 >
                   <option value="">{t.form.chooseGovernorate}</option>
-                  {GOVERNORATES.map((g) => (
+                  {places.map((g) => (
                     <option key={g.code} value={g.code}>
                       {g[arOrEn(locale)]}
                     </option>

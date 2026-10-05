@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { findGovernorate } from "./egypt";
+import { findPlace } from "./places";
 
 /**
  * The governorate the shopper said they ship to, remembered per store on this
@@ -11,8 +11,8 @@ import { findGovernorate } from "./egypt";
  *
  * localStorage, read through useSyncExternalStore: "" during SSR and
  * hydration (the server has no storage), the stored code after. A private
- * tab or blocked storage falls back to memory for this page load. Only one
- * of the 27 governorate codes is ever returned.
+ * tab or blocked storage falls back to memory for this page load. Only a
+ * place code of the platform's list (lib/places) is ever returned.
  */
 
 const keyFor = (workspaceId: string) => `zimos_ship_to_${workspaceId}`;
@@ -27,11 +27,11 @@ function read(workspaceId: string): string {
   } catch {
     // Storage blocked: the in-memory value stands.
   }
-  return findGovernorate(value) ? value : "";
+  return findPlace(value) ? value : "";
 }
 
 function write(workspaceId: string, code: string) {
-  const value = findGovernorate(code) ? code : "";
+  const value = findPlace(code) ? code : "";
   memory.set(workspaceId, value);
   try {
     if (value) window.localStorage.setItem(keyFor(workspaceId), value);

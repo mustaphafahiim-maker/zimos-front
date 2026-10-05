@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import type { Cart } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { GOVERNORATES } from "@/lib/egypt";
+import { useShippingPlaces } from "@/lib/useShippingPlaces";
 import { useShipTo } from "@/lib/shipTo";
 import { useStore } from "@/lib/StoreContext";
 import { useShippingQuote } from "@/lib/useShippingQuote";
@@ -36,6 +36,8 @@ export function CartShippingSummary({
   const [shipTo, setShipTo] = useShipTo(workspaceId);
   const selectId = useId();
   const country = useStoreCountry();
+  // The store's country's places it delivers to; a country without a list has no picker.
+  const places = useShippingPlaces(country);
   const shipping = useShippingQuote({
     client,
     workspaceId,
@@ -51,7 +53,7 @@ export function CartShippingSummary({
 
   return (
     <div className="space-y-3">
-      {!unpriced && (
+      {!unpriced && places.length > 0 && (
         <div className="flex items-center gap-2">
           <label htmlFor={selectId} className="shrink-0 text-sm text-ink-soft">
             {t.cart.shipTo}
@@ -63,7 +65,7 @@ export function CartShippingSummary({
             className={`${input} min-h-10 cursor-pointer py-1.5 text-sm`}
           >
             <option value="">{t.cart.shipToPlaceholder}</option>
-            {GOVERNORATES.map((g) => (
+            {places.map((g) => (
               <option key={g.code} value={g.code}>
                 {g[arOrEn(locale)]}
               </option>

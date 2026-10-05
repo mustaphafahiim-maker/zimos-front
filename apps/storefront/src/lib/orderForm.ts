@@ -7,7 +7,8 @@ import {
   type CheckoutPayload,
   type CheckoutSettings,
 } from "@store-builder/api-client";
-import { findGovernorate, isEgyptianMobile, normalizePhone } from "./egypt";
+import { isEgyptianMobile, normalizePhone } from "./egypt";
+import { findPlace, placesFor } from "./places";
 import type { Dictionary } from "./i18n";
 
 /** The COD order form shared by the product quick-order form and checkout. */
@@ -214,7 +215,7 @@ export function validateOrderForm(
       case "government":
         if (!value) {
           if (f.required) e.governorate = t.form.errors.governorate;
-        } else if (egypt && !findGovernorate(value)) {
+        } else if (placesFor(values.country).length > 0 && !placesFor(values.country).some((p) => p.code === value)) {
           e.governorate = t.form.errors.governorate;
         }
         break;
@@ -237,13 +238,14 @@ export function validateOrderForm(
 }
 
 /**
- * The governorate as the order stores it in shippingAddress.province: its
- * Arabic name with the English one alongside. The shipping quote sends the
- * same string, so a zone's regions match the quote and the order alike.
+ * The governorate (or region, lib/places) as the order stores it in
+ * shippingAddress.province: its Arabic name with the English one alongside.
+ * The shipping quote sends the same string, so a zone's regions match the
+ * quote and the order alike.
  */
 export function provinceFor(code: string): string | undefined {
-  const gov = findGovernorate(code);
-  return gov ? `${gov.ar} (${gov.en})` : undefined;
+  const place = findPlace(code);
+  return place ? `${place.ar} (${place.en})` : undefined;
 }
 
 /**
@@ -269,7 +271,8 @@ export function toCheckoutPayload(
   const read = (key: CheckoutFormFieldKey) => (shown.has(key) ? values[FORM_FIELD_OF[key]].trim() : "");
   // A hidden country field leaves the store's own country in the values (lib/storeCountry).
   const country = values.country || "EG";
-  const province = country === "EG" ? provinceFor(read("government")) : read("government") || undefined;
+  // A listed place goes as its names; a country without a list sends what was typed.
+  const province = placesFor(country).length > 0 ? provinceFor(read("government")) : read("government") || undefined;
   const altPhone = read("phone_alt") ? normalizePhone(read("phone_alt")) : "";
   const email = read("email");
   const postalCode = read("postal_code");

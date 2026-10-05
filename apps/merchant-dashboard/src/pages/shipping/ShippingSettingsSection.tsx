@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
-import type { ShippingSettingsResponse } from "@store-builder/api-client";
+import {
+  hiddenPlacesOf,
+  type ShippingPlacesPayload,
+  type ShippingSettingsResponse,
+  type ShippingSettingsResponseWithPlaces,
+  type UpdateShippingSettingsPayload,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -37,6 +43,13 @@ const STRINGS = {
     saving: "Saving…",
     saved: "Shipping prices saved.",
     productNote: "Individual products can also ship free or add an extra fee — set it in each product's details.",
+    regions: "Price per region",
+    regionsHint: "Leave a region blank to use the default price. Enter 0 to ship there free.",
+    allPrice: "One price for all",
+    applyAll: "Apply to all",
+    applyAllHint: "Fills every governorate shown below; change any of them after, then save.",
+    hide: "Don't deliver here",
+    hiddenCount: "{count} hidden: customers can't choose them at checkout.",
   },
   ar: {
     title: "أسعار الشحن",
@@ -60,6 +73,13 @@ const STRINGS = {
     saving: "جارٍ الحفظ…",
     saved: "تم حفظ أسعار الشحن.",
     productNote: "يمكن أيضًا جعل شحن منتج بعينه مجانيًا أو إضافة رسوم إضافية عليه — من بيانات كل منتج.",
+    regions: "السعر حسب المنطقة",
+    regionsHint: "اترك المنطقة فارغة لاستخدام السعر الافتراضي، أو أدخل 0 لشحن مجاني إليها.",
+    allPrice: "سعر واحد للكل",
+    applyAll: "طبّق على الكل",
+    applyAllHint: "بيملا كل المحافظات اللي تحت؛ عدّل أي واحدة بعدها واحفظ.",
+    hide: "مش بنوصّل هنا",
+    hiddenCount: "{count} مخفية: العميل مش هيقدر يختارها في صفحة الدفع.",
   },
 } satisfies Messages;
 
@@ -114,6 +134,10 @@ function SettingsForm({
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const { settings, governorates, carriers } = initial;
+  // Saudi stores price by region, Egyptian ones by governorate (with North Coast).
+  const regional = (initial as ShippingSettingsResponseWithPlaces).country === "SA";
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(hiddenPlacesOf(settings)));
+  const [allPrice, setAllPrice] = useState("");
 
   const [defaultRate, setDefaultRate] = useState(minorToMajorInput(settings.defaultRateAmount));
   const [threshold, setThreshold] = useState(minorToMajorInput(settings.freeShippingThresholdAmount));
@@ -146,12 +170,14 @@ function SettingsForm({
 
     setSaving(true);
     try {
-      const saved = await apiClient.updateShippingSettings(workspaceId, {
+      const payload: ShippingPlacesPayload = {
         defaultRateAmount: defaultAmount as number | null,
         freeShippingThresholdAmount: thresholdAmount as number | null,
         governorateRates,
         defaultCarrierCode: carrier || null,
-      });
+        hiddenPlaces: governorates.filter((g) => hidden.has(g.code)).map((g) => g.code),
+      };
+      const saved = await apiClient.updateShippingSettings(workspaceId, payload as UpdateShippingSettingsPayload);
       toast.success(t.saved);
       await onSaved(saved);
     } catch (err) {
@@ -199,21 +225,55 @@ function SettingsForm({
       </Field>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium text-ink">{t.governorates}</legend>
-        <p className="text-xs text-ink-soft">{t.governoratesHint}</p>
+        <legend className="text-sm font-medium text-ink">{regional ? t.regions : t.governorates}</legend>
+        <p className="text-xs text-ink-soft">{regional ? t.regionsHint : t.governoratesHint}</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <MoneyInput label={t.allPrice} value={allPrice} onChange={setAllPrice} hint={t.applyAllHint} className="w-full sm:w-64" />
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            disabled={parseAmount(allPrice) === null || parseAmount(allPrice) === "invalid"}
+            onClick={() => setRates(Object.fromEntries(governorates.map((g) => [g.code, allPrice.trim()])))}
+          >
+            {t.applyAll}
+          </Button>
+        </div>
+        {hidden.size > 0 && <p className="text-xs text-ink-soft">{fmt(t.hiddenCount, { count: hidden.size })}</p>}
         {settings.pricingMode === "weight_tiers" && <Alert variant="info">{t.tierModeNote}</Alert>}
         {fieldErrors.governorateRates && <p className="text-xs font-medium text-danger">{fieldErrors.governorateRates}</p>}
         <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          {governorates.map((g) => (
-            <MoneyInput
-              key={g.code}
-              label={g[locale]}
-              value={rates[g.code] ?? ""}
-              onChange={(value) => setRates((prev) => ({ ...prev, [g.code]: value }))}
-              error={fieldErrors[`governorateRates.${g.code}`]}
-              placeholder={defaultRate.trim() || "—"}
-            />
-          ))}
+          {governorates.map((g) => {
+            const off = hidden.has(g.code);
+            return (
+              <div key={g.code} className={off ? "opacity-60" : undefined}>
+                <MoneyInput
+                  label={g[locale]}
+                  value={rates[g.code] ?? ""}
+                  onChange={(value) => setRates((prev) => ({ ...prev, [g.code]: value }))}
+                  error={fieldErrors[`governorateRates.${g.code}`]}
+                  placeholder={defaultRate.trim() || "—"}
+                  disabled={off}
+                />
+                <label className="mt-1 flex min-h-9 cursor-pointer items-center gap-2 text-xs text-ink-soft">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--color-primary)]"
+                    checked={off}
+                    onChange={(e) =>
+                      setHidden((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(g.code);
+                        else next.delete(g.code);
+                        return next;
+                      })
+                    }
+                  />
+                  {t.hide}
+                </label>
+              </div>
+            );
+          })}
         </div>
       </fieldset>
 
