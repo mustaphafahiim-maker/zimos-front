@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
-import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
+import { BarChart3, Copy, Eye, Layers, Link2, MoreHorizontal, MousePointerClick, Pause, Pencil, Play, Plus, Share2, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { FunnelShareDialog, FunnelWizard } from "./FunnelWizard";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   funnelsDelete,
   funnelsList,
@@ -72,6 +73,8 @@ const STRINGS = {
     resume: "Resume",
     publish: "Publish",
     duplicate: "Duplicate",
+    share: "Share",
+    moreActions: "More actions",
     duplicating: "Duplicating…",
     copyShareLink: "Copy share link",
     toastLive: "\"{name}\" is live.",
@@ -121,6 +124,8 @@ const STRINGS = {
     resume: "استئناف",
     publish: "نشر",
     duplicate: "نسخ المسار",
+    share: "مشاركة",
+    moreActions: "إجراءات أخرى",
     duplicating: "جارٍ النسخ…",
     copyShareLink: "نسخ رابط المشاركة",
     toastLive: "«{name}» منشور الآن.",
@@ -206,6 +211,7 @@ export function FunnelsPage() {
 
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<FunnelDto | null>(null);
+  const [sharing, setSharing] = useState<FunnelDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const funnels = list.data ?? [];
@@ -420,55 +426,48 @@ export function FunnelsPage() {
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{formatDate(f.updatedAt)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-0.5">
-                          {analyticsAllowed && (
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              title={t.viewAnalytics}
-                              aria-label={t.viewAnalytics}
-                              onClick={() => navigate(`/analytics/funnels/${f.id}`)}
-                            >
-                              <BarChart3 className="size-4" aria-hidden />
-                            </Button>
-                          )}
-                          <Button size="icon-sm" variant="ghost" title={c.edit} aria-label={c.edit} onClick={() => navigate(`/funnels/${f.id}`)}>
+                        {/* One clear action, and the rest behind a menu with their names. */}
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/funnels/${f.id}`)}>
                             <Pencil className="size-4" aria-hidden />
+                            {c.edit}
                           </Button>
-                          {f.status === "published" ? (
-                            <Button size="icon-sm" variant="ghost" title={t.pause} aria-label={t.pause} disabled={busy} onClick={() => void changeStatus(f)}>
-                              <Pause className="size-4" aria-hidden />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              title={f.status === "paused" ? t.resume : t.publish}
-                              aria-label={f.status === "paused" ? t.resume : t.publish}
-                              disabled={busy}
-                              onClick={() => void changeStatus(f)}
-                            >
-                              <Play className="size-4" aria-hidden />
-                            </Button>
-                          )}
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            title={busy ? t.duplicating : t.duplicate}
-                            aria-label={busy ? t.duplicating : t.duplicate}
-                            disabled={busyId !== null}
-                            onClick={() => void duplicate(f)}
-                          >
-                            {busy ? <Spinner className="size-4" /> : <Copy className="size-4" aria-hidden />}
-                          </Button>
-                          {url && (
-                            <Button size="sm" variant="ghost" onClick={() => void copyLink(url)}>
-                              {t.copyShareLink}
-                            </Button>
-                          )}
-                          <Button size="icon-sm" variant="ghost" className="text-danger hover:bg-danger-soft" title={c.delete} aria-label={c.delete} onClick={() => setDeleting(f)}>
-                            <Trash2 className="size-4" aria-hidden />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" aria-label={t.moreActions} title={t.moreActions} />}>
+                              {busy ? <Spinner className="size-4" /> : <MoreHorizontal className="size-4" aria-hidden />}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-52">
+                              {analyticsAllowed && (
+                                <DropdownMenuItem onClick={() => navigate(`/analytics/funnels/${f.id}`)}>
+                                  <BarChart3 className="size-4" aria-hidden />
+                                  {t.viewAnalytics}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem disabled={busy} onClick={() => void changeStatus(f)}>
+                                {f.status === "published" ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+                                {f.status === "published" ? t.pause : f.status === "paused" ? t.resume : t.publish}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem disabled={busyId !== null} onClick={() => void duplicate(f)}>
+                                <Copy className="size-4" aria-hidden />
+                                {t.duplicate}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setSharing(f)}>
+                                <Share2 className="size-4" aria-hidden />
+                                {t.share}
+                              </DropdownMenuItem>
+                              {url && (
+                                <DropdownMenuItem onClick={() => void copyLink(url)}>
+                                  <Link2 className="size-4" aria-hidden />
+                                  {t.copyShareLink}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant="destructive" onClick={() => setDeleting(f)}>
+                                <Trash2 className="size-4" aria-hidden />
+                                {c.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -481,8 +480,10 @@ export function FunnelsPage() {
       </DataState>
 
       <Modal open={creating} onClose={() => setCreating(false)} title={t.createFunnel} description={t.modalDescription}>
-        {creating && <CreateFunnelForm onCancel={() => setCreating(false)} onCreated={(id) => navigate(`/funnels/${id}`)} />}
+        {creating && <FunnelWizard onCancel={() => setCreating(false)} onCreated={(id) => navigate(`/funnels/${id}`)} />}
       </Modal>
+
+      <FunnelShareDialog funnel={sharing} onClose={() => setSharing(null)} />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -497,7 +498,8 @@ export function FunnelsPage() {
   );
 }
 
-function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
+/** The one-screen form the wizard replaced; kept for callers that want name + template only. */
+export function CreateFunnelForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (id: string) => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(FORM_STRINGS);

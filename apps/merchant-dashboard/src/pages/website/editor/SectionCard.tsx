@@ -5,6 +5,7 @@ import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, useEditorLocale } from "./editorLocale";
+import { showcaseSummary } from "./showcaseBlocks";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -57,8 +58,14 @@ function elementSummary(element: PageElement): string {
       return truncate([str("title"), props.limit && `${props.limit} collections`].filter(Boolean).join(" · "));
     case "product_card":
       return truncate(str("title") || "One product");
+    case "shoppable_image":
+      return truncate(str("title") || "Shoppable image");
     case "countdown":
-      return truncate([str("label"), props.endsInHours && `${props.endsInHours}h`].filter(Boolean).join(" · "));
+      return truncate(
+        [str("label"), str("endsAt") ? new Date(str("endsAt")).toLocaleString() : props.endsInHours && `${props.endsInHours}h`]
+          .filter(Boolean)
+          .join(" · ")
+      );
     case "video":
     case "embed":
       return truncate(str("title") || str("url") || "Nothing linked yet");
@@ -99,6 +106,33 @@ function elementSummary(element: PageElement): string {
       const n = Array.isArray(props.rows) ? props.rows.length : 0;
       return truncate([str("title"), `${n} ${n === 1 ? "row" : "rows"}`].filter(Boolean).join(" · "));
     }
+    case "tabs": {
+      const n = Array.isArray(props.items) ? props.items.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "tab" : "tabs"}`].filter(Boolean).join(" · "));
+    }
+    case "carousel": {
+      const n = Array.isArray(props.images) ? props.images.length : 0;
+      return truncate([str("title"), `${n} ${n === 1 ? "image" : "images"}`].filter(Boolean).join(" · "));
+    }
+    case "text_link":
+      return truncate([str("text"), str("href") && `→ ${str("href")}`].filter(Boolean).join(" "));
+    case "stars_display":
+      return truncate([props.rating && `${props.rating}★`, str("label")].filter(Boolean).join(" · "));
+    case "upsell_accept_button":
+    case "upsell_decline_link":
+      return truncate(str("label"));
+    case "repeater":
+      return truncate([str("title"), str("source").split(".").pop()].filter(Boolean).join(" · "));
+    case "toggle":
+    case "price":
+    case "reviews_list":
+    case "cod_form":
+    case "checkout_summary":
+    case "order_summary":
+      return truncate(str("title"));
+    default:
+      // The showcase sections (showcaseBlocks.ts).
+      return truncate(showcaseSummary(element.type, props) ?? "");
   }
 }
 
