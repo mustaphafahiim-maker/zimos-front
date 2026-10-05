@@ -22,7 +22,6 @@ import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { SignOutButton } from "@/components/SignOutButton";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
@@ -73,11 +72,6 @@ const STRINGS = {
 const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v2";
 /** Groups that start open. The rest start closed and still show the page you are on. */
 const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products"]);
-
-/** The bottom group (My Plan, Settings, …): pinned under the scrolling list, always in view. */
-const PINNED_GROUP_ID = "config";
-const PINNED_GROUP = NAV_GROUPS.find((group) => group.id === PINNED_GROUP_ID);
-const SCROLLING_GROUPS = NAV_GROUPS.filter((group) => group.id !== PINNED_GROUP_ID);
 
 function readCollapsedGroups(): Record<string, boolean> {
   try {
@@ -206,25 +200,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <StoreSwitcher onNavigate={onNavigate} />
         {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
-      <nav aria-label={t.navLabel} className="flex min-h-0 flex-1 flex-col">
-        {/* Only this part scrolls, however many groups are open. */}
-        <div className="shell-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-          <SidebarShortcuts onNavigate={onNavigate} />
-          {SCROLLING_GROUPS.map((group, index) => renderGroup(group, index > 0))}
-        </div>
-        {/* My Plan, Settings and the rest of the bottom group, pinned below the
-            divider so they never scroll out of view. A very short window
-            scrolls this block on its own, My Plan first. */}
-        {PINNED_GROUP && (
-          <div className="shell-scroll max-h-[40dvh] shrink-0 overflow-y-auto border-t border-line px-3 pt-3 pb-2">
-            {renderGroup(PINNED_GROUP, false)}
-          </div>
-        )}
+      {/* The whole list scrolls in the height left; the last group (My Plan,
+          Settings, …) has no heading, so it never collapses. */}
+      <nav aria-label={t.navLabel} className="shell-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+        <SidebarShortcuts onNavigate={onNavigate} />
+        {NAV_GROUPS.map((group, index) => renderGroup(group, index > 0))}
       </nav>
-      <div className="flex items-center gap-2 border-t border-line px-3 py-4">
-        <SignOutButton className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger">
-          {t.signOut}
-        </SignOutButton>
+      {/* The theme toggle. Sign out is in the account menu in the top bar. */}
+      <div className="flex items-center justify-end border-t border-line px-3 py-3">
         <ThemeToggle />
       </div>
     </>
