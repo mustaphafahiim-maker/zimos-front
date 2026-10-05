@@ -10,6 +10,7 @@ import { Integrations } from "@/components/integrations";
 import { Lifecycle } from "@/components/lifecycle";
 import { Platform } from "@/components/platform";
 import { Pricing } from "@/components/pricing";
+import { ProductShowcase } from "@/components/product-showcase";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Service } from "@/components/service";
@@ -35,6 +36,7 @@ export default async function MarketingHome({
       <main id="main">
         <Hero copy={dict.hero} brand={dict.brand} />
         <Service copy={dict.service} />
+        <ProductShowcase locale={locale} />
         <Platform copy={dict.platform} />
         <Lifecycle copy={dict.lifecycle} />
         <HowItWorks copy={dict.howItWorks} />
