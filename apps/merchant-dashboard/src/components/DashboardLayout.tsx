@@ -13,6 +13,7 @@ import {
   type NavGroup,
 } from "@/lib/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
@@ -488,7 +489,7 @@ export function DashboardLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* Search, the store's link and alerts. Language and theme are in Settings. */}
+            {/* Search, the store's link, the language switch and alerts. The theme is in the sidebar. */}
             <CommandPalette />
             {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
             {/* Full screen: the side menu steps aside so the page has the whole width. */}
@@ -502,6 +503,9 @@ export function DashboardLayout() {
             >
               {focus ? <Minimize2 className="size-[18px]" aria-hidden /> : <Maximize2 className="size-[18px]" aria-hidden />}
             </button>
+            {/* Arabic / English, flipping the whole dashboard between RTL and LTR. */}
+            <LanguageSwitch className="hidden sm:inline-flex" />
+            <LanguageSwitch compact className="sm:hidden" />
             <NotificationsBell />
             <AccountMenu />
           </div>

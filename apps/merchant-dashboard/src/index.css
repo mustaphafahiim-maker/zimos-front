@@ -580,12 +580,18 @@ html {
 }
 @media (min-width: 40rem) {
   .glass-app main {
-    padding: 1.75rem 2rem 4.5rem;
+    padding: 1.75rem 1.5rem 4.5rem;
   }
 }
 /* On a wide screen the page column sits in the middle, not against one edge. */
 .glass-app main .page-in > [class*="max-w-"] {
   margin-inline: auto;
+}
+/* Pages built wide (tables, orders, products, the home cards: max-w-5xl and up)
+   use the content area up to 1600px. Forms and settings (max-w-2xl to 4xl)
+   keep their reading width. */
+.glass-app main .page-in > :is([class*="max-w-5xl"], [class*="max-w-6xl"], [class*="max-w-7xl"]) {
+  max-width: min(100%, 100rem);
 }
 .glass-app main h1 {
   font-size: 1.75rem;

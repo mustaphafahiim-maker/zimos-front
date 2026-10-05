@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Banknote,
   HeartHandshake,
   FileDown,
   GraduationCap,
@@ -199,8 +200,8 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "money",
     labelKey: "money",
     items: [
-      { key: "payments", to: "/payments", icon: CreditCard },
-      { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "payments", to: "/payments", icon: Wallet },
+      { key: "settlements", to: "/settlements", icon: Banknote },
       { key: "shipping", to: "/shipping", icon: Truck },
     ],
   },
