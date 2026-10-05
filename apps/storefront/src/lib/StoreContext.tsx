@@ -1,7 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
-import type { CheckoutSettings, StorefrontOrderBump } from "@store-builder/api-client";
+import type { MoneyFormat } from "./moneyFormat";
+import type {
+  CheckoutSettings,
+  LegalPolicyKey,
+  StorefrontOrderBump,
+  ThankYouPageSettings,
+} from "@store-builder/api-client";
 import {
   DEFAULT_LOCALE,
   dirFor,
@@ -20,13 +26,23 @@ export interface StoreInfo {
   slug: string;
   name: string;
   currency: string;
+  /** Where the currency symbol goes and whether decimals show (GET /store/:ws `currencyFormat`). */
+  currencyFormat?: MoneyFormat | null;
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
+  /** The languages the store offers (default first), as GET /store/:ws `languages` gives them; French joins the switch from here. */
+  languages?: string[];
   /** Which optional checkout fields the merchant shows/requires (GET /store/:ws `checkout`). */
   checkout: CheckoutSettings;
+  /** The thank-you page settings (GET /store/:ws `thankYou`); absent means the built-in page. */
+  thankYou?: ThankYouPageSettings;
+  /** Which legal policies the store has written (GET /store/:ws `legal`). */
+  legal?: LegalPolicyKey[];
   /** The checkout's order bump (GET /store/:ws `orderBump`); null when none can be offered. */
   orderBump: StorefrontOrderBump | null;
+  /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
+  country?: string | null;
 }
 
 export interface StoreContextValue {
@@ -45,7 +61,7 @@ function build(locale: Locale, store: StoreInfo | null): StoreContextValue {
     intlLocale: intlLocaleFor(locale),
     t: getDictionary(locale),
     store,
-    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale),
+    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale, store?.currencyFormat ?? null),
   };
 }
 

@@ -1,12 +1,12 @@
 import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from "./analyticsEvents";
+import { sendToAdPixels } from "./adPixels";
 
 /**
  * Commerce events. Two destinations:
  *
- *  - Ad pixels (Meta, TikTok, Snapchat, Google): not wired yet — pixels come
- *    after launch — so nothing is sent to them. The signatures are the real
- *    ones, so the call sites stay as they are and start reporting the day
- *    pixels are added here.
+ *  - Ad pixels (Meta, TikTok, Snapchat, Google): lib/adPixels.ts, for the
+ *    pixels the merchant configured (components/TrackingPixels loads them);
+ *    nothing is sent on a store with none.
  *  - The store's own analytics (lib/analyticsEvents.ts): sent now, once
  *    components/StoreAnalytics has named the store in the tracking context
  *    (setTrackingContext, re-exported for the funnel side).
@@ -15,7 +15,14 @@ import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from ".
  */
 export { setTrackingContext };
 
-export type TrackEvent = "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase";
+export type TrackEvent =
+  | "PageView"
+  | "ViewContent"
+  | "AddToCart"
+  | "InitiateCheckout"
+  | "AddPaymentInfo"
+  | "Purchase"
+  | "Lead";
 
 export interface TrackData {
   /** Integer minor units, like every amount the API returns. */
@@ -25,6 +32,16 @@ export interface TrackData {
   contentName?: string;
   numItems?: number;
   orderId?: string;
+  /** Where an add-to-cart came from (lib/addSource.ts), e.g. cross_sell. */
+  source?: string;
+  /** The offer the source names (a cross-sell rule id), for the offers hub (offers/offerStats.js). */
+  sourceId?: string;
+  /**
+   * Shared by the browser pixels and the API's server-side copy of the event,
+   * so each ad platform counts the two as one. Filled in by track(): a fresh
+   * UUID per event (a Purchase uses the order id instead).
+   */
+  eventId?: string;
 }
 
 /**
@@ -35,11 +52,24 @@ const FIRST_PARTY: Partial<Record<TrackEvent, AnalyticsEventName>> = {
   ViewContent: "view_content",
   AddToCart: "add_to_cart",
   InitiateCheckout: "begin_checkout",
+  AddPaymentInfo: "add_payment_info",
   Purchase: "purchase",
+  Lead: "lead",
 };
 
-export function track(event: TrackEvent, data: TrackData = {}): void {
+function newEventId(): string | undefined {
+  try {
+    return window.crypto.randomUUID();
+  } catch {
+    return undefined; // an old browser: the event still goes out, just without server dedup
+  }
+}
+
+export function track(event: TrackEvent, input: TrackData = {}): void {
   if (typeof window === "undefined") return;
+  const data: TrackData =
+    event === "PageView" || input.orderId || input.eventId ? input : { ...input, eventId: newEventId() };
+  sendToAdPixels(event, data);
   const own = FIRST_PARTY[event];
   if (!own) return;
   try {
@@ -48,6 +78,7 @@ export function track(event: TrackEvent, data: TrackData = {}): void {
     sendContextEvent({
       name: own,
       orderId: data.orderId,
+      eventId: data.orderId ? undefined : data.eventId,
       revenueAmount: data.valueMinor !== undefined ? Math.round(data.valueMinor) : undefined,
       currency: data.currency,
       dedupeId: own === "purchase" && data.orderId ? `purchase:${data.orderId}` : undefined,
@@ -55,6 +86,8 @@ export function track(event: TrackEvent, data: TrackData = {}): void {
         ...(data.currency ? { currency: data.currency } : {}),
         ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
         ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
+        ...(data.source ? { source: data.source } : {}),
+        ...(data.sourceId ? { sourceId: data.sourceId } : {}),
       },
     });
   } catch {

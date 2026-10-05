@@ -2,17 +2,33 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { StoreAppInstall } from "@/components/StoreAppInstall";
 import { CartDrawer } from "@/components/CartDrawer";
+import { ExitDownsell } from "@/components/offers/StoreOffers";
+import { CouponFromLink } from "@/components/offers/CouponBits";
+import { NewsletterSignup, SocialProofPopup } from "@/components/offers/Engagement";
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
-import { resolveCheckoutSettings } from "@store-builder/api-client";
+import { BotGuard } from "@/components/BotGuard";
+import { OtpGate } from "@/components/OtpGate";
+import { TrackingPixels } from "@/components/TrackingPixels";
+import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
+import {
+  resolveCheckoutForm,
+  resolveCheckoutSettings,
+  resolveThankYouPage,
+  storefrontDesignMeta,
+  storefrontGeneralMeta,
+  storefrontStoreApp,
+} from "@store-builder/api-client";
+import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
-import { storeOrigin } from "@/lib/domains";
-import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
+import { canonicalOrigin } from "@/lib/domains";
+import { dirFor, getDictionary, intlLocaleFor, arOrEn } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
@@ -20,6 +36,7 @@ import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore }
 import { storeThemeOf } from "@/lib/brandTheme";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { ThemeChrome } from "@/components/shell/ThemeChrome";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
 function localeSource(store: UnavailableStore) {
@@ -53,19 +70,25 @@ export async function generateMetadata({
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const description = store.tagline || t.meta.storeDescription(store.name);
+  // Settings → SEO and general: the title template, description, share
+  // image, favicon and Google verification the merchant set, over the defaults.
+  const { seo, general } = storefrontGeneralMeta(store);
+  const description = seo.description || store.tagline || t.meta.storeDescription(store.name);
+  const ogImage = seo.ogImageUrl || store.logoUrl;
 
   return {
-    metadataBase: new URL(storeOrigin(store.slug)),
-    title: { default: store.name, template: `%s — ${store.name}` },
+    metadataBase: new URL(canonicalOrigin(store)),
+    title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
+    ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),
+    ...(seo.googleSiteVerification ? { verification: { google: seo.googleSiteVerification } } : {}),
     openGraph: {
       type: "website",
       siteName: store.name,
       title: store.name,
       description,
       locale: intlLocaleFor(locale).replace("-", "_"),
-      ...(store.logoUrl ? { images: [{ url: store.logoUrl, alt: store.name }] } : {}),
+      ...(ogImage ? { images: [{ url: ogImage, alt: store.name }] } : {}),
     },
   };
 }
@@ -125,17 +148,28 @@ export default async function StoreLayout({
     slug: store.slug,
     name: store.name,
     currency: store.currency,
+    // Where the symbol goes and whether decimals show (dashboard → currencies; lib/moneyFormat).
+    currencyFormat: (store as { currencyFormat?: StoreInfo["currencyFormat"] }).currencyFormat ?? null,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    // Offered languages: French joins the language switch when it is one (lib/i18n switchLocales).
+    languages: (store as { languages?: string[] }).languages ?? [],
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
-    checkout: resolveCheckoutSettings(store.checkout),
+    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
+    thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
+    legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
+    // The order form's country (lib/storeCountry).
+    country: storefrontGeneralMeta(store).general.country,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
   const websiteId = (store as { websiteId?: unknown }).websiteId;
   const theme = storeThemeOf(store.themeSettings);
+  // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
+  const pixels = storePixelsOf(store);
+  const { floatingWhatsapp } = storefrontGeneralMeta(store);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -146,7 +180,15 @@ export default async function StoreLayout({
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
+            <BotGuard workspaceId={workspaceId} />
+            <OtpGate />
           </Suspense>
+          {pixels.length > 0 && (
+            // Reads the search params to send page views on navigation.
+            <Suspense fallback={null}>
+              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} />
+            </Suspense>
+          )}
           {/* suppressHydrationWarning: the editor's preview page puts its
               unsaved theme on this element before hydrating (brandTheme.ts
               previewBootScript); a live store never changes it. */}
@@ -167,13 +209,26 @@ export default async function StoreLayout({
             </HideInFunnel>
             <div className="flex flex-1 flex-col">{children}</div>
             <HideInFunnel>
+              {/* The merchant's sign-up form: a band above the footer, or a popup (Offers → Newsletter). */}
+              <NewsletterSignup workspaceId={store.id} />
               <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
               {/* The slide-over cart: opened by "add to cart" and the header's
                   cart icon. Funnel pages have no cart, so it steps aside with
                   the rest of the store's chrome. */}
               <CartDrawer />
+              {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
+              <ExitDownsell workspaceId={store.id} />
+              {/* Sales notifications from real orders (Offers → Sales notifications). */}
+              <SocialProofPopup workspaceId={store.id} />
+              {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
+            {/* Remembers a ?coupon=CODE link so a checkout applies it — the store's or a funnel's. */}
+            <CouponFromLink workspaceId={workspaceId} />
             <BackToTop label={t.common.backToTop} />
+            {/* The store as an app for shoppers (Settings → Store app). */}
+            <StoreAppInstall app={storefrontStoreApp(store)} locale={arOrEn(locale)} />
+            {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
+            <ThemeChrome store={store} />
           </div>
         </StoreShellProvider>
       </StoreContextProvider>

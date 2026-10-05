@@ -1,5 +1,7 @@
 "use client";
 
+import { DiscountRows, MinimumOrderNotice, clearStoredCoupon, useStoredCoupon } from "@/components/offers/CouponBits";
+import { takeRecoveryPrefill } from "@/lib/recoveryPrefill";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
@@ -7,6 +9,7 @@ import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/Check
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import type { CheckoutPayload } from "@store-builder/api-client";
 import { FreeShippingHint, ShippingFee } from "@/components/checkout/ShippingFee";
 import { ArrowIcon } from "@/components/Icons";
 import { StickyActionBar } from "@/components/StickyActionBar";
@@ -17,8 +20,8 @@ import { useCart } from "@/lib/CartProvider";
 import { orderBumpOf } from "@/lib/commerce";
 import { focusField } from "@/lib/focusField";
 import {
-  EMPTY_ORDER_FORM,
   FIELD_ORDER,
+  formOptionsOf,
   toCheckoutPayload,
   validateOrderForm,
   type OrderFormErrors,
@@ -31,12 +34,19 @@ import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
 import { useCatalog } from "@/lib/useCatalog";
+import { CrossSellStrip, ProductBumpCards } from "@/components/offers/StoreOffers";
+import { useCartBumps } from "@/components/offers/CartBumps";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useShippingChoice } from "@/lib/shippingChoice";
+import { ShippingOptionPicker } from "@/components/ShippingOptionPicker";
 import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
+import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { PolicyLinks } from "@/components/PolicyLinks";
 
 const FORM_PREFIX = "checkout";
 
@@ -54,24 +64,40 @@ export default function CheckoutPage() {
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
 
-  const [values, setValues] = useState<OrderFormValues>(EMPTY_ORDER_FORM);
+  // The form starts on the store's country (dashboard → General → Country).
+  const storeCountry = useStoreCountry();
+  const [values, setValues] = useState<OrderFormValues>(() => emptyOrderFormFor(storeCountry));
+  // Arriving from a recovery link (/r/:token): what the shopper had typed comes back, once.
+  useEffect(() => {
+    const prefill = takeRecoveryPrefill(workspaceId);
+    if (prefill) setValues((prev) => ({ ...prev, ...prefill }));
+  }, [workspaceId]);
   // The governorate chosen in the cart opens the form (once, and only into an
   // empty field); choosing one here is remembered for the cart in turn.
   const [shipTo, setShipTo] = useShipTo(workspaceId);
   const [adoptedShipTo, setAdoptedShipTo] = useState(false);
   if (!adoptedShipTo && shipTo) {
     setAdoptedShipTo(true);
-    if (!values.governorate) setValues((prev) => ({ ...prev, governorate: shipTo }));
+    // Settings → purchase form: "pre-select the shipping region" can be switched off.
+    if (!values.governorate && formOptionsOf(store?.checkout).auto_select_region) {
+      setValues((prev) => ({ ...prev, governorate: shipTo }));
+    }
   }
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
+  // A coupon that came with the link (?coupon=CODE) is applied without typing it.
+  const linkCoupon = useStoredCoupon(workspaceId);
+  useEffect(() => {
+    if (linkCoupon) setAppliedCode((current) => current || linkCoupon);
+  }, [linkCoupon]);
   const [bumpOn, setBumpOn] = useState(false);
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
-  const payment = usePaymentMethods(client, workspaceId);
+  const storeMethods = usePaymentMethods(client, workspaceId);
+  const payment = storeMethods;
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const [redirecting, setRedirecting] = useState(false);
@@ -105,7 +131,7 @@ export default function CheckoutPage() {
     if (checkoutTracked.current || !cart || cart.items.length === 0) return;
     checkoutTracked.current = true;
     track("InitiateCheckout", {
-      contentIds: cart.items.map((line) => line.variantId),
+      contentIds: cart.items.map((line) => contentIdOf(line.variant) ?? line.variantId),
       valueMinor: cart.subtotal,
       currency: cart.currency,
       numItems: cart.items.reduce((sum, line) => sum + line.quantity, 0),
@@ -119,20 +145,28 @@ export default function CheckoutPage() {
     return orderBumpOf(store?.orderBump, inCart);
   }, [bumpGone, items, byVariant, store?.orderBump]);
 
+  // The cart products' own add-ons (Offers → Order bumps), the store-wide one left to `bump` (CartBumps.tsx).
+  const cartBumps = useCartBumps(client, workspaceId, items.map((l) => byVariant.get(l.variantId)?.id).filter(Boolean) as string[], store?.orderBump?.offerId);
   // A ticked bump is not a cart line: the server adds it to the order.
-  const bumpInTotals = bumpOn && bump ? bump.priceAmount : 0;
+  const bumpInTotals = (bumpOn && bump ? bump.priceAmount : 0) + cartBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
   const subtotal = cart?.subtotal ?? 0;
   // The bump counts toward the parcel's weight as soon as it's ticked.
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
-  if (bumpInTotals > 0 && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
-  const shipping = useShippingQuote({ client, workspaceId, governorate: values.governorate, lines: quoteLines });
-  const total = subtotal + bumpInTotals + shipping.amount;
+  if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
+  for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
+  // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
+  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
+  const shipping = shippingChoice.state;
+  // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
+  const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
+  const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields);
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
   const progressDone: CheckoutStep[] = [
@@ -151,7 +185,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields);
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -171,8 +205,10 @@ export default function CheckoutPage() {
     const checkoutSessionId = await autosave.stop();
     try {
       const payload = {
-        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes }),
+        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
+        ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
+        ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
       if (method.method !== "cod") {
@@ -197,7 +233,7 @@ export default function CheckoutPage() {
       const order = await placeCodOrder({
         client,
         workspaceId,
-        payload,
+        payload: payload as CheckoutPayload,
         cartToken: cart.guestToken,
         visitorId: getVisitorId(workspaceId),
       });
@@ -208,6 +244,7 @@ export default function CheckoutPage() {
         // The totals drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
         setBumpGone(true);
+        cartBumps.reset();
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
@@ -274,6 +311,7 @@ export default function CheckoutPage() {
                 fields={fields}
                 showAltPhone
               />
+              <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
             </div>
           </section>
 
@@ -318,6 +356,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
+            {formOptions.allow_discount_codes && (
             <div className="mt-5 border-t border-line pt-4">
               <label htmlFor="discount-code" className="mb-1.5 block text-sm font-medium text-ink">
                 {t.checkout.discountCode}
@@ -329,7 +368,10 @@ export default function CheckoutPage() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setAppliedCode("")}
+                    onClick={() => {
+                      setAppliedCode("");
+                      clearStoredCoupon(workspaceId);
+                    }}
                     className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
                   >
                     {t.checkout.removeCode}
@@ -367,18 +409,26 @@ export default function CheckoutPage() {
                 </div>
               )}
             </div>
+            )}
 
             <dl className="mt-5 space-y-2 border-t border-line pt-4 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.subtotal}</dt>
                 <dd className="text-ink">{money(subtotal, currency)}</dd>
               </div>
-              {bumpInTotals > 0 && bump && (
+              {bumpOn && bump && (
                 <div className="flex justify-between gap-3">
                   <dt className="text-ink-soft">{bump.name}</dt>
                   <dd className="text-ink">{money(bump.priceAmount, currency)}</dd>
                 </div>
               )}
+              {cartBumps.selected.map((b) => (
+                <div key={b.offerId} className="flex justify-between gap-3">
+                  <dt className="text-ink-soft">{b.name}</dt>
+                  <dd className="text-ink">{money(b.priceAmount, currency)}</dd>
+                </div>
+              ))}
+              {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
                 <dd className="text-ink">
@@ -390,6 +440,7 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}
               line={shipping.line}
@@ -397,11 +448,13 @@ export default function CheckoutPage() {
               className="mt-3"
             />
             <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
+            <PolicyLinks className="mt-2" />
           </section>
 
           {bump && items.length > 0 && (
             <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />
           )}
+          {items.length > 0 && <ProductBumpCards state={cartBumps} idPrefix={`${FORM_PREFIX}-pb`} />}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
             {formError && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>}
@@ -425,6 +478,15 @@ export default function CheckoutPage() {
           </div>
         </StickyActionBar>
       </form>
+
+      {/* What goes with the order (Offers → Cross-sell, at checkout). */}
+      {items.length > 0 && (
+        <CrossSellStrip
+          workspaceId={workspaceId}
+          placement="checkout"
+          productIds={[...new Set(items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
+        />
+      )}
     </main>
   );
 }

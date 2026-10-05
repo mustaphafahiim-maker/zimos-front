@@ -1,5 +1,6 @@
 "use client";
 
+import { FreeShippingBar } from "../offers/CouponBits";
 import type { FreeShippingProgress } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import { freeShippingRemaining, type ShippingLine } from "@/lib/shippingLine";
@@ -43,6 +44,7 @@ export function FreeShippingHint({
     return (
       <p className={`rounded-xl bg-primary-soft px-3 py-2 text-xs font-medium text-primary ${className}`} aria-live="polite">
         {t.checkout.freeShippingHint(money(remaining, currency))}
+        <FreeShippingBar progress={progress} />
       </p>
     );
   }

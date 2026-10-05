@@ -271,10 +271,10 @@ export function SearchBox() {
 
   return (
     <>
-      <div className="hidden w-56 md:block lg:w-72">
+      <div className="zt-search-inline hidden w-56 md:block lg:w-72">
         <SearchCombobox />
       </div>
-      <div className="md:hidden">
+      <div className="zt-search-toggle md:hidden">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}

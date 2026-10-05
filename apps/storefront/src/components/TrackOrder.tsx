@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, type TrackResult } from "@store-builder/api-client";
+import { ApiError, orderTrackingByToken, type TrackResult } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
 import { focusField } from "@/lib/focusField";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { SearchIcon } from "./Icons";
-import { StatusTimeline } from "./StatusTimeline";
+import { TrackOrderProgress } from "./TrackOrderProgress";
+import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -16,14 +19,47 @@ const api = createStorefrontApiClient();
 export function TrackOrder() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { t, intlLocale, money } = useStore();
+  // The store's own country's numbers, as its checkout takes them (lib/orderForm validateOrderForm):
+  // an Egyptian mobile in Egypt, a full number elsewhere.
+  const egypt = useStoreCountry() === "EG";
+  const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : /^\+?\d{8,15}$/.test(normalizePhone(raw)));
 
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
   const [errors, setErrors] = useState<{ phone?: string; number?: string }>({});
+  // A link the store sent (…/track?number=ORD-…) arrives with the number filled in.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("number");
+    if (fromLink) setNumber(fromLink.slice(0, 60));
+  }, []);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [result, setResult] = useState<TrackResult | null>(null);
   /** Set only when the lookup itself failed; a clean miss shows `t.track.notFound`. */
   const [failure, setFailure] = useState<string | null>(null);
+
+  // A signed tracking link (…/track?t=<token>, from the store's messages or "Copy
+  // tracking link") opens its order straight away, with no phone number to type.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("t");
+    if (!token) return;
+    let stale = false;
+    setStatus("loading");
+    orderTrackingByToken(api, workspaceId, token)
+      .then((found) => {
+        if (stale) return;
+        setResult(found);
+        if (found) setNumber(found.orderNumber);
+      })
+      .catch(() => {
+        if (!stale) setResult(null);
+      })
+      .finally(() => {
+        if (!stale) setStatus("done");
+      });
+    return () => {
+      stale = true;
+    };
+  }, [workspaceId]);
 
   /** Maps a failed lookup onto one of the shopper-facing messages. */
   function lookupError(err: unknown): string {
@@ -39,7 +75,7 @@ export function TrackOrder() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!isEgyptianMobile(phone)) next.phone = t.form.errors.phone;
+    if (!validPhone(phone)) next.phone = egypt ? t.form.errors.phone : t.form.errors.phoneIntl;
     if (!number.trim()) next.number = t.track.errors.orderNumber;
     setErrors(next);
     if (next.phone) return focusField("track-phone");
@@ -53,7 +89,8 @@ export function TrackOrder() {
       // A "#" typed in front of the order number isn't part of it.
       const found = await api.trackOrder(
         workspaceId,
-        normalizePhone(phone),
+        // Digits only (the API refuses a "+"); it normalizes the number as the checkout did.
+        normalizePhone(phone).replace(/^\+/, ""),
         number.replace(/^#/, "").trim()
       );
       setResult(found);
@@ -89,9 +126,9 @@ export function TrackOrder() {
               id="track-phone"
               type="tel"
               inputMode="tel"
-              autoComplete="tel-national"
+              autoComplete={egypt ? "tel-national" : "tel"}
               dir="ltr"
-              placeholder={t.form.phonePlaceholder}
+              placeholder={egypt ? t.form.phonePlaceholder : undefined}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               aria-invalid={errors.phone ? true : undefined}
@@ -151,7 +188,7 @@ export function TrackOrder() {
                   #{result.orderNumber}
                 </span>
               </div>
-              <StatusTimeline stage={result.stage} />
+              <TrackOrderProgress result={result} />
 
               {result.items.length > 0 && (
                 <>
@@ -190,6 +227,10 @@ export function TrackOrder() {
                   <dd>{money(result.totalAmount, currency)}</dd>
                 </div>
               </dl>
+
+              <TrackOrderDownloads result={result} />
+
+              <TrackOrderNotes result={result} />
 
               {result.updatedAt && (
                 <p className="mt-5 text-xs text-ink-soft">

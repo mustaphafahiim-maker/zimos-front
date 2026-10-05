@@ -1,8 +1,10 @@
 "use client";
 
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontHeaderCollections } from "@store-builder/api-client";
+import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { brandingRemoved } from "@/components/PoweredByZimos";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type LogoSize, type ResolvedShellLink } from "@/lib/storeShell";
@@ -11,6 +13,7 @@ import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { MobileMenu } from "./MobileMenu";
 import { SearchBox } from "./SearchBox";
+import { NavDropdown, menuChildren } from "./shell/NavDropdown";
 import { ShellLink } from "./ShellLink";
 import { StickyHeader } from "./StickyHeader";
 import { StoreImage } from "./StoreImage";
@@ -59,7 +62,7 @@ const LOGO_NAME_CLASS: Record<LogoSize, string> = {
 
 /** An inline header link, hidden until its breakpoint class adds `…:inline-flex`. */
 const NAV_LINK =
-  "hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
+  "zt-nav-link hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
 
 export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: Locale }) {
   const t = getDictionary(locale);
@@ -70,10 +73,34 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   // The merchant's own menu, when they wrote one. Wide screens show it inline
   // from `md` (it can be several links long) and phones in the menu sheet,
   // which therefore stays available up to `md` instead of `sm`.
-  const menu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
-  const menuLinks = menu?.map((link) => (
-    <ShellLink key={link.key} link={link} className={`${NAV_LINK} md:inline-flex`} />
-  ));
+  // Pages flagged "show in header" (store settings → pages) join the menu.
+  const headerPages: ResolvedShellLink[] = storefrontDesignMeta(store)
+    .navPages.filter((p) => p.showInHeader)
+    .map((p) => ({ key: `page:${p.path}`, label: p.title, href: p.path, external: false }));
+  // Collections flagged "show in header" (catalog → collections) join it too.
+  for (const c of storefrontHeaderCollections(store)) {
+    headerPages.push({
+      key: `collection:${c.id}`,
+      label: c.name,
+      href: `/products?collection=${encodeURIComponent(c.slug)}`,
+      external: false,
+    });
+  }
+  const ownMenu: ResolvedShellLink[] | null = header.menu ? resolveShellLinks(header.menu, t.common) : null;
+  const menu: ResolvedShellLink[] | null =
+    headerPages.length > 0
+      ? [...(ownMenu ?? [{ key: "home", label: t.common.home, href: "/", external: false }]), ...headerPages]
+      : ownMenu;
+  // A menu link may open a list under it (shell/NavDropdown): `menu[i].children`.
+  const children = menuChildren(store.themeSettings, t.common);
+  const menuLinks = menu?.map((link) => {
+    const items = children.get(Number(link.key.split(":")[0]));
+    return items ? (
+      <NavDropdown key={link.key} link={link} items={items} className={`${NAV_LINK} md:inline-flex`} />
+    ) : (
+      <ShellLink key={link.key} link={link} className={`${NAV_LINK} md:inline-flex`} />
+    );
+  });
 
   // The sheet: the menu (or Home, as always), then the cart and order tracking.
   const sheetLinks: ResolvedShellLink[] = [
@@ -92,7 +119,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
       href="/"
       data-store-logo=""
       data-logo-size={size === "md" ? undefined : size}
-      className={`flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85${centred ? " justify-self-center" : ""}`}
+      className={`zt-logo flex min-h-11 min-w-0 items-center gap-3 rounded-lg transition-opacity hover:opacity-85${centred ? " justify-self-center" : ""}`}
     >
       {store.logoUrl ? (
         // A small light chip keeps an arbitrary-coloured logo legible while
@@ -103,16 +130,16 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           width={LOGO_IMG_PX[size]}
           height={LOGO_IMG_PX[size]}
           sizes={`${LOGO_IMG_PX[size]}px`}
-          className={`${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
+          className={`zt-logo-img ${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
         />
-      ) : (
+      ) : brandingRemoved(store) ? null : (
         // `.zimos-logo[data-overlay ancestor]` forces the dark-surface
         // (light wordmark) export regardless of the `auto` surface prop —
         // see the header rules in globals.css.
         <ZimosLogo height={LOGO_MARK_PX[size]} surface="auto" className="shrink-0" />
       )}
       <span
-        className={`truncate font-display ${LOGO_NAME_CLASS[size]} font-bold text-ink transition-colors duration-200 group-data-[overlay]/header:text-white motion-reduce:transition-none`}
+        className={`zt-logo-name truncate font-display ${LOGO_NAME_CLASS[size]} font-bold text-ink transition-colors duration-200 group-data-[overlay]/header:text-white motion-reduce:transition-none`}
       >
         {store.name}
       </span>
@@ -135,6 +162,9 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <LanguageSwitch />
         </span>
       )}
+      {/* View prices in another of the store's currencies (display only). */}
+      <span className="hidden sm:contents">
+      </span>
       {/* On a phone the theme toggle lives in the menu sheet; a wrapper hides
           it here because the button's own recipe sets its display. */}
       {header.showTheme && (
@@ -180,10 +210,10 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
         </div>
       ) : (
         <div
-          className={`${container} flex h-16 items-center justify-between gap-3 transition-[height] duration-200 group-data-[scrolled]/header:h-14 motion-reduce:transition-none`}
+          className={`zt-header-bar ${container} flex h-16 items-center justify-between gap-3 transition-[height] duration-200 group-data-[scrolled]/header:h-14 motion-reduce:transition-none`}
         >
           {logo}
-          <nav aria-label={t.common.menu} className="flex items-center gap-2">
+          <nav aria-label={t.common.menu} className="zt-nav flex items-center gap-2">
             {menuLinks}
             {controls}
           </nav>

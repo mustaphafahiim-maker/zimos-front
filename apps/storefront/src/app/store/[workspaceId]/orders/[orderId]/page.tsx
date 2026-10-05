@@ -5,17 +5,19 @@ import { useParams, useSearchParams } from "next/navigation";
 import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
+import { ThankYouMessage, ThankYouProducts } from "@/components/ThankYouExtras";
+import { formOptionsOf } from "@/lib/orderForm";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
 import {
-  getAcceptedUpsell,
   getOrderSnapshot,
-  type AcceptedUpsell,
   type OrderSnapshot,
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
+import { ThankYouDownloads } from "@/components/ThankYouDownloads";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -34,10 +36,6 @@ function Confirmation() {
     () => (isClient ? getOrderSnapshot(workspaceId, orderId) : null),
     [isClient, workspaceId, orderId]
   );
-  const upsell = useMemo<AcceptedUpsell | null>(
-    () => (isClient ? getAcceptedUpsell(workspaceId, orderId) : null),
-    [isClient, workspaceId, orderId]
-  );
   // The store’s shareable address: its own origin on a subdomain, the
   // /store/<workspaceId> path on the shared host.
   const storeUrl = isClient ? `${window.location.origin}${storeHref(basePath, "/")}` : "";
@@ -54,7 +52,7 @@ function Confirmation() {
     trackPurchaseOnce(snapshot.id, {
       valueMinor: snapshot.totalAmount,
       currency: snapshot.currency,
-      contentIds: snapshot.productIds,
+      contentIds: snapshot.contentIds ?? snapshot.productIds,
       numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
     });
   }, [snapshot]);
@@ -63,6 +61,11 @@ function Confirmation() {
   const currency = snapshot?.currency ?? store?.currency;
   const wa = store?.phone ? whatsappNumber(store.phone) : null;
   const storeName = store?.name ?? "";
+  // The merchant's thank-you settings: their message, the back-home button
+  // and a few products from a collection of their choosing.
+  const thanks = store?.thankYou;
+  const shortMessage = formOptionsOf(store?.checkout).thank_you_message;
+  const showBackHome = !thanks?.enabled || thanks.show_back_home_button;
 
   async function copyLink() {
     try {
@@ -86,15 +89,21 @@ function Confirmation() {
     <main className={`${container} flex-1 py-10 sm:py-14`}>
       <div className="mx-auto max-w-2xl">
         <ConfirmationHeading orderNumber={orderNumber} phone={snapshot?.phone} />
-
-        {upsell && (
-          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
-            <p className="font-semibold text-primary">
-              {t.upsell.accepted(upsell.name)} — {money(upsell.offerAmount, currency)}
-            </p>
-            <p className="mt-0.5 text-ink-soft">{t.upsell.acceptedHint}</p>
-          </div>
+        {shortMessage && <p className="mt-4 text-center text-sm font-medium text-ink">{shortMessage}</p>}
+        {thanks && (
+          <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />
         )}
+
+        {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
+        <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* A paid online order's digital products, as soon as the payment is captured. */}
+        <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />
+
+        {/* Notifications about this order on this phone, when the store app is on. */}
+
+        {/* What goes with what they just bought (Offers → Cross-sell, on the thank-you page). */}
+        {snapshot && snapshot.productIds.length > 0 && <CrossSellStrip workspaceId={workspaceId} placement="thank_you" productIds={snapshot.productIds} />}
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
@@ -105,11 +114,7 @@ function Confirmation() {
 
         {snapshot && (
           <div className="mt-6">
-            <OrderSnapshotSummary
-              snapshot={snapshot}
-              currency={currency}
-              footnote={upsell ? t.checkout.finalNote : undefined}
-            />
+            <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
           </div>
         )}
 
@@ -130,10 +135,16 @@ function Confirmation() {
           <StoreLink href="/track" className={btnSecondary}>
             {t.thankYou.track}
           </StoreLink>
-          <StoreLink href="/" className={btnSecondary}>
-            {t.thankYou.backToStore}
-          </StoreLink>
+          {showBackHome && (
+            <StoreLink href="/" className={btnSecondary}>
+              {t.thankYou.backToStore}
+            </StoreLink>
+          )}
         </div>
+
+        {thanks?.enabled && thanks.show_products_from_collection_id && (
+          <ThankYouProducts workspaceId={workspaceId} collectionId={thanks.show_products_from_collection_id} />
+        )}
 
         {storeUrl && (
           <section className="mt-8 text-center" aria-labelledby="share-title">

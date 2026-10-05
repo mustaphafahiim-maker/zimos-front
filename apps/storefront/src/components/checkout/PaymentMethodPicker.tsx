@@ -3,6 +3,8 @@
 import type { StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
+import { usePaymentMethodText } from "@/lib/paymentMethodText";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -20,25 +22,33 @@ export function PaymentMethodPicker({
   onChange: (id: string) => void;
   idPrefix: string;
 }) {
-  const { t } = useStore();
+  const { t, store } = useStore();
+  const workspaceId = store?.workspaceId ?? "";
+  const more = usePaymentMethodText();
 
   const copy = (m: StorefrontPaymentMethod) =>
     m.method === "card"
       ? { title: t.payment.card, hint: t.payment.cardHint, Icon: CardIcon }
       : m.method === "wallet"
         ? { title: t.payment.wallet, hint: t.payment.walletHint, Icon: WalletIcon }
-        : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
+        : m.method === "valu"
+          ? { title: more.valu, hint: more.valuHint, Icon: CardIcon }
+          : m.method === "kiosk"
+            ? { title: more.kiosk, hint: more.kioskHint, Icon: CashIcon }
+            : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
 
   if (methods.length === 1 && methods[0].method === "cod") {
     const { title, hint, Icon } = copy(methods[0]);
     return (
-      <div className="mt-4 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
-        <Icon className="shrink-0 text-primary" />
-        <p>
-          <span className="block text-sm font-semibold text-ink">{title}</span>
-          <span className="block text-xs text-ink-soft">{hint}</span>
-        </p>
-      </div>
+      <>
+        <div className="mt-4 flex min-h-14 items-center gap-3 rounded-xl border-2 border-primary bg-primary-soft px-4 py-3">
+          <Icon className="shrink-0 text-primary" />
+          <p>
+            <span className="block text-sm font-semibold text-ink">{title}</span>
+            <span className="block text-xs text-ink-soft">{hint}</span>
+          </p>
+        </div>
+      </>
     );
   }
 
@@ -61,7 +71,11 @@ export function PaymentMethodPicker({
               name={`${idPrefix}-payment`}
               value={m.id}
               checked={checked}
-              onChange={() => onChange(m.id)}
+              onChange={() => {
+                // Choosing an online method is the ad platforms' AddPaymentInfo.
+                if (m.method !== "cod") track("AddPaymentInfo");
+                onChange(m.id);
+              }}
               className="size-4 shrink-0 accent-primary"
             />
             <Icon className="shrink-0 text-primary" />

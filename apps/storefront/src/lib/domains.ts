@@ -62,6 +62,17 @@ export function storeOrigin(slug: string): string {
 }
 
 /**
+ * The store's canonical origin (SPEC §8.11): its primary domain when it has
+ * one that can be served (GET /store/:ws → primaryHost), else its platform
+ * subdomain. Canonical links, the sitemap and robots.txt use it; the proxy
+ * sends visitors of the other hosts there.
+ */
+export function canonicalOrigin(store: { slug: string }): string {
+  const primary = (store as { primaryHost?: unknown }).primaryHost;
+  return typeof primary === "string" && primary ? `https://${primary}` : storeOrigin(store.slug);
+}
+
+/**
  * Set by the proxy on a rewritten request, naming the store whose subdomain it
  * arrived on. Its presence is what tells a page it is being served at the root
  * of a store's own domain, and so must emit `/cart` rather than
