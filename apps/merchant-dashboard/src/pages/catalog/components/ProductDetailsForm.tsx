@@ -14,6 +14,8 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
+import { AI_ENABLED } from "@/lib/features";
+import { AiDescriptionButton } from "./AiDescriptionButton";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Field, TextField } from "@/components/Field";
@@ -296,6 +298,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                 />
               )}
             </Field>
+            {AI_ENABLED && <AiDescriptionButton name={name} onWritten={(output) => setDescription(output.description)} />}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.status} error={fieldErrors.status}>

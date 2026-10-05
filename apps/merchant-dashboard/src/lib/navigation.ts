@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
+import { AI_ENABLED } from "@/lib/features";
 
 /**
  * System roles without billing.manage (owner '*' and accountant hold it, see
@@ -169,7 +170,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "discounts", to: "/discounts", icon: Tag },
       { key: "automations", to: "/automations", icon: Bot },
       { key: "affiliates", to: "/affiliates", icon: UsersRound },
-      { key: "ai", to: "/ai", icon: Sparkles },
+      // AI studio only while the AI features are switched on (lib/features).
+      ...(AI_ENABLED ? [{ key: "ai" as const, to: "/ai", icon: Sparkles }] : []),
     ],
   },
   {

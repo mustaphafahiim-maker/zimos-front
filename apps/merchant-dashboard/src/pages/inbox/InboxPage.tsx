@@ -34,6 +34,10 @@ import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, Qui
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
+import { AI_ENABLED } from "@/lib/features";
+import { SuggestReplyButton } from "./SuggestReply";
+import { BotBadge, BotSettingsLink, BotToggle } from "./WaBot";
+import { waBotSentOf } from "@store-builder/api-client";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { TemplatePicker } from "@/components/WhatsappTemplates";
@@ -197,7 +201,7 @@ export function InboxPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={AI_ENABLED ? <BotSettingsLink /> : undefined} />
       <DataState
         loading={integration.loading}
         error={integration.error}
@@ -670,6 +674,7 @@ function Thread({
           </Link>
         )}
         <CustomerPanelButton className="xl:hidden" onClick={() => setPanelOpen(true)} />
+        {AI_ENABLED && <BotToggle conversation={conversation} onChange={(botPaused) => onPatch({ botPaused } as Partial<WhatsappConversation>)} />}
         <AssigneeSelect
           conversation={conversation as InboxConversation}
           onAssigned={(assignedTo) => {
@@ -747,6 +752,7 @@ function Bubble({ message: m }: { message: WhatsappMessage }) {
           m.status === "failed" && "ring-1 ring-danger/40"
         )}
       >
+        {AI_ENABLED && waBotSentOf(m) && <BotBadge />}
         {m.templateName && (
           <p className="mb-0.5 text-[11px] font-medium text-ink-soft">
             {fmt(t.template, { name: m.templateName })}
@@ -847,6 +853,7 @@ function Composer({
   return (
     <form onSubmit={sendText} className="flex items-end gap-2 border-t border-line p-3">
       <QuickRepliesMenu onPick={setText} draft={text} />
+      {AI_ENABLED && <SuggestReplyButton conversationId={conversation.id} onSuggest={setText} />}
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
