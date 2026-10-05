@@ -90,6 +90,17 @@ const FORM_PREFIX = "quick";
  * variant pickers → bundle/quantity offer → inline quick order form with an
  * order bump → real COD checkout. "Add to cart" stays as a secondary path.
  */
+/**
+ * The variant a product feed or ad link names (`?variant=<id>`, backend
+ * offers/productFeed.js), read on the client: the page opens on it, and its
+ * view is reported with that variant's id — the one the catalog item has.
+ */
+function linkedVariantOf<V extends { id: string }>(variants: V[]): V | undefined {
+  if (typeof window === "undefined") return undefined;
+  const id = new URLSearchParams(window.location.search).get("variant");
+  return id ? variants.find((v) => v.id === id) : undefined;
+}
+
 export function ProductLanding({
   workspaceId,
   product: listedProduct,
@@ -139,6 +150,9 @@ export function ProductLanding({
   useEffect(() => {
     const picked = product.variants.find((v) => v.id === readPick("variant", product.id));
     if (picked) setSelection({ ...(picked.optionValues ?? {}) });
+    // A feed or ad link names its variant: the shopper lands on the one the ad showed.
+    const linked = linkedVariantOf(product.variants);
+    if (linked) setSelection({ ...(linked.optionValues ?? {}) });
     const offer = readPick("offer", product.id);
     if (offer && product.offers.some((o) => o.id === offer)) setTierId(offer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -264,7 +278,7 @@ export function ProductLanding({
     const timer = window.setTimeout(() => {
       viewTracked.current = product.id;
       track("ViewContent", {
-        contentIds: [contentIdOf(variant ?? initialVariant) ?? product.id],
+        contentIds: [contentIdOf(linkedVariantOf(product.variants) ?? variant ?? initialVariant) ?? product.id],
         contentName: product.name,
         valueMinor: unit,
         currency: store?.currency,
