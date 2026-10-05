@@ -192,3 +192,18 @@ export async function subscriptionPortalCancel(client: ApiClient, workspaceRef: 
   });
   return subscription;
 }
+
+/** A subscription the tracked order started, with the path of its page on the store (backend subscriptions/subscriptionLinks.js). */
+export interface TrackSubscription {
+  productName: string;
+  status: CustomerSubscriptionStatus;
+  kind: string;
+  /** `/subscriptions/<token>` — the customer's page: change the card, cancel. */
+  portalPath: string | null;
+}
+
+/** The subscriptions on an order tracking answer (`subscriptions`); empty when it started none. */
+export function trackSubscriptionsOf(result: unknown): TrackSubscription[] {
+  const list = result && typeof result === "object" ? (result as { subscriptions?: TrackSubscription[] }).subscriptions : null;
+  return Array.isArray(list) ? list.filter((s) => s && typeof s.productName === "string") : [];
+}

@@ -17,7 +17,9 @@ export type OrderEmailKey =
   | "order_refunded"
   | "abandoned_cart"
   | "transfer_rejected"
-  | "digital_delivery";
+  | "digital_delivery"
+  /** On unless the store turns it off: the subscriber's link to their subscription page (SPEC §18.1). */
+  | "subscription_started";
 
 export interface OrderEmailTemplateDto {
   key: OrderEmailKey;
