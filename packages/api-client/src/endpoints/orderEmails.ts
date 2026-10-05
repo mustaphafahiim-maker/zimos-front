@@ -16,6 +16,7 @@ export type OrderEmailKey =
   | "order_cancelled"
   | "order_refunded"
   | "abandoned_cart"
+  | "transfer_rejected"
   | "digital_delivery";
 
 export interface OrderEmailTemplateDto {

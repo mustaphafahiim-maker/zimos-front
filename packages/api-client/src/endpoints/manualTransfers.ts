@@ -166,11 +166,13 @@ export async function manualTransferReject(
   workspaceId: string,
   orderId: string,
   paymentId: string,
-  reason?: string
+  reason?: string,
+  /** Tell the customer (an email, and the "transfer rejected" automation): they can send a new receipt. On by default. */
+  notifyCustomer = true
 ): Promise<ManualTransferPayment> {
   const { transfer } = await client.request<{ transfer: ManualTransferPayment }>(
     `${base(workspaceId)}/orders/${orderId}/payments/${paymentId}/reject`,
-    { method: "POST", body: { reason: reason || null } }
+    { method: "POST", body: { reason: reason || null, notifyCustomer } }
   );
   return transfer;
 }

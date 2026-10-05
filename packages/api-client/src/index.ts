@@ -208,3 +208,5 @@ export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/shippingPlaces";
 // The builder product list's sources: newest, featured, best selling (storefront/productSearch.js).
 export * from "./endpoints/productListSources";
+// A rejected transfer sent again from the tracking page (payments/transferResubmit.js).
+export * from "./endpoints/transferResubmit";

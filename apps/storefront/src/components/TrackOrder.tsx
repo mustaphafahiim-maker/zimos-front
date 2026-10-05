@@ -11,6 +11,7 @@ import { SearchIcon } from "./Icons";
 import { TrackOrderProgress } from "./TrackOrderProgress";
 import { TrackOrderNotes } from "./TrackOrderNotes";
 import { TrackOrderDownloads } from "./TrackOrderDownloads";
+import { TrackOrderTransfer } from "./TrackOrderTransfer";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -225,6 +226,8 @@ export function TrackOrder() {
               </dl>
 
               <TrackOrderDownloads result={result} />
+
+              <TrackOrderTransfer result={result} workspaceId={workspaceId} />
 
               <TrackOrderNotes result={result} />
 
