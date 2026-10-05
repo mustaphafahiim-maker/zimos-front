@@ -17,7 +17,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyButton } from "@/components/CopyButton";
@@ -30,7 +30,12 @@ import { useToast } from "@/components/Toast";
 const STRINGS = {
   en: {
     addTitle: "Connect a domain",
-    addDescription: "Use a domain you own (without www), or a subdomain such as shop.example.com.",
+    addDescription: "Use a domain you own (example.com — its www comes along), or a subdomain such as shop.example.com.",
+    rootHint: "A domain without a subdomain can't use a CNAME: point it with the A records below.",
+    alternativesTitle: "Or, if your DNS provider offers ALIAS / ANAME (CNAME flattening), use this instead of the A records:",
+    counterpart: "Send {host} here too",
+    counterpartHint: "Visitors who type {host} land on {domain}, same page. Add its record above.",
+    counterpartSsl: "{host} certificate: {status}",
     hostname: "Domain",
     add: "Connect",
     adding: "Connecting…",
@@ -74,7 +79,12 @@ const STRINGS = {
   },
   ar: {
     addTitle: "ربط دومين",
-    addDescription: "استخدم دومين تملكه (بدون www) أو دومين فرعي مثل shop.example.com.",
+    addDescription: "استخدم دومين تملكه (example.com — والـ www بتاعه معاه) أو دومين فرعي مثل shop.example.com.",
+    rootHint: "الدومين من غير دومين فرعي مينفعش يتربط بـ CNAME: وجّهه بسجلات A اللي تحت.",
+    alternativesTitle: "أو لو مزود الـ DNS عندك فيه ALIAS / ANAME (CNAME flattening)، استخدم ده بدل سجلات A:",
+    counterpart: "ابعت {host} هنا كمان",
+    counterpartHint: "اللي يكتب {host} هيوصل لـ {domain} على نفس الصفحة. ضيف السجل بتاعه فوق.",
+    counterpartSsl: "شهادة {host}: {status}",
     hostname: "الدومين",
     add: "ربط",
     adding: "جارٍ الربط…",
@@ -209,6 +219,17 @@ export function DomainsTab() {
           (state.data?.domains ?? []).map((domain) => {
             const usable = domain.status === "verified" || domain.status === "active";
             const check = dns[domain.id];
+            const counterpart = domain.counterpart ?? null;
+            // The counterpart still needs its record or its certificate.
+            const counterpartPending = Boolean(counterpart?.redirect && counterpart.sslStatus !== "issued");
+            const recordFound = (record: StoreDomain["records"][number]) =>
+              !check
+                ? null
+                : record.type === "TXT"
+                  ? check.txt.found
+                  : record.purpose === "redirect"
+                    ? (check.counterpart?.found ?? null)
+                    : (check.routing?.found ?? check.cname.found);
             const isBusy = (key: string) => busy === `${domain.id}:${key}`;
             return (
               <Section
@@ -230,10 +251,11 @@ export function DomainsTab() {
                 }
               >
                 <div className="space-y-4">
-                  {domain.status !== "active" && (
+                  {(domain.status !== "active" || counterpartPending) && (
                     <div>
                       <p className="text-sm font-medium text-ink">{t.stepsTitle}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">{t.stepsHint}</p>
+                      {domain.isRoot && domain.records.some((r) => r.type === "A") && <p className="mt-0.5 text-xs text-ink-soft">{t.rootHint}</p>}
                       <div className="mt-3 overflow-x-auto">
                         <table className="w-full min-w-[36rem] text-start text-sm">
                           <thead className="text-xs text-ink-soft">
@@ -247,9 +269,9 @@ export function DomainsTab() {
                           </thead>
                           <tbody className="divide-y divide-line">
                             {domain.records.map((record) => {
-                              const result = check ? (record.type === "TXT" ? check.txt.found : check.cname.found) : null;
+                              const result = recordFound(record);
                               return (
-                                <tr key={record.type}>
+                                <tr key={`${record.type}-${record.name}-${record.value}`}>
                                   <td className="py-2 pe-3 font-medium text-ink">{record.type}</td>
                                   <td className="py-2 pe-3">
                                     <bdi dir="ltr">{record.name}</bdi>
@@ -274,6 +296,48 @@ export function DomainsTab() {
                           </tbody>
                         </table>
                       </div>
+                      {(domain.alternatives ?? []).length > 0 && (
+                        <div className="mt-3 rounded-lg bg-muted px-3 py-2">
+                          <p className="text-xs text-ink-soft">{t.alternativesTitle}</p>
+                          {(domain.alternatives ?? []).map((record) => (
+                            <p key={`${record.type}-${record.name}`} className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                              <span className="font-medium text-ink">{record.type}</span>
+                              <bdi dir="ltr">{record.name}</bdi>
+                              <span aria-hidden>→</span>
+                              <bdi dir="ltr" className="break-all font-mono text-xs">
+                                {record.value}
+                              </bdi>
+                              <CopyButton value={record.value} label={t.copy} />
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {counterpart && (
+                    <div className="space-y-1">
+                      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[var(--color-primary)]"
+                          checked={counterpart.redirect}
+                          disabled={isBusy("counterpart")}
+                          onChange={(e) =>
+                            void run(domain, "counterpart", async () => {
+                              await storeDesignUpdateDomain(apiClient, workspaceId, domain.id, { redirectCounterpart: e.target.checked });
+                              return t.savedToast;
+                            })
+                          }
+                        />
+                        <bdi>{fmt(t.counterpart, { host: counterpart.hostname })}</bdi>
+                      </label>
+                      <p className="text-xs text-ink-soft">{fmt(t.counterpartHint, { host: counterpart.hostname, domain: domain.hostname })}</p>
+                      {counterpart.redirect && usable && (
+                        <p className="text-xs text-ink-soft">
+                          {fmt(t.counterpartSsl, { host: counterpart.hostname, status: t[`ssl_${counterpart.sslStatus}`] })}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -327,7 +391,7 @@ export function DomainsTab() {
                     >
                       {t.checkDns}
                     </Button>
-                    {usable && domain.sslStatus !== "issued" && (
+                    {usable && (domain.sslStatus !== "issued" || counterpartPending) && (
                       <Button
                         variant="outline"
                         size="sm"

@@ -14,6 +14,11 @@ export interface ResolvedHost {
   homeFunnelRef: string | null;
   /** The store's canonical host (its primary domain with a certificate), if it has one. */
   primaryHost: string | null;
+  /**
+   * The domain this host is sent to: the www / root counterpart of a
+   * connected domain (backend domains/rootDomains.js). Null for a domain served as itself.
+   */
+  redirectTo: string | null;
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
@@ -62,15 +67,19 @@ async function lookup(hostname: string): Promise<ResolvedHost | null> {
       headers: { accept: "application/json" },
     });
     if (res.ok) {
-      const body = (await res.json()) as { store?: { slug?: unknown; homeFunnel?: { ref?: unknown } | null; primaryHost?: unknown } };
+      const body = (await res.json()) as {
+        store?: { slug?: unknown; homeFunnel?: { ref?: unknown } | null; primaryHost?: unknown; redirectTo?: unknown };
+      };
       const slug = body.store?.slug;
       if (typeof slug === "string" && slug) {
         const ref = body.store?.homeFunnel?.ref;
         const primary = body.store?.primaryHost;
+        const sentTo = body.store?.redirectTo;
         value = {
           slug,
           homeFunnelRef: typeof ref === "string" && ref ? ref : null,
           primaryHost: typeof primary === "string" && primary ? primary.toLowerCase() : null,
+          redirectTo: typeof sentTo === "string" && sentTo ? sentTo.toLowerCase() : null,
         };
       }
     } else if (res.status !== 404) {

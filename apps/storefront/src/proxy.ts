@@ -101,6 +101,14 @@ export async function proxy(request: NextRequest) {
   const custom = storeSlugFromHost(host) ? null : await resolveCustomHost(host);
   const slug = storeSlugFromHost(host) ?? custom?.slug ?? null;
 
+  // www / the root of a connected domain: one address, so the visitor goes to
+  // the domain (or straight to the store's primary one), same path and query.
+  if (custom?.redirectTo && custom.redirectTo !== hostnameOf(host)) {
+    const to = custom.primaryHost ?? custom.redirectTo;
+    // Temporary, as the primary-domain redirect below: the merchant may switch it off.
+    return NextResponse.redirect(new URL(`https://${to}${pathname}${request.nextUrl.search}`), 307);
+  }
+
   // The internal shape, reached directly: deep links that predate subdomains,
   // the dashboard's preview route, and local development.
   const isInternalPath = pathname === "/store" || pathname.startsWith("/store/");

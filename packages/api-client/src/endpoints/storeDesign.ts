@@ -648,17 +648,32 @@ export async function storefrontCustomCode(
 // under /workspaces/:workspaceId/domains — permission domain.manage.
 // Codes: DOMAIN_TAKEN (409), STORE_NOT_SET_UP (409), DOMAIN_NOT_VERIFIED
 // (400 on verify, 409 on primary / certificate), FUNNEL_NOT_PUBLISHED (409),
-// CERTIFICATE_PROVIDER_ERROR (502).
+// CERTIFICATE_PROVIDER_ERROR (502), NO_COUNTERPART (422), COUNTERPART_CONNECTED (409).
+//
+// Root domains and www (domains/rootDomains.js): a root domain takes A records
+// (or an ALIAS where the DNS provider has one) instead of a CNAME, and a root
+// or its www can have the other one — its counterpart — sent to it.
 
 export type StoreDomainStatus = "pending_verification" | "verified" | "active" | "failed";
 export type StoreDomainSslStatus = "none" | "pending" | "issued" | "failed";
 
 export interface StoreDomainRecord {
-  type: "TXT" | "CNAME";
+  type: "TXT" | "CNAME" | "A" | "ALIAS";
   name: string;
   value: string;
   ttl: number;
-  purpose: "verification" | "routing";
+  /** "redirect": the counterpart's record (www / root sent to this domain). */
+  purpose: "verification" | "routing" | "redirect";
+}
+
+/** The www / root counterpart of a root domain or of its www. */
+export interface StoreDomainCounterpart {
+  hostname: string;
+  /** Visits to it go to this domain, same path. */
+  redirect: boolean;
+  sslStatus: StoreDomainSslStatus;
+  records: StoreDomainRecord[];
+  alternatives?: StoreDomainRecord[];
 }
 
 export interface StoreDomain {
@@ -672,6 +687,11 @@ export interface StoreDomain {
   sslCheckedAt: string | null;
   homeFunnel: { id: string; name: string; status: string } | null;
   records: StoreDomainRecord[];
+  /** A root domain (example.com), which takes A records or an ALIAS rather than a CNAME. */
+  isRoot?: boolean;
+  /** Instead of the A records, where the DNS provider has it: an ALIAS / ANAME (CNAME flattening). */
+  alternatives?: StoreDomainRecord[];
+  counterpart?: StoreDomainCounterpart | null;
 }
 
 export interface StoreDomainsOverview {
@@ -686,6 +706,9 @@ export interface StoreDomainDnsCheck {
   hostname: string;
   txt: { expected: string; found: boolean; values: string[] };
   cname: { expected: string; found: boolean; values: string[] };
+  /** The routing record, whichever kind the host takes. */
+  routing?: { kind: "A" | "ALIAS" | "CNAME"; expected: string[]; found: boolean; values: string[] };
+  counterpart?: { hostname: string; kind: "A" | "ALIAS" | "CNAME"; expected: string[]; found: boolean; values: string[] } | null;
   checkedAt: string;
 }
 
@@ -720,7 +743,7 @@ export async function storeDesignUpdateDomain(
   client: ApiClient,
   workspaceId: string,
   domainId: string,
-  patch: { isPrimary?: boolean; homeFunnelId?: string | null }
+  patch: { isPrimary?: boolean; homeFunnelId?: string | null; redirectCounterpart?: boolean }
 ): Promise<StoreDomain> {
   const { domain } = await client.request<{ domain: StoreDomain }>(domainsBase(workspaceId) + "/" + domainId, {
     method: "PATCH",
