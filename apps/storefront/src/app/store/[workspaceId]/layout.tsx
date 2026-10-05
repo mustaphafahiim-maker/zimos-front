@@ -44,6 +44,7 @@ function localeSource(store: UnavailableStore) {
   return source;
 }
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { storeIcons } from "@/lib/storeIcons";
 
 /**
  * Names the store for search engines and for anything that unfurls a link.
@@ -75,12 +76,14 @@ export async function generateMetadata({
   const { seo, general } = storefrontGeneralMeta(store);
   const description = seo.description || store.tagline || t.meta.storeDescription(store.name);
   const ogImage = seo.ogImageUrl || store.logoUrl;
+  // The tab icon: the merchant's favicon, else the store logo, else the default (lib/storeIcons).
+  const icons = storeIcons({ faviconUrl: general.faviconUrl, logoUrl: store.logoUrl });
 
   return {
     metadataBase: new URL(canonicalOrigin(store)),
     title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
-    ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),
+    ...(icons ? { icons } : {}),
     ...(seo.googleSiteVerification ? { verification: { google: seo.googleSiteVerification } } : {}),
     openGraph: {
       type: "website",

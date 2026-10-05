@@ -39,7 +39,7 @@ import { NotificationPreferencesSection } from "./NotificationPreferencesSection
 import { OrderEmailsSection } from "./OrderEmailsSection";
 import { BILLING_ROLES } from "@/pages/subscription/billingText";
 import { SUBSCRIPTION_STRINGS } from "@/pages/subscription/subscriptionStrings";
-import { useT } from "@/i18n/LocaleContext";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
@@ -97,7 +97,14 @@ function SubscriptionLinkSection() {
 // Workspace profile
 // ---------------------------------------------------------------------
 
+/** The note under the store logo: it is the storefront's browser tab icon too. */
+const LOGO_STRINGS = {
+  en: { tabIcon: "Your logo is also your store's browser tab icon. Use a square image of at least 192×192." },
+  ar: { tabIcon: "شعارك هو أيضًا أيقونة متجرك في تبويب المتصفح. استخدم صورة مربعة لا تقل عن 192×192." },
+} satisfies Messages;
+
 function WorkspaceProfileSection() {
+  const logoText = useT(LOGO_STRINGS);
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
   const saveThemeSettings = useSaveThemeSettings();
@@ -231,6 +238,7 @@ function WorkspaceProfileSection() {
             )}
           </div>
           <p className="text-xs text-ink-soft">PNG, JPEG, GIF or WEBP, up to 5MB.</p>
+          <p className="text-xs text-ink-soft">{logoText.tabIcon}</p>
         </div>
 
         <TextField
