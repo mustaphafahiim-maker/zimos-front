@@ -23,6 +23,7 @@ import { BarChart, ChartAxis, LineAreaChart } from "@/components/charts";
 import type { ChartPoint } from "@/components/charts";
 import { Mono, Panel, Td, Th } from "@/components/Panel";
 import { WorkspaceStatus } from "@/components/workspace";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { OverviewKpi, OverviewMoneyKpi, OverviewReport, OverviewSeries } from "@/lib/adminApi";
@@ -35,6 +36,109 @@ import {
   formatRate,
   formatRelative,
 } from "@/lib/format";
+
+const STRINGS = {
+  en: {
+    title: "Overview",
+    description: "Platform-wide state across every workspace.",
+    refresh: "Refresh",
+    refreshing: "Refreshing…",
+    notAvailable: "Not available",
+    unavailable: "Unavailable",
+    derivedTitle: "Platform metrics aren’t available — showing what can be worked out from the workspace list.",
+    derivedAnswered: "answered:",
+    derivedCountedFrom: "Subscription counts, MRR and signups are counted here from",
+    and: "and",
+    derivedRest:
+      "Anything needing order, shipment or invoice totals across workspaces is marked unavailable rather than shown as zero — no endpoint exposes those yet.",
+    activeWorkspaces: "Active workspaces",
+    activeWorkspacesHint: "Subscription active",
+    trialing: "Trialing",
+    trialingHint: "Currently in free trial",
+    pastDue: "Past due",
+    pastDueHint: "Failed renewal payment",
+    mrr: "MRR",
+    mrrHint: "Monthly run rate, paying plans only",
+    gmv: "GMV processed",
+    gmvHint: "Last 30 days, all stores",
+    ordersToday: "Orders today",
+    ordersTodayHint: "Across all stores, UTC day",
+    deliveryRate: "Delivery rate",
+    deliveryRateHint: "Delivered share of finished shipments, 30 days",
+    signupsPerDay: "Signups per day",
+    last30Total: "Last 30 days · {total} total",
+    signupsValue: "{count} signups",
+    mrrTrend: "MRR trend",
+    last12Months: "Last 12 months",
+    ordersPerDay: "Orders per day",
+    ordersValue: "{count} orders",
+    needsAttention: "Needs attention",
+    itemOne: "{count} item",
+    itemMany: "{count} items",
+    attentionEmptyDerived: "No overdue payments. Return rates and domain checks need the metrics endpoint.",
+    attentionEmpty: "Nothing needs attention right now.",
+    recentSignups: "Recent signups",
+    viewAll: "View all",
+    noWorkspaces: "No workspaces yet.",
+    colWorkspace: "Workspace",
+    colAddress: "Address",
+    colPlan: "Plan",
+    colStatus: "Status",
+    colCreated: "Created",
+    figuresAsOf:
+      "Figures as of {time}. Daily and monthly buckets are UTC calendar days, so the newest column closes at 00:00 UTC rather than local midnight.",
+  },
+  ar: {
+    title: "نظرة عامة",
+    description: "حالة المنصة عبر جميع المتاجر.",
+    refresh: "تحديث",
+    refreshing: "جارٍ التحديث…",
+    notAvailable: "غير متاح",
+    unavailable: "غير متاح",
+    derivedTitle: "مقاييس المنصة غير متاحة — يُعرض ما يمكن استنتاجه من قائمة المتاجر.",
+    derivedAnswered: "أجاب:",
+    derivedCountedFrom: "تُحسب هنا أعداد الاشتراكات والإيراد الشهري المتكرر والتسجيلات من",
+    and: "و",
+    derivedRest:
+      "كل ما يحتاج إلى إجماليات الطلبات أو الشحنات أو الفواتير عبر المتاجر يُعلَّم بأنه غير متاح بدلًا من عرضه صفرًا — لا توجد نقطة اتصال توفّرها بعد.",
+    activeWorkspaces: "المتاجر النشطة",
+    activeWorkspacesHint: "اشتراك نشط",
+    trialing: "في الفترة التجريبية",
+    trialingHint: "في الفترة التجريبية المجانية حاليًا",
+    pastDue: "متأخرة السداد",
+    pastDueHint: "فشل دفع التجديد",
+    mrr: "الإيراد الشهري المتكرر",
+    mrrHint: "المعدل الشهري، للخطط المدفوعة فقط",
+    gmv: "إجمالي المبيعات المعالجة",
+    gmvHint: "آخر 30 يومًا، جميع المتاجر",
+    ordersToday: "طلبات اليوم",
+    ordersTodayHint: "عبر جميع المتاجر، يوم بتوقيت UTC",
+    deliveryRate: "نسبة التسليم",
+    deliveryRateHint: "نسبة المُسلَّم من الشحنات المنتهية، 30 يومًا",
+    signupsPerDay: "التسجيلات يوميًا",
+    last30Total: "آخر 30 يومًا · الإجمالي {total}",
+    signupsValue: "{count} تسجيل",
+    mrrTrend: "اتجاه الإيراد الشهري المتكرر",
+    last12Months: "آخر 12 شهرًا",
+    ordersPerDay: "الطلبات يوميًا",
+    ordersValue: "{count} طلب",
+    needsAttention: "تحتاج إلى متابعة",
+    itemOne: "عنصر واحد",
+    itemMany: "عدد العناصر: {count}",
+    attentionEmptyDerived: "لا توجد مدفوعات متأخرة. نسب المرتجعات وفحوص النطاقات تحتاج إلى نقطة اتصال المقاييس.",
+    attentionEmpty: "لا شيء يحتاج إلى متابعة الآن.",
+    recentSignups: "أحدث التسجيلات",
+    viewAll: "عرض الكل",
+    noWorkspaces: "لا توجد متاجر بعد.",
+    colWorkspace: "المتجر",
+    colAddress: "العنوان",
+    colPlan: "الخطة",
+    colStatus: "الحالة",
+    colCreated: "تاريخ الإنشاء",
+    figuresAsOf:
+      "الأرقام حتى {time}. الفترات اليومية والشهرية أيام تقويمية بتوقيت UTC، لذا يُغلق أحدث عمود عند 00:00 UTC وليس عند منتصف الليل المحلي.",
+  },
+} satisfies Messages;
 
 const ATTENTION_ICON: Record<string, typeof CreditCard> = {
   past_due: CreditCard,
@@ -51,7 +155,8 @@ const ATTENTION_ICON: Record<string, typeof CreditCard> = {
  * measurement. The three are different claims and the tile has to pick one.
  */
 function Unavailable() {
-  return <span className="text-base font-normal text-ink-soft">Not available</span>;
+  const t = useT(STRINGS);
+  return <span className="text-base font-normal text-ink-soft">{t.notAvailable}</span>;
 }
 
 function kpiValue(kpi: OverviewKpi, format: (value: number) => string) {
@@ -103,10 +208,11 @@ function ChartPanel({
   total: (points: ChartPoint[]) => string;
   children: (points: ChartPoint[]) => React.ReactNode;
 }) {
+  const t = useT(STRINGS);
   const points = displayPoints(series);
   if (points === null) {
     return (
-      <Panel title={title} description="Unavailable">
+      <Panel title={title} description={t.unavailable}>
         <p className="text-sm text-ink-soft">{series.unavailable}</p>
       </Panel>
     );
@@ -120,6 +226,7 @@ function ChartPanel({
 }
 
 export function OverviewPage() {
+  const t = useT(STRINGS);
   const { data, loading, error, refresh } = useAsync(() => adminApi.loadOverview(), []);
   const [refreshing, setRefreshing] = useState(false);
   const busy = loading || refreshing;
@@ -140,11 +247,11 @@ export function OverviewPage() {
   return (
     <div>
       <PageHeader
-        title="Overview"
-        description="Platform-wide state across every workspace."
+        title={t.title}
+        description={t.description}
         actions={
           <Button variant="outline" size="sm" onClick={() => void reload()} disabled={busy}>
-            {busy ? <Spinner /> : <RefreshCw />} {busy ? "Refreshing…" : "Refresh"}
+            {busy ? <Spinner /> : <RefreshCw />} {busy ? t.refreshing : t.refresh}
           </Button>
         }
       />
@@ -156,6 +263,7 @@ export function OverviewPage() {
 }
 
 function OverviewBody({ data }: { data: OverviewReport }) {
+  const t = useT(STRINGS);
   const { kpis } = data;
   const signups = displayPoints(data.signupsPerDay);
   const signupsTotal = signups?.reduce((sum, p) => sum + p.value, 0) ?? 0;
@@ -165,86 +273,80 @@ function OverviewBody({ data }: { data: OverviewReport }) {
       {data.source === "derived" && (
         <Alert variant="info">
           <Info aria-hidden />
-          <span className="font-medium">
-            Platform metrics aren&rsquo;t available — showing what can be worked out from the
-            workspace list.
-          </span>
+          <span className="font-medium">{t.derivedTitle}</span>
           <span className="text-ink-soft">
-            <Mono>GET /admin/metrics/overview</Mono> answered:{" "}
-            <span className="text-ink">{sentence(data.endpointError ?? "")}</span> Subscription counts, MRR and
-            signups are counted here from <Mono>GET /admin/workspaces</Mono> and{" "}
-            <Mono>GET /admin/subscriptions</Mono>. Anything needing order, shipment or invoice
-            totals across workspaces is marked unavailable rather than shown as zero — no endpoint
-            exposes those yet.
+            <Mono>GET /admin/metrics/overview</Mono> {t.derivedAnswered}{" "}
+            <span className="text-ink">{sentence(data.endpointError ?? "")}</span> {t.derivedCountedFrom}{" "}
+            <Mono>GET /admin/workspaces</Mono> {t.and} <Mono>GET /admin/subscriptions</Mono>. {t.derivedRest}
           </span>
         </Alert>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Active workspaces"
+          label={t.activeWorkspaces}
           value={kpiValue(kpis.activeWorkspaces, formatNumber)}
           icon={<Building2 />}
           to="/workspaces"
-          hint={kpis.activeWorkspaces.unavailable ?? "Subscription active"}
+          hint={kpis.activeWorkspaces.unavailable ?? t.activeWorkspacesHint}
         />
         <KpiCard
-          label="Trialing"
+          label={t.trialing}
           value={kpiValue(kpis.trialing, formatNumber)}
           icon={<Hourglass />}
           to="/subscriptions"
-          hint={kpis.trialing.unavailable ?? "Currently in free trial"}
+          hint={kpis.trialing.unavailable ?? t.trialingHint}
         />
         <KpiCard
-          label="Past due"
+          label={t.pastDue}
           value={kpiValue(kpis.pastDue, formatNumber)}
           icon={<TriangleAlert />}
           to="/subscriptions"
-          hint={kpis.pastDue.unavailable ?? "Failed renewal payment"}
+          hint={kpis.pastDue.unavailable ?? t.pastDueHint}
         />
         <KpiCard
-          label="MRR"
+          label={t.mrr}
           value={moneyValue(kpis.mrr)}
           icon={<CircleDollarSign />}
-          hint={moneyHint(kpis.mrr, "Monthly run rate, paying plans only")}
+          hint={moneyHint(kpis.mrr, t.mrrHint)}
         />
         <KpiCard
-          label="GMV processed"
+          label={t.gmv}
           value={moneyValue(kpis.gmv30d)}
           icon={<Wallet />}
-          hint={moneyHint(kpis.gmv30d, "Last 30 days, all stores")}
+          hint={moneyHint(kpis.gmv30d, t.gmvHint)}
         />
         <KpiCard
-          label="Orders today"
+          label={t.ordersToday}
           value={kpiValue(kpis.ordersToday, formatNumber)}
           icon={<ShoppingCart />}
-          hint={kpis.ordersToday.unavailable ?? "Across all stores, UTC day"}
+          hint={kpis.ordersToday.unavailable ?? t.ordersTodayHint}
         />
         <KpiCard
-          label="Delivery rate"
+          label={t.deliveryRate}
           value={kpiValue(kpis.deliveryRate, formatRate)}
           icon={<Truck />}
-          hint={kpis.deliveryRate.unavailable ?? "Delivered share of finished shipments, 30 days"}
+          hint={kpis.deliveryRate.unavailable ?? t.deliveryRateHint}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartPanel
-          title="Signups per day"
+          title={t.signupsPerDay}
           series={data.signupsPerDay}
-          total={() => `Last 30 days · ${formatNumber(signupsTotal)} total`}
+          total={() => fmt(t.last30Total, { total: formatNumber(signupsTotal) })}
         >
           {(points) => (
             <BarChart
               points={points}
               height={140}
               color="var(--color-primary)"
-              format={(v) => `${v} signups`}
+              format={(v) => fmt(t.signupsValue, { count: v })}
             />
           )}
         </ChartPanel>
 
-        <ChartPanel title="MRR trend" series={data.mrrTrend} total={() => "Last 12 months"}>
+        <ChartPanel title={t.mrrTrend} series={data.mrrTrend} total={() => t.last12Months}>
           {(points) => (
             <LineAreaChart
               points={points}
@@ -257,18 +359,16 @@ function OverviewBody({ data }: { data: OverviewReport }) {
         </ChartPanel>
 
         <ChartPanel
-          title="Orders per day"
+          title={t.ordersPerDay}
           series={data.ordersPerDay}
-          total={(points) =>
-            `Last 30 days · ${formatNumber(points.reduce((s, p) => s + p.value, 0))} total`
-          }
+          total={(points) => fmt(t.last30Total, { total: formatNumber(points.reduce((s, p) => s + p.value, 0)) })}
         >
           {(points) => (
             <BarChart
               points={points}
               height={140}
               color="var(--color-accent)"
-              format={(v) => `${formatNumber(v)} orders`}
+              format={(v) => fmt(t.ordersValue, { count: formatNumber(v) })}
             />
           )}
         </ChartPanel>
@@ -277,17 +377,15 @@ function OverviewBody({ data }: { data: OverviewReport }) {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <Panel
           className="xl:col-span-2"
-          title="Needs attention"
-          description={`${data.attention.length} item${data.attention.length === 1 ? "" : "s"}`}
+          title={t.needsAttention}
+          description={fmt(data.attention.length === 1 ? t.itemOne : t.itemMany, { count: data.attention.length })}
           flush
         >
           {data.attention.length === 0 ? (
             <div className="p-4">
               <EmptyBlock
                 message={
-                  data.source === "derived"
-                    ? "No overdue payments. Return rates and domain checks need the metrics endpoint."
-                    : "Nothing needs attention right now."
+                  data.source === "derived" ? t.attentionEmptyDerived : t.attentionEmpty
                 }
               />
             </div>
@@ -344,27 +442,27 @@ function OverviewBody({ data }: { data: OverviewReport }) {
 
         <Panel
           className="xl:col-span-3"
-          title="Recent signups"
+          title={t.recentSignups}
           actions={
             <Link to="/workspaces" className="text-sm font-medium text-primary hover:underline">
-              View all
+              {t.viewAll}
             </Link>
           }
           flush
         >
           {data.recentSignups.length === 0 ? (
             <div className="p-4">
-              <EmptyBlock message="No workspaces yet." />
+              <EmptyBlock message={t.noWorkspaces} />
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <Th>Workspace</Th>
-                  <Th>Address</Th>
-                  <Th>Plan</Th>
-                  <Th>Status</Th>
-                  <Th className="text-end">Created</Th>
+                  <Th>{t.colWorkspace}</Th>
+                  <Th>{t.colAddress}</Th>
+                  <Th>{t.colPlan}</Th>
+                  <Th>{t.colStatus}</Th>
+                  <Th className="text-end">{t.colCreated}</Th>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -394,10 +492,7 @@ function OverviewBody({ data }: { data: OverviewReport }) {
         </Panel>
       </div>
 
-      <p className="text-xs text-ink-soft">
-        Figures as of {formatDateTime(data.generatedAt)}. Daily and monthly buckets are UTC
-        calendar days, so the newest column closes at 00:00 UTC rather than local midnight.
-      </p>
+      <p className="text-xs text-ink-soft">{fmt(t.figuresAsOf, { time: formatDateTime(data.generatedAt) })}</p>
     </div>
   );
 }

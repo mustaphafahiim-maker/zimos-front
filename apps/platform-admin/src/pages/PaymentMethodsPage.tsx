@@ -11,10 +11,86 @@ import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/forms";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { P } from "@/lib/permissions";
 import * as adminApi from "@/lib/adminApi";
+
+const STRINGS = {
+  en: {
+    title: "Payment methods",
+    description: "How merchants pay their subscription. Merchants see the ones that are on, in this order.",
+    refresh: "Refresh",
+    turnedOn: "Turned on.",
+    turnedOff: "Turned off.",
+    needsManage: "Turning methods on or off needs the “Payment methods — turn on and off” permission.",
+    empty: "No payment methods yet.",
+    offered: "Offered to merchants",
+    notOffered: "Not offered",
+    transferTo: "Transfer to",
+    noNumber: "— no number yet —",
+    moveUp: "Move {name} up",
+    moveDown: "Move {name} down",
+    editNumber: "Edit number",
+    toggleOn: "{name} on",
+    gatewaysTitle: "Gateways not added yet",
+    gatewaysDescription: "This server has these gateways. Turning one on adds it to the list above.",
+    configured: "Configured in the environment.",
+    notConfigured: "Not configured: {missing}",
+    addAndTurnOn: "Add and turn on",
+    savedToast: "Saved. The change is in the audit log.",
+    onHere: "On here",
+    offHere: "Off here",
+    noAdapter: "this server has no adapter for it",
+    configuredLower: "configured in the environment",
+    notConfiguredLower: "not configured in the environment ({missing})",
+    dialogTitle: "{name}: where the money goes",
+    dialogDescription: "Merchants send their transfers here. Check it twice: a wrong number sends their money elsewhere.",
+    cancel: "Cancel",
+    saving: "Saving…",
+    save: "Save",
+    numberLabel: "Number or InstaPay address",
+    noteArLabel: "Note in Arabic (optional)",
+    noteEnLabel: "Note in English (optional)",
+  },
+  ar: {
+    title: "طرق الدفع",
+    description: "كيف يدفع التجار اشتراكهم. يرى التجار الطرق المفعّلة بهذا الترتيب.",
+    refresh: "تحديث",
+    turnedOn: "فُعّلت.",
+    turnedOff: "أُوقفت.",
+    needsManage: "تفعيل الطرق أو إيقافها يحتاج إلى صلاحية «طرق الدفع — التفعيل والإيقاف».",
+    empty: "لا توجد طرق دفع بعد.",
+    offered: "معروضة على التجار",
+    notOffered: "غير معروضة",
+    transferTo: "التحويل إلى",
+    noNumber: "— لا يوجد رقم بعد —",
+    moveUp: "نقل {name} لأعلى",
+    moveDown: "نقل {name} لأسفل",
+    editNumber: "تعديل الرقم",
+    toggleOn: "تفعيل {name}",
+    gatewaysTitle: "بوابات لم تُضف بعد",
+    gatewaysDescription: "هذا الخادم يدعم هذه البوابات. تفعيل إحداها يضيفها إلى القائمة أعلاه.",
+    configured: "مُعدّة في بيئة التشغيل.",
+    notConfigured: "غير مُعدّة: {missing}",
+    addAndTurnOn: "إضافة وتفعيل",
+    savedToast: "حُفظ. التغيير مسجّل في سجل التدقيق.",
+    onHere: "مفعّلة هنا",
+    offHere: "متوقفة هنا",
+    noAdapter: "لا يوجد على هذا الخادم محوّل لها",
+    configuredLower: "مُعدّة في بيئة التشغيل",
+    notConfiguredLower: "غير مُعدّة في بيئة التشغيل ({missing})",
+    dialogTitle: "{name}: أين تذهب الأموال",
+    dialogDescription: "يرسل التجار تحويلاتهم إلى هنا. راجعه مرتين: الرقم الخاطئ يرسل أموالهم إلى مكان آخر.",
+    cancel: "إلغاء",
+    saving: "جارٍ الحفظ…",
+    save: "حفظ",
+    numberLabel: "الرقم أو عنوان إنستاباي",
+    noteArLabel: "ملاحظة بالعربية (اختيارية)",
+    noteEnLabel: "ملاحظة بالإنجليزية (اختيارية)",
+  },
+} satisfies Messages;
 
 /**
  * The ways merchants can pay Zimos. Reading is for whoever reviews payments;
@@ -24,6 +100,7 @@ import * as adminApi from "@/lib/adminApi";
  * environment has what it needs — by variable names, never a value.
  */
 export function PaymentMethodsPage() {
+  const t = useT(STRINGS);
   const { can } = useAuth();
   const toast = useToast();
   const canManage = can(P.PAYMENT_METHODS_MANAGE);
@@ -38,7 +115,7 @@ export function PaymentMethodsPage() {
     try {
       await adminApi.updatePaymentMethod(code, { enabled });
       await refresh({ silent: true });
-      toast.success(enabled ? "Turned on." : "Turned off.");
+      toast.success(enabled ? t.turnedOn : t.turnedOff);
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -64,21 +141,21 @@ export function PaymentMethodsPage() {
   return (
     <div>
       <PageHeader
-        title="Payment methods"
-        description="How merchants pay their subscription. Merchants see the ones that are on, in this order."
+        title={t.title}
+        description={t.description}
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw /> Refresh
+            <RefreshCw /> {t.refresh}
           </Button>
         }
       />
       {!canManage && (
-        <Alert className="mb-4">Turning methods on or off needs the “Payment methods — turn on and off” permission.</Alert>
+        <Alert className="mb-4">{t.needsManage}</Alert>
       )}
       <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
         <div className="space-y-4">
           {methods.length === 0 ? (
-            <EmptyBlock message="No payment methods yet." />
+            <EmptyBlock message={t.empty} />
           ) : (
             <Panel flush>
               <ul className="divide-y divide-line">
@@ -91,11 +168,11 @@ export function PaymentMethodsPage() {
                           {m.labelAr}
                         </span>
                         <Mono className="text-xs">{m.code}</Mono>
-                        <Status value={m.offered ? "active" : "inactive"} label={m.offered ? "Offered to merchants" : "Not offered"} />
+                        <Status value={m.offered ? "active" : "inactive"} label={m.offered ? t.offered : t.notOffered} />
                       </p>
                       {m.kind === "manual" ? (
                         <p className="text-sm text-ink-soft">
-                          Transfer to <span dir="ltr" className="font-mono text-ink">{m.accountNumber || "— no number yet —"}</span>
+                          {t.transferTo} <span dir="ltr" className="font-mono text-ink">{m.accountNumber || t.noNumber}</span>
                           {(m.noteEn || m.noteAr) && <span className="block text-xs">{m.noteEn || m.noteAr}</span>}
                         </p>
                       ) : (
@@ -108,7 +185,7 @@ export function PaymentMethodsPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            aria-label={`Move ${m.labelEn} up`}
+                            aria-label={fmt(t.moveUp, { name: m.labelEn })}
                             disabled={busy !== null || index === 0}
                             onClick={() => void move(index, -1)}
                           >
@@ -117,7 +194,7 @@ export function PaymentMethodsPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            aria-label={`Move ${m.labelEn} down`}
+                            aria-label={fmt(t.moveDown, { name: m.labelEn })}
                             disabled={busy !== null || index === methods.length - 1}
                             onClick={() => void move(index, 1)}
                           >
@@ -127,12 +204,12 @@ export function PaymentMethodsPage() {
                       )}
                       {m.kind === "manual" && canEditNumbers && (
                         <Button size="sm" variant="outline" onClick={() => setEditing(m)}>
-                          Edit number
+                          {t.editNumber}
                         </Button>
                       )}
                       <Toggle
                         checked={m.enabled}
-                        label={`${m.labelEn} on`}
+                        label={fmt(t.toggleOn, { name: m.labelEn })}
                         hideLabel
                         disabled={!canManage || busy !== null}
                         onChange={(next) => void setEnabled(m.code, next)}
@@ -145,19 +222,19 @@ export function PaymentMethodsPage() {
           )}
 
           {(data?.gatewaysNotAdded.length ?? 0) > 0 && (
-            <Panel title="Gateways not added yet" description="This server has these gateways. Turning one on adds it to the list above.">
+            <Panel title={t.gatewaysTitle} description={t.gatewaysDescription}>
               <ul className="space-y-3">
                 {data!.gatewaysNotAdded.map((g) => (
                   <li key={g.code} className="flex flex-wrap items-center justify-between gap-3">
                     <div className="text-sm">
                       <span className="font-medium text-ink">{g.name}</span> <Mono className="text-xs">{g.code}</Mono>
                       <span className="block text-xs text-ink-soft">
-                        {g.configured ? "Configured in the environment." : `Not configured: ${g.missing.join(", ")}`}
+                        {g.configured ? t.configured : fmt(t.notConfigured, { missing: g.missing.join(", ") })}
                       </span>
                     </div>
                     {canManage && (
                       <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => void setEnabled(g.code, true)}>
-                        Add and turn on
+                        {t.addAndTurnOn}
                       </Button>
                     )}
                   </li>
@@ -174,7 +251,7 @@ export function PaymentMethodsPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            toast.success("Saved. The change is in the audit log.");
+            toast.success(t.savedToast);
             void refresh({ silent: true });
           }}
         />
@@ -184,21 +261,24 @@ export function PaymentMethodsPage() {
 }
 
 function GatewayState({ method }: { method: AdminPaymentMethod }) {
+  const t = useT(STRINGS);
   const g = method.gateway;
   if (!g) return null;
   return (
     <p className="text-sm text-ink-soft">
-      {g.name ?? method.code} · {method.enabled ? "On here" : "Off here"} ·{" "}
+      {g.name ?? method.code} · {method.enabled ? t.onHere : t.offHere} ·{" "}
       {!g.adapterInstalled
-        ? "this server has no adapter for it"
+        ? t.noAdapter
         : g.configured
-          ? "configured in the environment"
-          : `not configured in the environment (${g.missing.join(", ")})`}
+          ? t.configuredLower
+          : fmt(t.notConfiguredLower, { missing: g.missing.join(", ") })}
     </p>
   );
 }
 
 function AccountDialog({ method, onClose, onSaved }: { method: AdminPaymentMethod; onClose: () => void; onSaved: () => void }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [accountNumber, setAccountNumber] = useState(method.accountNumber ?? "");
   const [noteAr, setNoteAr] = useState(method.noteAr ?? "");
   const [noteEn, setNoteEn] = useState(method.noteEn ?? "");
@@ -221,23 +301,23 @@ function AccountDialog({ method, onClose, onSaved }: { method: AdminPaymentMetho
     <Modal
       open
       onClose={() => !busy && onClose()}
-      title={`${method.labelEn}: where the money goes`}
-      description="Merchants send their transfers here. Check it twice: a wrong number sends their money elsewhere."
+      title={fmt(t.dialogTitle, { name: locale === "ar" ? method.labelAr : method.labelEn })}
+      description={t.dialogDescription}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {t.cancel}
           </Button>
           <Button onClick={() => void save()} disabled={busy || !accountNumber.trim()}>
-            {busy ? "Saving…" : "Save"}
+            {busy ? t.saving : t.save}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
-        <TextField label="Number or InstaPay address" dir="ltr" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} maxLength={80} required />
-        <TextField label="Note in Arabic (optional)" dir="rtl" value={noteAr} onChange={(e) => setNoteAr(e.target.value)} maxLength={500} />
-        <TextField label="Note in English (optional)" value={noteEn} onChange={(e) => setNoteEn(e.target.value)} maxLength={500} />
+        <TextField label={t.numberLabel} dir="ltr" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} maxLength={80} required />
+        <TextField label={t.noteArLabel} dir="rtl" value={noteAr} onChange={(e) => setNoteAr(e.target.value)} maxLength={500} />
+        <TextField label={t.noteEnLabel} value={noteEn} onChange={(e) => setNoteEn(e.target.value)} maxLength={500} />
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
     </Modal>

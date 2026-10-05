@@ -1,5 +1,11 @@
 import { Hourglass } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: { comingLater: "Coming later" },
+  ar: { comingLater: "قريبًا" },
+} satisfies Messages;
 
 interface ComingLaterProps {
   title: string;
@@ -15,6 +21,7 @@ interface ComingLaterProps {
  * the area is coming later, so nobody mistakes it for a broken screen.
  */
 export function ComingLater({ title, description, summary }: ComingLaterProps) {
+  const t = useT(STRINGS);
   return (
     <div>
       <PageHeader title={title} description={description} />
@@ -23,7 +30,7 @@ export function ComingLater({ title, description, summary }: ComingLaterProps) {
           <Hourglass className="size-5 text-primary" aria-hidden />
         </span>
         <div className="max-w-md space-y-1.5">
-          <h2 className="text-base font-semibold text-ink">Coming later</h2>
+          <h2 className="text-base font-semibold text-ink">{t.comingLater}</h2>
           <p className="text-sm text-ink-soft">{summary}</p>
         </div>
       </div>
