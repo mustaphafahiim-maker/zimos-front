@@ -12,6 +12,7 @@ import { PagesTab } from "./PagesTab";
 import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
 import { DomainsTab } from "./DomainsTab";
+import { CUSTOM_DOMAINS_ENABLED } from "@/lib/features";
 import { LanguagesTab } from "./LanguagesTab";
 
 /**
@@ -19,8 +20,10 @@ import { LanguagesTab } from "./LanguagesTab";
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains"] as const;
-type TabKey = (typeof TABS)[number];
+const ALL_TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains"] as const;
+type TabKey = (typeof ALL_TABS)[number];
+// Domains only while merchant domains are switched on (lib/features); off, /store-settings/domains opens General.
+const TABS: readonly TabKey[] = CUSTOM_DOMAINS_ENABLED ? ALL_TABS : ALL_TABS.filter((tab) => tab !== "domains");
 
 const STRINGS = {
   en: {

@@ -17,6 +17,9 @@ import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { CopyButton } from "@/components/CopyButton";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
+import { AI_FUNNEL_DEFAULTS, AiFunnelFields, AiTemplateCard, createAiFunnel, useAiFunnelText, type AiFunnelSettings } from "./AiFunnelOption";
+import { useAiErrorText } from "@/lib/aiRun";
+import { AI_ENABLED } from "@/lib/features";
 import { useToast } from "@/components/Toast";
 import { createFunnelFromStarter, useFunnelErrorMessage, type StarterTemplateId } from "./funnelAdapter";
 import { FunnelTemplateGallery, type GalleryPick } from "./FunnelTemplateGallery";
@@ -141,6 +144,11 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
   const [templateLang, setTemplateLang] = useState(locale);
   const [copyFrom, setCopyFrom] = useState<{ funnelId: string; name: string } | null>(null);
   const [productId, setProductId] = useState("");
+  // The "AI template" card (AiFunnelOption.tsx): the AI writes the sales page. Only while AI is switched on.
+  const [ai, setAi] = useState(false);
+  const [aiSettings, setAiSettings] = useState<AiFunnelSettings>(AI_FUNNEL_DEFAULTS);
+  const aiText = useAiFunnelText();
+  const aiError = useAiErrorText();
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
@@ -183,6 +191,16 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
         return onCreated(copy.id);
       } catch (err) {
         setError(describeError(err));
+        return setBusy(false);
+      }
+    }
+    if (AI_ENABLED && ai) {
+      try {
+        const id = await createAiFunnel(workspaceId, { productId, name: name.trim(), subdomain: subdomain || undefined, settings: aiSettings });
+        toast.success(fmt(t.created, { name: name.trim() }));
+        return onCreated(id);
+      } catch (err) {
+        setError(aiError(err));
         return setBusy(false);
       }
     }
@@ -300,6 +318,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                         setGoal(value);
                         setTemplateId("blank");
                         setCopyFrom(null);
+                        setAi(false);
                       }}
                     />
                     <p className="text-sm font-semibold text-ink">{label}</p>
@@ -310,13 +329,15 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
               <FunnelTemplateGallery
                 goal={goal}
                 locale={locale}
-                value={copyFrom ? { kind: "copy", ...copyFrom } : { kind: "starter", id: templateId, lang: templateLang }}
+                value={ai ? null : copyFrom ? { kind: "copy", ...copyFrom } : { kind: "starter", id: templateId, lang: templateLang }}
                 onChange={(pick: GalleryPick) => {
+                  setAi(false);
                   if (pick.kind === "copy") return setCopyFrom({ funnelId: pick.funnelId, name: pick.name });
                   setCopyFrom(null);
                   setTemplateId(pick.id);
                   setTemplateLang(pick.lang);
                 }}
+                leading={AI_ENABLED && goal === "sell" ? <AiTemplateCard active={ai} onSelect={() => { setAi(true); setCopyFrom(null); }} /> : null}
               />
             </div>
           )}
@@ -333,6 +354,11 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 ))}
               </Select>
               <p className="text-xs text-ink-soft">{goal === "leads" ? t.goalLeadsHint : t.productHint}</p>
+              {AI_ENABLED && ai && (
+                <div className="pt-2">
+                  <AiFunnelFields value={aiSettings} onChange={setAiSettings} />
+                </div>
+              )}
             </div>
           )}
 
@@ -361,6 +387,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 type="button"
                 onClick={() => {
                   setError(null);
+                  if (step === 2 && AI_ENABLED && ai && !productId) return setError(aiText.needsProduct);
                   setStep((s) => (s + 1) as 2 | 3);
                 }}
               >

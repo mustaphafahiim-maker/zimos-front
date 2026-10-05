@@ -267,12 +267,15 @@ export function RegisterPage() {
 
   const totalSteps = (planStep ? 1 : 0) + 1 + (options?.verificationRequired ? 1 : 0);
   const stepNumber = step === "plan" ? 1 : step === "account" ? (planStep ? 2 : 1) : totalSteps;
+  // The account form (the last branch below) takes two columns from lg up, in a
+  // wider card; the loader and the code screen keep the narrow one.
+  const showsAccountForm = !loadingOptions && step !== "plan" && !(step === "code" && challenge);
 
   return (
     <div className="auth-glass">
       <AuthBackdrop />
       <div className="auth-glass-stage">
-        <div className={step === "plan" ? "w-full max-w-xl" : "w-full max-w-sm"}>
+        <div className={step === "plan" ? "w-full max-w-xl" : showsAccountForm ? "w-full max-w-sm lg:max-w-4xl" : "w-full max-w-sm"}>
           {totalSteps > 1 && (
             <p className="mb-3 text-xs font-medium text-ink-soft">
               {fmt(t.stepOf, { n: stepNumber, total: totalSteps })}
@@ -366,8 +369,14 @@ export function RegisterPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <Alert variant="danger">{error}</Alert>}
+        {/* One column below lg; from lg two, in the fields' order (name | username,
+            email | phone, password | confirm), with the alert, terms and submit full width. */}
+        <form onSubmit={handleSubmit} className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-5 lg:space-y-0">
+          {error && (
+            <Alert variant="danger" className="lg:col-span-2">
+              {error}
+            </Alert>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="fullName">{t.fullName}</Label>
@@ -478,17 +487,19 @@ export function RegisterPage() {
             {confirm.length > 0 && password !== confirm && <p className="mt-1 text-xs text-danger">{t.mismatch}</p>}
           </div>
 
-          <TermsConsent
-            checked={acceptTerms}
-            onChange={(next) => {
-              setAcceptTerms(next);
-              if (next) setTermsError(false);
-            }}
-            showError={termsError}
-            disabled={submitting}
-          />
+          <div className="lg:col-span-2">
+            <TermsConsent
+              checked={acceptTerms}
+              onChange={(next) => {
+                setAcceptTerms(next);
+                if (next) setTermsError(false);
+              }}
+              showError={termsError}
+              disabled={submitting}
+            />
+          </div>
 
-          <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
+          <Button type="submit" className="min-h-11 w-full lg:col-span-2" disabled={submitting}>
             {submitting ? t.creating : t.create}
           </Button>
         </form>

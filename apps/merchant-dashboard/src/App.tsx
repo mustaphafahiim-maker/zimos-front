@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { LocaleProvider } from "@/i18n/LocaleContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
@@ -7,6 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
+import { AI_ENABLED } from "@/lib/features";
 import { LoginPage } from "@/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -64,6 +65,8 @@ import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 // with every dashboard page.
 // The funnel list shares the funnel starters (and so the block library's
 // element table) with the funnel editor, so it is split off with it.
+const AiStudioPage = lazy(() => import("@/pages/ai/AiStudioPage").then((m) => ({ default: m.AiStudioPage })));
+const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
 const ActivityLogPage = lazy(() => import("@/pages/activity/ActivityLogPage").then((m) => ({ default: m.ActivityLogPage })));
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
 const FunnelEditorPage = lazy(() =>
@@ -189,6 +192,9 @@ export default function App() {
                       <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />
                       <Route path="/ads" element={<LazyRoute><AdsPage /></LazyRoute>} />
                       <Route path="/media" element={<LazyRoute><MediaLibraryPage /></LazyRoute>} />
+                      {/* AI features (lib/features): off, these addresses go home. */}
+                      <Route path="/ai" element={AI_ENABLED ? <LazyRoute><AiStudioPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/inbox/bot" element={AI_ENABLED ? <LazyRoute><WaBotPage /></LazyRoute> : <Navigate to="/" replace />} />
                       <Route path="/store-settings" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/store-settings/:tab" element={<LazyRoute><StoreDesignPage /></LazyRoute>} />
                       <Route path="/settings" element={<SettingsPage />} />

@@ -774,7 +774,7 @@ const UI_EN = {
   radiusName: (key: string) =>
     (({ sharp: "Sharp", soft: "Soft", round: "Round" }) as Record<string, string>)[key] ?? key,
   logo: "Logo",
-  logoHint: "Shown in your store's header.",
+  logoHint: "Shown in your store's header, and as its browser tab icon: use a square image of at least 192×192.",
 
   canvasDragSection: "Drag to move this section (or use the arrow keys)",
   canvasDragElement: "Drag to move this block (or use the arrow keys)",
@@ -1046,7 +1046,7 @@ const UI_AR: EditorUi = {
   corners: "الحواف",
   radiusName: (key) => (({ sharp: "حادة", soft: "ناعمة", round: "مدوّرة" }) as Record<string, string>)[key] ?? key,
   logo: "الشعار",
-  logoHint: "يظهر أعلى متجرك في الترويسة.",
+  logoHint: "يظهر أعلى متجرك في الترويسة، وكأيقونة متجرك في تبويب المتصفح: استخدم صورة مربعة لا تقل عن 192×192.",
 
   canvasDragSection: "اسحب لنقل هذا القسم (أو استخدم مفاتيح الأسهم)",
   canvasDragElement: "اسحب لنقل هذا البلوك (أو استخدم مفاتيح الأسهم)",

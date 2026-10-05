@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Menu, Minimize2, Settings, X } from "lucide-react";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
 import { FOCUS_TOGGLE_EVENT, KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
@@ -10,8 +10,11 @@ import {
   findNavGroup,
   findNavItem,
   isNavItemVisible,
+  type NavGroup,
 } from "@/lib/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SignOutConfirmDialog } from "@/components/SignOutButton";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
@@ -20,7 +23,6 @@ import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { SignOutButton } from "@/components/SignOutButton";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
@@ -113,6 +115,78 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
 
+  // One group: its heading (a collapse toggle) and the entries this role can use.
+  function renderGroup(group: NavGroup, divided: boolean) {
+    const heading = group.labelKey ? groupLabels[group.labelKey] : null;
+    // Only a headed group can be collapsed: an unheaded one has no control
+    // to open it again, so a stored "closed" for it (the default for every
+    // group outside NAV_OPEN_BY_DEFAULT) is ignored.
+    const isClosed = Boolean(heading && collapsed[group.id]);
+    // Entries this role can't use are left out; a group left empty goes too.
+    const visible = group.items.filter((i) => isNavItemVisible(i, role));
+    if (visible.length === 0) return null;
+    const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
+
+    return (
+      <div
+        key={group.id}
+        className={cn(divided && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
+      >
+        {heading && (
+          <button
+            type="button"
+            onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
+            aria-expanded={!isClosed}
+            aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
+            className="mb-1 flex min-h-10 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink md:min-h-8 rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
+          >
+            <span className="flex-1 text-start">{heading}</span>
+            <ChevronDown
+              className={cn("size-3 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
+              aria-hidden
+            />
+          </button>
+        )}
+        <div className="space-y-0.5">
+          {items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/" || item.to === "/analytics"}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "group relative flex min-h-10 items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
+                  isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                    />
+                  )}
+                  <item.icon
+                    className={cn(
+                      "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
+                      isActive && "text-primary"
+                    )}
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 truncate">{navLabels[item.key]}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="px-4 pt-5 pb-3">
@@ -124,85 +198,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <ZimosLogo height={24} />
         </Link>
-        <StoreSwitcher onNavigate={onNavigate} />
+        {/* The store switcher and, beside it, the light/dark toggle. */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <StoreSwitcher onNavigate={onNavigate} />
+          </div>
+          <ThemeToggle />
+        </div>
         {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
-      <nav aria-label={t.navLabel} className="shell-scroll flex-1 overflow-y-auto px-3 pb-4">
+      {/* The whole list scrolls in the height left; the last group (My Plan,
+          Settings, …) has no heading, so it never collapses. */}
+      <nav aria-label={t.navLabel} className="shell-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
         <SidebarShortcuts onNavigate={onNavigate} />
-        {NAV_GROUPS.map((group, index) => {
-          const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const isClosed = Boolean(collapsed[group.id]);
-          // Entries this role can't use are left out; a group left empty goes too.
-          const visible = group.items.filter((i) => isNavItemVisible(i, role));
-          if (visible.length === 0) return null;
-          const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
-
-          return (
-            <div
-              key={group.id}
-              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
-            >
-              {heading && (
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
-                  aria-expanded={!isClosed}
-                  aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
-                >
-                  <span className="flex-1 text-start">{heading}</span>
-                  <ChevronDown
-                    className={cn("size-3 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
-                    aria-hidden
-                  />
-                </button>
-              )}
-              <div className="space-y-0.5">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === "/" || item.to === "/analytics"}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
-                        isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
-                          />
-                        )}
-                        <item.icon
-                          className={cn(
-                            "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
-                            isActive && "text-primary"
-                          )}
-                          strokeWidth={1.75}
-                          aria-hidden
-                        />
-                        <span className="min-w-0 truncate">{navLabels[item.key]}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {NAV_GROUPS.map((group, index) => renderGroup(group, index > 0))}
       </nav>
-      <div className="flex items-center gap-2 border-t border-line px-3 py-4">
-        <SignOutButton className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger">
-          {t.signOut}
-        </SignOutButton>
-        <ThemeToggle />
-      </div>
     </>
   );
 }
@@ -217,53 +227,61 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
  * no sign-out button on show anywhere.
  */
 function AccountMenu() {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
+  // Sign out asks first (SignOutConfirmDialog), centred over the page; focus
+  // returns to this trigger when the dialog closes.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const navigate = useNavigate();
   const t = useT(STRINGS);
   const userLabel = user?.fullName ?? user?.email ?? "";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            title={t.accountMenu}
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
-          />
-        }
-      >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </span>
-        <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
-        <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end" className="min-w-60">
-        <div className="px-2 py-1.5">
-          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
-          {user?.fullName && user.email && (
-            <p className="truncate text-xs text-ink-soft" dir="ltr">
-              {user.email}
-            </p>
-          )}
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/settings")}>
-          <Settings className="size-4" aria-hidden />
-          {t.settings}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
-          <Keyboard className="size-4" aria-hidden />
-          {t.shortcuts}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => logout()}>
-          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
-          {t.signOut}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={triggerRef}
+          render={
+            <button
+              type="button"
+              title={t.accountMenu}
+              className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
+            />
+          }
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+            {(userLabel || "?").charAt(0).toUpperCase()}
+          </span>
+          <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
+          <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="bottom" align="end" className="min-w-60">
+          <div className="px-2 py-1.5">
+            <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
+            {user?.fullName && user.email && (
+              <p className="truncate text-xs text-ink-soft" dir="ltr">
+                {user.email}
+              </p>
+            )}
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <Settings className="size-4" aria-hidden />
+            {t.settings}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
+            <Keyboard className="size-4" aria-hidden />
+            {t.shortcuts}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => setConfirmSignOut(true)}>
+            <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
+            {t.signOut}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <SignOutConfirmDialog open={confirmSignOut} onClose={() => setConfirmSignOut(false)} returnFocusTo={triggerRef} />
+    </>
   );
 }
 
@@ -281,7 +299,7 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <div className="relative mt-4">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -465,7 +483,7 @@ export function DashboardLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* Search, the store's link and alerts. Language and theme are in Settings. */}
+            {/* Search, the store's link, the language switch and alerts. The theme is in the sidebar. */}
             <CommandPalette />
             {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
             {/* Full screen: the side menu steps aside so the page has the whole width. */}
@@ -479,6 +497,9 @@ export function DashboardLayout() {
             >
               {focus ? <Minimize2 className="size-[18px]" aria-hidden /> : <Maximize2 className="size-[18px]" aria-hidden />}
             </button>
+            {/* Arabic / English, flipping the whole dashboard between RTL and LTR. */}
+            <LanguageSwitch className="hidden sm:inline-flex" />
+            <LanguageSwitch compact className="sm:hidden" />
             <NotificationsBell />
             <AccountMenu />
           </div>

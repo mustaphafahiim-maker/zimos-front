@@ -60,6 +60,8 @@ async function lookup(hostname: string): Promise<ResolvedHost | null> {
   try {
     const res = await fetch(`${API_BASE}/store/resolve-host?host=${encodeURIComponent(hostname)}`, {
       headers: { accept: "application/json" },
+      // The proxy stops waiting at 1.5 s (proxy.ts); the request stops with it.
+      signal: AbortSignal.timeout(1500),
     });
     if (res.ok) {
       const body = (await res.json()) as { store?: { slug?: unknown; homeFunnel?: { ref?: unknown } | null; primaryHost?: unknown } };

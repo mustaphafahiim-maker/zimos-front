@@ -157,3 +157,7 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// AI module: generation jobs, usage, apply as draft; the WhatsApp reply bot.
+// The dashboard shows none of it unless VITE_AI_ENABLED is "true".
+export * from "./endpoints/ai";
+export * from "./endpoints/waBot";

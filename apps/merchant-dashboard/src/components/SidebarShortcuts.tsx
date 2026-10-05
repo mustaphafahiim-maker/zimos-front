@@ -108,7 +108,7 @@ export function SidebarShortcuts({ onNavigate }: { onNavigate?: () => void }) {
             to={item.to}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary"
+              "flex min-h-10 items-center gap-2.5 rounded-[0.5rem] px-3 py-1.5 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary"
             )}
           >
             <item.icon className="size-4 shrink-0" aria-hidden />

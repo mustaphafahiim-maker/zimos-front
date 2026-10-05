@@ -15,6 +15,8 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { AI_ENABLED } from "@/lib/features";
+import { AiTranslateButton } from "./AiTranslateButton";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
@@ -100,7 +102,7 @@ export function LanguagesTab() {
   const [locale, setLocale] = useState<StoreLocale | "">("");
   const [kind, setKind] = useState<TranslatableEntity | ContentEntity>("product");
   // Bumped after an AI fill, so the rows below read their translations again.
-  const [version] = useState(0);
+  const [version, setVersion] = useState(0);
 
   const data = overview.data;
   const extra = (data?.languages ?? []).filter((l) => !l.isDefault);
@@ -199,6 +201,16 @@ export function LanguagesTab() {
                       { value: "funnel", label: t.funnels },
                     ]}
                   />
+                  {AI_ENABLED && (
+                    <AiTranslateButton
+                      locale={active}
+                      kind={kind}
+                      onDone={() => {
+                        setVersion((v) => v + 1);
+                        void overview.refresh({ silent: true });
+                      }}
+                    />
+                  )}
                 </div>
                 {kind === "page" || kind === "funnel" ? (
                   <ContentTranslationRows
