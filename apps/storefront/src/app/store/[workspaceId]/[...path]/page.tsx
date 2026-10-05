@@ -109,6 +109,7 @@ export default async function CustomStorePage({ params }: { params: Params }) {
           currency={store.currency}
           locale={locale}
           siteStyles={result.data.site?.globalStyles}
+          pageId={(page as { id?: string | null }).id}
         />
       </HtmlBlocksProvider>
       <PageScripts scripts={scriptsOf(page)} />

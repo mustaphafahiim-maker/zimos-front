@@ -112,6 +112,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             currency={store.currency}
             locale={locale}
             siteStyles={landing.data.site?.globalStyles}
+            pageId={(landing.data.page as { id?: string | null }).id}
           />
         </main>
       );

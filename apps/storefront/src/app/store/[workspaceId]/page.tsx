@@ -79,6 +79,7 @@ export default async function StoreHomePage({
             currency={store.currency}
             locale={locale}
             siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
+            pageId={published.kind === "page" ? (published.data.page as { id?: string | null }).id : undefined}
           />
         </HtmlBlocksProvider>
         {published.kind === "page" && <PageScripts scripts={scriptsOf(published.data.page)} />}

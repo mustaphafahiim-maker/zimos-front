@@ -152,10 +152,10 @@ const FIELD_LABEL_AR: Record<string, string> = {
 const FIELD_HINT_AR: Record<string, string> = {
   "countdown.endsAt": "تاريخ ووقت ثابتين — نفس الموعد لكل زائر.",
   "countdown.endsInHours": "لو مفيش تاريخ: النشر بيحوّله لتاريخ ثابت.",
-  "button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "button.contactTags": "تُضاف للعميل اللي يضغطه لما يطلب — في صفحة المتجر أو في الفانل.",
   "upsell_accept_button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
   "upsell_decline_link.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
-  "cod_form.contactTags": "في الفانل: تُضاف للعميل لما يطلب.",
+  "cod_form.contactTags": "تُضاف للعميل لما يطلب من الفورم ده — في صفحة المتجر أو في الفانل.",
   "rich_text.text": "نص عادي بس في المحرر ده — أدوات التنسيق جاية بعدين.",
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "image.width": "نسبة من عرض العمود — أو اسحب ركن الصورة في المعاينة. يحل محل الحجم؛ اتركه فارغًا لاستخدام الحجم.",

@@ -386,7 +386,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         max: 8760,
         hint: "Used when no date is set: publishing turns it into a fixed date.",
       },
-      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "Added to the customer who presses it, once they order — on a store page or in a funnel." },
     ],
   },
   form: {
@@ -686,7 +686,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         kind: "text",
         hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
       },
-      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer when they place the order." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "Added to the customer when they place the order with this form — on a store page or in a funnel." },
     ],
   },
   checkout_summary: {

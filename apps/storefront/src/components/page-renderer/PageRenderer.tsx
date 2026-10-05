@@ -66,6 +66,7 @@ import { applyBindings, loadBindingData, pageProductId, type BindingData } from 
 import { RepeaterElement } from "./repeater";
 import { HtmlBlock } from "@/components/HtmlBlock";
 import { MasonryGridElement, ProductActionElement, productAction } from "./builderMore";
+import { PageTagScope } from "./PageTagScope";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
@@ -128,12 +129,32 @@ interface Ctx {
   data: BindingData | null;
   /** The page's product, for product elements that name none; "" when the page has none. */
   pageProductId: string;
+  /** The website page being shown (its published id): its tagging buttons and forms report it (PageTagScope). */
+  pageId?: string;
+}
+
+/** A website page's buy button or order form that tags the customer (SPEC §18.4, lib/pageTags.ts). */
+const TAGGING_TYPES = new Set(["button", "cod_form"]);
+const hasContactTags = (element: PageElement) => {
+  const raw = (propsOf(element) as { contactTags?: unknown }).contactTags;
+  return (Array.isArray(raw) ? raw : String(raw ?? "").split(",")).some((tag) => String(tag).trim() !== "");
+};
+
+function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+  const body = <ElementBody element={element} ctx={ctx} />;
+  // A funnel tags through its own outcomes (backend funnels/funnelTags.js); the editor's preview never orders.
+  if (!ctx.pageId || ctx.funnel || ctx.editable || !TAGGING_TYPES.has(element.type) || !hasContactTags(element)) return body;
+  return (
+    <PageTagScope workspaceId={ctx.workspaceId} pageId={ctx.pageId} elementId={String(element.id)}>
+      {body}
+    </PageTagScope>
+  );
 }
 
 /** Elements whose empty `productId` means "the page's product". */
 const PAGE_PRODUCT_TYPES = new Set(["button", "price", "reviews_list", "cod_form", "image_gallery", "variant_selector", "bundle_selector", "review_form"]);
 
-function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+function ElementBody({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   // Bound props are replaced by live data before the element ever sees them.
   const bound = ctx.data ? applyBindings(element, ctx.data) : propsOf(element);
   // A product element with no product of its own follows the page's product.
@@ -423,6 +444,7 @@ export async function PageRenderer({
   editable = false,
   funnel,
   siteStyles,
+  pageId,
 }: {
   tree: PageTree | null;
   workspaceId: string;
@@ -438,6 +460,8 @@ export async function PageRenderer({
   funnel?: PageRendererFunnel;
   /** The website's global styles: its named styles apply on every page (elementStyle.ts). */
   siteStyles?: unknown;
+  /** The published website page this is (its tagging buttons and forms report it); absent on funnel steps and previews. */
+  pageId?: string | null;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
@@ -453,6 +477,7 @@ export async function PageRenderer({
     // One load for the whole page; null (and no call at all) when nothing is bound.
     data: await loadBindingData(tree, workspaceId, currency, locale),
     pageProductId: pageProductId(tree),
+    pageId: pageId || undefined,
   };
   const hero = heroSectionIndex(sections);
   const css = pageStyleSheet(tree, siteStyles);
