@@ -182,7 +182,7 @@ describe("the banner", () => {
     renderWithProviders(<AccessBanner />);
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("Your prepaid balance has run out");
-    expect(within(banner).getByRole("link", { name: "Subscription" })).toHaveAttribute("href", "/subscription?tab=usage");
+    expect(within(banner).getByRole("link", { name: "My Plan" })).toHaveAttribute("href", "/subscription?tab=usage");
   });
 
   it("warns, dismissibly, when it runs low", async () => {
