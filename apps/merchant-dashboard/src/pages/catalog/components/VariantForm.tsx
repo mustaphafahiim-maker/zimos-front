@@ -18,6 +18,7 @@ import { gramsToKgInput, kgInputToGrams } from "@/lib/weight";
 import { Select } from "@/components/Select";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useCatalogLabels } from "../catalogLabels";
+import { ImageField } from "@/pages/website/editor/ImageField";
 
 const STRINGS = {
   en: {
@@ -43,6 +44,8 @@ const STRINGS = {
     weight: "Weight",
     weightUnit: "kg",
     weightHint: "Used for shipping price and the courier's package. Leave blank if unknown.",
+    image: "Variant image",
+    imageHint: "Optional. Shown on the product page when this variant is chosen, and in the cart.",
     weightInvalid: "Enter a weight between 0 and 1000 kg, or leave it blank.",
     skuTaken: "That SKU is already used by another variant.",
     cancel: "Cancel",
@@ -73,6 +76,8 @@ const STRINGS = {
     weight: "الوزن",
     weightUnit: "كجم",
     weightHint: "يُستخدم لحساب سعر الشحن ونوع الشحنة عند شركة الشحن. اتركه فارغًا لو غير معروف.",
+    image: "صورة النسخة",
+    imageHint: "اختياري. بتظهر في صفحة المنتج لما العميل يختار النسخة دي، وفي السلة.",
     weightInvalid: "أدخل وزنًا بين 0 و1000 كجم، أو اتركه فارغًا.",
     skuTaken: "رمز SKU هذا مستخدم لمتغير آخر.",
     cancel: "إلغاء",
@@ -124,6 +129,8 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
   const [options, setOptions] = useState(stringifyOptionValues(variant?.optionValues));
   const [allowOverselling, setAllowOverselling] = useState(variant?.allowOverselling ?? false);
   const [status, setStatus] = useState<"active" | "archived">(variant?.status ?? "active");
+  // The variant's own picture (SPEC §7.2); the Variant type does not name it yet.
+  const [imageUrl, setImageUrl] = useState((variant as { imageUrl?: string | null } | undefined)?.imageUrl ?? "");
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -167,6 +174,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           weightGrams,
           allowOverselling,
           status,
+          ...{ imageUrl: imageUrl || null },
         };
         await apiClient.updateVariant(workspaceId, variant.id, payload);
       } else {
@@ -179,6 +187,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           optionValues: parseOptionValues(options),
           weightGrams,
           allowOverselling,
+          ...{ imageUrl: imageUrl || null },
           stockOnHand: Number.isFinite(stockValue) && stockValue > 0 ? Math.floor(stockValue) : 0,
         };
         await apiClient.createVariant(workspaceId, productId, payload);
@@ -242,6 +251,8 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         error={fieldErrors.weightGrams}
         hint={t.weightHint}
       />
+
+      <ImageField label={t.image} hint={t.imageHint} value={imageUrl} onChange={setImageUrl} />
 
       {!isEdit && (
         <>
