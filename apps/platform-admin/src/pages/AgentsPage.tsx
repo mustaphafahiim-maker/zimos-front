@@ -14,13 +14,72 @@ import { useToast } from "@/components/Toast";
 import { CodeFields, CommissionTotals } from "@/components/referrals";
 import { describeDiscount, initialCodeForm, toCodeInput, type CodeFormState } from "@/lib/referrals";
 import { useAuth } from "@/context/AuthContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import * as adminApi from "@/lib/adminApi";
 import { formatBp } from "@/lib/format";
 import { P } from "@/lib/permissions";
 
+const STRINGS = {
+  en: {
+    title: "Agents",
+    description: "Referral codes, the merchants who used them, and the commission each payment suggests.",
+    newAgent: "New agent",
+    commissionNote:
+      "Commission is tracking only: Zimos never pays an agent. Each payment a referred merchant makes suggests {rate} of what they paid (or the code’s own rate), and someone marks it paid by hand once they’ve paid it.",
+    empty: "No agents yet.",
+    colAgent: "Agent",
+    colCodes: "Codes",
+    colMerchants: "Merchants",
+    colCommission: "Suggested commission",
+    createdToast: "{email} is now an agent.",
+    noLongerAgent: "No longer an agent",
+    noCodes: "No codes",
+    merchantOne: "· {count} merchant",
+    merchantMany: "· {count} merchants",
+    inactive: "Inactive",
+    noPayments: "No payments yet",
+    modalDescription:
+      "The person needs an active Zimos account first — there are no invitations. They'll sign in here and see only their own codes and commissions.",
+    cancel: "Cancel",
+    creating: "Creating…",
+    createAgent: "Create agent",
+    accountEmail: "Account email",
+    firstCode: "Add their first referral code now",
+    firstCodeHint: "You can add more codes later, for example one per area.",
+  },
+  ar: {
+    title: "الوكلاء",
+    description: "رموز الإحالة، والتجار الذين استخدموها، والعمولة المقترحة عن كل دفعة.",
+    newAgent: "وكيل جديد",
+    commissionNote:
+      "العمولة للمتابعة فقط: لا تدفع Zimos لأي وكيل. كل دفعة يسددها تاجر مُحال تقترح {rate} مما دفعه (أو نسبة الرمز نفسه)، ويُعلّمها شخص ما كمدفوعة يدويًا بعد دفعها.",
+    empty: "لا يوجد وكلاء بعد.",
+    colAgent: "الوكيل",
+    colCodes: "الرموز",
+    colMerchants: "التجار",
+    colCommission: "العمولة المقترحة",
+    createdToast: "أصبح {email} وكيلًا.",
+    noLongerAgent: "لم يعد وكيلًا",
+    noCodes: "لا توجد رموز",
+    merchantOne: "· تاجر واحد",
+    merchantMany: "· عدد التجار: {count}",
+    inactive: "غير نشط",
+    noPayments: "لا توجد مدفوعات بعد",
+    modalDescription:
+      "يحتاج الشخص إلى حساب Zimos نشط أولًا — لا توجد دعوات. سيسجّل الدخول هنا ولن يرى إلا رموزه وعمولاته.",
+    cancel: "إلغاء",
+    creating: "جارٍ الإنشاء…",
+    createAgent: "إنشاء الوكيل",
+    accountEmail: "البريد الإلكتروني للحساب",
+    firstCode: "إضافة أول رمز إحالة له الآن",
+    firstCodeHint: "يمكنك إضافة رموز أخرى لاحقًا، مثلًا رمز لكل منطقة.",
+  },
+} satisfies Messages;
+
 export function AgentsPage() {
+  const t = useT(STRINGS);
   const toast = useToast();
   const { can } = useAuth();
   const { data, loading, error, refresh } = useAsync(() => adminApi.listAgents(), []);
@@ -32,35 +91,31 @@ export function AgentsPage() {
   return (
     <div>
       <PageHeader
-        title="Agents"
-        description="Referral codes, the merchants who used them, and the commission each payment suggests."
+        title={t.title}
+        description={t.description}
         actions={
           can(P.AGENTS_MANAGE) && (
             <Button onClick={() => setCreating(true)}>
-              <UserPlus /> New agent
+              <UserPlus /> {t.newAgent}
             </Button>
           )
         }
       />
 
-      <Alert className="mb-4">
-        Commission is tracking only: Zimos never pays an agent. Each payment a referred merchant makes suggests{" "}
-        {formatBp(defaultRateBp)} of what they paid (or the code&rsquo;s own rate), and someone marks it paid by hand
-        once they&rsquo;ve paid it.
-      </Alert>
+      <Alert className="mb-4">{fmt(t.commissionNote, { rate: formatBp(defaultRateBp) })}</Alert>
 
       <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
         {agents.length === 0 ? (
-          <EmptyBlock message="No agents yet." />
+          <EmptyBlock message={t.empty} />
         ) : (
           <Panel flush>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <Th>Agent</Th>
-                  <Th>Codes</Th>
-                  <Th className="text-end">Merchants</Th>
-                  <Th>Suggested commission</Th>
+                  <Th>{t.colAgent}</Th>
+                  <Th>{t.colCodes}</Th>
+                  <Th className="text-end">{t.colMerchants}</Th>
+                  <Th>{t.colCommission}</Th>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -78,7 +133,7 @@ export function AgentsPage() {
           defaultRateBp={defaultRateBp}
           onClose={() => setCreating(false)}
           onCreated={(email) => {
-            toast.success(`${email} is now an agent.`);
+            toast.success(fmt(t.createdToast, { email }));
             setCreating(false);
             void refresh({ silent: true });
           }}
@@ -89,6 +144,7 @@ export function AgentsPage() {
 }
 
 function AgentRow({ agent }: { agent: AdminAgent }) {
+  const t = useT(STRINGS);
   return (
     <TableRow>
       <Td className="align-top">
@@ -97,14 +153,14 @@ function AgentRow({ agent }: { agent: AdminAgent }) {
         </Link>
         {!agent.isAgent && (
           <StatusBadge tone="neutral" className="ms-2">
-            No longer an agent
+            {t.noLongerAgent}
           </StatusBadge>
         )}
         <span className="block text-xs text-ink-soft">{agent.email}</span>
       </Td>
       <Td className="align-top">
         {agent.codes.length === 0 ? (
-          <span className="text-sm text-ink-soft">No codes</span>
+          <span className="text-sm text-ink-soft">{t.noCodes}</span>
         ) : (
           <ul className="space-y-1.5">
             {agent.codes.map((c) => (
@@ -113,9 +169,9 @@ function AgentRow({ agent }: { agent: AdminAgent }) {
                 {c.label && <span className="text-ink-soft">{c.label}</span>}
                 <span className="text-xs text-ink-soft">{describeDiscount(c)}</span>
                 <span className="text-xs text-ink-soft">
-                  · {c.merchantsReferred} merchant{c.merchantsReferred === 1 ? "" : "s"}
+                  {fmt(c.merchantsReferred === 1 ? t.merchantOne : t.merchantMany, { count: c.merchantsReferred })}
                 </span>
-                {!c.active && <StatusBadge tone="neutral">Inactive</StatusBadge>}
+                {!c.active && <StatusBadge tone="neutral">{t.inactive}</StatusBadge>}
               </li>
             ))}
           </ul>
@@ -123,7 +179,7 @@ function AgentRow({ agent }: { agent: AdminAgent }) {
       </Td>
       <Td className="text-end align-top text-sm">{agent.merchantsReferred}</Td>
       <Td className="align-top">
-        <CommissionTotals totals={agent.commission} empty="No payments yet" />
+        <CommissionTotals totals={agent.commission} empty={t.noPayments} />
       </Td>
     </TableRow>
   );
@@ -138,6 +194,7 @@ function CreateAgentModal({
   onClose: () => void;
   onCreated: (email: string) => void;
 }) {
+  const t = useT(STRINGS);
   const [email, setEmail] = useState("");
   const [withCode, setWithCode] = useState(true);
   const [code, setCode] = useState<CodeFormState>(() => initialCodeForm());
@@ -168,20 +225,20 @@ function CreateAgentModal({
     <Modal
       open
       onClose={() => !busy && onClose()}
-      title="New agent"
-      description="The person needs an active Zimos account first — there are no invitations. They'll sign in here and see only their own codes and commissions."
+      title={t.newAgent}
+      description={t.modalDescription}
       className="max-w-2xl"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {t.cancel}
           </Button>
           <Button
             type="submit"
             form="agent-form"
             disabled={busy || !email.trim() || (withCode && code.code.trim().length < 3)}
           >
-            {busy ? "Creating…" : "Create agent"}
+            {busy ? t.creating : t.createAgent}
           </Button>
         </>
       }
@@ -189,7 +246,7 @@ function CreateAgentModal({
       <form id="agent-form" onSubmit={submit} className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <TextField
-          label="Account email"
+          label={t.accountEmail}
           type="email"
           required
           autoFocus
@@ -197,8 +254,8 @@ function CreateAgentModal({
           onChange={(e) => setEmail(e.target.value)}
         />
         <Toggle
-          label="Add their first referral code now"
-          description="You can add more codes later, for example one per area."
+          label={t.firstCode}
+          description={t.firstCodeHint}
           checked={withCode}
           onChange={setWithCode}
         />

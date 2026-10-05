@@ -1400,12 +1400,13 @@ export class ApiClient {
     return override;
   }
 
-  /** GET /admin/users — one search over name, username, email, id and the user's stores. */
-  async adminSearchUsers(params: { q?: string; page?: number; limit?: number } = {}) {
+  /** GET /admin/users — one search over name, username, email, id and the user's stores. Deleted accounts only with includeDeleted. */
+  async adminSearchUsers(params: { q?: string; page?: number; limit?: number; includeDeleted?: boolean } = {}) {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
     if (params.page) query.set("page", String(params.page));
     if (params.limit) query.set("limit", String(params.limit));
+    if (params.includeDeleted) query.set("includeDeleted", "true");
     const qs = query.toString();
     return this.request<AdminUserSearchPage>(`/admin/users${qs ? `?${qs}` : ""}`);
   }

@@ -5,6 +5,7 @@ import { SocialLinks } from "@store-builder/ui/social-links";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { formatLongDate } from "@/lib/format";
+import { ogImage } from "@/lib/og";
 import { POLICIES_LAST_UPDATED, POLICY_SLUGS, companyDetails, policyPage, type PolicySlug } from "@/lib/policies";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
@@ -21,7 +22,13 @@ export function policyMetadata(slug: PolicySlug, locale: string): Metadata {
       canonical: `/${locale}/${slug}`,
       languages: { ar: `/ar/${slug}`, en: `/en/${slug}` },
     },
-    openGraph: { title: `${page.title} — ZIMOS`, description: page.description, type: "article" },
+    openGraph: {
+      title: `${page.title} — ZIMOS`,
+      description: page.description,
+      type: "article",
+      url: `/${locale}/${slug}`,
+      images: [ogImage(locale)],
+    },
   };
 }
 

@@ -296,7 +296,10 @@ export function AdminLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  const envLabel = import.meta.env.DEV ? t.development : import.meta.env.MODE === "production" ? t.production : import.meta.env.MODE;
+  // The environment badge shows only on a build labelled as a non-production
+  // one; unset (or anything else) shows none.
+  const appEnv = import.meta.env.VITE_APP_ENV;
+  const envLabel = appEnv === "staging" ? t.staging : appEnv === "development" ? t.development : null;
 
   return (
     <div className="flex min-h-screen bg-paper">
@@ -339,13 +342,15 @@ export function AdminLayout() {
           {/* Workspace search reads the workspace and subscription lists. */}
           {can(P.WORKSPACES_VIEW) && <GlobalSearch />}
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
-            <span
-              className="hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-dark sm:inline-flex"
-              title={t.environment}
-            >
-              <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-              {envLabel}
-            </span>
+            {envLabel && (
+              <span
+                className="hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-dark sm:inline-flex"
+                title={t.environment}
+              >
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+                {envLabel}
+              </span>
+            )}
             {can(P.OVERVIEW_VIEW) && <NotificationBell />}
             <LanguageToggle />
             <ThemeToggle />

@@ -7,24 +7,31 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TextAreaField } from "@/components/forms";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import * as adminApi from "@/lib/adminApi";
 import { P } from "@/lib/permissions";
 
 type Action = "suspend" | "unsuspend" | "delete";
 
 /** The account's state as a badge: deleted, suspended, or its plain status. */
+const BADGE_STRINGS = {
+  en: { deleted: "Deleted", suspended: "Suspended" },
+  ar: { deleted: "محذوف", suspended: "موقوف" },
+} satisfies Messages;
+
 export function UserStateBadge({ status, deleted }: { status: string; deleted?: boolean }) {
+  const t = useT(BADGE_STRINGS);
   if (deleted) {
     return (
       <StatusBadge tone="danger" dot>
-        Deleted
+        {t.deleted}
       </StatusBadge>
     );
   }
   if (status === "suspended") {
     return (
       <StatusBadge tone="danger" dot>
-        Suspended
+        {t.suspended}
       </StatusBadge>
     );
   }

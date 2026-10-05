@@ -171,8 +171,8 @@ export async function getWorkspaceRow(workspaceId: string): Promise<AdminWorkspa
 
 // ----------------------------------------------------------------------- users
 
-/** `GET /admin/users` — name, username, email, id or a store of theirs. */
-export function searchUsers(params: { q?: string; page?: number; limit?: number }): Promise<AdminUserSearchPage> {
+/** `GET /admin/users` — name, username, email, id or a store of theirs. Deleted accounts only with includeDeleted. */
+export function searchUsers(params: { q?: string; page?: number; limit?: number; includeDeleted?: boolean }): Promise<AdminUserSearchPage> {
   return apiClient.adminSearchUsers(params);
 }
 

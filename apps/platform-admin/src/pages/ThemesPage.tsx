@@ -13,6 +13,92 @@ import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
 import { formatMinorMoney } from "@/lib/format";
 import { useAsync } from "@/lib/useAsync";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Themes",
+    description:
+      "The store themes merchants can pick. A theme's look is code in the storefront; here you name it, sort it, price it and switch it on or off.",
+    empty: "No themes yet — the catalog starts with the storefront's own themes once the migrations have run.",
+    catalog: "Catalog",
+    colTheme: "Theme",
+    colCategory: "Category",
+    colKind: "Kind",
+    colPrice: "Price",
+    colStores: "Stores using it",
+    colStatus: "Status",
+    free: "Free",
+    offered: "Offered",
+    hidden: "Hidden",
+    edit: "Edit",
+    errPrice: "The price is a positive amount, or empty for free.",
+    savedToast: "Theme saved.",
+    editNamed: "Edit {name}",
+    originalNote: "The original look is every store's fallback: it stays free and offered.",
+    cancel: "Cancel",
+    save: "Save",
+    nameEn: "Name (English)",
+    nameAr: "Name (Arabic)",
+    descriptionEn: "Description (English)",
+    descriptionAr: "Description (Arabic)",
+    category: "Category",
+    categoryHint: "e.g. fashion, kids, electronics",
+    kind: "Kind",
+    kindStore: "Store (many products)",
+    kindLanding: "Landing (one product)",
+    tags: "Tags",
+    tagsHint: "Comma-separated",
+    order: "Order",
+    previews: "Preview pictures",
+    previewsHint: "One https link per line, up to 6 (desktop and mobile).",
+    price: "Price",
+    priceHint: "Empty = free. Paid themes show their price but can't be bought until the wallet exists.",
+    currency: "Currency",
+    offeredToStores: "Offered to stores (stores already on it keep it)",
+  },
+  ar: {
+    title: "الثيمات",
+    description:
+      "ثيمات المتاجر التي يمكن للتجار اختيارها. مظهر الثيم كود في واجهة المتجر؛ هنا تسمّيه وترتّبه وتسعّره وتفعّله أو توقفه.",
+    empty: "لا توجد ثيمات بعد — يبدأ الكتالوج بثيمات واجهة المتجر نفسها بعد تشغيل عمليات الترحيل.",
+    catalog: "الكتالوج",
+    colTheme: "الثيم",
+    colCategory: "الفئة",
+    colKind: "النوع",
+    colPrice: "السعر",
+    colStores: "المتاجر التي تستخدمه",
+    colStatus: "الحالة",
+    free: "مجاني",
+    offered: "معروض",
+    hidden: "مخفي",
+    edit: "تعديل",
+    errPrice: "السعر مبلغ موجب، أو فارغ للمجاني.",
+    savedToast: "حُفظ الثيم.",
+    editNamed: "تعديل {name}",
+    originalNote: "المظهر الأصلي هو البديل الافتراضي لكل متجر: يبقى مجانيًا ومعروضًا.",
+    cancel: "إلغاء",
+    save: "حفظ",
+    nameEn: "الاسم (بالإنجليزية)",
+    nameAr: "الاسم (بالعربية)",
+    descriptionEn: "الوصف (بالإنجليزية)",
+    descriptionAr: "الوصف (بالعربية)",
+    category: "الفئة",
+    categoryHint: "مثل: fashion، kids، electronics",
+    kind: "النوع",
+    kindStore: "متجر (منتجات متعددة)",
+    kindLanding: "صفحة هبوط (منتج واحد)",
+    tags: "الوسوم",
+    tagsHint: "مفصولة بفواصل",
+    order: "الترتيب",
+    previews: "صور المعاينة",
+    previewsHint: "رابط https واحد في كل سطر، حتى 6 (للحاسوب والجوال).",
+    price: "السعر",
+    priceHint: "فارغ = مجاني. تُعرض الثيمات المدفوعة بسعرها لكن لا يمكن شراؤها حتى تتوفر المحفظة.",
+    currency: "العملة",
+    offeredToStores: "معروض للمتاجر (المتاجر التي تستخدمه تحتفظ به)",
+  },
+} satisfies Messages;
 
 /**
  * The store theme catalog (SPEC §8.1, themes/themesCatalog.js). A theme is
@@ -22,6 +108,7 @@ import { useAsync } from "@/lib/useAsync";
  * exists, so stores see it with its price but can't switch to it.
  */
 export function ThemesPage() {
+  const t = useT(STRINGS);
   const { can } = useAuth();
   const { data, loading, error, refresh } = useAsync(() => adminThemesList(apiClient), []);
   const [editing, setEditing] = useState<CatalogTheme | null>(null);
@@ -30,23 +117,23 @@ export function ThemesPage() {
   return (
     <div>
       <PageHeader
-        title="Themes"
-        description="The store themes merchants can pick. A theme's look is code in the storefront; here you name it, sort it, price it and switch it on or off."
+        title={t.title}
+        description={t.description}
       />
       <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
         {data && data.length === 0 ? (
-          <EmptyBlock message="No themes yet — the catalog starts with the storefront's own themes once the migrations have run." />
+          <EmptyBlock message={t.empty} />
         ) : (
-          <Panel title="Catalog">
+          <Panel title={t.catalog}>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <Th>Theme</Th>
-                  <Th>Category</Th>
-                  <Th>Kind</Th>
-                  <Th>Price</Th>
-                  <Th>Stores using it</Th>
-                  <Th>Status</Th>
+                  <Th>{t.colTheme}</Th>
+                  <Th>{t.colCategory}</Th>
+                  <Th>{t.colKind}</Th>
+                  <Th>{t.colPrice}</Th>
+                  <Th>{t.colStores}</Th>
+                  <Th>{t.colStatus}</Th>
                   <Th />
                 </TableRow>
               </TableHeader>
@@ -62,15 +149,15 @@ export function ThemesPage() {
                     </Td>
                     <Td>{theme.category}</Td>
                     <Td>{theme.kind}</Td>
-                    <Td>{theme.price ? formatMinorMoney(theme.price.amount, theme.price.currency) : "Free"}</Td>
+                    <Td>{theme.price ? formatMinorMoney(theme.price.amount, theme.price.currency) : t.free}</Td>
                     <Td>{theme.stores ?? 0}</Td>
                     <Td>
-                      <StatusBadge tone={theme.isActive ? "success" : "neutral"}>{theme.isActive ? "Offered" : "Hidden"}</StatusBadge>
+                      <StatusBadge tone={theme.isActive ? "success" : "neutral"}>{theme.isActive ? t.offered : t.hidden}</StatusBadge>
                     </Td>
                     <Td>
                       {canManage && (
                         <Button size="sm" variant="outline" onClick={() => setEditing(theme)}>
-                          Edit
+                          {t.edit}
                         </Button>
                       )}
                     </Td>
@@ -96,6 +183,7 @@ export function ThemesPage() {
 }
 
 function ThemeEditor({ theme, onClose, onSaved }: { theme: CatalogTheme; onClose: () => void; onSaved: () => void }) {
+  const tx = useT(STRINGS);
   const toast = useToast();
   const [form, setForm] = useState({
     nameEn: theme.name.en ?? "",
@@ -117,7 +205,7 @@ function ThemeEditor({ theme, onClose, onSaved }: { theme: CatalogTheme; onClose
 
   async function save() {
     const amount = form.price.trim() === "" ? null : Math.round(Number(form.price) * 100);
-    if (amount !== null && (!Number.isFinite(amount) || amount < 1)) return toast.error("The price is a positive amount, or empty for free.");
+    if (amount !== null && (!Number.isFinite(amount) || amount < 1)) return toast.error(tx.errPrice);
     setBusy(true);
     try {
       await adminThemeUpdate(apiClient, theme.key, {
@@ -130,7 +218,7 @@ function ThemeEditor({ theme, onClose, onSaved }: { theme: CatalogTheme; onClose
         position: Number.parseInt(form.position, 10) || 0,
         ...(original ? {} : { isActive: form.isActive, price: amount === null ? null : { amount, currency: form.currency.trim().toUpperCase() } }),
       });
-      toast.success("Theme saved.");
+      toast.success(tx.savedToast);
       onSaved();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -143,34 +231,34 @@ function ThemeEditor({ theme, onClose, onSaved }: { theme: CatalogTheme; onClose
     <Modal
       open
       onClose={busy ? () => {} : onClose}
-      title={`Edit ${theme.name.en || theme.key}`}
-      description={original ? "The original look is every store's fallback: it stays free and offered." : undefined}
+      title={fmt(tx.editNamed, { name: theme.name.en || theme.key })}
+      description={original ? tx.originalNote : undefined}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancel
+            {tx.cancel}
           </Button>
           <Button onClick={() => void save()} disabled={busy}>
-            Save
+            {tx.save}
           </Button>
         </>
       }
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Name (English)" value={form.nameEn} maxLength={80} onChange={(e) => set({ nameEn: e.target.value })} />
-        <TextField label="Name (Arabic)" dir="rtl" value={form.nameAr} maxLength={80} onChange={(e) => set({ nameAr: e.target.value })} />
-        <TextAreaField label="Description (English)" rows={2} value={form.descriptionEn} maxLength={300} onChange={(e) => set({ descriptionEn: e.target.value })} />
-        <TextAreaField label="Description (Arabic)" dir="rtl" rows={2} value={form.descriptionAr} maxLength={300} onChange={(e) => set({ descriptionAr: e.target.value })} />
-        <TextField label="Category" hint="e.g. fashion, kids, electronics" value={form.category} onChange={(e) => set({ category: e.target.value })} />
-        <SelectField label="Kind" value={form.kind} onChange={(e) => set({ kind: e.target.value as CatalogTheme["kind"] })}>
-          <option value="store">Store (many products)</option>
-          <option value="landing">Landing (one product)</option>
+        <TextField label={tx.nameEn} value={form.nameEn} maxLength={80} onChange={(e) => set({ nameEn: e.target.value })} />
+        <TextField label={tx.nameAr} dir="rtl" value={form.nameAr} maxLength={80} onChange={(e) => set({ nameAr: e.target.value })} />
+        <TextAreaField label={tx.descriptionEn} rows={2} value={form.descriptionEn} maxLength={300} onChange={(e) => set({ descriptionEn: e.target.value })} />
+        <TextAreaField label={tx.descriptionAr} dir="rtl" rows={2} value={form.descriptionAr} maxLength={300} onChange={(e) => set({ descriptionAr: e.target.value })} />
+        <TextField label={tx.category} hint={tx.categoryHint} value={form.category} onChange={(e) => set({ category: e.target.value })} />
+        <SelectField label={tx.kind} value={form.kind} onChange={(e) => set({ kind: e.target.value as CatalogTheme["kind"] })}>
+          <option value="store">{tx.kindStore}</option>
+          <option value="landing">{tx.kindLanding}</option>
         </SelectField>
-        <TextField label="Tags" hint="Comma-separated" value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
-        <TextField label="Order" type="number" min={0} value={form.position} onChange={(e) => set({ position: e.target.value })} />
+        <TextField label={tx.tags} hint={tx.tagsHint} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />
+        <TextField label={tx.order} type="number" min={0} value={form.position} onChange={(e) => set({ position: e.target.value })} />
         <TextAreaField
-          label="Preview pictures"
-          hint="One https link per line, up to 6 (desktop and mobile)."
+          label={tx.previews}
+          hint={tx.previewsHint}
           className="sm:col-span-2"
           rows={3}
           value={form.previewImages}
@@ -178,11 +266,11 @@ function ThemeEditor({ theme, onClose, onSaved }: { theme: CatalogTheme; onClose
         />
         {!original && (
           <>
-            <TextField label="Price" hint="Empty = free. Paid themes show their price but can't be bought until the wallet exists." inputMode="decimal" value={form.price} onChange={(e) => set({ price: e.target.value })} />
-            <TextField label="Currency" maxLength={3} value={form.currency} onChange={(e) => set({ currency: e.target.value })} />
+            <TextField label={tx.price} hint={tx.priceHint} inputMode="decimal" value={form.price} onChange={(e) => set({ price: e.target.value })} />
+            <TextField label={tx.currency} maxLength={3} value={form.currency} onChange={(e) => set({ currency: e.target.value })} />
             <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
               <input type="checkbox" checked={form.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
-              Offered to stores (stores already on it keep it)
+              {tx.offeredToStores}
             </label>
           </>
         )}
