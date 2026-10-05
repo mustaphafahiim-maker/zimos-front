@@ -57,6 +57,8 @@ export interface RegisterPayload {
   acceptTerms?: boolean;
   /** The language of the sign-up code email/SMS. */
   locale?: "ar" | "en";
+  /** The marketing-site session (?sv= on the sign-up link); 8–64 of A–Z a–z 0–9 -. Ignored while site analytics is off. */
+  siteSessionId?: string;
 }
 
 export type VerificationChannel = "email" | "sms";
@@ -2687,6 +2689,18 @@ export interface AdminUserSearchPage {
   hasMore: boolean;
 }
 
+/** Where an account came from: the first marketing-site visit of the session it signed up from. */
+export interface AdminUserAcquisition {
+  landingPath: string | null;
+  referrerHost: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  firstVisitAt: string;
+  signedUpAt: string;
+  secondsBeforeSignup: number;
+}
+
 /** GET /admin/users/:id */
 export interface AdminUserDetail extends AdminUserRow {
   phone: string | null;
@@ -2694,6 +2708,8 @@ export interface AdminUserDetail extends AdminUserRow {
   suspendedAt?: string | null;
   suspendedReason?: string | null;
   deletedAt?: string | null;
+  /** Null when the account signed up without a tracked site visit (or before site analytics). */
+  acquisition?: AdminUserAcquisition | null;
 }
 
 /** POST /admin/users/:id/{suspend,unsuspend,delete} */

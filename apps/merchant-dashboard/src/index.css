@@ -299,6 +299,21 @@ html.dark {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+  /* Native <select> option lists inherit the control's colours; a translucent
+     dark-mode control background (e.g. dark:bg-input/30) leaves the browser
+     painting a light list under pale text. Give the popup its own surface. */
+  select option,
+  select optgroup {
+    background-color: var(--color-paper-raised);
+    color: var(--color-ink);
+  }
+  select option:checked {
+    background-color: var(--color-primary-soft);
+    color: var(--color-ink);
+  }
+  select option:disabled {
+    color: var(--color-ink-soft);
+  }
   html {
     @apply font-sans;
   }

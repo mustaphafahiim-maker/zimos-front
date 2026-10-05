@@ -9,7 +9,42 @@ import { CopyId } from "@/components/CopyId";
 import { UserModerationActions, UserStateBadge } from "@/components/userModeration";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
-import { formatDate, formatRelative } from "@/lib/format";
+import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
+import { useLocale, useT } from "@/i18n/LocaleContext";
+import { SITE_TRAFFIC_STRINGS, formatDuration } from "@/lib/siteTrafficStrings";
+import type { AdminUserAcquisition } from "@store-builder/api-client";
+
+/** Where the account came from on the marketing site (backend user_acquisition). */
+function AcquisitionPanel({ acquisition }: { acquisition: AdminUserAcquisition | null }) {
+  const t = useT(SITE_TRAFFIC_STRINGS);
+  const { locale } = useLocale();
+  if (!acquisition) {
+    return (
+      <Panel title={t.acquisition}>
+        <p className="text-sm text-ink-soft">{t.acquisitionNone}</p>
+      </Panel>
+    );
+  }
+  const source = acquisition.utmSource ?? acquisition.referrerHost ?? t.direct;
+  const campaign = [acquisition.utmMedium, acquisition.utmCampaign].filter(Boolean).join(" / ");
+  return (
+    <Panel title={t.acquisition}>
+      <dl>
+        <DetailRow label={t.source}>
+          <bdi dir="ltr">{source}</bdi>
+        </DetailRow>
+        {campaign && (
+          <DetailRow label={t.campaign}>
+            <bdi dir="ltr">{campaign}</bdi>
+          </DetailRow>
+        )}
+        <DetailRow label={t.landingPage}>{acquisition.landingPath ? <bdi dir="ltr">{acquisition.landingPath}</bdi> : "—"}</DetailRow>
+        <DetailRow label={t.firstVisit}>{formatDateTime(acquisition.firstVisitAt)}</DetailRow>
+        <DetailRow label={t.beforeSignup}>{formatDuration(acquisition.secondsBeforeSignup, locale)}</DetailRow>
+      </dl>
+    </Panel>
+  );
+}
 
 /** One account: who they are, and every store they own or work in. */
 export function UserDetailPage() {
@@ -115,6 +150,7 @@ export function UserDetailPage() {
                 </Table>
               )}
             </Panel>
+            <AcquisitionPanel acquisition={user.acquisition ?? null} />
           </div>
         )}
       </DataState>

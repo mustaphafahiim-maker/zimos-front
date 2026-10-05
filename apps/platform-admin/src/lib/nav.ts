@@ -8,6 +8,7 @@ import {
   CreditCard,
   Factory,
   Flag,
+  Globe,
   Handshake,
   LayoutDashboard,
   LayoutTemplate,
@@ -42,6 +43,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     items: [
       { label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW },
       { label: "Notifications", to: "/notifications", icon: Bell, permission: P.OVERVIEW_VIEW },
+      { label: "Site traffic", to: "/site-traffic", icon: Globe, permission: P.OVERVIEW_VIEW },
     ],
   },
   {

@@ -6,6 +6,7 @@ import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { I18nProvider } from "@/i18n/provider";
 import { SITE_URL } from "@/lib/urls";
+import { SiteAnalytics } from "@/components/site-analytics";
 
 type LocaleParams = { locale: string };
 
@@ -83,6 +84,7 @@ export default async function LocaleLayout({
       </head>
       <body className="min-h-dvh bg-paper text-ink">
         <I18nProvider value={{ locale, dir, dict }}>{children}</I18nProvider>
+        <SiteAnalytics />
       </body>
     </html>
   );
