@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
-import { ordersInvoicePdf, ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
+import { orderListExtrasOf, ordersInvoicePdf, ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -97,9 +97,12 @@ export function useMarkSeen(order: Order | null, onMarked: () => void) {
 export function OrderMetaBadges({ order }: { order: Order }) {
   const t = useT(STRINGS);
   const meta = ordersMeta(order);
+  // SPEC §4.3/§4.4: a funnel order names its funnel.
+  const funnelName = orderListExtrasOf(order).funnelName;
+  const sourceText = meta.source === "funnel" && funnelName ? `${t.source_funnel}: ${funnelName}` : t[`source_${meta.source}`];
   return (
     <>
-      <StatusBadge label={t.source} value={meta.source} tone="neutral" text={t[`source_${meta.source}`]} />
+      <StatusBadge label={t.source} value={meta.source} tone="neutral" text={sourceText} />
       {meta.isTest && <StatusBadge value="test" tone="warning" text={t.badgeTest} />}
       {meta.archivedAt && <StatusBadge value="archived" tone="neutral" text={t.badgeArchived} />}
     </>

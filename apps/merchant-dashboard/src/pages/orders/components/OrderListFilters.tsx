@@ -48,6 +48,7 @@ const STRINGS = {
     columnsHint: "Tick the columns to show and move them into the order you want. Saved on this device for your account.",
     done: "Done",
     col_customer: "Customer",
+    col_products: "Products",
     col_total: "Total",
     col_payment: "Payment",
     col_stage: "Stage",
@@ -120,6 +121,7 @@ const STRINGS = {
     columnsHint: "اختر الأعمدة الظاهرة ورتّبها كما تريد. تُحفظ على هذا الجهاز لحسابك.",
     done: "تم",
     col_customer: "العميل",
+    col_products: "المنتجات",
     col_total: "الإجمالي",
     col_payment: "الدفع",
     col_stage: "المرحلة",
@@ -272,6 +274,7 @@ export type OrderExtraFilters = ReturnType<typeof useOrderExtraFilters>;
 
 export const OPTIONAL_COLUMNS = [
   "customer",
+  "products",
   "total",
   "payment",
   "stage",
@@ -285,7 +288,7 @@ export const OPTIONAL_COLUMNS = [
   "dataQuality",
 ] as const;
 export type OrderColumn = (typeof OPTIONAL_COLUMNS)[number];
-const DEFAULT_COLUMNS: OrderColumn[] = ["customer", "total", "payment", "stage", "timeline"];
+const DEFAULT_COLUMNS: OrderColumn[] = ["customer", "products", "total", "payment", "stage", "timeline"];
 export const PAGE_SIZES = [25, 50, 100] as const;
 
 function readJson<T>(key: string, fallback: T): T {

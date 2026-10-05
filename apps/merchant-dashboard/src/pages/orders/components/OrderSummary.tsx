@@ -6,6 +6,7 @@ import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
+import { OrderLineThumb } from "./OrderLineThumb";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 import { ShippingOptionNote } from "./ShippingOptionNote";
 
@@ -146,28 +147,33 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                 {order.items.map((item) => (
                   <tr key={item.id} className="border-b border-line last:border-0 align-top">
                     <td className="py-2 pe-3">
-                      <div className="font-medium text-ink">{item.productNameSnapshot}</div>
-                      {(item.isOrderBump || item.isUpsell) && (
-                        <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
-                          {item.isUpsell ? t.upsellBadge : t.bumpBadge}
-                        </span>
-                      )}
-                      {formatOptions(item.variantOptionsSnapshot) && (
-                        <div className="text-xs text-ink-soft">
-                          {formatOptions(item.variantOptionsSnapshot)}
+                      <div className="flex items-start gap-3">
+                        <OrderLineThumb item={item} className="size-12" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-ink">{item.productNameSnapshot}</div>
+                          {(item.isOrderBump || item.isUpsell) && (
+                            <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
+                              {item.isUpsell ? t.upsellBadge : t.bumpBadge}
+                            </span>
+                          )}
+                          {formatOptions(item.variantOptionsSnapshot) && (
+                            <div className="text-xs text-ink-soft">
+                              {formatOptions(item.variantOptionsSnapshot)}
+                            </div>
+                          )}
+                          {item.offerNameSnapshot && (
+                            <div className="text-xs text-ink-soft">
+                              {t.offer}: {item.offerNameSnapshot}
+                            </div>
+                          )}
+                          {item.skuSnapshot && (
+                            <div className="text-xs text-ink-soft">
+                              {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
+                            </div>
+                          )}
+                          <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
                         </div>
-                      )}
-                      {item.offerNameSnapshot && (
-                        <div className="text-xs text-ink-soft">
-                          {t.offer}: {item.offerNameSnapshot}
-                        </div>
-                      )}
-                      {item.skuSnapshot && (
-                        <div className="text-xs text-ink-soft">
-                          {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
-                        </div>
-                      )}
-                      <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
+                      </div>
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>

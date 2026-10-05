@@ -1,12 +1,13 @@
 import { orderListExtrasOf, type Order, type OrderStage } from "@store-builder/api-client";
 import { formatMoney } from "@/lib/format";
 import { providerName } from "@/lib/providers";
-import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RiskBadge } from "@/pages/fraud/RiskBadge";
 import { OrderNetworkRate } from "@/pages/fraud/NetworkRate";
 import { STAGE_TONE, useOrderLabels } from "../orderLabels";
 import { OrderTimelineLines } from "./OrderTimelineLines";
+import { OrderLineThumb } from "./OrderLineThumb";
 import { useSourceLabel, type OrderColumn } from "./OrderListFilters";
 
 const STRINGS = {
@@ -16,6 +17,8 @@ const STRINGS = {
     dq_low: "Poor data",
     noShipment: "Not shipped",
     manualCourier: "Manual",
+    newCustomer: "New customer",
+    moreItems: "+{n}",
   },
   ar: {
     phoneLabel: "الهاتف",
@@ -23,6 +26,8 @@ const STRINGS = {
     dq_low: "بيانات ضعيفة",
     noShipment: "لم يُشحن",
     manualCourier: "يدوي",
+    newCustomer: "عميل جديد",
+    moreItems: "+{n}",
   },
 } satisfies Messages;
 
@@ -64,8 +69,34 @@ export function OrderColumnCell({
               <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
             </div>
           )}
+          {extras.isNewCustomer && (
+            <div className="mt-1">
+              <StatusBadge value="new_customer" tone="info" text={t.newCustomer} />
+            </div>
+          )}
         </td>
       );
+    case "products": {
+      // SPEC §4.3: what was ordered, at a glance — the first lines' pictures, the name on hover.
+      const items = order.items ?? [];
+      const shown = items.slice(0, 3);
+      return (
+        <td className="px-4 py-3">
+          {items.length === 0 ? (
+            <span className="text-ink-soft">—</span>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              {shown.map((item) => (
+                <OrderLineThumb key={item.id} item={item} label={`${item.productNameSnapshot} × ${item.quantity}`} />
+              ))}
+              {items.length > shown.length && (
+                <span className="text-xs text-ink-soft">{fmt(t.moreItems, { n: items.length - shown.length })}</span>
+              )}
+            </div>
+          )}
+        </td>
+      );
+    }
     case "total":
       return <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>;
     case "payment":
@@ -102,7 +133,17 @@ export function OrderColumnCell({
         </td>
       );
     case "source":
-      return <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>;
+      return (
+        <td className="px-4 py-3 text-xs text-ink-soft">
+          {sourceLabel(meta.source)}
+          {/* SPEC §4.3: a funnel order names its funnel. */}
+          {meta.source === "funnel" && extras.funnelName && (
+            <div className="text-ink">
+              <bdi>{extras.funnelName}</bdi>
+            </div>
+          )}
+        </td>
+      );
     case "governorate":
       return <td className="px-4 py-3 text-xs text-ink-soft">{address?.province || "—"}</td>;
     case "address":
