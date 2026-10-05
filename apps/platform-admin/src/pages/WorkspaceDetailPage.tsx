@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { DetailRow } from "@/components/Drawer";
 import { Mono, Panel } from "@/components/Panel";
-import { Status, StatusBadge } from "@/components/StatusBadge";
+import { PricingBadge, Status, StatusBadge } from "@/components/StatusBadge";
 import { WorkspaceStatus } from "@/components/workspace";
 import { SubscriptionCharges } from "@/components/charges";
 import { StoreAccessPanel } from "@/components/storeAccess";
@@ -167,6 +167,7 @@ export function WorkspaceDetailPage() {
                   </DetailRow>
                   <DetailRow label="MRR">
                     <span className="tabular">{formatMinorMoney(sub.mrr, sub.currency)}</span>
+                    <PricingBadge kind={sub.pricingKind} />
                   </DetailRow>
                   <DetailRow label="Provider">{sub.externalProvider ?? "—"}</DetailRow>
                 </dl>

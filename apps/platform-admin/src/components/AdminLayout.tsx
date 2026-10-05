@@ -5,6 +5,10 @@ import { Spinner, cn } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
+import { NAV_LABELS_AR, SHELL_STRINGS } from "@/lib/shellStrings";
 import { SignOutDialog } from "@/components/SignOutDialog";
 import { Status } from "@/components/StatusBadge";
 import * as adminApi from "@/lib/adminApi";
@@ -15,19 +19,22 @@ import { useVisibleNav } from "@/lib/nav";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const groups = useVisibleNav();
+  const t = useT(SHELL_STRINGS);
+  const { locale } = useLocale();
+  const label = (en: string) => (locale === "ar" ? NAV_LABELS_AR[en] ?? en : en);
   return (
     <>
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <ZimosLogo height={28} />
         <span className="rounded-full border border-line bg-primary-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-primary uppercase">
-          Platform Admin
+          {t.platformAdmin}
         </span>
       </div>
-      <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
+      <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label={t.mainNav}>
         {groups.map((group, gi) => (
           <div key={gi} className={cn(gi > 0 && "mt-4")}>
             {group.label && (
-              <p className="mb-1 px-3 text-[11px] font-semibold tracking-wider text-ink-soft uppercase">{group.label}</p>
+              <p className="mb-1 px-3 text-[11px] font-semibold tracking-wider text-ink-soft uppercase">{label(group.label)}</p>
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => (
@@ -44,7 +51,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     }
                   >
                     <item.icon className="size-4 shrink-0" />
-                    {item.label}
+                    {label(item.label)}
                   </NavLink>
                 </li>
               ))}
@@ -57,6 +64,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function GlobalSearch() {
+  const t = useT(SHELL_STRINGS);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AdminWorkspaceRow[]>([]);
@@ -145,8 +153,8 @@ function GlobalSearch() {
             setOpen(false);
           }
         }}
-        placeholder="Search workspaces…"
-        aria-label="Search workspaces by name or address"
+        placeholder={t.searchPlaceholder}
+        aria-label={t.searchLabel}
         role="combobox"
         aria-expanded={open && query.trim().length > 0}
         aria-controls="global-search-results"
@@ -163,7 +171,7 @@ function GlobalSearch() {
               <Spinner /> Searching…
             </div>
           ) : results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-ink-soft">No workspaces match “{query.trim()}”.</p>
+            <p className="px-4 py-3 text-sm text-ink-soft">{fmt(t.noMatch, { query: query.trim() })}</p>
           ) : (
             <ul className="max-h-80 overflow-y-auto py-1">
               {results.map((row, i) => (
@@ -194,6 +202,7 @@ function GlobalSearch() {
 }
 
 function UserMenu() {
+  const t = useT(SHELL_STRINGS);
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -252,7 +261,7 @@ function UserMenu() {
             }}
             className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-danger-soft hover:text-danger"
           >
-            <LogOut className="size-4" aria-hidden /> Sign out
+            <LogOut className="size-4" aria-hidden /> {t.signOut}
           </button>
         </div>
       )}
@@ -269,6 +278,7 @@ function UserMenu() {
 }
 
 export function AdminLayout() {
+  const t = useT(SHELL_STRINGS);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { can } = useAuth();
@@ -286,7 +296,7 @@ export function AdminLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  const envLabel = import.meta.env.DEV ? "Development" : import.meta.env.MODE === "production" ? "Production" : import.meta.env.MODE;
+  const envLabel = import.meta.env.DEV ? t.development : import.meta.env.MODE === "production" ? t.production : import.meta.env.MODE;
 
   return (
     <div className="flex min-h-screen bg-paper">
@@ -299,14 +309,14 @@ export function AdminLayout() {
           <aside
             role="dialog"
             aria-modal="true"
-            aria-label="Navigation"
+            aria-label={t.navigation}
             onMouseDown={(e) => e.stopPropagation()}
             className="animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col border-e border-line bg-paper-raised shadow-lg"
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              aria-label="Close navigation"
+              aria-label={t.closeNav}
               className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
               <X className="size-4" aria-hidden />
@@ -321,7 +331,7 @@ export function AdminLayout() {
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            aria-label="Open navigation"
+            aria-label={t.openNav}
             className="cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink lg:hidden"
           >
             <Menu className="size-5" aria-hidden />
@@ -331,11 +341,13 @@ export function AdminLayout() {
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
             <span
               className="hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-dark sm:inline-flex"
-              title="Environment"
+              title={t.environment}
             >
               <span className="size-1.5 rounded-full bg-accent" aria-hidden />
               {envLabel}
             </span>
+            {can(P.OVERVIEW_VIEW) && <NotificationBell />}
+            <LanguageToggle />
             <ThemeToggle />
             <UserMenu />
           </div>

@@ -2549,6 +2549,15 @@ export interface AdminManualSubscription {
     source: AdminPeriodSource;
     /** Not subscribed yet: Activate takes it live. */
     draft?: boolean;
+    /** What one period costs the merchant (backend billing/manualPricing). */
+    pricingKind?: SubscriptionPricingKind;
+    discountPercent?: number | null;
+    priceOverrideAmount?: number | null;
+    /** One billing period at the price above, minor units. */
+    effectivePrice?: number;
+    currency?: string | null;
+    /** A free or discounted period that ran out (moved to past_due, not renewed). */
+    pricingExpiredAt?: string | null;
   };
   /** The owner's stores and this store's funnels this month, against the plan. */
   limits?: PlanLimits;
@@ -2766,10 +2775,19 @@ export interface AdminSubscription {
   graceUntil: string | null;
   cancelAtPeriodEnd: boolean;
   externalProvider: string | null;
-  /** Monthly run rate in minor units; 0 unless active/past_due. */
+  /** paid (plan price), free (a gift) or discounted — set with a manual Activate. */
+  pricingKind?: SubscriptionPricingKind;
+  discountPercent?: number | null;
+  priceOverrideAmount?: number | null;
+  /** One billing period as the merchant pays it, minor units. */
+  effectivePrice?: number;
+  pricingExpiredAt?: string | null;
+  /** Monthly run rate in minor units at the effective price; 0 unless active/past_due, 0 when free. */
   mrr: number;
   createdAt: string;
 }
+
+export type SubscriptionPricingKind = "paid" | "free" | "discounted";
 
 export interface AdminFeatureFlag {
   id: string;

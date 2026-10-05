@@ -118,3 +118,13 @@ export function Status({ value, label, className }: { value: string; label?: str
     </StatusBadge>
   );
 }
+
+/** Free / Discounted next to a subscription's status; nothing for one at the plan price. */
+export function PricingBadge({ kind, label, className }: { kind?: string | null; label?: string; className?: string }) {
+  if (!kind || kind === "paid") return null;
+  return (
+    <StatusBadge tone={kind === "free" ? "info" : "warning"} className={cn("ms-2", className)}>
+      {label ?? (kind === "free" ? "Free" : "Discounted")}
+    </StatusBadge>
+  );
+}

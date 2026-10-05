@@ -7,21 +7,81 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, SearchInput } from "@/components/forms";
 import { Panel, SortHead, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
+import { PricingBadge, Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminSubscriptionRow } from "@/lib/adminApi";
 import { formatDate, formatMinorMoney, formatRelative } from "@/lib/format";
+import { useT } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Subscriptions",
+    description: "Billing state for every workspace.",
+    refresh: "Refresh",
+    all: "All",
+    trialing: "Trialing",
+    active: "Active",
+    pastDue: "Past due",
+    canceled: "Canceled",
+    paidOnly: "Paid only",
+    search: "Search workspace name or address",
+    noneYet: "No workspace has a subscription yet.",
+    noMatch: "No subscriptions match these filters.",
+    workspace: "Workspace",
+    plan: "Plan",
+    status: "Status",
+    mrr: "MRR",
+    next: "Next billing / trial end",
+    billing: "Billing",
+    unnamed: "Unnamed workspace",
+    cancels: "Cancels at period end",
+    trialEnds: "Trial ends ",
+    total: "Total",
+    paidTotal: "Paid total",
+    free: "Free",
+    discounted: "Discounted",
+    readOnly: "Read-only here. A store's plan, period and pricing are set from its workspace page (Activate or change the plan).",
+  },
+  ar: {
+    title: "الاشتراكات",
+    description: "حالة الفوترة لكل متجر.",
+    refresh: "تحديث",
+    all: "الكل",
+    trialing: "تجريبي",
+    active: "نشط",
+    pastDue: "متأخر السداد",
+    canceled: "ملغى",
+    paidOnly: "المدفوعة فقط",
+    search: "ابحث باسم المتجر أو عنوانه",
+    noneYet: "لا يوجد متجر لديه اشتراك بعد.",
+    noMatch: "لا توجد اشتراكات تطابق هذه التصفية.",
+    workspace: "المتجر",
+    plan: "الخطة",
+    status: "الحالة",
+    mrr: "الإيراد الشهري المتكرر",
+    next: "الفوترة التالية / نهاية التجربة",
+    billing: "الفوترة",
+    unnamed: "متجر بلا اسم",
+    cancels: "يُلغى في نهاية الفترة",
+    trialEnds: "تنتهي التجربة ",
+    total: "الإجمالي",
+    paidTotal: "إجمالي المدفوع",
+    free: "مجاني",
+    discounted: "مخفّض",
+    readOnly: "للعرض فقط هنا. تُضبط خطة المتجر وفترته وتسعيره من صفحة المتجر (تفعيل الخطة أو تغييرها).",
+  },
+};
 
 type Filter = "all" | SubscriptionStatus;
 type SortKey = "name" | "mrr" | "next";
 
-const FILTERS: Array<[Filter, string]> = [
-  ["all", "All"],
-  ["trialing", "Trialing"],
-  ["active", "Active"],
-  ["past_due", "Past due"],
-  ["canceled", "Canceled"],
+const FILTERS: Array<[Filter, "all" | "trialing" | "active" | "pastDue" | "canceled"]> = [
+  ["all", "all"],
+  ["trialing", "trialing"],
+  ["active", "active"],
+  ["past_due", "pastDue"],
+  ["canceled", "canceled"],
 ];
 
 /** Trials count down to their end date; everything else to the period end. */
@@ -30,10 +90,13 @@ function nextDate(s: AdminSubscriptionRow): string {
 }
 
 export function SubscriptionsPage() {
+  const t = useT(STRINGS);
   const { data, loading, error, refresh } = useAsync(() => adminApi.listSubscriptions(), []);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState<SortKey>>({ key: "mrr", dir: "desc" });
+  // Only the subscriptions at the plan price: no free (gift) or discounted ones.
+  const [paidOnly, setPaidOnly] = useState(false);
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -41,6 +104,7 @@ export function SubscriptionsPage() {
     const q = query.trim().toLowerCase();
     return rows
       .filter((s) => filter === "all" || s.status === filter)
+      .filter((s) => !paidOnly || (s.pricingKind ?? "paid") === "paid")
       .filter(
         (s) =>
           !q ||
@@ -55,11 +119,11 @@ export function SubscriptionsPage() {
           return compareValues(nextDate(a) || "9999", nextDate(b) || "9999", sort.dir);
         return compareValues(a.mrr, b.mrr, sort.dir);
       });
-  }, [rows, filter, query, sort]);
+  }, [rows, filter, query, sort, paidOnly]);
 
-  const options = FILTERS.map(([value, label]) => ({
+  const options = FILTERS.map(([value, key]) => ({
     value,
-    label,
+    label: t[key],
     count: value === "all" ? rows.length : rows.filter((s) => s.status === value).length,
   }));
 
@@ -72,25 +136,31 @@ export function SubscriptionsPage() {
   return (
     <div>
       <PageHeader
-        title="Subscriptions"
-        description="Billing state for every workspace."
+        title={t.title}
+        description={t.description}
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw /> Refresh
+            <RefreshCw /> {t.refresh}
           </Button>
         }
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <FilterChips options={options} value={filter} onChange={setFilter} />
-          <SearchInput value={query} onChange={setQuery} placeholder="Search workspace name or address" />
+          <div className="flex flex-wrap items-center gap-3">
+            <FilterChips options={options} value={filter} onChange={setFilter} />
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input type="checkbox" className="size-4" checked={paidOnly} onChange={(e) => setPaidOnly(e.target.checked)} />
+              {t.paidOnly}
+            </label>
+          </div>
+          <SearchInput value={query} onChange={setQuery} placeholder={t.search} />
         </div>
         {filtered.length === 0 ? (
           <EmptyBlock
             message={
               rows.length === 0
-                ? "No workspace has a subscription yet."
-                : "No subscriptions match these filters."
+                ? t.noneYet
+                : t.noMatch
             }
           />
         ) : (
@@ -98,12 +168,12 @@ export function SubscriptionsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <SortHead label="Workspace" sortKey="name" sort={sort} onSort={setSort} />
-                  <Th>Plan</Th>
-                  <Th>Status</Th>
-                  <SortHead label="MRR" sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
-                  <SortHead label="Next billing / trial end" sortKey="next" sort={sort} onSort={setSort} />
-                  <Th>Billing</Th>
+                  <SortHead label={t.workspace} sortKey="name" sort={sort} onSort={setSort} />
+                  <Th>{t.plan}</Th>
+                  <Th>{t.status}</Th>
+                  <SortHead label={t.mrr} sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
+                  <SortHead label={t.next} sortKey="next" sort={sort} onSort={setSort} />
+                  <Th>{t.billing}</Th>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,7 +186,7 @@ export function SubscriptionsPage() {
                           to={`/workspaces/${s.workspaceId}`}
                           className="block font-medium text-ink hover:text-primary"
                         >
-                          {s.workspaceName ?? "Unnamed workspace"}
+                          {s.workspaceName ?? t.unnamed}
                         </Link>
                         {s.workspaceSlug && (
                           <span className="text-xs text-ink-soft">{s.workspaceSlug}</span>
@@ -128,8 +198,9 @@ export function SubscriptionsPage() {
                       </Td>
                       <Td>
                         <Status value={s.status} />
+                        <PricingBadge kind={s.pricingKind} label={s.pricingKind === "free" ? t.free : t.discounted} />
                         {s.cancelAtPeriodEnd && (
-                          <span className="mt-1 block text-xs text-ink-soft">Cancels at period end</span>
+                          <span className="mt-1 block text-xs text-ink-soft">{t.cancels}</span>
                         )}
                       </Td>
                       <Td className="tabular text-end">{formatMinorMoney(s.mrr, s.currency)}</Td>
@@ -143,7 +214,7 @@ export function SubscriptionsPage() {
                                 new Date(next).getTime() < Date.now() ? "text-danger" : "text-ink-soft"
                               )}
                             >
-                              {s.status === "trialing" ? "Trial ends " : ""}
+                              {s.status === "trialing" ? t.trialEnds : ""}
                               {formatRelative(next)}
                             </span>
                           </>
@@ -159,7 +230,7 @@ export function SubscriptionsPage() {
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
                   <Td className="font-medium" colSpan={3}>
-                    Total ({filtered.length})
+                    {paidOnly ? t.paidTotal : t.total} ({filtered.length})
                   </Td>
                   <Td className="tabular text-end font-semibold">
                     {totalCurrency ? formatMinorMoney(totalMrr, totalCurrency) : "—"}
@@ -172,8 +243,7 @@ export function SubscriptionsPage() {
         )}
       </DataState>
       <p className="mt-4 text-xs text-ink-soft">
-        Read-only. Changing a plan, extending a trial or cancelling needs billing mutation endpoints
-        that don't exist yet.
+        {t.readOnly}
       </p>
     </div>
   );
