@@ -657,7 +657,7 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
   const [draft, setDraft] = useState<Partial<Record<keyof FunnelOwnSettings, string>>>({});
   const [busy, setBusy] = useState(false);
 
-  const value = (key: keyof FunnelOwnSettings) => draft[key] ?? loaded.data?.[key] ?? "";
+  const value = (key: keyof FunnelOwnSettings) => String(draft[key] ?? loaded.data?.[key] ?? "");
   const field = (key: keyof FunnelOwnSettings, label: string, props: { dir?: "ltr"; maxLength: number }) => (
     <div className="space-y-1.5">
       <Label htmlFor={`fs-${key}`}>{label}</Label>

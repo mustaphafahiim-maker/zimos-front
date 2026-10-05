@@ -104,7 +104,7 @@ export default function CheckoutPage() {
   const [bumpOn, setBumpOn] = useState(false);
   // Refused by the server since this page loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
-  const storeMethods = usePaymentMethods(client, workspaceId);
+  const storeMethods = usePaymentMethods(client, workspaceId, undefined, cart?.currency);
   // A product on a plan in the cart is paid by a card that can be saved (product/BillingPlan).
   const planned = hasPlan((cart?.items ?? []).map((line) => byVariant.get(line.variantId)));
   const payment = { ...storeMethods, ...usePlanMethods(storeMethods.methods, planned) };

@@ -26,6 +26,12 @@ export interface PaymentRuleAdjustment {
   /** The line's name on the order, e.g. "Cash on delivery fee". */
   label: string | null;
   enabled: boolean;
+  /**
+   * A fixed amount's currency (null/unset: the store's). It applies only to
+   * orders in that currency; a percentage applies in every currency. Per
+   * method: one percentage and one fixed amount per currency.
+   */
+  currency?: string | null;
 }
 
 export interface PaymentRules {
@@ -33,6 +39,7 @@ export interface PaymentRules {
   /** funnel id → the payment method ids its checkout offers; a missing funnel offers all. */
   methodsByFunnel: Record<string, string[]>;
   methods: PaymentRuleMethod[];
+  storeCurrency?: string;
 }
 
 /** What a storefront payment method carries when its method has a rule. */
@@ -41,6 +48,8 @@ export interface PaymentRuleOnMethod {
   valueType: "fixed" | "percent";
   value: number;
   label: string | null;
+  /** A fixed amount's currency. */
+  currency?: string;
 }
 
 export interface PaymentRuleLink {

@@ -11,13 +11,18 @@ import type { ApiClient } from "../client";
 export interface ShippingProfile {
   id: string;
   name: string;
+  /**
+   * The currency its prices are in; null = the store's. A group in another
+   * currency prices a funnel that sells in it and holds no products.
+   */
+  currency: string | null;
   /** Minor units; null = no price of its own outside the listed governorates. */
   flatAmount: number | null;
   governorateAmounts: Record<string, number>;
   productCount: number;
 }
 
-export type ShippingProfileInput = Partial<Pick<ShippingProfile, "name" | "flatAmount" | "governorateAmounts">>;
+export type ShippingProfileInput = Partial<Pick<ShippingProfile, "name" | "currency" | "flatAmount" | "governorateAmounts">>;
 
 const base = (workspaceId: string) => `/workspaces/${workspaceId}/shipping/profiles`;
 

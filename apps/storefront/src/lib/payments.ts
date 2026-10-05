@@ -116,14 +116,15 @@ export function getPaymentReturn(workspaceId: string, orderId: string): string |
  * The methods the store offers at checkout. Starts (and falls back to) cash on
  * delivery only, so a store without online payments renders exactly as before.
  */
-export function usePaymentMethods(client: ApiClient, workspaceId: string, funnelId?: string) {
+export function usePaymentMethods(client: ApiClient, workspaceId: string, funnelId?: string, currency?: string) {
   const [methods, setMethods] = useState<StorefrontPaymentMethod[]>(COD_ONLY);
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     let live = true;
-    // A funnel offers its own list (payment rules → methods per funnel).
-    (funnelId
-      ? storefrontPaymentMethodsFor(client, workspaceId, { funnelId, previewToken: getPreviewToken(workspaceId) })
+    // A funnel offers its own list (payment rules → methods per funnel); a
+    // known currency leaves out the gateways that cannot take it.
+    (funnelId || currency
+      ? storefrontPaymentMethodsFor(client, workspaceId, { funnelId, currency, previewToken: getPreviewToken(workspaceId) })
       : client.getStorefrontPaymentMethods(workspaceId, getPreviewToken(workspaceId))
     )
       .then((res) => {
@@ -137,7 +138,7 @@ export function usePaymentMethods(client: ApiClient, workspaceId: string, funnel
     return () => {
       live = false;
     };
-  }, [client, workspaceId, funnelId]);
+  }, [client, workspaceId, funnelId, currency]);
   return { methods, preview };
 }
 

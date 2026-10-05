@@ -286,6 +286,11 @@ export interface FunnelOwnSettings {
   bodyCode?: string | null;
   /** Its shipping group (Shipping → groups); null = each product's own. */
   shippingProfileId?: string | null;
+  /**
+   * Its own free-shipping threshold, minor units in the funnel's currency;
+   * null = the store's (a funnel selling in another currency has none then).
+   */
+  freeShippingThresholdAmount?: number | null;
 }
 
 export async function funnelSettingsGet(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelOwnSettings> {

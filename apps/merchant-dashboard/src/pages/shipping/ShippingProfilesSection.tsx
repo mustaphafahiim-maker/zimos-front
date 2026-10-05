@@ -22,6 +22,7 @@ import { TextField } from "@/components/Field";
 import { Modal } from "@/components/Modal";
 import { MoneyInput } from "@/components/MoneyInput";
 import { useToast } from "@/components/Toast";
+import { useWorkspace } from "@/context/WorkspaceContext";
 
 const STRINGS = {
   en: {
@@ -53,6 +54,10 @@ const STRINGS = {
     saving: "Saving…",
     saved: "Shipping group saved.",
     deleted: "Shipping group deleted.",
+    currency: "Prices in",
+    currencyHint: "Blank = the store's currency ({store}). Another currency (a 3-letter code, e.g. USD) is for a funnel that sells in it.",
+    forFunnels: "For funnels in {currency}",
+    foreignNote: "A group priced in {currency} holds no products: it prices the funnels that sell in {currency} (funnel settings → shipping group).",
   },
   ar: {
     title: "مجموعات الشحن",
@@ -83,12 +88,19 @@ const STRINGS = {
     saving: "جارٍ الحفظ…",
     saved: "تم حفظ مجموعة الشحن.",
     deleted: "تم حذف مجموعة الشحن.",
+    currency: "الأسعار بعملة",
+    currencyHint: "فارغ = عملة المتجر ({store}). عملة تانية (كود من 3 حروف زي USD) بتكون لفانل بيبيع بيها.",
+    forFunnels: "للفانلز اللي بتبيع بـ {currency}",
+    foreignNote: "المجموعة اللي أسعارها بـ {currency} مفيهاش منتجات: بتسعّر شحن الفانلز اللي بتبيع بـ {currency} (إعدادات الفانل ← مجموعة الشحن).",
   },
 } satisfies Messages;
 
 /** SPEC §12.1 shipping groups: prices for specific products, under the store's own. */
-export function ShippingProfilesSection({ currency = "EGP" }: { currency?: string }) {
+export function ShippingProfilesSection({ currency: fallbackCurrency = "EGP" }: { currency?: string }) {
   const t = useT(STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  // The store's currency; a group may price in another one (for a funnel that sells in it).
+  const currency = currentWorkspace?.defaultCurrency ?? fallbackCurrency;
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
@@ -125,8 +137,8 @@ export function ShippingProfilesSection({ currency = "EGP" }: { currency?: strin
                 <div className="min-w-0">
                   <p className="font-medium text-ink">{p.name}</p>
                   <p className="text-xs text-ink-soft">
-                    {fmt(t.products, { count: p.productCount })} ·{" "}
-                    {p.flatAmount !== null ? fmt(t.anywhere, { price: formatMoney(p.flatAmount, currency) }) : t.noFlat}
+                    {p.currency && p.currency !== currency ? fmt(t.forFunnels, { currency: p.currency }) : fmt(t.products, { count: p.productCount })} ·{" "}
+                    {p.flatAmount !== null ? fmt(t.anywhere, { price: formatMoney(p.flatAmount, p.currency ?? currency) }) : t.noFlat}
                     {Object.keys(p.governorateAmounts).length > 0 &&
                       ` ${fmt(t.governorates, { count: Object.keys(p.governorateAmounts).length })}`}
                   </p>
@@ -203,6 +215,11 @@ function ProfileDialog({
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
   const [name, setName] = useState(profile?.name ?? "");
+  const [ownCurrency, setOwnCurrency] = useState(profile?.currency && profile.currency !== currency ? profile.currency : "");
+  const typed = ownCurrency.trim().toUpperCase();
+  // Another currency than the store's: the group prices funnels only (no products).
+  const foreign = /^[A-Z]{3}$/.test(typed) && typed !== currency ? typed : null;
+  const priceCurrency = foreign ?? currency;
   const [flat, setFlat] = useState(minorToMajorInput(profile?.flatAmount ?? null));
   const [rates, setRates] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(profile?.governorateAmounts ?? {}).map(([code, v]) => [code, minorToMajorInput(v)]))
@@ -232,11 +249,13 @@ function ProfileDialog({
           .filter(([, v]) => v.trim() !== "")
           .map(([code, v]) => [code, majorToMinor(v)])
       );
-      const input = { name: name.trim(), flatAmount: flat.trim() === "" ? null : majorToMinor(flat), governorateAmounts };
+      const input = { name: name.trim(), currency: foreign, flatAmount: flat.trim() === "" ? null : majorToMinor(flat), governorateAmounts };
+      // Its products leave first: a group in another currency holds none.
+      if (profile && foreign && picked && picked.size > 0) await shippingProfileSetProducts(apiClient, workspaceId, profile.id, []);
       const saved = profile
         ? await shippingProfileUpdate(apiClient, workspaceId, profile.id, input)
         : await shippingProfileCreate(apiClient, workspaceId, input);
-      if (picked) await shippingProfileSetProducts(apiClient, workspaceId, saved.id, [...picked]);
+      if (picked && !foreign) await shippingProfileSetProducts(apiClient, workspaceId, saved.id, [...picked]);
       onSaved();
     } catch (err) {
       setError(errorMessage(err));
@@ -249,7 +268,16 @@ function ProfileDialog({
     <Modal open onClose={busy ? () => undefined : onClose} title={t.formTitle} className="max-w-3xl">
       <form onSubmit={save} className="space-y-5">
         <TextField label={t.name} placeholder={t.namePlaceholder} required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
-        <MoneyInput label={t.flat} hint={t.flatHint} currency={currency} value={flat} onChange={setFlat} placeholder="—" />
+        <TextField
+          label={t.currency}
+          hint={fmt(t.currencyHint, { store: currency })}
+          dir="ltr"
+          maxLength={3}
+          placeholder={currency}
+          value={ownCurrency}
+          onChange={(e) => setOwnCurrency(e.target.value.toUpperCase())}
+        />
+        <MoneyInput label={t.flat} hint={t.flatHint} currency={priceCurrency} value={flat} onChange={setFlat} placeholder="—" />
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-ink">{t.perGov}</legend>
           <p className="text-xs text-ink-soft">{t.perGovHint}</p>
@@ -258,7 +286,7 @@ function ProfileDialog({
               <MoneyInput
                 key={g.code}
                 label={locale === "ar" ? g.ar : g.en}
-                currency={currency}
+                currency={priceCurrency}
                 value={rates[g.code] ?? ""}
                 onChange={(value) => setRates((prev) => ({ ...prev, [g.code]: value }))}
                 placeholder={flat.trim() || "—"}
@@ -266,6 +294,9 @@ function ProfileDialog({
             ))}
           </div>
         </fieldset>
+        {foreign ? (
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm text-ink-soft">{fmt(t.foreignNote, { currency: foreign })}</p>
+        ) : (
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-ink">{t.pick}</legend>
           <p className="text-xs text-ink-soft">{t.pickHint}</p>
@@ -290,6 +321,7 @@ function ProfileDialog({
             ))}
           </div>
         </fieldset>
+        )}
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" className="min-h-11" onClick={onClose} disabled={busy}>
