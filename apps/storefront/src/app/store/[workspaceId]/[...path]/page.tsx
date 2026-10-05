@@ -48,6 +48,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description: page.og?.description || undefined,
     alternates: { canonical },
+    // "Hide from search engines" in the page settings.
+    ...((page.seo as { noindex?: unknown } | undefined)?.noindex === true ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title,
       description: page.og?.description || undefined,
@@ -96,12 +98,13 @@ export default async function CustomStorePage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
-      <PageRenderer
-        tree={page.tree}
-        workspaceId={workspaceId}
-        currency={store.currency}
-        locale={locale}
-      />
+        <PageRenderer
+          tree={page.tree}
+          workspaceId={workspaceId}
+          currency={store.currency}
+          locale={locale}
+          siteStyles={result.data.site?.globalStyles}
+        />
     </main>
   );
 }

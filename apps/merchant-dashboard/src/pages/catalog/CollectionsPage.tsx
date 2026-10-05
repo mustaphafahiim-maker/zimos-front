@@ -1,3 +1,8 @@
+import { catalogCollectionFlags } from "@store-builder/api-client";
+import { CollectionVisibilityFields } from "./components/CollectionVisibilityFields";
+import { CollectionSeoFields, collectionSeoOf, collectionSeoPayload, downloadCollectionsCsv } from "./components/CollectionSeoFields";
+import { storeUrl } from "@/lib/storeAddress";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -16,6 +21,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowDown,
   ArrowUp,
+  Download,
+  ExternalLink,
   Folder,
   GripVertical,
   IndentDecrease,
@@ -79,6 +86,12 @@ const STRINGS = {
     indent: "Put {name} inside the collection above",
     outdent: "Move {name} out one level",
     orderProducts: "Order the products in {name}",
+    preview: "Open {name} in the store",
+    subcategories: "{n} subcategories",
+    subcategory: "1 subcategory",
+    inHeader: "In header",
+    hiddenBadge: "Hidden",
+    exportCsv: "Export",
     edit: "Edit {name}",
     delete: "Delete {name}",
     editTitle: "Edit collection",
@@ -132,6 +145,12 @@ const STRINGS = {
     indent: "وضع {name} داخل المجموعة التي فوقها",
     outdent: "إخراج {name} مستوى واحدًا",
     orderProducts: "ترتيب منتجات {name}",
+    preview: "فتح {name} في المتجر",
+    subcategories: "{n} تصنيف فرعي",
+    subcategory: "تصنيف فرعي واحد",
+    inHeader: "في الهيدر",
+    hiddenBadge: "مخفي",
+    exportCsv: "تصدير",
     edit: "تعديل {name}",
     delete: "حذف {name}",
     editTitle: "تعديل المجموعة",
@@ -215,6 +234,10 @@ function CollectionForm({
   const [description, setDescription] = useState(collection?.description ?? "");
   const [parentId, setParentId] = useState(collection?.parentId ?? "");
   const [imageUrl, setImageUrl] = useState(collection?.imageUrl ?? "");
+  // Header menu / hidden (components/CollectionVisibilityFields).
+  const [flags, setFlags] = useState(() => catalogCollectionFlags(collection));
+  // Search engines and sharing (SPEC §8.9), same keys as a product's.
+  const [seo, setSeo] = useState(() => collectionSeoOf(collection));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -230,6 +253,8 @@ function CollectionForm({
       name: name.trim(),
       description: description.trim(),
       imageUrl: imageUrl || null,
+      ...{ showInHeader: flags.showInHeader && !flags.hidden, hidden: flags.hidden },
+      seo: collectionSeoPayload(collection, seo),
     };
     // Sent only when it changed, so an edit never moves a collection by accident.
     if (!collection || (collection.parentId ?? "") !== parentId) payload.parentId = parentId || null;
@@ -285,6 +310,8 @@ function CollectionForm({
         )}
       </Field>
       <ImageField label={t.image} value={imageUrl} onChange={setImageUrl} />
+      <CollectionVisibilityFields value={flags} onChange={setFlags} disabled={saving} />
+      <CollectionSeoFields value={seo} onChange={setSeo} placeholderTitle={name || t.namePlaceholder} disabled={saving} />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="min-h-11">
           {t.cancel}
@@ -326,6 +353,10 @@ function CollectionRow({
   const c = node.item;
   const label = (key: keyof Strings) => fmt(t[key], { name: c.name });
   const count = productCount(t, c.productCount);
+  const children = flat.filter((n) => n.item.parentId === c.id).length;
+  const rowFlags = catalogCollectionFlags(c);
+  const { currentWorkspace } = useWorkspace();
+  const previewHref = currentWorkspace?.slug ? `${storeUrl(currentWorkspace.slug)}/products?collection=${encodeURIComponent(c.slug)}` : null;
 
   return (
     <li
@@ -363,7 +394,14 @@ function CollectionRow({
           <p className="truncate text-xs text-ink-soft">
             <bdi dir="ltr">{c.slug}</bdi>
             {count && <> · {count}</>}
+            {children > 0 && <> · {children === 1 ? t.subcategory : fmt(t.subcategories, { n: children })}</>}
           </p>
+          {(rowFlags.showInHeader || rowFlags.hidden) && (
+            <p className="mt-0.5 flex flex-wrap gap-1">
+              {rowFlags.showInHeader && <span className="rounded-full bg-primary-soft px-2 text-xs text-primary">{t.inHeader}</span>}
+              {rowFlags.hidden && <span className="rounded-full bg-paper px-2 text-xs text-ink-soft">{t.hiddenBadge}</span>}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center">
           <button type="button" className={iconButton} aria-label={label("moveUp")} title={label("moveUp")}
@@ -386,6 +424,11 @@ function CollectionRow({
             onClick={onOrderProducts}>
             <ListOrdered className="size-4" aria-hidden />
           </button>
+          {previewHref && (
+            <a href={previewHref} target="_blank" rel="noreferrer" className={iconButton} aria-label={label("preview")} title={label("preview")}>
+              <ExternalLink className="size-4" aria-hidden />
+            </a>
+          )}
           <button type="button" className={iconButton} aria-label={label("edit")} title={label("edit")} onClick={onEdit}>
             <Pencil className="size-4" aria-hidden />
           </button>
@@ -645,9 +688,15 @@ export function CollectionsPage() {
         back={{ to: "/catalog", label: t.products }}
         description={t.description}
         actions={
-          <Button onClick={() => setCreating(true)} className="min-h-11">
-            {t.newCollection}
-          </Button>
+          <>
+            <Button variant="outline" className="min-h-11" disabled={flat.length === 0} onClick={() => downloadCollectionsCsv(flat)}>
+              <Download className="size-4" aria-hidden />
+              {t.exportCsv}
+            </Button>
+            <Button onClick={() => setCreating(true)} className="min-h-11">
+              {t.newCollection}
+            </Button>
+          </>
         }
       />
 

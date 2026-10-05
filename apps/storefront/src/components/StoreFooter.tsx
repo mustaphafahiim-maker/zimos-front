@@ -1,11 +1,15 @@
 "use client";
 
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
+import { SocialLinks } from "./SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
-import { PoweredByZimos } from "./PoweredByZimos";
+import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
+import { cardTitle, storeCards } from "@/lib/storePromises";
+import { pageAndPolicyGroups } from "@/lib/footerLinks";
+import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { container } from "./ui";
 
@@ -37,6 +41,10 @@ const GRID_COLS: Record<number, string> = {
 export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; locale: Locale; year: number }) {
   const t = getDictionary(locale);
   const { footer } = useStoreShell(store);
+  // The fuller footer a store can ask for: logo, contact, social accounts (shell/RichFooter).
+  const layout = (store.themeSettings?.footer as { layout?: unknown } | undefined)?.layout;
+  if (layout === "rich") return <RichFooter store={store} locale={locale} year={year} footer={footer} />;
+
   const link =
     "inline-flex min-h-11 min-w-11 items-center text-sm text-ink-soft transition-colors hover:text-primary lg:min-h-9";
 
@@ -50,6 +58,9 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
         { title: t.footer.links, links: builtIn },
       ])
     : [];
+  // Settings → store settings: the pages flagged "show in footer" and the
+  // legal policies the store has written, each as its own column (lib/footerLinks).
+  groups.push(...pageAndPolicyGroups(store, t));
   const about = footer.text ?? store.tagline;
   const blocks = (footer.showBrand ? 1 : 0) + groups.length + (footer.showHelp ? 1 : 0);
 
@@ -89,23 +100,31 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
             </nav>
           ))}
 
-          {footer.showHelp && (
+          {/* The store's own shipping / returns / COD cards (lib/storePromises.ts), never invented ones. */}
+          {footer.showHelp && storeCards(store).length > 0 && (
             <div>
               <p className="text-sm font-semibold text-ink">{t.footer.help}</p>
               <ul className="mt-2 space-y-2 text-sm text-ink-soft">
-                <li>{t.trust.cod}</li>
-                <li>{t.trust.fast}</li>
-                <li>{t.trust.returns}</li>
+                {storeCards(store).map((card) => (
+                  <li key={card.key}>{cardTitle(card, locale)}</li>
+                ))}
               </ul>
             </div>
           )}
         </div>
       )}
 
+      {Object.keys(storefrontGeneralMeta(store).social).length > 0 && (
+        <div className={`${container} pb-6`}>
+          <SocialLinks links={storefrontGeneralMeta(store).social} />
+        </div>
+      )}
+
       <div className="border-t border-line">
         <div className={`${container} flex flex-col items-center justify-between gap-2 py-4 sm:flex-row`}>
           <p className="text-xs text-ink-soft">{t.footer.rights(store.name, year)}</p>
-          <PoweredByZimos label={t.footer.poweredBy} />
+          {/* Removed for stores whose plan includes it (Plan.features.remove_branding). */}
+          {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>
       </div>
     </footer>

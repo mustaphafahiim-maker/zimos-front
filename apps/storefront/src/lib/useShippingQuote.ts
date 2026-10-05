@@ -1,9 +1,12 @@
 "use client";
 
+import { storefrontQuoteExtras, storefrontShippingQuoteFor, type StorefrontQuoteExtras } from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
+import { getVisitorId } from "./visitorId";
 import { quotePricesShipping, shippingLineFor, type ShippingLine } from "./shippingLine";
+import { quoteOptionsOf, type ShippingOptionChoice } from "./shippingChoice";
 
 const DEBOUNCE_MS = 300;
 
@@ -21,6 +24,10 @@ export interface ShippingQuoteState {
   amount: number;
   /** Progress to the store's free-shipping threshold; null when it has none. */
   freeShipping: FreeShippingProgress | null;
+  /** The automatic discount, the minimum order and the bundle saving the quote reports. */
+  extras: StorefrontQuoteExtras;
+  /** The store's shipping options for this cart (standard first); absent or [] = no choice (shippingChoice.ts). */
+  options?: ShippingOptionChoice[];
 }
 
 /**
@@ -37,6 +44,7 @@ export function useShippingQuote({
   client,
   workspaceId,
   governorate,
+  country = "EG",
   lines,
   enabled = true,
 }: {
@@ -44,6 +52,8 @@ export function useShippingQuote({
   workspaceId: string;
   /** The governorate code ("" until chosen). */
   governorate: string;
+  /** The order's country: the form's, which starts on the store's (lib/storeCountry). */
+  country?: string;
   lines: QuoteLine[];
   enabled?: boolean;
 }): ShippingQuoteState {
@@ -52,7 +62,7 @@ export function useShippingQuote({
     .filter((l) => l.quantity > 0)
     .map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity }));
   // The effect keys on content, not on the fresh array each render.
-  const requestKey = JSON.stringify([workspaceId, province, items]);
+  const requestKey = JSON.stringify([workspaceId, country, province, items]);
   const active = enabled && items.length > 0;
 
   const [state, setState] = useState<{ key: string; quote: ShippingQuote | null; failed: boolean } | null>(null);
@@ -61,8 +71,8 @@ export function useShippingQuote({
     if (!active) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: province ?? null, items })
+      // For this visitor: a product A/B test's price counts, as the order will charge it.
+      storefrontShippingQuoteFor(client, workspaceId, { country, governorate: province ?? null, items }, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (!cancelled) setState({ key: requestKey, quote, failed: false });
         })
@@ -77,14 +87,16 @@ export function useShippingQuote({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestKey, active]);
 
-  if (!active) return { line: { kind: "on_confirmation" }, amount: 0, freeShipping: null };
-  if (!state) return { line: province ? { kind: "calculating" } : { kind: "pick_governorate" }, amount: 0, freeShipping: null };
+  const extras = storefrontQuoteExtras(active ? state?.quote : null);
+  if (!active) return { line: { kind: "on_confirmation" }, amount: 0, freeShipping: null, extras };
+  if (!state) return { line: province ? { kind: "calculating" } : { kind: "pick_governorate" }, amount: 0, freeShipping: null, extras };
   if (state.failed || !state.quote) {
     // A failure for an older request says nothing about this one yet.
-    return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null };
+    return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null, extras };
   }
 
   const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping };
+  const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options };
 }

@@ -27,11 +27,16 @@ import { useSessionBool } from "@/lib/useSessionState";
 import { BlockLibrary } from "./BlockLibrary";
 import { LayerList } from "./LayerList";
 import { SectionInspector } from "./SectionInspector";
+import { namedStylesOf } from "./ElementStylePanel";
+import { SavedSectionsLibrary } from "./SavedSections";
+import { PageProductField } from "./DataBinding";
 import { StoreLookPanel } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
+import { PageSettingsButton } from "./PageSettingsDialog";
 import { ResizableSplit } from "./ResizableSplit";
 import { applyCanvasEdit, nudgeElement } from "./canvasEdits";
+import { duplicateSection, inlineTextIds, setElementText } from "./canvasTools";
 import { ShellPanel } from "./ShellPanels";
 import {
   createSection,
@@ -188,6 +193,8 @@ function WebsiteEditor() {
   const history = useEditHistory<EditorDoc>({ sections: [], look: readStoreLook(null) });
   const { sections, look } = history.value;
   const [baseline, setBaseline] = useState<string>("[]");
+  // The rest of the tree (named styles, the page product) is saved with the page too.
+  const [metaBaseline, setMetaBaseline] = useState<string>("{}");
   const [lookBaseline, setLookBaseline] = useState<StoreLook>(() => readStoreLook(null));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** The announcement bar, header or footer, when one of those is open instead of a section. */
@@ -273,6 +280,7 @@ function WebsiteEditor() {
       nextSections = loaded;
       setSeededPageId(page.id);
       setTreeMeta(meta);
+      setMetaBaseline(JSON.stringify(meta));
       setBaseline(JSON.stringify(loaded));
       setSelectedId(null);
       setInsertIndex(null);
@@ -281,7 +289,7 @@ function WebsiteEditor() {
     history.reset({ sections: nextSections, look: nextLook });
   }
 
-  const pageDirty = JSON.stringify(sections) !== baseline;
+  const pageDirty = JSON.stringify(sections) !== baseline || JSON.stringify(treeMeta) !== metaBaseline;
   const lookDirty = !sameLook(look, lookBaseline);
   const dirty = pageDirty || lookDirty;
   /** Only the Store look tab's own fields — the dot on that tab. */
@@ -475,8 +483,10 @@ function WebsiteEditor() {
         draftData: tree,
       });
       // Re-baseline off what the server stored, not off what we sent.
-      const { sections: saved } = normalizeTree(updated.draftData);
+      const { sections: saved, ...savedMeta } = normalizeTree(updated.draftData);
       setBaseline(JSON.stringify(saved));
+      setTreeMeta(savedMeta);
+      setMetaBaseline(JSON.stringify(savedMeta));
       const detail = site.data;
       if (detail) {
         site.setData({
@@ -619,6 +629,24 @@ function WebsiteEditor() {
         />
       }
       bottom={
+        <>
+        <PageProductField
+          value={typeof (treeMeta as { productId?: unknown }).productId === "string" ? ((treeMeta as { productId?: string }).productId ?? "") : ""}
+          onChange={(productId) =>
+            setTreeMeta((prev) => {
+              const { productId: _old, ...rest } = prev as typeof prev & { productId?: string };
+              void _old;
+              return (productId ? { ...rest, productId } : rest) as typeof prev;
+            })
+          }
+        />
+        <SavedSectionsLibrary
+          onInsert={(section) => {
+            setSections((prev) => insertSection(prev, section, insertIndex ?? prev.length));
+            selectSection(section.id, { scroll: true });
+            setInsertIndex(null);
+          }}
+        />
         <BlockLibrary
           onAdd={addBlock}
           insertPosition={insertIndex === null ? null : insertIndex + 1}
@@ -626,6 +654,7 @@ function WebsiteEditor() {
           onDragStart={setDraggingPreset}
           onDragEnd={() => setDraggingPreset(null)}
         />
+        </>
       }
     />
   );
@@ -691,7 +720,17 @@ function WebsiteEditor() {
           <SectionInspector
             section={selected}
             onChange={updateSection}
+            namedStyles={namedStylesOf(treeMeta.globalStyles)}
+            onNamedStylesChange={(named) =>
+              // Saved with the page tree; the element that triggered it changes too, which marks the page unsaved.
+              setTreeMeta((prev) => ({ ...prev, globalStyles: { ...(prev.globalStyles ?? {}), named } }))
+            }
             onDelete={() => setPendingDelete(selected)}
+            onDuplicate={() => {
+              const copy = duplicateSection(selected);
+              setSections((prev) => insertSection(prev, copy, prev.findIndex((s) => s.id === selected.id) + 1));
+              selectSection(copy.id, { scroll: true });
+            }}
             onClose={() => {
               setSelectedId(null);
               setEndOpen(false);
@@ -774,6 +813,20 @@ function WebsiteEditor() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {page && (
+              <PageSettingsButton
+                key={page.id}
+                compact
+                name={page.title}
+                seo={(page.seo ?? {}) as Record<string, unknown>}
+                scripts={{ kind: "page", id: page.id }}
+                onSaveSeo={async (seo) => {
+                  const saved = await apiClient.updateWebsitePage(workspaceId, websiteId, page.id, { seo });
+                  const detail = site.data;
+                  if (detail) site.setData({ ...detail, pages: detail.pages.map((p) => (p.id === saved.id ? { ...p, seo: saved.seo } : p)) });
+                }}
+              />
+            )}
             {/* Below lg / xl the side panes are drawers, opened from here. */}
             <Button
               type="button"
@@ -926,6 +979,7 @@ function WebsiteEditor() {
                     frameTitle: ui.previewFrame,
                     lightMode: ui.previewLightMode,
                     darkMode: ui.previewDarkMode,
+                    xray: ui.previewXray,
                   }}
                   colorMode={previewMode}
                   onColorModeChange={setPreviewMode}
@@ -943,6 +997,7 @@ function WebsiteEditor() {
                       resizeColumns: ui.canvasResizeColumns,
                       resizeImage: ui.canvasResizeImage,
                       auto: ui.canvasAuto,
+                      editText: ui.canvasEditText,
                     },
                     theme: lookToPreview(look),
                     scrollRequest,
@@ -960,6 +1015,9 @@ function WebsiteEditor() {
                     onSelect: (id) => selectSection(id, { scroll: false }),
                     onCanvasEdit: (edit) => applyCanvas(edit),
                     onCanvasStep: stepCanvas,
+                    // Double-click text editing on the page (canvasTools.ts): one undo step per edit.
+                    inlineText: inlineTextIds(sections),
+                    onTextEdit: (elementId, text) => setSections((prev) => setElementText(prev, elementId, text)),
                     onInsert: requestInsert,
                     onMoveSection: moveSectionBy,
                     dragActive: draggingPreset !== null,

@@ -1,24 +1,43 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  HeartHandshake,
+  FileDown,
+  GraduationCap,
+  MousePointerClick,
+  Handshake,
+  Repeat,
+  UsersRound,
+  Sparkles,
   Activity,
+  BadgeDollarSign,
   BarChart3,
+  Bot,
   ClipboardCheck,
   CreditCard,
   Gem,
+  Gift,
   Globe,
+  History,
+  Images,
   LayoutDashboard,
   LineChart,
   LifeBuoy,
+  Megaphone,
+  MessageCircle,
   Package,
+  PiggyBank,
   Settings,
   ShieldAlert,
   ShoppingBag,
   ShoppingCart,
   Star,
+  Store,
   Tag,
+  Target,
   Truck,
   Undo2,
   Users,
+  Wallet,
   Workflow,
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
@@ -41,19 +60,38 @@ export type NavKey =
   | "reviews"
   | "customers"
   | "discounts"
+  | "offers"
   | "shipping"
   | "payments"
   | "website"
   | "funnels"
   | "analytics"
   | "webAnalytics"
+  | "attribution"
   | "realtime"
   | "subscription"
   | "settings"
-  | "support";
+  | "support"
+  | "settlements"
+  | "inbox"
+  | "automations"
+  | "marketing"
+  | "profit"
+  | "ads"
+  | "media"
+  | "digital"
+  | "ai"
+  | "affiliates"
+  | "subscriptions"
+  | "services"
+  | "referrals"
+  | "shoppableImages"
+  | "courses"
+  | "storeSettings"
+  | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "sell" | "catalog" | "grow" | "reports" | "storefront";
+export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "analytics" | "money";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
@@ -77,10 +115,10 @@ export interface NavGroup {
 }
 
 /**
- * Sidebar structure. Order mirrors a merchant's day: what came in, what to
- * confirm, what slipped away or looks suspicious, then getting it delivered
- * (and back); then the catalog behind it, growth tooling, and the storefront
- * and its settings.
+ * Sidebar structure, in the order a merchant thinks about the business: the
+ * orders that came in and what each one needs, what is being sold, who bought
+ * it, how more people are brought in, the store they land on, the numbers, and
+ * the money (getting paid, shipping). Admin and help sit at the bottom.
  *
  * Every entry here must map to a route in App.tsx — the sidebar is not a
  * roadmap. Features the backend does not serve yet stay out until they do.
@@ -92,48 +130,78 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [{ key: "overview", to: "/", icon: LayoutDashboard }],
   },
   {
-    id: "sell",
-    labelKey: "sell",
+    id: "orders",
+    labelKey: "orders",
     items: [
       { key: "orders", to: "/orders", icon: ShoppingBag },
       { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
       { key: "abandonedCarts", to: "/abandoned-carts", icon: ShoppingCart },
-      { key: "fraud", to: "/fraud", icon: ShieldAlert },
-      { key: "shipping", to: "/shipping", icon: Truck },
-      { key: "payments", to: "/payments", icon: CreditCard },
       { key: "returns", to: "/returns", icon: Undo2 },
+      { key: "fraud", to: "/fraud", icon: ShieldAlert },
     ],
   },
   {
-    id: "catalog",
-    labelKey: "catalog",
+    id: "products",
+    labelKey: "products",
     items: [
       { key: "catalog", to: "/catalog", icon: Package },
       { key: "reviews", to: "/reviews", icon: Star },
-      { key: "customers", to: "/customers", icon: Users },
+      { key: "digital", to: "/digital", icon: FileDown },
+      { key: "courses", to: "/courses", icon: GraduationCap },
+      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
+      { key: "media", to: "/media", icon: Images },
     ],
   },
   {
-    id: "grow",
-    labelKey: "grow",
+    id: "customers",
+    labelKey: "customers",
     items: [
-      { key: "funnels", to: "/funnels", icon: Workflow },
-      { key: "discounts", to: "/discounts", icon: Tag },
+      { key: "customers", to: "/customers", icon: Users },
+      { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
   {
-    id: "reports",
-    labelKey: "reports",
+    id: "marketing",
+    labelKey: "marketing",
+    items: [
+      { key: "marketing", to: "/marketing", icon: Megaphone },
+      { key: "offers", to: "/offers", icon: Gift },
+      { key: "discounts", to: "/discounts", icon: Tag },
+      { key: "automations", to: "/automations", icon: Bot },
+      { key: "affiliates", to: "/affiliates", icon: UsersRound },
+      { key: "ai", to: "/ai", icon: Sparkles },
+    ],
+  },
+  {
+    id: "store",
+    labelKey: "store",
+    items: [
+      { key: "website", to: "/website", icon: Globe },
+      { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
+      { key: "storeSettings", to: "/store-settings", icon: Store },
+    ],
+  },
+  {
+    id: "analytics",
+    labelKey: "analytics",
     items: [
       { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
-    id: "storefront",
-    labelKey: "storefront",
-    items: [{ key: "website", to: "/website", icon: Globe }],
+    id: "money",
+    labelKey: "money",
+    items: [
+      { key: "payments", to: "/payments", icon: CreditCard },
+      { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "shipping", to: "/shipping", icon: Truck },
+    ],
   },
   {
     id: "config",
@@ -141,10 +209,18 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "subscription", to: "/subscription", icon: Gem, hiddenForRoles: NO_BILLING_ROLES },
       { key: "settings", to: "/settings", icon: Settings },
+      { key: "activity", to: "/activity", icon: History },
+      { key: "services", to: "/services", icon: Handshake },
+      { key: "referrals", to: "/referrals", icon: HeartHandshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
 ];
+
+/** The group an item sits in — the first crumb of the page's breadcrumb. */
+export function findNavGroup(item: NavItem): NavGroup | undefined {
+  return NAV_GROUPS.find((group) => group.items.includes(item));
+}
 
 /** Whether a role sees an entry (see NavItem.hiddenForRoles). */
 export function isNavItemVisible(item: NavItem, role: string | null | undefined): boolean {
@@ -170,16 +246,17 @@ export function findNavItem(pathname: string): NavItem | undefined {
 /** Sidebar / drawer labels. Read with `useT(NAV_LABELS)`. */
 export const NAV_LABELS = {
   en: {
-    overview: "Overview",
+    overview: "Home",
     orders: "Orders",
     confirmationQueue: "Confirmation queue",
     fraud: "Fraud protection",
     returns: "Returns",
-    abandonedCarts: "Abandoned carts",
-    catalog: "Catalog",
+    abandonedCarts: "Lost orders",
+    catalog: "Products",
     reviews: "Reviews",
     customers: "Customers",
     discounts: "Discounts",
+    offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
     website: "Website",
@@ -187,48 +264,89 @@ export const NAV_LABELS = {
     analytics: "Analytics",
     webAnalytics: "Web analytics",
     realtime: "Realtime",
-    subscription: "Subscription",
+    subscription: "My Plan",
+    attribution: "Sales sources",
+    activity: "Activity log",
     settings: "Settings",
     support: "Contact support",
+    settlements: "COD settlements",
+    inbox: "WhatsApp inbox",
+    automations: "Automations",
+    marketing: "Marketing",
+    profit: "Profit",
+    ads: "Ad spend",
+    media: "Media library",
+    digital: "Digital products",
+    ai: "AI studio",
+    affiliates: "Affiliates",
+    subscriptions: "Subscriptions",
+    services: "Services",
+    referrals: "Refer & earn",
+    shoppableImages: "Shoppable images",
+    courses: "Courses",
+    storeSettings: "Store settings",
   },
   ar: {
-    overview: "نظرة عامة",
+    overview: "الرئيسية",
     orders: "الطلبات",
     confirmationQueue: "قائمة التأكيد",
     fraud: "الحماية من الاحتيال",
     returns: "المرتجعات",
-    abandonedCarts: "السلات المتروكة",
-    catalog: "الكتالوج",
+    abandonedCarts: "الطلبات المفقودة",
+    catalog: "المنتجات",
     reviews: "التقييمات",
     customers: "العملاء",
     discounts: "الخصومات",
+    offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",
     website: "الموقع",
     funnels: "مسارات البيع",
-    analytics: "التحليلات",
+    analytics: "النظرة العامة والتقارير",
     webAnalytics: "زيارات الموقع",
+    attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
-    subscription: "الاشتراك",
+    subscription: "خطتي",
+    activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
+    settlements: "تحصيل الشحن",
+    inbox: "صندوق واتساب",
+    automations: "الأتمتة",
+    marketing: "التسويق",
+    profit: "الأرباح",
+    ads: "مصاريف الإعلانات",
+    media: "مكتبة الصور",
+    digital: "المنتجات الرقمية",
+    ai: "استوديو الذكاء الاصطناعي",
+    affiliates: "المسوّقون بالعمولة",
+    subscriptions: "الاشتراكات",
+    services: "الخدمات",
+    referrals: "اكسب من الإحالة",
+    shoppableImages: "الصور التفاعلية",
+    courses: "الكورسات",
+    storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
 
 /** Group headings. Read with `useT(NAV_GROUP_LABELS)`. */
 export const NAV_GROUP_LABELS = {
   en: {
-    sell: "Sell",
-    catalog: "Catalog",
-    grow: "Grow",
-    reports: "Reports",
-    storefront: "Storefront",
+    orders: "Orders",
+    products: "Products",
+    customers: "Customers",
+    marketing: "Marketing",
+    store: "Online store",
+    analytics: "Analytics",
+    money: "Money & shipping",
   },
   ar: {
-    sell: "البيع",
-    catalog: "الكتالوج",
-    grow: "النمو",
-    reports: "التقارير",
-    storefront: "واجهة المتجر",
+    orders: "الطلبات",
+    products: "المنتجات",
+    customers: "العملاء",
+    marketing: "التسويق",
+    store: "المتجر",
+    analytics: "التحليلات",
+    money: "الفلوس والشحن",
   },
 } satisfies Messages<NavGroupKey>;

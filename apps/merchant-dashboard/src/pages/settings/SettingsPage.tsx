@@ -31,7 +31,12 @@ import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { CheckoutSettingsSection } from "./CheckoutSettingsSection";
+import { WhatsappSection } from "./WhatsappSection";
+import { AppearanceSection } from "./AppearanceSection";
+import { AccountSettingsSection } from "./AccountSettingsSection";
+import { DevelopersSection } from "./DevelopersSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { OrderEmailsSection } from "./OrderEmailsSection";
 import { BILLING_ROLES } from "@/pages/subscription/billingText";
 import { SUBSCRIPTION_STRINGS } from "@/pages/subscription/subscriptionStrings";
 import { useT } from "@/i18n/LocaleContext";
@@ -54,13 +59,20 @@ export function SettingsPage() {
         description="Your store profile and the people who can manage it."
       />
       <AccountSection />
+      <AppearanceSection />
+      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <CheckoutSettingsSection key={`checkout-${workspaceId}`} />
+      <AccountSettingsSection key={`account-settings-${workspaceId}`} />
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
+      {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
+      <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+      {/* The emails customers get about their orders. */}
+      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
       <SubscriptionLinkSection />
       <TeamSection key={`team-${workspaceId}`} />
+      <DevelopersSection key={`developers-${workspaceId}`} />
     </div>
   );
 }

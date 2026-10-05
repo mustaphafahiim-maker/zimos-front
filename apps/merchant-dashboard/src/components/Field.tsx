@@ -7,15 +7,20 @@ interface FieldProps {
   hint?: string;
   required?: boolean;
   className?: string;
+  /**
+   * Keeps the label for screen readers but not on screen — for a field whose
+   * own heading already names it, where a visible label would read twice.
+   */
+  labelHidden?: boolean;
   /** Render prop so the control can wire up the generated id. */
   children: (props: { id: string; "aria-invalid"?: boolean }) => ReactNode;
 }
 
-export function Field({ label, error, hint, required, className, children }: FieldProps) {
+export function Field({ label, error, hint, required, className, labelHidden, children }: FieldProps) {
   const id = useId();
   return (
     <div className={cn("space-y-1.5", className)}>
-      <Label htmlFor={id}>
+      <Label htmlFor={id} className={labelHidden ? "sr-only" : undefined}>
         {label}
         {required && <span className="text-danger"> *</span>}
       </Label>
@@ -33,12 +38,13 @@ interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id
   label: string;
   error?: string;
   hint?: string;
+  labelHidden?: boolean;
 }
 
 /** Label + <Input> + inline error, the common case. */
-export function TextField({ label, error, hint, required, className, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, hint, required, className, labelHidden, ...inputProps }: TextFieldProps) {
   return (
-    <Field label={label} error={error} hint={hint} required={required} className={className}>
+    <Field label={label} error={error} hint={hint} required={required} className={className} labelHidden={labelHidden}>
       {({ id, ...aria }) => (
         <Input
           id={id}

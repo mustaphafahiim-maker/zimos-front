@@ -63,6 +63,8 @@
 
   --radius-card: 0.625rem;
 
+  --shadow-card: 0 1px 3px rgb(16 24 40 / 0.05), 0 1px 2px rgb(16 24 40 / 0.03);
+
   /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
      `@store-builder/ui` are built against these. They point at the brand
      palette above, so those components render in this app's colours and
@@ -100,6 +102,10 @@
   --sidebar-accent-foreground: var(--color-primary-dark);
   --sidebar-border: var(--color-line);
   --sidebar-ring: var(--color-primary);
+}
+
+html.dark {
+  --shadow-card: none;
 }
 
 .dark {
@@ -188,6 +194,11 @@
   --color-danger-soft: var(--color-danger-soft);
   --color-success: var(--color-success);
   --color-success-soft: var(--color-success-soft);
+
+  /* Used by ported pages (text-warning, text-on-primary); mapped onto the
+     existing palette, no new colours. */
+  --color-warning: var(--color-accent-dark);
+  --color-on-primary: var(--primary-foreground);
 
   --font-display: var(--font-display);
   --font-sans: 'Inter Variable', sans-serif;
@@ -399,5 +410,459 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-slide-in-start {
     animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Glass dashboard (docs/UI_SYSTEM.md).
+ *
+ * The frame — sidebar, top bar, menus, dialogs — is the Glass material of
+ * @store-builder/ui/styles.css over a soft backdrop. Cards and outline
+ * buttons are translucent without blur, so tables, numbers and forms stay
+ * as readable as on a solid surface and a page of them costs nothing to
+ * draw. With reduced transparency, forced colours or data-glass="off",
+ * everything below falls back to the solid surfaces. The backdrop tints
+ * use this app's own primary and accent.
+ * ------------------------------------------------------------------ */
+.glass-app {
+  /* Cards are tinted by the backdrop instead of sitting on it as white boxes. */
+  --card: color-mix(in srgb, var(--color-paper-raised) 84%, transparent);
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%, color-mix(in srgb, var(--color-primary) 17%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 12%, color-mix(in srgb, var(--color-accent) 15%, transparent), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 55% 100%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 62%),
+    var(--color-paper);
+  background-attachment: fixed;
+}
+
+/* Navigation glass is clearer than floating glass: only the backdrop is behind it. */
+.zimos-glass.glass-nav {
+  --glass-opacity: 64%;
+  --glass-blur: 22px;
+  --glass-shadow: 0 14px 34px -22px color-mix(in srgb, var(--color-ink) 38%, transparent);
+  border-color: color-mix(in srgb, var(--color-paper-raised) 72%, var(--color-line));
+}
+.dark .zimos-glass.glass-nav {
+  --glass-opacity: 60%;
+  border-color: var(--color-line);
+}
+.glass-nav.zimos-glass-panel {
+  border-radius: 1rem;
+}
+/* The top bar spans the screen on a phone and floats, rounded, from md up. */
+.glass-topbar {
+  border-width: 0 0 1px;
+}
+@media (min-width: 48rem) {
+  .glass-topbar {
+    border-width: 1px;
+    border-radius: 1rem;
+  }
+}
+
+.glass-app [data-slot="card"] {
+  --tw-ring-color: color-mix(in srgb, var(--color-paper-raised) 60%, var(--color-line));
+  --tw-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 14px 30px -22px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
+.dark .glass-app [data-slot="card"] {
+  --tw-ring-color: var(--color-line);
+  --tw-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 9%, transparent);
+}
+
+/* Secondary actions: a clear edge and a calm highlight, no blur. */
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 88%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass):hover:not(:disabled),
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass)[aria-expanded="true"] {
+  background: var(--color-primary-soft);
+}
+.dark .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+/* The main action catches a little light along its top edge. */
+.glass-app [data-slot="button"][data-variant="default"],
+.glass-app [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 10px 18px -12px color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+
+/* Menus, selects, popovers and dialogs are portalled outside .glass-app. */
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"],
+[data-slot="popover-content"],
+[data-slot="dialog-content"],
+[data-slot="sheet-content"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.zimos-glass.glass-dialog {
+  --glass-opacity: 90%;
+  --glass-shadow: 0 24px 60px -24px color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .glass-app {
+    --card: var(--color-paper-raised);
+    background: var(--color-paper);
+  }
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+[data-glass="off"] .glass-app {
+  --card: var(--color-paper-raised);
+  background: var(--color-paper);
+}
+[data-glass="off"] .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+[data-glass="off"] [data-slot="dropdown-menu-content"],
+[data-glass="off"] [data-slot="select-content"],
+[data-glass="off"] [data-slot="popover-content"],
+[data-glass="off"] [data-slot="dialog-content"],
+[data-glass="off"] [data-slot="sheet-content"] {
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Thin scrollbar that only shows while the sidebar is hovered. */
+.shell-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.shell-scroll:hover {
+  scrollbar-color: color-mix(in srgb, var(--color-ink) 26%, transparent) transparent;
+}
+
+/* A page settles in when you move between sections. */
+.page-in {
+  animation: page-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in,
+  .quick-action {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Comfort. Every page inside the dashboard gets room to breathe: wider
+ * gutters, a centred column, taller rows and fields, and soft hover
+ * states. One layer for all pages, so none has to be restyled on its own.
+ * ------------------------------------------------------------------ */
+html {
+  scroll-behavior: smooth;
+}
+.glass-app main {
+  padding: 1.25rem 1rem 4rem;
+}
+@media (min-width: 40rem) {
+  .glass-app main {
+    padding: 1.75rem 2rem 4.5rem;
+  }
+}
+/* On a wide screen the page column sits in the middle, not against one edge. */
+.glass-app main .page-in > [class*="max-w-"] {
+  margin-inline: auto;
+}
+.glass-app main h1 {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Tables: taller rows, and the row under the pointer is easy to follow. */
+.glass-app main table th {
+  padding-block: 0.75rem;
+}
+.glass-app main table td {
+  padding-block: 0.9375rem;
+}
+.glass-app main tbody tr {
+  transition: background-color 140ms ease;
+}
+.glass-app main tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 55%, transparent);
+}
+
+/* Fields, selects, filter tabs and default buttons share one comfortable height. */
+.glass-app main [data-slot="input"],
+.glass-app main [data-slot="select-trigger"],
+.glass-app main select {
+  min-height: 2.5rem;
+  border-radius: 0.625rem;
+}
+.glass-app main [data-slot="button"].h-9 {
+  height: 2.5rem;
+  padding-inline: 0.875rem;
+}
+.glass-app main [role="group"] > button {
+  min-height: 2.25rem;
+  padding-inline: 0.875rem;
+}
+
+/* Cards are a little rounder; a card that is a link lifts when pointed at. */
+.glass-app main [data-slot="card"] {
+  border-radius: 1rem;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.glass-app main a > [data-slot="card"]:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .glass-app main tbody tr,
+  .glass-app main [data-slot="card"] {
+    transition: none;
+  }
+  .glass-app main a > [data-slot="card"]:hover {
+    transform: none;
+  }
+}
+
+/* A visually hidden label inside a sideways-scrolling area (a table header,
+   say) is positioned against that area, so it is clipped with it instead of
+   widening the whole page on a phone. In the base layer: an element that sets
+   its own position keeps it. */
+@layer base {
+  .glass-app main .overflow-x-auto,
+  .glass-app main .overflow-auto {
+    position: relative;
+  }
+}
+
+/* Full screen: the side menu is hidden and the page column may use the whole width. */
+.glass-app[data-focus="on"] > aside {
+  display: none;
+}
+.glass-app[data-focus="on"] main .page-in > [class*="max-w-"] {
+  max-width: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Full-screen editors (funnel, website): the same backdrop as the
+ * dashboard, and the editor's own top bar as glass. Styling only — the
+ * editors' markup and behaviour are untouched.
+ * ------------------------------------------------------------------ */
+.glass-editor {
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 12%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 62%),
+    var(--color-paper);
+}
+/* The bar at the top of an editor page: its first block, drawn on the raised surface. */
+.glass-editor .flex.h-full.flex-col > .border-b.bg-paper-raised:first-child {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px -24px color-mix(in srgb, var(--color-ink) 40%, transparent);
+}
+.glass-editor [data-slot="button"][data-variant="outline"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+}
+.glass-editor [data-slot="button"][data-variant="outline"]:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+.glass-editor [data-slot="button"][data-variant="default"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 10px 18px -12px color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .glass-editor {
+    background: var(--color-paper);
+  }
+  .glass-editor .flex.h-full.flex-col > .border-b.bg-paper-raised:first-child,
+  .glass-editor [data-slot="button"][data-variant="outline"] {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Sign-in pages: one Glass card over a slow backdrop in the brand colours.
+ * The pages keep their own forms and logic; this only frames them.
+ * ------------------------------------------------------------------ */
+/* The sign-in pages (login, register, forgot and reset password) draw in the
+   source design's own palette and display face. Scoped to .auth-glass so
+   nothing else in the dashboard changes. The dark values are the app's own,
+   which the source shares, so only the light ones are overridden. */
+.auth-glass {
+  --color-cyan: #12c8da;
+  --font-display: "Inter Variable", "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+}
+html:not(.dark) .auth-glass {
+  --color-ink: #081f5c;
+  --color-ink-soft: #56648c;
+  --color-paper: #f6f9ff;
+  --color-line: #e3e8f2;
+  --color-line-strong: #868b98;
+  --color-primary: #165dff;
+  --color-primary-dark: #081f5c;
+  --color-primary-soft: #eaf0ff;
+  /* The shadcn tokens resolve where they are declared (:root), so the ones
+     the form controls read are re-pointed here too. */
+  --foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --ring: var(--color-primary);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --muted-foreground: var(--color-ink-soft);
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  color: var(--color-ink);
+}
+
+.auth-glass {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6rem 1rem 2.5rem;
+  background: var(--color-paper);
+}
+.auth-glass-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.auth-glass-stage > * {
+  padding: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-paper-raised) 78%, var(--color-line));
+  border-radius: 1.75rem;
+  background: var(--color-paper-raised);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 30px 70px -34px color-mix(in srgb, var(--color-primary-dark) 55%, transparent);
+}
+@media (min-width: 40rem) {
+  .auth-glass-stage > * {
+    padding: 2.25rem;
+  }
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-glass-stage > * {
+    background: color-mix(in srgb, var(--color-paper-raised) 62%, transparent);
+    -webkit-backdrop-filter: blur(26px);
+    backdrop-filter: blur(26px);
+  }
+}
+.dark .auth-glass-stage > * {
+  border-color: var(--color-line);
+}
+
+/* Fields and buttons take the pill shape of the card. */
+.auth-glass [data-slot="input"] {
+  height: 2.875rem;
+  border-radius: 9999px;
+  padding-inline: 1.125rem;
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 90%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"],
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  min-height: 2.875rem;
+  border-radius: 9999px;
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 12px 22px -14px color-mix(in srgb, var(--color-primary) 85%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+}
+
+.auth-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: auth-float 22s ease-in-out infinite;
+}
+.auth-blob[data-n="1"] {
+  inset-block-end: -9rem;
+  inset-inline-start: -8rem;
+  width: 34rem;
+  height: 26rem;
+  background: var(--color-primary);
+}
+.auth-blob[data-n="2"] {
+  inset-block-start: -7rem;
+  inset-inline-end: -5rem;
+  width: 26rem;
+  height: 24rem;
+  background: var(--color-cyan);
+  animation-duration: 27s;
+  animation-direction: reverse;
+}
+.auth-blob[data-n="3"] {
+  inset-block-end: 3rem;
+  inset-inline-end: 16%;
+  width: 22rem;
+  height: 22rem;
+  background: var(--color-primary-dark);
+  opacity: 0.24;
+  animation-duration: 31s;
+}
+.dark .auth-blob {
+  opacity: 0.32;
+}
+@keyframes auth-float {
+  50% {
+    transform: translate(18px, -22px) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .auth-glass-stage > * {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .auth-blob {
+    display: none;
   }
 }

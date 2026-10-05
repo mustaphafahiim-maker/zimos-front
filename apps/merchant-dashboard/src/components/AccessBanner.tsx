@@ -37,7 +37,7 @@ const STRINGS = {
     notEnforced: "Your subscription has expired. Renew it to keep your store running.",
     suspended:
       "This store has been suspended by Zimos. It's unavailable to shoppers and new products and funnels can't be added. Contact Zimos support.",
-    billingLink: "Subscription",
+    billingLink: "My Plan",
     dismiss: "Dismiss for today",
     draft: "Your store is in draft mode: build as much as you like, and subscribe to publish it.",
     subscribe: "Subscribe to publish your store",
@@ -56,7 +56,7 @@ const STRINGS = {
     notEnforced: "انتهى اشتراكك. جدّده حتى يستمر متجرك في العمل.",
     suspended:
       "أوقفت Zimos هذا المتجر. المتجر غير متاح للمتسوقين ولا يمكن إضافة منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
-    billingLink: "الاشتراك",
+    billingLink: "خطتي",
     dismiss: "إخفاء لليوم",
     draft: "متجرك في وضع المسودة: ابنِ كما تشاء، واشترك لتنشره.",
     subscribe: "اشترك لنشر متجرك",

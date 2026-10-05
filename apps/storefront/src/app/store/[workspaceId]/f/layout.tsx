@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FunnelHeader } from "@/components/funnel/FunnelHeader";
-import { PoweredByZimos } from "@/components/PoweredByZimos";
+import { FunnelPolicies } from "@/components/funnel/FunnelPolicies";
+import { PoweredByZimos, brandingRemoved } from "@/components/PoweredByZimos";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { getStoreLocale } from "@/lib/storeLocale";
@@ -43,8 +44,11 @@ export default async function FunnelLayout({
       <FunnelHeader store={store} />
       <div className="flex flex-1 flex-col">{children}</div>
       <footer className="mt-auto border-t border-line bg-paper-raised">
-        <div className={`${container} flex justify-center py-3`}>
-          <PoweredByZimos label={t.footer.poweredBy} />
+        <div className={`${container} flex flex-col items-center gap-2 py-3`}>
+          {/* The store's policies: required by ad platforms, and the store footer is hidden here. */}
+          <FunnelPolicies />
+          {/* Not for a store whose plan removes the branding (Plan.features.remove_branding). */}
+          {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>
       </footer>
     </>

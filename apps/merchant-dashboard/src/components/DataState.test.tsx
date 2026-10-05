@@ -18,7 +18,7 @@ describe("DataState and the plan feature gate (PLAN_FEATURE_REQUIRED)", () => {
       </DataState>,
       { locale: "ar" }
     );
-    expect(screen.getByText("خطتك الحالية لا تشمل «تحليلات متقدمة». رقِّ خطتك من قسم الاشتراك لاستخدامها.")).toBeTruthy();
+    expect(screen.getByText("خطتك الحالية لا تشمل «تحليلات متقدمة». رقِّ خطتك من قسم خطتي لاستخدامها.")).toBeTruthy();
     // Not the permission sentence a plain 403 gets, and nothing to retry.
     expect(screen.queryByText(/ليست لديك صلاحية/)).toBeNull();
     expect(screen.queryByRole("button", { name: "حاول مرة أخرى" })).toBeNull();
@@ -36,7 +36,7 @@ describe("DataState and the plan feature gate (PLAN_FEATURE_REQUIRED)", () => {
       </DataState>,
       { locale: "en" }
     );
-    expect(screen.getByText("Your plan doesn't include Advanced analytics. Upgrade your plan from Subscription to use it.")).toBeTruthy();
+    expect(screen.getByText("Your plan doesn't include Advanced analytics. Upgrade your plan from My Plan to use it.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "See the plans" }).getAttribute("href")).toBe("/subscription");
   });
 
@@ -47,7 +47,7 @@ describe("DataState and the plan feature gate (PLAN_FEATURE_REQUIRED)", () => {
       </DataState>,
       { locale: "en" }
     );
-    expect(screen.getByText("Your plan doesn't include this feature. Upgrade your plan from Subscription to use it.")).toBeTruthy();
+    expect(screen.getByText("Your plan doesn't include this feature. Upgrade your plan from My Plan to use it.")).toBeTruthy();
   });
 
   it("keeps the permission message for any other 403", () => {

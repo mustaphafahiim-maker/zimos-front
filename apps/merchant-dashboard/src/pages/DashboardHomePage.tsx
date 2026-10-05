@@ -1,17 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  ClipboardCheck,
-  DollarSign,
-  Package,
-  ShoppingCart,
-  Users,
-  Wallet,
-  Workflow,
-} from "lucide-react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, Spinner, cn } from "@store-builder/ui";
+import { ShoppingCart, Workflow } from "lucide-react";
+import { Button, Card, Spinner, cn } from "@store-builder/ui";
 import type { Order } from "@store-builder/api-client";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -19,11 +9,15 @@ import { useAsync } from "@/lib/useAsync";
 import { apiClient } from "@/lib/apiClient";
 import { fetchOrderStats } from "@/lib/orderStats";
 import { isPermissionError } from "@/lib/errors";
-import { formatDateTime, formatMoney, formatPercentValue } from "@/lib/format";
-import { deltaBasisPoints, formatCount, percentToRatio, rangeWindows, type AnalyticsPair } from "@/lib/analytics";
+import { formatDateTime, formatMoney } from "@/lib/format";
+import type { AnalyticsPair } from "@/lib/analytics";
 import { fetchAnalyticsPair, takePrefetchedAnalyticsSummary } from "@/lib/analyticsPrefetch";
 import { canViewAnalytics } from "@/lib/analyticsAccess";
 import { StatusBadge } from "@/components/StatusBadge";
+import { StoreOverview } from "@/pages/home/StoreOverview";
+import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
+import { SiteAnalytics } from "@/pages/home/SiteAnalytics";
+import { QuickActions } from "@/pages/home/QuickActions";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -163,10 +157,10 @@ export function DashboardHomePage() {
   const extra = useAsync(
     () =>
       withAnalytics
-        ? Promise.all([
-            apiClient.listOrders(workspaceId, { limit: 6 }).then((page) => page.orders as Order[]).catch(() => null),
-            apiClient.getFunnelAnalytics(workspaceId, rangeWindows("30d").current).catch(() => null),
-          ]).then(([recent, funnels]) => ({ recent, funnels }))
+        ? apiClient
+            .listOrders(workspaceId, { limit: 6 })
+            .then((page) => ({ recent: page.orders as Order[] }))
+            .catch(() => ({ recent: null }))
         : Promise.resolve(null),
     [workspaceId, withAnalytics]
   );
@@ -179,7 +173,7 @@ export function DashboardHomePage() {
       <h1 className="font-display text-2xl font-medium text-ink">
         {currentWorkspace ? fmt(t.welcomeNamed, { name: currentWorkspace.name }) : t.welcome}
       </h1>
-      {withAnalytics && <p className="mt-1 text-sm text-ink-soft">{t.subtitle}</p>}
+      <QuickActions awaiting={queue.data ?? null} />
 
       <div className="mt-8">
         {loading ? (
@@ -204,9 +198,7 @@ export function DashboardHomePage() {
         ) : analytics ? (
           <AnalyticsOverview
             pair={analytics}
-            awaiting={queue.data ?? null}
             recent={extra.data?.recent ?? null}
-            funnels={extra.data?.funnels ?? null}
             extraLoading={extra.loading}
           />
         ) : legacy.data && legacy.data.totalOrders === 0 ? (
@@ -228,85 +220,38 @@ export function DashboardHomePage() {
         ) : null}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          { title: t.ordersTitle, desc: t.ordersDesc, to: "/orders" },
-          { title: t.catalogTitle, desc: t.catalogDesc, to: "/catalog" },
-          { title: t.customersTitle, desc: t.customersDesc, to: "/customers" },
-        ].map((item) => (
-          <Link key={item.to} to={item.to} className="block">
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>{item.desc}</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {analyticsAllowed && (
+        <div className="mt-8">
+          <SiteAnalytics />
+        </div>
+      )}
     </div>
   );
 }
 
 function AnalyticsOverview({
   pair,
-  awaiting,
   recent,
-  funnels,
   extraLoading,
 }: {
   pair: AnalyticsPair;
-  awaiting: number | null;
   recent: Order[] | null;
-  funnels: Awaited<ReturnType<typeof apiClient.getFunnelAnalytics>> | null;
   extraLoading: boolean;
 }) {
   const t = useT(STRINGS);
-  const { current, previous } = pair;
+  const { current } = pair;
   const currency = current.currency ?? "EGP";
   const money = (v: number | string) => <bdi dir="ltr">{formatMoney(v, currency)}</bdi>;
 
   return (
     <>
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={<DollarSign />}
-          tone="primary"
-          label={t.grossSales}
-          value={money(current.revenue.gross)}
-          delta={deltaBasisPoints(current.revenue.gross, previous?.revenue.gross)}
-          vsLabel={t.vsPrevious}
-          to="/analytics"
-        />
-        <StatCard
-          icon={<ShoppingCart />}
-          tone="neutral"
-          label={t.orders}
-          value={<bdi dir="ltr">{formatCount(current.orders.placed)}</bdi>}
-          delta={deltaBasisPoints(current.orders.placed, previous?.orders.placed)}
-          vsLabel={t.vsPrevious}
-          to="/orders"
-        />
-        <StatCard
-          icon={<ClipboardCheck />}
-          tone="accent"
-          label={t.awaitingConfirmation}
-          value={<bdi dir="ltr">{awaiting === null ? "—" : formatCount(awaiting)}</bdi>}
-          hint={t.awaitingHint}
-          to="/confirmation-queue"
-        />
-        <StatCard
-          icon={<Wallet />}
-          tone="success"
-          label={t.collected}
-          value={money(current.revenue.collected)}
-          delta={deltaBasisPoints(current.revenue.collected, previous?.revenue.collected)}
-          vsLabel={t.vsPrevious}
-        />
+      <SetupGuideCard />
+      <div className="mb-8">
+        <StoreOverview />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6">
+        <div>
           <Panel
             title={t.recentTitle}
             action={
@@ -356,139 +301,8 @@ function AnalyticsOverview({
           </Panel>
         </div>
 
-        <div className="space-y-6">
-          <Panel title={t.quickTitle}>
-            <div className="space-y-4">
-              <Meter label={t.confirmationRate} value={current.rates.confirmation} tone="bg-primary" />
-              <Meter label={t.deliveryRate} value={current.rates.delivery} tone="bg-success" />
-              {current.traffic && current.traffic.sessions > 0 ? (
-                <Meter label={t.conversionRate} value={current.traffic.conversionRate} tone="bg-accent" />
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-ink-soft">{t.conversionRate}</span>
-                  <span className="text-xs text-ink-soft">{t.noSessions}</span>
-                </div>
-              )}
-            </div>
-          </Panel>
-
-          <Panel title={t.topProducts}>
-            {current.topProducts.length === 0 ? (
-              <p className="text-sm text-ink-soft">{t.noProducts}</p>
-            ) : (
-              <div className="space-y-3">
-                {current.topProducts.map((p, i) => (
-                  <div key={p.productId ?? `${p.name}-${i}`} className="flex items-center justify-between gap-3 py-1">
-                    <span className="flex min-w-0 items-center gap-2 text-sm text-ink-soft">
-                      <Package className="size-4 shrink-0" aria-hidden />
-                      <span className="truncate" dir="auto">
-                        {p.name ?? "—"}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-end">
-                      <span className="block tabular-nums text-sm font-medium text-ink">{money(p.revenue)}</span>
-                      <span className="block text-xs text-ink-soft">{fmt(t.units, { n: formatCount(p.quantity) })}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          {funnels && (
-            <Panel
-              title={t.funnelsTitle}
-              action={
-                <Link to="/funnels" className="text-sm font-medium text-primary hover:underline">
-                  {t.viewAll}
-                </Link>
-              }
-            >
-              {funnels.totals.sessions === 0 ? (
-                <p className="text-sm text-ink-soft">{t.noFunnels}</p>
-              ) : (
-                <div className="space-y-3">
-                  {funnels.funnels
-                    .filter((f) => f.sessions > 0)
-                    .slice(0, 4)
-                    .map((f) => (
-                      <Link
-                        key={f.id}
-                        to={`/analytics/funnels/${f.id}`}
-                        className="flex items-center justify-between gap-3 py-1 hover:text-primary"
-                      >
-                        <span className="flex min-w-0 items-center gap-2 text-sm text-ink-soft">
-                          <Users className="size-4 shrink-0" aria-hidden />
-                          <span className="truncate" dir="auto">
-                            {f.name}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-end">
-                          <span className="block tabular-nums text-sm font-medium text-ink">{money(f.revenue)}</span>
-                          <span className="block text-xs text-ink-soft">
-                            {fmt(t.funnelSessions, { n: formatCount(f.sessions) })} ·{" "}
-                            <bdi dir="ltr">{formatPercentValue(percentToRatio(f.conversionRate))}</bdi>
-                          </span>
-                        </span>
-                      </Link>
-                    ))}
-                </div>
-              )}
-            </Panel>
-          )}
-        </div>
       </div>
     </>
-  );
-}
-
-function StatCard({
-  icon,
-  tone,
-  label,
-  value,
-  delta,
-  vsLabel,
-  hint,
-  to,
-}: {
-  icon: ReactNode;
-  tone: keyof typeof TONES;
-  label: string;
-  value: ReactNode;
-  delta?: number | null;
-  vsLabel?: string;
-  hint?: string;
-  to?: string;
-}) {
-  const up = delta !== null && delta !== undefined && delta > 0;
-  const down = delta !== null && delta !== undefined && delta < 0;
-  const body = (
-    <Card className={cn("h-full gap-0 p-5", to && "transition-colors hover:border-primary/40")}>
-      <div className="mb-3 flex items-center justify-between">
-        <div className={cn("rounded-lg p-2 [&>svg]:size-5", TONES[tone])} aria-hidden>
-          {icon}
-        </div>
-        {up && <ArrowUpRight className="size-4 text-success" aria-hidden />}
-        {down && <ArrowDownRight className="size-4 text-danger" aria-hidden />}
-      </div>
-      <p className="mb-1 text-xs font-medium tracking-wide text-ink-soft uppercase rtl:tracking-normal">{label}</p>
-      <p className="tabular-nums font-display text-2xl font-medium text-ink">{value}</p>
-      {delta !== undefined && delta !== null ? (
-        <p className={cn("mt-1 text-sm", up ? "text-success" : down ? "text-danger" : "text-ink-soft")}>
-          <bdi dir="ltr">{(up ? "+" : down ? "−" : "") + formatPercentValue(Math.abs(delta) / 10000)}</bdi> {vsLabel}
-        </p>
-      ) : hint ? (
-        <p className="mt-1 text-sm text-ink-soft">{hint}</p>
-      ) : null}
-    </Card>
-  );
-  return to ? (
-    <Link to={to} className="block">
-      {body}
-    </Link>
-  ) : (
-    body
   );
 }
 
@@ -501,22 +315,6 @@ function Panel({ title, action, children }: { title: string; action?: ReactNode;
       </div>
       {children}
     </Card>
-  );
-}
-
-function Meter({ label, value, tone }: { label: string; value: number | null; tone: "bg-primary" | "bg-success" | "bg-accent" }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-ink-soft">{label}</span>
-        <span className="tabular-nums text-sm font-medium text-ink">
-          <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>
-        </span>
-      </div>
-      <div className="mt-1.5 h-2 w-full rounded-full bg-paper">
-        <div className={cn("h-2 rounded-full", tone)} style={{ width: `${Math.min(100, Math.max(0, value ?? 0))}%` }} />
-      </div>
-    </div>
   );
 }
 

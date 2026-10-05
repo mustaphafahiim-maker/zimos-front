@@ -116,12 +116,12 @@ describe("SettingsPage team invitations", () => {
 
   it("asks for an upgrade, naming the feature, when the plan has no staff accounts", async () => {
     await invite("en", planLacksStaff());
-    expect(await screen.findByText("Your plan doesn't include Staff accounts. Upgrade your plan from Subscription to use it.")).toBeInTheDocument();
+    expect(await screen.findByText("Your plan doesn't include Staff accounts. Upgrade your plan from My Plan to use it.")).toBeInTheDocument();
     expect(screen.queryByText(/don't have permission/)).not.toBeInTheDocument();
   });
 
   it("asks for it in Arabic on an Arabic dashboard", async () => {
     await invite("ar", planLacksStaff());
-    expect(await screen.findByText("خطتك الحالية لا تشمل «حسابات الفريق». رقِّ خطتك من قسم الاشتراك لاستخدامها.")).toBeInTheDocument();
+    expect(await screen.findByText("خطتك الحالية لا تشمل «حسابات الفريق». رقِّ خطتك من قسم خطتي لاستخدامها.")).toBeInTheDocument();
   });
 });

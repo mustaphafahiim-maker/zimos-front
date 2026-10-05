@@ -31,8 +31,9 @@ const STRINGS = {
     VALIDATION_ERROR: "Some fields need attention. Check the highlighted values and try again.",
     UNAUTHENTICATED: "Your session has ended. Sign in again to continue.",
     FORBIDDEN: "You don't have permission to do that. Ask the store owner to update your role.",
+    APP_NOT_INSTALLED: "This needs an app your store has uninstalled. Install it again from the Apps page.",
     SUBSCRIPTION_REQUIRED:
-      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Subscription.",
+      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see My Plan.",
     STORE_SUSPENDED:
       "This store has been suspended by Zimos, so new products and funnels can't be created. Contact Zimos support.",
     NOT_FOUND: "We couldn't find that. It may have been deleted.",
@@ -109,7 +110,7 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
     PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
-    PLAN_FEATURE_REQUIRED: "Your plan doesn't include this feature. Upgrade your plan from Subscription to use it.",
+    PLAN_FEATURE_REQUIRED: "Your plan doesn't include this feature. Upgrade your plan from My Plan to use it.",
     TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
     EMAIL_NOT_VERIFIED: "Confirm your email address first: use the code we send you from the banner at the top of the page.",
     INVITEE_NOT_CONFIRMED: "That person's account hasn't confirmed its email yet. Ask them to confirm it, then invite them again.",
@@ -117,7 +118,7 @@ const STRINGS = {
     limitFunnels: "You've reached your plan's funnels for this month ({used} of {max}). You can create more from {date}.",
     limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
     limitDrafts: "Subscribe to one of your stores before starting another.",
-    featureRequired: "Your plan doesn't include {feature}. Upgrade your plan from Subscription to use it.",
+    featureRequired: "Your plan doesn't include {feature}. Upgrade your plan from My Plan to use it.",
     cancelFailedPermission:
       "The courier refused to cancel the delivery: the connected API key doesn't have Full Access. The order was not cancelled. Reconnect the courier with a Full Access key under Shipping, or cancel the delivery in the courier's dashboard first.",
     cancelFailedAuth:
@@ -138,8 +139,9 @@ const STRINGS = {
     VALIDATION_ERROR: "بعض الحقول تحتاج إلى مراجعة. راجع القيم المحددة وحاول مرة أخرى.",
     UNAUTHENTICATED: "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
     FORBIDDEN: "ليست لديك صلاحية للقيام بذلك. اطلب من مالك المتجر تحديث دورك.",
+    APP_NOT_INSTALLED: "هذا يحتاج تطبيقًا ألغيت تثبيته من متجرك. ثبّته مرة أخرى من صفحة التطبيقات.",
     SUBSCRIPTION_REQUIRED:
-      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع قسم الاشتراك.",
+      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع قسم خطتي.",
     STORE_SUSPENDED: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
     NOT_FOUND: "لم نعثر على هذا العنصر. ربما تم حذفه.",
     CONFLICT: "تغيّر هذا العنصر في الأثناء. أعد التحميل وحاول مرة أخرى.",
@@ -215,7 +217,7 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "لا يمكن استرداد هذه الدفعة عبر البوابة.",
     ORDER_TEST_PAYMENT: "هذا الأوردر دُفع في وضع التجربة، لذلك لا يمكن شحنه.",
     PLAN_LIMIT_REACHED: "بلغت الحد المسموح في خطتك. رقِّ خطتك لإضافة المزيد.",
-    PLAN_FEATURE_REQUIRED: "خطتك الحالية لا تشمل هذه الميزة. رقِّ خطتك من قسم الاشتراك لاستخدامها.",
+    PLAN_FEATURE_REQUIRED: "خطتك الحالية لا تشمل هذه الميزة. رقِّ خطتك من قسم خطتي لاستخدامها.",
     TRIAL_NOT_AVAILABLE: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
     EMAIL_NOT_VERIFIED: "أكّد بريدك الإلكتروني أولًا بالرمز الذي نرسله إليك من الشريط أعلى الصفحة.",
     INVITEE_NOT_CONFIRMED: "لم يؤكد صاحب هذا الحساب بريده الإلكتروني بعد. اطلب منه تأكيده، ثم أرسل الدعوة مرة أخرى.",
@@ -223,7 +225,7 @@ const STRINGS = {
     limitFunnels: "بلغت الحد الشهري لمسارات البيع في خطتك ({used} من {max}). يمكنك إنشاء المزيد بدءًا من {date}.",
     limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
     limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
-    featureRequired: "خطتك الحالية لا تشمل «{feature}». رقِّ خطتك من قسم الاشتراك لاستخدامها.",
+    featureRequired: "خطتك الحالية لا تشمل «{feature}». رقِّ خطتك من قسم خطتي لاستخدامها.",
     cancelFailedPermission:
       "رفضت شركة الشحن إلغاء الشحنة لأن مفتاح API المربوط ليس بصلاحية Full Access. لم يتم إلغاء الأوردر. أعد ربط الشركة بمفتاح Full Access من صفحة الشحن، أو ألغِ الشحنة من لوحة تحكم الشركة أولًا.",
     cancelFailedAuth:

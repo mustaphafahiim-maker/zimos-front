@@ -381,6 +381,7 @@ export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
     downsell: "Downsell",
     thank_you: "Thank you",
     custom: "Custom page",
+    article: "Article",
   },
   ar: {
     landing: "صفحة الهبوط",
@@ -391,6 +392,7 @@ export const STEP_TYPE_LABELS: Record<Locale, Record<UiStepType, string>> = {
     downsell: "عرض بديل",
     thank_you: "صفحة الشكر",
     custom: "صفحة مخصصة",
+    article: "مقال",
   },
 };
 
@@ -405,6 +407,7 @@ export const STEP_DEFAULT_NAMES: Record<Locale, Record<UiStepType, string>> = {
     downsell: "Downsell",
     thank_you: "Thank you",
     custom: "Custom page",
+    article: "Article",
   },
   ar: {
     landing: "صفحة الهبوط",
@@ -415,6 +418,7 @@ export const STEP_DEFAULT_NAMES: Record<Locale, Record<UiStepType, string>> = {
     downsell: "عرض بديل",
     thank_you: "شكرًا لطلبك",
     custom: "صفحة مخصصة",
+    article: "مقال",
   },
 };
 
@@ -424,12 +428,14 @@ export const CONDITION_LABELS: Record<Locale, Record<UiEdgeCondition, string>> =
     completed_checkout: "Completed checkout",
     accepted_offer: "Accepted",
     declined_offer: "Declined",
+    clicked_through: "Pressed a button",
   },
   ar: {
     always: "دائمًا",
     completed_checkout: "أكمل الدفع",
     accepted_offer: "قبِل العرض",
     declined_offer: "رفض العرض",
+    clicked_through: "ضغط زرار",
   },
 };
 
@@ -440,12 +446,14 @@ export const CONNECTOR_LABELS: Record<Locale, Record<UiEdgeCondition, string>> =
     completed_checkout: "Ordered",
     accepted_offer: "Yes",
     declined_offer: "No",
+    clicked_through: "Button",
   },
   ar: {
     always: "بعد ذلك",
     completed_checkout: "طلب",
     accepted_offer: "قبول",
     declined_offer: "رفض",
+    clicked_through: "زرار",
   },
 };
 

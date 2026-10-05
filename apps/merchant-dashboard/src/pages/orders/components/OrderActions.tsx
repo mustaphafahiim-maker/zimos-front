@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
-import { ApiError, isApiErrorCode, type Order, type UpdateOrderPayload } from "@store-builder/api-client";
+import { ApiError, isApiErrorCode, ordersCancelWithOptions, type Order, type UpdateOrderPayload } from "@store-builder/api-client";
+import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
+import { MoneyInput } from "@/components/MoneyInput";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
@@ -11,10 +14,14 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
+import { Select } from "@/components/Select";
 import { isCarrierBooked } from "@/pages/shipping/carriers";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 
 const SHIPPED_STATES = ["fulfilled", "partially_fulfilled", "returned"];
+
+const CANCEL_REASON_KINDS = ["customer", "fake", "duplicate", "stock", "other"] as const;
+type CancelReasonKind = (typeof CANCEL_REASON_KINDS)[number];
 
 const STRINGS = {
   en: {
@@ -26,14 +33,24 @@ const STRINGS = {
     shippedNote: "Shipped — cancel and edit are disabled; open a return instead.",
     cancelTitle: "Cancel {number}?",
     cancelDescription:
-      "Releases the stock reservation and marks the confirmation as rejected. Refunding a paid order is a separate step.",
+      "Releases the stock reservation and marks the confirmation as rejected. A paid order can be refunded here too.",
     cancelConfirm: "Cancel this order",
     keepOrder: "Keep order",
     working: "Working…",
-    reason: "Reason",
+    reason: "Details",
+    reasonKind: "Reason",
+    reason_customer: "Customer cancelled",
+    reason_fake: "Fake order",
+    reason_duplicate: "Duplicate order",
+    reason_stock: "Out of stock",
+    reason_other: "Other",
     reasonPlaceholder: "Customer changed their mind",
     reasonRequired: "Enter a reason for the cancellation.",
     cancelledToast: "Order cancelled. The stock reservation has been released.",
+    refundOnCancel: "Refund {amount} the customer paid",
+    refundAmount: "Amount to refund",
+    refundInvalid: "Enter an amount between 0.01 and {max}.",
+    refundFailed: "The order is cancelled, but the refund failed: {reason} Refund it from the payments card.",
     courierCancelNote:
       "This order has a courier delivery that hasn't been collected or is marked Failed. It's cancelled with the courier first; if the courier refuses, nothing is cancelled and the order stays active.",
     notCancelled: "Nothing was cancelled: the order is still active.",
@@ -59,14 +76,24 @@ const STRINGS = {
     shippedNote: "تم الشحن — الإلغاء والتعديل غير متاحين؛ افتح مرتجعًا بدلًا من ذلك.",
     cancelTitle: "إلغاء {number}؟",
     cancelDescription:
-      "يحرر حجز المخزون ويعلّم التأكيد كمرفوض. استرداد قيمة أوردر مدفوع خطوة منفصلة.",
+      "يحرر حجز المخزون ويعلّم التأكيد كمرفوض. يمكن استرداد قيمة الأوردر المدفوع هنا أيضًا.",
     cancelConfirm: "إلغاء هذا الأوردر",
     keepOrder: "الإبقاء على الأوردر",
     working: "جارٍ التنفيذ…",
-    reason: "السبب",
+    reason: "التفاصيل",
+    reasonKind: "السبب",
+    reason_customer: "العميل ألغى",
+    reason_fake: "أوردر وهمي",
+    reason_duplicate: "أوردر مكرر",
+    reason_stock: "المنتج غير متوفر",
+    reason_other: "سبب آخر",
     reasonPlaceholder: "العميل غيّر رأيه",
     reasonRequired: "أدخل سبب الإلغاء.",
     cancelledToast: "تم إلغاء الأوردر وتحرير حجز المخزون.",
+    refundOnCancel: "رد {amount} دفعها العميل",
+    refundAmount: "المبلغ المسترد",
+    refundInvalid: "أدخل مبلغًا بين 0.01 و{max}.",
+    refundFailed: "تم إلغاء الطلب، لكن الاسترداد فشل: {reason} استرده من بطاقة المدفوعات.",
     courierCancelNote:
       "لهذا الأوردر شحنة مع شركة شحن لم تُستلم بعد أو حالتها «فشل». سيتم إلغاؤها لدى الشركة أولًا؛ وإذا رفضت الشركة، فلن يُلغى أي شيء ويبقى الأوردر نشطًا.",
     notCancelled: "لم يتم إلغاء أي شيء: الأوردر ما زال نشطًا.",
@@ -97,9 +124,16 @@ export function OrderActions({ order, onChanged }: Props) {
   const errorMessage = useErrorMessage();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
+  // SPEC §4.4: the reason is picked from a list; "other" needs the details typed.
+  const [reasonKind, setReasonKind] = useState<CancelReasonKind>("customer");
   const [editing, setEditing] = useState(false);
   const [waybillBusy, setWaybillBusy] = useState(false);
   const manualCancelPrompt = useManualCancelPrompt();
+  // SPEC §4.4 cancellation options: give the money back, tell the customer.
+  const refundable = Math.max(0, Number(order.amountPaid) - Number(order.amountRefunded));
+  const [notify, setNotify] = useState(true);
+  const [giveBack, setGiveBack] = useState(false);
+  const [refundAmount, setRefundAmount] = useState(minorToMajorInput(refundable));
 
   const isCancelled = Boolean(order.cancelledAt);
   const isShipped = SHIPPED_STATES.includes(order.fulfillmentState);
@@ -114,7 +148,13 @@ export function OrderActions({ order, onChanged }: Props) {
   /** Throws a translated Error (ConfirmDialog and the manual-cancel dialog show it as-is). */
   async function cancel(cancelReason: string, acknowledgeManualCancel: boolean) {
     try {
-      await apiClient.cancelOrder(workspaceId, order.id, cancelReason, { acknowledgeManualCancel });
+      const result = await ordersCancelWithOptions(apiClient, workspaceId, order.id, {
+        reason: cancelReason,
+        acknowledgeManualCancel,
+        notifyCustomer: notify,
+        ...(giveBack && refundable > 0 ? { refundAmount: majorToMinor(refundAmount) } : {}),
+      });
+      if (result.refundError) toast.error(fmt(t.refundFailed, { reason: errorMessage(result.refundError) }));
     } catch (err) {
       if (isApiErrorCode(err, "CARRIER_CANCEL_FAILED")) {
         // The whole cancellation rolled back. Refresh anyway: a rejected key
@@ -131,8 +171,16 @@ export function OrderActions({ order, onChanged }: Props) {
   }
 
   async function confirmCancel() {
-    const cancelReason = reason.trim();
-    if (cancelReason.length === 0) throw new Error(t.reasonRequired);
+    const details = reason.trim();
+    if (reasonKind === "other" && details.length === 0) throw new Error(t.reasonRequired);
+    if (giveBack && refundable > 0) {
+      const minor = majorToMinor(refundAmount);
+      if (!Number.isFinite(minor) || minor < 1 || minor > refundable) {
+        throw new Error(fmt(t.refundInvalid, { max: formatMoney(refundable, order.currency) }));
+      }
+    }
+    const cancelReason =
+      reasonKind === "other" ? details : details ? `${t[`reason_${reasonKind}`]} — ${details}`.slice(0, 500) : t[`reason_${reasonKind}`];
     try {
       await cancel(cancelReason, false);
     } catch (err) {
@@ -210,14 +258,42 @@ export function OrderActions({ order, onChanged }: Props) {
         onCancel={() => setCancelling(false)}
         onConfirm={confirmCancel}
       >
+        <Field label={t.reasonKind} className="mb-3">
+          {({ id }) => (
+            <Select
+              id={id}
+              value={reasonKind}
+              onChange={(e) => setReasonKind(e.target.value as CancelReasonKind)}
+              className="h-11"
+            >
+              {CANCEL_REASON_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {t[`reason_${kind}`]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
         <TextField
           label={t.reason}
-          required
+          required={reasonKind === "other"}
           value={reason}
           maxLength={500}
           onChange={(e) => setReason(e.target.value)}
           placeholder={t.reasonPlaceholder}
         />
+        {refundable > 0 && (
+          <div className="mt-3">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input type="checkbox" className="size-4 accent-primary" checked={giveBack} onChange={(e) => setGiveBack(e.target.checked)} />
+              {fmt(t.refundOnCancel, { amount: formatMoney(refundable, order.currency) })}
+            </label>
+            {giveBack && (
+              <MoneyInput label={t.refundAmount} value={refundAmount} onChange={setRefundAmount} currency={order.currency} />
+            )}
+          </div>
+        )}
+        <NotifyCustomerToggle checked={notify} onChange={setNotify} />
         {courierToCancel && <p className="mt-3 text-sm text-ink-soft">{t.courierCancelNote}</p>}
       </ConfirmDialog>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CHECKOUT_SETTINGS_DEFAULTS,
+  resolveCheckoutForm,
   resolveCheckoutSettings,
   type ApiClient,
   type CheckoutSettings,
@@ -26,7 +27,8 @@ export function useFreshCheckoutSettings(client: ApiClient, workspaceId: string)
     client
       .getStorefrontMeta(workspaceId)
       .then((meta) => {
-        if (!cancelled) setFresh(resolveCheckoutSettings(meta.checkout));
+        // The builder's field list rides along (lib/orderForm.ts → formOf).
+        if (!cancelled) setFresh({ ...resolveCheckoutSettings(meta.checkout), form: resolveCheckoutForm(meta.checkout) } as CheckoutSettings);
       })
       .catch(() => {
         /* keep the layout's copy */
@@ -63,7 +65,7 @@ export function useOrderFormFields(base: OrderFormFieldModes) {
     const out = { ...base };
     for (const { key } of MODE_FIELDS) {
       const mode = revealed[key];
-      if (mode && out[key] === "hidden") (out as Record<string, string>)[key] = mode;
+      if (mode && out[key] === "hidden") (out as unknown as Record<string, string>)[key] = mode;
     }
     return out;
   }, [base, revealed]);
@@ -72,7 +74,7 @@ export function useOrderFormFields(base: OrderFormFieldModes) {
     (errors: OrderFormErrors) => {
       const add: Partial<OrderFormFieldModes> = {};
       for (const { field, key, revealAs } of MODE_FIELDS) {
-        if (errors[field] && fields[key] === "hidden") (add as Record<string, string>)[key] = revealAs;
+        if (errors[field] && fields[key] === "hidden") (add as unknown as Record<string, string>)[key] = revealAs;
       }
       if (Object.keys(add).length > 0) setRevealed((prev) => ({ ...prev, ...add }));
     },

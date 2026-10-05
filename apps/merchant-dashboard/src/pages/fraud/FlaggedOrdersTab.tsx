@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@store-builder/ui";
-import { isInvalidCursorError, type FlaggedOrder } from "@store-builder/api-client";
+import { isInvalidCursorError, protectionBlockAndCancel, type FlaggedOrder } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
@@ -40,6 +41,12 @@ const STRINGS = {
     clear: "Clear flag",
     clearing: "Clearing…",
     cleared: "Flag cleared on {order}.",
+    block: "Block and cancel",
+    blockTitle: "Block and cancel {order}?",
+    blockDescription: "The order is cancelled, its phone number is blocked from ordering, and its internet address is blocked from ordering and from seeing your store.",
+    blocking: "Blocking…",
+    keep: "Keep the order",
+    blocked: "{order} was cancelled and its customer blocked.",
   },
   ar: {
     filterLabel: "الأوردرات المشتبه بها المعروضة",
@@ -54,6 +61,12 @@ const STRINGS = {
     clear: "إزالة العلامة",
     clearing: "جارٍ الإزالة…",
     cleared: "تمت إزالة علامة الاشتباه عن {order}.",
+    block: "حظر وإلغاء",
+    blockTitle: "حظر وإلغاء {order}؟",
+    blockDescription: "يُلغى الأوردر، ويُحظر رقم الهاتف من الطلب، ويُحظر عنوان الإنترنت من الطلب ومن رؤية متجرك.",
+    blocking: "جارٍ الحظر…",
+    keep: "إبقاء الأوردر",
+    blocked: "تم إلغاء {order} وحظر العميل.",
   },
 } satisfies Messages;
 
@@ -131,6 +144,19 @@ function FlaggedOrderCard({
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const [busy, setBusy] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+
+  async function blockAndCancel() {
+    try {
+      await protectionBlockAndCancel(apiClient, workspaceId, order.id);
+    } catch (err) {
+      // ConfirmDialog shows a thrown Error's message as-is.
+      throw new Error(errorMessage(err));
+    }
+    toast.success(fmt(t.blocked, { order: order.orderNumber }));
+    setBlocking(false);
+    onCleared();
+  }
 
   async function clearFlag() {
     setBusy(true);
@@ -161,9 +187,14 @@ function FlaggedOrderCard({
         {order.phone && (
           <>
             {" · "}
-            <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+            {/* Masked for roles without customers.reveal_sensitive: the order page has the full number. */}
+            {order.phone.includes("*") ? (
               <bdi dir="ltr">{order.phone}</bdi>
-            </a>
+            ) : (
+              <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+                <bdi dir="ltr">{order.phone}</bdi>
+              </a>
+            )}
           </>
         )}
       </p>
@@ -193,8 +224,24 @@ function FlaggedOrderCard({
           <Button variant="outline" onClick={clearFlag} disabled={busy} className="min-h-11">
             {busy ? t.clearing : t.clear}
           </Button>
+          {!order.cancelled && (
+            <Button variant="outline" onClick={() => setBlocking(true)} disabled={busy} className="min-h-11 text-danger">
+              {t.block}
+            </Button>
+          )}
         </div>
       )}
+      <ConfirmDialog
+        open={blocking}
+        title={fmt(t.blockTitle, { order: order.orderNumber })}
+        description={t.blockDescription}
+        confirmLabel={t.block}
+        busyLabel={t.blocking}
+        cancelLabel={t.keep}
+        destructive
+        onCancel={() => setBlocking(false)}
+        onConfirm={blockAndCancel}
+      />
     </article>
   );
 }

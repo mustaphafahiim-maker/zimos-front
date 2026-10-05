@@ -1,5 +1,7 @@
+import { EXTRA_AR } from "./builderExtraBlocks";
 import { createContext, useContext } from "react";
 import type { PageElementType } from "@store-builder/api-client";
+import { SHOWCASE_LABEL_AR } from "./showcaseBlocks";
 
 /**
  * Language for the shared page-editor pieces — the field inspector, the block
@@ -41,6 +43,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   map: "خريطة",
   social_icons: "روابط التواصل",
   product_card: "منتج واحد",
+  shoppable_image: "صورة تفاعلية",
   product_list: "شبكة منتجات",
   collection_list: "المجموعات",
   cart: "السلة",
@@ -50,10 +53,44 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   scroll_story: "قصة مع التمرير",
   marquee: "شريط عبارات متحرك",
   comparison: "جدول مقارنة",
+  text_link: "رابط نصي",
+  tabs: "تبويبات",
+  toggle: "عنصر قابل للفتح",
+  carousel: "صور متحركة",
+  stars_display: "تقييم بالنجوم",
+  price: "سعر المنتج",
+  reviews_list: "تقييمات العملاء",
+  cod_form: "نموذج الطلب (الدفع عند الاستلام)",
+  checkout_summary: "ملخص السلة",
+  order_summary: "ملخص الطلب",
+  upsell_accept_button: "زرار قبول العرض",
+  upsell_decline_link: "رابط رفض العرض",
+  repeater: "مكرِّر",
+  ...SHOWCASE_LABEL_AR,
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
 const FIELD_LABEL_AR: Record<string, string> = {
+  "repeater.source": "كرّر لكل",
+  "repeater.layout": "التخطيط",
+  "repeater.limit": "الحد الأقصى",
+  "text_link.href": "الرابط",
+  "text_link.newTab": "يفتح في تبويب جديد",
+  "tabs.items": "التبويبات",
+  "toggle.body": "النص",
+  "toggle.open": "يبدأ مفتوحًا",
+  "stars_display.rating": "عدد النجوم",
+  "stars_display.label": "النص بجانب النجوم",
+  "price.showCompareAt": "إظهار السعر قبل الخصم",
+  "price.size": "الحجم",
+  "reviews_list.limit": "عدد التقييمات",
+  "checkout_summary.buttonLabel": "نص الزرار",
+  "upsell_accept_button.label": "نص الزرار",
+  "upsell_decline_link.label": "نص الرابط",
+  "form.extraFields": "حقول نصية إضافية",
+  "form.choiceLabel": "قائمة اختيار — عنوانها",
+  "form.choices": "قائمة اختيار — الاختيارات",
+  "form.checkboxLabel": "مربع اختيار — عنوانه",
   "image.size": "حجم الصورة",
   "image.width": "العرض (%)",
   "gallery.fit": "شكل الصور",
@@ -80,8 +117,12 @@ const FIELD_LABEL_AR: Record<string, string> = {
   quote: "كلام العميل",
   author: "الاسم",
   rating: "التقييم",
-  endsInHours: "ينتهي بعد (ساعات)",
+  endsInHours: "أو: ينتهي بعد عدد الساعات دي من النشر",
+  endsAt: "ينتهي في",
   submitLabel: "نص زرار الإرسال",
+  successMessage: "الرسالة بعد الإرسال",
+  tags: "وسوم تُضاف لجهة الاتصال (افصل بفاصلة)",
+  contactTags: "وسوم تُضاف للعميل (افصل بفاصلة)",
   "map.address": "العنوان على الخريطة",
   zoom: "درجة التكبير",
   links: "الروابط",
@@ -106,11 +147,18 @@ const FIELD_LABEL_AR: Record<string, string> = {
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
+  "countdown.endsAt": "تاريخ ووقت ثابتين — نفس الموعد لكل زائر.",
+  "countdown.endsInHours": "لو مفيش تاريخ: النشر بيحوّله لتاريخ ثابت.",
+  "button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "upsell_accept_button.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "upsell_decline_link.contactTags": "في الفانل: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "cod_form.contactTags": "في الفانل: تُضاف للعميل لما يطلب.",
   "rich_text.text": "نص عادي بس في المحرر ده — أدوات التنسيق جاية بعدين.",
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "image.width": "نسبة من عرض العمود — أو اسحب ركن الصورة في المعاينة. يحل محل الحجم؛ اتركه فارغًا لاستخدام الحجم.",
   "embed.url": "رابط للتضمين. السيرفر بيرفض الـ HTML الخام.",
   "product_card.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
+  "shoppable_image.imageId": "انسخه من الكتالوج ← الصور التفاعلية.",
   "shader_hero.height": "تتحرك الخلفية بألوان متجرك نفسه.",
   "product_3d.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
   "product_3d.modelUrl":
@@ -151,6 +199,19 @@ const OPTION_LABEL_AR: Record<string, string> = {
 
 /** Keyed by BlockPreset.key. */
 const PRESET_AR: Record<string, { label: string; description: string }> = {
+  repeater: { label: "مكرِّر", description: "كارت لكل ميزة أو رأي أو سؤال أو تقييم من منتج الصفحة." },
+  "cod-form": { label: "نموذج الطلب", description: "اختيارات المنتج ونموذج الشراء — العميل يطلب من غير ما يسيب الصفحة." },
+  "product-price": { label: "سعر المنتج", description: "السعر الحقيقي للمنتج ومعاه السعر قبل الخصم." },
+  "reviews-list": { label: "تقييمات العملاء", description: "التقييمات المعتمدة للمنتج بنجومها." },
+  "stars-display": { label: "تقييم بالنجوم", description: "صف نجوم وجنبه سطر قصير." },
+  "currency-converter": { label: "محوّل العملة", description: "يعرض الأسعار تقريبيًا بعملة أخرى من عملات متجرك (الإعدادات ← العملات)." },
+  "cart-summary": { label: "ملخص السلة", description: "اللي في سلة العميل والطريق لإتمام الطلب." },
+  "order-summary": { label: "ملخص الطلب", description: "الطلب اللي العميل لسه عامله — لصفحة الشكر." },
+  "upsell-actions": { label: "أزرار العرض", description: "«أيوه ضيفه» و«لا شكرًا» لصفحة العرض في مسار البيع." },
+  tabs: { label: "تبويبات", description: "أكتر من جزء نص ورا صف عناوين." },
+  toggle: { label: "عنصر قابل للفتح", description: "عنوان واحد يتفتح ويظهر نص أكتر." },
+  carousel: { label: "صور متحركة", description: "صور بتتحرك واحدة ورا التانية." },
+  "text-link": { label: "رابط نصي", description: "رابط بسيط لصفحة أو لعنوان خارجي." },
   // Ready-made store sections (BLOCK_PRESETS: the "store" group).
   "store-hero-slideshow": { label: "واجهة المتجر مع شرائح", description: "شريط عروض متحرك، وشرائح صور بعرض الشاشة، وأول زر شراء." },
   "store-departments": { label: "تسوّق حسب القسم", description: "صف صور للأقسام وتحت كل صورة اسمها — ومن هنا يبدأ التصفح." },
@@ -180,6 +241,7 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   gallery: { label: "معرض صور", description: "مجموعة صور في شبكة." },
   video: { label: "فيديو", description: "فيديو متضمّن." },
   embed: { label: "تضمين", description: "تضمين صفحة خارجية برابط." },
+  "html-code": { label: "كود HTML", description: "كود HTML الخاص بك في هذا المكان من الصفحة — يعمل على دومين متجرك فقط." },
   map: { label: "خريطة", description: "اعرض عنوانك على الخريطة." },
   icon: { label: "أيقونة", description: "أيقونة زخرفية واحدة." },
   social: { label: "روابط التواصل", description: "روابط حساباتك على السوشيال ميديا." },
@@ -453,6 +515,28 @@ const GROUP_AR: Record<string, string> = {
   basics: "عناصر أساسية",
 };
 
+// The builder elements added later (builderExtraBlocks.ts) bring their own Arabic.
+Object.assign(ELEMENT_LABEL_AR, EXTRA_AR.elements);
+Object.assign(FIELD_LABEL_AR, EXTRA_AR.fields);
+Object.assign(FIELD_HINT_AR, EXTRA_AR.hints);
+Object.assign(OPTION_LABEL_AR, EXTRA_AR.options);
+Object.assign(PRESET_AR, EXTRA_AR.presets);
+// The full-width showcase bands (showcaseBlocks.ts).
+Object.assign(PRESET_AR, {
+  "showcase-hero-slider": { label: SHOWCASE_LABEL_AR.hero_slider, description: "صور بعرض الصفحة تتبدّل واحدة بعد الأخرى، ولكل صورة زرّها." },
+  "showcase-category-tiles": { label: SHOWCASE_LABEL_AR.category_tiles, description: "صور مربعة لأقسام متجرك تحت عنوان واحد." },
+  "showcase-trust-strip": { label: SHOWCASE_LABEL_AR.trust_strip, description: "أربعة أسباب للثقة بك، كل سبب في بطاقة." },
+  "showcase-bundle-cards": { label: SHOWCASE_LABEL_AR.bundle_cards, description: "منتجات مجموعة في بطاقات صغيرة مناسبة للهاتف." },
+  "showcase-need-picker": { label: SHOWCASE_LABEL_AR.need_picker, description: "تبويبات يختار منها المتسوّق احتياجه، ولكل احتياج منتج." },
+  "showcase-product-rail": { label: SHOWCASE_LABEL_AR.product_rail, description: "منتجات مجموعة تتحرك أمام المتسوّق تلقائيًا." },
+  "showcase-video-reels": { label: SHOWCASE_LABEL_AR.video_reels, description: "مقاطع طولية متجاورة، مع المنتج الظاهر في كل مقطع." },
+  "showcase-product-shelf": { label: SHOWCASE_LABEL_AR.product_shelf, description: "مجموعة منتجات في صف واحد بأسهم ونقاط." },
+  "showcase-product-cards": { label: SHOWCASE_LABEL_AR.product_cards, description: "مجموعة منتجات في شبكة بطاقات مع زر الإضافة إلى السلة." },
+  "showcase-image-banner": { label: SHOWCASE_LABEL_AR.image_banner, description: "صورة عريضة فوقها عنوان وسطر وزر." },
+} satisfies Record<string, { label: string; description: string }>);
+Object.assign(SECTION_SETTING_LABEL_AR, EXTRA_AR.sectionLabels);
+Object.assign(SECTION_SETTING_OPTION_AR, EXTRA_AR.sectionOptions);
+
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
   return locale === "ar" ? (ELEMENT_LABEL_AR[type] ?? fallback) : fallback;
 }
@@ -514,6 +598,10 @@ const UI_EN = {
   expandPanel: "Expand panel",
   popularBlocks: "Commonly used",
   deleteSection: "Delete section",
+  duplicateSection: "Duplicate section",
+  duplicateElement: (label: string) => `Duplicate ${label}`,
+  previewXray: "Show outlines (X-ray)",
+  canvasEditText: "Double-click to edit the text",
   noElements: "This section has no elements to edit.",
   elementCount: (n: number) => `${n} ${n === 1 ? "element" : "elements"}`,
   emptySection: "Empty section",
@@ -790,6 +878,10 @@ const UI_AR: EditorUi = {
   expandPanel: "فتح اللوحة",
   popularBlocks: "الأكثر استخدامًا",
   deleteSection: "حذف القسم",
+  duplicateSection: "تكرار القسم",
+  duplicateElement: (label) => `تكرار ${label}`,
+  previewXray: "إظهار الحدود (X-ray)",
+  canvasEditText: "دبل كليك لتعديل النص",
   noElements: "القسم ده مفيهوش عناصر تتعدّل.",
   elementCount: (n) => (n === 1 ? "عنصر واحد" : n === 2 ? "عنصرين" : `${n} عناصر`),
   emptySection: "قسم فاضي",

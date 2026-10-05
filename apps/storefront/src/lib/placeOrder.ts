@@ -7,6 +7,9 @@ import {
   type CustomizationInput,
   type Order,
 } from "@store-builder/api-client";
+import { botGuardFields } from "./botGuard";
+import { adMatchFields } from "./adMatch";
+import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import type { Dictionary } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
@@ -44,7 +47,12 @@ export async function placeCodOrder({
   /** The shopper's visitor id — it owns any photo answering a custom field. */
   visitorId?: string;
 }): Promise<Order> {
-  return client.checkout(workspaceId, payload, cartToken, { visitorId });
+  // The bot guard's token and honeypot ride along with every order (lib/botGuard).
+  const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)), ...adMatchFields(workspaceId) };
+  // A store that verifies phones answers OTP_REQUIRED first; the code is asked for and the order sent again.
+  return withCheckoutOtp(workspaceId, payload.contact.phone, (otp) =>
+    client.checkout(workspaceId, { ...guarded, ...otp }, cartToken, { visitorId })
+  );
 }
 
 /**
@@ -90,6 +98,13 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
   "shippingAddress.addressLine": "address",
   "shippingAddress.postalCode": "postalCode",
   "shippingAddress.notes": "notes",
+  "shippingAddress.country": "country",
+  "formFields.sa_national_address": "nationalAddress",
+  "formFields.custom_1": "custom1",
+  "formFields.custom_2": "custom2",
+  "formFields.custom_3": "custom3",
+  "formFields.custom_4": "custom4",
+  "formFields.custom_5": "custom5",
 };
 
 /**
@@ -103,7 +118,9 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
     out[field] =
-      field === "email" && /required/i.test(problem.message) ? copy.emailRequired : copy[field];
+      field === "email" && /required/i.test(problem.message)
+        ? copy.emailRequired
+        : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
   }
   return out;
 }

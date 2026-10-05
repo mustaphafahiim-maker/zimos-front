@@ -1,4 +1,5 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { LOCALE_COOKIE, parseLocale } from "./i18n";
 import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
 import { STORE_PREVIEW_HEADER, isTokenShaped } from "./storePreview";
 
@@ -38,5 +39,9 @@ export async function createServerStorefrontApiClient() {
   // proxy passes their token on, and the API checks it.
   const preview = requestHeaders.get(STORE_PREVIEW_HEADER);
   if (isTokenShaped(preview)) defaultHeaders["X-Store-Preview"] = preview;
+  // The language the shopper chose: the API answers products and collections
+  // in it where the store has them translated (the originals otherwise).
+  const locale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  if (locale) defaultHeaders["X-Store-Locale"] = locale;
   return new ApiClient({ baseUrl, tokenStorage: createMemoryTokenStorage(), defaultHeaders });
 }

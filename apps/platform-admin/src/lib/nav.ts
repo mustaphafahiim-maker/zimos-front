@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   Layers,
+  Palette,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -58,6 +59,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: "Marketplace",
     items: [
       { label: "Templates", to: "/templates", icon: LayoutTemplate, permission: P.TEMPLATES_VIEW },
+      { label: "Themes", to: "/themes", icon: Palette, permission: P.TEMPLATES_VIEW },
       { label: "Suppliers", to: "/suppliers", icon: Factory, permission: P.TEMPLATES_VIEW },
       { label: "Apps", to: "/apps", icon: Puzzle, permission: P.TEMPLATES_VIEW },
     ],
@@ -82,6 +84,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     items: [
       { label: "Tickets", to: "/tickets", icon: LifeBuoy, permission: P.SUPPORT_VIEW },
       { label: "Announcements", to: "/announcements", icon: Megaphone, permission: P.ANNOUNCEMENTS_VIEW },
+      { label: "Service listings", to: "/service-listings", icon: Handshake, permission: P.SERVICE_LISTINGS_VIEW },
     ],
   },
   {

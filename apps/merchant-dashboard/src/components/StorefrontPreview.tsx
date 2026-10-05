@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from "react";
-import { Monitor, Moon, RefreshCw, Smartphone, Sun, Tablet, X } from "lucide-react";
+import { Monitor, Moon, RefreshCw, ScanEye, Smartphone, Sun, Tablet, X } from "lucide-react";
 import { Button, Spinner, cn } from "@store-builder/ui";
 import type { PageTree } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -35,6 +35,8 @@ export interface PreviewLabels {
   /** The light/dark switch's two labels — each says what pressing it does. */
   lightMode?: string;
   darkMode?: string;
+  /** With a canvas: the "outlines" (X-ray) switch's label; the switch shows when given. */
+  xray?: string;
 }
 
 /**
@@ -85,6 +87,10 @@ export interface PreviewCanvas {
   onCanvasEdit?: (edit: CanvasEdit) => void;
   /** One arrow-key press on a canvas handle. */
   onCanvasStep?: (step: CanvasStep) => void;
+  /** The elements whose text a double-click edits on the page (editor/canvasTools.ts). */
+  inlineText?: string[];
+  /** A double-click text edit was committed in the frame. */
+  onTextEdit?: (elementId: string, text: string) => void;
 }
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -152,6 +158,8 @@ export function StorefrontPreview({
   const lastSessionCheck = useRef(0);
   const [token] = useState(() => crypto.randomUUID());
   const [device, setDevice] = useState<Device>("desktop");
+  // The canvas's X-ray: every section, row, column and element outlined (item 95).
+  const [xray, setXray] = useState(false);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState<0 | 1>(0);
   const visibleRef = useRef<0 | 1>(0);
@@ -307,6 +315,8 @@ export function StorefrontPreview({
         shellLabels: canvas.shellLabels ?? null,
         shell: canvas.shell ?? null,
         colorMode: chosen,
+        xray,
+        inlineText: canvas.inlineText ?? [],
       } satisfies EditorStateMessage)
     : "";
   const stateRef = useRef(stateJson);
@@ -447,6 +457,9 @@ export function StorefrontPreview({
         case "zimos:canvas-step":
           current?.onCanvasStep?.(message.step);
           break;
+        case "zimos:edit-text":
+          current?.onTextEdit?.(message.elementId, message.text);
+          break;
         case "zimos:color-mode":
           // The page's own moon (or the OS) switched it: follow, so the next
           // render opens in the same mode and the toolbar switch agrees.
@@ -508,6 +521,19 @@ export function StorefrontPreview({
               </Button>
             );
           })()}
+          {canvas && labels.xray && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant={xray ? "secondary" : "ghost"}
+              aria-label={labels.xray}
+              title={labels.xray}
+              aria-pressed={xray}
+              onClick={() => setXray((on) => !on)}
+            >
+              <ScanEye className="size-4" aria-hidden />
+            </Button>
+          )}
           <Button
             type="button"
             size="icon-sm"

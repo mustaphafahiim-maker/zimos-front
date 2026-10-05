@@ -23,7 +23,9 @@ export type FunnelStepTypeDto =
   | "upsell"
   | "downsell"
   | "thank_you"
-  | "custom";
+  | "custom"
+  // An advertorial before the product page.
+  | "article";
 
 export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "landing",
@@ -34,12 +36,13 @@ export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "downsell",
   "thank_you",
   "custom",
+  "article",
 ];
 
 /** Step types that must reference an active offer before publishing. */
 export const FUNNEL_OFFER_STEP_TYPES: readonly FunnelStepTypeDto[] = ["upsell", "downsell"];
 
-export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer";
+export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer" | "clicked_through";
 
 export type FunnelEdgeConditionDto = ({ type: FunnelEdgeConditionType } & Record<string, unknown>) | null;
 
@@ -125,6 +128,8 @@ export interface FunnelCreatePayload {
 
 export interface FunnelUpdatePayload {
   name?: string;
+  /** The funnel's link (/f/<subdomain>); 409 FUNNEL_SUBDOMAIN_TAKEN when another funnel has it. */
+  subdomain?: string;
 }
 
 export interface FunnelStepCreatePayload {

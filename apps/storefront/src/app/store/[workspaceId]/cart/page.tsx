@@ -1,5 +1,6 @@
 "use client";
 
+import { CrossSellStrip } from "@/components/offers/StoreOffers";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { BoxIcon, CartGlyph } from "@/components/Icons";
@@ -7,10 +8,12 @@ import { QuantityStepper } from "@/components/QuantityStepper";
 import { StoreImage } from "@/components/StoreImage";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { storeCards } from "@/lib/storePromises";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
 import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
-import { firstImage, variantLabel } from "@/lib/product";
+import { variantLabel } from "@/lib/product";
+import { lineImage } from "@/lib/variantImage";
 import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
 import { LineCustomizations } from "@/components/LineCustomizations";
@@ -20,7 +23,7 @@ export default function CartPage() {
   // which resolves this store’s own prefix.
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { cart, isLoading, updateItem, removeItem } = useCart();
-  const { t, money } = useStore();
+  const { t, money, store, locale } = useStore();
   const { byVariant } = useCatalog(workspaceId);
 
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -91,7 +94,8 @@ export default function CartPage() {
               {cart.items.map((line) => {
                 const rowBusy = pendingId === line.id;
                 const product = byVariant.get(line.variantId);
-                const image = product ? firstImage(product) : null;
+                // The variant's own picture, else the product's (lib/variantImage).
+                const image = product ? lineImage(product, line.variantId) : null;
                 const options = variantLabel(line.variant);
                 return (
                   <li key={line.id} className={`flex gap-4 p-4 sm:p-5 ${rowBusy ? "opacity-60" : ""}`}>
@@ -169,9 +173,18 @@ export default function CartPage() {
                 {t.common.continueShopping}
               </StoreLink>
             </div>
-            <TrustStrip t={t} compact />
+            <TrustStrip cards={storeCards(store)} locale={locale} compact />
           </aside>
         </div>
+      )}
+
+      {/* What goes with the cart: the merchant's cross-sell rule, or what was bought together. */}
+      {!isEmpty && cart && (
+        <CrossSellStrip
+          workspaceId={workspaceId}
+          placement="cart"
+          productIds={[...new Set(cart.items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
+        />
       )}
     </main>
   );

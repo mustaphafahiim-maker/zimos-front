@@ -21,7 +21,7 @@ describe("AccessBanner and paying", () => {
     renderWithProviders(<AccessBanner />);
     const banner = await screen.findByRole("status");
     expect(banner).toHaveTextContent("Your free trial ends on");
-    expect(within(banner).getByRole("link", { name: "Subscription" })).toHaveAttribute("href", "/subscription?tab=invoices");
+    expect(within(banner).getByRole("link", { name: "My Plan" })).toHaveAttribute("href", "/subscription?tab=invoices");
   });
 
   it("sends a lapsed subscription to the invoices too, in Arabic", async () => {
@@ -29,7 +29,7 @@ describe("AccessBanner and paying", () => {
     api.getWorkspaceAccess.mockResolvedValue(access({ phase: "restricted", status: "past_due", trialing: false, enforced: true }));
     renderWithProviders(<AccessBanner />, { locale: "ar" });
     const banner = await screen.findByRole("alert");
-    expect(within(banner).getByRole("link", { name: "الاشتراك" })).toHaveAttribute("href", "/subscription?tab=invoices");
+    expect(within(banner).getByRole("link", { name: "خطتي" })).toHaveAttribute("href", "/subscription?tab=invoices");
   });
 
   it("shows no link to whoever can't manage billing", async () => {

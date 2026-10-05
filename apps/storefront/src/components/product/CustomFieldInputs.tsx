@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, apiErrorCode, apiErrorDetails, type CustomField, type CustomizationInput } from "@store-builder/api-client";
+import { ApiError, apiErrorCode, apiErrorDetails, type CustomField, type CustomizationInput, customFieldPrice } from "@store-builder/api-client";
 import { compressImageIfNeeded } from "@store-builder/image-tools";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { focusField } from "@/lib/focusField";
@@ -18,6 +18,7 @@ import {
   type FieldProblem,
 } from "@/lib/customFields";
 import { btnSecondary, focusRing, input as inputClass, label as labelClass } from "../ui";
+import { arOrEn } from "@/lib/i18n";
 
 /**
  * The product's custom fields on its page: what the shopper types or the photo
@@ -175,7 +176,7 @@ export function useCustomFieldAnswers(workspaceId: string, productId: string, fi
 }
 
 export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
-  const { t, locale } = useStore();
+  const { t, locale, money } = useStore();
   if (state.fields.length === 0) return null;
 
   const problemText = (field: CustomField, problem: FieldProblem | undefined) => {
@@ -191,13 +192,16 @@ export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
     <div className="space-y-4">
       {state.fields.map((field) => {
         const id = state.idFor(field.id);
-        const label = fieldLabel(field, locale);
+        const label = fieldLabel(field, arOrEn(locale));
         const problem = problemText(field, state.problems[field.id]);
         const errorId = `${id}-error`;
         const hintId = `${id}-hint`;
         const heading = (
           <>
             {label}
+            {customFieldPrice(field) > 0 && (
+              <span className="ms-1 text-xs font-semibold text-primary">{t.custom.adds(money(customFieldPrice(field)))}</span>
+            )}
             {field.required ? (
               <span className="text-danger" aria-hidden>
                 {" "}
@@ -277,7 +281,7 @@ export function CustomFieldInputs({ state }: { state: CustomFieldAnswers }) {
           id,
           value,
           dir: "auto" as const,
-          placeholder: fieldPlaceholder(field, locale),
+          placeholder: fieldPlaceholder(field, arOrEn(locale)),
           "aria-invalid": problem ? true : undefined,
           "aria-required": field.required || undefined,
           "aria-describedby": `${hintId}${problem ? ` ${errorId}` : ""}`,

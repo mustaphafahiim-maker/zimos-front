@@ -3,9 +3,9 @@ import type { Messages } from "@/i18n/LocaleContext";
 /** The Subscription section's own words (the moved Settings parts keep theirs, in billingParts). */
 export const SUBSCRIPTION_STRINGS = {
   en: {
-    title: "Subscription",
+    title: "My Plan",
     description: "Your Zimos plan, how much of it you use, and its invoices.",
-    tabsLabel: "Subscription sections",
+    tabsLabel: "My Plan sections",
     plansTab: "Plans",
     usageTab: "Usage",
     invoicesTab: "Invoices",
@@ -64,13 +64,13 @@ export const SUBSCRIPTION_STRINGS = {
     pageOf: "Page {page} of {pages}",
     // Settings link
     settingsTitle: "Plan and billing",
-    settingsBody: "Your plan, its usage, invoices, payments and referral code are now in Subscription.",
-    settingsOpen: "Open Subscription",
+    settingsBody: "Your plan, its usage, invoices, payments and referral code are now in My Plan.",
+    settingsOpen: "Open My Plan",
   },
   ar: {
-    title: "الاشتراك",
+    title: "خطتي",
     description: "خطتك في Zimos، ومقدار استخدامك لها، وفواتيرها.",
-    tabsLabel: "أقسام الاشتراك",
+    tabsLabel: "أقسام خطتي",
     plansTab: "الخطط",
     usageTab: "الاستخدام",
     invoicesTab: "الفواتير",
@@ -126,8 +126,8 @@ export const SUBSCRIPTION_STRINGS = {
     next: "التالي",
     pageOf: "الصفحة {page} من {pages}",
     settingsTitle: "الخطة والفوترة",
-    settingsBody: "خطتك واستخدامها وفواتيرها ومدفوعاتها وكود الإحالة أصبحت كلها في قسم الاشتراك.",
-    settingsOpen: "فتح قسم الاشتراك",
+    settingsBody: "خطتك واستخدامها وفواتيرها ومدفوعاتها وكود الإحالة أصبحت كلها في قسم خطتي.",
+    settingsOpen: "فتح قسم خطتي",
   },
 } satisfies Messages;
 
