@@ -77,6 +77,8 @@ const STRINGS = {
     anySource: "Store and funnels",
     source_store: "Store",
     source_funnel: "Funnel",
+    cameFrom: "Came from {source}",
+    cameFromTitle: "Medium: {medium} · Ad: {ad} · Landing page: {page}",
     from: "From",
     to: "To",
     colCustomer: "Customer",
@@ -158,6 +160,8 @@ const STRINGS = {
     anySource: "المتجر والفانلز",
     source_store: "المتجر",
     source_funnel: "فانل",
+    cameFrom: "جه من {source}",
+    cameFromTitle: "الوسيط: {medium} · الإعلان: {ad} · صفحة الوصول: {page}",
     from: "من",
     to: "إلى",
     colCustomer: "العميل",
@@ -401,6 +405,24 @@ export function LostOrdersPage() {
             {s.phone}
           </bdi>
           {s.source === "funnel" && <div className="text-xs text-ink-soft">{t.source_funnel}</div>}
+          {s.trafficSource?.source && (
+            <div
+              className="truncate text-xs text-ink-soft"
+              title={fmt(t.cameFromTitle, {
+                medium: s.trafficSource.medium ?? "—",
+                ad: s.trafficSource.adId ?? "—",
+                page: s.trafficSource.landingPage ?? "—",
+              })}
+            >
+              {fmt(t.cameFrom, { source: s.trafficSource.source })}
+              {s.trafficSource.campaign && (
+                <>
+                  {" · "}
+                  <bdi>{s.trafficSource.campaign}</bdi>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ),
     },

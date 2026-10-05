@@ -57,6 +57,16 @@ export interface LostOrderLine {
   lineTotalAmount: number;
 }
 
+export interface LostOrderTrafficSource {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  adId: string | null;
+  /** The referring site's host. */
+  referrer: string | null;
+  landingPage: string | null;
+}
+
 export interface LostOrder {
   id: string;
   status: LostOrderStatus;
@@ -77,6 +87,12 @@ export interface LostOrder {
   source: "store" | "funnel";
   ipAddress: string | null;
   ipCountry: string | null;
+  /**
+   * Where the shopper came from: the last touch the storefront kept, else the
+   * first (UTM source / medium / campaign, the ad id, the referring site).
+   * Null for a direct visit.
+   */
+  trafficSource: LostOrderTrafficSource | null;
   /** `/r/<token>` — put the store's address in front for the recovery link. */
   recoveryPath: string | null;
   lastActivityAt: string;
