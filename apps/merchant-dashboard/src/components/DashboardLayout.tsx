@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Menu, Minimize2, Settings, X } from "lucide-react";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
 import { FOCUS_TOGGLE_EVENT, KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
@@ -13,6 +13,7 @@ import {
   type NavGroup,
 } from "@/lib/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SignOutConfirmDialog } from "@/components/SignOutButton";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
@@ -224,53 +225,61 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
  * no sign-out button on show anywhere.
  */
 function AccountMenu() {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
+  // Sign out asks first (SignOutConfirmDialog), centred over the page; focus
+  // returns to this trigger when the dialog closes.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const navigate = useNavigate();
   const t = useT(STRINGS);
   const userLabel = user?.fullName ?? user?.email ?? "";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            title={t.accountMenu}
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
-          />
-        }
-      >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </span>
-        <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
-        <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end" className="min-w-60">
-        <div className="px-2 py-1.5">
-          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
-          {user?.fullName && user.email && (
-            <p className="truncate text-xs text-ink-soft" dir="ltr">
-              {user.email}
-            </p>
-          )}
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/settings")}>
-          <Settings className="size-4" aria-hidden />
-          {t.settings}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
-          <Keyboard className="size-4" aria-hidden />
-          {t.shortcuts}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => logout()}>
-          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
-          {t.signOut}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={triggerRef}
+          render={
+            <button
+              type="button"
+              title={t.accountMenu}
+              className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
+            />
+          }
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+            {(userLabel || "?").charAt(0).toUpperCase()}
+          </span>
+          <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
+          <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="bottom" align="end" className="min-w-60">
+          <div className="px-2 py-1.5">
+            <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
+            {user?.fullName && user.email && (
+              <p className="truncate text-xs text-ink-soft" dir="ltr">
+                {user.email}
+              </p>
+            )}
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <Settings className="size-4" aria-hidden />
+            {t.settings}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
+            <Keyboard className="size-4" aria-hidden />
+            {t.shortcuts}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => setConfirmSignOut(true)}>
+            <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
+            {t.signOut}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <SignOutConfirmDialog open={confirmSignOut} onClose={() => setConfirmSignOut(false)} returnFocusTo={triggerRef} />
+    </>
   );
 }
 

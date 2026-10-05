@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
@@ -40,7 +40,24 @@ export function SignOutButton({ className, children }: { className?: string; chi
   );
 }
 
-function SignOutDialog({ onClose }: { onClose: () => void }) {
+/**
+ * The same confirmation, opened from elsewhere (the top bar's account menu):
+ * `open` shows it, `onClose` hides it, and focus goes back to `returnFocusTo`
+ * (the control that opened it) when it closes.
+ */
+export function SignOutConfirmDialog({
+  open,
+  onClose,
+  returnFocusTo,
+}: {
+  open: boolean;
+  onClose: () => void;
+  returnFocusTo?: RefObject<HTMLElement | null>;
+}) {
+  return open ? createPortal(<SignOutDialog onClose={onClose} returnFocusTo={returnFocusTo} />, document.body) : null;
+}
+
+function SignOutDialog({ onClose, returnFocusTo }: { onClose: () => void; returnFocusTo?: RefObject<HTMLElement | null> }) {
   const t = useT(STRINGS);
   const { logout } = useAuth();
   const titleId = useId();
@@ -52,8 +69,17 @@ function SignOutDialog({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     cancelRef.current?.focus();
-    return () => previous?.focus?.();
-  }, []);
+    // Focus stays inside while open, even when a menu that opened the dialog
+    // hands focus back to its trigger as it closes.
+    const keepInside = (e: FocusEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) cancelRef.current?.focus();
+    };
+    document.addEventListener("focusin", keepInside);
+    return () => {
+      document.removeEventListener("focusin", keepInside);
+      (returnFocusTo?.current ?? previous)?.focus?.();
+    };
+  }, [returnFocusTo]);
 
   const close = () => {
     if (!busy) onClose();
@@ -91,7 +117,7 @@ function SignOutDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-ink/40 p-4 py-12" onMouseDown={close}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-ink/40 p-4" onMouseDown={close}>
       <div
         ref={dialogRef}
         role="alertdialog"
