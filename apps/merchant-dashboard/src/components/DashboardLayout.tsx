@@ -10,6 +10,7 @@ import {
   findNavGroup,
   findNavItem,
   isNavItemVisible,
+  type NavGroup,
 } from "@/lib/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/context/AuthContext";
@@ -72,6 +73,11 @@ const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v2";
 /** Groups that start open. The rest start closed and still show the page you are on. */
 const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products"]);
 
+/** The bottom group (My Plan, Settings, …): pinned under the scrolling list, always in view. */
+const PINNED_GROUP_ID = "config";
+const PINNED_GROUP = NAV_GROUPS.find((group) => group.id === PINNED_GROUP_ID);
+const SCROLLING_GROUPS = NAV_GROUPS.filter((group) => group.id !== PINNED_GROUP_ID);
+
 function readCollapsedGroups(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
@@ -113,6 +119,78 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
 
+  // One group: its heading (a collapse toggle) and the entries this role can use.
+  function renderGroup(group: NavGroup, divided: boolean) {
+    const heading = group.labelKey ? groupLabels[group.labelKey] : null;
+    // Only a headed group can be collapsed: an unheaded one has no control
+    // to open it again, so a stored "closed" for it (the default for every
+    // group outside NAV_OPEN_BY_DEFAULT) is ignored.
+    const isClosed = Boolean(heading && collapsed[group.id]);
+    // Entries this role can't use are left out; a group left empty goes too.
+    const visible = group.items.filter((i) => isNavItemVisible(i, role));
+    if (visible.length === 0) return null;
+    const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
+
+    return (
+      <div
+        key={group.id}
+        className={cn(divided && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
+      >
+        {heading && (
+          <button
+            type="button"
+            onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
+            aria-expanded={!isClosed}
+            aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
+            className="mb-1 flex min-h-11 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-xs font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink md:min-h-8 rtl:font-sans rtl:text-sm rtl:tracking-normal"
+          >
+            <span className="flex-1 text-start">{heading}</span>
+            <ChevronDown
+              className={cn("size-3 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
+              aria-hidden
+            />
+          </button>
+        )}
+        <div className="space-y-0.5">
+          {items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/" || item.to === "/analytics"}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "group relative flex min-h-11 items-center gap-3 rounded-[10px] px-3 py-2 text-base font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
+                  isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                    />
+                  )}
+                  <item.icon
+                    className={cn(
+                      "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
+                      isActive && "text-primary"
+                    )}
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 truncate">{navLabels[item.key]}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="px-4 pt-5 pb-3">
@@ -127,75 +205,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <StoreSwitcher onNavigate={onNavigate} />
         {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
-      <nav aria-label={t.navLabel} className="shell-scroll flex-1 overflow-y-auto px-3 pb-4">
-        <SidebarShortcuts onNavigate={onNavigate} />
-        {NAV_GROUPS.map((group, index) => {
-          const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const isClosed = Boolean(collapsed[group.id]);
-          // Entries this role can't use are left out; a group left empty goes too.
-          const visible = group.items.filter((i) => isNavItemVisible(i, role));
-          if (visible.length === 0) return null;
-          const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
-
-          return (
-            <div
-              key={group.id}
-              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
-            >
-              {heading && (
-                <button
-                  type="button"
-                  onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
-                  aria-expanded={!isClosed}
-                  aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
-                >
-                  <span className="flex-1 text-start">{heading}</span>
-                  <ChevronDown
-                    className={cn("size-3 transition-transform", isClosed && "-rotate-90 rtl:rotate-90")}
-                    aria-hidden
-                  />
-                </button>
-              )}
-              <div className="space-y-0.5">
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === "/" || item.to === "/analytics"}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
-                        isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
-                          />
-                        )}
-                        <item.icon
-                          className={cn(
-                            "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
-                            isActive && "text-primary"
-                          )}
-                          strokeWidth={1.75}
-                          aria-hidden
-                        />
-                        <span className="min-w-0 truncate">{navLabels[item.key]}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <nav aria-label={t.navLabel} className="flex min-h-0 flex-1 flex-col">
+        {/* Only this part scrolls, however many groups are open. */}
+        <div className="shell-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+          <SidebarShortcuts onNavigate={onNavigate} />
+          {SCROLLING_GROUPS.map((group, index) => renderGroup(group, index > 0))}
+        </div>
+        {/* My Plan, Settings and the rest of the bottom group, pinned below the
+            divider so they never scroll out of view. A very short window
+            scrolls this block on its own, My Plan first. */}
+        {PINNED_GROUP && (
+          <div className="shell-scroll max-h-[40dvh] shrink-0 overflow-y-auto border-t border-line px-3 pt-3 pb-2">
+            {renderGroup(PINNED_GROUP, false)}
+          </div>
+        )}
       </nav>
       <div className="flex items-center gap-2 border-t border-line px-3 py-4">
         <SignOutButton className="cursor-pointer flex-1 rounded-[0.5rem] px-3 py-2 text-start text-sm font-medium text-ink-soft hover:bg-danger-soft hover:text-danger">

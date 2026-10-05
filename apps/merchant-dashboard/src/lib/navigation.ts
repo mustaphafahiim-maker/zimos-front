@@ -14,7 +14,6 @@ import {
   Bot,
   ClipboardCheck,
   CreditCard,
-  Gem,
   Gift,
   Globe,
   History,
@@ -209,7 +208,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "config",
     labelKey: null,
     items: [
-      { key: "subscription", to: "/subscription", icon: Gem, hiddenForRoles: NO_BILLING_ROLES },
+      { key: "subscription", to: "/subscription", icon: CreditCard, hiddenForRoles: NO_BILLING_ROLES },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "activity", to: "/activity", icon: History },
       { key: "services", to: "/services", icon: Handshake },

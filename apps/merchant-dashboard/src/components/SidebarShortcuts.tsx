@@ -86,7 +86,7 @@ export function SidebarShortcuts({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="mb-4">
       <div className="mb-1 flex items-center gap-1.5 px-3 py-1">
-        <span className="flex-1 text-[11px] font-semibold tracking-wider text-ink-soft uppercase rtl:tracking-normal">{t.heading}</span>
+        <span className="flex-1 text-xs font-semibold tracking-wider text-ink-soft uppercase rtl:text-sm rtl:tracking-normal">{t.heading}</span>
         {current && current.to !== "/" && (
           <button
             type="button"
@@ -108,7 +108,7 @@ export function SidebarShortcuts({ onNavigate }: { onNavigate?: () => void }) {
             to={item.to}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary"
+              "flex min-h-11 items-center gap-2.5 rounded-[0.5rem] px-3 py-1.5 text-base font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary-dark dark:hover:text-primary"
             )}
           >
             <item.icon className="size-4 shrink-0" aria-hidden />
