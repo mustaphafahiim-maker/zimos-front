@@ -239,7 +239,7 @@ export interface OrderListFilters {
 
 // -------------------------------------------------- timeline, neighbours --
 
-export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier";
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier" | "message";
 
 export interface OrderTimelineEvent {
   id: string;
@@ -250,7 +250,10 @@ export interface OrderTimelineEvent {
    * status: { from, to, reason } · audit: { action, entity, before, after } ·
    * note: { body, visibility } · automation: { trigger, status, detail } ·
    * webhook: { eventType, status, attempts, responseStatus } ·
-   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId }
+   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId } ·
+   * message: { channel: "email" | "sms" | "whatsapp" | "push", template, subject, status, error, bot? }
+   *   — a message the customer was sent about the order; `subject` is its line
+   *   (an email's subject, an SMS's text, a push's title, a WhatsApp template and values)
    */
   data: Record<string, unknown>;
 }

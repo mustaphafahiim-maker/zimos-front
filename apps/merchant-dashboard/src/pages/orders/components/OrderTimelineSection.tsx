@@ -44,6 +44,15 @@ const STRINGS = {
     webhook_failed: "failed, will retry",
     webhook_exhausted: "failed",
     courier_update: "{carrier} update",
+    message_email: "Email to the customer",
+    message_sms: "SMS to the customer",
+    message_whatsapp: "WhatsApp to the customer",
+    message_push: "Notification to the customer's browser",
+    message_sent: "sent",
+    message_delivered: "delivered",
+    message_read: "read",
+    message_failed: "not sent",
+    message_bot: "by the WhatsApp assistant",
     "a_order.update": "Address or notes edited",
     "a_order.meta_update": "Tags or flags changed",
     "a_order.archive": "Order archived",
@@ -88,6 +97,15 @@ const STRINGS = {
     webhook_failed: "فشل وسيُعاد",
     webhook_exhausted: "فشل",
     courier_update: "تحديث من {carrier}",
+    message_email: "إيميل للعميل",
+    message_sms: "رسالة SMS للعميل",
+    message_whatsapp: "واتساب للعميل",
+    message_push: "إشعار على متصفح العميل",
+    message_sent: "اتبعت",
+    message_delivered: "وصل",
+    message_read: "اتقرا",
+    message_failed: "ماتبعتش",
+    message_bot: "من مساعد الواتساب",
     "a_order.update": "تعديل العنوان أو الملاحظات",
     "a_order.meta_update": "تغيير التاجز أو العلامات",
     "a_order.archive": "تمت أرشفة الأوردر",
@@ -200,6 +218,28 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
         </>
       );
     }
+    if (event.type === "message") {
+      const channel = lookup(t, `message_${String(d.channel)}`) ?? humanize(String(d.channel));
+      const status = lookup(t, `message_${String(d.status)}`) ?? humanize(String(d.status));
+      const failed = d.status === "failed";
+      return (
+        <>
+          <p className="text-sm font-medium text-ink">
+            {channel} — <span className={failed ? "text-danger" : undefined}>{status}</span>
+          </p>
+          {typeof d.subject === "string" && d.subject && (
+            <p className="mt-1 text-sm text-ink">
+              <bdi>{d.subject}</bdi>
+            </p>
+          )}
+          {failed && typeof d.error === "string" && d.error && (
+            <p className="mt-1 text-xs text-ink-soft">
+              <bdi>{d.error}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
     if (event.type === "webhook") {
       const status = lookup(t, `webhook_${String(d.status)}`) ?? humanize(String(d.status));
       return (
@@ -238,7 +278,7 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
               <p className="mt-1 text-xs text-ink-soft">
                 <time dateTime={event.at}>{formatDateTime(event.at)}</time>
                 {" · "}
-                {actorText(t, event.actor)}
+                {event.type === "message" && event.data.bot ? t.message_bot : actorText(t, event.actor)}
               </p>
             </li>
           ))}
