@@ -202,7 +202,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
             .map((item) => (
               <div key={item.id} className="space-y-1">
                 <p className="text-xs font-medium text-ink-soft">{item.productNameSnapshot}</p>
-                <CustomizationList customizations={item.customizations} compact />
+                <CustomizationList customizations={item.customizations} compact currency={order.currency} />
               </div>
             ))}
         </section>

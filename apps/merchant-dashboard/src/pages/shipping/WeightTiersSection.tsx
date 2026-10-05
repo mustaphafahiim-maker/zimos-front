@@ -83,6 +83,7 @@ const STRINGS = {
     wizardBack: "Back",
     wizardSwitch: "Switch to tier pricing",
     cancel: "Cancel",
+    working: "Working…",
     errDefaultWeight: "Enter a weight above 0 kg.",
   },
   ar: {
@@ -140,6 +141,7 @@ const STRINGS = {
     wizardBack: "رجوع",
     wizardSwitch: "التحويل للتسعير بالشرائح",
     cancel: "إلغاء",
+    working: "جارٍ التنفيذ…",
     errDefaultWeight: "أدخل وزنًا أكبر من 0 كجم.",
   },
 } satisfies Messages;
@@ -304,6 +306,7 @@ function WeightTiersBody({
         description={t.switchToRatesBody}
         confirmLabel={t.switchToRatesConfirm}
         cancelLabel={t.cancel}
+        busyLabel={t.working}
         onCancel={() => setConfirmRates(false)}
         onConfirm={switchToRates}
       />

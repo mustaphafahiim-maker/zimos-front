@@ -34,6 +34,9 @@ import {
   rememberCarrierEnvironment,
 } from "./carriers";
 import { BostaTierMapField } from "./BostaTierMapField";
+import { CarrierBookingSettings } from "./CarrierBookingSettings";
+import { CarrierAreas } from "./CarrierAreas";
+import { useCarrierFilter } from "./CarrierFilter";
 import { pruneTierMap, useWeightTiers } from "./weightTiers";
 
 const STRINGS = {
@@ -303,6 +306,7 @@ export function CarrierConnectionsSection() {
     [workspaceId, roleAllows]
   );
   const list = carriers.data;
+  const filter = useCarrierFilter(list?.carriers ?? []);
   const canManage = roleAllows && !forbidden;
 
   return (
@@ -325,7 +329,9 @@ export function CarrierConnectionsSection() {
             ) : (
               <>
                 {forbidden && <Alert>{t.viewOnlyForbidden}</Alert>}
-                {list?.carriers.map((carrier) => (
+                {filter.bar}
+                {filter.empty}
+                {filter.filtered.map((carrier) => (
                   <CarrierCard
                     key={carrier.code}
                     carrier={carrier}
@@ -718,6 +724,25 @@ function CarrierCard({
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
+      )}
+
+      {canManage && connection && mode === "view" && (
+        <CarrierBookingSettings
+          carrierCode={carrier.code}
+          name={name}
+          connection={connection}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+          onChanged={onChanged}
+        />
+      )}
+
+      {connection && mode === "view" && (
+        <CarrierAreas
+          carrierCode={carrier.code}
+          name={name}
+          canManage={canManage}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+        />
       )}
 
       {canManage && mode === "key" && (
