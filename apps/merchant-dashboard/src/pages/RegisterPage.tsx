@@ -30,7 +30,8 @@ const STRINGS = {
     fullName: "Full name",
     fullNamePlaceholder: "Your name",
     email: "Email",
-    phone: "Phone (optional)",
+    phone: "Phone",
+    invalidPhone: "Enter a valid mobile number (at least 8 digits).",
     password: "Password",
     passwordPlaceholder: "At least 8 characters",
     confirm: "Confirm password",
@@ -67,7 +68,8 @@ const STRINGS = {
     fullName: "الاسم الكامل",
     fullNamePlaceholder: "اسمك",
     email: "البريد الإلكتروني",
-    phone: "رقم الهاتف (اختياري)",
+    phone: "رقم الهاتف",
+    invalidPhone: "أدخل رقم موبايل صحيحًا (8 أرقام على الأقل).",
     password: "كلمة المرور",
     passwordPlaceholder: "8 أحرف على الأقل",
     confirm: "تأكيد كلمة المرور",
@@ -222,6 +224,11 @@ export function RegisterPage() {
       setError(t.mismatch);
       return;
     }
+    if (!/^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ""))) {
+      setError(t.invalidPhone);
+      document.getElementById("phone")?.focus();
+      return;
+    }
     if (!usernameSubmittable(usernameStatus)) {
       setError(t.chooseUsername);
       document.getElementById("register-username")?.querySelector("input")?.focus();
@@ -242,7 +249,7 @@ export function RegisterPage() {
         fullName,
         username: normalizeUsername(username),
         email,
-        phone: phone || undefined,
+        phone,
         password,
         acceptTerms: true,
         locale,
@@ -416,6 +423,7 @@ export function RegisterPage() {
               id="phone"
               type="tel"
               autoComplete="tel"
+              required
               dir="ltr"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
