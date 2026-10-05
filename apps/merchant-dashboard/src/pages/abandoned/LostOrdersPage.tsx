@@ -45,6 +45,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { LostOrderProductFilter, LostOrdersBulkBar, useLostOrderSelection } from "./LostOrdersBulk";
+import { LostOrderTiming } from "./LostOrderTiming";
 
 /**
  * System role keys carrying orders.manage, which every action here needs
@@ -136,7 +137,6 @@ const STRINGS = {
     placeOrder: "Create order",
     placing: "Creating…",
     converted: "Order {order} created.",
-    abandonedAfter: "A checkout counts as left after {n} minutes without activity.",
   },
   ar: {
     title: "الطلبات المفقودة",
@@ -219,7 +219,6 @@ const STRINGS = {
     placeOrder: "إنشاء الأوردر",
     placing: "جارٍ الإنشاء…",
     converted: "تم إنشاء الأوردر {order}.",
-    abandonedAfter: "يُعتبر الطلب متروكًا بعد {n} دقيقة بدون نشاط.",
   },
 } satisfies Messages;
 
@@ -663,7 +662,15 @@ export function LostOrdersPage() {
           />
         </Card>
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
-        {abandonedAfter !== null && <p className="mt-3 text-xs text-ink-soft">{fmt(t.abandonedAfter, { n: abandonedAfter })}</p>}
+        {abandonedAfter !== null && (
+          <LostOrderTiming
+            minutes={abandonedAfter}
+            onSaved={() => {
+              list.reload();
+              void stats.refresh({ silent: true });
+            }}
+          />
+        )}
       </DataState>
 
       <ConvertModal
