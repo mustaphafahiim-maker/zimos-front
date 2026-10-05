@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, SearchInput } from "@/components/forms";
 import { Panel, SortHead, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
+import { PricingBadge, Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminSubscriptionRow } from "@/lib/adminApi";
@@ -34,6 +34,8 @@ export function SubscriptionsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState<SortKey>>({ key: "mrr", dir: "desc" });
+  // Only the subscriptions at the plan price: no free (gift) or discounted ones.
+  const [paidOnly, setPaidOnly] = useState(false);
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -41,6 +43,7 @@ export function SubscriptionsPage() {
     const q = query.trim().toLowerCase();
     return rows
       .filter((s) => filter === "all" || s.status === filter)
+      .filter((s) => !paidOnly || (s.pricingKind ?? "paid") === "paid")
       .filter(
         (s) =>
           !q ||
@@ -55,7 +58,7 @@ export function SubscriptionsPage() {
           return compareValues(nextDate(a) || "9999", nextDate(b) || "9999", sort.dir);
         return compareValues(a.mrr, b.mrr, sort.dir);
       });
-  }, [rows, filter, query, sort]);
+  }, [rows, filter, query, sort, paidOnly]);
 
   const options = FILTERS.map(([value, label]) => ({
     value,
@@ -82,7 +85,13 @@ export function SubscriptionsPage() {
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <FilterChips options={options} value={filter} onChange={setFilter} />
+          <div className="flex flex-wrap items-center gap-3">
+            <FilterChips options={options} value={filter} onChange={setFilter} />
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input type="checkbox" className="size-4" checked={paidOnly} onChange={(e) => setPaidOnly(e.target.checked)} />
+              Paid only
+            </label>
+          </div>
           <SearchInput value={query} onChange={setQuery} placeholder="Search workspace name or address" />
         </div>
         {filtered.length === 0 ? (
@@ -128,6 +137,7 @@ export function SubscriptionsPage() {
                       </Td>
                       <Td>
                         <Status value={s.status} />
+                        <PricingBadge kind={s.pricingKind} />
                         {s.cancelAtPeriodEnd && (
                           <span className="mt-1 block text-xs text-ink-soft">Cancels at period end</span>
                         )}
@@ -159,7 +169,7 @@ export function SubscriptionsPage() {
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
                   <Td className="font-medium" colSpan={3}>
-                    Total ({filtered.length})
+                    {paidOnly ? "Paid total" : "Total"} ({filtered.length})
                   </Td>
                   <Td className="tabular text-end font-semibold">
                     {totalCurrency ? formatMinorMoney(totalMrr, totalCurrency) : "—"}

@@ -11,7 +11,7 @@ import type {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatMinorMoney } from "@/lib/format";
 import { catalogFromFeatureTable, featureLabelIn } from "@/lib/planFeatures";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
@@ -21,7 +21,7 @@ import { FeaturePicker } from "./FeaturePicker";
 import { Field, NativeSelect, TextAreaField, TextField } from "./forms";
 import { Modal } from "./Modal";
 import { Panel, Td, Th } from "./Panel";
-import { Status, StatusBadge } from "./StatusBadge";
+import { PricingBadge, Status, StatusBadge } from "./StatusBadge";
 import { useToast } from "./Toast";
 
 const DAY_MS = 86_400_000;
@@ -198,6 +198,7 @@ function SubscriptionSummary({ data }: { data: AdminManualSubscription }) {
           ) : (
             <>
               <Status value={s.status} />
+              <PricingBadge kind={s.pricingKind} />
               {s.phase !== "ok" && (
                 <StatusBadge tone={s.phase === "restricted" || s.phase === "grace" ? "danger" : "warning"} className="ms-2">
                   {s.phase.replace(/_/g, " ")}
@@ -216,6 +217,15 @@ function SubscriptionSummary({ data }: { data: AdminManualSubscription }) {
           </DetailRow>
         )}
         <DetailRow label="Trial ends">{s.trialEndsAt ? formatDateTime(s.trialEndsAt) : "—"}</DetailRow>
+        {s.pricingKind && s.pricingKind !== "paid" && (
+          <DetailRow label="Pricing">
+            {s.pricingKind === "free" ? "Free (gift)" : s.discountPercent ? `Discounted ${s.discountPercent}%` : "Discounted"}
+            {s.currency != null && s.effectivePrice != null && (
+              <span className="ms-2 tabular text-ink-soft">{formatMinorMoney(s.effectivePrice, s.currency)} / {s.billingCycle === "yearly" ? "year" : "month"}</span>
+            )}
+            {s.pricingExpiredAt && <span className="ms-2 text-xs text-danger">ended {formatDate(s.pricingExpiredAt)}, not renewed</span>}
+          </DetailRow>
+        )}
         {limits && (
           <>
             <DetailRow label="Owner's stores">
@@ -358,9 +368,20 @@ function ActivateDialog({
   const [endDate, setEndDate] = useState("");
   const [note, setNote] = useState("");
   const [step, setStep] = useState<"form" | "review">("form");
+  const [pricing, setPricing] = useState<"paid" | "free" | "discounted">("paid");
+  const [discountBy, setDiscountBy] = useState<"percent" | "amount">("percent");
+  const [percent, setPercent] = useState("");
+  const [amount, setAmount] = useState("");
   const { run, busy, error, setError } = useAction(workspaceId);
 
   const plan = active.find((p) => p.id === planId);
+  const cycle = data.subscription.billingCycle;
+  const fullPrice = plan ? (cycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice) : 0;
+  const percentValue = Number(percent);
+  // The amount is typed in major units; the API takes minor units.
+  const amountMinor = Math.round(Number(amount) * 100);
+  const effective =
+    pricing === "free" ? 0 : pricing === "discounted" ? (discountBy === "percent" ? Math.round((fullPrice * (100 - percentValue)) / 100) : amountMinor) : fullPrice;
   const startDate = start === today ? new Date(now) : new Date(`${start}T00:00:00`);
   const end = keepDates
     ? new Date(data.subscription.currentPeriodEnd)
@@ -379,6 +400,14 @@ function ActivateDialog({
     if (note.trim().length < 3) return setError("Write a note: why, and what was agreed.");
     if (!keepDates && (!end || end.getTime() <= now)) return setError("The period must end in the future.");
     if (keepDates && plan.id === data.subscription.plan?.id) return setError("The store is already on this plan.");
+    if (!keepDates && pricing === "discounted") {
+      if (discountBy === "percent" && !(Number.isInteger(percentValue) && percentValue >= 1 && percentValue <= 99)) {
+        return setError("The discount must be a whole percent between 1 and 99.");
+      }
+      if (discountBy === "amount" && !(amountMinor >= 1 && amountMinor < fullPrice)) {
+        return setError("The discounted price must be more than zero and less than the plan price.");
+      }
+    }
     setError(null);
     setStep("review");
   }
@@ -391,6 +420,9 @@ function ActivateDialog({
       ]
     : [
         `Plan: ${plan?.name}, active from ${formatDate(startDate.toISOString())} to ${end ? formatDate(end.toISOString()) : "—"}.`,
+        pricing === "paid"
+          ? "Pricing: paid, at the plan price."
+          : `Pricing: ${pricing === "free" ? "free (gift)" : "discounted"}, ${plan ? formatMinorMoney(effective, plan.currency) : "—"} per ${cycle === "yearly" ? "year" : "month"}. It counts in MRR at this price and is never charged at the plan price; when the period ends it is not renewed.`,
         "Any expired banner or restriction is lifted now; after the end date the usual warning, grace day and restriction apply.",
         "No charge is created; no commission is recorded.",
       ];
@@ -404,6 +436,11 @@ function ActivateDialog({
     if (start !== today) body.startsAt = startDate.toISOString();
     if (duration === null) body.endsAt = end?.toISOString();
     else body.duration = duration;
+    body.pricingKind = pricing;
+    if (pricing === "discounted") {
+      if (discountBy === "percent") body.discountPercent = percentValue;
+      else body.priceOverrideAmount = amountMinor;
+    }
     await run("activate", body, () => onDone("Subscription activated."));
   }
 
@@ -446,6 +483,32 @@ function ActivateDialog({
             <>
               <TextField label="Starts on" type="date" value={start} max={today} onChange={(e) => setStart(e.target.value)} hint="Today by default; may be in the past." />
               <DurationPicker value={duration} onChange={setDuration} allowEndDate endDate={endDate} onEndDate={setEndDate} />
+              <Field label="Pricing" required hint="Paid is the plan price, as before. Free and discounted are never charged at the plan price.">
+                {({ id }) => (
+                  <NativeSelect id={id} value={pricing} onChange={(e) => setPricing(e.target.value as typeof pricing)}>
+                    <option value="paid">Paid (plan price)</option>
+                    <option value="free">Free (gift)</option>
+                    <option value="discounted">Discounted</option>
+                  </NativeSelect>
+                )}
+              </Field>
+              {pricing === "discounted" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Discount by">
+                    {({ id }) => (
+                      <NativeSelect id={id} value={discountBy} onChange={(e) => setDiscountBy(e.target.value as typeof discountBy)}>
+                        <option value="percent">Percent off</option>
+                        <option value="amount">Fixed price per period</option>
+                      </NativeSelect>
+                    )}
+                  </Field>
+                  {discountBy === "percent" ? (
+                    <TextField label="Percent (1-99)" type="number" min={1} max={99} value={percent} onChange={(e) => setPercent(e.target.value)} />
+                  ) : (
+                    <TextField label={`Price per ${cycle === "yearly" ? "year" : "month"}${plan ? ` (${plan.currency})` : ""}`} type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  )}
+                </div>
+              )}
             </>
           )}
           <TextAreaField label="Note" required value={note} onChange={(e) => setNote(e.target.value)} rows={3} hint="Why, and what was agreed (kept with the change and in the audit log)." />
