@@ -1,0 +1,180 @@
+/* ------------------------------------------------------------------ *
+ * ZIMOS family tokens — one file for the four products (store builder,
+ * affiliate marketplace, fulfillment, profit analytics).
+ *
+ * Every product imports this file and gets the same neutrals, type, radii,
+ * shadows, spacing and status colours. The ONLY thing that differs between
+ * products is `--brand`, chosen by `data-product` on <html>:
+ *
+ *   <html data-product="store">        ZIMOS store builder   (default)
+ *   <html data-product="affiliate">    affiliate marketplace
+ *   <html data-product="fulfillment">  fulfillment
+ *   <html data-product="analytics">    profit analytics
+ *
+ * Every primary shade (hover, soft fill, text-on-soft, dark-mode lift) is
+ * derived from `--brand` with color-mix, so a product changes one value.
+ * Each brand holds >= 4.5:1 for white text on it (WCAG AA, normal text).
+ *
+ * Light neutral palette, one accent (the brand), status colours used only
+ * for status. Rationale and usage rules: docs/ux/06-design-system.md.
+ * Dark mode: a `.dark` class on <html>.
+ * ------------------------------------------------------------------ */
+
+:root,
+[data-product="store"] {
+  --brand: #165dff; /* 5.19:1 with white */
+}
+[data-product="affiliate"] {
+  --brand: #6d28d9; /* 7.10:1 */
+}
+[data-product="fulfillment"] {
+  --brand: #0f766e; /* 5.47:1 */
+}
+[data-product="analytics"] {
+  --brand: #b45309; /* 5.02:1 */
+}
+
+:root {
+  color-scheme: light;
+
+  /* Neutrals — cool grey, no brand tint, so every product sits on the same ground. */
+  --color-paper: #f5f6f8; /* page */
+  --color-paper-raised: #ffffff; /* cards, sheets, the side menu */
+  --color-paper-sunken: #eef0f3; /* wells, table heads, skeletons */
+  --color-ink: #14161a; /* 17.6:1 on white */
+  --color-ink-soft: #5a606b; /* 6.3:1 on white, 5.8:1 on paper */
+  --color-line: #e6e8ec; /* decorative hairlines, card edges */
+  --color-line-strong: #8b919c; /* control boundaries: 3.2:1 on white (WCAG 1.4.11) */
+
+  /* The one accent. */
+  --color-primary: var(--brand);
+  --color-primary-dark: color-mix(in srgb, var(--brand) 72%, black); /* text on soft, hover */
+  --color-primary-soft: color-mix(in srgb, var(--brand) 9%, white); /* selected rows, chips */
+  --color-cyan: color-mix(in srgb, var(--brand) 40%, #12c8da); /* charts only, never text */
+
+  /* Status — used for status only, always paired with a word or icon. */
+  --color-success: #1f7a4d;
+  --color-success-soft: #e6f4ec;
+  --color-danger: #c0362c;
+  --color-danger-soft: #fcebea;
+  /* "accent" is the warning/attention amber; kept under its old name so the
+     existing badges keep working. Text uses accent-dark (5.8:1 on soft). */
+  --color-accent: #f0a020;
+  --color-accent-dark: #8a5300;
+  --color-accent-soft: #fff3dc;
+
+  /* Type — Readex Pro draws Arabic and Latin from one family, so a mixed
+     Arabic/English line has one rhythm. Bundled via @fontsource/readex-pro. */
+  --font-sans: "Readex Pro", "Inter Variable", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Readex Pro", "Inter Variable", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+
+  /* Shape — big soft cards, comfortable controls. */
+  --radius: 0.75rem; /* controls: 12px */
+  --radius-card: 1.25rem; /* cards / bento tiles: 20px */
+  --radius-pill: 999px;
+
+  /* Very soft elevation: a hairline plus a wide, faint shadow. */
+  --shadow-card: 0 1px 2px rgb(20 22 26 / 0.04), 0 8px 24px -12px rgb(20 22 26 / 0.08);
+  --shadow-raised: 0 2px 4px rgb(20 22 26 / 0.04), 0 16px 32px -16px rgb(20 22 26 / 0.14);
+  --shadow-pop: 0 24px 48px -16px rgb(20 22 26 / 0.22);
+
+  /* Bento grid rhythm. */
+  --bento-gap: 0.75rem;
+  --page-gutter: 1rem;
+
+  /* shadcn/Base UI tokens used by @store-builder/ui, pointed at the palette above. */
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  --muted: var(--color-paper-sunken);
+  --muted-foreground: var(--color-ink-soft);
+  --accent: var(--color-accent);
+  --accent-foreground: #14161a;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-cyan);
+  --chart-3: var(--color-accent);
+  --chart-4: var(--color-success);
+  --chart-5: var(--color-ink-soft);
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary-dark);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --bento-gap: 1rem;
+    --page-gutter: 1.5rem;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+
+  --color-paper: #0e1014;
+  --color-paper-raised: #171a20;
+  --color-paper-sunken: #1e2229;
+  --color-ink: #eceef2;
+  --color-ink-soft: #a3a9b5;
+  --color-line: #262a33;
+  --color-line-strong: #666d7c;
+
+  /* The brand lifted toward white so it reads on the dark ground; text on it is dark. */
+  --color-primary: color-mix(in srgb, var(--brand) 62%, white);
+  --color-primary-dark: color-mix(in srgb, var(--brand) 40%, white);
+  --color-primary-soft: color-mix(in srgb, var(--brand) 22%, #0e1014);
+
+  --color-success: #5cbf8f;
+  --color-success-soft: #13291e;
+  --color-danger: #f08a7e;
+  --color-danger-soft: #2e1614;
+  --color-accent: #f2b54a;
+  --color-accent-dark: #f2b54a;
+  --color-accent-soft: #2c2111;
+
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.02);
+  --shadow-raised: 0 16px 32px -16px rgb(0 0 0 / 0.6);
+  --shadow-pop: 0 24px 48px -16px rgb(0 0 0 / 0.7);
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #0e1014;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  --muted: var(--color-paper-sunken);
+  --muted-foreground: var(--color-ink-soft);
+  --accent: var(--color-accent);
+  --accent-foreground: #0e1014;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --ring: var(--color-primary);
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #0e1014;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary-dark);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
+}

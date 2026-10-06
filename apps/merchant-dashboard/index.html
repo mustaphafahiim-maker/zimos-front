@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl" data-product="store">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -9,8 +9,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Installable dashboard (PWA): manifest, theme colour, iOS home-screen mode. -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Zimos" />
@@ -36,6 +36,14 @@
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           e.classList.toggle("dark", d);
           e.style.colorScheme = d ? "dark" : "light";
+          // Arabic first: the language the merchant chose, else Arabic, before first paint.
+          var l = null;
+          try {
+            l = localStorage.getItem("zimos.locale");
+          } catch (_) {}
+          var en = l === "en";
+          e.lang = en ? "en" : "ar";
+          e.dir = en ? "ltr" : "rtl";
         } catch (_) {}
       })();
     </script>

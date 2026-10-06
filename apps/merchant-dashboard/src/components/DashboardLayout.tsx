@@ -23,6 +23,7 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
+import { MobileTabBar } from "@/components/MobileTabBar";
 import { useTeammateLocale } from "@/lib/useTeammateLocale";
 
 const STRINGS = {
@@ -68,9 +69,9 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v2";
+const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v3";
 /** Groups that start open. The rest start closed and still show the page you are on. */
-const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products"]);
+const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products", "customers", "money"]);
 
 function readCollapsedGroups(): Record<string, boolean> {
   try {
@@ -140,7 +141,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           return (
             <div
               key={group.id}
-              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-line pt-4"))}
+              className={cn(index > 0 && (heading ? "mt-4" : "mt-4 border-t border-line pt-3"))}
             >
               {heading && (
                 <button
@@ -148,7 +149,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.16em] text-ink-soft/80 uppercase transition-colors hover:text-ink rtl:font-sans rtl:text-[13px] rtl:tracking-normal"
+                  className="mb-1 flex min-h-8 w-full cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
@@ -166,8 +167,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-ink-soft transition-colors hover:bg-primary-soft/70 hover:text-ink",
-                        isActive && "bg-primary-soft font-semibold text-primary-dark dark:text-primary"
+                        "group relative flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink",
+                        isActive && "bg-primary-soft font-semibold text-primary-dark"
                       )
                     }
                   >
@@ -181,7 +182,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         )}
                         <item.icon
                           className={cn(
-                            "size-5 shrink-0 text-ink-soft/80 group-hover:text-ink",
+                            "size-[18px] shrink-0 text-ink-soft group-hover:text-ink",
                             isActive && "text-primary"
                           )}
                           strokeWidth={1.75}
@@ -500,6 +501,7 @@ export function DashboardLayout() {
           </main>
         </div>
       </div>
+      <MobileTabBar onMore={() => setMobileOpen(true)} moreOpen={mobileOpen} />
     </div>
   );
 }

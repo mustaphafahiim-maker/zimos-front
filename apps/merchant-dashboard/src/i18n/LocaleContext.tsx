@@ -45,7 +45,8 @@ function readStored(): Locale {
   } catch {
     /* private mode */
   }
-  return "en";
+  // Arabic first: the dashboard is built for Egyptian merchants (docs/ux/05-proposal.md).
+  return "ar";
 }
 
 function applyToDocument(locale: Locale) {
