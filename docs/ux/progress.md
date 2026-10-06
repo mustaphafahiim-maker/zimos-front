@@ -184,7 +184,13 @@ are listed under *Handoff items done*.
       / Esc / × ask «تسيب التعديلات؟» (كمّل تعديل / سيبها); a caller's own
       Cancel or a save isn't asked. Swipe-down not added (no gesture
       library). Checked with touch emulation at 390.
-- [ ] R2-8 … R2-12 — see the plan.
+- [x] R2-8 (part) One name per thing (N-02): Settings → «هوية المتجر» (name,
+      logo, tagline) and Store settings → «بيانات التواصل» / «بيانات التواصل
+      في المتجر» (what shoppers see) no longer share the title «بيانات
+      المتجر»; copy of both in Egyptian Arabic. Moving the identity form
+      into Store settings is left for later (the shopper-accounts branch is
+      adding a Store settings tab now).
+- [ ] R2-9 … R2-12 — see the plan.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox
