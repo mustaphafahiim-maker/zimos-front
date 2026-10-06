@@ -6,6 +6,7 @@ import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { normalizeHex } from "@/lib/brandColors";
 import { useEditorLocale } from "./editorLocale";
+import { StyleExtrasFields } from "./StyleExtrasFields";
 
 /**
  * The Style and Layout tabs of one element (SPEC §9.3).
@@ -410,6 +411,8 @@ export function ElementStylePanel({
           {t.hidden}
         </label>
       )}
+
+      <StyleExtrasFields tab={tab} device={device} own={own} inherited={inherited} setValue={setValue} />
 
       {hasOwn && (
         <Button
