@@ -310,7 +310,14 @@ are listed under *Handoff items done*.
       source / medium / campaign) with a summary chip and outline marks; the
       storefront applies device (CSS), country (visitor context) and UTM
       rules without a gap or flash.
-- [ ] 188/194, 189, 190, 192, 196, 197, 198/199 — interrupted by a
+- [x] 188 Wishlist: heart on product cards and the product page (guests
+      get one sign-in notice), account tab «المفضلة» with add to cart,
+      guest hearts merged on sign-in; dashboard «الأكتر في المفضلة» card.
+- [x] 194 Back-in-stock: «بلغني لما يرجع» (phone or email) replaces the cart
+      buttons on a sold-out variant (sold-out options can now be picked,
+      still struck through); dashboard «مستنيين يرجع» card and «{n} مستني»
+      badges on variants. One backend request (wishlist availability).
+- [ ] 189, 190, 192, 196, 197, 198/199 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
