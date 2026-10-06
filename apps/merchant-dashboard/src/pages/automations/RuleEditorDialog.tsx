@@ -66,6 +66,7 @@ const STRINGS = {
     wallet: "Wallet",
     valu: "valU installments",
     kiosk: "Kiosk (Aman / Masary)",
+    paypal: "PayPal",
     bank_transfer: "Bank transfer",
     minTotal: "Order total at least",
     source: "Order came from",
@@ -130,6 +131,7 @@ const STRINGS = {
     wallet: "محفظة",
     valu: "تقسيط valU",
     kiosk: "الدفع في الكشك (أمان / مصاري)",
+    paypal: "باي بال",
     bank_transfer: "تحويل بنكي",
     minTotal: "إجمالي الطلب لا يقل عن",
     source: "مصدر الطلب",
@@ -417,6 +419,7 @@ export function RuleEditorDialog({
                   <option value="wallet">{t.wallet}</option>
                   <option value="valu">{t.valu}</option>
                   <option value="kiosk">{t.kiosk}</option>
+                  <option value="paypal">{t.paypal}</option>
                   <option value="bank_transfer">{t.bank_transfer}</option>
                 </Select>
               )}

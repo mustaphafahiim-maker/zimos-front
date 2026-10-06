@@ -26,7 +26,8 @@ const POLL_FOR_MS = 2 * 60 * 1000;
  * means "just came back". The server works out which gateway signed them.
  */
 // sbx_setup_sig: the sandbox's "save a card" page, for a free trial with nothing to pay.
-const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig", "sbx_setup_sig"];
+// token / PayerID: PayPal (handoff 183) — nothing signed, the return makes the server ask PayPal (and capture).
+const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig", "sbx_setup_sig", "token", "PayerID"];
 
 function gatewayQuery(search: URLSearchParams): Record<string, string> | null {
   if (!GATEWAY_REDIRECT_MARKERS.some((key) => search.has(key))) return null;
@@ -152,7 +153,7 @@ function PaymentPage() {
   const funnelReturn = isClient ? getPaymentReturn(workspaceId, orderId) : null;
   const more = usePaymentMethodText();
   const methodName = (m: StorefrontPaymentMethod) =>
-    m.method === "wallet" ? t.payment.wallet : m.method === "valu" ? more.valu : m.method === "kiosk" ? more.kiosk : t.payment.card;
+    m.method === "wallet" ? t.payment.wallet : m.method === "valu" ? more.valu : m.method === "kiosk" ? more.kiosk : (m.method as string) === "paypal" ? t.express.paypal : t.payment.card;
   const thankYou = storeHref(basePath, `/orders/${orderId}?number=${encodeURIComponent(status?.orderNumber ?? "")}`);
   const expiresAt =
     status?.expiresAt &&

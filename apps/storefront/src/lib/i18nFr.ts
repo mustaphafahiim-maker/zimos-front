@@ -355,6 +355,14 @@ export const fr: Dictionary = {
     backToStore: "Retour à la boutique",
     error: "Une erreur s'est produite. Veuillez réessayer.",
   },
+  express: {
+    title: "Paiement express",
+    or: "Ou payez autrement",
+    payWith: (wallet) => `Payer avec ${wallet}`,
+    hint: "Nous utilisons vos coordonnées de livraison ci-dessous : remplissez-les d'abord.",
+    paypal: "PayPal",
+    paypalHint: "Validez le paiement sur PayPal, puis revenez ici.",
+  },
   upsell: {
     // A funnel offer's saving (FunnelStep).
     save: (amount: string) => `Vous économisez ${amount}`,

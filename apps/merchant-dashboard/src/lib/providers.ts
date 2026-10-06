@@ -31,6 +31,8 @@ const KNOWN_NAMES: Record<string, string> = {
   mylerz: "Mylerz",
   paymob: "Paymob",
   kashier: "Kashier",
+  stripe: "Stripe",
+  paypal: "PayPal",
   // The test courier and the test payment gateway share the code.
   sandbox: "Sandbox (test)",
 };

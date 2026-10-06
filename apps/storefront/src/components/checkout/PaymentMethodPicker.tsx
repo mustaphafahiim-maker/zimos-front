@@ -48,6 +48,8 @@ export function PaymentMethodPicker({
           ? { title: more.valu, hint: more.valuHint, Icon: CardIcon }
           : m.method === "kiosk"
             ? { title: more.kiosk, hint: more.kioskHint, Icon: CashIcon }
+            : (m.method as string) === "paypal" // handoff 183: also an express button at the top of checkout
+              ? { title: t.express.paypal, hint: t.express.paypalHint, Icon: WalletIcon }
             : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
 
   if (methods.length === 1 && methods[0].method === "cod") {

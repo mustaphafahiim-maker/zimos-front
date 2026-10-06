@@ -181,7 +181,7 @@ const FILTER_KEYS = [
   "utmCampaign",
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
-const PAYMENT_METHODS = ["cod", "card", "wallet", "valu", "kiosk", "bank_transfer"] as const;
+const PAYMENT_METHODS = ["cod", "card", "wallet", "valu", "kiosk", "paypal", "bank_transfer"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -225,7 +225,7 @@ export function useOrderExtraFilters() {
     () => ({
       tag: values.tag || undefined,
       source: (values.source || undefined) as OrderSource | undefined,
-      paymentMethod: values.paymentMethod || undefined,
+      paymentMethod: (values.paymentMethod || undefined) as OrderListFilters["paymentMethod"],
       governorate: values.governorate || undefined,
       carrier: values.carrier || undefined,
       seen: values.seen ? values.seen === "true" : undefined,

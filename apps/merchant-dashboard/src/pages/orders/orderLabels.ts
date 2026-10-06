@@ -4,7 +4,7 @@ import type {
   FinancialState,
   FulfillmentState,
   OrderStage,
-  PaymentMethod,
+  PaymentMethodWithPaypal,
   RiskFlag,
   ShipmentStatus,
 } from "@store-builder/api-client";
@@ -63,6 +63,7 @@ const LABELS = {
     pay_wallet: "Wallet",
     pay_valu: "valU installments",
     pay_kiosk: "Kiosk (Aman / Masary)",
+    pay_paypal: "PayPal",
     pay_bank_transfer: "Bank transfer",
     // risk flags
     risk_blacklisted_customer: "Blocked customer",
@@ -123,6 +124,7 @@ const LABELS = {
     pay_wallet: "محفظة إلكترونية",
     pay_valu: "تقسيط valU",
     pay_kiosk: "الدفع في الكشك (أمان / مصاري)",
+    pay_paypal: "باي بال",
     pay_bank_transfer: "تحويل بنكي",
     risk_blacklisted_customer: "عميل محظور",
     risk_duplicate_order: "أوردر مكرر محتمل",
@@ -179,7 +181,7 @@ export function useOrderLabels() {
       financial: (v: FinancialState | null | undefined) => pick(t, "fin", v),
       fulfillment: (v: FulfillmentState | null | undefined) => pick(t, "ful", v),
       shipment: (v: ShipmentStatus | null | undefined) => pick(t, "ship", v),
-      paymentMethod: (v: PaymentMethod | null | undefined) => pick(t, "pay", v),
+      paymentMethod: (v: PaymentMethodWithPaypal | null | undefined) => pick(t, "pay", v),
       riskFlag: (v: RiskFlag | string | null | undefined) => pick(t, "risk", v),
       flagged: t.flagged,
     }),

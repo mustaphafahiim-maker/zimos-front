@@ -264,3 +264,5 @@ export * from "./endpoints/addressLookup";
 export * from "./endpoints/shopperReturns";
 // Email marketing: contacts who agreed to marketing to Mailchimp / Klaviyo lists (emailMarketing/emailMarketing.js, handoff 182).
 export * from "./endpoints/emailMarketing";
+// Express checkout (Apple Pay, Google Pay, PayPal), Stripe and PayPal: wallets on methods, PayPal as a method (handoff 183).
+export * from "./endpoints/expressCheckout";
