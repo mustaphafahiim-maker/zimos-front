@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Globe, Star, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
+  domainSetRedirectToPrimary,
   funnelsList,
   storeDesignAddDomain,
   storeDesignCheckDomainSsl,
@@ -26,6 +27,9 @@ import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { DomainRedirectSwitch } from "./DomainRedirectSwitch";
+import { BuyDomainSection } from "./BuyDomainSection";
+import { BoughtDomainsSection } from "./BoughtDomainsSection";
 
 const STRINGS = {
   en: {
@@ -75,6 +79,7 @@ const STRINGS = {
     removeTitle: "Remove this domain?",
     removeBody: "Shoppers opening it will no longer reach your store. Your free store address keeps working.",
     testProvider: "Certificates are issued by a test provider for now: the status here does not mean a real certificate exists.",
+    boughtDns: "Bought here: its DNS is set for you, nothing to add at a DNS provider.",
     noProvider: "No certificate provider is configured yet; certificates cannot be requested.",
   },
   ar: {
@@ -124,6 +129,7 @@ const STRINGS = {
     removeTitle: "حذف هذا الدومين؟",
     removeBody: "من يفتحه لن يصل إلى متجرك. عنوان متجرك المجاني يظل يعمل.",
     testProvider: "الشهادات تصدر حاليًا من مزود تجريبي: الحالة هنا لا تعني وجود شهادة حقيقية.",
+    boughtDns: "اتشترى من هنا: الـ DNS بتاعه متظبط لوحده، مش محتاج تضيف حاجة عند مزود DNS.",
     noProvider: "لم يُضبط مزود شهادات بعد؛ لا يمكن طلب شهادات.",
   },
 } satisfies Messages;
@@ -142,6 +148,10 @@ export function DomainsTab() {
   const [busy, setBusy] = useState<string | null>(null);
   const [dns, setDns] = useState<Record<string, StoreDomainDnsCheck>>({});
   const [removing, setRemoving] = useState<StoreDomain | null>(null);
+  // Bumped after a purchase so "Bought domains" reads its list again.
+  const [boughtVersion, setBoughtVersion] = useState(0);
+  // Domains bought in the dashboard: the platform holds their DNS, so the merchant has no records to add.
+  const [boughtDomainIds, setBoughtDomainIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const publishedFunnels = (funnels.data ?? []).filter((f) => f.status === "published");
 
@@ -192,6 +202,14 @@ export function DomainsTab() {
         {state.data?.certificateProvider === "sandbox" && <Alert>{t.testProvider}</Alert>}
         {state.data && state.data.certificateProvider === null && <Alert variant="danger">{t.noProvider}</Alert>}
 
+        <BuyDomainSection
+          onBought={() => {
+            setBoughtVersion((v) => v + 1);
+            void state.refresh({ silent: true });
+          }}
+          onPurchaseFailed={() => setBoughtVersion((v) => v + 1)}
+        />
+
         <Section title={t.addTitle} description={t.addDescription}>
           <form onSubmit={add} className="flex flex-wrap items-start gap-2">
             <Field label={t.hostname} error={addError ?? undefined} labelHidden className="min-w-0 flex-1">
@@ -222,6 +240,7 @@ export function DomainsTab() {
             const counterpart = domain.counterpart ?? null;
             // The counterpart still needs its record or its certificate.
             const counterpartPending = Boolean(counterpart?.redirect && counterpart.sslStatus !== "issued");
+            const dnsHeldByUs = boughtDomainIds.has(domain.id);
             const recordFound = (record: StoreDomain["records"][number]) =>
               !check
                 ? null
@@ -251,7 +270,8 @@ export function DomainsTab() {
                 }
               >
                 <div className="space-y-4">
-                  {(domain.status !== "active" || counterpartPending) && (
+                  {dnsHeldByUs && <p className="text-sm text-ink-soft">{t.boughtDns}</p>}
+                  {!dnsHeldByUs && (domain.status !== "active" || counterpartPending) && (
                     <div>
                       <p className="text-sm font-medium text-ink">{t.stepsTitle}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">{t.stepsHint}</p>
@@ -339,6 +359,19 @@ export function DomainsTab() {
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {!domain.isPrimary && (
+                    <DomainRedirectSwitch
+                      domain={domain}
+                      disabled={isBusy("redirect")}
+                      onChange={(redirectToPrimary) =>
+                        void run(domain, "redirect", async () => {
+                          await domainSetRedirectToPrimary(apiClient, workspaceId, domain.id, redirectToPrimary);
+                          return t.savedToast;
+                        })
+                      }
+                    />
                   )}
 
                   {usable && (
@@ -431,6 +464,13 @@ export function DomainsTab() {
             );
           })
         )}
+
+        <BoughtDomainsSection
+          version={boughtVersion}
+          onLoaded={(purchases) =>
+            setBoughtDomainIds(new Set(purchases.filter((p) => p.status === "active" || p.status === "expired").flatMap((p) => (p.domainId ? [p.domainId] : []))))
+          }
+        />
 
         <ConfirmDialog
           open={removing !== null}

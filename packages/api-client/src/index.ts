@@ -246,3 +246,7 @@ export * from "./endpoints/gtmContainer";
 export * from "./endpoints/webhookHeaders";
 // MCP server for AI assistants: its URL, the funnel scopes and the tools a key opens (mcp/mcpServer.js).
 export * from "./endpoints/mcp";
+// Per-domain "redirect to the primary domain" switch (domains/domainSettings.js, item 177).
+export * from "./endpoints/domainRedirect";
+// Buy a domain: search, purchase, auto-renew and renew (domains/purchases.js, item 176).
+export * from "./endpoints/domainPurchases";

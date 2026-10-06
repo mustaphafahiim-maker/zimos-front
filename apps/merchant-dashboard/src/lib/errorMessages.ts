@@ -113,11 +113,18 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
     PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
+    STORE_NOT_SET_UP: "Set up your store (add a product) before connecting a domain.",
+    DOMAIN_TAKEN: "That domain is already connected to a store.",
+    DOMAIN_PRICE_CHANGED: "The price changed — check it and confirm again.",
+    DOMAIN_UNAVAILABLE: "This domain isn't available anymore. Search for another name.",
+    DOMAIN_PURCHASE_FAILED: "The domain couldn't be bought — nothing was charged. Try again in a few minutes.",
+    DOMAIN_NOT_ACTIVE: "Only a bought domain that's active or expired can be renewed.",
     TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
     draftRequired: "Your store is in draft mode. Subscribe to publish it.",
     limitFunnels: "You've reached your plan's funnels for this month ({used} of {max}). You can create more from {date}.",
     limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
     limitDrafts: "Subscribe to one of your stores before starting another.",
+    limitDomains: "You've reached your plan's domain limit ({used} of {max}). Upgrade your plan to add another.",
     cancelFailedPermission:
       "The courier refused to cancel the delivery: the connected API key doesn't have Full Access. The order was not cancelled. Reconnect the courier with a Full Access key under Shipping, or cancel the delivery in the courier's dashboard first.",
     cancelFailedAuth:
@@ -219,11 +226,18 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "الدفعة دي مينفعش ترجع عن طريق البوابة.",
     ORDER_TEST_PAYMENT: "الأوردر ده اتدفع تجريبي، فمينفعش يتشحن.",
     PLAN_LIMIT_REACHED: "وصلت للحد بتاع باقتك. رقّي الباقة عشان تضيف أكتر.",
+    STORE_NOT_SET_UP: "جهّز متجرك الأول (ضيف منتج) قبل ما تربط دومين.",
+    DOMAIN_TAKEN: "الدومين ده مربوط بمتجر تاني.",
+    DOMAIN_PRICE_CHANGED: "السعر اتغير — راجعه وأكّد تاني.",
+    DOMAIN_UNAVAILABLE: "الدومين ده مبقاش متاح. دوّر على اسم تاني.",
+    DOMAIN_PURCHASE_FAILED: "معرفناش نشتري الدومين، ومفيش أي فلوس اتخصمت. جرّب تاني بعد شوية.",
+    DOMAIN_NOT_ACTIVE: "التجديد بيبقى للدومين اللي اشتريته وشغال أو خلصت مدته بس.",
     TRIAL_NOT_AVAILABLE: "الفترة المجانية مش متاحة للحساب ده.",
     draftRequired: "متجرك لسه مسودة. اشترك عشان تنشره.",
     limitFunnels: "وصلت لحد مسارات البيع في باقتك الشهر ده ({used} من {max}). تقدر تعمل تاني من {date}.",
     limitStores: "وصلت لأقصى عدد متاجر في باقتك ({used} من {max}). رقّي باقة متجر من متاجرك عشان تضيف واحد كمان.",
     limitDrafts: "اشترك في متجر من متاجرك الأول قبل ما تبدأ متجر جديد.",
+    limitDomains: "وصلت لأقصى عدد دومينات في باقتك ({used} من {max}). رقّي الباقة عشان تضيف دومين تاني.",
     cancelFailedPermission:
       "شركة الشحن رفضت تلغي الشحنة لأن المفتاح المربوط مش بصلاحية Full Access. الأوردر متلغاش. اربط الشركة تاني بمفتاح Full Access من صفحة الشحن، أو الغي الشحنة من لوحة الشركة الأول.",
     cancelFailedAuth:
@@ -254,6 +268,7 @@ const OWN_KEY_LIST = [
   "limitFunnels",
   "limitStores",
   "limitDrafts",
+  "limitDomains",
 ] as const;
 type CodeKey = Exclude<keyof typeof STRINGS.en, (typeof OWN_KEY_LIST)[number]>;
 const OWN_KEYS: ReadonlySet<string> = new Set(OWN_KEY_LIST);
@@ -305,11 +320,12 @@ function translateError(t: (typeof STRINGS)["en"], err: unknown, overrides?: Err
     // A draft store (not subscribed yet) is not an expired one.
     if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
     if (code === "PLAN_LIMIT_REACHED") {
-      const limit = apiErrorDetails<{ limit?: string; max?: number; used?: number; resetsAt?: string }>(err);
-      const counts = { max: limit?.max ?? "", used: limit?.used ?? "" };
+      const limit = apiErrorDetails<{ limit?: string; max?: number; allowed?: number; used?: number; resetsAt?: string }>(err);
+      const counts = { max: limit?.max ?? limit?.allowed ?? "", used: limit?.used ?? "" };
       if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
       if (limit?.limit === "stores") return fmt(t.limitStores, counts);
       if (limit?.limit === "draft_stores") return t.limitDrafts;
+      if (limit?.limit === "domains") return fmt(t.limitDomains, counts);
     }
     if (code === "CARRIER_CANCEL_FAILED") {
       // Only order cancellation raises it. The courier-side cause decides
