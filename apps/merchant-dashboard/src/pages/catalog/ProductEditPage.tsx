@@ -26,13 +26,14 @@ import { ProductTestSection } from "./components/ProductTestSection";
 import { isFromStoreProvider } from "@/pages/apps/dropshipStores";
 import { StoreSkuWarning } from "@/pages/apps/StoreSkuWarning";
 import { PreorderSection } from "./components/PreorderSection";
+import { PurchaseLimitsSection } from "./components/PurchaseLimitsSection";
 
 const STRINGS = {
   en: {
     newTitle: "New product",
     newDescription: "A name, a price and one photo are enough. Variants, offers and collections can come after it's created.",
     more: "More settings",
-    moreHint: "Video, collections, custom fields, page layout, SEO and the product page's content.",
+    moreHint: "Video, collections, custom fields, purchase limits, page layout, SEO and the product page's content.",
     products: "Products",
     product: "Product",
     noActiveVariant: "Add a variant so customers can buy this product.",
@@ -43,7 +44,7 @@ const STRINGS = {
     newTitle: "منتج جديد",
     newDescription: "اسم وسعر وصورة واحدة كفاية. الأنواع والعروض والمجموعات ممكن تضيفها بعد ما يتعمل.",
     more: "إعدادات تانية",
-    moreHint: "الفيديو، المجموعات، الخانات الإضافية، شكل الصفحة، الـ SEO ومحتوى صفحة المنتج.",
+    moreHint: "الفيديو، المجموعات، الخانات الإضافية، حدود الشراء، شكل الصفحة، الـ SEO ومحتوى صفحة المنتج.",
     products: "المنتجات",
     product: "المنتج",
     noActiveVariant: "ضيف نوع عشان العملاء يقدروا يشتروا المنتج ده.",
@@ -148,6 +149,7 @@ export function ProductEditPage() {
               onChanged={reload}
             />
             <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
+            <PurchaseLimitsSection productId={data.id} />
             <ProductTestSection productId={data.id} variants={data.variants ?? []} media={data.media ?? []} onProductChanged={reload} />
             {/* The same product, read with the page fields lane 3 added. */}
             <ProductOptionsDisplaySection

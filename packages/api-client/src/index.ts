@@ -274,3 +274,5 @@ export * from "./endpoints/contactImport";
 export * from "./endpoints/shopperAccounts";
 // Pre-orders: sold-out variants keep selling up to a limit, with a ship date (handoff 195).
 export * from "./endpoints/preorders";
+// Purchase limits per product: min / max per order and max per customer, and their refusals (handoff 198).
+export * from "./endpoints/purchaseLimits";

@@ -87,7 +87,7 @@ import { setChosenVariantImage, variantImageOf } from "@/lib/variantImage";
 import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 import { RichText } from "../RichText";
-import { ProductBuyNotes, preorderFor, takesPreorders } from "./ProductBuyNotes";
+import { ProductBuyNotes, preorderFor, stepperLimits, takesPreorders } from "./ProductBuyNotes";
 
 const FORM_PREFIX = "quick";
 
@@ -199,7 +199,7 @@ export function ProductLanding({
   const bundle = useMemo(() => storefrontProductBundle(product), [product]);
   const bundleChoice = useBundleSelection({ client, workspaceId, bundle, product, mainVariant: variant });
   const tiers = useMemo(() => (bundle ? [] : bundleTiers(product)), [bundle, product]);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(() => stepperLimits(product).min ?? 1);
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
@@ -518,7 +518,7 @@ export function ProductLanding({
               : t.common.outOfStock}
         </p>
         <BillingPlanNote plan={plan} unitMinor={unit} />
-        <ProductBuyNotes preorder={preorder} />
+        <ProductBuyNotes product={product} preorder={preorder} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
@@ -597,7 +597,7 @@ export function ProductLanding({
             {t.product.quantity}
           </span>
           {/* The same stepper the cart page and the cart drawer use. */}
-          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
+          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" {...stepperLimits(product)} />
         </div>
       )}
 
