@@ -70,6 +70,7 @@ import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 // element table) with the funnel editor, so it is split off with it.
 const ActivityLogPage = lazy(() => import("@/pages/activity/ActivityLogPage").then((m) => ({ default: m.ActivityLogPage })));
 const AppsPage = lazy(() => import("@/pages/apps/AppsPage").then((m) => ({ default: m.AppsPage })));
+const GoogleSheetsPage = lazy(() => import("@/pages/apps/GoogleSheetsPage").then((m) => ({ default: m.GoogleSheetsPage })));
 const InstallAppPage = lazy(() => import("@/pages/apps/InstallAppPage").then((m) => ({ default: m.InstallAppPage })));
 const DropshipProviderPage = lazy(() =>
   import("@/pages/apps/DropshipProviderPage").then((m) => ({ default: m.DropshipProviderPage }))
@@ -210,6 +211,7 @@ export default function App() {
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/apps" element={<LazyRoute><AppsPage /></LazyRoute>} />
                       <Route path="/activity" element={<LazyRoute><ActivityLogPage /></LazyRoute>} />
+                      <Route path="/apps/google-sheets" element={<LazyRoute><GoogleSheetsPage /></LazyRoute>} />
                       <Route path="/apps/dropship_sandbox" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
                       <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />

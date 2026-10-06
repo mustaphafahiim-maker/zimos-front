@@ -218,3 +218,5 @@ export * from "./endpoints/storeAddress";
 export * from "./endpoints/richText";
 // Courier export layouts: a courier's column titles mapped to the export's columns (orders/exportPresets.js).
 export * from "./endpoints/orderExportPresets";
+// Google Sheets: a Google account and the sheets orders, lost orders and leads are written to (modules/sheets).
+export * from "./endpoints/googleSheets";
