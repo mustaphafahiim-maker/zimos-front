@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProductOptionDisplay } from "@store-builder/api-client";
+import type { ProductOptionDisplay, ProductOptionLabel } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import type { ProductOptionGroup } from "@/lib/product";
 import { input } from "../ui";
@@ -10,7 +10,9 @@ import { productPageText } from "./productPageText";
  * One option of the product ("Size", "اللون"), drawn the way the merchant
  * chose: buttons (the default), a dropdown, colour swatches or pictures. A
  * value with no stock left stays visible, struck through, and cannot be
- * picked.
+ * picked. In a language the merchant translated the option into, its name
+ * and values are shown from `labels` (backend translations/moreTexts.js);
+ * the values themselves stay what the variants and swatches are keyed by.
  */
 export function OptionPicker({
   group,
@@ -18,8 +20,10 @@ export function OptionPicker({
   selected,
   isAvailable,
   onSelect,
+  labels,
 }: {
   group: ProductOptionGroup;
+  labels?: ProductOptionLabel;
   display: ProductOptionDisplay | undefined;
   selected: string | undefined;
   isAvailable: (value: string) => boolean;
@@ -28,11 +32,13 @@ export function OptionPicker({
   const { locale } = useStore();
   const text = productPageText(locale);
   const type = display?.displayType ?? "buttons";
+  const name = labels?.name || group.name;
+  const show = (value: string) => labels?.values?.[value] || value;
 
   const legend = (
     <legend className="mb-2 text-sm font-semibold text-ink">
-      {group.name}
-      {selected && <span className="ms-2 font-normal text-ink-soft">{selected}</span>}
+      {name}
+      {selected && <span className="ms-2 font-normal text-ink-soft">{show(selected)}</span>}
     </legend>
   );
 
@@ -41,17 +47,17 @@ export function OptionPicker({
       <fieldset>
         {legend}
         <select
-          aria-label={text.choose(group.name)}
+          aria-label={text.choose(name)}
           value={selected ?? ""}
           onChange={(e) => onSelect(e.target.value)}
           className={`${input} min-h-11 cursor-pointer`}
         >
-          {!selected && <option value="">{text.choose(group.name)}</option>}
+          {!selected && <option value="">{text.choose(name)}</option>}
           {group.values.map((value) => {
             const ok = isAvailable(value);
             return (
               <option key={value} value={value} disabled={!ok}>
-                {ok ? value : `${value} — ${text.soldOut}`}
+                {ok ? show(value) : `${show(value)} — ${text.soldOut}`}
               </option>
             );
           })}
@@ -70,8 +76,8 @@ export function OptionPicker({
           const common = {
             type: "button" as const,
             "aria-pressed": isSelected,
-            "aria-label": ok ? value : `${value} — ${text.soldOut}`,
-            title: value,
+            "aria-label": ok ? show(value) : `${show(value)} — ${text.soldOut}`,
+            title: show(value),
             disabled: !ok,
             onClick: () => onSelect(value),
           };
@@ -102,7 +108,7 @@ export function OptionPicker({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={image} alt="" loading="lazy" className="aspect-square w-full object-cover" />
-                <span className={`block truncate px-1 py-1 ${ok ? "" : "line-through"}`}>{value}</span>
+                <span className={`block truncate px-1 py-1 ${ok ? "" : "line-through"}`}>{show(value)}</span>
               </button>
             );
           }
@@ -117,7 +123,7 @@ export function OptionPicker({
                   : "border-line bg-paper-raised text-ink hover:border-primary"
               } ${ok ? "cursor-pointer" : "cursor-not-allowed text-ink-soft line-through decoration-1 opacity-60"}`}
             >
-              {value}
+              {show(value)}
             </button>
           );
         })}

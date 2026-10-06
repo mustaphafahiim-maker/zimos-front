@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Button } from "@store-builder/ui";
-import { contentTranslationsList, contentTranslationsSave, type ContentEntity, type ContentTranslationItem, type StoreLocale } from "@store-builder/api-client";
+import {
+  contentTranslationsList,
+  contentTranslationsSave,
+  type ContentEntity,
+  type ContentTranslationItem,
+  type StoreLocale,
+  type StoreTextSection,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -14,6 +21,12 @@ const STRINGS = {
   en: {
     nothingPages: "No published pages yet. Publish your website to translate its pages.",
     nothingFunnels: "No published funnels yet.",
+    nothingProducts: "No active product has offers, options, a special-offer line or page content to translate.",
+    nothingStore: "No menus, policies, store info or thank-you text written yet.",
+    section_menus: "Menus and announcement bar",
+    section_policies: "Policies",
+    section_store_info: "Store info",
+    section_thank_you: "Thank-you page",
     progress: "{done} of {total} translated",
     original: "Original",
     save: "Save",
@@ -24,6 +37,12 @@ const STRINGS = {
   ar: {
     nothingPages: "مفيش صفحات منشورة لسه. انشر موقعك عشان تترجم صفحاته.",
     nothingFunnels: "مفيش فانلز منشورة لسه.",
+    nothingProducts: "مفيش منتج نشط فيه عروض أو اختيارات أو سطر عرض خاص أو محتوى صفحة يتترجم.",
+    nothingStore: "لسه مفيش قوايم أو سياسات أو بيانات متجر أو نص شكر مكتوب.",
+    section_menus: "القوايم وشريط الإعلان",
+    section_policies: "السياسات",
+    section_store_info: "بيانات المتجر",
+    section_thank_you: "صفحة الشكر",
     progress: "اتترجم {done} من {total}",
     original: "الأصل",
     save: "حفظ",
@@ -34,7 +53,9 @@ const STRINGS = {
 } satisfies Messages;
 
 /**
- * The text of the live pages or funnels, one card each: every sentence a
+ * The text of the live pages or funnels — or of the products' offers, options
+ * and page content, or of the store's menus, policies, info and thank-you
+ * page — one card each: every sentence a
  * shopper reads, with a box for it in the chosen language. An empty box keeps
  * the original.
  */
@@ -43,13 +64,16 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
   const workspaceId = useWorkspaceId();
   const items = useAsync(() => contentTranslationsList(apiClient, workspaceId, kind, locale), [workspaceId, kind, locale]);
   const [open, setOpen] = useState<string | null>(null);
+  // A store_text item is one section of the store's own texts, named here.
+  const sectionName = (section: string) =>
+    ({ menus: t.section_menus, policies: t.section_policies, store_info: t.section_store_info, thank_you: t.section_thank_you })[section as StoreTextSection] ?? section;
 
   return (
     <DataState
       loading={items.loading}
       error={items.error}
       empty={(items.data ?? []).length === 0}
-      emptyMessage={kind === "page" ? t.nothingPages : t.nothingFunnels}
+      emptyMessage={{ page: t.nothingPages, funnel: t.nothingFunnels, product_details: t.nothingProducts, store_text: t.nothingStore }[kind]}
       onRetry={() => void items.refresh()}
     >
       <ul className="divide-y divide-line">
@@ -61,7 +85,7 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink" dir="auto">
-                    {item.label}
+                    {kind === "store_text" ? sectionName(item.label) : item.label}
                     {item.sub && (
                       <span className="ms-2 text-xs font-normal text-ink-soft" dir="ltr">
                         {item.sub}

@@ -47,6 +47,8 @@ const STRINGS = {
     collections: "Collections",
     pages: "Pages",
     funnels: "Funnels",
+    productDetails: "Product details",
+    storeTexts: "Store texts",
     kind: "What to translate",
     original: "Original",
     name: "Name",
@@ -78,6 +80,8 @@ const STRINGS = {
     collections: "التصنيفات",
     pages: "الصفحات",
     funnels: "الفانلز",
+    productDetails: "تفاصيل المنتجات",
+    storeTexts: "نصوص المتجر",
     kind: "ما الذي تترجمه",
     original: "الأصل",
     name: "الاسم",
@@ -198,6 +202,8 @@ export function LanguagesTab() {
                       { value: "collection", label: t.collections },
                       { value: "page", label: t.pages },
                       { value: "funnel", label: t.funnels },
+                      { value: "product_details", label: t.productDetails },
+                      { value: "store_text", label: t.storeTexts },
                     ]}
                   />
                   <AiTranslateButton
@@ -209,7 +215,7 @@ export function LanguagesTab() {
                     }}
                   />
                 </div>
-                {kind === "page" || kind === "funnel" ? (
+                {kind !== "product" && kind !== "collection" ? (
                   <ContentTranslationRows
                     key={`${active}:${kind}:${version}`}
                     locale={active}

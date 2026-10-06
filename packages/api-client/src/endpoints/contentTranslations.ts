@@ -1,8 +1,28 @@
 import type { ApiClient } from "../client";
 import type { StoreLocale } from "./storeDesign";
 
-/** The live pages and funnels whose text is translated (translations/contentTranslations.js). */
-export type ContentEntity = "page" | "funnel";
+/**
+ * What is translated text by text (translations/contentTranslations.js): the
+ * live pages and funnels, the products' other texts (offers, options, the
+ * special-offer line, page content) and the store's own texts (menus,
+ * policies, store info, thank-you page) — translations/moreTexts.js.
+ */
+export type ContentEntity = "page" | "funnel" | "product_details" | "store_text";
+
+/** The sections of a store's own texts; a store_text item's `label` is one of these. */
+export type StoreTextSection = "menus" | "policies" | "store_info" | "thank_you";
+
+/** What a product in the shopper's language shows for one option instead of its stored name and values. */
+export interface ProductOptionLabel {
+  name?: string;
+  values: Record<string, string>;
+}
+
+/** A public product's option labels, when the shopper's language has any. */
+export function optionLabelsOf(product: object): Record<string, ProductOptionLabel> | null {
+  const labels = (product as { optionLabels?: unknown }).optionLabels;
+  return labels && typeof labels === "object" ? (labels as Record<string, ProductOptionLabel>) : null;
+}
 
 export interface ContentTranslationItem {
   entityType: ContentEntity;

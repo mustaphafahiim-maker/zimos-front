@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, useCallback } fro
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
+  optionLabelsOf,
   parseMoney,
   storefrontProductPage,
   type CheckoutSettings,
@@ -501,6 +502,7 @@ export function ProductLanding({
           key={group.name}
           group={group}
           display={page.options.find((o) => o.name === group.name)}
+          labels={optionLabelsOf(product)?.[group.name]}
           selected={selection[group.name]}
           isAvailable={(value) => isValueAvailable(group.name, value)}
           onSelect={(value) => setSelection((prev) => ({ ...prev, [group.name]: value }))}
