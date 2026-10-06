@@ -260,3 +260,5 @@ export * from "./endpoints/storefrontPlaces";
 export * from "./endpoints/liveMap";
 // Address suggestions at checkout: the shopper's search and pick, and the store's provider setting (handoff 184).
 export * from "./endpoints/addressLookup";
+// Shopper returns: the store's setting, photos and source on the staff lists, and the shopper's request (handoff 186).
+export * from "./endpoints/shopperReturns";

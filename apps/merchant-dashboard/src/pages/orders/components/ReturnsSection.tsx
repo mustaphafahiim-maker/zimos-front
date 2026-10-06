@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, ReturnReasonCode, ReturnRequest, ReturnStatus } from "@store-builder/api-client";
+import { returnPhotosOf, returnSourceOf } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -13,6 +14,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
+import { ReturnPhotos, ReturnSourceBadge } from "@/pages/returns/ReturnExtras";
 
 const REASON_CODES: ReturnReasonCode[] = [
   "damaged",
@@ -85,13 +87,14 @@ const STRINGS = {
     chooseItems: "اختر عنصرًا واحدًا على الأقل وكمية لإرجاعها.",
     opening: "جارٍ الفتح…",
     open: "فتح المرتجع",
-    reason_damaged: "تالف",
-    reason_defective: "به عيب",
-    reason_wrong_item: "منتج خاطئ",
-    reason_not_as_described: "مخالف للوصف",
-    reason_no_longer_wanted: "لم يعد مطلوبًا",
-    reason_arrived_late: "وصل متأخرًا",
-    reason_other: "سبب آخر",
+    // The words the customer picks from on the store (handoff 186).
+    reason_damaged: "وصل متكسر",
+    reason_defective: "فيه عيب",
+    reason_wrong_item: "منتج غلط",
+    reason_not_as_described: "مش زي الوصف",
+    reason_no_longer_wanted: "مبقتش عايزه",
+    reason_arrived_late: "وصل متأخر",
+    reason_other: "سبب تاني",
     status_requested: "مطلوب",
     status_approved: "مقبول",
     status_rejected: "مرفوض",
@@ -189,8 +192,13 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
             {list.map((ret) => (
               <li key={ret.id} className="rounded-[0.5rem] border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-ink">{reasonLabel(ret.reason, t)}</span>
-                  <StatusBadge value={ret.status} text={statusLabel(ret.status, t)} />
+                  <span dir="auto" className="min-w-0 text-sm text-ink">
+                    {reasonLabel(ret.reason, t)}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {returnSourceOf(ret) === "shopper" && <ReturnSourceBadge />}
+                    <StatusBadge value={ret.status} text={statusLabel(ret.status, t)} />
+                  </div>
                 </div>
                 <div className="mt-1 text-xs text-ink-soft">
                   {ret.items.map((it) => `${it.quantity}× ${itemName(it.orderItemId)}`).join(t.listSep)}
@@ -198,6 +206,14 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                     <span> · {fmt(t.restocked, { date: formatDateTime(ret.restockedAt) })}</span>
                   )}
                 </div>
+                {returnPhotosOf(ret).length > 0 && (
+                  <div className="mt-2">
+                    <ReturnPhotos
+                      photos={returnPhotosOf(ret)}
+                      onExpired={() => void returns.refresh({ silent: true })}
+                    />
+                  </div>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {ret.status === "requested" && (
                     <>
