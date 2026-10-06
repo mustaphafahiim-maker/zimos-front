@@ -3,8 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Alert, Spinner } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -20,7 +21,7 @@ const STRINGS = {
   },
   ar: {
     title: "تأكيد البريد الإلكتروني",
-    verifying: "جارٍ تأكيد البريد الإلكتروني…",
+    verifying: "بنأكد الإيميل…",
     success: "تم تأكيد بريدك الإلكتروني بنجاح. يمكنك تسجيل الدخول الآن.",
     signIn: "تسجيل الدخول",
     badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
@@ -68,7 +69,7 @@ export function VerifyEmailPage() {
         // generic line for anything else (network, unexpected shape).
         setApiState("error");
         setApiErrorMessage(
-          err instanceof ApiError ? err.message : true
+          err instanceof ApiError ? errorMessageNow(err) : true
         );
       });
   }, [token]);
@@ -79,9 +80,9 @@ export function VerifyEmailPage() {
   const errorMessage = token ? (apiErrorMessage === true ? t.failed : apiErrorMessage) : t.badLink;
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-sm">
           <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 

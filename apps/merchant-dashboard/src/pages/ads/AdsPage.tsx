@@ -37,7 +37,7 @@ import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
-    title: "Ad campaigns",
+    title: "Ad spend",
     description: "Your ad spend against the orders it really delivered: real cost per delivered order and real return on spend.",
     addSpend: "Add spend",
     importCsv: "Import CSV",
@@ -61,7 +61,7 @@ const STRINGS = {
     google: "Google",
     other: "Other",
     emptyTitle: "No ad spend recorded for this period",
-    emptyDesc: "Type in what you spent per campaign, or import the CSV your ads manager exports. Orders are matched by utm_campaign.",
+    emptyDesc: "Type in what you spent per campaign, or import the CSV your ads manager exports. Orders are matched by utm_campaign, or by the ad_id in the ad's link.",
     withoutSpendTitle: "Campaigns with orders but no spend",
     withoutSpendDesc: "These utm_campaign values brought orders. Add their spend to see their real return.",
     urlTitle: "URL parameters for your ads",
@@ -84,7 +84,7 @@ const STRINGS = {
     required: "Required",
     saved: "Spend saved.",
     importTitle: "Import ad spend",
-    importDesc: "A CSV with the columns: Date, Platform, Campaign name, Amount spent. Impressions and Clicks are optional.",
+    importDesc: "A CSV with the columns: Date, Platform, Campaign name, Amount spent. Impressions, Clicks, Campaign ID and Ad ID are optional. An export at ad level (with Ad ID) is added up per campaign and day, and its ads let orders that carry ad_id find their campaign.",
     chooseFile: "Choose a CSV file",
     defaultPlatform: "Platform (when the file has no platform column)",
     fromFile: "From the file",
@@ -98,7 +98,7 @@ const STRINGS = {
     template: "Example",
   },
   ar: {
-    title: "الحملات الإعلانية",
+    title: "مصاريف الإعلانات",
     description: "إنفاقك الإعلاني مقابل الطلبات التي سُلّمت فعلًا: التكلفة الحقيقية لكل طلب مسلَّم والعائد الحقيقي على الإنفاق.",
     addSpend: "أضف إنفاقًا",
     importCsv: "استيراد CSV",
@@ -121,8 +121,8 @@ const STRINGS = {
     snapchat: "سناب شات",
     google: "جوجل",
     other: "أخرى",
-    emptyTitle: "لا يوجد إنفاق إعلاني مسجَّل في هذه الفترة",
-    emptyDesc: "اكتب ما أنفقته على كل حملة، أو استورد ملف CSV من مدير الإعلانات. تُطابَق الطلبات عبر utm_campaign.",
+    emptyTitle: "مفيش إنفاق إعلاني مسجَّل في هذه الفترة",
+    emptyDesc: "اكتب ما أنفقته على كل حملة، أو استورد ملف CSV من مدير الإعلانات. تُطابَق الطلبات عبر utm_campaign أو عبر ad_id في رابط الإعلان.",
     withoutSpendTitle: "حملات جلبت طلبات بلا إنفاق مسجَّل",
     withoutSpendDesc: "قيم utm_campaign هذه جلبت طلبات. أضف إنفاقها لترى عائدها الحقيقي.",
     urlTitle: "معاملات الرابط لإعلاناتك",
@@ -134,19 +134,19 @@ const STRINGS = {
     sync: "مزامنة",
     impressions: "مرات الظهور",
     clicks: "النقرات",
-    noEntries: "لا توجد إدخالات إنفاق بعد.",
+    noEntries: "مفيش إدخالات إنفاق لسه.",
     deleted: "تم حذف الإدخال.",
     addTitle: "إضافة إنفاق إعلاني",
     addDesc: "مبلغ واحد لكل يوم وحملة. حفظ نفس اليوم والحملة مرة أخرى يستبدل المبلغ.",
     campaignName: "اسم الحملة",
     campaignHint: "كما هو في utm_campaign تمامًا",
     amount: "المبلغ المنفَق",
-    invalidAmount: "أدخل مبلغًا صحيحًا",
+    invalidAmount: "اكتب مبلغًا صحيحًا",
     required: "مطلوب",
     saved: "تم حفظ الإنفاق.",
     importTitle: "استيراد الإنفاق الإعلاني",
-    importDesc: "ملف CSV بالأعمدة: Date, Platform, Campaign name, Amount spent. وعمودا Impressions و Clicks اختياريان.",
-    chooseFile: "اختر ملف CSV",
+    importDesc: "ملف CSV بالأعمدة: Date, Platform, Campaign name, Amount spent. والأعمدة Impressions و Clicks و Campaign ID و Ad ID اختيارية. الملف على مستوى الإعلان (فيه Ad ID) يُجمَع لكل حملة ويوم، وإعلاناته تربط الطلبات التي تحمل ad_id بحملتها.",
+    chooseFile: "اختار ملف CSV",
     defaultPlatform: "المنصة (إذا لم يكن في الملف عمود للمنصة)",
     fromFile: "من الملف",
     check: "افحص الملف",
@@ -304,6 +304,7 @@ export function AdsPage() {
               ) : (
                 <Section title={t.tabCampaigns} flush>
                   <DataTable
+            phoneCards={false}
                     columns={campaignColumns}
                     rows={data.campaigns}
                     rowKey={(c) => `${c.platform}:${c.campaignName}`}
@@ -314,6 +315,7 @@ export function AdsPage() {
             ) : (
               <Section title={t.tabEntries} flush>
                 <DataTable
+            phoneCards={false}
                   columns={entryColumns}
                   rows={entries.data?.entries ?? []}
                   rowKey={(e) => e.id}

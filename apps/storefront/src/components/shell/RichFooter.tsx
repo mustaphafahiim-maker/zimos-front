@@ -1,25 +1,26 @@
-import type { StorefrontMeta } from "@store-builder/api-client";
+import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
 import type { ReactNode } from "react";
-import { PoweredByZimos } from "@/components/PoweredByZimos";
+import { PoweredByZimos, brandingRemoved } from "@/components/PoweredByZimos";
 import { ShellLink } from "@/components/ShellLink";
+import { CookieSettingsButton } from "@/components/CookieConsent";
 import { StoreLink } from "@/components/StoreRoute";
-import { getDictionary, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import { useDictionary } from "@/lib/StoreContext";
 import { resolveShellLinks, type FooterShell } from "@/lib/storeShell";
+import { pageAndPolicyGroups } from "@/lib/footerLinks";
 
 /**
  * The fuller footer (`themeSettings.footer.layout: "rich"`): the store's logo
  * with how to reach it and its social accounts, then the merchant's link
  * groups, over the same rights line every footer ends with.
  *
- *   footer.contact = { address?, email?, phone? }
- *   footer.social  = [{ platform, url }]
- *
- * Both are read here, defensively, straight from the saved blob; the link
- * groups come through lib/storeShell like the plain footer's.
+ * How to reach the store and its social accounts are the store's own settings
+ * (Store info, Social links) — never values a template carried in its theme
+ * settings, which once put another store's details on every store that used
+ * it (migration 430). The link groups come through lib/storeShell like the
+ * plain footer's.
  */
 
-type Blob = Record<string, unknown>;
-const obj = (v: unknown): Blob | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Blob) : null);
 const text = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 const SOCIAL: Record<string, { label: string; icon: ReactNode }> = {
@@ -50,21 +51,20 @@ export function RichFooter({
   year: number;
   footer: FooterShell;
 }) {
-  const t = getDictionary(locale);
-  const raw = obj(obj(store.themeSettings)?.footer) ?? {};
-  const contact = obj(raw.contact) ?? {};
-  const address = text(contact.address);
-  const email = text(contact.email, 120);
-  const phone = text(contact.phone, 40);
-  const social = (Array.isArray(raw.social) ? raw.social : [])
-    .map((item) => obj(item))
-    .filter((item): item is Blob => item !== null)
-    .map((item) => ({ platform: text(item.platform, 20).toLowerCase(), url: text(item.url, 500) }))
-    .filter((item) => /^https:\/\//i.test(item.url) && SOCIAL[item.platform])
+  const t = useDictionary(locale);
+  const info = storefrontDesignMeta(store).storeInfo;
+  const address = text(info?.address);
+  const email = text(info?.email, 120);
+  const phone = text(info?.phone, 40);
+  const social = Object.entries(storefrontGeneralMeta(store).social)
+    .map(([platform, url]) => ({ platform, url: text(url, 500) }))
+    .filter((item) => /^https?:\/\//i.test(item.url) && SOCIAL[item.platform])
     .slice(0, 6);
-  const groups = footer.showLinks
-    ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) }))
-    : [];
+  const groups = [
+    ...(footer.showLinks ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) })) : []),
+    // The footer pages and the store's policies, as the plain footer shows them (lib/footerLinks).
+    ...pageAndPolicyGroups(store, t),
+  ];
 
   return (
     <footer data-zimos-shell="footer" className="zs-footer mt-auto">
@@ -142,7 +142,20 @@ export function RichFooter({
 
       <div className="zs-footer__bottom">
         <p>{t.footer.rights(store.name, year)}</p>
-        <PoweredByZimos label={t.footer.poweredBy} />
+        <CookieSettingsButton />
+        {/* The social accounts sit with the brand; without it, here. */}
+        {!footer.showBrand && social.length > 0 && (
+          <div className="zs-footer__social">
+            {social.map((item) => (
+              <a key={item.platform} href={item.url} target="_blank" rel="noopener noreferrer nofollow" aria-label={SOCIAL[item.platform].label}>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  {SOCIAL[item.platform].icon}
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
+        {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
       </div>
     </footer>
   );

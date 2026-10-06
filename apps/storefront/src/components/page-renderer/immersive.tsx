@@ -12,6 +12,7 @@ import { firstImage } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { EmptyBlock } from "./commerce";
 import { num, resolveHref, safeUrl, str, type Props } from "./props";
+import { RichText } from "../RichText";
 
 /**
  * The four immersive element types: a hero drawn in the store's colours, a
@@ -111,7 +112,7 @@ export async function Product3DElement({
           <BoxIcon size={18} />
           {t.immersive.spinHint}
         </p>
-        {product.description ? <p className="text-ink-soft">{product.description}</p> : null}
+        {product.description ? <RichText text={product.description} className="text-ink-soft" /> : null}
         <div>
           <StoreLink href={`/products/${product.slug}`} className={btnPrimary} lang={locale}>
             {t.renderer.viewDetails}

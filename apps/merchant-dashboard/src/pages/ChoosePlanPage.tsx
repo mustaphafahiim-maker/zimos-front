@@ -4,7 +4,7 @@ import { Alert, Button, Spinner } from "@store-builder/ui";
 import { isApiErrorCode, type PublicPlan } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { PlanPicker, type PlanChoice } from "@/components/plans/PlanPicker";
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { useErrorMessage } from "@/lib/errorMessages";
@@ -22,17 +22,21 @@ const STRINGS = {
     loading: "Loading plans…",
     loadFailed: "We couldn't load the plans.",
     retry: "Try again",
+    signOut: "Sign out",
+    notNow: "Not you, or not now?",
   },
   ar: {
-    title: "اختر خطتك",
-    body: "اختر خطة متجرك الأول. ستشترك عندما تكون جاهزًا لنشره.",
-    save: "متابعة",
-    saving: "جارٍ الحفظ…",
-    choose: "اختر خطة للمتابعة.",
-    planGone: "هذه الخطة لم تعد متاحة. اختر خطة أخرى.",
-    loading: "جارٍ تحميل الخطط…",
-    loadFailed: "تعذّر تحميل الخطط.",
-    retry: "حاول مرة أخرى",
+    title: "اختار باقتك",
+    body: "اختار باقة متجرك الأول. هتشترك لما تبقى جاهز تنشره.",
+    save: "كمّل",
+    saving: "بنحفظ…",
+    choose: "اختار باقة عشان تكمّل.",
+    planGone: "الباقة دي مبقتش متاحة. اختار باقة تانية.",
+    loading: "بنحمّل الباقات…",
+    loadFailed: "معرفناش نحمّل الباقات.",
+    retry: "جرّب تاني",
+    signOut: "اخرج من الحساب",
+    notNow: "مش إنت، أو مش دلوقتي؟",
   },
 } satisfies Messages;
 
@@ -45,7 +49,7 @@ const STRINGS = {
  */
 export function ChoosePlanPage() {
   const t = useT(STRINGS);
-  const { needsPlan, refreshUser } = useAuth();
+  const { needsPlan, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const errorMessage = useErrorMessage();
@@ -101,9 +105,9 @@ export function ChoosePlanPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-xl">
           <h1 id={headingId} className="font-display text-3xl font-medium text-ink">
             {t.title}
@@ -148,6 +152,13 @@ export function ChoosePlanPage() {
           <Button className="mt-6 min-h-11 w-full" onClick={() => void save()} disabled={saving || !plans}>
             {saving ? t.saving : t.save}
           </Button>
+          {/* A way out of this step (Google sign-ups land here first). */}
+          <p className="mt-4 text-center text-sm text-ink-soft">
+            {t.notNow}{" "}
+            <button type="button" onClick={() => logout()} className="min-h-11 cursor-pointer font-medium text-primary-dark hover:underline">
+              {t.signOut}
+            </button>
+          </p>
         </div>
       </div>
     </div>

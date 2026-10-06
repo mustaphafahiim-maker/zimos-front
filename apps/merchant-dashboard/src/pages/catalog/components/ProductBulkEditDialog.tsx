@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
-import { catalogBulkEditProducts, type CatalogBulkChanges } from "@store-builder/api-client";
+import { catalogBulkEditProducts, isSmartCollection, type CatalogBulkChanges } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -66,11 +66,11 @@ const STRINGS = {
     price_increase_percent: "زيادة بنسبة %",
     price_decrease_percent: "تخفيض بنسبة %",
     priceHint: "يُطبَّق على كل المتغيرات النشطة للمنتجات المحددة.",
-    priceInvalid: "أدخل رقمًا صحيحًا.",
-    nothing: "اختر تغييرًا واحدًا على الأقل.",
+    priceInvalid: "اكتب رقمًا صحيحًا.",
+    nothing: "اختار تغييرًا واحدًا على الأقل.",
     cancel: "إلغاء",
     apply: "تطبيق على {count} منتج",
-    applying: "جارٍ التطبيق…",
+    applying: "بنطبّق…",
     done: "تم تحديث {count} منتج.",
   },
 } satisfies Messages;
@@ -189,7 +189,8 @@ export function ProductBulkEditDialog({
               onChange={(e) => setCollectionId(e.target.value)}
             >
               <option value="">{t.collectionNone}</option>
-              {(collections.data ?? []).map((c) => (
+              {/* A smart collection fills itself from its rules (409 SMART_COLLECTION by hand). */}
+              {(collections.data ?? []).filter((c) => !isSmartCollection(c)).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>

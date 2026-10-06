@@ -1,6 +1,7 @@
 import { ImageOff } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import type { Customization } from "@store-builder/api-client";
+import { customizationPrice, type Customization } from "@store-builder/api-client";
+import { formatMoney } from "@/lib/format";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -31,10 +32,13 @@ export function CustomizationList({
   customizations,
   compact = false,
   className,
+  currency,
 }: {
   customizations: Customization[] | null | undefined;
   /** A tighter layout for the confirmation queue's cards. */
   compact?: boolean;
+  /** The order's currency: a priced field shows what it added (+20.00). */
+  currency?: string;
   className?: string;
 }) {
   const t = useT(STRINGS);
@@ -48,7 +52,10 @@ export function CustomizationList({
         const label = labelOf(c);
         return (
           <div key={c.fieldId} className={compact ? "flex flex-wrap items-start gap-x-2" : "space-y-1"}>
-            <dt className="text-xs font-medium text-ink-soft">{label}</dt>
+            <dt className="text-xs font-medium text-ink-soft">
+              {label}
+              {currency && customizationPrice(c) > 0 && <span className="ms-1 text-primary">+{formatMoney(customizationPrice(c), currency)}</span>}
+            </dt>
             <dd className="min-w-0 text-ink">
               {c.type === "image" ? (
                 c.url ? (

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Spinner } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -17,7 +17,7 @@ const STRINGS = {
     failedTitle: "تعذّر تسجيل الدخول بجوجل",
     failedBody: "حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.",
     back: "← العودة لتسجيل الدخول",
-    signingIn: "جارٍ تسجيل الدخول…",
+    signingIn: "بندخّلك…",
   },
 } satisfies Messages;
 
@@ -58,9 +58,9 @@ export function AuthCallbackPage() {
   const failed = !hasTokens || refreshFailed;
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-sm text-center">
           {failed ? (
             <>

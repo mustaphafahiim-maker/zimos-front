@@ -5,7 +5,7 @@ import { funnelExtrasIssues, type FunnelIssue } from "@store-builder/api-client"
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 
 /**
@@ -31,23 +31,34 @@ const STRINGS = {
     unlinked_button: "A button on this page goes nowhere.",
     image_without_alt: "An image on this page has no description.",
     missing_policies: "Your store has no policies yet (Store settings → Policies). Ad platforms ask for them.",
+    untranslated_text: "{n} texts on this page are not translated into {language} yet (Store settings → Languages).",
   },
   ar: {
-    none: "لا توجد مشاكل",
+    none: "مفيش مشاكل",
     count: "مشاكل",
     title: "أشياء تحتاج إصلاحًا",
     description: "المشاكل المعلَّمة «تمنع النشر» يجب إصلاحها أولًا. الباقي نصائح.",
     fatal: "تمنع النشر",
     warning: "نصيحة",
     page: "الصفحة",
-    allGood: "لا يوجد ما يحتاج إصلاحًا — المسار جاهز.",
+    allGood: "مفيش ما يحتاج إصلاحًا — المسار جاهز.",
     close: "إغلاق",
     page_without_product: "هذه الصفحة لا تبيع شيئًا بعد: أضف منتجًا إليها.",
     unlinked_button: "زرار في هذه الصفحة لا يؤدي لأي مكان.",
     image_without_alt: "صورة في هذه الصفحة بدون وصف.",
     missing_policies: "متجرك بدون سياسات حتى الآن (إعدادات المتجر ← السياسات). منصات الإعلانات تطلبها.",
+    untranslated_text: "{n} نص في الصفحة دي لسه مش مترجم لـ{language} (إعدادات المتجر ← اللغات).",
   },
 } satisfies Messages;
+
+/** A language's name in the dashboard's language ("English", "الفرنسية"). */
+function languageName(code: string, locale: string): string {
+  try {
+    return new Intl.DisplayNames([locale], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
 
 export function FunnelIssuesButton({
   funnelId,
@@ -61,6 +72,7 @@ export function FunnelIssuesButton({
   stepNames?: Record<string, string>;
 }) {
   const t = useT(STRINGS);
+  const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const [open, setOpen] = useState(false);
   const state = useAsync(() => funnelExtrasIssues(apiClient, workspaceId, funnelId), [workspaceId, funnelId, version]);
@@ -69,7 +81,11 @@ export function FunnelIssuesButton({
 
   // Graph problems come as the server's own sentence; the content checks are translated by code.
   const text = (issue: FunnelIssue) =>
-    issue.code === "graph" ? issue.message : ((t as Record<string, string>)[issue.code] ?? issue.message);
+    issue.code === "graph"
+      ? issue.message
+      : issue.code === "untranslated_text"
+        ? fmt(t.untranslated_text, { n: issue.count ?? 0, language: languageName(issue.locale ?? "", locale) })
+        : ((t as Record<string, string>)[issue.code] ?? issue.message);
 
   return (
     <>

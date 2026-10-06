@@ -6,6 +6,10 @@ Where `docs/LANES.md` and `docs/SPEC.md` differ, `docs/LANES.md` wins.
 
 The short version:
 
+- For UI work, also read `docs/UI_RULES.md` and `docs/UI_SYSTEM.md`. The
+  development-only `/design-system` lab proposes an opt-in Glass material;
+  it does not authorize restyling existing screens or changing the stack.
+
 - Do not stop to ask, plan for approval, or ask whether to continue. Decide,
   note the decision in the backend repo's `docs/progress/lane-N.md`, keep
   building.

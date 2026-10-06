@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FlaskConical, Trash2 } from "lucide-react";
-import { Alert, Badge, Button, Input, Label, cn } from "@store-builder/ui";
+import { FlaskConical, Pencil, Trash2, X } from "lucide-react";
+import { Alert, Badge, Button, Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, Input, Label, cn } from "@store-builder/ui";
 import {
   funnelGeoRedirectsCreate,
   funnelGeoRedirectsDelete,
@@ -26,18 +26,22 @@ import { useAsync } from "@/lib/useAsync";
 import { formatMoney } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { useFunnelErrorMessage, type UiStep } from "./funnelAdapter";
+import { FunnelCodeAndShippingFields, FunnelLinkSetting } from "./FunnelSettingsMore";
+import { FunnelConversionEventSetting } from "./FunnelConversionEventSetting";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
+import { FunnelEmailsTab } from "./FunnelEmailsTab";
+import { CONTROL_KEY, VersionSharesEditor, sharesTotal, toPayload, versionLabel, type VersionDraft } from "./SplitTestVersions";
 
 /**
  * A funnel's split tests, country redirects and own settings (SPEC §9.6,
  * §9.7), opened from the funnel editor's top bar.
  *
- * Split test: one page of the funnel shown in two versions. A is the page as
- * it is; B starts as a copy and is edited here with the same page editor. The
+ * Split test: one page of the funnel shown in two to five versions. A is the
+ * page as it is; every other version starts as a copy and is edited here with
+ * the same page editor (SplitTestVersions.tsx holds the versions and shares). The
  * numbers are the server's — visits, orders, conversion, revenue per visit —
  * and a test ends when a winner is picked, by hand or automatically.
  */
@@ -49,15 +53,15 @@ const STRINGS = {
     tabTests: "Split tests",
     tabGeo: "Country redirects",
     tabSettings: "Funnel settings",
+    tabEmails: "Emails",
     close: "Close",
     // tests
-    testsIntro: "Show one page in two versions and keep the one that sells more. A is the page as it is now; B starts as a copy you then change.",
+    testsIntro: "Show one page in two or more versions and keep the one that sells more. A is the page as it is now; each other version starts as a copy you then change.",
     noTests: "No split test on this funnel yet.",
     newTest: "New split test",
     page: "Page",
     name: "Test name",
     namePlaceholder: "Headline test",
-    shareB: "Visitors who see B (%)",
     auto: "Pick the winner automatically",
     afterVisits: "After this many visits",
     metric: "By",
@@ -70,9 +74,13 @@ const STRINGS = {
     completed: "Finished",
     pause: "Pause",
     resume: "Resume",
-    editB: "Edit B's page",
-    saveB: "Save B's page",
-    savedB: "B's page saved. It is live for visitors in B at once.",
+    editPage: "Edit {key}'s page",
+    savePage: "Save {key}'s page",
+    savedPage: "{key}'s page saved. It is live for visitors in {key} at once.",
+    editVersions: "Versions and shares",
+    saveVersions: "Save versions and shares",
+    cancel: "Cancel",
+    savedVersions: "Saved. New visitors are shared out the new way; visitors already in a version stay in it.",
     back: "Back to tests",
     remove: "Delete test",
     variant: "Version",
@@ -85,6 +93,7 @@ const STRINGS = {
     winner: "Winner",
     makeWinner: "Make winner",
     confidence: "{pct}% sure the leader really converts better.",
+    confidenceVs: "{pct}% sure {leader} really converts better than {runnerUp}.",
     confidenceLow: "Not enough visits yet to tell the versions apart.",
     control: "A — original",
     // geo
@@ -99,7 +108,7 @@ const STRINGS = {
     active: "Active",
     // settings
     settingsIntro: "This funnel's own icon and search title. Left empty, the store's are used.",
-    currency: "Currency label (3 letters)",
+    currency: "Currency (3 letters) — what this funnel sells in; its offers must be priced in it",
     favicon: "Icon link",
     seoTitle: "Search title",
     seoDescription: "Search description",
@@ -112,14 +121,14 @@ const STRINGS = {
     tabTests: "اختبارات A/B",
     tabGeo: "التحويل حسب الدولة",
     tabSettings: "إعدادات المسار",
+    tabEmails: "الإيميلات",
     close: "إغلاق",
-    testsIntro: "اعرض صفحة واحدة بنسختين واحتفظ بالتي تبيع أكثر. A هي الصفحة كما هي الآن؛ B تبدأ كنسخة ثم تعدّلها.",
-    noTests: "لا يوجد اختبار على هذا المسار بعد.",
+    testsIntro: "اعرض صفحة واحدة بنسختين أو أكثر واحتفظ بالتي تبيع أكثر. A هي الصفحة كما هي الآن؛ وكل نسخة تانية تبدأ كنسخة منها ثم تعدّلها.",
+    noTests: "مفيش اختبار على هذا المسار لسه.",
     newTest: "اختبار جديد",
     page: "الصفحة",
     name: "اسم الاختبار",
     namePlaceholder: "اختبار العنوان",
-    shareB: "نسبة الزوار الذين يرون B (%)",
     auto: "اختيار الفائز تلقائيًا",
     afterVisits: "بعد هذا العدد من الزيارات",
     metric: "حسب",
@@ -132,9 +141,13 @@ const STRINGS = {
     completed: "انتهى",
     pause: "إيقاف",
     resume: "استكمال",
-    editB: "تعديل صفحة B",
-    saveB: "حفظ صفحة B",
-    savedB: "تم حفظ صفحة B. تظهر فورًا للزوار في B.",
+    editPage: "تعديل صفحة {key}",
+    savePage: "حفظ صفحة {key}",
+    savedPage: "تم حفظ صفحة {key}. تظهر فورًا للزوار في {key}.",
+    editVersions: "النسخ والنسب",
+    saveVersions: "حفظ النسخ والنسب",
+    cancel: "إلغاء",
+    savedVersions: "تم الحفظ. الزوار الجدد يتوزعوا بالنسب الجديدة، واللي دخل نسخة بيفضل فيها.",
     back: "رجوع للاختبارات",
     remove: "حذف الاختبار",
     variant: "النسخة",
@@ -147,28 +160,29 @@ const STRINGS = {
     winner: "الفائز",
     makeWinner: "اجعله الفائز",
     confidence: "{pct}% ثقة أن المتصدر يحوّل أفضل فعلًا.",
+    confidenceVs: "{pct}% ثقة أن {leader} يحوّل أفضل من {runnerUp} فعلًا.",
     confidenceLow: "الزيارات غير كافية بعد للتفريق بين النسختين.",
     control: "A — الأصلية",
     geoIntro: "حوّل زوار بعض الدول إلى مسار آخر — للغة أو عملة أو شحن مختلف. الباقون يرون هذا المسار.",
-    noRules: "لا يوجد تحويل حسب الدولة على هذا المسار.",
+    noRules: "مفيش تحويل حسب الدولة على هذا المسار.",
     countries: "الدول (كود من حرفين، مفصولة بفاصلة)",
     countriesPlaceholder: "SA, AE, KW",
     target: "حوّلهم إلى",
-    chooseFunnel: "اختر مسارًا",
+    chooseFunnel: "اختار مسارًا",
     onlyPublished: "التحويل يعمل طالما المسار الهدف منشور.",
     addRule: "إضافة تحويل",
     active: "مفعّل",
     settingsIntro: "أيقونة هذا المسار وعنوانه في البحث. إن تُركت فارغة تُستخدم بيانات المتجر.",
-    currency: "رمز العملة (3 حروف)",
+    currency: "العملة (3 حروف) — عملة بيع مسار البيع ده؛ لازم تكون عروضه مسعّرة بيها",
     favicon: "رابط الأيقونة",
     seoTitle: "عنوان البحث",
     seoDescription: "وصف البحث",
     save: "حفظ الإعدادات",
-    saved: "تم الحفظ.",
+    saved: "اتحفظ.",
   },
 } satisfies Messages;
 
-type Tab = "tests" | "geo" | "settings";
+type Tab = "tests" | "geo" | "settings" | "emails";
 
 export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; steps: UiStep[] }) {
   const t = useT(STRINGS);
@@ -181,38 +195,57 @@ export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; step
         <FlaskConical className="size-4" aria-hidden />
         {t.open}
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={t.title} className="max-w-4xl">
-        <div className="mb-4 inline-flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
-          {(
-            [
-              ["tests", t.tabTests],
-              ["geo", t.tabGeo],
-              ["settings", t.tabSettings],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={tab === value}
-              onClick={() => setTab(value)}
-              className={cn(
-                "cursor-pointer rounded-[0.375rem] px-3 py-1.5 text-sm font-medium",
-                tab === value ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {open && tab === "tests" && <SplitTestsTab funnelId={funnelId} steps={steps} />}
-        {open && tab === "geo" && <GeoTab funnelId={funnelId} />}
-        {open && tab === "settings" && <SettingsTab funnelId={funnelId} />}
-      </Modal>
+      {/* A portalled dialog: the old Modal sat inside the editor's top bar and was clipped by it. */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent showCloseButton={false} className="flex max-h-[90vh] flex-col gap-4 sm:max-w-4xl">
+          <DialogHeader className="flex-row items-start justify-between gap-2">
+            <DialogTitle>{t.title}</DialogTitle>
+            <DialogClose render={<Button type="button" size="icon-sm" variant="ghost" aria-label={t.close} title={t.close} />}>
+              <X className="size-4" aria-hidden />
+            </DialogClose>
+          </DialogHeader>
+          <div className="-mx-6 min-h-0 overflow-y-auto px-6">
+            <div className="mb-4 inline-flex flex-wrap gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
+              {(
+                [
+                  ["tests", t.tabTests],
+                  ["geo", t.tabGeo],
+                  ["settings", t.tabSettings],
+                  ["emails", t.tabEmails],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={tab === value}
+                  onClick={() => setTab(value)}
+                  className={cn(
+                    "cursor-pointer rounded-[0.375rem] px-3 py-1.5 text-sm font-medium",
+                    tab === value ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {open && tab === "tests" && <SplitTestsTab funnelId={funnelId} steps={steps} />}
+            {open && tab === "geo" && <GeoTab funnelId={funnelId} />}
+            {open && tab === "settings" && <SettingsTab funnelId={funnelId} />}
+            {/* The order emails for this funnel (FunnelEmailsTab.tsx, item 175). */}
+            {open && tab === "emails" && <FunnelEmailsTab funnelId={funnelId} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
 // --- split tests ------------------------------------------------------------
+
+const DEFAULT_VERSIONS: VersionDraft[] = [
+  { key: CONTROL_KEY, name: "", weight: 50 },
+  { key: "B", name: "", weight: 50 },
+];
 
 function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] }) {
   const t = useT(STRINGS);
@@ -221,12 +254,12 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
   const describeError = useFunnelErrorMessage();
   const list = useAsync(() => splitTestsList(apiClient, workspaceId, funnelId), [workspaceId, funnelId]);
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<{ test: SplitTest; tree: PageTree } | null>(null);
+  const [editing, setEditing] = useState<{ test: SplitTest; key: string; tree: PageTree } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const [stepKey, setStepKey] = useState(steps[0]?.key ?? "");
   const [name, setName] = useState("");
-  const [shareB, setShareB] = useState(50);
+  const [versions, setVersions] = useState<VersionDraft[]>(DEFAULT_VERSIONS);
   const [auto, setAuto] = useState(false);
   const [afterVisits, setAfterVisits] = useState(2000);
   const [metric, setMetric] = useState<SplitTestMetric>("conversion_rate");
@@ -234,13 +267,15 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
 
   const stepOf = (key: string) => steps.find((s) => s.key === key);
 
-  async function run(action: () => Promise<unknown>) {
+  async function run(action: () => Promise<unknown>): Promise<boolean> {
     setBusy(true);
     try {
       await action();
       await list.refresh({ silent: true });
+      return true;
     } catch (err) {
       toast.error(describeError(err));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -257,15 +292,13 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
         funnelId,
         stepKey,
         name: name.trim(),
-        variants: [
-          { key: "A", weight: 100 - shareB },
-          // B starts as a copy of the page as it is now.
-          { key: "B", weight: shareB, builderData: step.tree },
-        ],
+        // Every version but A starts as a copy of the page as it is now.
+        variants: toPayload(versions.map((v) => ({ ...v, builderData: step.tree }))),
         autoWinner: { enabled: auto, afterVisits, metric },
       });
       setCreating(false);
       setName("");
+      setVersions(DEFAULT_VERSIONS);
       await list.refresh({ silent: true });
     } catch (err) {
       setError(describeError(err));
@@ -274,7 +307,7 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
     }
   }
 
-  // Editing B's page: the same page editor a funnel step uses, on B's own tree.
+  // Editing a version's page: the same page editor a funnel step uses, on the version's own tree.
   if (editing) {
     const step = stepOf(editing.test.stepKey);
     const host: UiStep | null = step ? { ...step, tree: editing.tree } : null;
@@ -291,16 +324,19 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
             onClick={() =>
               void run(async () => {
                 await splitTestsUpdate(apiClient, workspaceId, editing.test.id, {
+                  // Every version but A sends its page back, the edited one with its changes.
                   variants: editing.test.variants.map((v) =>
-                    v.key === "B" ? { key: v.key, name: v.name, weight: v.weight, builderData: editing.tree } : { key: v.key, name: v.name, weight: v.weight }
+                    v.key === CONTROL_KEY
+                      ? { key: v.key, name: v.name, weight: v.weight }
+                      : { key: v.key, name: v.name, weight: v.weight, builderData: v.key === editing.key ? editing.tree : v.builderData }
                   ),
                 });
-                toast.success(t.savedB);
+                toast.success(fmt(t.savedPage, { key: editing.key }));
                 setEditing(null);
               })
             }
           >
-            {t.saveB}
+            {fmt(t.savePage, { key: editing.key })}
           </Button>
         </div>
         {host && (
@@ -313,6 +349,7 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
               onSelectStep={() => undefined}
               onTreeChange={(tree) => setEditing((prev) => (prev ? { ...prev, tree } : prev))}
               onBack={() => setEditing(null)}
+              funnelId={funnelId}
             />
           </div>
         )}
@@ -338,12 +375,19 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
             }
             onWinner={(key) => void run(() => splitTestsChooseWinner(apiClient, workspaceId, test.id, key))}
             onDelete={() => void run(() => splitTestsDelete(apiClient, workspaceId, test.id))}
-            onEditB={() =>
+            onEditPage={(key) =>
               void run(async () => {
                 const { experiment } = await splitTestsGet(apiClient, workspaceId, test.id);
-                const b = experiment.variants.find((v) => v.key === "B");
-                const tree = (b?.builderData ?? { version: 1, sections: [] }) as PageTree;
-                setEditing({ test: experiment, tree: { ...tree, sections: Array.isArray(tree.sections) ? tree.sections : [] } });
+                const version = experiment.variants.find((v) => v.key === key);
+                const tree = (version?.builderData ?? { version: 1, sections: [] }) as PageTree;
+                setEditing({ test: experiment, key, tree: { ...tree, sections: Array.isArray(tree.sections) ? tree.sections : [] } });
+              })
+            }
+            newPage={stepOf(test.stepKey)?.tree}
+            onSaveVersions={(next) =>
+              run(async () => {
+                await splitTestsUpdate(apiClient, workspaceId, test.id, { variants: toPayload(next) });
+                toast.success(t.savedVersions);
               })
             }
           />
@@ -366,18 +410,8 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
                 <Label htmlFor="st-name">{t.name}</Label>
                 <Input id="st-name" maxLength={200} value={name} placeholder={t.namePlaceholder} onChange={(e) => setName(e.target.value)} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="st-share">{t.shareB}</Label>
-                <Input
-                  id="st-share"
-                  type="number"
-                  min={1}
-                  max={99}
-                  value={shareB}
-                  onChange={(e) => setShareB(Math.min(99, Math.max(1, Math.round(Number(e.target.value) || 50))))}
-                />
-              </div>
             </div>
+            <VersionSharesEditor versions={versions} onChange={setVersions} newPage={stepOf(stepKey)?.tree} idPrefix="st-new" />
             <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
               <input type="checkbox" className="size-4 accent-primary" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
               {t.auto}
@@ -408,7 +442,7 @@ function SplitTestsTab({ funnelId, steps }: { funnelId: string; steps: UiStep[] 
               <Button type="button" variant="outline" onClick={() => setCreating(false)} disabled={busy}>
                 {t.close}
               </Button>
-              <Button type="button" onClick={() => void create()} disabled={busy || !name.trim() || !stepKey}>
+              <Button type="button" onClick={() => void create()} disabled={busy || !name.trim() || !stepKey || sharesTotal(versions) !== 100}>
                 {t.create}
               </Button>
             </div>
@@ -430,7 +464,9 @@ function SplitTestCard({
   onPauseResume,
   onWinner,
   onDelete,
-  onEditB,
+  onEditPage,
+  newPage,
+  onSaveVersions,
 }: {
   test: SplitTest;
   pageName: string;
@@ -438,7 +474,11 @@ function SplitTestCard({
   onPauseResume: () => void;
   onWinner: (variantKey: string) => void;
   onDelete: () => void;
-  onEditB: () => void;
+  onEditPage: (variantKey: string) => void;
+  /** The page a version added now starts from. */
+  newPage: unknown;
+  /** Resolves true once saved. */
+  onSaveVersions: (versions: VersionDraft[]) => Promise<boolean>;
 }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
@@ -446,6 +486,14 @@ function SplitTestCard({
   const detail = useAsync(() => splitTestsGet(apiClient, workspaceId, test.id), [workspaceId, test.id, test.updatedAt]);
   const results = detail.data?.results;
   const done = test.status === "completed";
+  const [versions, setVersions] = useState<VersionDraft[] | null>(null);
+  const control = t.control;
+  // The leader and the runner-up by conversion, as the server ranks them for its confidence.
+  const ranked = [...(results?.variants ?? [])].sort((x, y) => y.conversionRateBp - x.conversionRateBp);
+  const nameOf = (key: string | undefined) => {
+    const v = test.variants.find((x) => x.key === key);
+    return v ? versionLabel(v, control) : (key ?? "");
+  };
 
   return (
     <div className="rounded-[0.5rem] border border-line p-4">
@@ -463,8 +511,21 @@ function SplitTestCard({
               <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onPauseResume}>
                 {test.status === "running" ? t.pause : t.resume}
               </Button>
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onEditB}>
-                {t.editB}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-expanded={versions !== null}
+                disabled={busy || !detail.data}
+                onClick={() =>
+                  setVersions((open) =>
+                    open
+                      ? null
+                      : (detail.data?.experiment.variants ?? []).map((v) => ({ key: v.key, name: v.name === v.key ? "" : v.name, weight: v.weight, builderData: v.builderData, locked: true }))
+                  )
+                }
+              >
+                {t.editVersions}
               </Button>
             </>
           )}
@@ -495,8 +556,22 @@ function SplitTestCard({
               return (
                 <tr key={v.key}>
                   <td className="py-2 font-medium text-ink">
-                    {v.key === "A" ? t.control : v.key}
+                    <span dir="auto">{versionLabel(v, control)}</span>
                     {isWinner && <Badge className="ms-2">{t.winner}</Badge>}
+                    {!done && v.key !== CONTROL_KEY && (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="ms-1"
+                        aria-label={fmt(t.editPage, { key: v.key })}
+                        title={fmt(t.editPage, { key: v.key })}
+                        disabled={busy}
+                        onClick={() => onEditPage(v.key)}
+                      >
+                        <Pencil className="size-3.5" aria-hidden />
+                      </Button>
+                    )}
                   </td>
                   <td className="py-2 text-end tabular-nums text-ink-soft">{v.weight}%</td>
                   <td className="py-2 text-end tabular-nums text-ink-soft">{r ? r.visits : "—"}</td>
@@ -520,9 +595,29 @@ function SplitTestCard({
       {results && !done && (
         <p className="mt-2 text-xs text-ink-soft">
           {results.confidence !== null && results.confidence > 0.5
-            ? fmt(t.confidence, { pct: Math.round(results.confidence * 100) })
+            ? test.variants.length > 2 && ranked.length > 1
+              ? fmt(t.confidenceVs, { pct: Math.round(results.confidence * 100), leader: nameOf(ranked[0]?.key), runnerUp: nameOf(ranked[1]?.key) })
+              : fmt(t.confidence, { pct: Math.round(results.confidence * 100) })
             : t.confidenceLow}
         </p>
+      )}
+      {versions && !done && (
+        <div className="mt-3 space-y-3 border-t border-line pt-3">
+          <VersionSharesEditor versions={versions} onChange={setVersions} newPage={newPage} idPrefix={`st-${test.id}`} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setVersions(null)}>
+              {t.cancel}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={busy || sharesTotal(versions) !== 100}
+              onClick={() => void onSaveVersions(versions).then((ok) => ok && setVersions(null))}
+            >
+              {t.saveVersions}
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -655,7 +750,7 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
   const [draft, setDraft] = useState<Partial<Record<keyof FunnelOwnSettings, string>>>({});
   const [busy, setBusy] = useState(false);
 
-  const value = (key: keyof FunnelOwnSettings) => draft[key] ?? loaded.data?.[key] ?? "";
+  const value = (key: keyof FunnelOwnSettings) => String(draft[key] ?? loaded.data?.[key] ?? "");
   const field = (key: keyof FunnelOwnSettings, label: string, props: { dir?: "ltr"; maxLength: number }) => (
     <div className="space-y-1.5">
       <Label htmlFor={`fs-${key}`}>{label}</Label>
@@ -667,12 +762,15 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
     <DataState loading={loaded.loading} error={loaded.error} onRetry={() => void loaded.refresh()}>
       <div className="space-y-4">
         <p className="text-sm text-ink-soft">{t.settingsIntro}</p>
+        <FunnelLinkSetting funnelId={funnelId} />
+        <FunnelConversionEventSetting funnelId={funnelId} />
         <div className="grid gap-3 sm:grid-cols-2">
           {field("title", t.seoTitle, { maxLength: 200 })}
           {field("currency", t.currency, { dir: "ltr", maxLength: 3 })}
           {field("description", t.seoDescription, { maxLength: 320 })}
           {field("faviconUrl", t.favicon, { dir: "ltr", maxLength: 1000 })}
         </div>
+        <FunnelCodeAndShippingFields value={value} onChange={(key, next) => setDraft((prev) => ({ ...prev, [key]: next }))} disabled={busy} />
         <div className="flex justify-end">
           <Button
             type="button"

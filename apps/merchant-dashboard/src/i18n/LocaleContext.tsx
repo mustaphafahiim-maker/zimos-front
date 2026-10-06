@@ -6,7 +6,7 @@
  *
  *   const STRINGS = {
  *     en: { title: "Orders", empty: "No orders yet." },
- *     ar: { title: "الطلبات", empty: "لا توجد طلبات بعد." },
+ *     ar: { title: "الطلبات", empty: "مفيش طلبات لسه." },
  *   } satisfies Messages;
  *   const t = useT(STRINGS);
  *   <h1>{t.title}</h1>
@@ -45,7 +45,8 @@ function readStored(): Locale {
   } catch {
     /* private mode */
   }
-  return "en";
+  // Arabic first: the dashboard is built for Egyptian merchants (docs/ux/05-proposal.md).
+  return "ar";
 }
 
 function applyToDocument(locale: Locale) {
@@ -141,9 +142,28 @@ export function useT<K extends string>(messages: { en: Record<K, string>; ar: Re
   return messages[locale];
 }
 
-/** "Hello {name}" + { name: "Sara" } -> "Hello Sara" */
+/**
+ * "Hello {name}" + { name: "Sara" } -> "Hello Sara". A number is written with
+ * the language's digits («٣ أوردرات» in Arabic, never a stray "3"), grouped
+ * only from 5 digits so years and codes stay whole (re-audit N-10).
+ */
 export function fmt(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (_, k: string) => (k in values ? String(values[k]) : `{${k}}`));
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => {
+    if (!(k in values)) return `{${k}}`;
+    const value = values[k];
+    return typeof value === "number" ? formatCountForText(value) : String(value);
+  });
+}
+
+function formatCountForText(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  try {
+    // "min2" is newer than this TypeScript lib's option type; engines without it fall back to grouping.
+    const options = { useGrouping: "min2", maximumFractionDigits: 2 } as unknown as Intl.NumberFormatOptions;
+    return new Intl.NumberFormat(getIntlLocale(), options).format(value);
+  } catch {
+    return String(value);
+  }
 }
 
 /** Shared strings used across many screens. */
@@ -185,7 +205,7 @@ export const COMMON = {
   },
   ar: {
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     cancel: "إلغاء",
     delete: "حذف",
     edit: "تعديل",
@@ -198,24 +218,24 @@ export const COMMON = {
     all: "الكل",
     status: "الحالة",
     actions: "إجراءات",
-    loading: "جارٍ التحميل…",
-    retry: "حاول مرة أخرى",
+    loading: "بيحمّل…",
+    retry: "جرّب تاني",
     exportCsv: "تصدير CSV",
     demoData: "بيانات تجريبية",
-    active: "نشط",
+    active: "شغّال",
     paused: "متوقف",
     enabled: "مفعّل",
     disabled: "معطّل",
     yes: "نعم",
     no: "لا",
-    today: "اليوم",
+    today: "النهارده",
     last7: "آخر 7 أيام",
     last30: "آخر 30 يوم",
     last90: "آخر 90 يوم",
     viewAll: "عرض الكل",
-    learnMore: "اعرف أكثر",
+    learnMore: "اعرف أكتر",
     copy: "نسخ",
-    copied: "تم النسخ",
+    copied: "اتنسخ",
     signOut: "تسجيل الخروج",
   },
 } satisfies Messages;

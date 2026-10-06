@@ -10,6 +10,7 @@ import {
   PackageMinus,
   PlugZap,
   ShoppingBag,
+  Truck,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -56,7 +57,7 @@ const STRINGS = {
     unread: "غير المقروءة",
     emptyTitle: "لا جديد حتى الآن",
     emptyBody: "الطلبات الجديدة وتنبيهات المخزون وكل ما يحتاج انتباهك سيظهر هنا.",
-    emptyUnread: "لا توجد إشعارات غير مقروءة.",
+    emptyUnread: "مفيش إشعارات غير مقروءة.",
     settings: "إعدادات الإشعارات",
     filterLabel: "تصفية الإشعارات",
   },
@@ -72,6 +73,7 @@ const ICONS: Record<string, LucideIcon> = {
   "stock.low": PackageMinus,
   "integration.failed": PlugZap,
   "export.ready": Download,
+  "shipping.batch_done": Truck,
   announcement: Megaphone,
   automation: Megaphone,
 };
@@ -164,7 +166,7 @@ export function NotificationsBell() {
         {unreadCount > 0 && (
           <span
             data-testid="notifications-badge"
-            className="absolute -end-0.5 -top-0.5 flex min-w-4.5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-4.5 text-white"
+            className="absolute -end-0.5 -top-0.5 flex min-w-4.5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-4.5 text-paper-raised"
           >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>

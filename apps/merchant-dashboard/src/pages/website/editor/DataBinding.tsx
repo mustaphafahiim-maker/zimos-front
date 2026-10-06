@@ -39,6 +39,7 @@ const STRINGS = {
     "legal.refund_policy": "Refund policy",
     "legal.privacy_policy": "Privacy policy",
     "legal.terms_of_service": "Terms of service",
+    "legal.shipping_policy": "Shipping policy",
     text: "Text",
     label: "Button text",
     src: "Image",
@@ -66,6 +67,7 @@ const STRINGS = {
     "legal.refund_policy": "سياسة الاسترجاع",
     "legal.privacy_policy": "سياسة الخصوصية",
     "legal.terms_of_service": "شروط الخدمة",
+    "legal.shipping_policy": "سياسة الشحن",
     text: "النص",
     label: "نص الزرار",
     src: "الصورة",
@@ -89,6 +91,7 @@ const TEXT_SOURCES = [
   "legal.refund_policy",
   "legal.privacy_policy",
   "legal.terms_of_service",
+  "legal.shipping_policy",
 ] as const;
 const IMAGE_SOURCES = ["product.images[0]", "product.images[1]", "product.images[2]"] as const;
 

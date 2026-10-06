@@ -3,11 +3,13 @@ import { RefundLinesPicker } from "./FulfillAndRefundLines";
 import { RefreshCw } from "lucide-react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, Payment, PaymentTimeline, Refund } from "@store-builder/api-client";
+import { ordersRefundWithNotify } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { ManualTransfersCard } from "./ManualTransfersCard";
@@ -22,6 +24,7 @@ import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useOrderLabels } from "../orderLabels";
+import { GiftCardPaymentIcon, GiftCardPaymentName, isGiftCardPayment } from "@/pages/giftCards/GiftCardPaymentName";
 
 const STRINGS = {
   en: {
@@ -37,9 +40,11 @@ const STRINGS = {
     pendingRefunds: "Refunds in progress",
     refundable: "Can still refund",
     refund: "Refund",
+    codNotCollected: "Paid in cash on delivery. Nothing has been collected yet, so there is nothing to refund.",
     refundTitle: "Refund this order",
     refundGateway: "The money goes back to the shopper's card or wallet through the gateway.",
     refundManual: "This records a refund you hand back yourself (cash, transfer). Nothing is sent to a gateway.",
+    refundGiftCard: "The money goes back onto the shopper's gift card.",
     amount: "Amount",
     amountHint: "At most {max}.",
     fromPayment: "Refund from",
@@ -87,10 +92,10 @@ const STRINGS = {
   },
   ar: {
     title: "المدفوعات والاستردادات",
-    loading: "جارٍ تحميل المدفوعات…",
-    empty: "لا توجد مدفوعات مسجلة على هذا الأوردر.",
+    loading: "بنحمّل المدفوعات…",
+    empty: "مفيش مدفوعات مسجلة على هذا الأوردر.",
     sync: "مزامنة حالة الدفع",
-    syncing: "جارٍ التحقق مع البوابة…",
+    syncing: "بنتأكد مع البوابة…",
     synced: "حالة الدفع محدّثة.",
     unreachable: "تعذّر الوصول للبوابة لإحدى الدفعات. لم يتغير شيء، حاول بعد قليل.",
     paid: "المدفوع",
@@ -98,9 +103,11 @@ const STRINGS = {
     pendingRefunds: "استردادات جارية",
     refundable: "المتاح للاسترداد",
     refund: "استرداد",
+    codNotCollected: "الدفع كاش عند الاستلام. لسه متحصّلش حاجة، فمفيش حاجة تترد.",
     refundTitle: "استرداد مبلغ من هذا الأوردر",
     refundGateway: "المبلغ يرجع لكارت أو محفظة العميل عن طريق البوابة.",
-    refundManual: "هذا يسجل استردادًا ترجّعه بنفسك (كاش أو تحويل). لا يُرسل شيء لأي بوابة.",
+    refundManual: "ده بيسجّل استرداد بترجّعه إنت بنفسك (كاش أو تحويل). مفيش حاجة بتتبعت لأي بوابة.",
+    refundGiftCard: "الفلوس هترجع على كارت الهدية بتاع العميل.",
     amount: "المبلغ",
     amountHint: "بحد أقصى {max}.",
     fromPayment: "الاسترداد من",
@@ -108,8 +115,8 @@ const STRINGS = {
     reason: "السبب",
     reasonPlaceholder: "اختياري — مثلًا المنتج غير متوفر",
     confirmRefund: "استرداد {amount}",
-    refunding: "جارٍ الاسترداد…",
-    amountInvalid: "أدخل مبلغًا بين 0.01 و{max}.",
+    refunding: "بنرجّع الفلوس…",
+    amountInvalid: "اكتب مبلغًا بين 0.01 و{max}.",
     refundProcessed: "تم استرداد {amount}.",
     refundPending: "تم إرسال استرداد {amount}. البوابة لم تؤكده بعد، وسيتحدث هنا.",
     refundFailed: "رفضت البوابة الاسترداد: {reason}",
@@ -142,7 +149,7 @@ const STRINGS = {
     status_partially_refunded: "مسترد جزئيًا",
     status_expired: "انتهت المهلة",
     status_cancelled: "استُبدلت",
-    refund_pending: "جارٍ",
+    refund_pending: "بيتنفّذ",
     refund_processed: "تم",
     refund_failed: "فشل",
   },
@@ -202,6 +209,9 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
   // The payment to refund for a "refund the extra payment" alert: the newest
   // gateway payment that still has something left.
   const lastRefundable = data ? [...data.perPayment].reverse().find((p) => p.refundable > 0) : undefined;
+  // A cash-on-delivery order with nothing collected yet has nothing to refund: no «استرداد»
+  // next to «المدفوع ٠» (re-audit N-15). Display only; the API's numbers are unchanged.
+  const codNotCollected = order.paymentMethod === "cod" && order.financialState === "pending" && (data?.amountPaid ?? 0) === 0;
 
   return (
     <Card>
@@ -215,10 +225,10 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
                 {syncing ? t.syncing : t.sync}
               </Button>
             )}
-            {(order.paymentMethod === "card" || order.paymentMethod === "wallet") &&
+            {["card", "wallet", "valu", "kiosk", "paypal"].includes(order.paymentMethod) &&
               order.financialState === "pending" &&
               !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
-            {data && data.refundable > 0 && (
+            {data && data.refundable > 0 && !codNotCollected && (
               <Button variant="outline" className="min-h-11" onClick={() => setDialog({})}>
                 {t.refund}
               </Button>
@@ -275,12 +285,16 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
               <p className="text-sm text-ink-soft">{fmt(t.expiresAt, { date: formatDateTime(data.paymentExpiresAt) })}</p>
             )}
 
-            <dl className="grid gap-3 text-sm sm:grid-cols-4">
-              <Stat label={t.paid} value={money(data.amountPaid)} />
-              <Stat label={t.refunded} value={money(data.amountRefunded)} />
-              <Stat label={t.pendingRefunds} value={money(data.pendingRefunds)} />
-              <Stat label={t.refundable} value={money(data.refundable)} />
-            </dl>
+            {codNotCollected ? (
+              <p className="text-sm text-ink-soft">{t.codNotCollected}</p>
+            ) : (
+              <dl className="grid gap-3 text-sm sm:grid-cols-4">
+                <Stat label={t.paid} value={money(data.amountPaid)} />
+                <Stat label={t.refunded} value={money(data.amountRefunded)} />
+                <Stat label={t.pendingRefunds} value={money(data.pendingRefunds)} />
+                <Stat label={t.refundable} value={money(data.refundable)} />
+              </dl>
+            )}
 
             {data.attempts.length === 0 && data.refunds.length === 0 ? (
               <p className="text-sm text-ink-soft">{t.empty}</p>
@@ -347,17 +361,17 @@ function AttemptList({
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-3">
               {/* A method means a gateway attempt; COD / manual records have none. */}
-              {p.method && <ProviderLogo code={p.providerCode} size="sm" />}
+              {isGiftCardPayment(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
               <span className="min-w-0">
                 <span className="font-medium text-ink">
-                  {p.method
+                  {isGiftCardPayment(p) ? <GiftCardPaymentName payment={p} /> : p.method
                     ? fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
                     : p.providerCode}{" "}
                   · {money(p.amount)}
                 </span>
                 <span className="block text-xs text-ink-soft">
                   {formatDateTime(p.createdAt)}
-                  {p.maskedDisplay && ` · ${p.maskedDisplay}`}
+                  {p.maskedDisplay && !isGiftCardPayment(p) && ` · ${p.maskedDisplay}`}
                   {p.failureReason && p.status === "failed" && ` · ${p.failureReason}`}
                 </span>
               </span>
@@ -446,6 +460,7 @@ function RefundDialog({
   const max = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
   const [amount, setAmount] = useState(minorToMajorInput(initial.amount ?? max));
   const [reason, setReason] = useState("");
+  const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -461,8 +476,9 @@ function RefundDialog({
     setBusy(true);
     setError(null);
     try {
-      const refund = await apiClient.refundOrder(workspaceId, order.id, {
+      const refund = await ordersRefundWithNotify(apiClient, workspaceId, order.id, {
         amount: minor,
+        notifyCustomer: notify,
         ...(reason.trim() ? { reason: reason.trim() } : {}),
         ...(viaGateway && paymentId ? { paymentId } : {}),
       });
@@ -474,13 +490,17 @@ function RefundDialog({
   }
 
   const attempt = (id: string) => timeline.attempts.find((p) => p.id === id);
+  // A gift card's share is refunded onto the card (backend giftCards/giftCardProvider.js), not in cash.
+  const toGiftCard = viaGateway
+    ? Boolean(paymentId && attempt(paymentId) && isGiftCardPayment(attempt(paymentId)!))
+    : timeline.attempts.some((p) => isGiftCardPayment(p));
 
   return (
     <Modal
       open
       onClose={onClose}
       title={t.refundTitle}
-      description={viaGateway ? t.refundGateway : t.refundManual}
+      description={toGiftCard ? t.refundGiftCard : viaGateway ? t.refundGateway : t.refundManual}
     >
       <form onSubmit={submit} className="space-y-4 p-5">
         {viaGateway && timeline.perPayment.length > 1 && (
@@ -524,6 +544,7 @@ function RefundDialog({
             <Textarea id={id} value={reason} maxLength={300} placeholder={t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
           )}
         </Field>
+        <NotifyCustomerToggle checked={notify} onChange={setNotify} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onClose}>

@@ -23,6 +23,8 @@ import type { PreviewTheme } from "@/lib/previewBridge";
 import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 import { ThemeGallery } from "./ThemeGallery";
+import { StoreTextsLink } from "./StoreTextsLink";
+import { WebsiteEmailsButton } from "./WebsiteEmailsButton";
 import { TEMPLATE_COLOR_SOURCE } from "./editor/storeLook";
 import { ORIGINAL_LOOK, readThemeChoice } from "./editor/storeThemes";
 
@@ -89,17 +91,17 @@ const STRINGS = {
     search: "ابحث عن قالب",
     filterLabel: "تصفية القوالب حسب الفئة",
     all: "الكل",
-    noMatchTitle: "لا توجد قوالب مطابقة",
+    noMatchTitle: "مفيش قوالب مطابقة",
     noMatchDescription: "جرّب اسمًا آخر، أو اعرض كل الفئات.",
     clearFilters: "عرض كل القوالب",
     device: "حجم المعاينة",
     desktop: "الكمبيوتر",
     mobile: "الهاتف",
-    noPreview: "لا توجد معاينة بعد",
+    noPreview: "مفيش معاينة لسه",
     templatesTitle: "قوالب الصفحات",
     title: "الموقع",
-    description: "اختر قالبًا تبدأ به موقع متجرك. يمكنك تسميته الآن وتخصيصه لاحقًا.",
-    noTemplates: "لا توجد قوالب مواقع متاحة الآن. عُد لاحقًا.",
+    description: "اختار قالبًا تبدأ به موقع متجرك. يمكنك تسميته الآن وتخصيصه لاحقًا.",
+    noTemplates: "مفيش قوالب مواقع متاحة الآن. عُد لاحقًا.",
     yourSites: "مواقعك",
     edit: "تعديل",
     deleteSite: "حذف {name}",
@@ -110,7 +112,7 @@ const STRINGS = {
       "سيُحذف {name} نهائيًا مع كل صفحاته ونسخه المنشورة وأي دومين مربوط به. لا يمكن التراجع عن ذلك.",
     deleteLive: "هذا الموقع منشور الآن. حذفه يوقفه فورًا — ولن يرى متجرك أي شخص يزور {subdomain}.",
     cancel: "إلغاء",
-    working: "جارٍ الحذف…",
+    working: "بنمسح…",
     "status.draft": "مسودة",
     "status.published": "منشور",
     "status.suspended": "موقوف",
@@ -163,8 +165,8 @@ const USE_STRINGS = {
     created: "Site \"{name}\" created.",
   },
   ar: {
-    description: "عاين محتوى القالب، ثم اختر اسمًا لموقعك.",
-    loadingDetails: "جارٍ تحميل تفاصيل القالب…",
+    description: "عاين محتوى القالب، ثم اختار اسمًا لموقعك.",
+    loadingDetails: "بنحمّل تفاصيل القالب…",
     detailError: "تعذّر تحميل معاينة القالب، ويمكنك مع ذلك متابعة إنشاء الموقع.",
     retry: "إعادة المحاولة",
     pagesOne: "يتضمن هذا القالب صفحة واحدة ستُنسخ إلى موقعك:",
@@ -176,7 +178,7 @@ const USE_STRINGS = {
     siteNameHint: "يُنشأ منه عنوان مؤقت (نطاق فرعي) يمكنك تغييره لاحقًا.",
     siteNamePlaceholder: "متجري",
     cancel: "إلغاء",
-    creating: "جارٍ الإنشاء…",
+    creating: "بنعمله…",
     useTemplate: "استخدم هذا القالب",
     created: "تم إنشاء الموقع \"{name}\".",
   },
@@ -581,6 +583,8 @@ function ExistingSites() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* A website's own order emails, once there is more than one (item 175). */}
+              {list.length > 1 && <WebsiteEmailsButton site={site} />}
               <Button asChild size="sm" variant="outline">
                 <Link to={`/website/${site.id}/edit`}>
                   <Pencil className="size-4" aria-hidden />
@@ -652,7 +656,7 @@ export function WebsitePage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} tutorial="website" actions={<StoreTextsLink />} />
 
       <ExistingSites />
 

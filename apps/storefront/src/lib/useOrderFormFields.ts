@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CHECKOUT_SETTINGS_DEFAULTS,
-  resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   type ApiClient,
   type CheckoutSettings,
@@ -28,7 +28,7 @@ export function useFreshCheckoutSettings(client: ApiClient, workspaceId: string)
       .getStorefrontMeta(workspaceId)
       .then((meta) => {
         // The builder's field list rides along (lib/orderForm.ts → formOf).
-        if (!cancelled) setFresh({ ...resolveCheckoutSettings(meta.checkout), form: resolveCheckoutForm(meta.checkout) } as CheckoutSettings);
+        if (!cancelled) setFresh({ ...resolveCheckoutSettings(meta.checkout), form: resolveCheckoutFormWithBilling(meta.checkout) } as CheckoutSettings);
       })
       .catch(() => {
         /* keep the layout's copy */

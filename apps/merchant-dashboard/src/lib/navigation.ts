@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  HeartHandshake,
   FileDown,
   GraduationCap,
   MousePointerClick,
@@ -22,11 +23,11 @@ import {
   LineChart,
   LifeBuoy,
   Megaphone,
+  Newspaper,
   MessageCircle,
   Package,
   PiggyBank,
   Settings,
-  Send,
   ShieldAlert,
   ShoppingBag,
   ShoppingCart,
@@ -34,6 +35,7 @@ import {
   Store,
   Tag,
   Target,
+  Ticket,
   Truck,
   Undo2,
   Users,
@@ -58,6 +60,7 @@ export type NavKey =
   | "shipping"
   | "payments"
   | "website"
+  | "blog"
   | "funnels"
   | "analytics"
   | "webAnalytics"
@@ -68,7 +71,6 @@ export type NavKey =
   | "settlements"
   | "inbox"
   | "automations"
-  | "campaigns"
   | "marketing"
   | "profit"
   | "ads"
@@ -76,8 +78,10 @@ export type NavKey =
   | "digital"
   | "ai"
   | "affiliates"
+  | "giftCards"
   | "subscriptions"
   | "services"
+  | "referrals"
   | "shoppableImages"
   | "courses"
   | "storeSettings"
@@ -85,7 +89,7 @@ export type NavKey =
   | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "analytics" | "money";
+export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "analytics" | "money" | "more";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
@@ -139,10 +143,9 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "products",
     items: [
       { key: "catalog", to: "/catalog", icon: Package },
+      { key: "offers", to: "/offers", icon: Gift },
+      { key: "discounts", to: "/discounts", icon: Tag },
       { key: "reviews", to: "/reviews", icon: Star },
-      { key: "digital", to: "/digital", icon: FileDown },
-      { key: "courses", to: "/courses", icon: GraduationCap },
-      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
       { key: "media", to: "/media", icon: Images },
     ],
   },
@@ -155,17 +158,13 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: "marketing",
-    labelKey: "marketing",
+    id: "money",
+    labelKey: "money",
     items: [
-      { key: "marketing", to: "/marketing", icon: Megaphone },
-      { key: "offers", to: "/offers", icon: Gift },
-      { key: "discounts", to: "/discounts", icon: Tag },
-      { key: "campaigns", to: "/campaigns", icon: Send },
-      { key: "automations", to: "/automations", icon: Bot },
+      { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "settlements", to: "/settlements", icon: Wallet },
+      { key: "payments", to: "/payments", icon: CreditCard },
       { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "affiliates", to: "/affiliates", icon: UsersRound },
-      { key: "ai", to: "/ai", icon: Sparkles },
     ],
   },
   {
@@ -173,9 +172,21 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "store",
     items: [
       { key: "website", to: "/website", icon: Globe },
+      { key: "blog", to: "/blog", icon: Newspaper },
       { key: "funnels", to: "/funnels", icon: Workflow },
-      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
+      { key: "shipping", to: "/shipping", icon: Truck },
       { key: "storeSettings", to: "/store-settings", icon: Store },
+    ],
+  },
+  {
+    id: "marketing",
+    labelKey: "marketing",
+    items: [
+      { key: "marketing", to: "/marketing", icon: Megaphone },
+      { key: "automations", to: "/automations", icon: Bot },
+      { key: "affiliates", to: "/affiliates", icon: UsersRound },
+      { key: "giftCards", to: "/gift-cards", icon: Ticket },
+      { key: "ai", to: "/ai", icon: Sparkles },
     ],
   },
   {
@@ -186,16 +197,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {
-    id: "money",
-    labelKey: "money",
+    // Ways to sell beyond physical COD products. Few stores use them daily,
+    // so the group starts closed; every page is still one ⌘K away.
+    id: "more",
+    labelKey: "more",
     items: [
-      { key: "payments", to: "/payments", icon: CreditCard },
-      { key: "settlements", to: "/settlements", icon: Wallet },
-      { key: "shipping", to: "/shipping", icon: Truck },
+      { key: "digital", to: "/digital", icon: FileDown },
+      { key: "courses", to: "/courses", icon: GraduationCap },
+      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
+      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
+      { key: "services", to: "/services", icon: Handshake },
     ],
   },
   {
@@ -205,7 +219,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "apps", to: "/apps", icon: LayoutGrid },
       { key: "settings", to: "/settings", icon: Settings },
       { key: "activity", to: "/activity", icon: History },
-      { key: "services", to: "/services", icon: Handshake },
+      { key: "referrals", to: "/referrals", icon: HeartHandshake },
       { key: "support", to: "/support", icon: LifeBuoy },
     ],
   },
@@ -242,7 +256,7 @@ export const NAV_LABELS = {
   en: {
     overview: "Home",
     orders: "Orders",
-    confirmationQueue: "Confirmation queue",
+    confirmationQueue: "Confirm orders",
     fraud: "Fraud protection",
     returns: "Returns",
     abandonedCarts: "Lost orders",
@@ -251,11 +265,12 @@ export const NAV_LABELS = {
     customers: "Customers",
     discounts: "Discounts",
     offers: "Offers",
-    shipping: "Shipping & Tax",
+    shipping: "Shipping",
     payments: "Payments",
     website: "Website",
+    blog: "Blog",
     funnels: "Funnels",
-    analytics: "Overview & reports",
+    analytics: "Reports",
     webAnalytics: "Store traffic",
     attribution: "Sales sources",
     realtime: "Live now",
@@ -266,37 +281,39 @@ export const NAV_LABELS = {
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
-    campaigns: "WhatsApp campaigns",
     marketing: "Marketing",
     profit: "Profit",
-    ads: "Ad campaigns",
+    ads: "Ad spend",
     media: "Media library",
     digital: "Digital products",
     ai: "AI studio",
     affiliates: "Affiliates",
+    giftCards: "Gift cards",
     subscriptions: "Subscriptions",
     services: "Services",
+    referrals: "Refer & earn",
     shoppableImages: "Shoppable images",
     courses: "Courses",
     storeSettings: "Store settings",
   },
   ar: {
     overview: "الرئيسية",
-    orders: "الطلبات",
-    confirmationQueue: "قائمة التأكيد",
-    fraud: "الحماية من الاحتيال",
+    orders: "الأوردرات",
+    confirmationQueue: "تأكيد الأوردرات",
+    fraud: "الحماية من النصب",
     returns: "المرتجعات",
-    abandonedCarts: "الطلبات المفقودة",
+    abandonedCarts: "الأوردرات المفقودة",
     catalog: "المنتجات",
     reviews: "التقييمات",
     customers: "العملاء",
     discounts: "الخصومات",
     offers: "العروض",
-    shipping: "الشحن والضرائب",
+    shipping: "الشحن",
     payments: "المدفوعات",
     website: "الموقع",
+    blog: "المدونة",
     funnels: "مسارات البيع",
-    analytics: "النظرة العامة والتقارير",
+    analytics: "التقارير",
     webAnalytics: "زيارات الموقع",
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
@@ -304,19 +321,20 @@ export const NAV_LABELS = {
     activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
-    settlements: "تحصيل الشحن",
+    settlements: "تحصيل شركات الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",
-    campaigns: "حملات واتساب",
     marketing: "التسويق",
     profit: "الأرباح",
-    ads: "الحملات الإعلانية",
+    ads: "مصاريف الإعلانات",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",
     affiliates: "المسوّقون بالعمولة",
+    giftCards: "كروت الهدايا",
     subscriptions: "الاشتراكات",
     services: "الخدمات",
+    referrals: "اكسب من الإحالة",
     shoppableImages: "الصور التفاعلية",
     courses: "الكورسات",
     storeSettings: "إعدادات المتجر",
@@ -332,15 +350,17 @@ export const NAV_GROUP_LABELS = {
     marketing: "Marketing",
     store: "Online store",
     analytics: "Analytics",
-    money: "Money & shipping",
+    money: "Money",
+    more: "More ways to sell",
   },
   ar: {
-    orders: "الطلبات",
+    orders: "الأوردرات",
     products: "المنتجات",
     customers: "العملاء",
     marketing: "التسويق",
     store: "المتجر",
     analytics: "التحليلات",
-    money: "الفلوس والشحن",
+    money: "الفلوس",
+    more: "طرق بيع أكتر",
   },
 } satisfies Messages<NavGroupKey>;

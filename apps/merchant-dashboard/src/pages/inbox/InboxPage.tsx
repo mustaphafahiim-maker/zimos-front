@@ -26,16 +26,21 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { ApiError, getErrorMessage } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/relativeTime";
 import { PageHeader } from "@/components/PageHeader";
+import { AppOffNotice } from "@/components/AppOffNotice";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
 import { useInboxLive } from "./useInboxLive";
 import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, QuickRepliesMenu, type InboxScope } from "./InboxExtras";
+import { SuggestReplyButton } from "./SuggestReply";
+import { BotBadge, BotSettingsLink, BotToggle } from "./WaBot";
+import { waBotSentOf } from "@store-builder/api-client";
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { TemplatePicker } from "@/components/WhatsappTemplates";
 
 /** There is no realtime channel, so the inbox polls while the tab is visible. */
 const POLL_MS = 10_000;
@@ -196,7 +201,8 @@ export function InboxPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<BotSettingsLink />} />
+      <AppOffNotice app="whatsapp" />
       <DataState
         loading={integration.loading}
         error={integration.error}
@@ -669,6 +675,7 @@ function Thread({
           </Link>
         )}
         <CustomerPanelButton className="xl:hidden" onClick={() => setPanelOpen(true)} />
+        <BotToggle conversation={conversation} onChange={(botPaused) => onPatch({ botPaused } as Partial<WhatsappConversation>)} />
         <AssigneeSelect
           conversation={conversation as InboxConversation}
           onAssigned={(assignedTo) => {
@@ -746,6 +753,7 @@ function Bubble({ message: m }: { message: WhatsappMessage }) {
           m.status === "failed" && "ring-1 ring-danger/40"
         )}
       >
+        {waBotSentOf(m) && <BotBadge />}
         {m.templateName && (
           <p className="mb-0.5 text-[11px] font-medium text-ink-soft">
             {fmt(t.template, { name: m.templateName })}
@@ -846,6 +854,7 @@ function Composer({
   return (
     <form onSubmit={sendText} className="flex items-end gap-2 border-t border-line p-3">
       <QuickRepliesMenu onPick={setText} draft={text} />
+      <SuggestReplyButton conversationId={conversation.id} onSuggest={setText} />
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -934,6 +943,16 @@ function TemplateForm({
           hint={t.phoneHint}
         />
       )}
+      {/* A template synced from Meta fills the name, language and variable count. */}
+      <TemplatePicker
+        name={name}
+        language={language}
+        onPick={(tpl) => {
+          setName(tpl.name);
+          setLanguage(tpl.language);
+          setParams((prev) => Array.from({ length: tpl.paramsCount }, (_, i) => prev[i] ?? ""));
+        }}
+      />
       <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
         <TextField
           label={t.templateName}

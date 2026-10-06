@@ -35,23 +35,23 @@ const STRINGS = {
   ar: {
     title: "الصور",
     discard: "تجاهل",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ الصور",
     savedToast: "تم حفظ الصور.",
     help:
       "PNG أو JPEG أو GIF أو WEBP. أي صورة أكبر من 5\u00a0ميجابايت يتم تصغيرها تلقائيًا قبل الرفع. الصورة الأولى هي الصورة الرئيسية في الكتالوج والمتجر.",
     drop: "اسحب الصور هنا أو اضغط للاختيار",
-    multiple: "يمكن رفع أكثر من ملف",
-    preparingOne: "جارٍ تجهيز صورة واحدة…",
-    preparingMany: "جارٍ تجهيز {n} صور…",
-    uploadingOne: "جارٍ رفع صورة واحدة…",
-    uploadingMany: "جارٍ رفع {n} صور…",
+    multiple: "تقدر ترفع أكتر من صورة مرة واحدة",
+    preparingOne: "بنجهّز صورة واحدة…",
+    preparingMany: "بنجهّز {n} صور…",
+    uploadingOne: "بنرفع صورة واحدة…",
+    uploadingMany: "بنرفع {n} صور…",
     imageAlt: "صورة {n}",
     primary: "رئيسية",
     moveEarlier: "نقل الصورة للأمام",
     moveLater: "نقل الصورة للخلف",
     remove: "إزالة الصورة",
-    empty: "لا توجد صور بعد.",
+    empty: "لسه مفيش صور.",
   },
 } satisfies Messages;
 
@@ -67,6 +67,8 @@ type Props =
       mode: "edit";
       productId: string;
       media: ProductMedia[];
+      /** Media this section doesn't show (the product's video), saved back alongside the pictures. */
+      keep?: ProductMedia[];
       onChanged: () => void;
       error?: undefined;
       onUploadingChange?: undefined;
@@ -182,7 +184,7 @@ export function ProductImagesSection(props: Props) {
     if (props.mode !== "edit") return;
     setSaving(true);
     try {
-      await apiClient.updateProduct(workspaceId, props.productId, { media: editItems });
+      await apiClient.updateProduct(workspaceId, props.productId, { media: [...editItems, ...(props.keep ?? [])] });
       toast.success(t.savedToast);
       props.onChanged();
     } catch (err) {
@@ -284,7 +286,7 @@ export function ProductImagesSection(props: Props) {
               >
                 <ProductImage media={m} alt={fmt(t.imageAlt, { n: i + 1 })} className="aspect-square w-full" />
                 {i === 0 && (
-                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
+                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
                     <Star className="size-3" aria-hidden /> {t.primary}
                   </span>
                 )}

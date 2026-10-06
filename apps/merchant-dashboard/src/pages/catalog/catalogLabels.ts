@@ -15,7 +15,7 @@ const LABELS = {
   },
   ar: {
     status_draft: "مسودة",
-    status_active: "نشط",
+    status_active: "شغّال",
     status_archived: "مؤرشف",
     type_physical: "منتج ملموس",
     type_digital: "منتج رقمي",

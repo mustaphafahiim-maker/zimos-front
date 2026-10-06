@@ -1,7 +1,37 @@
 import { Check, CircleAlert, Loader2 } from "lucide-react";
 import { Input, Label, cn } from "@store-builder/ui";
-import { ROOT_DOMAIN, slugRejectionMessage } from "@/lib/storeAddress";
+import { ROOT_DOMAIN } from "@/lib/storeAddress";
 import type { SlugCheckState } from "@/lib/useSlugCheck";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    label: "Store address",
+    checking: "Checking availability…",
+    available: "{address} is available",
+    empty: "This is the web address your customers will visit.",
+    checkFailed: "Couldn't check that address right now.",
+    reason_taken: "That address is already taken. Try another.",
+    reason_reserved: "That address is reserved and can't be used.",
+    reason_too_short: "Addresses need at least 3 characters.",
+    reason_too_long: "Addresses can be at most 63 characters.",
+    reason_invalid_format: "Use lowercase letters, numbers and hyphens only — and don't start or end with a hyphen.",
+    reason_other: "That address can't be used.",
+  },
+  ar: {
+    label: "عنوان المتجر",
+    checking: "بنشوف لو متاح…",
+    available: "{address} متاح",
+    empty: "ده العنوان اللي عملاءك هيفتحوه.",
+    checkFailed: "مقدرناش نتحقق من العنوان ده دلوقتي.",
+    reason_taken: "العنوان ده محجوز لمتجر تاني. جرّب غيره.",
+    reason_reserved: "العنوان ده محجوز للمنصة ومينفعش يتستخدم.",
+    reason_too_short: "العنوان لازم يكون ٣ حروف على الأقل.",
+    reason_too_long: "العنوان أقصاه ٦٣ حرف.",
+    reason_invalid_format: "استخدم حروف إنجليزي صغيرة وأرقام وشَرطات بس — ومن غير شَرطة في الأول أو الآخر.",
+    reason_other: "العنوان ده مينفعش يتستخدم.",
+  },
+} satisfies Messages;
 
 /**
  * The store address input, with the live verdict underneath it.
@@ -28,12 +58,15 @@ export function StoreAddressField({
   state: SlugCheckState;
   disabled?: boolean;
 }) {
+  const t = useT(STRINGS);
   const invalid = state.status === "unavailable";
+  const reasonText = (reason: string | undefined) => (t as Record<string, string>)[`reason_${reason}`] ?? t.reason_other;
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>Store address</Label>
+      <Label htmlFor={id}>{t.label}</Label>
       <div
+        dir="ltr"
         className={cn(
           "flex items-center rounded-[0.5rem] border border-line-strong bg-paper-raised pe-3 transition-colors focus-within:ring-2 focus-within:ring-primary/30",
           invalid && "border-danger focus-within:ring-danger/30",
@@ -77,23 +110,23 @@ export function StoreAddressField({
         {state.status === "checking" && (
           <>
             <Loader2 className="size-3.5 animate-spin" aria-hidden />
-            Checking availability…
+            {t.checking}
           </>
         )}
         {state.status === "available" && (
           <>
             <Check className="size-3.5" aria-hidden />
-            {value}.{ROOT_DOMAIN} is available
+            {fmt(t.available, { address: `${value}.${ROOT_DOMAIN}` })}
           </>
         )}
         {state.status === "unavailable" && (
           <>
             <CircleAlert className="size-3.5" aria-hidden />
-            {slugRejectionMessage(state.result.reason)}
+            {reasonText(state.result.reason)}
           </>
         )}
-        {state.status === "error" && state.message}
-        {state.status === "empty" && "This is the web address your customers will visit."}
+        {state.status === "error" && t.checkFailed}
+        {state.status === "empty" && t.empty}
       </p>
     </div>
   );

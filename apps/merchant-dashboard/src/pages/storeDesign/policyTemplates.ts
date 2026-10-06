@@ -1,12 +1,21 @@
 import type { LegalPolicyKey } from "@store-builder/api-client";
 
 /**
- * Starting points for the three legal policies, in Arabic and English. They
+ * Starting points for the four policies, in Arabic and English. They
  * are a draft for the merchant to read and adapt, not legal advice. The
  * {{store.*}} variables are filled in by the server when a policy is shown.
  */
 export const POLICY_TEMPLATES: Record<"ar" | "en", Record<LegalPolicyKey, string>> = {
   ar: {
+    shipping_policy: [
+      "سياسة الشحن والتوصيل — {{store.name}}",
+      "نوصّل لكل المحافظات التي تظهر في صفحة الطلب، ومصاريف الشحن تظهر قبل تأكيد الطلب.",
+      "بعد تسجيل طلبك نتواصل معك هاتفيًا أو عبر واتساب لتأكيده، ثم نسلّمه لشركة الشحن.",
+      "مدة التوصيل المعتادة من 2 إلى 5 أيام عمل حسب المحافظة، وقد تزيد في المواسم والعطلات.",
+      "الدفع عند الاستلام متاح، ويمكنك معاينة المنتج أمام المندوب قبل الدفع.",
+      "سيصلك رقم الشحنة ورابط تتبعها بمجرد خروجها، ويمكنك متابعة طلبك من صفحة تتبع الطلب.",
+      "إذا تعذّر التواصل معك لتسليم الطلب بعد عدة محاولات يعود الطلب إلينا. للاستفسار: {{store.phone}}.",
+    ].join("\n"),
     refund_policy: [
       "سياسة الاسترجاع والاستبدال — {{store.name}}",
       "يمكنك طلب استرجاع أو استبدال المنتج خلال 14 يومًا من تاريخ الاستلام.",
@@ -37,6 +46,15 @@ export const POLICY_TEMPLATES: Record<"ar" | "en", Record<LegalPolicyKey, string
     ].join("\n"),
   },
   en: {
+    shipping_policy: [
+      "Shipping and delivery policy — {{store.name}}",
+      "We deliver to every governorate listed on the order form; the shipping fee is shown before you confirm.",
+      "After you order we contact you by phone or WhatsApp to confirm it, then hand it to the courier.",
+      "Delivery usually takes 2 to 5 business days depending on the governorate, and may take longer in busy seasons and holidays.",
+      "Cash on delivery is available, and you may inspect the product in front of the courier before paying.",
+      "You receive the tracking number and link as soon as your parcel ships, and can follow it from the order tracking page.",
+      "If we cannot reach you to deliver after several attempts, the order comes back to us. Questions: {{store.phone}}.",
+    ].join("\n"),
     refund_policy: [
       "Refund and exchange policy — {{store.name}}",
       "You can ask to return or exchange a product within 14 days of receiving it.",

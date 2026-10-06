@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Table2 } from "lucide-react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
@@ -76,8 +76,8 @@ const STRINGS = {
     skuTaken: "أحد رموز SKU مستخدم لمتغير آخر.",
     cancel: "إلغاء",
     save: "حفظ {count} تغيير",
-    noChanges: "لا توجد تغييرات",
-    saving: "جارٍ الحفظ…",
+    noChanges: "مفيش تغييرات",
+    saving: "بنحفظ…",
     saved: "تم تحديث {count} متغير.",
   },
 } satisfies Messages;
@@ -153,10 +153,13 @@ export function VariantBulkEditor({
   productId,
   variants,
   onChanged,
+  skuNote,
 }: {
   productId: string;
   variants: Variant[];
   onChanged: () => void;
+  /** A warning about the SKUs, shown above the table (handoff 181). */
+  skuNote?: ReactNode;
 }) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
@@ -171,6 +174,7 @@ export function VariantBulkEditor({
         <EditorDialog
           productId={productId}
           variants={variants}
+          skuNote={skuNote}
           onClose={() => setOpen(false)}
           onSaved={() => {
             setOpen(false);
@@ -185,11 +189,13 @@ export function VariantBulkEditor({
 function EditorDialog({
   productId,
   variants,
+  skuNote,
   onClose,
   onSaved,
 }: {
   productId: string;
   variants: Variant[];
+  skuNote?: ReactNode;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -283,6 +289,7 @@ function EditorDialog({
       }
     >
       <div className="space-y-3">
+        {skuNote}
         {selected.size > 0 && (
           <div className="flex flex-wrap items-end gap-2 rounded-[0.5rem] bg-primary-soft px-3 py-2">
             <span className="self-center text-sm font-medium text-ink">{fmt(t.applyTo, { count: selected.size })}</span>

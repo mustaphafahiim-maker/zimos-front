@@ -6,6 +6,12 @@ import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
+import { OrderLineThumb } from "./OrderLineThumb";
+import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
+import { OrderBillingAddress, OrderCheckoutPhotos } from "./OrderCheckoutExtras";
+import { ShippingOptionNote } from "./ShippingOptionNote";
+import { PreorderLineNote } from "./PreorderLineNote";
+import { DeliveryEstimateNote } from "./DeliveryEstimateNote";
 
 const STRINGS = {
   en: {
@@ -44,10 +50,13 @@ const STRINGS = {
     rule_all_items_free: "Every product in the order ships free",
     rule_free_threshold: "Free: the order reached the free-shipping amount",
     rule_governorate_rate: "The governorate's shipping price",
+    rule_profile_rate: "The shipping group's price",
     rule_zone_rate: "Shipping zone rate",
     rule_zone_tier_price: "Zone price for the weight tier",
     rule_default_rate: "Default shipping price",
     rule_no_rate: "No shipping price was set",
+    // The store's own city/area price (Shipping → Places, handoff 164).
+    rule_store_place_rate: "City/area price",
     ruleExtras: "{rule} + {amount} in product extra fees",
   },
   ar: {
@@ -73,7 +82,7 @@ const STRINGS = {
     customer: "العميل",
     altPhone: "رقم بديل",
     shippingAddress: "عنوان الشحن",
-    noAddress: "لا يوجد عنوان شحن",
+    noAddress: "مفيش عنوان شحن",
     note: "ملاحظة",
     payment: "الدفع",
     internalNotes: "ملاحظات داخلية",
@@ -81,15 +90,17 @@ const STRINGS = {
     cancelUnconfirmedHint:
       "شحنة أُلغيت من لوحة تحكم شركة الشحن ما زالت تظهر كأنها تتحرك هناك. راجع لوحة تحكم الشركة؛ التفاصيل في قسم الشحنات.",
     listSep: "، ",
-    rule_no_destination: "لا يوجد عنوان، لذلك لم يُحتسب شحن",
+    rule_no_destination: "مفيش عنوان، لذلك لم يُحتسب شحن",
     rule_offer_override: "سعر الشحن الخاص بالعرض",
     rule_all_items_free: "كل منتجات الطلب مجانية الشحن",
     rule_free_threshold: "مجاني: بلغ الطلب حد الشحن المجاني",
     rule_governorate_rate: "سعر الشحن الخاص بالمحافظة",
+    rule_profile_rate: "سعر مجموعة الشحن",
     rule_zone_rate: "سعر منطقة الشحن",
     rule_zone_tier_price: "سعر المنطقة حسب شريحة الوزن",
     rule_default_rate: "سعر الشحن الافتراضي",
-    rule_no_rate: "لم يكن هناك سعر شحن محدد",
+    rule_no_rate: "مكانش فيه سعر شحن متحدد",
+    rule_store_place_rate: "سعر المدينة/المنطقة",
     ruleExtras: "{rule} + {amount} رسوم إضافية للمنتجات",
   },
 } satisfies Messages;
@@ -103,7 +114,7 @@ function AmountRow({ label, value, strong }: { label: string; value: string; str
   );
 }
 
-export function OrderSummary({ order }: { order: Order }) {
+export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: () => void }) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const c = order.currency;
@@ -142,28 +153,34 @@ export function OrderSummary({ order }: { order: Order }) {
                 {order.items.map((item) => (
                   <tr key={item.id} className="border-b border-line last:border-0 align-top">
                     <td className="py-2 pe-3">
-                      <div className="font-medium text-ink">{item.productNameSnapshot}</div>
-                      {(item.isOrderBump || item.isUpsell) && (
-                        <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
-                          {item.isUpsell ? t.upsellBadge : t.bumpBadge}
-                        </span>
-                      )}
-                      {formatOptions(item.variantOptionsSnapshot) && (
-                        <div className="text-xs text-ink-soft">
-                          {formatOptions(item.variantOptionsSnapshot)}
+                      <div className="flex items-start gap-3">
+                        <OrderLineThumb item={item} className="size-12" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-ink">{item.productNameSnapshot}</div>
+                          {(item.isOrderBump || item.isUpsell) && (
+                            <span className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-dark dark:text-primary">
+                              {item.isUpsell ? t.upsellBadge : t.bumpBadge}
+                            </span>
+                          )}
+                          {formatOptions(item.variantOptionsSnapshot) && (
+                            <div className="text-xs text-ink-soft">
+                              {formatOptions(item.variantOptionsSnapshot)}
+                            </div>
+                          )}
+                          {item.offerNameSnapshot && (
+                            <div className="text-xs text-ink-soft">
+                              {t.offer}: {item.offerNameSnapshot}
+                            </div>
+                          )}
+                          {item.skuSnapshot && (
+                            <div className="text-xs text-ink-soft">
+                              {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
+                            </div>
+                          )}
+                          <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
+                          <PreorderLineNote item={item} />
                         </div>
-                      )}
-                      {item.offerNameSnapshot && (
-                        <div className="text-xs text-ink-soft">
-                          {t.offer}: {item.offerNameSnapshot}
-                        </div>
-                      )}
-                      {item.skuSnapshot && (
-                        <div className="text-xs text-ink-soft">
-                          {t.sku}: <bdi dir="ltr">{item.skuSnapshot}</bdi>
-                        </div>
-                      )}
-                      <CustomizationList customizations={item.customizations} className="mt-2" />
+                      </div>
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>
@@ -190,6 +207,8 @@ export function OrderSummary({ order }: { order: Order }) {
                   : t[`rule_${order.shippingSnapshot.rule as ShippingRule}`]}
               </p>
             )}
+            <ShippingOptionNote order={order} />
+            <DeliveryEstimateNote order={order} />
             <AmountRow label={t.tax} value={formatMoney(order.taxAmount, c)} />
             <AmountRow label={t.total} value={formatMoney(order.totalAmount, c)} strong />
             {Number(order.amountPaid) > 0 && <AmountRow label={t.paid} value={formatMoney(order.amountPaid, c)} />}
@@ -235,7 +254,13 @@ export function OrderSummary({ order }: { order: Order }) {
             <h3 className="mb-1 font-medium text-ink">{t.customer}</h3>
             <p className="text-ink-soft">{order.contactSnapshot?.fullName || "—"}</p>
             <p className="text-ink-soft">
-              {order.contactSnapshot?.phone ? <bdi dir="ltr">{order.contactSnapshot.phone}</bdi> : "—"}
+              {order.contactSnapshot?.phone ? (
+                <a href={`tel:${order.contactSnapshot.phone.replace(/[^\d+]/g, "")}`} className="hover:text-primary">
+                  <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
+                </a>
+              ) : (
+                "—"
+              )}
             </p>
             {order.contactSnapshot?.alternatePhone && (
               <p className="text-ink-soft">
@@ -247,16 +272,20 @@ export function OrderSummary({ order }: { order: Order }) {
                 <bdi dir="ltr">{order.contactSnapshot.email}</bdi>
               </p>
             )}
+            <OrderContactTools order={order} onChanged={onChanged} />
           </div>
           <div>
             <h3 className="mb-1 font-medium text-ink">{t.shippingAddress}</h3>
             <p className="text-ink-soft">{addressText}</p>
+            <OrderAddressTools order={order} />
             {address?.notes && (
               <p className="text-ink-soft">
                 {t.note}: {address.notes}
               </p>
             )}
           </div>
+          <OrderBillingAddress order={order} />
+          <OrderCheckoutPhotos order={order} />
           <div>
             <h3 className="mb-1 font-medium text-ink">{t.payment}</h3>
             <p className="text-ink-soft">

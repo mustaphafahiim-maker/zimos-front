@@ -2,7 +2,7 @@ import { RiskBadge, RiskFilter, useRiskParam } from "@/pages/fraud/RiskBadge";
 import { NetworkScoresProvider, OrderNetworkRate } from "@/pages/fraud/NetworkRate";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Search, X } from "lucide-react";
+import { CalendarDays, Ellipsis, Plus, Search, ShoppingBag, X } from "lucide-react";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
   ORDER_SORTS,
@@ -21,28 +21,34 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoney } from "@/lib/format";
 import { useListSort } from "@/lib/listSort";
 import { providerName } from "@/lib/providers";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages, getIntlLocale } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadMore } from "@/components/LoadMore";
 import { Select } from "@/components/Select";
+import { ContactActions } from "@/components/ContactActions";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { storeUrl } from "@/lib/storeAddress";
+import { EmptyState } from "@/components/EmptyState";
 import { useNow } from "@/pages/confirmation/confirmationRoles";
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderTimelineLines } from "./components/OrderTimelineLines";
 import { ExportOrders } from "./components/ExportOrders";
 import { rememberOrdersListQuery } from "./orderListQuery";
 import { OrderBulkBar } from "./components/OrderBulkBar";
+import { SelectAllMatching } from "./components/SelectAllMatching";
 import { OrderListDocuments } from "./components/OrderDocuments";
-import { ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
+import { OrderColumnCell } from "./components/OrderColumnCell";
+import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
 import {
   OrderFilterBar,
   useColumnLabel,
   useOrderExtraFilters,
   useOrderListPrefs,
-  useSourceLabel,
   type OrderColumn,
 } from "./components/OrderListFilters";
+import { OrdersHeaderTools } from "./components/OrdersHeaderTools";
 
 const STRINGS = {
   en: {
@@ -51,13 +57,22 @@ const STRINGS = {
     tabsLabel: "Filter orders by stage",
     tabAll: "All",
     searchLabel: "Search orders",
-    searchPlaceholder: "Order number, name, email or phone",
-    searchHint: "Matches the order number, customer name or email, or the full phone number.",
+    searchPlaceholder: "Order #, name, phone or its last 4 digits, waybill",
+    searchHint: "Matches the order number, customer name or email, the phone (or just its last 4+ digits), or a courier waybill number.",
+    today: "Today",
+    last7: "Last 7 days",
+    last30: "Last 30 days",
     searchTooShort: "Type at least 2 characters to search.",
     clearSearch: "Clear search",
     from: "From",
     to: "To",
-    datesHint: "Dates are matched in UTC — Cairo time is 2–3 hours ahead.",
+    datesHint: "Days follow this device's clock.",
+    dates: "Date",
+    tools: "More tools",
+    emptyAllTitle: "No orders yet",
+    emptyAllBody: "The moment a customer orders from your store, the order shows up here — and on your home screen.",
+    emptyShare: "Open your store",
+    emptyTest: "Create an order by hand",
     rangeInvalid: "The start date is after the end date, so the dates aren't applied.",
     clearFilters: "Clear filters",
     countsFailed: "Couldn't load the tab counts.",
@@ -79,28 +94,37 @@ const STRINGS = {
     loadMoreFailed: "Couldn't load more orders.",
     phoneLabel: "Phone",
     unseen: "Not seen yet",
-    createOrder: "Create order",
+    createOrder: "New order",
     selectAll: "Select all orders shown",
     selectOrder: "Select order {number}",
     test: "Test",
   },
   ar: {
     title: "الأوردرات",
-    description: "كل الأوردرات، مجمّعة حسب حالتها الآن.",
-    tabsLabel: "تصفية الأوردرات حسب المرحلة",
+    description: "كل الأوردرات، متقسّمة حسب هي فين دلوقتي.",
+    tabsLabel: "فلترة الأوردرات حسب المرحلة",
     tabAll: "الكل",
     searchLabel: "البحث في الأوردرات",
-    searchPlaceholder: "رقم الأوردر أو الاسم أو البريد أو الهاتف",
-    searchHint: "يبحث في رقم الأوردر أو اسم العميل أو بريده، أو رقم الهاتف كاملًا.",
-    searchTooShort: "اكتب حرفين على الأقل للبحث.",
-    clearSearch: "مسح البحث",
+    searchPlaceholder: "رقم الأوردر، الاسم، الموبايل أو آخر ٤ أرقام، البوليصة",
+    searchHint: "بيدوّر في رقم الأوردر، اسم العميل أو إيميله، الموبايل (أو آخر ٤ أرقام منه)، أو رقم البوليصة.",
+    today: "النهارده",
+    last7: "آخر 7 أيام",
+    last30: "آخر 30 يوم",
+    searchTooShort: "اكتب حرفين على الأقل عشان ندوّر.",
+    clearSearch: "امسح البحث",
     from: "من",
-    to: "إلى",
-    datesHint: "تتم مطابقة التواريخ بتوقيت UTC — توقيت القاهرة متقدم بساعتين إلى ثلاث.",
-    rangeInvalid: "تاريخ البداية بعد تاريخ النهاية، لذلك لم يتم تطبيق التواريخ.",
-    clearFilters: "مسح عوامل التصفية",
-    countsFailed: "تعذّر تحميل أعداد التبويبات.",
-    retry: "حاول مرة أخرى",
+    to: "لحد",
+    datesHint: "الأيام بتوقيت الجهاز ده.",
+    dates: "التاريخ",
+    tools: "أدوات تانية",
+    emptyAllTitle: "لسه مفيش أوردرات",
+    emptyAllBody: "أول ما عميل يطلب من متجرك، الأوردر هيظهر هنا وفي الصفحة الرئيسية.",
+    emptyShare: "افتح متجرك",
+    emptyTest: "اعمل أوردر بإيدك",
+    rangeInvalid: "تاريخ البداية بعد تاريخ النهاية، فمطبّقناش التواريخ.",
+    clearFilters: "امسح الفلاتر",
+    countsFailed: "معرفناش نجيب الأعداد.",
+    retry: "جرّب تاني",
     colOrder: "الأوردر",
     colCustomer: "العميل",
     colTotal: "الإجمالي",
@@ -108,19 +132,19 @@ const STRINGS = {
     colPayment: "الدفع",
     colTimeline: "الطلب / التأكيد",
     sortLabel: "الترتيب",
-    sort_newest: "الأحدث أولًا",
-    sort_oldest: "الأقدم أولًا",
-    sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
-    sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
-    emptyAll: "لا توجد أوردرات بعد. ستظهر هنا أوردرات متجرك.",
-    emptyStage: "لا توجد أوردرات في «{stage}» حاليًا.",
-    emptyFiltered: "لا توجد أوردرات تطابق هذا البحث والتواريخ.",
-    loadMoreFailed: "تعذّر تحميل المزيد من الأوردرات.",
-    phoneLabel: "الهاتف",
-    unseen: "لم يُشاهد بعد",
-    createOrder: "إنشاء أوردر",
-    selectAll: "تحديد كل الأوردرات المعروضة",
-    selectOrder: "تحديد الأوردر {number}",
+    sort_newest: "الأحدث الأول",
+    sort_oldest: "الأقدم الأول",
+    sort_total_desc: "الأغلى الأول",
+    sort_total_asc: "الأرخص الأول",
+    emptyAll: "لسه مفيش أوردرات. أوردرات متجرك هتظهر هنا.",
+    emptyStage: "مفيش أوردرات في «{stage}» دلوقتي.",
+    emptyFiltered: "مفيش أوردرات بالبحث والتواريخ دي.",
+    loadMoreFailed: "معرفناش نجيب أوردرات أكتر.",
+    phoneLabel: "الموبايل",
+    unseen: "محدش فتحه لسه",
+    createOrder: "أوردر جديد",
+    selectAll: "اختار كل الأوردرات اللي ظاهرة",
+    selectOrder: "اختار الأوردر {number}",
     test: "تجريبي",
   },
 } satisfies Messages;
@@ -129,6 +153,24 @@ const SEARCH_DEBOUNCE_MS = 300;
 const SEARCH_MIN = 2;
 const SEARCH_MAX = 100;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "2026-10-06" for a moment, on this device's calendar (Cairo for an Egyptian merchant), not UTC's. */
+function localDay(at: number): string {
+  const d = new Date(at);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * The device's time zone (Africa/Cairo for an Egyptian merchant). Sent with
+ * the dates so the API reads "6 Oct" as that whole day there, not in UTC.
+ */
+function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** `value`, once it has stopped changing for `delayMs`. */
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -186,6 +228,7 @@ function useOrderFilters() {
       q: q || undefined,
       from: rangeInvalid ? undefined : from || undefined,
       to: rangeInvalid ? undefined : to || undefined,
+      tz: !rangeInvalid && (from || to) ? deviceTimeZone() : undefined,
     },
     hasSearchFilters: Boolean(q || from || to),
     update,
@@ -249,6 +292,16 @@ export function OrdersListPage() {
   const allSelected = list.items.length > 0 && list.items.every((o) => selected.has(o.id));
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(list.items.map((o) => o.id)));
 
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const { currentWorkspace } = useWorkspace();
+  const storeLink = currentWorkspace?.slug ? storeUrl(currentWorkspace.slug) : null;
+  // A store with no orders at all (not a filter that matched none): guide, don't just say "empty".
+  const noOrdersAtAll =
+    !list.loading && !list.error && list.items.length === 0 && pipeline.data?.total === 0 &&
+    !stage && !filters.hasSearchFilters && extra.active.length === 0 && !risk.risk;
+  // The date range opens by itself when the link already carries one.
+  const [datesOpen, setDatesOpen] = useState(() => Boolean(filters.from || filters.to));
+
   const emptyMessage = filters.hasSearchFilters || extra.active.length > 0
     ? t.emptyFiltered
     : stage
@@ -262,6 +315,23 @@ export function OrdersListPage() {
         description={t.description}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* On a phone the secondary tools fold behind one button; New order stays in reach. */}
+            <Button
+              variant="outline"
+              className="min-h-11 md:hidden"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen((v) => !v)}
+            >
+              <Ellipsis className="size-4" aria-hidden />
+              {t.tools}
+            </Button>
+            <div className={cn("flex-wrap items-center justify-end gap-2 md:flex", toolsOpen ? "flex basis-full md:basis-auto" : "hidden")}>
+            <OrdersHeaderTools
+              onRefresh={() => {
+                list.reload();
+                pipeline.refresh({ silent: true });
+              }}
+            />
             <OrderListDocuments
               onImported={() => {
                 list.reload();
@@ -269,30 +339,52 @@ export function OrdersListPage() {
               }}
             />
             <ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />
+            </div>
             <Link
               to="/orders/new"
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius)] bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
+              <Plus className="size-4" aria-hidden />
               {t.createOrder}
             </Link>
           </div>
         }
       />
 
-      <SearchAndDates filters={filters} />
+      <SearchAndDates filters={filters} showDates={datesOpen} />
 
-      <OrderFilterBar filters={extra} prefs={prefs} />
-
-      <SortPicker value={sort} onChange={setSort} />
-
-      <RiskFilter />
-
+      {/* The stage first: it is what a merchant switches most. */}
       <StageTabs
         value={stage}
         onChange={(next) => filters.update({ stage: next })}
         pipeline={pipeline.data}
         countsLoading={pipeline.loading}
       />
+
+      <OrderFilterBar
+        filters={extra}
+        prefs={prefs}
+        leading={
+          <>
+            <Button
+              variant={datesOpen || filters.from || filters.to ? "secondary" : "outline"}
+              size="sm"
+              className="min-h-11 gap-1.5"
+              aria-expanded={datesOpen}
+              onClick={() => setDatesOpen((v) => !v)}
+            >
+              <CalendarDays className="size-4" aria-hidden />
+              {filters.from || filters.to ? `${filters.from || "…"} → ${filters.to || "…"}` : t.dates}
+            </Button>
+            <SortPicker value={sort} onChange={setSort} />
+          </>
+        }
+      />
+
+      {/* Risk tabs: always on a wide screen; on a phone only while one is picked. */}
+      <div className={cn(risk.risk ? "block" : "hidden md:block")}>
+        <RiskFilter counts={orderRiskCountsOf(pipeline.data)} />
+      </div>
       {pipeline.error != null && (
         <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-danger" role="alert">
           {t.countsFailed}
@@ -312,7 +404,38 @@ export function OrdersListPage() {
           pipeline.refresh({ silent: true });
         }}
       />
+      <SelectAllMatching
+        params={{ stage: stage ?? undefined, sort, ...fullQuery }}
+        pageCount={list.items.length}
+        selectedCount={selected.size}
+        allPageSelected={allSelected}
+        hasMore={list.hasMore}
+        total={pipeline.data ? (stage ? pipeline.data.stages[stage] : pipeline.data.total) : undefined}
+        onSelect={(ids) => setSelected(new Set(ids))}
+        onClear={() => setSelected(new Set())}
+      />
 
+      {noOrdersAtAll ? (
+        <EmptyState
+          icon={<ShoppingBag aria-hidden />}
+          title={t.emptyAllTitle}
+          description={t.emptyAllBody}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button asChild className="min-h-11">
+                <Link to="/orders/new">{t.emptyTest}</Link>
+              </Button>
+              {storeLink && (
+                <Button variant="outline" asChild className="min-h-11">
+                  <a href={storeLink} target="_blank" rel="noreferrer">
+                    {t.emptyShare}
+                  </a>
+                </Button>
+              )}
+            </div>
+          }
+        />
+      ) : (
       <DataState
         loading={list.loading}
         error={list.items.length ? null : list.error}
@@ -342,6 +465,7 @@ export function OrdersListPage() {
         )}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
+      )}
 
       {filters.hasSearchFilters && list.items.length === 0 && !list.loading && !list.error && (
         <div className="mt-3 flex justify-center">
@@ -360,7 +484,7 @@ export function OrdersListPage() {
 
 // ---------------------------------------------------------------------------
 
-function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilters> }) {
+function SearchAndDates({ filters, showDates }: { filters: ReturnType<typeof useOrderFilters>; showDates: boolean }) {
   const t = useT(STRINGS);
   const searchId = useId();
   const hintId = useId();
@@ -391,7 +515,7 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
   const tooShort = draft.trim().length > 0 && draft.trim().length < SEARCH_MIN;
 
   return (
-    <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="mb-3 grid gap-3">
       <div>
         <label htmlFor={searchId} className="sr-only">
           {t.searchLabel}
@@ -425,12 +549,13 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
             </button>
           )}
         </div>
-        <p id={hintId} className={cn("mt-1 text-xs", tooShort ? "text-accent-dark" : "text-ink-soft")} aria-live="polite">
+        <p id={hintId} className={cn("mt-1 text-xs", tooShort ? "text-accent-dark" : "hidden text-ink-soft sm:block")} aria-live="polite">
           {tooShort ? t.searchTooShort : t.searchHint}
         </p>
       </div>
 
-      <fieldset className="min-w-0">
+      {showDates && (
+      <fieldset className="min-w-0 rounded-[var(--radius-card)] bg-paper-raised p-3 ring-1 ring-line">
         <legend className="sr-only">
           {t.from} / {t.to}
         </legend>
@@ -459,6 +584,29 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
             aria-describedby={datesHintId}
             className="h-11 w-auto"
           />
+          {/* Shortcuts, on this device's calendar like the dates themselves. */}
+          {([
+            ["today", 0],
+            ["last7", 6],
+            ["last30", 29],
+          ] as const).map(([key, back]) => {
+            const day = (offset: number) => localDay(Date.now() - offset * 86_400_000);
+            const from = day(back);
+            const to = day(0);
+            const active = filters.from === from && filters.to === to;
+            return (
+              <Button
+                key={key}
+                variant={active ? "secondary" : "ghost"}
+                size="sm"
+                className="min-h-11"
+                aria-pressed={active}
+                onClick={() => update({ from, to })}
+              >
+                {t[key]}
+              </Button>
+            );
+          })}
           {(filters.from || filters.to) && (
             <Button
               variant="ghost"
@@ -479,6 +627,7 @@ function SearchAndDates({ filters }: { filters: ReturnType<typeof useOrderFilter
           </p>
         )}
       </fieldset>
+      )}
     </div>
   );
 }
@@ -489,15 +638,15 @@ function SortPicker({ value, onChange }: { value: OrderSort; onChange: (next: Or
   const t = useT(STRINGS);
   const id = useId();
   return (
-    <div className="mb-3 flex items-center justify-end gap-2">
-      <label htmlFor={id} className="text-sm text-ink-soft">
+    <div className="flex items-center gap-2">
+      <label htmlFor={id} className="sr-only">
         {t.sortLabel}
       </label>
       <Select
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value as OrderSort)}
-        className="h-11 w-auto min-w-48"
+        className="h-11 w-auto"
       >
         {ORDER_SORTS.map((key) => (
           <option key={key} value={key}>
@@ -519,6 +668,23 @@ function usePaymentLabel() {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * The stages in the order a cash-on-delivery order lives through them; waiting
+ * for an online payment (not a COD stage) and cancelled go last (re-audit N-25).
+ */
+const COD_STAGE_ORDER: readonly OrderStage[] = [
+  "pending_confirmation",
+  "needs_follow_up",
+  "ready_to_ship",
+  "shipped",
+  "out_for_delivery",
+  "delivery_failed",
+  "delivered",
+  "returned",
+  "awaiting_payment",
+  "cancelled",
+].filter((stage): stage is OrderStage => (ORDER_STAGES as readonly string[]).includes(stage));
 
 function StageTabs({
   value,
@@ -542,7 +708,7 @@ function StageTabs({
 
   const tabs: Array<{ key: OrderStage | null; label: string; count: number | undefined }> = [
     { key: null, label: t.tabAll, count: pipeline?.total },
-    ...ORDER_STAGES.map((stage) => ({
+    ...COD_STAGE_ORDER.map((stage) => ({
       key: stage,
       label: labels.stage(stage),
       count: pipeline?.stages[stage],
@@ -569,7 +735,9 @@ function StageTabs({
               "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               selected
                 ? "border-primary/40 bg-primary-soft text-primary-dark dark:text-primary"
-                : "border-line bg-paper-raised text-ink-soft hover:text-ink"
+                : "border-line bg-paper-raised text-ink-soft hover:text-ink",
+              // A stage with nothing in it steps back, so the busy ones stand out.
+              !selected && tab.key !== null && tab.count === 0 && "opacity-60"
             )}
           >
             {tab.label}
@@ -580,7 +748,7 @@ function StageTabs({
                 countsLoading && "opacity-50"
               )}
             >
-              {tab.count ?? "–"}
+              {tab.count === undefined ? "–" : new Intl.NumberFormat(getIntlLocale()).format(tab.count)}
             </span>
           </button>
         );
@@ -608,8 +776,6 @@ function OrdersTable({
 }) {
   const t = useT(STRINGS);
   const columnLabel = useColumnLabel();
-  const sourceLabel = useSourceLabel();
-  const show = (column: OrderColumn) => columns.includes(column);
   const labels = useOrderLabels();
   const paymentLabel = usePaymentLabel();
   // One clock for the whole list, so every row's "3 hours ago" moves together.
@@ -628,54 +794,83 @@ function OrdersTable({
 
   return (
     <>
-      {/* Phones and small tablets: one card per order. */}
-      <ul className="space-y-3 md:hidden">
-        {rows.map(({ order, stageLabel, flagged, meta }) => (
-          <li key={order.id}>
-            <Link
-              to={`/orders/${order.id}`}
-              className="block rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-primary"
+      <label className="mb-2 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm text-ink-soft md:hidden">
+        <input type="checkbox" className="size-5 cursor-pointer accent-primary" checked={allSelected} onChange={onToggleAll} />
+        {t.selectAll}
+      </label>
+      {/* Phones and small tablets: one card per order. The whole card opens the
+          order (a stretched link); the checkbox and the call / WhatsApp buttons
+          sit above it, so they work on their own. */}
+      <ul className="space-y-[var(--bento-gap)] md:hidden">
+        {rows.map(({ order, stageLabel, flagged, meta }) => {
+          const isSelected = selected.has(order.id);
+          return (
+            <li
+              key={order.id}
+              className={cn(
+                "relative rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 transition-colors",
+                isSelected ? "ring-2 ring-primary" : "ring-line"
+              )}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className={cn("text-ink", meta.isSeen ? "font-medium" : "font-bold")}>
-                  {!meta.isSeen && <UnseenDot label={t.unseen} />}
-                  <bdi dir="ltr">{order.orderNumber}</bdi>
-                </span>
-                <span className="text-sm text-ink">{formatMoney(order.totalAmount, order.currency)}</span>
+              <div className="flex items-start gap-3">
+                <label className="relative z-10 -m-2 flex size-11 shrink-0 cursor-pointer items-center justify-center">
+                  <input
+                    type="checkbox"
+                    className="size-5 cursor-pointer accent-primary"
+                    checked={isSelected}
+                    onChange={() => onToggle(order.id)}
+                    aria-label={fmt(t.selectOrder, { number: order.orderNumber })}
+                  />
+                </label>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      to={`/orders/${order.id}`}
+                      className={cn(
+                        "min-w-0 truncate text-[15px] text-ink after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary",
+                        meta.isSeen ? "font-medium" : "font-bold"
+                      )}
+                    >
+                      {!meta.isSeen && <UnseenDot label={t.unseen} />}
+                      <bdi>{order.contactSnapshot?.fullName || "—"}</bdi>
+                    </Link>
+                    <span className="shrink-0 text-[15px] font-semibold text-ink tabular-nums">
+                      <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-ink-soft">
+                    <bdi dir="ltr">{order.orderNumber}</bdi> · {paymentLabel(order)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {order.stage && stageLabel && (
+                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
+                    )}
+                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
+                    <RiskBadge order={order} />
+                    <OrderNetworkRate order={order} />
+                    {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} />}
+                    {meta.tags.map((tag) => (
+                      <StatusBadge key={tag} value={tag} tone="info" text={tag} />
+                    ))}
+                  </div>
+                  <OrderTimelineLines order={order} now={now} className="mt-2" />
+                  <ContactActions
+                    phone={order.contactSnapshot?.phone}
+                    name={order.contactSnapshot?.fullName}
+                    className="relative z-10 mt-3"
+                  />
+                </div>
               </div>
-              <div className="mt-1 text-sm text-ink-soft">
-                {order.contactSnapshot?.fullName || "—"}
-                {order.contactSnapshot?.phone && (
-                  <>
-                    {" · "}
-                    <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
-                  </>
-                )}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                {order.stage && stageLabel && (
-                  <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
-                )}
-                {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                <RiskBadge order={order} />
-                <OrderNetworkRate order={order} />
-                {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} />}
-                {meta.tags.map((tag) => (
-                  <StatusBadge key={tag} value={tag} tone="info" text={tag} />
-                ))}
-                <span className="ms-auto text-xs text-ink-soft">{paymentLabel(order)}</span>
-              </div>
-              <OrderTimelineLines order={order} now={now} className="mt-2" />
-            </Link>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {/* Tablet landscape and up: the table. */}
-      <div className="hidden overflow-x-auto rounded-[var(--radius-card)] border border-line md:block">
+      <div className="hidden overflow-x-auto rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+            <tr className="border-b border-line bg-paper-sunken/60 text-start text-xs text-ink-soft">
               <th scope="col" className="w-10 ps-4 py-3">
                 <input
                   type="checkbox"
@@ -688,32 +883,7 @@ function OrdersTable({
               <th scope="col" className="px-4 py-3 text-start font-medium">
                 {t.colOrder}
               </th>
-              {show("customer") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colCustomer}
-                </th>
-              )}
-              {show("total") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTotal}
-                </th>
-              )}
-              {show("payment") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colPayment}
-                </th>
-              )}
-              {show("stage") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colStage}
-                </th>
-              )}
-              {show("timeline") && (
-                <th scope="col" className="px-4 py-3 text-start font-medium">
-                  {t.colTimeline}
-                </th>
-              )}
-              {(["tags", "source", "governorate"] as const).filter(show).map((column) => (
+              {columns.map((column) => (
                 <th key={column} scope="col" className="px-4 py-3 text-start font-medium">
                   {columnLabel(column)}
                 </th>
@@ -751,53 +921,15 @@ function OrdersTable({
                   </Link>
                   {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} className="ms-2" />}
                 </td>
-                {show("customer") && (
-                <td className="px-4 py-3 text-ink-soft">
-                  <div className="text-ink">{order.contactSnapshot?.fullName || "—"}</div>
-                  {order.contactSnapshot?.phone && (
-                    <div className="text-xs">
-                      <span className="sr-only">{t.phoneLabel}: </span>
-                      <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
-                    </div>
-                  )}
-                </td>
-                )}
-                {show("total") && (
-                  <td className="px-4 py-3 text-ink-soft">{formatMoney(order.totalAmount, order.currency)}</td>
-                )}
-                {show("payment") && <td className="px-4 py-3 text-xs text-ink-soft">{paymentLabel(order)}</td>}
-                {show("stage") && (
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {order.stage && stageLabel && (
-                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
-                    )}
-                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                <RiskBadge order={order} />
-                <OrderNetworkRate order={order} />
-                  </div>
-                </td>
-                )}
-                {show("timeline") && (
-                  <td className="px-4 py-3">
-                    <OrderTimelineLines order={order} now={now} />
-                  </td>
-                )}
-                {show("tags") && (
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {meta.tags.length === 0 ? (
-                        <span className="text-ink-soft">—</span>
-                      ) : (
-                        meta.tags.map((tag) => <StatusBadge key={tag} value={tag} tone="info" text={tag} />)
-                      )}
-                    </div>
-                  </td>
-                )}
-                {show("source") && <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>}
-                {show("governorate") && (
-                  <td className="px-4 py-3 text-xs text-ink-soft">{order.shippingAddressSnapshot?.province || "—"}</td>
-                )}
+                {columns.map((column) => (
+                  <OrderColumnCell
+                    key={column}
+                    column={column}
+                    row={{ order, stageLabel, flagged, meta }}
+                    paymentLabel={paymentLabel(order)}
+                    now={now}
+                  />
+                ))}
               </tr>
             ))}
           </tbody>

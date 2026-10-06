@@ -1,5 +1,6 @@
 import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from "./analyticsEvents";
 import { sendToAdPixels } from "./adPixels";
+import { whenPixelsMay } from "./cookieConsent";
 
 /**
  * Commerce events. Two destinations:
@@ -32,6 +33,10 @@ export interface TrackData {
   contentName?: string;
   numItems?: number;
   orderId?: string;
+  /** Where an add-to-cart came from (lib/addSource.ts), e.g. cross_sell. */
+  source?: string;
+  /** The offer the source names (a cross-sell rule id), for the offers hub (offers/offerStats.js). */
+  sourceId?: string;
   /**
    * Shared by the browser pixels and the API's server-side copy of the event,
    * so each ad platform counts the two as one. Filled in by track(): a fresh
@@ -65,7 +70,7 @@ export function track(event: TrackEvent, input: TrackData = {}): void {
   if (typeof window === "undefined") return;
   const data: TrackData =
     event === "PageView" || input.orderId || input.eventId ? input : { ...input, eventId: newEventId() };
-  sendToAdPixels(event, data);
+  whenPixelsMay(() => sendToAdPixels(event, data)); // held on a store that asks first, until the shopper's choice is known
   const own = FIRST_PARTY[event];
   if (!own) return;
   try {
@@ -82,6 +87,8 @@ export function track(event: TrackEvent, input: TrackData = {}): void {
         ...(data.currency ? { currency: data.currency } : {}),
         ...(data.contentIds?.length ? { contentIds: data.contentIds } : {}),
         ...(data.numItems !== undefined ? { numItems: data.numItems } : {}),
+        ...(data.source ? { source: data.source } : {}),
+        ...(data.sourceId ? { sourceId: data.sourceId } : {}),
       },
     });
   } catch {

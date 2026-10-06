@@ -16,12 +16,14 @@ import {
   type Order,
   type Shipment,
   type ShipmentStatus,
+  shipmentDraftOf,
+  type ShipmentDraftInput,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useCarrierErrorMessage, useErrorMessage } from "@/lib/errorMessages";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney, placeName } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
@@ -52,6 +54,7 @@ import { BookingWeightField } from "./BookingWeightField";
 import { CityDistrictPicker, LevelAddressPicker, type PickerSource } from "./CarrierAddressPicker";
 import { TypedAddressNames, type TypedNamesProblem } from "./TypedAddressNames";
 import { useLevelLabel } from "./useLevelLabel";
+import { ShipmentDraftNote, ShipmentDraftSaveButton } from "./ShipmentDraftBar";
 
 const STATUSES: ShipmentStatus[] = [
   "created",
@@ -167,7 +170,7 @@ const STRINGS = {
   },
   ar: {
     title: "الشحنات",
-    empty: "لا توجد شحنات بعد.",
+    empty: "مفيش شحنات لسه.",
     manual: "يدوي",
     via: "عبر {carrier}",
     waybill: "رقم التتبع",
@@ -180,11 +183,11 @@ const STRINGS = {
     setStatus: "الحالة",
     statusUpdated: "تم تغيير حالة الشحنة إلى «{status}».",
     sync: "مزامنة الحالة",
-    syncing: "جارٍ المزامنة…",
+    syncing: "بنزامن…",
     syncChanged: "تم التحديث من {carrier}: {status}.",
     syncSame: "لا تغيير. حالة {carrier}: {state}.",
     label: "تنزيل البوليصة",
-    labelLoading: "جارٍ تجهيز البوليصة…",
+    labelLoading: "بنجهّز البوليصة…",
     failedNote:
       "الفشل ليس نهائيًا: قد تعيد شركة الشحن محاولة التوصيل. إذا انتهت الشحنة فعلًا، علّمها كملغاة لتتمكن من حجز شحنة جديدة.",
     carrierCreatedNote:
@@ -197,7 +200,7 @@ const STRINGS = {
       "هذا يغيّرها هنا فقط، ولن يتم التواصل مع {carrier}. تأكد من لوحة تحكم {carrier} أن الطرد لم يعد في الطريق، وإلا فقد يؤدي الحجز الجديد إلى طردين في الطريق.",
     markCancelledConfirm: "تعليم كملغاة",
     cancelShipment: "إلغاء الشحنة",
-    cancellingShipment: "جارٍ الإلغاء…",
+    cancellingShipment: "بنلغي…",
     cancelledToast: "تم تعليم الشحنة كملغاة. يمكنك حجز شحنة جديدة.",
     manualAck: "أُلغيت من لوحة تحكم {carrier}. أكّد ذلك {who}، {date}.",
     ackYou: "أنت",
@@ -219,7 +222,7 @@ const STRINGS = {
     methodNotConnectedHint: "غير مربوطة. اربطها من صفحة الشحن لتحجز من هنا.",
     courierGeneric: "شركة شحن",
     courierGenericHint: "تُحجز عبر حساب شركة شحن مربوط.",
-    chooseMethod: "اختر طريقة شحن هذا الأوردر.",
+    chooseMethod: "اختار طريقة شحن هذا الأوردر.",
     courierNotConnected: "اربط {carrier} من صفحة الشحن لتحجز من هنا.",
     courierUnavailable: "الحجز مع شركات الشحن غير متاح لمتجرك بعد.",
     or: " أو ",
@@ -227,16 +230,16 @@ const STRINGS = {
     carrierName: "اسم شركة الشحن",
     carrierNamePlaceholder: "مثلًا: أرامكس",
     carrierNameHint: "اختياري. اتركه فارغًا إذا كنت توصّل بنفسك.",
-    useCourierOption: "{carrier} مربوطة. اختر {carrier} بالأعلى لحجزها عبر حسابك.",
+    useCourierOption: "{carrier} مربوطة. اختار {carrier} بالأعلى لحجزها عبر حسابك.",
     connectCourierFirst:
-      "لا يمكن استخدام «{carrier}» كاسم شركة شحن يدوي. للشحن مع {carrier}، اربطها من صفحة الشحن ثم اختر خيار {carrier}.",
+      "لا يمكن استخدام «{carrier}» كاسم شركة شحن يدوي. للشحن مع {carrier}، اربطها من صفحة الشحن ثم اختار خيار {carrier}.",
     alreadyExistsToast: "لهذا الأوردر شحنة نشطة بالفعل، وتظهر الآن بالأعلى. ألغِها قبل إضافة شحنة أخرى.",
     trackingUrl: "رابط التتبع",
     create: "إضافة الشحنة",
-    creating: "جارٍ الإضافة…",
+    creating: "بنضيف…",
     createdToast: "تمت إضافة الشحنة.",
     codToCollect: "المبلغ المطلوب تحصيله",
-    noCod: "لا يوجد مبلغ للتحصيل: هذا الأوردر مدفوع مسبقًا.",
+    noCod: "مفيش مبلغ للتحصيل: هذا الأوردر مدفوع مسبقًا.",
     codOverLimit:
       "أقصى مبلغ تحصّله {carrier} عند الاستلام هو {limit}، ومبلغ هذا الأوردر {amount}. لا يمكن حجزه مع {carrier}؛ اشحنه يدويًا.",
     // Only Bosta declares a currency limit today (EGP), so this names it.
@@ -245,7 +248,7 @@ const STRINGS = {
     notConfirmedManual: "أكّد أوردر الدفع عند الاستلام قبل شحنه.",
     notPaidManual: "يجب دفع هذا الأوردر المدفوع مسبقًا قبل شحنه.",
     notPaid: "يجب دفع هذا الأوردر المدفوع مسبقًا قبل حجز شركة الشحن.",
-    noAddress: "لا يوجد عنوان شحن لهذا الأوردر.",
+    noAddress: "مفيش عنوان شحن لهذا الأوردر.",
     deliverTo: "التوصيل إلى",
     chooseAddress: "اختيار المدينة والمنطقة بنفسي",
     chooseArea: "اختيار منطقة التوصيل بنفسي",
@@ -253,7 +256,7 @@ const STRINGS = {
     notes: "ملاحظة للمندوب",
     notesHint: "اختياري، حتى 500 حرف.",
     book: "احجز مع {carrier}",
-    booking: "جارٍ الحجز مع {carrier}…",
+    booking: "بنحجز مع {carrier}…",
     bookedToast: "تم الحجز مع {carrier}. رقم التتبع {number}.",
     uncertainHint: "بعد أن تتأكد، أعد تحميل الصفحة لتحجز مرة أخرى.",
     timeoutNote: "إذا انتهت مهلة محاولة حجز سابقة، راجع لوحة تحكم {carrier} أولًا: قد تكون الشحنة موجودة هناك بالفعل.",
@@ -766,6 +769,9 @@ function CreateShipmentForm({
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const carrierError = useCarrierErrorMessage();
+  // The order's saved draft (ShipmentDraftBar) opens the form where it was left.
+  const saved = shipmentDraftOf(order);
+  const savedAddress = saved?.address;
 
   const { currentWorkspace } = useWorkspace();
   const connected = carriers.filter((c) => c.connection);
@@ -775,7 +781,7 @@ function CreateShipmentForm({
   // once it's known (booking stays one step), manual when there is none, and
   // no default when there are several to choose from. Whichever is booked,
   // the order keeps the shipping price the customer paid.
-  const [pickedMethod, setPickedMethod] = useState<Method | null>(null);
+  const [pickedMethod, setPickedMethod] = useState<Method | null>(saved ? saved.carrierCode : null);
   const usable = (code: string | null | undefined): code is Method =>
     code === MANUAL || connected.some((c) => c.code === code);
   const picked = usable(pickedMethod) ? pickedMethod : null;
@@ -794,25 +800,27 @@ function CreateShipmentForm({
   const cityDistrict = courier ? usesCityDistrict(courier) : true;
 
   // Manual
-  const [carrierName, setCarrierName] = useState("");
-  const [waybillNumber, setWaybillNumber] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
+  const [carrierName, setCarrierName] = useState(saved?.manual?.carrierName ?? "");
+  const [waybillNumber, setWaybillNumber] = useState(saved?.manual?.waybillNumber ?? "");
+  const [trackingUrl, setTrackingUrl] = useState(saved?.manual?.trackingUrl ?? "");
 
   // Courier
-  const [notes, setNotes] = useState("");
-  const [picker, setPicker] = useState<PickerSource | null>(null);
-  const [cityId, setCityId] = useState("");
-  const [districtId, setDistrictId] = useState("");
+  const [notes, setNotes] = useState(saved?.notes ?? "");
+  const [picker, setPicker] = useState<PickerSource | null>(
+    savedAddress?.cityId || savedAddress?.path?.length ? { kind: "free" } : null
+  );
+  const [cityId, setCityId] = useState(savedAddress?.cityId ?? "");
+  const [districtId, setDistrictId] = useState(savedAddress?.districtId ?? "");
   // Any other courier: one id per address level, top first.
-  const [areaPath, setAreaPath] = useState<string[]>([]);
+  const [areaPath, setAreaPath] = useState<string[]>(savedAddress?.path ?? []);
   // The courier refuses this account its address list: the merchant types
   // its names instead. `namesAsked` is a 422 CARRIER_ADDRESS_NAMES_REQUIRED
   // for that courier; a connection already marked shows them from the start.
   const [namesAsked, setNamesAsked] = useState<{ code: string; levels: string[] } | null>(null);
-  const [typedNames, setTypedNames] = useState<string[] | null>(null);
+  const [typedNames, setTypedNames] = useState<string[] | null>(savedAddress?.names ?? null);
   const [typedProblems, setTypedProblems] = useState<TypedNamesProblem[]>([]);
   // "" books with the order's own weight tier.
-  const [tierId, setTierId] = useState("");
+  const [tierId, setTierId] = useState(saved?.tierId ?? "");
   const [tierUnmapped, setTierUnmapped] = useState(false);
   // A create that got no answer may still exist at the courier. No retry
   // from this screen until the merchant has checked and reloaded.
@@ -940,6 +948,22 @@ function CreateShipmentForm({
     if (!picker) return undefined;
     if (cityDistrict) return cityId && districtId ? { cityId, districtId } : undefined;
     return isPathComplete(areaPath, levels) ? { path: areaPath } : undefined;
+  }
+
+  /** What the form holds, for "Save as draft". */
+  function draftOfForm(): ShipmentDraftInput | null {
+    if (!method) return null;
+    if (method === MANUAL) {
+      return { carrierCode: MANUAL, manual: { carrierName: carrierName.trim(), waybillNumber: waybillNumber.trim(), trackingUrl: trackingUrl.trim() } };
+    }
+    const address = typedLevels
+      ? { names: names.map((n) => n.trim()) }
+      : picker
+        ? cityDistrict
+          ? { cityId, districtId }
+          : { path: areaPath }
+        : undefined;
+    return { carrierCode: method, ...(address ? { address } : {}), ...(tierId ? { tierId } : {}), ...(notes.trim() ? { notes: notes.trim() } : {}) };
   }
 
   async function submitCourier(e: FormEvent) {
@@ -1094,6 +1118,7 @@ function CreateShipmentForm({
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-medium text-ink">{t.newShipment}</h3>
+      <ShipmentDraftNote order={order} onDiscarded={onCreated} />
 
       <MethodPicker
         legend={t.method}
@@ -1160,7 +1185,8 @@ function CreateShipmentForm({
               maxLength={500}
             />
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <ShipmentDraftSaveButton order={order} draft={draftOfForm} disabled={submitting} onSaved={onCreated} />
             <Button type="submit" className="min-h-11" disabled={submitting || manualBlockers.length > 0}>
               {submitting ? t.creating : t.create}
             </Button>
@@ -1183,7 +1209,7 @@ function CreateShipmentForm({
             <div>
               <p className="text-xs text-ink-soft">{t.deliverTo}</p>
               <p className="text-ink" dir="auto">
-                {address ? [address.province, address.city].filter(Boolean).join(" · ") || "—" : "—"}
+                {address ? [placeName(address.province), placeName(address.city)].filter(Boolean).join(" · ") || "—" : "—"}
               </p>
             </div>
           </div>
@@ -1279,7 +1305,8 @@ function CreateShipmentForm({
               conditional: after a reload the Book button is back. */}
           <p className="text-xs text-ink-soft">{fmt(t.timeoutNote, { carrier: courierName })}</p>
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <ShipmentDraftSaveButton order={order} draft={draftOfForm} disabled={submitting} onSaved={onCreated} />
             {!uncertain && (
               <Button
                 type="submit"

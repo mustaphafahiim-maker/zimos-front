@@ -1,3 +1,4 @@
+import { BuilderExtraElement, EXTRA_ELEMENT_TYPES } from "./builderExtras";
 import type {
   PageColumn,
   PageElement,
@@ -6,6 +7,8 @@ import type {
   PageTree,
 } from "@store-builder/api-client";
 import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
+import { setRequestMoneyFormat, type MoneyFormat } from "@/lib/moneyFormat";
+import { getStoreMeta } from "@/lib/storeMeta";
 import {
   CartElement,
   CollectionListElement,
@@ -48,6 +51,7 @@ import {
   PriceElement,
   ReviewsListElement,
   StarsDisplayElement,
+  CurrencyConverterElement,
   TabsElement,
   TextLinkElement,
   ToggleElement,
@@ -58,21 +62,60 @@ import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHoo
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
+import { animationAttributes, animationOf, pageHasAnimation } from "./elementAnimation";
+import { EntranceAnimations } from "./EntranceAnimations";
+import { FontAssets, treeFontRefs } from "@/lib/storeFonts";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
+import { HtmlBlock } from "@/components/HtmlBlock";
+import { MasonryGridElement, ProductActionElement, productAction } from "./builderMore";
+import { PageTagScope } from "./PageTagScope";
+import { displayRulesOf } from "@store-builder/api-client";
+import { DisplayRulesGate } from "./DisplayRulesGate";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
  * wrapped in a box its rules target; any other element is rendered bare, the
  * way it always was.
+ *
+ * Display rules (the Display tab, handoff 191): shoppers get the element
+ * through DisplayRulesGate, which shows it only to the visitors the rules
+ * allow. The editor's preview shows every element, and marks the ones with
+ * rules with a small «Rules» badge (in the same box, which the canvas reads
+ * like a style box).
  */
 function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   const key = styleKey(element);
-  if (!key) return <ElementNode element={element} ctx={ctx} />;
-  return (
-    <div data-zs={key}>
+  // An entrance animation also needs the box (elementAnimation.ts).
+  const animation = animationOf(element);
+  const rules = displayRulesOf(element);
+  if (rules && ctx.editable) {
+    return (
+      <div data-zs={key ?? ""} className="relative" {...(animation ? animationAttributes(animation) : {})}>
+        <ElementNode element={element} ctx={ctx} />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute end-1 top-1 z-10 rounded-full bg-black/80 px-2 py-0.5 text-[11px] font-semibold leading-4 text-white shadow-sm ring-1 ring-white/50"
+        >
+          {ctx.t.renderer.displayRules}
+        </span>
+      </div>
+    );
+  }
+  const body =
+    !key && !animation ? (
       <ElementNode element={element} ctx={ctx} />
-    </div>
+    ) : (
+      <div data-zs={key ?? undefined} {...(animation ? animationAttributes(animation) : {})}>
+        <ElementNode element={element} ctx={ctx} />
+      </div>
+    );
+  return rules ? (
+    <DisplayRulesGate rules={rules} workspaceId={ctx.workspaceId}>
+      {body}
+    </DisplayRulesGate>
+  ) : (
+    body
   );
 }
 
@@ -122,12 +165,32 @@ interface Ctx {
   data: BindingData | null;
   /** The page's product, for product elements that name none; "" when the page has none. */
   pageProductId: string;
+  /** The website page being shown (its published id): its tagging buttons and forms report it (PageTagScope). */
+  pageId?: string;
+}
+
+/** A website page's buy button or order form that tags the customer (SPEC §18.4, lib/pageTags.ts). */
+const TAGGING_TYPES = new Set(["button", "cod_form"]);
+const hasContactTags = (element: PageElement) => {
+  const raw = (propsOf(element) as { contactTags?: unknown }).contactTags;
+  return (Array.isArray(raw) ? raw : String(raw ?? "").split(",")).some((tag) => String(tag).trim() !== "");
+};
+
+function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+  const body = <ElementBody element={element} ctx={ctx} />;
+  // A funnel tags through its own outcomes (backend funnels/funnelTags.js); the editor's preview never orders.
+  if (!ctx.pageId || ctx.funnel || ctx.editable || !TAGGING_TYPES.has(element.type) || !hasContactTags(element)) return body;
+  return (
+    <PageTagScope workspaceId={ctx.workspaceId} pageId={ctx.pageId} elementId={String(element.id)}>
+      {body}
+    </PageTagScope>
+  );
 }
 
 /** Elements whose empty `productId` means "the page's product". */
-const PAGE_PRODUCT_TYPES = new Set(["price", "reviews_list", "cod_form"]);
+const PAGE_PRODUCT_TYPES = new Set(["button", "price", "reviews_list", "cod_form", "image_gallery", "variant_selector", "bundle_selector", "review_form"]);
 
-function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
+function ElementBody({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   // Bound props are replaced by live data before the element ever sees them.
   const bound = ctx.data ? applyBindings(element, ctx.data) : propsOf(element);
   // A product element with no product of its own follows the page's product.
@@ -149,6 +212,10 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
+      // "Add to cart" / "Buy now" (item 93) — on the store; a funnel keeps its own path below.
+      if (!ctx.funnel && productAction(props)) {
+        return <ProductActionElement props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;
+      }
       // In a funnel, a button with no link of its own moves the shopper on:
       // FunnelStep reports the click with this element's id, so the funnel
       // map can route each button of a page to a different step.
@@ -243,6 +310,8 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <CarouselElement props={props} />;
     case "stars_display":
       return <StarsDisplayElement props={props} t={t} />;
+    case "currency_converter":
+      return <CurrencyConverterElement props={props} t={t} />;
     case "price":
       return <PriceElement props={props} workspaceId={ctx.workspaceId} currency={ctx.currency} locale={ctx.locale} />;
     case "reviews_list":
@@ -257,9 +326,18 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       return <UpsellActionElement props={props} action="accepted_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
     case "upsell_decline_link":
       return <UpsellActionElement props={props} action="declined_offer" funnel={ctx.funnel} editable={ctx.editable} t={t} />;
+    // The merchant's own HTML, kept outside the tree (components/HtmlBlock.tsx).
+    case "html_block":
+      return <HtmlBlock blockId={String(props.blockId ?? "")} editable={ctx.editable} label={t.renderer.embedded} />;
     case "repeater":
       return <RepeaterElement props={props} product={ctx.data?.product ?? null} t={t} />;
     default:
+      // Pictures in columns of their own heights (item 93, ./builderMore).
+      if ((element.type as string) === "masonry_grid") return <MasonryGridElement props={props} />;
+      // Gallery with thumbnails, variant and bundle pickers, review form (./builderExtras).
+      if (EXTRA_ELEMENT_TYPES.has(element.type)) {
+        return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;
+      }
       // The showcase sections (./showcase) draw their own types; anything
       // else is a type this renderer does not know, and a tree written for a
       // newer one must not blank the page — so it draws nothing.
@@ -402,6 +480,7 @@ export async function PageRenderer({
   editable = false,
   funnel,
   siteStyles,
+  pageId,
 }: {
   tree: PageTree | null;
   workspaceId: string;
@@ -417,9 +496,13 @@ export async function PageRenderer({
   funnel?: PageRendererFunnel;
   /** The website's global styles: its named styles apply on every page (elementStyle.ts). */
   siteStyles?: unknown;
+  /** The published website page this is (its tagging buttons and forms report it); absent on funnel steps and previews. */
+  pageId?: string | null;
 }) {
   const sections = Array.isArray(tree?.sections) ? tree.sections : [];
   if (sections.length === 0) return null;
+  // The store's currency format, for the prices the elements below write on the server (lib/moneyFormat).
+  setRequestMoneyFormat(((await getStoreMeta(workspaceId).catch(() => null)) as { currencyFormat?: MoneyFormat } | null)?.currencyFormat ?? null);
   const ctx: Ctx = {
     workspaceId,
     currency,
@@ -430,6 +513,7 @@ export async function PageRenderer({
     // One load for the whole page; null (and no call at all) when nothing is bound.
     data: await loadBindingData(tree, workspaceId, currency, locale),
     pageProductId: pageProductId(tree),
+    pageId: pageId || undefined,
   };
   const hero = heroSectionIndex(sections);
   const css = pageStyleSheet(tree, siteStyles);
@@ -439,6 +523,8 @@ export async function PageRenderer({
     <div className="zt-sections divide-y divide-line">
       {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
+      {pageHasAnimation(tree) && <EntranceAnimations />}
+      <FontAssets refs={treeFontRefs(tree)} store={workspaceId} />
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />

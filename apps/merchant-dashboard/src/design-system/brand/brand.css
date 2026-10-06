@@ -1,0 +1,360 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap");
+
+/* The proposed ZIMOS identity, shown on a board that keeps its own colours:
+   a brand board is the same in light and dark mode. Everything is scoped to
+   .zb — no product token, :root value or shared component is touched. */
+.zb {
+  --zb-navy: #081f5c;
+  --zb-navy-deep: #061747;
+  --zb-blue: #165dff;
+  --zb-blue-hover: #0f4bd9;
+  --zb-blue-soft: #eaf0ff;
+  --zb-cyan: #12c8da;
+  --zb-surface: #f6f9ff;
+  --zb-white: #ffffff;
+  --zb-ink: #081f5c;
+  --zb-ink-soft: #56648c;
+  --zb-line: #e3e8f2;
+  --zb-danger: #c2362b;
+  --zb-radius: 12px;
+  background: var(--zb-white);
+  color: var(--zb-ink);
+  border: 1px solid var(--zb-line);
+  border-radius: 16px;
+  font-family: "Inter Variable", Inter, "Noto Sans Arabic", system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  line-height: 1.5;
+}
+/* In the base layer, so a utility such as border-[...] still wins. */
+@layer base {
+  .zb *,
+  .zb *::before,
+  .zb *::after {
+    border-color: var(--zb-line);
+  }
+}
+
+.zb-eyebrow,
+.zb-tagline {
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.zb-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--zb-blue);
+}
+.zb-h2 {
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.zb-soft {
+  color: var(--zb-ink-soft);
+}
+
+.zb-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--zb-line);
+  border-radius: var(--zb-radius);
+  background: var(--zb-white);
+}
+.zb-stage {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 9.5rem;
+  padding: 1.5rem;
+  color: var(--zb-navy);
+}
+.zb-stage[data-layout="top"] {
+  align-items: flex-start;
+  padding: 1rem;
+}
+.zb-stage[data-layout="tight"] {
+  padding: 1rem;
+}
+.zb-stage[data-layout="fill"] {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+.zb-stage[data-layout="bare"] {
+  min-height: 0;
+}
+.zb-stage[data-tone="surface"] {
+  background: var(--zb-surface);
+}
+.zb-stage[data-tone="navy"] {
+  background: var(--zb-navy);
+  color: #fff;
+}
+.zb-stage[data-tone="black"] {
+  background: #000;
+  color: #fff;
+}
+.zb-stage[data-tone="blue"] {
+  background: var(--zb-blue);
+  color: #fff;
+}
+.zb-stage[data-tone="busy"] {
+  background: repeating-linear-gradient(45deg, #12c8da 0 10px, #165dff 10px 20px, #081f5c 20px 30px);
+}
+.zb-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-top: 1px solid var(--zb-line);
+  font-size: 12px;
+}
+.zb-cap strong {
+  font-weight: 600;
+}
+.zb-mono {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+/* Buttons of the identity: flat, exact, one blue. */
+.zb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+.zb-btn:focus-visible {
+  outline: 2px solid var(--zb-blue);
+  outline-offset: 2px;
+}
+.zb-btn[data-variant="primary"] {
+  background: var(--zb-blue);
+  color: #fff;
+}
+.zb-btn[data-variant="primary"]:hover {
+  background: var(--zb-blue-hover);
+}
+.zb-btn[data-variant="navy"] {
+  background: var(--zb-navy);
+  color: #fff;
+}
+.zb-btn[data-variant="navy"]:hover {
+  background: var(--zb-navy-deep);
+}
+.zb-btn[data-variant="outline"] {
+  background: #fff;
+  border-color: #c5cee0;
+  color: var(--zb-navy);
+}
+.zb-btn[data-variant="outline"]:hover {
+  border-color: var(--zb-navy);
+}
+.zb-btn[data-variant="ghost"] {
+  background: transparent;
+  color: var(--zb-blue);
+}
+.zb-btn[data-variant="ghost"]:hover {
+  background: var(--zb-blue-soft);
+}
+.zb-btn[data-variant="danger"] {
+  background: #fff;
+  border-color: #e7b9b4;
+  color: var(--zb-danger);
+}
+.zb-btn[data-size="sm"] {
+  min-height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 13px;
+}
+.zb-btn[data-size="lg"] {
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  font-size: 15px;
+}
+.zb-btn:disabled {
+  cursor: not-allowed;
+  background: #eef1f7;
+  border-color: #eef1f7;
+  color: #8e99b5;
+}
+
+/* Product mock-ups. Sample content only. */
+.zb-win {
+  overflow: hidden;
+  border: 1px solid var(--zb-line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.zb-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid var(--zb-line);
+  background: var(--zb-surface);
+}
+.zb-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.zb-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cfd6e6;
+}
+.zb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 11rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--zb-line);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  background: #fff;
+  font-weight: 500;
+}
+.zb-side {
+  background: var(--zb-navy);
+  color: rgb(255 255 255 / 0.74);
+}
+.zb-side [aria-current="page"] {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+.zb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  background: var(--zb-blue-soft);
+  color: var(--zb-blue);
+  font-size: 10px;
+  font-weight: 600;
+}
+.zb-pill[data-tone="cyan"] {
+  background: #e3f9fb;
+  color: #08707b;
+}
+.zb-pill[data-tone="muted"] {
+  background: #eef1f7;
+  color: var(--zb-ink-soft);
+}
+.zb-field {
+  height: 1.75rem;
+  border: 1px solid #c5cee0;
+  border-radius: 6px;
+  background: #fff;
+}
+.zb-phone {
+  width: 13.5rem;
+  overflow: hidden;
+  border: 6px solid var(--zb-navy);
+  border-radius: 28px;
+  background: #fff;
+  font-size: 11px;
+}
+
+/* Supporting graphics: everything is cut on the mark's own diagonal. */
+.zb-cut {
+  clip-path: polygon(1.8rem 0, 100% 0, calc(100% - 1.8rem) 100%, 0 100%);
+}
+.zb-progress {
+  display: flex;
+  gap: 4px;
+}
+.zb-progress i {
+  flex: 1;
+  height: 8px;
+  border-radius: 2px;
+  background: #dbe2f0;
+  transform: skewX(-29deg);
+}
+.zb-progress i[data-done] {
+  background: var(--zb-blue);
+}
+.zb-progress i[data-current] {
+  background: var(--zb-cyan);
+}
+
+/* Motion: the three layers slide in from alternate sides and settle as the Z. */
+.zb-loader path {
+  animation: zb-assemble 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+.zb-loader path:nth-child(1) {
+  --zb-from: -38px;
+}
+.zb-loader path:nth-child(2) {
+  --zb-from: 38px;
+  animation-delay: 90ms;
+}
+.zb-loader path:nth-child(3) {
+  --zb-from: -38px;
+  animation-delay: 180ms;
+}
+@keyframes zb-assemble {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--zb-from));
+  }
+  28%,
+  82% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(var(--zb-from) * -1));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zb-loader path {
+    animation: none;
+  }
+}
+
+/* Misuse examples are crossed out, never shown as an option. */
+.zb-wrong {
+  position: relative;
+}
+.zb-wrong::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0.625rem;
+  inset-inline-end: 0.625rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background:
+    linear-gradient(45deg, transparent 44%, #fff 44% 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #fff 44% 56%, transparent 56%),
+    var(--zb-danger);
+}

@@ -1,6 +1,11 @@
 import type { Locale } from "./i18n";
+import { arOrEn } from "./i18n";
 
-/** All 27 Egyptian governorates. `code` is stable and what the form stores. */
+/**
+ * Egypt's 27 governorates and North Coast — the platform's places for Egypt
+ * (backend geo_regions; North Coast is priced and delivered to on its own).
+ * `code` is stable and what the form stores.
+ */
 export const GOVERNORATES = [
   { code: "cairo", ar: "القاهرة", en: "Cairo", zone: "metro" },
   { code: "giza", ar: "الجيزة", en: "Giza", zone: "metro" },
@@ -29,6 +34,7 @@ export const GOVERNORATES = [
   { code: "matrouh", ar: "مطروح", en: "Matrouh", zone: "remote" },
   { code: "north-sinai", ar: "شمال سيناء", en: "North Sinai", zone: "remote" },
   { code: "south-sinai", ar: "جنوب سيناء", en: "South Sinai", zone: "remote" },
+  { code: "north-coast", ar: "الساحل الشمالي", en: "North Coast", zone: "remote" },
 ] as const;
 
 export type Governorate = (typeof GOVERNORATES)[number];
@@ -41,7 +47,7 @@ export function findGovernorate(code: string): Governorate | undefined {
 
 export function governorateName(code: string, locale: Locale): string {
   const g = findGovernorate(code);
-  return g ? g[locale] : code;
+  return g ? g[arOrEn(locale)] : code;
 }
 
 export const EGYPT_MOBILE = /^01[0125]\d{8}$/;

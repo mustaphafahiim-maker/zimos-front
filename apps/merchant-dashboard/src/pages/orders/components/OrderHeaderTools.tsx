@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
-import { ordersInvoicePdf, ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
+import { orderListExtrasOf, ordersInvoicePdf, ordersMeta, ordersNeighbors, ordersUpdateMeta, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -52,8 +52,8 @@ const STRINGS = {
     next: "الأوردر التالي",
     copyLink: "نسخ رابط العميل",
     invoice: "الفاتورة",
-    invoicePreparing: "جارٍ التجهيز…",
-    invoiceNone: "لا توجد فاتورة لهذا الأوردر بعد: تصدر عند الدفع أو عند طلبه بالدفع عند الاستلام.",
+    invoicePreparing: "بنجهّز…",
+    invoiceNone: "مفيش فاتورة لهذا الأوردر بعد: تصدر عند الدفع أو عند طلبه بالدفع عند الاستلام.",
     archive: "أرشفة",
     unarchive: "استرجاع من الأرشيف",
     archiveTitle: "أرشفة هذا الأوردر؟",
@@ -61,7 +61,7 @@ const STRINGS = {
       "الأوردر يختفي من قائمة الأوردرات وأعدادها. لا يُحذف شيء: تجده تحت «المؤرشفة» ويمكنك استرجاعه.",
     archiveConfirm: "أرشفة الأوردر",
     keep: "إبقاء",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     archived: "تمت أرشفة الأوردر.",
     unarchived: "تم استرجاع الأوردر.",
     markTest: "تعليم كأوردر تجريبي",
@@ -72,7 +72,7 @@ const STRINGS = {
     badgeArchived: "مؤرشف",
     source: "المصدر",
     source_store: "المتجر",
-    source_funnel: "فانل",
+    source_funnel: "مسار بيع",
     source_manual: "يدوي",
     source_api: "API",
     source_import: "استيراد",
@@ -97,9 +97,12 @@ export function useMarkSeen(order: Order | null, onMarked: () => void) {
 export function OrderMetaBadges({ order }: { order: Order }) {
   const t = useT(STRINGS);
   const meta = ordersMeta(order);
+  // SPEC §4.3/§4.4: a funnel order names its funnel.
+  const funnelName = orderListExtrasOf(order).funnelName;
+  const sourceText = meta.source === "funnel" && funnelName ? `${t.source_funnel}: ${funnelName}` : t[`source_${meta.source}`];
   return (
     <>
-      <StatusBadge label={t.source} value={meta.source} tone="neutral" text={t[`source_${meta.source}`]} />
+      <StatusBadge label={t.source} value={meta.source} tone="neutral" text={sourceText} />
       {meta.isTest && <StatusBadge value="test" tone="warning" text={t.badgeTest} />}
       {meta.archivedAt && <StatusBadge value="archived" tone="neutral" text={t.badgeArchived} />}
     </>

@@ -17,6 +17,7 @@ import { RangeSwitch } from "@/components/RangeSwitch";
 import { Section } from "@/components/Section";
 import { BarChart } from "@/components/charts";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -32,8 +33,17 @@ const STRINGS = {
     projectedNoHistory: "Adds open orders, assuming all of them get delivered — no delivery history yet.",
     netProfit: "Net profit",
     margin: "Profit margin",
-    maxCpa: "Max affordable CPA",
+    maxCpa: "Most you can pay in ads per order",
     maxCpaHint: "Ad cost per placed order before you lose money",
+    answerUp: "You kept {amount} — {pct} of every pound you sold.",
+    answerDown: "You lost {amount} on what you sold.",
+    answerNone: "No finished orders in this period yet.",
+    answerBiggest: "The biggest cost was {cost}: {pct} of your sales.",
+    cost_costOfGoods: "the products themselves",
+    cost_shipping: "shipping and returns",
+    cost_fees: "collection and gateway fees",
+    cost_adSpend: "ads",
+    cost_zimosFees: "ZIMOS fees",
     deliveryRate: "Delivery rate",
     deliveryHint: "{delivered} delivered · {returned} returned · {open} open",
     statement: "Profit statement",
@@ -78,11 +88,20 @@ const STRINGS = {
     versionLabel: "نسخة الربح",
     actualHint: "الطلبات المنتهية فقط: المسلَّمة أو المرتجعة.",
     projectedHint: "يضيف الطلبات المفتوحة بافتراض تسليم {rate} منها (نسبة التسليم عندك).",
-    projectedNoHistory: "يضيف الطلبات المفتوحة بافتراض تسليمها كلها — لا يوجد سجل تسليم بعد.",
+    projectedNoHistory: "يضيف الطلبات المفتوحة بافتراض تسليمها كلها — مفيش سجل تسليم لسه.",
     netProfit: "صافي الربح",
     margin: "هامش الربح",
-    maxCpa: "أقصى تكلفة إعلان للطلب",
-    maxCpaHint: "تكلفة الإعلان لكل طلب مسجَّل قبل أن تخسر",
+    maxCpa: "أقصى تكلفة إعلان للأوردر",
+    maxCpaHint: "تدفع في الإعلان لحد كده للأوردر قبل ما تخسر",
+    answerUp: "فضلك {amount} — يعني {pct} من كل جنيه بعته.",
+    answerDown: "خسرت {amount} على اللي بعته.",
+    answerNone: "لسه مفيش أوردرات خلصت في الفترة دي.",
+    answerBiggest: "أكبر مصروف كان {cost}: {pct} من مبيعاتك.",
+    cost_costOfGoods: "تكلفة المنتجات نفسها",
+    cost_shipping: "الشحن والمرتجعات",
+    cost_fees: "رسوم التحصيل وبوابات الدفع",
+    cost_adSpend: "الإعلانات",
+    cost_zimosFees: "رسوم زيموس",
     deliveryRate: "نسبة التسليم",
     deliveryHint: "{delivered} مسلَّم · {returned} مرتجع · {open} مفتوح",
     statement: "قائمة الأرباح",
@@ -110,8 +129,8 @@ const STRINGS = {
     colMargin: "الهامش",
     colMaxCpa: "أقصى تكلفة إعلان",
     noCampaign: "بدون حملة",
-    noRows: "لا توجد طلبات منتهية في هذه الفترة بعد.",
-    coverageNone: "لا توجد تكلفة وحدة لأي منتج مسلَّم، فتكلفة البضاعة أقل من الحقيقة. أضف التكلفة على أنواع منتجاتك.",
+    noRows: "مفيش طلبات منتهية في هذه الفترة لسه.",
+    coverageNone: "مفيش تكلفة وحدة لأي منتج مسلَّم، فتكلفة البضاعة أقل من الحقيقة. أضف التكلفة على أنواع منتجاتك.",
     coveragePartial: "{rate} من القطع المسلَّمة لها تكلفة وحدة؛ والباقي محسوب بتكلفة صفر.",
     noCostsSet: "تكاليف الشحن والمرتجعات والرسوم كلها صفر. حدّدها مرة واحدة من صفحة التكاليف لترى ربحك الحقيقي.",
     setCosts: "حدّد التكاليف",
@@ -140,7 +159,9 @@ export function RealProfitPage() {
   );
   const data = report.data;
   const currency = data?.currency ?? "EGP";
-  const money = (v: number | null) => (v === null ? "—" : formatMoney(v, currency));
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (v: number | null) => (v === null ? "—" : formatMoney(...inReport(v, currency)));
   const pct = (v: number | null) => formatPercentValue(percentToRatio(v));
 
   const columns = useMemo<Column<ProfitRow>[]>(() => {
@@ -205,6 +226,7 @@ export function RealProfitPage() {
         description={t.description}
         actions={
           <>
+            <ReportCurrencySelect />
             <Button asChild variant="outline" size="sm">
               <Link to="/profit/costs">
                 <SlidersHorizontal className="size-4" aria-hidden />
@@ -257,6 +279,11 @@ export function RealProfitPage() {
               <Alert variant="info" className="text-sm">
                 {data.costCoverage === 0 ? t.coverageNone : fmt(t.coveragePartial, { rate: pct(data.costCoverage) })}
               </Alert>
+            )}
+
+            {/* The answer first (docs/ux/05-proposal.md §3): what was kept, and what ate the most of it. */}
+            {data.costCoverage !== 0 && (
+              <ProfitAnswer statement={statement} money={money} pct={(ratio) => formatPercentValue(ratio, 0)} t={t} />
             )}
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -326,6 +353,7 @@ export function RealProfitPage() {
               }
             >
               <DataTable
+            phoneCards={false}
                 columns={columns}
                 rows={groupBy === "day" ? [...finishedRows].reverse() : finishedRows}
                 rowKey={(r) => r.key || "__none"}
@@ -369,15 +397,68 @@ function ProfitByDay({
     () => profitGetPnl(apiClient, workspaceId, { ...rangeWindows(range).current, groupBy: "day" }),
     [workspaceId, range]
   );
+  const inReport = useReportMoney();
   if (!days.data) return <div className="h-[200px]" />;
   // Bars cannot go below the axis: losses are drawn as zero and named in the tooltip.
   return (
     <div dir="ltr">
       <BarChart
         points={days.data.rows.map((r) => ({ label: formatAxisDate(r.key), value: Math.max(0, r[version].netProfit) }))}
-        format={(v) => formatMoney(v, currency)}
+        format={(v) => formatMoney(...inReport(v, currency))}
         summary={summary}
       />
+    </div>
+  );
+}
+
+type CostKey = "costOfGoods" | "shipping" | "fees" | "adSpend" | "zimosFees";
+
+/** One sentence on the period: kept or lost, and the biggest cost as a share of sales. */
+function ProfitAnswer({
+  statement,
+  money,
+  pct,
+  t,
+}: {
+  statement: ProfitStatement;
+  money: (v: number | null) => string;
+  pct: (ratio: number) => string;
+  t: Record<string, string>;
+}) {
+  if (statement.revenue <= 0) {
+    return (
+      <div className="rounded-[var(--radius-card)] bg-paper-raised p-4 text-sm text-ink-soft shadow-[var(--shadow-card)] ring-1 ring-line sm:p-5">
+        {t.answerNone}
+      </div>
+    );
+  }
+  const costs: Record<CostKey, number> = {
+    costOfGoods: statement.costOfGoods,
+    shipping: statement.shipping + statement.returnShipping,
+    fees: statement.fees,
+    adSpend: statement.adSpend,
+    zimosFees: statement.zimosFees,
+  };
+  const biggest = (Object.keys(costs) as CostKey[]).reduce((a, b) => (costs[b] > costs[a] ? b : a));
+  const loss = statement.netProfit < 0;
+  return (
+    <div
+      className={cn(
+        "rounded-[var(--radius-card)] p-4 shadow-[var(--shadow-card)] sm:p-5",
+        loss ? "bg-danger-soft" : "bg-paper-raised ring-1 ring-line"
+      )}
+    >
+      <p className={cn("text-[17px] leading-7 font-semibold", loss ? "text-danger" : "text-ink")}>
+        {fmt(loss ? t.answerDown : t.answerUp, {
+          amount: money(Math.abs(statement.netProfit)),
+          pct: pct(Math.max(0, statement.netProfit) / statement.revenue),
+        })}
+      </p>
+      {costs[biggest] > 0 && (
+        <p className="mt-1 text-sm text-ink">
+          {fmt(t.answerBiggest, { cost: t[`cost_${biggest}`], pct: pct(costs[biggest] / statement.revenue) })}
+        </p>
+      )}
     </div>
   );
 }

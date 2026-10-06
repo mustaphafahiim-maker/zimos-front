@@ -36,6 +36,7 @@ import {
 } from "./trackerCore";
 import { captureAttribution, getSessionId, getVisitorId, type Attribution } from "./visitor";
 import { currentTouches, type Touches } from "./touches";
+import { consentBatchField } from "./cookieConsent";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -87,6 +88,8 @@ export interface TrackingContext {
   workspaceId: string;
   websiteId?: string;
   funnelId?: string;
+  /** The funnel step on screen: carried as metadata.stepKey, for the funnel's page performance. */
+  stepKey?: string;
   /** Free-form label carried on every event (Umami `data-tag`). */
   tag?: string;
 }
@@ -125,6 +128,9 @@ const MAX_NAME = 50;
 // --- context & options ------------------------------------------------------------
 
 let context: TrackingContext | null = null;
+// Events sent before any context existed (sendContextEvent), sent when it arrives.
+const MAX_WAITING = 10;
+const waiting: AnalyticsEvent[] = [];
 // Set while a merchant looks at a preview (StoreAnalytics): nothing is sent.
 let paused = false;
 let options: TrackerOptions = { ...DEFAULT_URL_OPTIONS, respectDnt: false };
@@ -139,6 +145,12 @@ let navigation: NavigationState | null = null;
 export function setTrackingContext(next: Partial<TrackingContext>) {
   const merged = { ...(context ?? {}), ...next };
   context = merged.workspaceId ? (merged as TrackingContext) : null;
+  // Events a page sent while the store's context was still being set up (an effect
+  // that ran first) go out now, instead of being lost.
+  if (context && waiting.length > 0) {
+    const ready = context;
+    for (const event of waiting.splice(0)) sendEvent(ready.workspaceId, event);
+  }
 }
 
 export function getTrackingContext(): TrackingContext | null {
@@ -256,6 +268,7 @@ function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean)
   if (Object.keys(attribution).length > 0) body.attribution = attribution;
   const touches = currentTouches();
   if (touches) body.touches = touches;
+  Object.assign(body, consentBatchField()); // the shopper's cookie choice, on a store that asks first
   try {
     const pixel = pixelInfo?.();
     if (pixel && Object.keys(pixel).length > 0) body.pixel = pixel;
@@ -331,6 +344,7 @@ export function sendEvent(workspaceId: string, event: AnalyticsEvent) {
     if (full.tag === undefined && ctx?.tag) full.tag = ctx.tag;
     if (full.websiteId === undefined && ctx?.websiteId) full.websiteId = ctx.websiteId;
     if (full.funnelId === undefined && ctx?.funnelId) full.funnelId = ctx.funnelId;
+    if (ctx?.stepKey && full.funnelId === ctx.funnelId) full.metadata = { ...(full.metadata ?? {}), stepKey: ctx.stepKey };
     for (const key of Object.keys(full) as Array<keyof AnalyticsEvent>) {
       if (full[key] === undefined || full[key] === "") delete full[key];
     }
@@ -348,7 +362,9 @@ export function sendEvent(workspaceId: string, event: AnalyticsEvent) {
  */
 export function sendContextEvent(event: AnalyticsEvent) {
   if (!context) {
-    if (typeof console !== "undefined") console.debug("[analytics] no tracking context; dropped", event.name);
+    // Held for the context the layout sets in a moment (a few at most; anything older is dropped).
+    if (waiting.length < MAX_WAITING) waiting.push(event);
+    else if (typeof console !== "undefined") console.debug("[analytics] no tracking context; dropped", event.name);
     return;
   }
   sendEvent(context.workspaceId, event);

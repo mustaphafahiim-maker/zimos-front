@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ExternalLink } from "lucide-react";
 import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
 import {
   ApiError,
+  isSwitchSetting,
   type PaymentGatewayInfo,
   type PaymentMethodEntry,
 } from "@store-builder/api-client";
@@ -18,6 +19,16 @@ import { PageHeader } from "@/components/PageHeader";
 import { ManualTransferSettings } from "./ManualTransferSettings";
 import { PaymentRulesSettings } from "./PaymentRulesSettings";
 import { CurrencySettings } from "./CurrencySettings";
+import {
+  ExpressWalletBadges,
+  GatewayCurrencyNote,
+  SettingSwitch,
+  isOptionalCredential,
+  useGatewayKeyProblem,
+  useGatewayWebhookNotes,
+  useMethodLabel,
+  useMethodNames,
+} from "./ExpressPayments";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -78,7 +89,6 @@ const STRINGS = {
     recheck: "Check the account again",
     rechecking: "Checking…",
     recheckedToast: "{name} account checked.",
-    methodNames: "card|mobile wallet",
     saveIds: "Save",
     disconnect: "Disconnect",
     disconnectTitle: "Disconnect {name}?",
@@ -90,8 +100,6 @@ const STRINGS = {
     methodListHint:
       "Choose which methods shoppers see and in what order. One gateway per method: turning one on turns the other gateway's same method off. At least one must stay on.",
     methodCod: "Cash on delivery",
-    methodCard: "{name}: card",
-    methodWallet: "{name}: mobile wallet",
     methodUnavailable: "Not connected",
     moveUp: "Move up",
     moveDown: "Move down",
@@ -118,7 +126,7 @@ const STRINGS = {
     testNote:
       "مفاتيح تجربة: الكارت والمحفظة يظهران في معاينة متجرك فقط وليس للعملاء الحقيقيين، والأوردرات المدفوعة في وضع التجربة لا يمكن شحنها.",
     previewButton: "جرّب الدفع في معاينة المتجر",
-    previewOpening: "جارٍ فتح المعاينة…",
+    previewOpening: "بنفتح المعاينة…",
     connectedSince: "مربوطة منذ {date}",
     lastWebhook: "آخر تحديث دفع وصل {date}",
     noWebhookYet: "لم يصل أي تحديث دفع بعد. تأكد أن رابط الـ webhook بالأسفل ملصوق في كل تكامل.",
@@ -134,34 +142,31 @@ const STRINGS = {
     credentialsTitle: "المفاتيح",
     credentialsHint: "تُحفظ مشفّرة ولا تظهر مرة أخرى.",
     methodsTitle: "طرق الدفع",
-    methodsHint: "أدخل رقم التكامل لكل طريقة تريد تقديمها.",
+    methodsHint: "اكتب رقم التكامل لكل طريقة تريد تقديمها.",
     submitConnect: "تحقق من المفاتيح واربط",
-    checking: "جارٍ التحقق مع {name}…",
+    checking: "بنتأكد مع {name}…",
     replaceKeys: "تغيير المفاتيح",
     editIds: "تعديل أرقام التكامل",
     accountMethods: "الطرق المتاحة في حساب {name}",
     recheck: "إعادة فحص الحساب",
-    rechecking: "جارٍ الفحص…",
-    recheckedToast: "تم فحص حساب {name}.",
-    methodNames: "كارت|محفظة إلكترونية",
+    rechecking: "بنفحص…",
+    recheckedToast: "اتفحص حساب {name}.",
     saveIds: "حفظ",
     disconnect: "إلغاء الربط",
     disconnectTitle: "إلغاء ربط {name}؟",
     disconnectDescription: "لن يستطيع العملاء الدفع عبر {name}. المدفوعات والاستردادات السابقة تبقى على أوردراتها.",
-    connectedToast: "تم ربط {name}.",
-    savedToast: "تم حفظ إعدادات {name}.",
-    disconnectedToast: "تم إلغاء ربط {name}.",
+    connectedToast: "اتربط {name}.",
+    savedToast: "اتحفظت إعدادات {name}.",
+    disconnectedToast: "اتفصل {name}.",
     methodListTitle: "طرق الدفع في صفحة الدفع",
     methodListHint:
-      "اختر الطرق التي يراها العملاء وترتيبها. بوابة واحدة لكل طريقة: تفعيل طريقة من بوابة يوقف نفس الطريقة من البوابة الأخرى. لازم تفضل طريقة واحدة على الأقل مفعّلة.",
+      "اختار الطرق التي يراها العملاء وترتيبها. بوابة واحدة لكل طريقة: تفعيل طريقة من بوابة يوقف نفس الطريقة من البوابة الأخرى. لازم تفضل طريقة واحدة على الأقل مفعّلة.",
     methodCod: "الدفع عند الاستلام",
-    methodCard: "{name}: كارت",
-    methodWallet: "{name}: محفظة إلكترونية",
     methodUnavailable: "غير مربوطة",
     moveUp: "تحريك لأعلى",
     moveDown: "تحريك لأسفل",
     saveMethods: "حفظ طرق الدفع",
-    methodsSaved: "تم حفظ طرق الدفع.",
+    methodsSaved: "اتحفظت طرق الدفع.",
     on: "مفعّلة",
   },
 } satisfies Messages;
@@ -192,7 +197,8 @@ export function PaymentsPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        tutorial="payments" title={t.title} description={t.description} />
       {!roleAllows ? (
         <Alert>{t.viewOnly}</Alert>
       ) : (
@@ -262,11 +268,18 @@ function GatewayCard({
   const connection = gateway.connection;
   // Kashier: the methods come from the account itself; only keys are typed in.
   const fromAccount = gateway.methodsFromAccount;
-  const [cardName, walletName] = t.methodNames.split("|");
+  // Integration IDs are typed in (Paymob); on/off settings are switches (Stripe's express wallets, handoff 183).
+  const idFields = gateway.settingFields.filter((f) => !isSwitchSetting(f));
+  const switchFields = gateway.settingFields.filter(isSwitchSetting);
+  const typesIds = idFields.length > 0;
+  const methodNames = useMethodNames();
+  const webhookNotes = useGatewayWebhookNotes(gateway);
+  const keyProblem = useGatewayKeyProblem();
 
   const [mode, setMode] = useState<CardMode>("view");
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [ids, setIds] = useState<Record<string, string>>({});
+  const [switches, setSwitches] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -276,13 +289,17 @@ function GatewayCard({
   function savedIds() {
     const settings = connection?.settings ?? {};
     return Object.fromEntries(
-      gateway.settingFields.map((f) => [f.key, settings[f.key] != null ? String(settings[f.key]) : ""])
+      idFields.map((f) => [f.key, settings[f.key] != null ? String(settings[f.key]) : ""])
     );
   }
+
+  // A switch is on unless saved off (the server's default is on).
+  const switchOn = (key: string) => connection?.settings?.[key] !== false;
 
   function openForm(next: CardMode) {
     setError(null);
     setIds(savedIds());
+    setSwitches(Object.fromEntries(switchFields.map((f) => [f.key, switchOn(f.key)])));
     setMode(next);
   }
 
@@ -293,14 +310,19 @@ function GatewayCard({
       setMode("view");
       return;
     }
-    setError(errorMessage(err));
+    setError(keyProblem(gateway.code, err) ?? errorMessage(err));
   }
 
   function settingsPayload() {
-    return Object.fromEntries(
-      gateway.settingFields.map((f) => [f.key, ids[f.key]?.trim() ? Number(ids[f.key].trim()) : null])
-    );
+    return {
+      ...Object.fromEntries(idFields.map((f) => [f.key, ids[f.key]?.trim() ? Number(ids[f.key].trim()) : null])),
+      ...switches,
+    };
   }
+
+  // An optional key left empty (Stripe's webhook signing secret) is not sent.
+  const typedCredentials = () =>
+    Object.fromEntries(Object.entries(credentials).filter(([, v]) => v.trim().length > 0));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -309,7 +331,7 @@ function GatewayCard({
     const wasConnected = Boolean(connection);
     try {
       await apiClient.connectPaymentGateway(workspaceId, gateway.code, {
-        ...(mode === "connect" ? { credentials } : {}),
+        ...(mode === "connect" ? { credentials: typedCredentials() } : {}),
         ...(fromAccount ? {} : { settings: settingsPayload() }),
       });
       setCredentials({});
@@ -334,6 +356,23 @@ function GatewayCard({
     } catch (err) {
       fail(err);
       onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** A switch on a connected card saves at once (the stored keys are checked again with it). */
+  async function saveSwitch(key: string, on: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.connectPaymentGateway(workspaceId, gateway.code, {
+        settings: { ...(connection?.settings ?? {}), [key]: on },
+      });
+      toast.success(fmt(t.savedToast, { name }));
+      onChanged();
+    } catch (err) {
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -372,9 +411,11 @@ function GatewayCard({
     }
   }
 
-  const credentialsComplete = gateway.credentialFields.every((f) => (credentials[f.key] ?? "").trim().length > 0);
-  const anyId = gateway.settingFields.some((f) => /^\d+$/.test((ids[f.key] ?? "").trim()));
-  const idsValid = gateway.settingFields.every((f) => !(ids[f.key] ?? "").trim() || /^\d+$/.test(ids[f.key].trim()));
+  const credentialsComplete = gateway.credentialFields.every(
+    (f) => isOptionalCredential(gateway.code, f) || (credentials[f.key] ?? "").trim().length > 0
+  );
+  const anyId = idFields.some((f) => /^\d+$/.test((ids[f.key] ?? "").trim()));
+  const idsValid = idFields.every((f) => !(ids[f.key] ?? "").trim() || /^\d+$/.test(ids[f.key].trim()));
 
   return (
     <div className="rounded-[var(--radius-card)] border border-line p-5">
@@ -413,6 +454,8 @@ function GatewayCard({
         )}
       </div>
 
+      <GatewayCurrencyNote gateway={gateway} />
+
       {connection?.status === "invalid" && mode === "view" && (
         <Alert variant="danger" className="mt-3">
           {fmt(t.invalidNote, { name })}
@@ -430,30 +473,41 @@ function GatewayCard({
               </Button>
             </div>
           )}
-          <p className={cn("text-sm", connection.lastWebhookAt ? "text-ink-soft" : "text-warning")}>
-            {connection.lastWebhookAt
-              ? fmt(t.lastWebhook, { date: formatDateTime(connection.lastWebhookAt) })
-              : gateway.webhookSetup.automatic
-                ? fmt(t.noWebhookYetAutomatic, { name })
-                : t.noWebhookYet}
-          </p>
+          {webhookNotes.pending && !connection.lastWebhookAt ? (
+            <p className="text-sm text-ink-soft">{webhookNotes.pending}</p>
+          ) : (
+            <p className={cn("text-sm", connection.lastWebhookAt ? "text-ink-soft" : "text-accent-dark")}>
+              {connection.lastWebhookAt
+                ? fmt(t.lastWebhook, { date: formatDateTime(connection.lastWebhookAt) })
+                : gateway.webhookSetup.automatic
+                  ? fmt(t.noWebhookYetAutomatic, { name })
+                  : t.noWebhookYet}
+            </p>
+          )}
           <WebhookUrl gateway={gateway} url={connection.webhookUrl} />
           <p className="text-sm text-ink-soft">
-            {fromAccount
-              ? `${fmt(t.accountMethods, { name })}: ${connection.methods
-                  .map((m) => (m === "card" ? cardName : walletName))
-                  .join(" · ")}`
-              : gateway.settingFields
+            {!typesIds
+              ? `${fmt(t.accountMethods, { name })}: ${methodNames(connection.methods)}`
+              : idFields
                   .filter((f) => connection.settings[f.key])
                   .map((f) => `${f.label[locale]}: ${String(connection.settings[f.key])}`)
                   .join(" · ")}
           </p>
+          {switchFields.map((f) => (
+            <SettingSwitch
+              key={f.key}
+              field={f}
+              checked={switchOn(f.key)}
+              disabled={!canManage || busy}
+              onChange={(on) => void saveSwitch(f.key, on)}
+            />
+          ))}
         </div>
       )}
 
       {canManage && connection && mode === "view" && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {fromAccount ? (
+          {!typesIds ? (
             <Button variant="outline" className="min-h-11" disabled={busy} onClick={recheck}>
               {busy ? t.rechecking : t.recheck}
             </Button>
@@ -508,12 +562,21 @@ function GatewayCard({
               ))}
             </fieldset>
           )}
-          {!fromAccount && (
+          {switchFields.map((field) => (
+            <SettingSwitch
+              key={field.key}
+              field={field}
+              checked={switches[field.key] ?? true}
+              disabled={busy}
+              onChange={(on) => setSwitches((s) => ({ ...s, [field.key]: on }))}
+            />
+          ))}
+          {typesIds && (
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium text-ink">{t.methodsTitle}</legend>
               <p className="text-xs text-ink-soft">{t.methodsHint}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                {gateway.settingFields.map((field) => (
+                {idFields.map((field) => (
                   <TextInput
                     key={field.key}
                     label={field.label[locale]}
@@ -539,7 +602,7 @@ function GatewayCard({
             <Button
               type="submit"
               className="min-h-11"
-              disabled={busy || (!fromAccount && (!anyId || !idsValid)) || (mode === "connect" && !credentialsComplete)}
+              disabled={busy || (typesIds && (!anyId || !idsValid)) || (mode === "connect" && !credentialsComplete)}
             >
               {busy ? fmt(t.checking, { name }) : mode === "connect" ? t.submitConnect : t.saveIds}
             </Button>
@@ -564,6 +627,8 @@ function GatewayCard({
 
 function WebhookUrl({ gateway, url }: { gateway: PaymentGatewayInfo; url: string }) {
   const t = useT(STRINGS);
+  const notes = useGatewayWebhookNotes(gateway);
+  if (notes.hideUrl) return null;
   return (
     <div className="space-y-1">
       <p className="text-sm font-medium text-ink">{t.webhookTitle}</p>
@@ -574,10 +639,11 @@ function WebhookUrl({ gateway, url }: { gateway: PaymentGatewayInfo; url: string
         <CopyButton value={url} label={t.copyWebhook} />
       </div>
       <p className="text-xs text-ink-soft">
-        {fmt(gateway.webhookSetup.automatic ? t.webhookHintAutomatic : t.webhookHint, {
-          field: gateway.webhookSetup.field,
-          name: gateway.name,
-        })}
+        {notes.hint ??
+          fmt(gateway.webhookSetup.automatic ? t.webhookHintAutomatic : t.webhookHint, {
+            field: gateway.webhookSetup.field,
+            name: gateway.name,
+          })}
       </p>
     </div>
   );
@@ -675,10 +741,8 @@ function MethodList({
   const [error, setError] = useState<string | null>(null);
 
   const nameOf = (provider: string | null) => gateways.find((g) => g.code === provider)?.name ?? provider ?? "";
-  const labelOf = (m: PaymentMethodEntry) =>
-    m.method === "cod"
-      ? t.methodCod
-      : fmt(m.method === "card" ? t.methodCard : t.methodWallet, { name: nameOf(m.provider) });
+  const methodLabel = useMethodLabel();
+  const labelOf = (m: PaymentMethodEntry) => (m.method === "cod" ? t.methodCod : methodLabel(m.method, nameOf(m.provider)));
 
   const dirty = JSON.stringify(draft.map((m) => [m.id, m.enabled])) !== JSON.stringify(methods.map((m) => [m.id, m.enabled]));
 
@@ -721,7 +785,7 @@ function MethodList({
             <label className={cn("flex min-h-11 flex-1 items-center gap-3", !m.available && "opacity-60")}>
               <input
                 type="checkbox"
-                className="size-4 accent-primary"
+                className="size-4 shrink-0 accent-primary"
                 checked={m.enabled}
                 disabled={!canManage || busy}
                 onChange={(e) => {
@@ -739,11 +803,14 @@ function MethodList({
                   );
                 }}
               />
-              <span className="text-sm font-medium text-ink">{labelOf(m)}</span>
-              {m.mode === "test" && m.method !== "cod" && (
-                <StatusBadge value="test" tone="warning" text={t.modeTest} />
-              )}
-              {!m.available && <StatusBadge value="unavailable" tone="neutral" text={t.methodUnavailable} />}
+              <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-sm font-medium text-ink">{labelOf(m)}</span>
+                <ExpressWalletBadges method={m} />
+                {m.mode === "test" && m.method !== "cod" && (
+                  <StatusBadge value="test" tone="warning" text={t.modeTest} />
+                )}
+                {!m.available && <StatusBadge value="unavailable" tone="neutral" text={t.methodUnavailable} />}
+              </span>
             </label>
             {canManage && (
               <div className="flex gap-1">

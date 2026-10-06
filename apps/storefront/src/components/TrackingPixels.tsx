@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track";
-import { registerPixels, type PurchaseTiming, type StorePixel } from "@/lib/adPixels";
+import { registerPixels, type ConversionEvent, type PurchaseTiming, type StorePixel } from "@/lib/adPixels";
 
 /**
  * Loads the tracking pixels the merchant configured (dashboard → Marketing →
@@ -20,9 +20,18 @@ import { registerPixels, type PurchaseTiming, type StorePixel } from "@/lib/adPi
  * view here. A funnel's or product's pixels get theirs when the shopper
  * reaches that funnel or product (lib/adPixels.ts decides per event).
  */
-export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[]; purchaseTiming?: PurchaseTiming }) {
+export function TrackingPixels({
+  pixels,
+  purchaseTiming,
+  conversionEvent,
+}: {
+  pixels: StorePixel[];
+  purchaseTiming?: PurchaseTiming;
+  /** Whether an order is reported as a Purchase or a Lead (GET /store/:ws `conversionEvent`). */
+  conversionEvent?: ConversionEvent;
+}) {
   // Before any effect below (or in a child page) sends an event.
-  registerPixels(pixels, purchaseTiming);
+  registerPixels(pixels, purchaseTiming, conversionEvent);
 
   const of = (platform: StorePixel["platform"]) => pixels.filter((p) => p.platform === platform);
   const storeWide = (list: StorePixel[]) => list.filter((p) => p.scope.type === "all");
@@ -32,6 +41,7 @@ export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[
   const google = of("google");
   const gtm = of("gtm");
   const clarity = of("clarity");
+  const pinterest = of("pinterest");
 
   const pathname = usePathname();
   const search = useSearchParams();
@@ -75,6 +85,15 @@ export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[
           {`(function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};a.queue=[];var s='script';var r=t.createElement(s);r.async=!0;r.src=n;var u=t.getElementsByTagName(s)[0];u.parentNode.insertBefore(r,u);})(window,document,'https://sc-static.net/scevent.min.js');${storeWide(snapchat)
             .map((p) => `snaptr('init','${p.pixelId}',{});`)
             .join("")}${storeWide(snapchat).length ? "snaptr('track','PAGE_VIEW');" : ""}`}
+        </Script>
+      )}
+      {pinterest.length > 0 && (
+        // Like Snap, a Pinterest event goes to every loaded tag: the store-wide
+        // ones load here, scoped ones on first match (lib/adPixels.ts).
+        <Script id="zimos-pinterest-tag" strategy="afterInteractive">
+          {`!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");${storeWide(pinterest)
+            .map((p) => `pintrk('load','${p.pixelId}');`)
+            .join("")}${storeWide(pinterest).length ? "pintrk('page');" : ""}`}
         </Script>
       )}
       {google.length > 0 && (

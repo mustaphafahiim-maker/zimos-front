@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToTop } from "@/components/BackToTop";
+import { StoreAppInstall } from "@/components/StoreAppInstall";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
 import { CouponFromLink } from "@/components/offers/CouponBits";
@@ -15,28 +16,34 @@ import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
 import { OtpGate } from "@/components/OtpGate";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
+import { ConsentGate, CookieConsentBanner } from "@/components/CookieConsent";
+import { purchaseTimingOf, storeConversionEventOf, storePixelsOf } from "@/lib/adPixels";
 import {
-  resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
-  storefrontCustomCode,
   storefrontGeneralMeta,
+  storefrontStoreApp,
+  hiddenPlacesOf,
+  storefrontCookieConsentOf,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
-import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { storeCode } from "@/lib/headCode";
+import { StoreScripts } from "@/components/StoreScripts";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
-import { storeOrigin } from "@/lib/domains";
-import { dirFor, getDictionary, intlLocaleFor } from "@/lib/i18n";
+import { canonicalOrigin } from "@/lib/domains";
+import { dirFor, getDictionary, intlLocaleFor, arOrEn } from "@/lib/i18n";
 import { DocumentLocale, StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { storeThemeOf } from "@/lib/brandTheme";
+import { storeTextsOf } from "@/lib/storeTexts";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
 import { ThemeChrome } from "@/components/shell/ThemeChrome";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
@@ -78,7 +85,7 @@ export async function generateMetadata({
   const ogImage = seo.ogImageUrl || store.logoUrl;
 
   return {
-    metadataBase: new URL(storeOrigin(store.slug)),
+    metadataBase: new URL(canonicalOrigin(store)),
     title: { default: store.name, template: seo.titleTemplate || `%s — ${store.name}` },
     description,
     ...(general.faviconUrl ? { icons: { icon: general.faviconUrl, shortcut: general.faviconUrl } } : {}),
@@ -149,14 +156,24 @@ export default async function StoreLayout({
     slug: store.slug,
     name: store.name,
     currency: store.currency,
+    // Where the symbol goes and whether decimals show (dashboard → currencies; lib/moneyFormat).
+    currencyFormat: (store as { currencyFormat?: StoreInfo["currencyFormat"] }).currencyFormat ?? null,
     logoUrl: store.logoUrl,
     phone: storePhone(store),
+    // Offered languages: French joins the language switch when it is one (lib/i18n switchLocales).
+    languages: (store as { languages?: string[] }).languages ?? [],
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
-    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
+    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
     legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
+    // The order form's country (lib/storeCountry).
+    country: storefrontGeneralMeta(store).general.country,
+    // The places it does not deliver to: left out of the checkout's list (lib/useShippingPlaces).
+    hiddenPlaces: hiddenPlacesOf(store),
+    // The merchant's own wording, this language only (Website → Store texts; lib/storeTexts).
+    storefrontTexts: { [locale]: storeTextsOf(store)[locale] ?? {} },
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
@@ -164,12 +181,11 @@ export default async function StoreLayout({
   const theme = storeThemeOf(store.themeSettings);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
+  const consent = storefrontCookieConsentOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
-  // The merchant's own code slots. The API returns none to a staff preview,
-  // and components/CustomCode.tsx decides where the rest may run.
-  const customCode = await storefrontCustomCode(await createServerStorefrontApiClient(), workspaceId).catch(
-    () => ({})
-  );
+  // The merchant's own code slots and scripts. The API returns none to a staff
+  // preview, and components/CustomCode.tsx decides where the rest may run.
+  const { slots: customCode, scripts: storeScripts } = await storeCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -179,6 +195,8 @@ export default async function StoreLayout({
         <StoreShellProvider>
           <CustomCodeProvider slots={customCode}>
           <CustomCodeHead />
+          {/* The merchant's scripts by position and page type (components/StoreScripts.tsx). */}
+          <StoreScripts scripts={storeScripts} />
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
@@ -188,7 +206,9 @@ export default async function StoreLayout({
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} />
+              <ConsentGate consent={consent}>
+                <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} conversionEvent={storeConversionEventOf(store)} />
+              </ConsentGate>
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its
@@ -198,12 +218,15 @@ export default async function StoreLayout({
             lang={intlLocaleFor(locale)}
             dir={dirFor(locale)}
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-            style={brandStyle(store.themeSettings)}
+            style={{ ...brandStyle(store.themeSettings), ...storeFontVars(store.themeSettings) }}
             data-store-theme={theme ?? undefined}
             suppressHydrationWarning
           >
             {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
+            {/* The store's own body and heading fonts (lib/storeFonts.tsx). */}
+            <FontAssets refs={Object.values(storeFontRefs(store.themeSettings))} store={workspaceId} />
             <DocumentLocale locale={locale} />
+            <CookieConsentBanner consent={consent} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             <HideInFunnel>
               <CodeSlot name="above_header" />
@@ -224,13 +247,15 @@ export default async function StoreLayout({
               <CartDrawer />
               {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
               <ExitDownsell workspaceId={store.id} />
-              {/* Remembers a ?coupon=CODE link so checkout applies it. */}
-              <CouponFromLink workspaceId={workspaceId} />
               {/* Sales notifications from real orders (Offers → Sales notifications). */}
               <SocialProofPopup workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}
             </HideInFunnel>
+            {/* Remembers a ?coupon=CODE link so a checkout applies it — the store's or a funnel's. */}
+            <CouponFromLink workspaceId={workspaceId} />
             <BackToTop label={t.common.backToTop} />
+            {/* The store as an app for shoppers (Settings → Store app). */}
+            <StoreAppInstall app={storefrontStoreApp(store)} locale={arOrEn(locale)} />
             {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
             <ThemeChrome store={store} />
           </div>

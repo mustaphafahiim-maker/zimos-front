@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Download, UserPlus, Users } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { Alert, Button, Card, buttonVariants } from "@store-builder/ui";
 import {
   contactsCreate,
   contactsExportCsv,
@@ -16,7 +16,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, placeName } from "@/lib/format";
 import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -30,6 +30,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { CONTACT_STRINGS, contactErrorCode, parseTagInput } from "./contactStrings";
 import { DeliveryRateBar } from "./DeliveryRateBar";
+import { ContactBulkBar } from "./ContactBulkTags";
 
 const STRINGS = {
   en: {
@@ -59,6 +60,7 @@ const STRINGS = {
     emptyTitle: "No contacts yet",
     emptyDescription: "Everyone who orders or fills in a form on your store shows up here. You can also add a contact by hand.",
     emptyFiltered: "No contact matches these filters.",
+    importSheet: "Import from a sheet",
     addTitle: "Add a contact",
     addDescription: "A lead you met outside the store. They become a customer with their first order.",
     name: "Name",
@@ -69,10 +71,12 @@ const STRINGS = {
     consent: "They agreed to receive marketing messages",
     added: "Contact added.",
     openExisting: "Open that contact",
+    selectAll: "Select all contacts shown",
+    selectOne: "Select {name}",
   },
   ar: {
     add: "إضافة جهة اتصال",
-    exporting: "جارٍ التصدير…",
+    exporting: "بنصدّر…",
     exported: "تم تصدير {count} جهة اتصال.",
     kpiAll: "جهات الاتصال",
     kpiCustomers: "عملاء",
@@ -94,9 +98,10 @@ const STRINGS = {
     colDelivery: "نسبة الاستلام",
     never: "—",
     blacklisted: "محظور",
-    emptyTitle: "لا توجد جهات اتصال بعد",
+    emptyTitle: "مفيش جهات اتصال لسه",
     emptyDescription: "كل من يطلب أو يملأ نموذجًا في متجرك يظهر هنا. ويمكنك إضافة جهة اتصال يدويًا.",
-    emptyFiltered: "لا توجد جهة اتصال تطابق هذه الفلاتر.",
+    emptyFiltered: "مفيش جهة اتصال تطابق هذه الفلاتر.",
+    importSheet: "استورد من شيت",
     addTitle: "إضافة جهة اتصال",
     addDescription: "عميل محتمل عرفته خارج المتجر. يتحول إلى عميل مع أول طلب.",
     name: "الاسم",
@@ -107,6 +112,8 @@ const STRINGS = {
     consent: "وافق على استقبال رسائل تسويقية",
     added: "تمت إضافة جهة الاتصال.",
     openExisting: "افتح جهة الاتصال",
+    selectAll: "تحديد كل جهات الاتصال المعروضة",
+    selectOne: "تحديد {name}",
   },
 } satisfies Messages;
 
@@ -168,6 +175,17 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
   const [adding, setAdding] = useState(false);
   const [exporting, setExporting] = useState(false);
   const filtered = Boolean(q || type || tag || segmentId);
+  // Contacts ticked for bulk tagging; other filters start a fresh selection.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => setSelected(new Set()), [params]);
+  const allSelected = contacts.length > 0 && contacts.every((contact) => selected.has(contact.id));
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   async function loadMore() {
     const cursor = list.data?.nextCursor;
@@ -198,6 +216,29 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
 
   const columns: Column<Contact>[] = [
     {
+      key: "select",
+      header: (
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-primary"
+          checked={allSelected}
+          onChange={() => setSelected(allSelected ? new Set() : new Set(contacts.map((contact) => contact.id)))}
+          aria-label={t.selectAll}
+        />
+      ),
+      headerClassName: "w-10",
+      className: "w-10",
+      cell: (contact) => (
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-primary"
+          checked={selected.has(contact.id)}
+          onChange={() => toggle(contact.id)}
+          aria-label={fmt(t.selectOne, { name: contact.fullName || contact.phoneRaw || contact.phoneNormalized })}
+        />
+      ),
+    },
+    {
       key: "contact",
       header: t.colContact,
       cell: (contact) => (
@@ -210,7 +251,7 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
             {contact.governorate && (
               <>
                 {" · "}
-                <bdi>{contact.governorate}</bdi>
+                <bdi>{placeName(contact.governorate)}</bdi>
               </>
             )}
           </div>
@@ -227,20 +268,29 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
         </div>
       ),
     },
-    { key: "tags", header: t.colTags, cell: (contact) => <TagChips tags={contact.tags} /> },
-    { key: "orders", header: t.colOrders, align: "end", cell: (contact) => <span className="tabular-nums">{contact.ordersCount}</span> },
+    { key: "tags", header: t.colTags, phoneHidden: true, cell: (contact) => <TagChips tags={contact.tags} /> },
+    // On a phone card, a contact with no orders yet skips the zero lines (re-audit N-07).
+    {
+      key: "orders",
+      header: t.colOrders,
+      align: "end",
+      phoneSkip: (contact) => !contact.ordersCount,
+      cell: (contact) => <span className="tabular-nums">{contact.ordersCount}</span>,
+    },
     {
       key: "spent",
       header: t.colSpent,
       align: "end",
+      phoneSkip: (contact) => !contact.ordersCount,
       cell: (contact) => <span className="tabular-nums">{formatMoney(contact.totalSpent, currency)}</span>,
     },
     {
       key: "lastOrder",
       header: t.colLastOrder,
+      phoneHidden: true,
       cell: (contact) => <span className="text-ink-soft">{contact.lastOrderAt ? formatDate(contact.lastOrderAt) : t.never}</span>,
     },
-    { key: "delivery", header: t.colDelivery, cell: (contact) => <DeliveryRateBar contact={contact} /> },
+    { key: "delivery", header: t.colDelivery, phoneSkip: (contact) => !contact.ordersCount, cell: (contact) => <DeliveryRateBar contact={contact} /> },
   ];
 
   return (
@@ -313,6 +363,17 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
         </div>
       </div>
 
+      <ContactBulkBar
+        selectedIds={[...selected]}
+        tagOptions={tagOptions}
+        onClear={() => setSelected(new Set())}
+        onDone={() => {
+          setSelected(new Set());
+          void list.refresh({ silent: true });
+          void filters.refresh({ silent: true });
+        }}
+      />
+
       <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
         <Card className="p-0">
           <DataTable
@@ -328,7 +389,14 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
                   icon={<Users className="size-6" aria-hidden />}
                   title={t.emptyTitle}
                   description={t.emptyDescription}
-                  action={<Button onClick={() => setAdding(true)}>{t.add}</Button>}
+                  action={
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button onClick={() => setAdding(true)}>{t.add}</Button>
+                      <Link to="/customers/import" className={buttonVariants({ variant: "outline" })}>
+                        {t.importSheet}
+                      </Link>
+                    </div>
+                  }
                 />
               )
             }

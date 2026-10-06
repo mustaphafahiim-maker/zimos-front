@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { applyFontPreview } from "./fontPreview";
 import {
   BRAND_VAR_NAMES,
   brandVars,
@@ -16,6 +17,7 @@ import { useIsClient } from "@/lib/useIsClient";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
 import { CanvasHandles, SectionGrip } from "./CanvasHandles";
 import { useCanvasDrag } from "./useCanvasDrag";
+import { useCanvasText } from "./useCanvasText";
 
 /**
  * The storefront half of the website editor's canvas. Rendered only by the
@@ -37,6 +39,7 @@ import { useCanvasDrag } from "./useCanvasDrag";
  *   { type: "zimos:canvas-drag", phase, … }               dragging / resizing on the page (useCanvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *   { type: "zimos:color-mode", mode }                    the page went light or dark (the in-page switch, or the OS)
+ *   { type: "zimos:edit-text", elementId, text }          a double-click text edit was committed (useCanvasText.ts)
  *
  * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
@@ -100,6 +103,7 @@ interface Strings {
   resizeHeight: string;
   resizeColumns: string;
   resizeImage: string;
+  editText: string;
 }
 
 const DEFAULT_STRINGS: Strings = {
@@ -112,6 +116,7 @@ const DEFAULT_STRINGS: Strings = {
   resizeHeight: "Drag to change the section's height",
   resizeColumns: "Drag to change the column widths",
   resizeImage: "Drag to resize the picture",
+  editText: "Double-click to edit the text",
 };
 
 function sectionEl(id: string): HTMLElement | null {
@@ -144,6 +149,7 @@ function applyTheme(theme: PreviewTheme | null) {
     if (name in vars) wrapper.style.setProperty(name, vars[name], "important");
     else wrapper.style.removeProperty(name);
   }
+  applyFontPreview(theme);
   applyLogo(theme.logoUrl);
 }
 
@@ -289,6 +295,9 @@ export function PreviewBridge({
   // frame never computes either one itself.
   const [dragActive, setDragActive] = useState(false);
   const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
+  // X-ray outlines and the texts a double-click edits (useCanvasText.ts), from zimos:editor-state.
+  const [xray, setXray] = useState(false);
+  const [inlineText, setInlineText] = useState<string[]>([]);
   // Bumped on scroll/resize so the fixed outlines (and, mid-drag, the section
   // rects the dashboard needs) follow the page.
   const [tick, setTick] = useState(0);
@@ -301,6 +310,9 @@ export function PreviewBridge({
     },
     [parentOrigin]
   );
+
+  // X-ray outlines and double-click text editing (useCanvasText.ts).
+  useCanvasText({ editable, xray, inlineText, hint: strings.editText, post });
 
   // Dragging and resizing on the page itself (useCanvasDrag.ts).
   const drag = useCanvasDrag({ post, parentOrigin, focusKey: `zimos-preview-focus:${token}` });
@@ -411,6 +423,11 @@ export function PreviewBridge({
             if (typeof s[key] === "string") next[key] = (s[key] as string).slice(0, 200);
           }
           setStrings(next);
+        }
+        setXray(data.xray === true);
+        if (Array.isArray(data.inlineText)) {
+          const ids = data.inlineText.filter((id): id is string => typeof id === "string" && id.length <= 200).slice(0, 2000);
+          setInlineText((prev) => (prev.length === ids.length && prev.every((id, i) => id === ids[i]) ? prev : ids));
         }
         if ("theme" in data) applyTheme(readPreviewTheme(data.theme));
         const mode = readColorMode(data.colorMode);

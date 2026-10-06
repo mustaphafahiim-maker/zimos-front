@@ -23,6 +23,7 @@ import { Modal } from "@/components/Modal";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { BundleEditorDialog } from "./BundleEditorDialog";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * Quantity bundles (SPEC §10.1): the list of the store's bundles, each with
@@ -68,7 +69,7 @@ const STRINGS = {
     description: "عروض الكمية — اشترِ أكثر وادفع أقل للقطعة. أنشئ باقة واستخدمها على أي عدد من المنتجات.",
     back: "العروض",
     newBundle: "باقة جديدة",
-    emptyTitle: "لا توجد باقات بعد",
+    emptyTitle: "مفيش باقات لسه",
     emptyDescription: "قدّم خصم 5% على قطعتين و10% على ثلاث، وارفع قيمة كل أوردر.",
     active: "مفعّلة",
     inactive: "متوقفة",
@@ -90,10 +91,10 @@ const STRINGS = {
     productsTitle: "المنتجات التي تستخدم «{name}»",
     productsDescription: "للمنتج باقة واحدة. تحديد منتج هنا ينقله من أي باقة أخرى.",
     search: "ابحث في المنتجات",
-    noMatch: "لا توجد منتجات مطابقة.",
+    noMatch: "مفيش منتجات مطابقة.",
     cancel: "إلغاء",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     productsSaved: "تم حفظ المنتجات.",
   },
 } satisfies Messages;
@@ -113,6 +114,8 @@ function tierText(tier: BundleTierDto, t: Strings): string {
 }
 
 export function BundlesPage() {
+  // Each offer's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -160,6 +163,7 @@ export function BundlesPage() {
                     <p className="mt-0.5 text-sm text-ink-soft">
                       {bundle.productCount > 0 ? fmt(t.products, { count: bundle.productCount }) : t.noProducts}
                     </p>
+                    <OfferNumbers stat={stats?.bundles[bundle.id]} />
                   </div>
                   <StatusBadge
                     value={bundle.isActive ? "active" : "inactive"}

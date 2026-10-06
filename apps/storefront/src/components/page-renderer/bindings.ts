@@ -10,6 +10,7 @@ import { formatPrice, type Locale } from "@/lib/i18n";
 import { compareAtOf, priceOf, productImages } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { richTextToPlain } from "@store-builder/api-client";
 
 /**
  * Data binding (SPEC §9.4). An element may carry
@@ -122,7 +123,8 @@ export async function loadBindingData(
     }
     if (product) {
       set("product.title", product.name);
-      set("product.description", product.description);
+      // A bound text shows the description without its formatting marks.
+      set("product.description", product.description ? richTextToPlain(product.description) : product.description);
       const price = priceOf(product);
       if (price !== undefined) set("product.price", formatPrice(price, currency, locale));
       const compareAt = compareAtOf(product);

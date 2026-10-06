@@ -49,6 +49,8 @@ import { stepPageTree, type StepPageVariant } from "./funnelPages";
 
 export type { FunnelStatus };
 export type UiStepType = FunnelStepTypeDto;
+/** The steps with an order form, and so an order bump: checkout, and a sales page's COD form. */
+export const BUMP_STEP_TYPES: readonly UiStepType[] = ["checkout", "sales"];
 export type UiEdgeCondition = FunnelEdgeConditionType;
 
 export interface UiStep {
@@ -77,6 +79,8 @@ export interface UiEdge {
   fromStepKey: string;
   toStepKey: string;
   condition: UiEdgeCondition;
+  /** clicked_through only: the button the path follows (funnelRouting.js); null = any. */
+  sourceElementId?: string | null;
   priority: number;
 }
 
@@ -181,6 +185,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
       toStepKey: e.toStepKey,
       // The runtime treats a null condition as "always".
       condition: e.condition?.type ?? "always",
+      sourceElementId: typeof e.condition?.sourceElementId === "string" ? e.condition.sourceElementId : null,
       priority: e.priority,
     })),
   };
@@ -261,7 +266,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           name: s.name.trim() || s.key,
           builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
-          ...(s.type === "checkout" && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
+          ...(BUMP_STEP_TYPES.includes(s.type) && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
           seo: withCanvas(s, order),
         })
       );
@@ -271,14 +276,18 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (!before) return;
     const patch: FunnelStepUpdatePayload = {};
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
+    // A generic page's new address (page settings → Details).
+    if (s.key !== before.key) patch.key = s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
-    // A step that stops being a checkout loses its bump on the server by itself.
-    if (s.bumpOfferId !== before.bumpOfferId && (s.type === "checkout" || s.bumpOfferId === null)) {
+    // A step that stops having an order form loses its bump on the server by itself.
+    if (s.bumpOfferId !== before.bumpOfferId && (BUMP_STEP_TYPES.includes(s.type) || s.bumpOfferId === null)) {
       patch.bumpOfferId = s.bumpOfferId;
     }
     if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
-    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
+    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key) || JSON.stringify(s.seo) !== JSON.stringify(before.seo)) {
+      patch.seo = withCanvas(s, order);
+    }
     if (Object.keys(patch).length > 0) {
       const id = s.id;
       ops.push(() => funnelsUpdateStep(apiClient, workspaceId, fid, id, patch));
@@ -305,7 +314,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
         funnelsCreateEdge(apiClient, workspaceId, fid, {
           fromStepKey: e.fromStepKey,
           toStepKey: e.toStepKey,
-          condition: { type: e.condition },
+          condition: { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) },
           priority: e.priority,
         })
       );
@@ -316,7 +325,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     const patch: FunnelEdgeUpdatePayload = {};
     if (e.fromStepKey !== before.fromStepKey) patch.fromStepKey = e.fromStepKey;
     if (e.toStepKey !== before.toStepKey) patch.toStepKey = e.toStepKey;
-    if (e.condition !== before.condition) patch.condition = { type: e.condition };
+    if (e.condition !== before.condition || (e.sourceElementId ?? null) !== (before.sourceElementId ?? null)) {
+      patch.condition = { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) };
+    }
     if (e.priority !== before.priority) patch.priority = e.priority;
     if (Object.keys(patch).length > 0) {
       const id = e.serverId;
@@ -557,6 +568,7 @@ const ERROR_STRINGS = {
     suspended: "This store has been suspended by Zimos, so new funnels can't be created. Contact Zimos support.",
     notPublished: "Publish this funnel before pausing or resuming it.",
     keyTaken: "A step with this key already exists in the funnel. Reload and try again.",
+    keyLocked: "This page's address can't change: it is on the funnel map, or it has a split test.",
   },
   ar: {
     permission: "ليست لديك صلاحية لإدارة مسارات البيع أو نشرها. اطلب من مالك مساحة العمل تحديث دورك.",
@@ -565,6 +577,7 @@ const ERROR_STRINGS = {
     suspended: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء مسارات بيع جديدة. تواصل مع دعم Zimos.",
     notPublished: "انشر مسار البيع أولًا قبل إيقافه مؤقتًا أو استئنافه.",
     keyTaken: "توجد خطوة بنفس المعرّف في مسار البيع. أعد التحميل وحاول مرة أخرى.",
+    keyLocked: "عنوان الصفحة دي مينفعش يتغيّر: هي على خريطة مسار البيع، أو عليها اختبار A/B.",
   },
 } satisfies Messages;
 
@@ -587,6 +600,7 @@ export function useFunnelErrorMessage(): (err: unknown) => string {
       if (err.status === 403) return t.permission;
       if (err.code === "FUNNEL_NOT_PUBLISHED") return t.notPublished;
       if (err.code === "FUNNEL_STEP_KEY_TAKEN") return t.keyTaken;
+      if (err.code === "FUNNEL_STEP_KEY_LOCKED") return t.keyLocked;
     }
     return getErrorMessage(err);
   };

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   ORDER_STAGES,
+  ORDER_STAGES_THAT_NOTIFY,
   ordersBulk,
   type OrderBulkAction,
   type OrderBulkPayload,
@@ -12,12 +13,16 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useOrderLabels } from "../orderLabels";
 import { useOrderErrorMessage } from "../orderErrors";
 import { SelectionDocuments } from "./OrderDocuments";
+import { BulkShipDialog } from "./BulkShipDialog";
+import { SelectionExtras } from "./SelectionExtras";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 
 const STRINGS = {
   en: {
@@ -33,7 +38,7 @@ const STRINGS = {
     a_unarchive: "Restore from archive",
     a_mark_seen: "Mark as seen",
     a_mark_unseen: "Mark as not seen",
-    title: "{action} — {count} orders",
+    title: "{action} — {orders}",
     status: "New status",
     reason: "Reason (optional)",
     statusHint: "Orders that can't take this status from where they are stay as they are.",
@@ -48,15 +53,15 @@ const STRINGS = {
     apply: "Apply",
     applying: "Working…",
     resultTitle: "Result",
-    resultOk: "{count} orders updated.",
+    resultOk: "{orders} updated.",
     resultFailed: "{count} could not be updated:",
     close: "Close",
   },
   ar: {
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     clear: "إلغاء التحديد",
     action: "إجراء جماعي",
-    choose: "اختر إجراء…",
+    choose: "اختار إجراء…",
     a_set_status: "تغيير الحالة",
     a_add_tag: "إضافة تاج",
     a_remove_tag: "حذف تاج",
@@ -65,7 +70,7 @@ const STRINGS = {
     a_unarchive: "استرجاع من الأرشيف",
     a_mark_seen: "تعليم كمشاهَد",
     a_mark_unseen: "تعليم كغير مشاهَد",
-    title: "{action} — {count} أوردر",
+    title: "{action} — {orders}",
     status: "الحالة الجديدة",
     reason: "السبب (اختياري)",
     statusHint: "الأوردرات التي لا تقبل هذه الحالة من وضعها الحالي تبقى كما هي.",
@@ -78,10 +83,10 @@ const STRINGS = {
     confirm_generic: "سيُطبَّق هذا على كل الأوردرات المحددة.",
     cancel: "إلغاء",
     apply: "تطبيق",
-    applying: "جارٍ التنفيذ…",
+    applying: "بننفّذ…",
     resultTitle: "النتيجة",
-    resultOk: "تم تحديث {count} أوردر.",
-    resultFailed: "تعذّر تحديث {count}:",
+    resultOk: "اتحدّث {orders}.",
+    resultFailed: "معرفناش نحدّث {count}:",
     close: "إغلاق",
   },
 } satisfies Messages;
@@ -117,12 +122,16 @@ export function OrderBulkBar({
   const [action, setAction] = useState<OrderBulkAction | null>(null);
   const [status, setStatus] = useState<OrderStage>("ready_to_ship");
   const [reason, setReason] = useState("");
+  // SPEC §4.6: tell every customer, or change the orders quietly.
+  const [notify, setNotify] = useState(true);
   const [tag, setTag] = useState("");
   const [courier, setCourier] = useState("");
   const [courierName, setCourierName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OrderBulkResponse | null>(null);
+  // A connected courier ships through a checked, queued batch (BulkShipDialog).
+  const [bulkShip, setBulkShip] = useState(false);
 
   const carriers = useAsync(
     () => apiClient.listCarriers(workspaceId).then((r) => r.carriers.filter((c) => c.connection)),
@@ -133,7 +142,13 @@ export function OrderBulkBar({
   if (selectedIds.length === 0 && !result) return null;
 
   function payload(): OrderBulkPayload | null {
-    if (action === "set_status") return { status, reason: reason.trim() || undefined };
+    if (action === "set_status") {
+      return {
+        status,
+        reason: reason.trim() || undefined,
+        ...(ORDER_STAGES_THAT_NOTIFY.includes(status) ? { notifyCustomer: notify } : {}),
+      };
+    }
     if (action === "add_tag" || action === "remove_tag") return tag.trim() ? { tags: [tag.trim()] } : null;
     if (action === "ship") {
       const code = courier || courierName.trim();
@@ -147,6 +162,11 @@ export function OrderBulkBar({
     if (!action) return;
     const body = payload();
     if (!body) return;
+    if (action === "ship" && courier) {
+      setAction(null);
+      setBulkShip(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -188,6 +208,7 @@ export function OrderBulkBar({
             ))}
           </Select>
           <SelectionDocuments orderIds={selectedIds} />
+          <SelectionExtras orderIds={selectedIds} />
           <Button variant="ghost" size="sm" className="ms-auto min-h-11" onClick={onClear}>
             {t.clear}
           </Button>
@@ -197,7 +218,7 @@ export function OrderBulkBar({
       <Modal
         open={action !== null}
         onClose={() => (busy ? undefined : setAction(null))}
-        title={action ? fmt(t.title, { action: t[`a_${action}`], count: selectedIds.length }) : ""}
+        title={action ? fmt(t.title, { action: t[`a_${action}`], orders: countOf("order", selectedIds.length) }) : ""}
       >
         <form onSubmit={submit} className="space-y-4" noValidate>
           {error && (
@@ -220,6 +241,7 @@ export function OrderBulkBar({
                 )}
               </Field>
               <TextField label={t.reason} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+              {ORDER_STAGES_THAT_NOTIFY.includes(status) && <NotifyCustomerToggle checked={notify} onChange={setNotify} />}
             </>
           )}
 
@@ -273,6 +295,18 @@ export function OrderBulkBar({
         </form>
       </Modal>
 
+      {bulkShip && courier && (
+        <BulkShipDialog
+          carrierCode={courier}
+          orderIds={selectedIds}
+          onClose={() => setBulkShip(false)}
+          onStarted={() => {
+            setBulkShip(false);
+            onDone();
+          }}
+        />
+      )}
+
       <Modal
         open={result !== null}
         onClose={() => setResult(null)}
@@ -285,7 +319,7 @@ export function OrderBulkBar({
       >
         {result && (
           <div className="space-y-3">
-            <p className="text-sm text-ink">{fmt(t.resultOk, { count: result.succeeded })}</p>
+            <p className="text-sm text-ink">{fmt(t.resultOk, { orders: countOf("order", result.succeeded) })}</p>
             {failures.length > 0 && (
               <>
                 <p className="text-sm font-medium text-danger">{fmt(t.resultFailed, { count: failures.length })}</p>

@@ -18,3 +18,13 @@ export function PoweredByZimos({ label }: { label: string }) {
     </a>
   );
 }
+
+/**
+ * Whether the store's plan removes ZIMOS from its pages (Plan.features.
+ * remove_branding, sent as `removeBranding` with the store). Every place that
+ * shows the mark asks this: the footers, the funnel footer, and the headers
+ * that fall back to the ZIMOS logo when the store has none.
+ */
+export function brandingRemoved(store: unknown): boolean {
+  return Boolean(store && (store as { removeBranding?: unknown }).removeBranding === true);
+}

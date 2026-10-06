@@ -53,18 +53,18 @@ const STRINGS = {
     scopeOpen: "بانتظار المكالمة",
     scopeAll: "كل المشتبه بها",
     hint: "أوردرات ميّزتها إحدى قواعد الحماية من الاحتيال. إزالة العلامة تترك الأوردر يكمل مساره المعتاد — لا تؤكده ولا تشحنه.",
-    emptyOpen: "لا توجد أوردرات مشتبه بها بانتظار المكالمة.",
+    emptyOpen: "مفيش أوردرات مشتبه بها بانتظار المكالمة.",
     emptyAll: "لم يُميَّز أي أوردر كمشتبه به.",
     unnamedCustomer: "عميل بدون اسم",
     reasons: "سبب الاشتباه",
     cancelled: "ملغي",
     clear: "إزالة العلامة",
-    clearing: "جارٍ الإزالة…",
+    clearing: "بنشيل…",
     cleared: "تمت إزالة علامة الاشتباه عن {order}.",
     block: "حظر وإلغاء",
     blockTitle: "حظر وإلغاء {order}؟",
     blockDescription: "يُلغى الأوردر، ويُحظر رقم الهاتف من الطلب، ويُحظر عنوان الإنترنت من الطلب ومن رؤية متجرك.",
-    blocking: "جارٍ الحظر…",
+    blocking: "بنحظر…",
     keep: "إبقاء الأوردر",
     blocked: "تم إلغاء {order} وحظر العميل.",
   },
@@ -187,9 +187,14 @@ function FlaggedOrderCard({
         {order.phone && (
           <>
             {" · "}
-            <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+            {/* Masked for roles without customers.reveal_sensitive: the order page has the full number. */}
+            {order.phone.includes("*") ? (
               <bdi dir="ltr">{order.phone}</bdi>
-            </a>
+            ) : (
+              <a href={`tel:${order.phone}`} className="inline-flex min-h-11 items-center hover:text-primary">
+                <bdi dir="ltr">{order.phone}</bdi>
+              </a>
+            )}
           </>
         )}
       </p>

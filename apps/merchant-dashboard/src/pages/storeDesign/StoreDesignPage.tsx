@@ -1,6 +1,6 @@
+import { StoreLivePreview } from "./StoreLivePreview";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
-import { FilterTabs } from "@/components/FilterTabs";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { CheckoutFormTab } from "./CheckoutFormTab";
@@ -10,16 +10,19 @@ import { PoliciesTab } from "./PoliciesTab";
 import { PagesTab } from "./PagesTab";
 import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
-import { CustomCodeTab } from "./CustomCodeTab";
+import { CustomCodeSection } from "./CustomCodeSection";
 import { DomainsTab } from "./DomainsTab";
 import { LanguagesTab } from "./LanguagesTab";
+import { SectionTabs } from "@/components/SectionTabs";
+import { CustomerAccountsTab } from "./CustomerAccountsTab";
+import { PrivacyTab } from "./PrivacyTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "custom-code"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "custom-code", "customer-accounts", "privacy"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -29,7 +32,7 @@ const STRINGS = {
     tabsLabel: "Store settings sections",
     "checkout-form": "Purchase form",
     "thank-you": "Thank-you page",
-    "store-info": "Store information",
+    "store-info": "Contact details",
     policies: "Policies",
     pages: "Pages",
     general: "General",
@@ -37,14 +40,16 @@ const STRINGS = {
     "custom-code": "Custom code",
     domains: "Domains",
     languages: "Languages",
+    "customer-accounts": "Customer accounts",
+    privacy: "Privacy",
   },
   ar: {
     title: "إعدادات المتجر",
-    description: "ما يملؤه المشتري وما يقرؤه ويراه في متجرك.",
+    description: "اللي العميل بيملاه ويقراه ويشوفه في متجرك.",
     tabsLabel: "أقسام إعدادات المتجر",
     "checkout-form": "نموذج الشراء",
     "thank-you": "صفحة الشكر",
-    "store-info": "بيانات المتجر",
+    "store-info": "بيانات التواصل",
     policies: "السياسات",
     pages: "الصفحات",
     general: "عام",
@@ -52,6 +57,8 @@ const STRINGS = {
     "custom-code": "أكواد التخصيص",
     domains: "الدومينات",
     languages: "اللغات",
+    "customer-accounts": "حسابات العملاء",
+    privacy: "الخصوصية",
   },
 } satisfies Messages;
 
@@ -65,13 +72,15 @@ export function StoreDesignPage() {
   return (
     <div>
       <PageHeader title={t.title} description={t.description} />
-      <FilterTabs
+      <SectionTabs
         label={t.tabsLabel}
         tabs={TABS.map((value) => ({ value, label: t[value] }))}
         value={active}
         onChange={(value) => navigate(`/store-settings/${value}`)}
-        className="mb-5"
       />
+      {/* The settings, and beside them (wide screens) the real store to check them against. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0">
       {/* Keyed by workspace so a store switch never shows the previous store's draft. */}
       {active === "checkout-form" && <CheckoutFormTab key={workspaceId} />}
       {active === "thank-you" && <ThankYouTab key={workspaceId} />}
@@ -80,9 +89,14 @@ export function StoreDesignPage() {
       {active === "pages" && <PagesTab key={workspaceId} />}
       {active === "general" && <GeneralTab key={workspaceId} />}
       {active === "seo" && <SeoTab key={workspaceId} />}
-      {active === "custom-code" && <CustomCodeTab key={workspaceId} />}
+      {active === "custom-code" && <CustomCodeSection key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
+      {active === "customer-accounts" && <CustomerAccountsTab key={workspaceId} />}
+      {active === "privacy" && <PrivacyTab key={workspaceId} />}
+        </div>
+        <StoreLivePreview workspaceId={workspaceId} className="sticky top-24 hidden xl:block" />
+      </div>
     </div>
   );
 }

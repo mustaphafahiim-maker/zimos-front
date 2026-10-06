@@ -18,6 +18,8 @@ export interface Touch {
   campaign?: string;
   content?: string;
   term?: string;
+  /** The ad's id: the ad_id the suggested ad links carry (dashboard → Ad spend), matched to spend. */
+  adId?: string;
   fbclid?: string;
   ttclid?: string;
   gclid?: string;
@@ -65,6 +67,7 @@ export function touchFrom(input: { search: string; pathname: string; referrer: s
     campaign: clip(params.get("utm_campaign")),
     content: clip(params.get("utm_content")),
     term: clip(params.get("utm_term")),
+    adId: clip(params.get("ad_id"), 100),
     fbclid: clip(params.get("fbclid")),
     ttclid: clip(params.get("ttclid")),
     gclid: clip(params.get("gclid")),

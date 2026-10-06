@@ -1,4 +1,5 @@
 import type { PageElement, PageTree } from "@store-builder/api-client";
+import { extraDeclarations, orientationRules } from "./elementStyleExtras";
 
 /**
  * Turns the builder's per-element styles into one stylesheet for the page.
@@ -92,6 +93,8 @@ function declarations(style: Style | undefined): string[] {
   px("paddingEnd", "padding-inline-end", 0, 300);
   px("marginTop", "margin-top", 0, 300);
   px("marginBottom", "margin-bottom", 0, 300);
+  // Gradient/image background, sizes, custom shadow, overflow, cursor.
+  out.push(...extraDeclarations(style));
   return out;
 }
 
@@ -99,7 +102,7 @@ function declarations(style: Style | undefined): string[] {
  * Colour, size and weight have to reach the text inside the element, whose
  * own classes set them; the rest styles the wrapper box.
  */
-const INHERITED = ["color:", "font-size:", "font-weight:", "line-height:", "text-align:"];
+const INHERITED = ["color:", "font-size:", "font-weight:", "line-height:", "text-align:", "font-family:"];
 
 function rules(selector: string, styles: DeviceStyles): string {
   const block = (style: Style | undefined) => {
@@ -116,7 +119,8 @@ function rules(selector: string, styles: DeviceStyles): string {
   return (
     block(styles.base) +
     (tablet ? `@media (max-width:1023px){${tablet}}` : "") +
-    (mobile ? `@media (max-width:639px){${mobile}}` : "")
+    (mobile ? `@media (max-width:639px){${mobile}}` : "") +
+    orientationRules(selector, [styles.base, styles.tablet, styles.mobile])
   );
 }
 

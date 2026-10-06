@@ -4,9 +4,10 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -30,10 +31,10 @@ const STRINGS = {
   },
   ar: {
     title: "تعيين كلمة مرور جديدة",
-    intro: "اختر كلمة مرور جديدة لحسابك.",
+    intro: "اختار كلمة مرور جديدة لحسابك.",
     badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
     newLink: "اطلب رابطًا جديدًا",
-    done: "تم تغيير كلمة المرور بنجاح. جارٍ تحويلك لتسجيل الدخول…",
+    done: "اتغيرت كلمة السر. بنحوّلك لتسجيل الدخول…",
     signIn: "تسجيل الدخول",
     password: "كلمة المرور الجديدة",
     passwordPlaceholder: "8 أحرف على الأقل",
@@ -43,7 +44,7 @@ const STRINGS = {
     passwordRules: "كلمة المرور لا تستوفي بعض الشروط المذكورة أسفلها.",
     mismatch: "كلمة المرور وتأكيدها غير متطابقين.",
     save: "حفظ كلمة المرور الجديدة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     back: "← العودة لتسجيل الدخول",
     failed: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
   },
@@ -97,7 +98,7 @@ export function ResetPasswordPage() {
     } catch (err) {
       // Keep the form mounted so they can fix a typo or go request a fresh link.
       setError(
-        err instanceof ApiError ? err.message : t.failed
+        err instanceof ApiError ? errorMessageNow(err) : t.failed
       );
     } finally {
       setSubmitting(false);
@@ -105,9 +106,9 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-sm">
           <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 

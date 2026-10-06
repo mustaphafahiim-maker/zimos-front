@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CheckoutFormField } from "@store-builder/api-client";
-import { GOVERNORATES } from "@/lib/egypt";
+import { isCheckoutPhotoField, type CheckoutFormField } from "@store-builder/api-client";
+import { useShippingPlaces } from "@/lib/useShippingPlaces";
 import {
   FORM_COUNTRIES,
   FORM_FIELD_OF,
@@ -16,7 +16,13 @@ import {
   type OrderFormValues,
 } from "@/lib/orderForm";
 import { useStore } from "@/lib/StoreContext";
+import { countryName } from "@/lib/storeCountry";
 import { input, label as labelClass } from "../ui";
+import { CheckoutPhotoField } from "./CheckoutPhotoField";
+import { StorePlaceFields } from "./StorePlaceFields";
+import type { StorePlacesState } from "@/lib/useStorePlaces";
+import { arOrEn } from "@/lib/i18n";
+import { AddressSearch, addressSearchSlot } from "./AddressSearch";
 
 export function fieldId(prefix: string, field: OrderFormField) {
   return `${prefix}-${field}`;
@@ -93,6 +99,8 @@ const HALF_WIDTH = new Set(["government", "city"]);
  * lib/orderForm.ts so the product quick form and checkout behave identically.
  * Which fields appear, in what order, under which label and whether they must
  * be filled comes from the store's purchase form (`fields`, see `formOf`).
+ * With the store's own place list (`storePlaces`, lib/useStorePlaces) the
+ * governorate and city become its region → city → area pickers.
  */
 export function OrderFormFields({
   idPrefix,
@@ -101,6 +109,7 @@ export function OrderFormFields({
   onChange,
   fields,
   showAltPhone = false,
+  storePlaces = null,
 }: {
   idPrefix: string;
   values: OrderFormValues;
@@ -108,11 +117,16 @@ export function OrderFormFields({
   onChange: (field: OrderFormField, value: string) => void;
   fields: OrderFormFieldModes;
   showAltPhone?: boolean;
+  /** The store's own places (region → city → area); absent or inactive = the platform's governorates and a typed city. */
+  storePlaces?: StorePlacesState | null;
 }) {
   const { t, locale } = useStore();
   const egypt = isEgyptForm(values);
+  // The platform's places for the form's country, less the ones the store does not deliver to.
+  const places = useShippingPlaces(values.country || "EG");
   const list = formOf(fields, { showAltPhone });
   const shownKeys = new Set(list.map((f) => f.key));
+  const ownPlaces = storePlaces?.active ? storePlaces : null;
 
   const a11y = (field: OrderFormField, hasHint = false) => {
     const id = fieldId(idPrefix, field);
@@ -142,8 +156,8 @@ export function OrderFormFields({
   function renderField(f: CheckoutFormField) {
     const field = FORM_FIELD_OF[f.key];
     const id = fieldId(idPrefix, field);
-    const label = f.label[locale] || f.label.ar || f.label.en || builtInLabel[f.key] || f.key;
-    const help = f.helpText[locale] || f.helpText.ar || f.helpText.en || "";
+    const label = f.label[arOrEn(locale)] || f.label.ar || f.label.en || builtInLabel[f.key] || f.key;
+    const help = f.helpText[arOrEn(locale)] || f.helpText.ar || f.helpText.en || "";
     const value = values[field];
     const set = (v: string) => onChange(field, v);
     // Half-width only when its row partner is on the form too.
@@ -168,7 +182,7 @@ export function OrderFormFields({
               {...a11y(field, !!help)}
               type="text"
               autoComplete="name"
-              required
+              required={f.required}
               placeholder={t.form.fullNamePlaceholder}
               value={value}
               onChange={(e) => set(e.target.value)}
@@ -225,9 +239,11 @@ export function OrderFormFields({
                 onChange={(e) => set(e.target.value)}
                 className={`${input} cursor-pointer appearance-none pe-10`}
               >
+                {/* A store country the list does not carry (lib/storeCountry) is offered too. */}
+                {value && !FORM_COUNTRIES.some((c) => c.code === value) && <option value={value}>{countryName(value, locale)}</option>}
                 {FORM_COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c[locale]}
+                    {c[arOrEn(locale)]}
                   </option>
                 ))}
               </select>
@@ -236,9 +252,45 @@ export function OrderFormFields({
           </Field>
         );
       case "government":
+        if (ownPlaces) {
+          // The pickers stand in for the governorate and the city (rendered here, skipped at "city").
+          const cityField = list.find((x) => x.key === "city");
+          const cityHelp = cityField ? cityField.helpText[arOrEn(locale)] || cityField.helpText.ar || cityField.helpText.en : "";
+          return (
+            <StorePlaceFields
+              key={f.key}
+              idPrefix={idPrefix}
+              places={ownPlaces}
+              region={{
+                label: f.label[arOrEn(locale)] || f.label.ar || f.label.en || (egypt ? t.form.governorate : t.places.region),
+                required: f.required,
+                hint: help || undefined,
+                // With a region picked, a governorate error can only be the server refusing the picked place.
+                error: ownPlaces.regionId ? undefined : errors.governorate,
+              }}
+              refusal={ownPlaces.regionId ? errors.governorate : undefined}
+              city={
+                cityField
+                  ? {
+                      label:
+                        cityField.label[arOrEn(locale)] ||
+                        cityField.label.ar ||
+                        cityField.label.en ||
+                        (ownPlaces.regionId && !ownPlaces.hasCities ? t.form.city : t.places.city),
+                      required: cityField.required,
+                      hint: cityHelp || undefined,
+                      error: errors.city,
+                    }
+                  : null
+              }
+              cityText={values.city}
+              onCityText={(v) => onChange("city", v)}
+            />
+          );
+        }
         return (
           <Field key={f.key} {...common} hint={help || undefined}>
-            {egypt ? (
+            {places.length > 0 ? (
               <div className="relative">
                 <select
                   {...a11y(field, !!help)}
@@ -249,9 +301,9 @@ export function OrderFormFields({
                   className={`${input} cursor-pointer appearance-none pe-10`}
                 >
                   <option value="">{t.form.chooseGovernorate}</option>
-                  {GOVERNORATES.map((g) => (
+                  {places.map((g) => (
                     <option key={g.code} value={g.code}>
-                      {g[locale]}
+                      {g[arOrEn(locale)]}
                     </option>
                   ))}
                 </select>
@@ -272,6 +324,7 @@ export function OrderFormFields({
           </Field>
         );
       case "city":
+        if (ownPlaces) return null;
         return (
           <Field key={f.key} {...common} hint={help || undefined}>
             <input
@@ -351,10 +404,21 @@ export function OrderFormFields({
           </Field>
         );
       default:
-        // The merchant's own fields: free text, or one of their options.
+        // The merchant's own fields: free text, one of their options, or a photo.
         return (
           <Field key={f.key} {...common} hint={help || undefined}>
-            {f.type === "choice" ? (
+            {isCheckoutPhotoField(f) ? (
+              <CheckoutPhotoField
+                id={id}
+                fieldKey={f.key}
+                label={label}
+                value={value}
+                onChange={set}
+                required={f.required}
+                invalid={Boolean(errors[field])}
+                describedBy={errors[field] ? `${id}-error` : help ? `${id}-hint` : undefined}
+              />
+            ) : f.type === "choice" ? (
               <div className="relative">
                 <select
                   {...a11y(field, !!help)}
@@ -389,5 +453,8 @@ export function OrderFormFields({
     }
   }
 
-  return <div className="grid gap-4 sm:grid-cols-2">{list.map(renderField)}</div>;
+  // "Search your address" (handoff 184) goes before the form's first address field.
+  const searchAt = addressSearchSlot(list);
+  const search = <AddressSearch key="address-search" idPrefix={idPrefix} country={values.country} onChange={onChange} storePlaces={ownPlaces} />;
+  return <div className="grid gap-4 sm:grid-cols-2">{list.flatMap((f, i) => (i === searchAt ? [search, renderField(f)] : [renderField(f)]))}</div>;
 }

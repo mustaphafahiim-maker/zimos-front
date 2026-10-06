@@ -1,3 +1,4 @@
+import { EXTRA_AR } from "./builderExtraBlocks";
 import { createContext, useContext } from "react";
 import type { PageElementType } from "@store-builder/api-client";
 import { SHOWCASE_LABEL_AR } from "./showcaseBlocks";
@@ -30,6 +31,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   button: "زرار",
   video: "فيديو",
   embed: "تضمين",
+  html_block: "كود HTML",
   spacer: "مسافة",
   divider: "فاصل",
   icon: "أيقونة",
@@ -57,6 +59,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   toggle: "عنصر قابل للفتح",
   carousel: "صور متحركة",
   stars_display: "تقييم بالنجوم",
+  currency_converter: "محوّل العملة",
   price: "سعر المنتج",
   reviews_list: "تقييمات العملاء",
   cod_form: "نموذج الطلب (الدفع عند الاستلام)",
@@ -80,6 +83,7 @@ const FIELD_LABEL_AR: Record<string, string> = {
   "toggle.open": "يبدأ مفتوحًا",
   "stars_display.rating": "عدد النجوم",
   "stars_display.label": "النص بجانب النجوم",
+  "currency_converter.label": "العنوان",
   "price.showCompareAt": "إظهار السعر قبل الخصم",
   "price.size": "الحجم",
   "reviews_list.limit": "عدد التقييمات",
@@ -116,14 +120,16 @@ const FIELD_LABEL_AR: Record<string, string> = {
   quote: "كلام العميل",
   author: "الاسم",
   rating: "التقييم",
-  endsInHours: "ينتهي بعد (ساعات)",
+  endsInHours: "أو: ينتهي بعد عدد الساعات دي من النشر",
+  endsAt: "ينتهي في",
   submitLabel: "نص زرار الإرسال",
   successMessage: "الرسالة بعد الإرسال",
   tags: "وسوم تُضاف لجهة الاتصال (افصل بفاصلة)",
+  contactTags: "وسوم تُضاف للعميل (افصل بفاصلة)",
   "map.address": "العنوان على الخريطة",
   zoom: "درجة التكبير",
   links: "الروابط",
-  productId: "معرّف المنتج",
+  productId: "المنتج",
   showPrice: "إظهار السعر",
   showBuyButton: "إظهار زرار الشراء",
   source: "المعروض",
@@ -144,6 +150,12 @@ const FIELD_LABEL_AR: Record<string, string> = {
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
+  "countdown.endsAt": "تاريخ ووقت ثابتين — نفس الموعد لكل زائر.",
+  "countdown.endsInHours": "لو مفيش تاريخ: النشر بيحوّله لتاريخ ثابت.",
+  "button.contactTags": "تُضاف للعميل اللي يضغطه لما يطلب — في صفحة المتجر أو في مسار البيع.",
+  "upsell_accept_button.contactTags": "في مسار البيع: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "upsell_decline_link.contactTags": "في مسار البيع: تُضاف للعميل اللي يضغطه بعد ما يطلب.",
+  "cod_form.contactTags": "تُضاف للعميل لما يطلب من الفورم ده — في صفحة المتجر أو في مسار البيع.",
   "rich_text.text": "نص عادي بس في المحرر ده — أدوات التنسيق جاية بعدين.",
   "image.alt": "بيوصف الصورة لقارئات الشاشة.",
   "image.width": "نسبة من عرض العمود — أو اسحب ركن الصورة في المعاينة. يحل محل الحجم؛ اتركه فارغًا لاستخدام الحجم.",
@@ -195,6 +207,7 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   "product-price": { label: "سعر المنتج", description: "السعر الحقيقي للمنتج ومعاه السعر قبل الخصم." },
   "reviews-list": { label: "تقييمات العملاء", description: "التقييمات المعتمدة للمنتج بنجومها." },
   "stars-display": { label: "تقييم بالنجوم", description: "صف نجوم وجنبه سطر قصير." },
+  "currency-converter": { label: "محوّل العملة", description: "يعرض الأسعار تقريبيًا بعملة أخرى من عملات متجرك (الإعدادات ← العملات)." },
   "cart-summary": { label: "ملخص السلة", description: "اللي في سلة العميل والطريق لإتمام الطلب." },
   "order-summary": { label: "ملخص الطلب", description: "الطلب اللي العميل لسه عامله — لصفحة الشكر." },
   "upsell-actions": { label: "أزرار العرض", description: "«أيوه ضيفه» و«لا شكرًا» لصفحة العرض في مسار البيع." },
@@ -231,6 +244,7 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   gallery: { label: "معرض صور", description: "مجموعة صور في شبكة." },
   video: { label: "فيديو", description: "فيديو متضمّن." },
   embed: { label: "تضمين", description: "تضمين صفحة خارجية برابط." },
+  "html-code": { label: "كود HTML", description: "كود HTML الخاص بك في هذا المكان من الصفحة — يعمل على دومين متجرك فقط." },
   map: { label: "خريطة", description: "اعرض عنوانك على الخريطة." },
   icon: { label: "أيقونة", description: "أيقونة زخرفية واحدة." },
   social: { label: "روابط التواصل", description: "روابط حساباتك على السوشيال ميديا." },
@@ -433,7 +447,7 @@ const PRESET_AR: Record<string, { label: string; description: string }> = {
   },
   "bundle-tiers": {
     label: "ثلاثة عروض",
-    description: "ثلاثة منتجات متجاورة، لكل منها زر شراء — اختر منتجًا لكل عمود.",
+    description: "ثلاثة منتجات متجاورة، لكل منها زر شراء — اختار منتجًا لكل عمود.",
   },
   "countdown-band": {
     label: "شريط العدّاد",
@@ -504,6 +518,15 @@ const GROUP_AR: Record<string, string> = {
   basics: "عناصر أساسية",
 };
 
+// The builder elements added later (builderExtraBlocks.ts) bring their own Arabic.
+Object.assign(ELEMENT_LABEL_AR, EXTRA_AR.elements);
+Object.assign(FIELD_LABEL_AR, EXTRA_AR.fields);
+Object.assign(FIELD_HINT_AR, EXTRA_AR.hints);
+Object.assign(OPTION_LABEL_AR, EXTRA_AR.options);
+Object.assign(PRESET_AR, EXTRA_AR.presets);
+Object.assign(SECTION_SETTING_LABEL_AR, EXTRA_AR.sectionLabels);
+Object.assign(SECTION_SETTING_OPTION_AR, EXTRA_AR.sectionOptions);
+
 export function elementLabel(type: PageElementType, fallback: string, locale: EditorLocale): string {
   return locale === "ar" ? (ELEMENT_LABEL_AR[type] ?? fallback) : fallback;
 }
@@ -565,6 +588,11 @@ const UI_EN = {
   expandPanel: "Expand panel",
   popularBlocks: "Commonly used",
   deleteSection: "Delete section",
+  duplicateSection: "Duplicate section",
+  duplicateElement: (label: string) => `Duplicate ${label}`,
+  selectParent: (parent: string) => `Select its parent: ${parent}`,
+  previewXray: "Show outlines (X-ray)",
+  canvasEditText: "Double-click to edit the text",
   noElements: "This section has no elements to edit.",
   elementCount: (n: number) => `${n} ${n === 1 ? "element" : "elements"}`,
   emptySection: "Empty section",
@@ -841,6 +869,11 @@ const UI_AR: EditorUi = {
   expandPanel: "فتح اللوحة",
   popularBlocks: "الأكثر استخدامًا",
   deleteSection: "حذف القسم",
+  duplicateSection: "تكرار القسم",
+  duplicateElement: (label) => `تكرار ${label}`,
+  selectParent: (parent) => `اختيار العنصر الأب: ${parent}`,
+  previewXray: "إظهار الحدود (X-ray)",
+  canvasEditText: "دبل كليك لتعديل النص",
   noElements: "القسم ده مفيهوش عناصر تتعدّل.",
   elementCount: (n) => (n === 1 ? "عنصر واحد" : n === 2 ? "عنصرين" : `${n} عناصر`),
   emptySection: "قسم فاضي",
@@ -896,9 +929,9 @@ const UI_AR: EditorUi = {
   undo: "تراجع",
   redo: "إعادة",
   save: "حفظ",
-  saving: "جارٍ الحفظ…",
+  saving: "بنحفظ…",
   publish: "نشر",
-  publishing: "جارٍ النشر…",
+  publishing: "بننشر…",
   publishSaveFirst: "احفظ تعديلاتك أولًا — ينشر النشرُ آخر نسخة محفوظة.",
   publishHint: "انشر آخر نسخة محفوظة من كل الصفحات",
   cantPublish: "لا يمكن نشر الموقع بعد:",
@@ -909,8 +942,8 @@ const UI_AR: EditorUi = {
   lookSaveFailed: "تعذّر حفظ مظهر المتجر.",
   published: (n) => `نُشر الموقع — النسخة ${n} تعمل الآن.`,
   publishFailed: "تعذّر نشر الموقع.",
-  noPagesToEdit: "لا توجد في هذا الموقع صفحات لتعديلها بعد.",
-  noPages: "لا توجد في هذا الموقع صفحات بعد. استخدم «صفحة جديدة» في الأعلى لإضافة صفحة.",
+  noPagesToEdit: "مفيش في هذا الموقع صفحات لتعديلها لسه.",
+  noPages: "مفيش في هذا الموقع صفحات لسه. استخدم «صفحة جديدة» في الأعلى لإضافة صفحة.",
   pageCreated: (title) => `أُنشئت "${title}".`,
   pageDeleted: (title) => `حُذفت "${title}".`,
 
@@ -920,7 +953,7 @@ const UI_AR: EditorUi = {
   hideLayers: "إخفاء أقسام الصفحة",
   resizeSplit: "تغيير مساحة أقسام الصفحة والبلوكات",
   resizeSplitHint: "اسحب أو استخدم مفاتيح الأسهم. انقر مرتين للرجوع للوضع الافتراضي.",
-  emptyPage: "هذه الصفحة فارغة. اختر قسمًا من الأسفل للبدء.",
+  emptyPage: "هذه الصفحة فارغة. اختار قسمًا من الأسفل للبدء.",
   addHere: "أضف قسمًا هنا",
   addAbove: "أضف قسمًا أعلاه",
   addBelow: "أضف قسمًا أسفله",
@@ -929,7 +962,7 @@ const UI_AR: EditorUi = {
   insertingAt: (n) => `سيُضاف بوصفه القسم رقم ${n} في الصفحة.`,
   cancelInsert: "إلغاء",
   searchBlocks: "ابحث عن قسم",
-  noBlocksFound: "لا توجد أقسام بهذا الاسم.",
+  noBlocksFound: "مفيش أقسام بهذا الاسم.",
   allGroups: "الكل",
 
   previewTitle: "معاينة حيّة",
@@ -963,7 +996,7 @@ const UI_AR: EditorUi = {
   themeHint: "يحدد الثيم الخطوط والحواف والأزرار والبطاقات والمسافات وشكل الواجهة، وأنت تختار لون التمييز.",
   themeOriginalHint: "في المظهر الأصلي تختار أيضًا الخط والحواف بالأسفل.",
   accentColors: "لون التمييز",
-  accentColorsHint: "للأزرار والروابط والعناصر البارزة. اختر لونًا للوضع الفاتح ولونًا للوضع الداكن.",
+  accentColorsHint: "للأزرار والروابط والعناصر البارزة. اختار لونًا للوضع الفاتح ولونًا للوضع الداكن.",
   lightMode: "الوضع الفاتح",
   darkMode: "الوضع الداكن",
   accentLightHint: "يُستخدم في الوضع الفاتح.",
@@ -1044,13 +1077,13 @@ const UI_AR: EditorUi = {
         url: "عنوان ويب",
       }) as Record<string, string>
     )[kind] ?? kind,
-  choosePage: "اختر صفحة",
-  chooseProduct: "اختر منتجًا",
-  chooseCollection: "اختر مجموعة",
-  listLoading: "جارٍ التحميل…",
+  choosePage: "اختار صفحة",
+  chooseProduct: "اختار منتجًا",
+  chooseCollection: "اختار مجموعة",
+  listLoading: "بنحمّل…",
   listFailed: "تعذّر تحميل القائمة.",
-  noProductsYet: "لا توجد منتجات نشطة بعد.",
-  noCollectionsYet: "لا توجد مجموعات بعد.",
+  noProductsYet: "مفيش منتجات نشطة لسه.",
+  noCollectionsYet: "مفيش مجموعات لسه.",
   webAddress: "عنوان الويب",
   webAddressHint: "يفتح في تبويب جديد.",
   dragLink: (i) => `اسحب الرابط ${i} لإعادة الترتيب`,

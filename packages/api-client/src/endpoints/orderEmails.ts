@@ -16,7 +16,10 @@ export type OrderEmailKey =
   | "order_cancelled"
   | "order_refunded"
   | "abandoned_cart"
-  | "digital_delivery";
+  | "transfer_rejected"
+  | "digital_delivery"
+  /** On unless the store turns it off: the subscriber's link to their subscription page (SPEC §18.1). */
+  | "subscription_started";
 
 export interface OrderEmailTemplateDto {
   key: OrderEmailKey;
@@ -79,4 +82,27 @@ export async function orderEmailsSendTest(
   options: { to?: string; subject?: string; body?: string } = {}
 ): Promise<{ ok: boolean; error: string | null; to: string }> {
   return client.request(`${base(workspaceId)}/${key}/test`, { method: "POST", body: options });
+}
+
+/**
+ * Who the order emails are from (backend notifications/orderEmailSender.js):
+ * the sender name customers see (null = the store's name) and a Reply-To
+ * (null = none). The sending address stays the platform's.
+ */
+export interface OrderEmailSender {
+  fromName: string | null;
+  replyTo: string | null;
+}
+
+export async function orderEmailsSenderGet(client: ApiClient, workspaceId: string): Promise<{ sender: OrderEmailSender; storeName: string }> {
+  return client.request<{ sender: OrderEmailSender; storeName: string }>(`${base(workspaceId)}/sender`);
+}
+
+/** Empty strings clear a field. */
+export async function orderEmailsSenderSet(
+  client: ApiClient,
+  workspaceId: string,
+  sender: { fromName?: string | null; replyTo?: string | null }
+): Promise<{ sender: OrderEmailSender; storeName: string }> {
+  return client.request<{ sender: OrderEmailSender; storeName: string }>(`${base(workspaceId)}/sender`, { method: "PUT", body: sender });
 }

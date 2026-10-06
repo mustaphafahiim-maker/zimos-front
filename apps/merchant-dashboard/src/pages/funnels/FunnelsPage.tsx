@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Copy, Eye, Layers, MousePointerClick, Pause, Pencil, Play, Plus, ShoppingBag, Trash2, Wallet } from "lucide-react";
-import { FunnelShareDialog, FunnelWizard, ShareFunnelButton } from "./FunnelWizard";
-import { Button, Input, Label, Spinner, cn } from "@store-builder/ui";
+import { BarChart3, Copy, Eye, Layers, Link2, MoreHorizontal, MousePointerClick, Pause, Pencil, Play, Plus, Share2, ShoppingBag, Store, Trash2, Upload, Wallet } from "lucide-react";
+import { FunnelShareDialog, FunnelWizard } from "./FunnelWizard";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   funnelsDelete,
   funnelsList,
@@ -43,6 +43,9 @@ import {
 } from "./funnelAdapter";
 import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
+import { FunnelBulkBar } from "./FunnelBulkBar";
+import { ShareTemplateDialog } from "./marketplace/ShareTemplateDialog";
+import { MARKET_STRINGS } from "./marketplace/marketplaceStrings";
 
 const STRINGS = {
   en: {
@@ -73,6 +76,8 @@ const STRINGS = {
     resume: "Resume",
     publish: "Publish",
     duplicate: "Duplicate",
+    share: "Share",
+    moreActions: "More actions",
     duplicating: "Duplicating…",
     copyShareLink: "Copy share link",
     toastLive: "\"{name}\" is live.",
@@ -93,6 +98,8 @@ const STRINGS = {
     statusDraft: "Draft",
     statusPublished: "Published",
     statusPaused: "Paused",
+    selectAll: "Select all funnels on this page",
+    selectFunnel: "Select {name}",
   },
   ar: {
     title: "مسارات البيع",
@@ -109,7 +116,7 @@ const STRINGS = {
     statsUnavailable: "تعذّر تحميل الإحصاءات",
     statsNoAccess: "دورك لا يتيح عرض التحليلات",
     viewAnalytics: "التحليلات",
-    emptyTitle: "لا توجد مسارات بيع بعد",
+    emptyTitle: "مفيش مسارات بيع لسه",
     emptyDescription: "أنشئ مسار بيع لبيع منتج واحد بصفحة هبوط مركّزة وعروض بنقرة واحدة.",
     colFunnel: "مسار البيع",
     colSteps: "الخطوات",
@@ -122,7 +129,9 @@ const STRINGS = {
     resume: "استئناف",
     publish: "نشر",
     duplicate: "نسخ المسار",
-    duplicating: "جارٍ النسخ…",
+    share: "مشاركة",
+    moreActions: "إجراءات أخرى",
+    duplicating: "بننسخ…",
     copyShareLink: "نسخ رابط المشاركة",
     toastLive: "«{name}» منشور الآن.",
     toastPaused: "تم إيقاف «{name}» مؤقتًا.",
@@ -130,11 +139,11 @@ const STRINGS = {
     toastPublishBlocked: "لا يمكن نشر «{name}» بعد ({n} مشكلات). افتح المحرر لإصلاحها.",
     toastDuplicatedAs: "تم النسخ باسم «{name}».",
     toastDuplicatePartial: "تم إنشاء النسخة لكن تعذّر نسخ بعض الخطوات أو الروابط: {message}",
-    toastCopied: "تم نسخ {url}",
+    toastCopied: "اتنسخ {url}",
     toastCopyFailed: "تعذّر النسخ إلى الحافظة.",
-    toastDeleted: "تم حذف «{name}».",
+    toastDeleted: "اتمسح «{name}».",
     copySuffix: "{name} (نسخة)",
-    modalDescription: "اختر اسمًا ونقطة بداية. يمكنك تغيير كل شيء من المحرر.",
+    modalDescription: "اختار اسمًا ونقطة بداية. يمكنك تغيير كل شيء من المحرر.",
     deleteTitleNamed: "حذف «{name}»؟",
     deleteTitle: "حذف مسار البيع؟",
     deleteDescription: "سيتوقف مسار البيع وخطواته ورابط المشاركة عن العمل فورًا. الطلبات السابقة تبقى محفوظة.",
@@ -142,6 +151,8 @@ const STRINGS = {
     statusDraft: "مسودة",
     statusPublished: "منشور",
     statusPaused: "متوقف مؤقتًا",
+    selectAll: "حدد كل مسارات البيع اللي في الصفحة",
+    selectFunnel: "حدد {name}",
   },
 } satisfies Messages;
 
@@ -161,9 +172,9 @@ const FORM_STRINGS = {
     nameRequired: "اكتب اسمًا لمسار البيع.",
     namePlaceholder: "عرض السماعة Pro — رمضان",
     startFrom: "ابدأ من",
-    toastCreated: "تم إنشاء «{name}».",
+    toastCreated: "اتعمل «{name}».",
     toastCreatedPartial: "تم إنشاء مسار البيع لكن تعذّرت إضافة كل الخطوات المبدئية: {message}",
-    creating: "جارٍ الإنشاء…",
+    creating: "بنعمله…",
     createAndOpen: "إنشاء وفتح المحرر",
   },
 } satisfies Messages;
@@ -203,15 +214,31 @@ export function FunnelsPage() {
   const c = useCommon();
   const { intlLocale } = useLocale();
   const describeError = useFunnelErrorMessage();
+  const m = useT(MARKET_STRINGS);
   const list = useAsync(() => funnelsList(apiClient, workspaceId), [workspaceId]);
 
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<FunnelDto | null>(null);
   const [sharing, setSharing] = useState<FunnelDto | null>(null);
+  // The funnel being sent to the template marketplace (handoff 192).
+  const [marketing, setMarketing] = useState<FunnelDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const funnels = list.data ?? [];
   const reload = () => list.refresh({ silent: true });
+
+  // Funnels ticked for a bulk action (FunnelBulkBar); only the ones still listed count.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectedFunnels = funnels.filter((f) => selected.has(f.id));
+  const allSelected = funnels.length > 0 && funnels.every((f) => selected.has(f.id));
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(funnels.map((f) => f.id)));
 
   // The list endpoint has no step count; fetch each funnel's steps (read-only, parallel).
   const idsKey = funnels.map((f) => f.id).join(",");
@@ -319,11 +346,15 @@ export function FunnelsPage() {
   return (
     <div className="max-w-6xl">
       <PageHeader
+        tutorial="funnels"
         title={t.title}
         description={t.description}
         actions={
           <>
             {analyticsAllowed && <RangeSwitch value={range} onChange={setRange} />}
+            <Button variant="outline" onClick={() => navigate("/funnels/marketplace")}>
+              <Store className="size-4" aria-hidden /> {m.title}
+            </Button>
             <Button onClick={() => setCreating(true)}>
               <Plus className="size-4" aria-hidden /> {t.createFunnel}
             </Button>
@@ -359,18 +390,39 @@ export function FunnelsPage() {
           />
         </div>
 
+        <FunnelBulkBar
+          selected={selectedFunnels}
+          onClear={() => setSelected(new Set())}
+          onDone={async (response) => {
+            // The ones that did not change stay ticked, ready for another try.
+            setSelected(new Set(response.results.filter((r) => !r.ok).map((r) => r.funnelId)));
+            await reload();
+          }}
+        />
         {funnels.length === 0 ? (
           <EmptyState
             icon={<Layers />}
             title={t.emptyTitle}
             description={t.emptyDescription}
-            action={<Button onClick={() => setCreating(true)}>{t.createFunnel}</Button>}
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => setCreating(true)}>{t.createFunnel}</Button>
+                <Button variant="outline" onClick={() => navigate("/funnels/marketplace")}>
+                  <Store className="size-4" aria-hidden /> {m.title}
+                </Button>
+              </div>
+            }
           />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
             <table className="w-full min-w-[960px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th scope="col" className="w-12 ps-2">
+                    <label className="flex size-11 cursor-pointer items-center justify-center">
+                      <input type="checkbox" className="size-4 cursor-pointer accent-primary" checked={allSelected} onChange={toggleAll} aria-label={t.selectAll} />
+                    </label>
+                  </th>
                   <th className="px-4 py-3 text-start font-medium">{t.colFunnel}</th>
                   <th className="px-4 py-3 text-start font-medium">{c.status}</th>
                   <th className="px-4 py-3 text-start font-medium">{t.colSteps}</th>
@@ -394,8 +446,19 @@ export function FunnelsPage() {
                     <tr
                       key={f.id}
                       onClick={() => navigate(`/funnels/${f.id}`)}
-                      className="cursor-pointer border-b border-line last:border-0 hover:bg-paper"
+                      className={cn("cursor-pointer border-b border-line last:border-0 hover:bg-paper", selected.has(f.id) && "bg-primary-soft/50")}
                     >
+                      <td className="w-12 ps-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="flex size-11 cursor-pointer items-center justify-center">
+                          <input
+                            type="checkbox"
+                            className="size-4 cursor-pointer accent-primary"
+                            checked={selected.has(f.id)}
+                            onChange={() => toggleSelected(f.id)}
+                            aria-label={fmt(t.selectFunnel, { name: f.name })}
+                          />
+                        </label>
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink" dir="auto">
                           {f.name}
@@ -422,56 +485,52 @@ export function FunnelsPage() {
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{formatDate(f.updatedAt)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-end" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-0.5">
-                          {analyticsAllowed && (
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              title={t.viewAnalytics}
-                              aria-label={t.viewAnalytics}
-                              onClick={() => navigate(`/analytics/funnels/${f.id}`)}
-                            >
-                              <BarChart3 className="size-4" aria-hidden />
-                            </Button>
-                          )}
-                          <Button size="icon-sm" variant="ghost" title={c.edit} aria-label={c.edit} onClick={() => navigate(`/funnels/${f.id}`)}>
+                        {/* One clear action, and the rest behind a menu with their names. */}
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/funnels/${f.id}`)}>
                             <Pencil className="size-4" aria-hidden />
+                            {c.edit}
                           </Button>
-                          {f.status === "published" ? (
-                            <Button size="icon-sm" variant="ghost" title={t.pause} aria-label={t.pause} disabled={busy} onClick={() => void changeStatus(f)}>
-                              <Pause className="size-4" aria-hidden />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              title={f.status === "paused" ? t.resume : t.publish}
-                              aria-label={f.status === "paused" ? t.resume : t.publish}
-                              disabled={busy}
-                              onClick={() => void changeStatus(f)}
-                            >
-                              <Play className="size-4" aria-hidden />
-                            </Button>
-                          )}
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            title={busy ? t.duplicating : t.duplicate}
-                            aria-label={busy ? t.duplicating : t.duplicate}
-                            disabled={busyId !== null}
-                            onClick={() => void duplicate(f)}
-                          >
-                            {busy ? <Spinner className="size-4" /> : <Copy className="size-4" aria-hidden />}
-                          </Button>
-                          <ShareFunnelButton onClick={() => setSharing(f)} />
-                          {url && (
-                            <Button size="sm" variant="ghost" onClick={() => void copyLink(url)}>
-                              {t.copyShareLink}
-                            </Button>
-                          )}
-                          <Button size="icon-sm" variant="ghost" className="text-danger hover:bg-danger-soft" title={c.delete} aria-label={c.delete} onClick={() => setDeleting(f)}>
-                            <Trash2 className="size-4" aria-hidden />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" aria-label={t.moreActions} title={t.moreActions} />}>
+                              {busy ? <Spinner className="size-4" /> : <MoreHorizontal className="size-4" aria-hidden />}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-52">
+                              {analyticsAllowed && (
+                                <DropdownMenuItem onClick={() => navigate(`/analytics/funnels/${f.id}`)}>
+                                  <BarChart3 className="size-4" aria-hidden />
+                                  {t.viewAnalytics}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem disabled={busy} onClick={() => void changeStatus(f)}>
+                                {f.status === "published" ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+                                {f.status === "published" ? t.pause : f.status === "paused" ? t.resume : t.publish}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem disabled={busyId !== null} onClick={() => void duplicate(f)}>
+                                <Copy className="size-4" aria-hidden />
+                                {t.duplicate}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setSharing(f)}>
+                                <Share2 className="size-4" aria-hidden />
+                                {t.share}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setMarketing(f)}>
+                                <Upload className="size-4" aria-hidden />
+                                {m.share}
+                              </DropdownMenuItem>
+                              {url && (
+                                <DropdownMenuItem onClick={() => void copyLink(url)}>
+                                  <Link2 className="size-4" aria-hidden />
+                                  {t.copyShareLink}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant="destructive" onClick={() => setDeleting(f)}>
+                                <Trash2 className="size-4" aria-hidden />
+                                {c.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -488,6 +547,7 @@ export function FunnelsPage() {
       </Modal>
 
       <FunnelShareDialog funnel={sharing} onClose={() => setSharing(null)} />
+      <ShareTemplateDialog open={marketing !== null} funnelId={marketing?.id} onClose={() => setMarketing(null)} />
 
       <ConfirmDialog
         open={deleting !== null}

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   isApiErrorCode,
@@ -8,6 +8,7 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput, formatOptions } from "@/lib/format";
@@ -18,6 +19,7 @@ import { gramsToKgInput, kgInputToGrams } from "@/lib/weight";
 import { Select } from "@/components/Select";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useCatalogLabels } from "../catalogLabels";
+import { ImageField } from "@/pages/website/editor/ImageField";
 
 const STRINGS = {
   en: {
@@ -43,6 +45,8 @@ const STRINGS = {
     weight: "Weight",
     weightUnit: "kg",
     weightHint: "Used for shipping price and the courier's package. Leave blank if unknown.",
+    image: "Variant image",
+    imageHint: "Optional. Shown on the product page when this variant is chosen, and in the cart.",
     weightInvalid: "Enter a weight between 0 and 1000 kg, or leave it blank.",
     skuTaken: "That SKU is already used by another variant.",
     cancel: "Cancel",
@@ -67,16 +71,18 @@ const STRINGS = {
     optionsLine: "الخيارات: {options}",
     status: "الحالة",
     allowOverselling: "السماح بالبيع بعد نفاد المخزون (قبول أوردرات تتجاوز المتاح)",
-    priceInvalid: "أدخل سعرًا صحيحًا (صفر أو أكثر).",
-    costInvalid: "أدخل تكلفة صحيحة، أو اتركها فارغة.",
-    compareAtInvalid: "أدخل مبلغًا صحيحًا، أو اتركه فارغًا.",
+    priceInvalid: "اكتب سعرًا صحيحًا (صفر أو أكثر).",
+    costInvalid: "اكتب تكلفة صحيحة، أو اتركها فارغة.",
+    compareAtInvalid: "اكتب مبلغًا صحيحًا، أو اتركه فارغًا.",
     weight: "الوزن",
     weightUnit: "كجم",
     weightHint: "يُستخدم لحساب سعر الشحن ونوع الشحنة عند شركة الشحن. اتركه فارغًا لو غير معروف.",
-    weightInvalid: "أدخل وزنًا بين 0 و1000 كجم، أو اتركه فارغًا.",
+    image: "صورة النسخة",
+    imageHint: "اختياري. بتظهر في صفحة المنتج لما العميل يختار النسخة دي، وفي السلة.",
+    weightInvalid: "اكتب وزنًا بين 0 و1000 كجم، أو اتركه فارغًا.",
     skuTaken: "رمز SKU هذا مستخدم لمتغير آخر.",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ المتغير",
     add: "إضافة المتغير",
   },
@@ -87,6 +93,10 @@ interface Props {
   variant?: Variant;
   onDone: () => void;
   onCancel: () => void;
+  /** False for a product whose quantity is not tracked: no stock and no overselling choice. */
+  tracked?: boolean;
+  /** Shown under the SKU (a product linked to the merchant's other store: its SKUs are that store's ids). */
+  skuNote?: ReactNode;
 }
 
 /** Parse "Size=M, Color=Red" -> { Size: "M", Color: "Red" }. */
@@ -108,12 +118,14 @@ function stringifyOptionValues(values: Record<string, string> | undefined): stri
     .join(", ");
 }
 
-export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
+export function VariantForm({ productId, variant, onDone, onCancel, tracked = true, skuNote }: Props) {
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
   const isEdit = Boolean(variant);
+  // A new variant is priced in the store's own currency (backend currencies/baseCurrency.js).
+  const storeCurrency = useWorkspace().currentWorkspace?.defaultCurrency ?? "EGP";
 
   const [sku, setSku] = useState(variant?.sku ?? "");
   const [price, setPrice] = useState(minorToMajorInput(variant?.priceAmount));
@@ -124,6 +136,8 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
   const [options, setOptions] = useState(stringifyOptionValues(variant?.optionValues));
   const [allowOverselling, setAllowOverselling] = useState(variant?.allowOverselling ?? false);
   const [status, setStatus] = useState<"active" | "archived">(variant?.status ?? "active");
+  // The variant's own picture (SPEC §7.2); the Variant type does not name it yet.
+  const [imageUrl, setImageUrl] = useState((variant as { imageUrl?: string | null } | undefined)?.imageUrl ?? "");
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -167,6 +181,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           weightGrams,
           allowOverselling,
           status,
+          ...{ imageUrl: imageUrl || null },
         };
         await apiClient.updateVariant(workspaceId, variant.id, payload);
       } else {
@@ -179,6 +194,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           optionValues: parseOptionValues(options),
           weightGrams,
           allowOverselling,
+          ...{ imageUrl: imageUrl || null },
           stockOnHand: Number.isFinite(stockValue) && stockValue > 0 ? Math.floor(stockValue) : 0,
         };
         await apiClient.createVariant(workspaceId, productId, payload);
@@ -205,6 +221,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         error={fieldErrors.sku}
         placeholder="TSHIRT-M"
       />
+      {skuNote}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <MoneyInput
@@ -213,7 +230,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           value={price}
           onChange={setPrice}
           error={fieldErrors.priceAmount}
-          currency={variant?.currency ?? "EGP"}
+          currency={variant?.currency ?? storeCurrency}
         />
         <MoneyInput
           label={t.cost}
@@ -221,7 +238,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           onChange={setCost}
           error={fieldErrors.costAmount}
           hint={t.optional}
-          currency={variant?.currency ?? "EGP"}
+          currency={variant?.currency ?? storeCurrency}
         />
       </div>
 
@@ -231,7 +248,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         onChange={setCompareAt}
         error={fieldErrors.compareAtAmount}
         hint={t.compareAtHint}
-        currency={variant?.currency ?? "EGP"}
+        currency={variant?.currency ?? storeCurrency}
       />
 
       <WeightInput
@@ -243,17 +260,21 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         hint={t.weightHint}
       />
 
+      <ImageField label={t.image} hint={t.imageHint} value={imageUrl} onChange={setImageUrl} />
+
       {!isEdit && (
         <>
-          <TextField
-            label={t.stock}
-            type="number"
-            min={0}
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            error={fieldErrors.stockOnHand}
-            hint={t.stockHint}
-          />
+          {tracked && (
+            <TextField
+              label={t.stock}
+              type="number"
+              min={0}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              error={fieldErrors.stockOnHand}
+              hint={t.stockHint}
+            />
+          )}
           <TextField
             label={t.options}
             value={options}
@@ -291,14 +312,16 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         </>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          checked={allowOverselling}
-          onChange={(e) => setAllowOverselling(e.target.checked)}
-        />
-        {t.allowOverselling}
-      </label>
+      {tracked && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={allowOverselling}
+            onChange={(e) => setAllowOverselling(e.target.checked)}
+          />
+          {t.allowOverselling}
+        </label>
+      )}
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>

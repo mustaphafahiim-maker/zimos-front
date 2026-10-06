@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Card, cn } from "@store-builder/ui";
 import {
@@ -13,7 +13,8 @@ import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatMoney, formatPercentValue } from "@/lib/format";
-import { deltaBasisPoints, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { ANALYTICS_RANGES, deltaBasisPoints, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
+import { useRememberedChoice } from "@/lib/rememberedChoice";
 import { DataState } from "@/components/DataState";
 import { RangeSwitch } from "@/components/RangeSwitch";
 import { Section } from "@/components/Section";
@@ -119,7 +120,7 @@ const STRINGS = {
     stepCheckout: "بدأ إتمام الطلب",
     stepPurchase: "اشترى",
     ofVisits: "{rate} من الزيارات",
-    noVisits: "لا توجد زيارات للمتجر في هذه الفترة بعد.",
+    noVisits: "مفيش زيارات للمتجر في هذه الفترة لسه.",
     offersTitle: "العروض والبيع الإضافي",
     offersDesc: "ما أضافته عروضك إلى الطلبات.",
     offerType: "العرض",
@@ -134,7 +135,7 @@ const STRINGS = {
     devicesTitle: "الأجهزة",
     productsTitle: "المنتجات الأكثر مبيعًا",
     funnelsTitle: "أفضل مسارات البيع",
-    nothing: "لا يوجد شيء في هذه الفترة بعد.",
+    nothing: "مفيش شيء في هذه الفترة لسه.",
     ordersCaption: "{orders} طلب · {sales}",
     visitsCaption: "{visits} زيارة · {orders} طلب",
     unitsCaption: "بيع منه {n}",
@@ -171,7 +172,7 @@ const TILES: Tile[] = [
   { key: "checkouts", kind: "count", spark: "checkouts" },
   { key: "crossSellAdds", kind: "count", spark: "crossSell" },
   { key: "newOrders", kind: "count", hint: "hintNewOrders", to: "/orders" },
-  { key: "lostOrders", kind: "count", spark: "lost", hint: "hintLost", to: "/abandoned", inverse: true },
+  { key: "lostOrders", kind: "count", spark: "lost", hint: "hintLost", to: "/abandoned-carts", inverse: true },
   { key: "lostRate", kind: "rate", inverse: true },
   { key: "newCustomers", kind: "count", to: "/customers" },
   { key: "returningCustomers", kind: "count", to: "/customers" },
@@ -186,13 +187,21 @@ const TILES: Tile[] = [
 export function StoreOverview({ actions }: { actions?: ReactNode }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
-  const [range, setRange] = useState<AnalyticsRange>("7d");
-  const [funnelId, setFunnelId] = useState("");
-  const [currency, setCurrency] = useState("");
+  // The period, funnel and currency the merchant last chose here, per store (SPEC §15.1: 7 days by default).
+  const [range, setRange] = useRememberedChoice<AnalyticsRange>("home.range", "7d", ANALYTICS_RANGES);
+  const [funnelId, setFunnelId] = useRememberedChoice<string>("home.funnel", "");
+  const [currency, setCurrency] = useRememberedChoice<string>("home.currency", "");
   const currencies = useAsync(() => currenciesGet(apiClient, workspaceId).catch(() => null), [workspaceId]);
   const currencyChoices = currencies.data ? Object.keys(currencies.data.rates) : [];
 
   const funnels = useAsync(() => funnelsList(apiClient, workspaceId).catch(() => []), [workspaceId]);
+  // A remembered funnel that was deleted, or a currency no longer offered, falls back to the whole store.
+  useEffect(() => {
+    if (funnelId && funnels.data && !funnels.data.some((f) => f.id === funnelId)) setFunnelId("");
+  }, [funnelId, funnels.data, setFunnelId]);
+  useEffect(() => {
+    if (currency && currencies.data && !(currency in currencies.data.rates)) setCurrency("");
+  }, [currency, currencies.data, setCurrency]);
   const overview = useAsync<InsightsOverview>(
     () =>
       insightsGetOverview(apiClient, workspaceId, {

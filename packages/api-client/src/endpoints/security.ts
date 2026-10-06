@@ -85,7 +85,7 @@ export async function securityEndAllSessions(client: ApiClient): Promise<void> {
 
 // -------------------------------------------------------- two-step sign-in --
 
-export type TwoFactorMode = "off" | "email" | "totp";
+export type TwoFactorMode = "off" | "email" | "totp" | "whatsapp";
 
 export interface TwoFactorStatus {
   mode: TwoFactorMode;
@@ -98,7 +98,8 @@ export interface TwoFactorStatus {
 export interface TwoFactorChallenge {
   twoFactorRequired: true;
   challengeToken: string;
-  channel: "email" | "totp";
+  /** whatsapp/sms: the code went to the verified phone (sms when WhatsApp could not deliver it). */
+  channel: "email" | "totp" | "whatsapp" | "sms";
   /** Masked address the code went to (email channel). */
   sentTo?: string;
 }

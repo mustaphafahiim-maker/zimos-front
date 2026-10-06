@@ -22,6 +22,7 @@ const STRINGS = {
     bulkEdit: "Bulk edit",
     clear: "Clear selection",
     selectAll: "Select all products on this page",
+    selectAllShort: "Select all",
     selectRow: "Select {name}",
     transfer: "Import / export",
     duplicate: "Duplicate",
@@ -29,14 +30,15 @@ const STRINGS = {
     duplicated: "“{name}” created as a draft.",
   },
   ar: {
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     bulkEdit: "تعديل جماعي",
     clear: "إلغاء التحديد",
-    selectAll: "تحديد كل المنتجات في هذه الصفحة",
+    selectAll: "اختار كل المنتجات في الصفحة دي",
+    selectAllShort: "اختار الكل",
     selectRow: "تحديد {name}",
     transfer: "استيراد / تصدير",
     duplicate: "نسخ",
-    duplicating: "جارٍ النسخ…",
+    duplicating: "بننسخ…",
     duplicated: "تم إنشاء «{name}» كمسودة.",
   },
 } satisfies Messages;
@@ -73,17 +75,33 @@ export function useProductSelection(): ProductSelection {
 }
 
 /** The header checkbox: ticks or clears every product shown. */
-export function SelectAllCheckbox({ selection, products }: { selection: ProductSelection; products: Product[] }) {
+export function SelectAllCheckbox({
+  selection,
+  products,
+  withLabel,
+}: {
+  selection: ProductSelection;
+  products: Product[];
+  /** Phones: the words beside the box, not a lone 16 px square (re-audit N-25). */
+  withLabel?: boolean;
+}) {
   const t = useT(STRINGS);
   const all = products.length > 0 && products.every((p) => selection.ids.has(p.id));
-  return (
+  const box = (
     <input
       type="checkbox"
       className="size-4 cursor-pointer accent-primary"
-      aria-label={t.selectAll}
+      aria-label={withLabel ? undefined : t.selectAll}
       checked={all}
       onChange={() => selection.setAll(products.map((p) => p.id), !all)}
     />
+  );
+  if (!withLabel) return box;
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-2 pe-2">
+      {box}
+      <span>{t.selectAllShort}</span>
+    </label>
   );
 }
 

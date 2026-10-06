@@ -10,6 +10,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { recallReferralCode } from "@/lib/referralCode";
 import { useToast } from "@/components/Toast";
 import { DataState } from "@/components/DataState";
 
@@ -106,7 +107,7 @@ const STRINGS = {
     referralHint: "حصلت على كود من أحد مندوبي Zimos؟ أدخله هنا. يُطبق على مدفوعات خطتك ويمكن إدخاله مرة واحدة فقط.",
     codePlaceholder: "مثال: CAIRO10",
     apply: "تطبيق الكود",
-    applying: "جارٍ التطبيق…",
+    applying: "بنطبّق…",
     applied: "تم تطبيق كود الإحالة.",
     attachedOn: "طُبق في {date}",
     noDiscount: "بدون خصم — يسجل فقط من قام بإحالتك.",
@@ -118,9 +119,9 @@ const STRINGS = {
     payTitle: "الدفع الإلكتروني",
     payHint: "ادفع قيمة فترة واحدة من خطتك ({amount}) عبر صفحة الدفع الآمنة من فواتيرك.",
     payNow: "ادفع الآن",
-    opening: "جارٍ فتح صفحة الدفع…",
+    opening: "بنفتح صفحة الدفع…",
     awaitingReference: "بانتظار دفعتك عبر {method}. الرقم المرجعي: {reference}",
-    checking: "جارٍ التحقق من دفعتك…",
+    checking: "بنتأكد من دفعتك…",
     paid: "تم استلام الدفعة، واشتراكك نشط.",
     stillPending: "دفعتك قيد المعالجة. ستظهر في هذه الصفحة عند تأكيدها.",
     notCompleted: "لم تكتمل عملية الدفع. يمكنك المحاولة مرة أخرى.",
@@ -133,7 +134,7 @@ const STRINGS = {
     payCurrency: "الدفع الإلكتروني متاح فقط للخطط المسعّرة بالجنيه المصري.",
     payStartFailed: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد بضع دقائق.",
     payStarting: "هناك عملية دفع يجري فتحها بالفعل. انتظر لحظة ثم حاول مرة أخرى.",
-    nothingToPay: "لا يوجد مبلغ مستحق حاليًا.",
+    nothingToPay: "مفيش مبلغ مستحق حاليًا.",
     chargeSettled: "تمت تسوية هذه الدفعة في الأثناء. أعد تحميل الصفحة.",
     noCheckout: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد بضع دقائق.",
   },
@@ -488,7 +489,7 @@ function ReferralCodeForm({ onApplied }: { onApplied: (next: WorkspaceBilling) =
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => recallReferralCode());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

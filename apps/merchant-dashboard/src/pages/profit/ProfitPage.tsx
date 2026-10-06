@@ -20,6 +20,7 @@ import {
   type AnalyticsRange,
 } from "@/lib/analytics";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -94,7 +95,9 @@ export function ProfitPage() {
   const current = summary.data?.current ?? null;
   const previous = summary.data?.previous ?? null;
   const currency = current?.currency ?? "EGP";
-  const money = (value: number) => <bdi dir="ltr">{formatMoney(value, currency)}</bdi>;
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (value: number) => <bdi dir="ltr">{formatMoney(...inReport(value, currency))}</bdi>;
 
   const profit = current?.profit;
   const margin =
@@ -107,9 +110,15 @@ export function ProfitPage() {
   return (
     <div className="min-w-0 max-w-6xl">
       <PageHeader
+        tutorial="profit"
         title={t.title}
         description={t.description}
-        actions={<RangeSwitch value={range} onChange={setRange} />}
+        actions={
+          <div className="flex flex-wrap items-start gap-2">
+            <ReportCurrencySelect />
+            <RangeSwitch value={range} onChange={setRange} />
+          </div>
+        }
       />
 
       <DataState
@@ -192,7 +201,7 @@ export function ProfitPage() {
                         <dd className="tabular-nums text-ink">
                           <bdi dir="ltr">
                             {row.sign}
-                            {formatMoney(row.value, currency)}
+                            {formatMoney(...inReport(row.value, currency))}
                           </bdi>
                         </dd>
                       </div>

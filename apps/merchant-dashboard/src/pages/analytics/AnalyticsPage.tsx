@@ -29,6 +29,7 @@ import {
   type AnalyticsRange,
 } from "@/lib/analytics";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -144,12 +145,12 @@ const STRINGS = {
   },
   ar: {
     title: "التحليلات",
-    description: "أرقام المبيعات محسوبة من طلباتك الفعلية، والزيارات من تتبّع متجرك نفسه. لا يوجد أي رقم تقديري.",
+    description: "أرقام المبيعات محسوبة من طلباتك الفعلية، والزيارات من تتبّع متجرك نفسه. مفيش أي رقم تقديري.",
     comparedTo: "{current} مقارنةً بـ {previous}",
     thisPeriod: "هذه الفترة",
     previousPeriod: "الفترة السابقة",
     vsPrevious: "مقارنةً بالفترة السابقة",
-    noComparison: "لا توجد فترة سابقة للمقارنة",
+    noComparison: "مفيش فترة سابقة للمقارنة",
     grossSales: "إجمالي المبيعات",
     grossSalesHint: "قيمة الطلبات المُنشأة، بعد استبعاد الملغاة والمرفوضة.",
     orders: "الطلبات",
@@ -216,7 +217,7 @@ const STRINGS = {
     statusCancelled: "ملغاة",
     statusDelivered: "مُسلَّمة",
     statusReturned: "مرتجعة",
-    noActivity: "لا توجد طلبات في هذه الفترة",
+    noActivity: "مفيش طلبات في هذه الفترة",
     noActivityDesc: "ستمتلئ الرسوم البيانية بمجرد أن تبدأ الطلبات بالوصول.",
     sessions: "الجلسات",
     sessionsHint: "زيارات متجرك ومسارات البيع، يحسبها المتجر نفسه.",
@@ -384,7 +385,9 @@ export function AnalyticsPage() {
   const current = summary.data?.current ?? null;
   const previous = summary.data?.previous ?? null;
   const currency = current?.currency ?? "EGP";
-  const money = (value: number) => <bdi dir="ltr">{formatMoney(value, currency)}</bdi>;
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (value: number) => <bdi dir="ltr">{formatMoney(...inReport(value, currency))}</bdi>;
   const percent = (value: number | null) => <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>;
   const count = (value: number) => <bdi dir="ltr">{formatCount(value)}</bdi>;
   const rateDelta = (now: number | null, before: number | null | undefined) =>
@@ -421,7 +424,12 @@ export function AnalyticsPage() {
       <PageHeader
         title={t.title}
         description={t.description}
-        actions={<RangeSwitch value={range} onChange={setRange} />}
+        actions={
+          <div className="flex flex-wrap items-start gap-2">
+            <ReportCurrencySelect />
+            <RangeSwitch value={range} onChange={setRange} />
+          </div>
+        }
       />
 
       <DataState loading={summary.loading && !current} error={summary.error} onRetry={() => summary.refresh()}>
@@ -672,7 +680,7 @@ export function AnalyticsPage() {
                     <ComparisonLineChart
                       summary={fmt(t.salesOverTimeDesc, { currency })}
                       points={comparePoints((d) => d.revenue)}
-                      format={(value) => formatMoney(value, currency)}
+                      format={(value) => formatMoney(...inReport(value, currency))}
                       formatAxis={(value) => formatCount(Math.round(value / 100))}
                       currentLabel={t.thisPeriod}
                       previousLabel={t.previousPeriod}
@@ -699,7 +707,7 @@ export function AnalyticsPage() {
                         <dd className={cn("tabular-nums text-ink", row.strong && "font-semibold")}>
                           <bdi dir="ltr">
                             {row.negative && row.value > 0 ? "−" : ""}
-                            {formatMoney(row.value, currency)}
+                            {formatMoney(...inReport(row.value, currency))}
                           </bdi>
                         </dd>
                       </div>

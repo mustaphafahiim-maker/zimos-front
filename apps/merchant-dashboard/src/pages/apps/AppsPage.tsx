@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { automationGuidePath } from "./automationApps";
 
 const STRINGS = {
   en: {
@@ -56,7 +57,7 @@ const STRINGS = {
     hooks: "{count} webhook(s)",
     uninstallTitle: "Uninstall {name}?",
     uninstallBody: "Its API key stops working at once and its webhooks are removed.",
-    uninstallFeatureBody: "You can install it again at any time.",
+    uninstallFeatureBody: "It stops working in your store and dashboard until you install it again. What you set up is kept.",
     cancel: "Cancel",
     working: "Working…",
   },
@@ -75,7 +76,7 @@ const STRINGS = {
     comingSoon: "قريبًا",
     test: "تجريبي",
     install: "تثبيت",
-    installing: "جارٍ التثبيت…",
+    installing: "بنثبّت…",
     open: "فتح",
     uninstall: "إلغاء التثبيت",
     installedBadge: "مثبّت",
@@ -92,9 +93,9 @@ const STRINGS = {
     hooks: "{count} webhook",
     uninstallTitle: "إلغاء تثبيت {name}؟",
     uninstallBody: "مفتاح الـ API بتاعه هيقف فورًا والـ webhooks هتتشال.",
-    uninstallFeatureBody: "تقدر تثبّته تاني في أي وقت.",
+    uninstallFeatureBody: "هيوقف في متجرك ولوحة التحكم لحد ما تثبّته تاني. إعداداتك محفوظة.",
     cancel: "إلغاء",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 
@@ -227,7 +228,7 @@ export function AppsPage() {
                             </Button>
                             {app.openPath && (
                               <Button size="sm" asChild>
-                                <Link to={app.openPath}>{t.open}</Link>
+                                <Link to={automationGuidePath(app.key) ?? app.openPath}>{t.open}</Link>
                               </Button>
                             )}
                           </>

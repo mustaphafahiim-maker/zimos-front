@@ -1,13 +1,14 @@
 import { useId, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Alert, Button, Card, CardContent, Input, Label } from "@store-builder/ui";
-import { CUSTOM_FIELD_LIMITS, type CustomField, type CustomFieldType } from "@store-builder/api-client";
+import { CUSTOM_FIELD_LIMITS, customFieldPrice, type CustomField, type CustomFieldType, type PricedCustomField } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { CustomFieldPriceInput } from "./CustomFieldPriceInput";
 
 /**
  * The fields a shopper fills in when ordering this product — a name to
@@ -53,7 +54,7 @@ const STRINGS = {
     title: "حقول مخصصة",
     description:
       "اطلب من العميل بيانات عند طلب هذا المنتج — اسمًا للنقش، أو رسالة، أو صورته الخاصة. حتى خمسة حقول، تظهر في صفحة المنتج بهذا الترتيب.",
-    empty: "لا توجد حقول مخصصة. يطلب العملاء هذا المنتج كما هو.",
+    empty: "مفيش حقول مخصصة. يطلب العملاء هذا المنتج كما هو.",
     field: "الحقل {n}",
     type: "النوع",
     type_text: "نص قصير",
@@ -74,7 +75,7 @@ const STRINGS = {
     remove: "حذف الحقل {n}",
     labelMissing: "أضف عنوانًا للحقل {n} بالعربية أو الإنجليزية.",
     save: "حفظ الحقول المخصصة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     discard: "تجاهل التغييرات",
     saved: "تم حفظ الحقول المخصصة.",
   },
@@ -97,6 +98,7 @@ function clean(field: CustomField): CustomField {
     if (placeholder.ar || placeholder.en) out.placeholder = placeholder;
     if (field.maxLength) out.maxLength = field.maxLength;
   }
+  if (customFieldPrice(field)) (out as PricedCustomField).priceDeltaAmount = customFieldPrice(field);
   return out;
 }
 
@@ -360,6 +362,7 @@ function FieldEditor({
           ) : (
             <p className="text-xs text-ink-soft sm:col-span-2">{t.imageHint}</p>
           )}
+          <CustomFieldPriceInput field={field} onChange={onChange} />
         </div>
       </fieldset>
     </li>

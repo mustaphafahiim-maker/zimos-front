@@ -1,9 +1,11 @@
 "use client";
 
+import { wantsSaveCard } from "./saveCard";
 import { botGuardFields } from "./botGuard";
+import { adMatchFields } from "./adMatch";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { ApiClient, CheckoutPayload, CheckoutResult, StorefrontPaymentMethod } from "@store-builder/api-client";
+import { storefrontPaymentMethodsFor, type ApiClient, type CheckoutPayload, type CheckoutResult, type StorefrontPaymentMethod } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import { storeHref } from "./storeHref";
 
@@ -87,19 +89,44 @@ export function getPaymentToken(workspaceId: string, orderId: string): string | 
   return readTokens(workspaceId)[orderId] ?? null;
 }
 
+// Where the payment page sends the shopper on once the order is paid: back into
+// the funnel the order was placed in. A store-relative path only.
+const backKey = (workspaceId: string, orderId: string) => `zimos_pay_back_${workspaceId}_${orderId}`;
+
+export function savePaymentReturn(workspaceId: string, orderId: string, path: string) {
+  try {
+    if (path.startsWith("/") && !path.startsWith("//")) window.localStorage.setItem(backKey(workspaceId, orderId), path);
+  } catch {
+    /* storage disabled */
+  }
+}
+
+export function getPaymentReturn(workspaceId: string, orderId: string): string | null {
+  try {
+    const path = window.localStorage.getItem(backKey(workspaceId, orderId));
+    return path && path.startsWith("/") && !path.startsWith("//") ? path : null;
+  } catch {
+    return null;
+  }
+}
+
 // --------------------------------------------------------------- methods
 
 /**
  * The methods the store offers at checkout. Starts (and falls back to) cash on
  * delivery only, so a store without online payments renders exactly as before.
  */
-export function usePaymentMethods(client: ApiClient, workspaceId: string) {
+export function usePaymentMethods(client: ApiClient, workspaceId: string, funnelId?: string, currency?: string) {
   const [methods, setMethods] = useState<StorefrontPaymentMethod[]>(COD_ONLY);
   const [preview, setPreview] = useState(false);
   useEffect(() => {
     let live = true;
-    client
-      .getStorefrontPaymentMethods(workspaceId, getPreviewToken(workspaceId))
+    // A funnel offers its own list (payment rules → methods per funnel); a
+    // known currency leaves out the gateways that cannot take it.
+    (funnelId || currency
+      ? storefrontPaymentMethodsFor(client, workspaceId, { funnelId, currency, previewToken: getPreviewToken(workspaceId) })
+      : client.getStorefrontPaymentMethods(workspaceId, getPreviewToken(workspaceId))
+    )
       .then((res) => {
         if (!live) return;
         setMethods(res.methods.length ? res.methods : COD_ONLY);
@@ -111,7 +138,7 @@ export function usePaymentMethods(client: ApiClient, workspaceId: string) {
     return () => {
       live = false;
     };
-  }, [client, workspaceId]);
+  }, [client, workspaceId, funnelId, currency]);
   return { methods, preview };
 }
 
@@ -133,6 +160,7 @@ export async function placeOnlineOrder({
   method,
   cartToken,
   visitorId,
+  returnTo,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -142,6 +170,8 @@ export async function placeOnlineOrder({
   cartToken?: string;
   /** Owns any photo answering a product's custom field. */
   visitorId?: string;
+  /** A store-relative path the payment page sends the shopper on to once paid (a funnel's next step). */
+  returnTo?: string;
 }): Promise<{ result: CheckoutResult; next: string; external: boolean }> {
   const previewToken = getPreviewToken(workspaceId);
   const token = cartToken;
@@ -149,8 +179,12 @@ export async function placeOnlineOrder({
     ...payload,
     paymentMethod: method.method,
     ...(method.provider ? { paymentProvider: method.provider } : {}),
+    // The shopper ticked "save my card" (lib/saveCard): kept by the gateway once paid.
+    ...(method.method === "card" && wantsSaveCard(workspaceId) ? { saveCard: true } : {}),
     // The bot guard's token and honeypot (lib/botGuard).
     ...(await botGuardFields(client, workspaceId)),
+    // The ad platforms' browser ids, for the server-side Purchase (lib/adMatch).
+    ...adMatchFields(workspaceId),
   };
   // The return URL names the order, which only exists once the checkout
   // answers: the server fills in the {orderId} placeholder.
@@ -165,6 +199,7 @@ export async function placeOnlineOrder({
   const order = result.order;
   saveOrderSnapshot(workspaceId, snapshotFromOrder(order, body.contact.phone));
   if (result.paymentToken) savePaymentToken(workspaceId, order.id, result.paymentToken);
+  if (returnTo) savePaymentReturn(workspaceId, order.id, returnTo);
 
   const redirect = result.payment?.redirectUrl;
   if (redirect) return { result, next: redirect, external: true };

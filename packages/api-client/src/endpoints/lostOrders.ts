@@ -14,6 +14,7 @@
  * createOrder can give.
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
 export const LOST_ORDER_REASONS = [
   "incomplete",
@@ -56,6 +57,16 @@ export interface LostOrderLine {
   lineTotalAmount: number;
 }
 
+export interface LostOrderTrafficSource {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  adId: string | null;
+  /** The referring site's host. */
+  referrer: string | null;
+  landingPage: string | null;
+}
+
 export interface LostOrder {
   id: string;
   status: LostOrderStatus;
@@ -76,6 +87,12 @@ export interface LostOrder {
   source: "store" | "funnel";
   ipAddress: string | null;
   ipCountry: string | null;
+  /**
+   * Where the shopper came from: the last touch the storefront kept, else the
+   * first (UTM source / medium / campaign, the ad id, the referring site).
+   * Null for a direct visit.
+   */
+  trafficSource: LostOrderTrafficSource | null;
   /** `/r/<token>` — put the store's address in front for the recovery link. */
   recoveryPath: string | null;
   lastActivityAt: string;
@@ -121,7 +138,7 @@ export interface LostOrderStats {
 export interface LostOrderConvertPayload {
   contact?: { fullName?: string; phone?: string; email?: string | null };
   shippingAddress?: LostOrderAddress;
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   notes?: string;
   items?: { variantId: string; offerId?: string; quantity: number }[];
 }
@@ -213,3 +230,50 @@ export async function lostOrdersRecover(client: ApiClient, workspaceId: string, 
   );
   return recovery;
 }
+
+/**
+ * The full phone behind a masked one (lists mask phones for roles without
+ * customers.reveal_sensitive). Needs orders.view; every call is in the activity log.
+ */
+export async function lostOrdersRevealPhone(client: ApiClient, workspaceId: string, sessionId: string): Promise<string | null> {
+  const { phone } = await client.request<{ phone: string | null }>(`${base(workspaceId)}/${sessionId}/reveal-phone`, {
+    method: "POST",
+  });
+  return phone;
+}
+
+/**
+ * Sends the recovery template from the store's connected WhatsApp number
+ * (backend checkoutSessions/lostOrderWhatsapp.js): `cart_reminder` unless
+ * another approved template is named, filled with the customer's name, the
+ * store's name and the recovery link. Marks the lost order contacted.
+ * Codes: WHATSAPP_NOT_CONNECTED, WHATSAPP_TEMPLATE_NOT_APPROVED,
+ * MARKETING_NOT_ALLOWED (the phone answered STOP or is blocked), NO_PHONE — all 422.
+ */
+export async function lostOrdersSendWhatsapp(
+  client: ApiClient,
+  workspaceId: string,
+  sessionId: string,
+  options: { template?: string; language?: string } = {}
+): Promise<{ message: { id: string; conversationId: string; status: string }; recoveryStatus: LostOrderRecoveryStatus }> {
+  return client.request(`${base(workspaceId)}/${sessionId}/whatsapp`, { method: "POST", body: options });
+}
+
+/**
+ * How long a checkout may sit quiet before it counts as lost (SPEC §6.2):
+ * `settings.fraud_rules.abandoned_after_minutes`, 5–1440 minutes; null puts
+ * back the default (15). Needs workspace.manage (403 otherwise). Returns the
+ * minutes now in force.
+ */
+export async function lostOrdersSaveAbandonAfter(client: ApiClient, workspaceId: string, minutes: number | null): Promise<number> {
+  const body = await client.request<{
+    workspace?: { settings?: { fraud_rules?: { abandoned_after_minutes?: unknown } } };
+    settings?: { fraud_rules?: { abandoned_after_minutes?: unknown } };
+  }>(`/workspaces/${workspaceId}`, { method: "PATCH", body: { settings: { fraud_rules: { abandoned_after_minutes: minutes } } } });
+  const stored = (body.workspace?.settings ?? body.settings)?.fraud_rules?.abandoned_after_minutes;
+  return typeof stored === "number" ? stored : LOST_ORDER_DEFAULT_ABANDON_MINUTES;
+}
+
+/** The backend's default (lostOrderService.js) and the bounds it accepts. */
+export const LOST_ORDER_DEFAULT_ABANDON_MINUTES = 15;
+export const LOST_ORDER_ABANDON_MINUTES_RANGE = { min: 5, max: 1440 } as const;

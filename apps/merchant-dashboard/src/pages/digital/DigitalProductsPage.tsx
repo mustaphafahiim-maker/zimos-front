@@ -12,6 +12,7 @@ import {
   digitalListProducts,
   digitalSaveDelivery,
   digitalUploadFile,
+  digitalUploadLargeFile,
   type DigitalDeliveryType,
   type DigitalFile,
   type DigitalProduct,
@@ -85,7 +86,9 @@ const STRINGS = {
     upload: "Upload file",
     uploading: "Uploading…",
     uploaded: "“{name}” uploaded.",
-    maxSize: "Up to {size} MB per file. Files are private: only a buyer's download link can open them.",
+    maxSize: "Up to {large} GB per file — above {size} MB it goes straight to storage in parts. Files are private: only a buyer's download link can open them.",
+    uploadingPercent: "Uploading… {percent}%",
+    cancelUpload: "Cancel",
     colFile: "File",
     colSize: "Size",
     colUsed: "Used by",
@@ -119,14 +122,14 @@ const STRINGS = {
     setUp: "إعداد",
     edit: "تعديل",
     stock: "متبقي {available} من {total}",
-    emptyProductsTitle: "لا توجد منتجات رقمية بعد",
+    emptyProductsTitle: "مفيش منتجات رقمية لسه",
     emptyProductsDescription: "أنشئ منتجًا واختر النوع «رقمي». سيظهر هنا لتحدد ما يستلمه العميل.",
     newProduct: "منتج جديد",
     deliveryTitle: "تسليم «{name}»",
     deliveryDescription: "يُرسل عند دفع الطلب. طلب الدفع عند الاستلام يُسلَّم بعد تسجيل دفعه.",
     type: "ما يحصل عليه العميل",
     file: "الملف",
-    chooseFile: "اختر ملفًا من المكتبة",
+    chooseFile: "اختار ملفًا من المكتبة",
     noFiles: "مكتبة الملفات فارغة. ارفع ملفًا أولًا.",
     linkUrl: "الرابط",
     linkHint: "صفحة خاصة، مجلد على درايف، كورس — أي شيء له عنوان.",
@@ -144,12 +147,14 @@ const STRINGS = {
     codesAdded: "أُضيف {added} كود، و{duplicates} موجود مسبقًا.",
     codeGiven: "سُلِّم {date}",
     codeFree: "متاح",
-    noCodes: "لا توجد أكواد بعد.",
+    noCodes: "مفيش أكواد لسه.",
     removeCode: "حذف الكود",
     upload: "رفع ملف",
-    uploading: "جارٍ الرفع…",
-    uploaded: "تم رفع «{name}».",
-    maxSize: "حتى {size} ميجابايت للملف. الملفات خاصة: لا يفتحها إلا رابط تحميل المشتري.",
+    uploading: "بنرفع…",
+    uploaded: "اترفع «{name}».",
+    maxSize: "حتى {large} جيجابايت للملف — فوق {size} ميجابايت بيترفع على أجزاء مباشرة للتخزين. الملفات خاصة: لا يفتحها إلا رابط تحميل المشتري.",
+    uploadingPercent: "بنرفع… {percent}%",
+    cancelUpload: "إلغاء",
     colFile: "الملف",
     colSize: "الحجم",
     colUsed: "مستخدم في",
@@ -160,7 +165,7 @@ const STRINGS = {
     emptyFilesDescription: "ارفع الكتب والقوالب والملفات التي تسلّمها منتجاتك الرقمية.",
     deleteFileTitle: "حذف «{name}»؟",
     deleteFileDescription: "يُحذف الملف نهائيًا. العملاء الذين اشتروه لن يتمكنوا من تحميله.",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     fileDeleted: "تم حذف الملف.",
     fileInUse: "يوجد منتج ما زال يسلّم هذا الملف. غيّر تسليمه أولًا.",
     fileTooLarge: "الملف أكبر من الحد المسموح.",
@@ -542,19 +547,36 @@ function FilesTab() {
   const files = list.data?.files ?? [];
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  // A large file's progress (0–100) and the way to stop it; null for a small one.
+  const [progress, setProgress] = useState<number | null>(null);
+  const cancel = useRef<AbortController | null>(null);
   const [removing, setRemoving] = useState<DigitalFile | null>(null);
+  const maxBytes = list.data?.maxFileBytes ?? 100 * 1024 * 1024;
 
   async function onPick(file: File | undefined) {
     if (!file) return;
     setUploading(true);
     try {
-      const saved = await digitalUploadFile(apiClient, apiBaseUrl, workspaceId, file);
+      let saved: DigitalFile;
+      if (file.size > maxBytes) {
+        if (list.data?.maxLargeFileBytes && file.size > list.data.maxLargeFileBytes) throw new ApiError("too large", 413, "FILE_TOO_LARGE");
+        cancel.current = new AbortController();
+        setProgress(0);
+        saved = await digitalUploadLargeFile(apiClient, workspaceId, file, {
+          signal: cancel.current.signal,
+          onProgress: (sent, total) => setProgress(Math.floor((sent / total) * 100)),
+        });
+      } else {
+        saved = await digitalUploadFile(apiClient, apiBaseUrl, workspaceId, file);
+      }
       toast.success(fmt(t.uploaded, { name: saved.name }));
       void list.refresh({ silent: true });
     } catch (err) {
-      toast.error(codeOf(err) === "FILE_TOO_LARGE" ? t.fileTooLarge : errorMessage(err));
+      if (!cancel.current?.signal.aborted) toast.error(codeOf(err) === "FILE_TOO_LARGE" ? t.fileTooLarge : errorMessage(err));
     } finally {
       setUploading(false);
+      setProgress(null);
+      cancel.current = null;
       if (input.current) input.current.value = "";
     }
   }
@@ -572,10 +594,17 @@ function FilesTab() {
   }
 
   const uploadButton = (
-    <Button className="min-h-10" disabled={uploading} onClick={() => input.current?.click()}>
-      <Upload className="size-4" aria-hidden />
-      {uploading ? t.uploading : t.upload}
-    </Button>
+    <span className="inline-flex items-center gap-2">
+      <Button className="min-h-10" disabled={uploading} onClick={() => input.current?.click()}>
+        <Upload className="size-4" aria-hidden />
+        {progress !== null ? fmt(t.uploadingPercent, { percent: progress }) : uploading ? t.uploading : t.upload}
+      </Button>
+      {progress !== null && (
+        <Button variant="outline" className="min-h-10" onClick={() => cancel.current?.abort()}>
+          {t.cancelUpload}
+        </Button>
+      )}
+    </span>
   );
 
   const columns: Column<DigitalFile>[] = [
@@ -605,7 +634,7 @@ function FilesTab() {
       <input ref={input} type="file" className="hidden" onChange={(e) => void onPick(e.target.files?.[0])} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-ink-soft">
-          {fmt(t.maxSize, { size: list.data ? Math.round(list.data.maxFileBytes / 1024 / 1024) : 100 })}
+          {fmt(t.maxSize, { size: Math.round(maxBytes / 1024 / 1024), large: list.data?.maxLargeFileBytes ? Math.round(list.data.maxLargeFileBytes / 1024 ** 3) : 10 })}
         </p>
         {uploadButton}
       </div>

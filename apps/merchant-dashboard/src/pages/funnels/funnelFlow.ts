@@ -15,12 +15,14 @@ import { fmt, type Locale } from "@/i18n/LocaleContext";
 import { STEP_DEFAULT_NAMES, STEP_TYPE_LABELS, VALIDATION_STRINGS } from "./FunnelEditorPage.strings";
 import { tempId, uniqueStepKey, type StarterPlan, type UiEdge, type UiEdgeCondition, type UiFunnel, type UiStep, type UiStepType } from "./funnelAdapter";
 import { pageElementCount, stepPageTree } from "./funnelPages";
+import { flowSteps, isGenericStep } from "./genericPageRules";
 
 // ---------------------------------------------------------------- layout --
 
 /** Canvas card size and grid. Cards are laid out left to right in flow order. */
 export const FLOW_CARD_W = 224;
-export const FLOW_CARD_H = 132;
+// Room for the page thumbnail and the step's numbers (FlowMapTools).
+export const FLOW_CARD_H = 172;
 const GAP_X = 340;
 const GAP_Y = 176;
 const ORIGIN_X = 40;
@@ -280,8 +282,9 @@ export function collectFunnelProblems(funnel: UiFunnel, locale: Locale = "en"): 
     problems.push({ field: "steps", message: v.noSteps });
     return problems;
   }
+  // Generic pages (genericPageRules.ts) are off the path: neither the start nor "unreachable".
   const entries = entryKeysOf(
-    funnel.steps.map((s) => s.key),
+    flowSteps(funnel.steps, funnel.edges).map((s) => s.key),
     funnel.edges
   );
   if (entries.length === 0) {
@@ -305,7 +308,7 @@ export function collectFunnelProblems(funnel: UiFunnel, locale: Locale = "en"): 
     }
   }
   for (const s of funnel.steps) {
-    if (!seen.has(s.key)) problems.push({ field: `steps.${s.key}`, stepKey: s.key, message: fmt(v.unreachable, { name: s.name }) });
+    if (!seen.has(s.key) && !isGenericStep(s, funnel.edges)) problems.push({ field: `steps.${s.key}`, stepKey: s.key, message: fmt(v.unreachable, { name: s.name }) });
   }
   return problems;
 }

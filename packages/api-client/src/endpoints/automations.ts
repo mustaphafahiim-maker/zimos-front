@@ -14,6 +14,7 @@
  * wait, and may not end on a wait; each step's fields depend on its type.
  */
 import type { ApiClient } from "../client";
+import type { PaymentMethod } from "../types";
 
 export type AutomationStepType =
   | "wait"
@@ -38,7 +39,7 @@ export type AutomationStep =
   | { type: "notify_team"; message: string };
 
 export interface AutomationFlowConditions {
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer" | null;
+  paymentMethod?: PaymentMethod | null;
   /** Minor units. */
   minTotalAmount?: number | null;
   productIds?: string[];
@@ -54,6 +55,10 @@ export interface AutomationFlowConditions {
   delayDays?: number;
   /** The value of `{{coupon_code}}` in this rule's messages. */
   couponCode?: string | null;
+  /** Only contacts in this segment, checked when the rule starts (any trigger with a contact). */
+  segmentId?: string | null;
+  /** Never contacts in this segment. */
+  excludeSegmentId?: string | null;
 }
 
 export interface AutomationFlowRule {
@@ -118,6 +123,8 @@ export interface AutomationFlowTemplate {
   whatsappTemplates: AutomationWhatsappTemplateHint[];
   /** The rule this store already created from the template, or null. */
   ruleId: string | null;
+  /** Switched on with a coupon code, its last message offers it (abandoned cart). */
+  acceptsCoupon?: boolean;
 }
 
 const base = (workspaceId: string) => `/workspaces/${workspaceId}/automations`;
@@ -177,7 +184,12 @@ export async function automationFlowsEnableTemplate(
   client: ApiClient,
   workspaceId: string,
   key: string,
-  locale: "ar" | "en"
+  locale: "ar" | "en",
+  /** For a template that offers one (`acceptsCoupon`): the code its last message gives. */
+  opts: { couponCode?: string } = {}
 ): Promise<{ rule: AutomationFlowRule; created: boolean }> {
-  return client.request(`${base(workspaceId)}/templates/${encodeURIComponent(key)}/enable`, { method: "POST", body: { locale } });
+  return client.request(`${base(workspaceId)}/templates/${encodeURIComponent(key)}/enable`, {
+    method: "POST",
+    body: { locale, ...(opts.couponCode ? { couponCode: opts.couponCode } : {}) },
+  });
 }

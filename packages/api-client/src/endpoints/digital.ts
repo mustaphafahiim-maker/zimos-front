@@ -126,7 +126,10 @@ export interface TrackDownload {
 
 const digitalBase = (workspaceId: string) => `/workspaces/${workspaceId}/digital`;
 
-export async function digitalListFiles(client: ApiClient, workspaceId: string): Promise<{ files: DigitalFile[]; maxFileBytes: number }> {
+export async function digitalListFiles(
+  client: ApiClient,
+  workspaceId: string
+): Promise<{ files: DigitalFile[]; maxFileBytes: number; /** Above maxFileBytes the upload goes in parts (digitalUploadLargeFile), up to this. */ maxLargeFileBytes?: number; partSizeBytes?: number }> {
   return client.request(`${digitalBase(workspaceId)}/files`);
 }
 

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Columns3, Palette, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, Columns3, Copy, Palette, Plus, Trash2, X } from "lucide-react";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import type { PageColumn, PageElement, PageElementType, PageRow, PageSection } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
@@ -28,7 +28,10 @@ import {
   type SectionSettingSpec,
 } from "./blocks";
 import { MoveButtons } from "./MoveButtons";
-import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
+import { SelectParentButton, parentOf, useParentFocus } from "./selectParent";
+import { duplicateElement } from "./canvasTools";
+import { ElementStylePanel, ElementTabs, type ElementTab, type NamedStyle } from "./ElementStylePanel";
+import { DisplayRulesChip, DisplayRulesPanel, hasDisplayRules } from "./DisplayRulesPanel";
 import { SaveSectionPanel } from "./SavedSections";
 import { BindingFields } from "./DataBinding";
 import {
@@ -46,6 +49,8 @@ import { ImageField, ImageListField } from "./ImageField";
 import { ItemListField } from "./ItemListField";
 import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
 import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
+import { HtmlBlockCodeField } from "./HtmlBlockCodeField";
+import { ProductPickerField } from "./ProductPickerField";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
@@ -528,6 +533,31 @@ function ElementField({
         </Field>
       );
 
+    case "datetime": {
+      // datetime-local speaks the editor's own clock; the prop is an ISO date.
+      const parsed = typeof raw === "string" && raw ? new Date(raw) : null;
+      const local =
+        parsed && !Number.isNaN(parsed.getTime())
+          ? new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          : "";
+      return (
+        <Field label={label} hint={hint}>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="datetime-local"
+              value={local}
+              onChange={(e) => {
+                const v = e.target.value;
+                const at = v ? new Date(v) : null;
+                onChange(spec.key, at && !Number.isNaN(at.getTime()) ? at.toISOString() : "");
+              }}
+            />
+          )}
+        </Field>
+      );
+    }
+
     case "boolean":
       return (
         <label className="flex items-center gap-2 py-1 text-sm text-ink">
@@ -565,6 +595,10 @@ function ElementField({
           )}
         </Field>
       );
+
+    case "product":
+    case "collection":
+      return <ProductPickerField kind={spec.kind} label={label} hint={hint} value={asString(raw)} onChange={(v) => onChange(spec.key, v)} />;
 
     case "image":
       return (
@@ -619,6 +653,9 @@ function ElementField({
           onChange={(next) => onChange(spec.key, next)}
         />
       );
+
+    case "htmlBlockCode":
+      return <HtmlBlockCodeField label={label} hint={hint} blockId={asString(raw)} onBlockId={(id) => onChange(spec.key, id)} />;
 
     case "compareRows":
       return (
@@ -706,12 +743,12 @@ export function ElementFieldset({
   element: PageElement;
   onPropChange: (element: PageElement, key: string, value: unknown) => void;
   actions?: ReactNode;
-  /** With it the element gets Style and Layout tabs (ElementStylePanel). */
+  /** With it the element gets Style, Layout (ElementStylePanel) and Display (DisplayRulesPanel) tabs. */
   onSettingsChange?: (element: PageElement, settings: Record<string, unknown> | undefined) => void;
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
 }) {
-  const [tab, setTab] = useState<"content" | "style" | "layout">("content");
+  const [tab, setTab] = useState<ElementTab>("content");
   const locale = useEditorLocale();
   const spec = ELEMENT_SPECS[element.type];
   const Icon = spec.icon;
@@ -724,7 +761,9 @@ export function ElementFieldset({
         <span className="min-w-0 flex-1 truncate">{elementLabel(element.type, spec.label, locale)}</span>
         {actions}
       </div>
-      {onSettingsChange && <ElementTabs value={tab} onChange={setTab} />}
+      {/* What its display rules do, one tap from the Display tab (handoff 191). */}
+      {tab !== "display" && <DisplayRulesChip element={element} onOpen={onSettingsChange ? () => setTab("display") : undefined} />}
+      {onSettingsChange && <ElementTabs value={tab} onChange={setTab} displayMarked={hasDisplayRules(element)} />}
       {(tab === "content" || !onSettingsChange) &&
         spec.fields.map((field) => (
           <ElementField
@@ -738,7 +777,7 @@ export function ElementFieldset({
       {(tab === "content" || !onSettingsChange) && (
         <BindingFields element={element} onChange={(bindings) => onPropChange(element, "bindings", bindings)} />
       )}
-      {onSettingsChange && tab !== "content" && (
+      {onSettingsChange && (tab === "style" || tab === "layout") && (
         <ElementStylePanel
           element={element}
           tab={tab}
@@ -746,6 +785,9 @@ export function ElementFieldset({
           onSettingsChange={(settings) => onSettingsChange(element, settings)}
           onNamedChange={onNamedStylesChange}
         />
+      )}
+      {onSettingsChange && tab === "display" && (
+        <DisplayRulesPanel element={element} onSettingsChange={(settings) => onSettingsChange(element, settings)} />
       )}
     </div>
   );
@@ -897,6 +939,8 @@ function ColumnBlock({
   defaultOpen,
   onChange,
   renderElement,
+  flash = false,
+  onSelectParent,
 }: {
   section: PageSection;
   column: PageColumn;
@@ -904,6 +948,9 @@ function ColumnBlock({
   defaultOpen: boolean;
   onChange: (next: PageSection) => void;
   renderElement: (element: PageElement) => ReactNode;
+  /** Outlined for a moment after "select parent" (selectParent.tsx). */
+  flash?: boolean;
+  onSelectParent?: (id: string) => void;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -913,27 +960,35 @@ function ColumnBlock({
 
   return (
     <div className="border-b border-line last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="cursor-pointer flex w-full items-center gap-2 bg-paper px-4 py-3 text-start hover:bg-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
-      >
-        <ChevronDown
-          className={cn("size-4 shrink-0 text-ink-soft transition-transform", !open && "-rotate-90 rtl:rotate-90")}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-ink">{title}</span>
-          <span className="block text-xs text-ink-soft">{ui.elementCount(elements.length)}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1 text-ink-soft" aria-hidden>
-          {elements.slice(0, 4).map((element) => {
-            const Icon = ELEMENT_SPECS[element.type].icon;
-            return <Icon key={element.id} className="size-3.5" />;
-          })}
-        </span>
-      </button>
+      <div className={cn("flex items-stretch bg-paper", flash && "ring-2 ring-inset ring-primary")}>
+        <button
+          type="button"
+          data-node-id={column.id}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="cursor-pointer flex min-w-0 flex-1 items-center gap-2 bg-paper px-4 py-3 text-start hover:bg-paper-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+        >
+          <ChevronDown
+            className={cn("size-4 shrink-0 text-ink-soft transition-transform", !open && "-rotate-90 rtl:rotate-90")}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-ink">{title}</span>
+            <span className="block text-xs text-ink-soft">{ui.elementCount(elements.length)}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-ink-soft" aria-hidden>
+            {elements.slice(0, 4).map((element) => {
+              const Icon = ELEMENT_SPECS[element.type].icon;
+              return <Icon key={element.id} className="size-3.5" />;
+            })}
+          </span>
+        </button>
+        {onSelectParent && (
+          <span className="flex items-center pe-2">
+            <SelectParentButton parent={parentOf(section, column.id, locale)} locale={locale} onSelect={onSelectParent} />
+          </span>
+        )}
+      </div>
       {open && (
         <div>
           <ColumnStyleFieldset section={section} column={column} index={index} heading={false} onChange={onChange} />
@@ -981,14 +1036,20 @@ export function SectionInspector({
   onClose,
   namedStyles,
   onNamedStylesChange,
+  onDuplicate,
+  funnelId,
 }: {
   section: PageSection;
   onChange: (next: PageSection) => void;
   onDelete: () => void;
   onClose: () => void;
+  /** Puts a copy of the section right after it (editor/canvasTools.ts). */
+  onDuplicate?: () => void;
   /** The page's named styles (tree.globalStyles.named) and how to change them. */
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
+  /** In a funnel's editor: a saved section may be kept for that funnel only. */
+  funnelId?: string;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
@@ -997,6 +1058,7 @@ export function SectionInspector({
   const multiColumn = columnCount > 1;
   // Two columns side by side are readable open; a row of six tiles is not.
   const foldColumns = columnCount > 2;
+  const parentFocus = useParentFocus();
 
   const fieldset = (element: PageElement) => (
     <ElementFieldset
@@ -1011,13 +1073,26 @@ export function SectionInspector({
       namedStyles={namedStyles}
       onNamedStylesChange={onNamedStylesChange}
       actions={
-        <ElementMoveButtons
-          section={section}
-          elementId={element.id}
-          label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
-          ui={ui}
-          onChange={onChange}
-        />
+        <>
+          <SelectParentButton parent={parentOf(section, element.id, locale)} locale={locale} onSelect={parentFocus.focusNode} />
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            title={ui.duplicateElement(elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale))}
+            onClick={() => onChange(duplicateElement(section, element.id))}
+          >
+            <Copy className="size-3.5" aria-hidden />
+          </Button>
+          <ElementMoveButtons
+            section={section}
+            elementId={element.id}
+            label={elementLabel(element.type, ELEMENT_SPECS[element.type].label, locale)}
+            ui={ui}
+            onChange={onChange}
+          />
+        </>
       }
     />
   );
@@ -1040,8 +1115,10 @@ export function SectionInspector({
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <SectionStyleFieldset section={section} onChange={onChange} />
+      <div ref={parentFocus.containerRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div data-node-id={section.id} tabIndex={-1} className={cn("focus:outline-none", parentFocus.flashId === section.id && "ring-2 ring-inset ring-primary")}>
+          <SectionStyleFieldset section={section} onChange={onChange} />
+        </div>
         {elements.length === 0 ? (
           <p className="px-4 py-6 text-sm text-ink-soft">{ui.noElements}</p>
         ) : !multiColumn ? (
@@ -1063,6 +1140,8 @@ export function SectionInspector({
                     defaultOpen={foldColumns ? false : true}
                     onChange={onChange}
                     renderElement={fieldset}
+                    flash={parentFocus.flashId === column.id}
+                    onSelectParent={parentFocus.focusNode}
                   />
                 ))}
               </div>
@@ -1071,10 +1150,16 @@ export function SectionInspector({
         )}
       </div>
 
-      <SaveSectionPanel section={section} onChange={onChange} />
+      <SaveSectionPanel section={section} onChange={onChange} funnelId={funnelId} />
 
-      <div className="border-t border-line px-4 py-3">
-        <Button type="button" size="sm" variant="outline" className="w-full" onClick={onDelete}>
+      <div className="flex gap-2 border-t border-line px-4 py-3">
+        {onDuplicate && (
+          <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDuplicate}>
+            <Copy className="size-4" aria-hidden />
+            {ui.duplicateSection}
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="outline" className="flex-1" onClick={onDelete}>
           <Trash2 className="size-4" aria-hidden />
           {ui.deleteSection}
         </Button>

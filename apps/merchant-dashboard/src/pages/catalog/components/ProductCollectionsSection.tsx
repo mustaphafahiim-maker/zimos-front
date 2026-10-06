@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, Card, CardContent, Spinner } from "@store-builder/ui";
-import type { CollectionSummary } from "@store-builder/api-client";
+import { isSmartCollection, type CollectionSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -27,7 +27,7 @@ const STRINGS = {
     description: "مجموعات المتجر التي يظهر فيها هذا المنتج.",
     none: "ليس ضمن أي مجموعة بعد.",
     removeFrom: "إزالة من {name}",
-    noCollections: "لا توجد مجموعات بعد — أنشئ واحدة من صفحة المجموعات.",
+    noCollections: "مفيش مجموعات بعد — أنشئ واحدة من صفحة المجموعات.",
     inAll: "موجود في كل المجموعات بالفعل.",
     pick: "أضف إلى مجموعة…",
     add: "إضافة",
@@ -53,7 +53,8 @@ export function ProductCollectionsSection({ productId, memberships, onChanged }:
   const [busy, setBusy] = useState(false);
 
   const memberIds = useMemo(() => new Set(memberships.map((c) => c.id)), [memberships]);
-  const available = (all.data ?? []).filter((c) => !memberIds.has(c.id));
+  // Smart collections fill themselves from their rules: no hand add or remove (409 SMART_COLLECTION).
+  const available = (all.data ?? []).filter((c) => !memberIds.has(c.id) && !isSmartCollection(c));
 
   async function add() {
     if (!pick || busy) return;
@@ -100,14 +101,16 @@ export function ProductCollectionsSection({ productId, memberships, onChanged }:
               className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-1 text-sm text-ink"
             >
               {c.name}
-              <button
-                onClick={() => remove(c.id)}
-                disabled={busy}
-                className="cursor-pointer text-ink-soft hover:text-danger"
-                aria-label={fmt(t.removeFrom, { name: c.name })}
-              >
-                ✕
-              </button>
+              {!isSmartCollection(c) && (
+                <button
+                  onClick={() => remove(c.id)}
+                  disabled={busy}
+                  className="cursor-pointer text-ink-soft hover:text-danger"
+                  aria-label={fmt(t.removeFrom, { name: c.name })}
+                >
+                  ✕
+                </button>
+              )}
             </span>
           ))}
         </div>

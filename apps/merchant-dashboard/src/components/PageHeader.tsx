@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import type { TutorialTopic } from "@store-builder/api-client";
+import { TutorialLink } from "./Education";
 
 interface PageHeaderProps {
   title: string;
@@ -11,22 +14,25 @@ interface PageHeaderProps {
   /** Renders a "← label" link above the title. */
   back?: { to: string; label: string };
   actions?: ReactNode;
+  /** The page's tutorial video, shown under the description when the platform team has set one (Education.tsx). */
+  tutorial?: TutorialTopic;
 }
 
-export function PageHeader({ title, titleMeta, titleBadge, description, back, actions }: PageHeaderProps) {
+export function PageHeader({ title, titleMeta, titleBadge, description, back, actions, tutorial }: PageHeaderProps) {
   return (
     <div className="mb-6">
       {back && (
         <Link
           to={back.to}
-          className="mb-2 inline-block text-sm text-ink-soft transition-colors hover:text-primary"
+          className="mb-2 inline-flex min-h-9 items-center gap-1.5 text-sm text-ink-soft transition-colors hover:text-primary"
         >
-          ← {back.label}
+          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+          {back.label}
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-medium text-ink">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold text-ink">
             {title}
             {titleMeta && (
               <span className="ms-2 align-middle text-base font-normal text-ink-soft">
@@ -36,8 +42,9 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
             {titleBadge && <span className="ms-2 align-middle">{titleBadge}</span>}
           </h1>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
+          {tutorial && <TutorialLink topic={tutorial} />}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ const STRINGS = {
     never: "لم يطلب بعد",
     source: "المصدر",
     tags: "الوسوم",
-    noTags: "لا توجد وسوم بعد.",
+    noTags: "مفيش وسوم لسه.",
     addTag: "إضافة وسم",
     addTagPlaceholder: "مثال: vip، جملة",
     add: "إضافة",

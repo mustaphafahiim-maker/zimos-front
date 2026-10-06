@@ -46,7 +46,7 @@ const STRINGS = {
     description:
       "للتقييمات الحقيقية التي وصلتك من مكان آخر — واتساب، تعليقات، مكالمة. يظهر بدون علامة «مشترٍ موثّق».",
     product: "المنتج",
-    chooseProduct: "اختر منتجًا",
+    chooseProduct: "اختار منتجًا",
     name: "اسم العميل",
     rating: "التقييم",
     ratingOf: "{n} من 5",
@@ -54,10 +54,10 @@ const STRINGS = {
     photos: "الصور",
     addPhoto: "إضافة صورة",
     publish: "إظهاره في المتجر الآن",
-    missing: "اختر المنتج واكتب اسم العميل.",
+    missing: "اختار المنتج واكتب اسم العميل.",
     cancel: "إلغاء",
     add: "إضافة التقييم",
-    adding: "جارٍ الإضافة…",
+    adding: "بنضيف…",
     added: "تمت إضافة التقييم.",
   },
 } satisfies Messages;

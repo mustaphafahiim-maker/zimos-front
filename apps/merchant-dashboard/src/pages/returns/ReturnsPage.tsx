@@ -8,6 +8,7 @@ import type {
   ReturnRequest,
   ReturnStatus,
 } from "@store-builder/api-client";
+import { returnPhotosOf, returnSourceOf } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -19,6 +20,8 @@ import { DataState } from "@/components/DataState";
 import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { ReturnPhotos, ReturnSourceBadge } from "./ReturnExtras";
+import { ShopperReturnsSettingsCard } from "./ShopperReturnsSettingsCard";
 
 /** "" is the All tab — the backend simply omits the status filter. */
 type StatusFilter = "" | ReturnStatus;
@@ -80,28 +83,29 @@ const STRINGS = {
     statusRejected: "مرفوض",
     statusReceived: "مستلم",
     statusRefunded: "مسترد",
-    emptyRequested: "لا يوجد ما ينتظر قرارًا.",
-    emptyApproved: "لا توجد مرتجعات مقبولة تنتظر إعادة التخزين.",
-    emptyRejected: "لا توجد مرتجعات مرفوضة.",
+    emptyRequested: "مفيش ما ينتظر قرارًا.",
+    emptyApproved: "مفيش مرتجعات مقبولة تنتظر إعادة التخزين.",
+    emptyRejected: "مفيش مرتجعات مرفوضة.",
     emptyReceived: "لم يتم استلام أي مرتجع بعد.",
-    emptyRefunded: "لا توجد مرتجعات تم ردّ قيمتها.",
-    emptyAll: "لا توجد مرتجعات بعد. يمكن فتح مرتجع من الأوردر بعد تسليمه.",
+    emptyRefunded: "مفيش مرتجعات تم ردّ قيمتها.",
+    emptyAll: "مفيش مرتجعات لسه. يمكن فتح مرتجع من الأوردر بعد تسليمه.",
     openOrder: "فتح الأوردر",
     itemsLabel: "العناصر",
-    reasonDamaged: "تالف",
-    reasonDefective: "به عيب",
-    reasonWrongItem: "منتج خاطئ",
-    reasonNotAsDescribed: "مخالف للوصف",
-    reasonNoLongerWanted: "لم يعد مطلوبًا",
-    reasonArrivedLate: "وصل متأخرًا",
-    reasonOther: "سبب آخر",
+    // The words the customer picks from on the store (handoff 186), so both read the same reason.
+    reasonDamaged: "وصل متكسر",
+    reasonDefective: "فيه عيب",
+    reasonWrongItem: "منتج غلط",
+    reasonNotAsDescribed: "مش زي الوصف",
+    reasonNoLongerWanted: "مبقتش عايزه",
+    reasonArrivedLate: "وصل متأخر",
+    reasonOther: "سبب تاني",
     approve: "قبول",
     reject: "رفض",
     restock: "إعادة إلى المخزون",
     restockedAt: "أُعيد إلى المخزون {date}",
-    saving: "جارٍ الحفظ…",
-    toastApproved: "تم قبول المرتجع. أعد القطع إلى المخزون عند وصولها.",
-    toastRejected: "تم رفض المرتجع.",
+    saving: "بنحفظ…",
+    toastApproved: "اتقبل المرتجع. رجّع القطع للمخزون لما توصل.",
+    toastRejected: "اترفض المرتجع.",
     toastRestocked: "تمت إعادة القطع المرتجعة إلى المخزون.",
   },
 } satisfies Messages;
@@ -245,6 +249,8 @@ export function ReturnsPage() {
     <div className="max-w-3xl">
       <PageHeader title={t.title} description={t.description} />
 
+      <ShopperReturnsSettingsCard />
+
       <div className="mb-4">
         <FilterTabs tabs={tabs} value={status} onChange={setStatus} label={t.filterLabel} />
       </div>
@@ -263,6 +269,7 @@ export function ReturnsPage() {
               returnRequest={ret}
               orderEntry={orders[ret.orderId]}
               onUpdated={applyUpdate}
+              onPhotosExpired={() => void list.refresh({ silent: true })}
             />
           ))}
         </div>
@@ -275,10 +282,13 @@ function ReturnCard({
   returnRequest: ret,
   orderEntry,
   onUpdated,
+  onPhotosExpired,
 }: {
   returnRequest: ReturnRequest;
   orderEntry: OrderEntry | undefined;
   onUpdated: (updated: ReturnRequest) => void;
+  /** The photo links are signed for minutes; this lists the returns again for fresh ones. */
+  onPhotosExpired: () => void;
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -355,13 +365,16 @@ function ReturnCard({
               : formatDate(ret.createdAt)}
           </p>
         </div>
-        <StatusBadge value={ret.status} text={statusText} />
+        <div className="flex flex-wrap items-center gap-2">
+          {returnSourceOf(ret) === "shopper" && <ReturnSourceBadge />}
+          <StatusBadge value={ret.status} text={statusText} />
+        </div>
       </div>
 
       <div className="text-sm">
         <p className="text-ink">{reasonLabel(code, t)}</p>
-        {/* Its own line, with dir="auto": the detail is the merchant's own
-            words, not necessarily in the language the dashboard is set to, and
+        {/* Its own line, with dir="auto": the detail is the merchant's (or the
+            customer's) own words, not necessarily in the language the dashboard is set to, and
             on one line with the label the two scripts reorder into a tangle. */}
         {detail && (
           <p dir="auto" className="mt-0.5 text-ink-soft">
@@ -385,6 +398,8 @@ function ReturnCard({
           ))}
         </ul>
       </div>
+
+      <ReturnPhotos photos={returnPhotosOf(ret)} onExpired={onPhotosExpired} />
 
       {ret.restockedAt && (
         <p className="text-sm text-ink-soft">

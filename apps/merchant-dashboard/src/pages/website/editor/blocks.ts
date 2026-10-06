@@ -2,6 +2,7 @@ import {
   AlarmClock,
   AlignLeft,
   BadgeCheck,
+  Coins,
   BarChart3,
   Box,
   Building2,
@@ -75,6 +76,7 @@ import type {
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import { BUTTON_ACTION_FIELDS, COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS, FORM_INPUT_FIELDS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
 /**
@@ -105,6 +107,8 @@ export type FieldSpec =
   | { key: string; label: string; kind: "text"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "textarea"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "number"; min?: number; max?: number; hint?: string }
+  // A date and time, stored as an ISO string ("" = not set).
+  | { key: string; label: string; kind: "datetime"; hint?: string }
   | { key: string; label: string; kind: "boolean"; hint?: string }
   | {
       key: string;
@@ -114,12 +118,17 @@ export type FieldSpec =
       hint?: string;
     }
   | { key: string; label: string; kind: "image"; hint?: string }
+  // Picked from the store's catalogue, stored as its id (ProductPickerField.tsx).
+  | { key: string; label: string; kind: "product"; hint?: string }
+  | { key: string; label: string; kind: "collection"; hint?: string }
   | { key: string; label: string; kind: "stringList"; itemLabel: string; hint?: string }
   | { key: string; label: string; kind: "imageList"; hint?: string }
   | { key: string; label: string; kind: "qaList"; hint?: string }
   | { key: string; label: string; kind: "stepList"; hint?: string }
   | { key: string; label: string; kind: "compareRows"; hint?: string }
   | { key: string; label: string; kind: "linkList"; hint?: string }
+  // An html_block's code, saved through its own API by blockId (HtmlBlockCodeField.tsx).
+  | { key: string; label: string; kind: "htmlBlockCode"; hint?: string }
   // A list of objects, each a small card of its own fields (ItemListField.tsx).
   | {
       key: string;
@@ -290,6 +299,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
     ],
   },
+  // SPEC §8.2 "HTML code": the tree holds only blockId; the HTML lives outside it.
+  html_block: {
+    label: "HTML code",
+    icon: Code2,
+    defaultProps: {},
+    fields: [{ key: "blockId", label: "HTML", kind: "htmlBlockCode", hint: "Scripts and styles are allowed. Test it on your live store." }],
+  },
   spacer: {
     label: "Spacer",
     icon: MoveVertical,
@@ -364,7 +380,16 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { label: "ينتهي العرض خلال", endsInHours: 24 },
     fields: [
       { key: "label", label: "Label", kind: "text" },
-      { key: "endsInHours", label: "Ends in (hours)", kind: "number", min: 1, max: 8760 },
+      { key: "endsAt", label: "Ends at", kind: "datetime", hint: "A fixed date and time — the same for every visitor." },
+      {
+        key: "endsInHours",
+        label: "Or: ends this many hours after publishing",
+        kind: "number",
+        min: 1,
+        max: 8760,
+        hint: "Used when no date is set: publishing turns it into a fixed date.",
+      },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "Added to the customer who presses it, once they order — on a store page or in a funnel." },
     ],
   },
   form: {
@@ -412,7 +437,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { title: "", showPrice: true, showBuyButton: true },
     fields: [
       { key: "title", label: "Title", kind: "text" },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "showPrice", label: "Show price", kind: "boolean" },
       { key: "showBuyButton", label: "Show buy button", kind: "boolean" },
     ],
@@ -485,8 +510,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       {
         key: "productId",
         label: "Product",
-        kind: "text",
-        placeholder: "Product id or slug",
+        kind: "product",
         hint: "Leave empty to use the newest product.",
       },
       {
@@ -504,7 +528,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text" },
       { key: "limit", label: "How many", kind: "number", min: 3, max: 16 },
-      { key: "collectionId", label: "Collection", kind: "text", hint: "Leave empty for the whole catalogue." },
+      { key: "collectionId", label: "Collection", kind: "collection", hint: "Leave empty for the whole catalogue." },
     ],
   },
   scroll_story: {
@@ -608,6 +632,12 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "images", label: "Images", kind: "imageList" },
     ],
   },
+  currency_converter: {
+    label: "Currency converter",
+    icon: Coins,
+    defaultProps: { label: "" },
+    fields: [{ key: "label", label: "Label", kind: "text", hint: "Empty shows \"Currency\". Shoppers see prices approximately in the currency they pick; they pay in the price's own." }],
+  },
   stars_display: {
     label: "Star rating",
     icon: BadgeCheck,
@@ -622,7 +652,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     icon: Tag,
     defaultProps: { productId: "", showCompareAt: true, size: "medium" },
     fields: [
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "showCompareAt", label: "Show the price before discount", kind: "boolean" },
       {
         key: "size",
@@ -642,7 +672,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { title: "", productId: "", limit: 6 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "limit", label: "How many reviews", kind: "number", min: 1, max: 50 },
     ],
   },
@@ -654,10 +684,11 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
       {
         key: "productId",
-        label: "Product ID",
-        kind: "text",
+        label: "Product",
+        kind: "product",
         hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
       },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "Added to the customer when they place the order with this form — on a store page or in a funnel." },
     ],
   },
   checkout_summary: {
@@ -679,7 +710,10 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     label: "Accept offer button",
     icon: Zap,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   repeater: {
     label: "Repeater",
@@ -709,18 +743,27 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         ],
       },
       { key: "limit", label: "How many at most", kind: "number", min: 1, max: 24 },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the page product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the page product." },
     ],
   },
   upsell_decline_link: {
     label: "Decline offer link",
     icon: Minus,
     defaultProps: { label: "" },
-    fields: [{ key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." }],
+    fields: [
+      { key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
+      { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "In a funnel: added to the customer who presses it, once they have ordered." },
+    ],
   },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
+  // Gallery with thumbnails, variant and bundle pickers, review form (builderExtraBlocks.ts).
+  ...EXTRA_ELEMENT_SPECS,
 };
+
+// A button's cart actions and a form's photo and stars inputs (item 93, builderExtraBlocks.ts).
+ELEMENT_SPECS.button.fields.push(...BUTTON_ACTION_FIELDS);
+ELEMENT_SPECS.form.fields.push(...FORM_INPUT_FIELDS);
 
 // ---------------------------------------------------------------------------
 // Block presets — what the left sidebar offers
@@ -883,6 +926,9 @@ export const COLUMN_SETTING_SPECS: SectionSettingSpec[] = [
     ],
   },
 ];
+
+// Every column is a flex container: its items' layout (builderExtraBlocks.ts).
+COLUMN_SETTING_SPECS.push(...COLUMN_LAYOUT_SPECS);
 
 export const ROW_SETTING_SPECS: SectionSettingSpec[] = [
   {
@@ -1530,7 +1576,7 @@ const CORE_PRESETS: BlockPreset[] = [
           {
             span: 12,
             elements: ["heading", "text"],
-            content: [{ text: "اختر العرض المناسب لك", level: 2 }, { text: "اكتب سطرًا يوضّح الفرق بين العروض الثلاثة." }],
+            content: [{ text: "اختار العرض المناسب لك", level: 2 }, { text: "اكتب سطرًا يوضّح الفرق بين العروض الثلاثة." }],
             settings: { align: "center" },
           },
         ],
@@ -1583,7 +1629,7 @@ const CORE_PRESETS: BlockPreset[] = [
     elements: ["heading", "orbit_gallery"],
     settings: { width: "wide" },
     content: [
-      { text: "اختر من مجموعتنا", level: 2 },
+      { text: "اختار من مجموعتنا", level: 2 },
       { title: "", limit: 8, collectionId: "" },
     ],
   },
@@ -2056,6 +2102,14 @@ const CORE_PRESETS: BlockPreset[] = [
     elements: ["reviews_list"],
   },
   {
+    key: "currency-converter",
+    label: "Currency converter",
+    description: "Lets shoppers view prices in another of your currencies (Settings → Currencies).",
+    icon: Coins,
+    group: "trust",
+    elements: ["currency_converter"],
+  },
+  {
     key: "stars-display",
     label: "Star rating",
     description: "A row of stars with a short line beside it.",
@@ -2382,7 +2436,7 @@ const CORE_PRESETS: BlockPreset[] = [
             { text: ["اكتب اسم الباقة الأولى", "اكتب اسم الباقة الثانية", "اكتب اسم الباقة الثالثة"][i], level: 3 },
             { text: "اكتب هنا السعر ولمن هذه الباقة." },
             { title: "", items: ["اكتب هنا أول ما تتضمنه", "اكتب هنا الشيء الثاني", "اكتب هنا الشيء الثالث"] },
-            { label: "اختر هذه الباقة", href: "/products", variant: i === 1 ? "primary" : "outline" },
+            { label: "اختار هذه الباقة", href: "/products", variant: i === 1 ? "primary" : "outline" },
           ],
           settings: { surface: "card" },
         })),
@@ -2462,6 +2516,14 @@ const CORE_PRESETS: BlockPreset[] = [
     icon: Code2,
     group: "basics",
     elements: ["embed"],
+  },
+  {
+    key: "html-code",
+    label: "HTML code",
+    description: "Your own HTML at this place on the page — runs on your store's domain only.",
+    icon: Code2,
+    group: "basics",
+    elements: ["html_block"],
   },
   {
     key: "map",
@@ -3154,7 +3216,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS, ...EXTRA_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

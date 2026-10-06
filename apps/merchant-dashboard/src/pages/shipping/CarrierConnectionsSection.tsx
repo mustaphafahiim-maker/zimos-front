@@ -34,6 +34,9 @@ import {
   rememberCarrierEnvironment,
 } from "./carriers";
 import { BostaTierMapField } from "./BostaTierMapField";
+import { CarrierBookingSettings } from "./CarrierBookingSettings";
+import { CarrierAreas } from "./CarrierAreas";
+import { useCarrierFilter } from "./CarrierFilter";
 import { pruneTierMap, useWeightTiers } from "./weightTiers";
 
 const STRINGS = {
@@ -142,7 +145,7 @@ const STRINGS = {
     notConnected: "غير مربوط",
     connected: "مربوط",
     invalid: "المفتاح مرفوض",
-    invalidNote: "رفضت {name} مفتاح API المحفوظ. أدخل مفتاحًا جديدًا لمواصلة حجز الشحنات.",
+    invalidNote: "رفضت {name} مفتاح API المحفوظ. اكتب مفتاحًا جديدًا لمواصلة حجز الشحنات.",
     connectedSince: "مربوط منذ {date}",
     lastVerified: "آخر تحقق {date}",
     connect: "ربط {name}",
@@ -154,34 +157,34 @@ const STRINGS = {
     fullAccess:
       "المفتاح بصلاحية Read/Write يستطيع حجز الشحنات لكنه لا يستطيع إلغاءها، لذلك سيفشل إلغاء أي أوردر له شحنة مع {name}. لا يمكننا معرفة صلاحية المفتاح، فتأكد منها في لوحة تحكم {name} قبل لصقه.",
     verify: "تحقق من المفتاح وتابع",
-    verifying: "جارٍ التحقق مع {name}…",
+    verifying: "بنتأكد مع {name}…",
     settingsStepTitle: "الاستلام والبوالص",
     pickupLocation: "مكان الاستلام",
     pickupHint: "المكان الذي يستلم منه مندوب {name} طرودك.",
     accountDefault: "الافتراضي في حساب {name}",
     defaultTag: "افتراضي",
-    noLocations: "لا توجد أماكن استلام في حساب {name} بعد. أضف مكانًا من لوحة تحكم {name}، أو استخدم الافتراضي.",
+    noLocations: "مفيش أماكن استلام في حساب {name} لسه. أضف مكانًا من لوحة تحكم {name}، أو استخدم الافتراضي.",
     packageType: "نوع الطرد",
     labelSize: "مقاس البوليصة",
     labelLanguage: "لغة البوليصة",
     langAr: "العربية",
     langEn: "الإنجليزية",
     saveSettings: "حفظ الإعدادات",
-    loadingLocations: "جارٍ تحميل أماكن الاستلام…",
+    loadingLocations: "بنحمّل أماكن الاستلام…",
     editSettings: "تعديل الاستلام والبوالص",
     replaceKey: "تغيير مفتاح API",
     disconnect: "إلغاء الربط",
-    connectedToast: "تم ربط {name}. اختر مكان استلام الطرود.",
-    connectedToastPlain: "تم ربط {name}.",
-    savedToast: "تم حفظ إعدادات {name}.",
-    keyReplacedToast: "تم حفظ مفتاح {name} الجديد.",
+    connectedToast: "اتربط {name}. اختار مكان استلام الطرود.",
+    connectedToastPlain: "اتربط {name}.",
+    savedToast: "اتحفظت إعدادات {name}.",
+    keyReplacedToast: "اتحفظ مفتاح {name} الجديد.",
     locationReset:
-      "مكان الاستلام المحفوظ غير موجود في الحساب الذي يتبعه هذا المفتاح، لذلك أُعيد إلى الافتراضي. اختر مكانًا بالأسفل.",
+      "مكان الاستلام المحفوظ غير موجود في الحساب الذي يتبعه هذا المفتاح، لذلك أُعيد إلى الافتراضي. اختار مكانًا بالأسفل.",
     disconnectTitle: "إلغاء ربط {name}؟",
     disconnectDescription:
       "شحنات {name} الحالية تحتفظ بأرقام التتبع لكن حالتها لن تتحدث. الشحنات الجديدة ستكون يدوية حتى تعيد الربط.",
     disconnectConfirm: "إلغاء الربط",
-    disconnectedToast: "تم إلغاء ربط {name}.",
+    disconnectedToast: "اتفصل {name}.",
     summaryPickup: "الاستلام: {value}",
     summaryPackage: "الطرد: {value}",
     summaryLabel: "البوليصة: {size}، {lang}",
@@ -215,7 +218,7 @@ const STRINGS = {
     envSandbox: "التجربة Sandbox (شحنات تجريبية فقط)",
     environmentHint: "بيئة التجربة تنشئ شحنات تجريبية فقط ولا توصّلها أبدًا. استخدم الإنتاج للأوردرات الحقيقية.",
     sandboxNotAllowed:
-      "بيئة التجربة (Sandbox) لدى {name} تنشئ شحنات تجريبية فقط، لذلك هي متاحة لمتاجر الاختبار فقط. يلزم حساب إنتاج (Production) لدى {name}: اختر الإنتاج وأدخل بيانات حسابك الفعلي لدى {name}.",
+      "بيئة التجربة (Sandbox) لدى {name} تنشئ شحنات تجريبية فقط، لذلك هي متاحة لمتاجر الاختبار فقط. يلزم حساب إنتاج (Production) لدى {name}: اختار الإنتاج وأدخل بيانات حسابك الفعلي لدى {name}.",
     unverifiedTitle: "لم يتم التحقق من كود العميل وكلمة المرور بعد",
     unverifiedNote:
       "تم حفظ ربط {name}، لكن {name} لم تسمح لنا بالتحقق من كود العميل وكلمة المرور بعد. سيتم التحقق منهما عند حجز أول شحنة؛ وإذا رُفض الحجز، غيّرهما من هنا.",
@@ -303,6 +306,7 @@ export function CarrierConnectionsSection() {
     [workspaceId, roleAllows]
   );
   const list = carriers.data;
+  const filter = useCarrierFilter(list?.carriers ?? []);
   const canManage = roleAllows && !forbidden;
 
   return (
@@ -325,7 +329,9 @@ export function CarrierConnectionsSection() {
             ) : (
               <>
                 {forbidden && <Alert>{t.viewOnlyForbidden}</Alert>}
-                {list?.carriers.map((carrier) => (
+                {filter.bar}
+                {filter.empty}
+                {filter.filtered.map((carrier) => (
                   <CarrierCard
                     key={carrier.code}
                     carrier={carrier}
@@ -718,6 +724,25 @@ function CarrierCard({
         <Alert variant="danger" className="mt-3">
           {error}
         </Alert>
+      )}
+
+      {canManage && connection && mode === "view" && (
+        <CarrierBookingSettings
+          carrierCode={carrier.code}
+          name={name}
+          connection={connection}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+          onChanged={onChanged}
+        />
+      )}
+
+      {connection && mode === "view" && (
+        <CarrierAreas
+          carrierCode={carrier.code}
+          name={name}
+          canManage={canManage}
+          onForbidden={(err) => (err instanceof ApiError && err.status === 403 ? (onForbidden(), true) : false)}
+        />
       )}
 
       {canManage && mode === "key" && (

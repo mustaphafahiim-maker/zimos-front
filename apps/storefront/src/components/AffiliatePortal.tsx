@@ -27,6 +27,16 @@ const STRINGS = {
     signIn: "Sign in",
     signingIn: "Signing in…",
     changePhone: "Use another number",
+    step: (n: number) => `Step ${n} of 2`,
+    sentTo: "Number",
+    resend: "Send the code again",
+    resendIn: (seconds: number) => `Send again in ${seconds}s`,
+    how: "How you earn",
+    how1: "Share your link",
+    how2: "The order is delivered",
+    how3: "The store pays you",
+    whatsapp: "Share on WhatsApp",
+    methods: { vodafone_cash: "Vodafone Cash", instapay: "InstaPay", bank_transfer: "Bank transfer", cash: "Cash", other: "Other" } as Record<string, string>,
     invalidPhone: "Enter a valid phone number.",
     invalidCode: "That code is not valid.",
     expiredCode: "That code has expired. Ask for a new one.",
@@ -59,6 +69,16 @@ const STRINGS = {
     signIn: "دخول",
     signingIn: "جارٍ الدخول…",
     changePhone: "استخدم رقم تاني",
+    step: (n: number) => `الخطوة ${n} من 2`,
+    sentTo: "الرقم",
+    resend: "ابعت الكود تاني",
+    resendIn: (seconds: number) => `ابعت تاني بعد ${seconds} ث`,
+    how: "إزاي بتكسب",
+    how1: "شارك رابطك",
+    how2: "الطلب يتسلّم",
+    how3: "المتجر يدفعلك",
+    whatsapp: "شارك على واتساب",
+    methods: { vodafone_cash: "فودافون كاش", instapay: "إنستاباي", bank_transfer: "تحويل بنكي", cash: "نقدًا", other: "أخرى" } as Record<string, string>,
     invalidPhone: "اكتب رقم موبايل صحيح.",
     invalidCode: "الكود ده مش صحيح.",
     expiredCode: "الكود انتهت صلاحيته. اطلب كود جديد.",
@@ -101,6 +121,14 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  // Seconds before another code can be asked for; the server limits it too.
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((seconds) => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     try {
@@ -147,13 +175,14 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
     return t.error;
   }
 
-  async function requestCode(e: FormEvent) {
-    e.preventDefault();
+  async function requestCode(e?: FormEvent) {
+    e?.preventDefault();
     setBusy(true);
     setError(null);
     try {
       await affiliatePortalRequestCode(createStorefrontApiClient(), workspaceId, phone.trim());
       setStep("code");
+      setCooldown(30);
     } catch (err) {
       setError(problem(err));
     } finally {
@@ -194,8 +223,14 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
     return (
       <div className={`${container} py-10`}>
         <div className={`${card} mx-auto max-w-md p-6`}>
-          <h1 className="text-xl font-semibold text-ink">{t.title}</h1>
+          <p className="text-xs font-medium text-ink-soft">{t.step(step === "phone" ? 1 : 2)}</p>
+          <h1 className="mt-1 text-xl font-semibold text-ink">{t.title}</h1>
           <p className="mt-1 text-sm text-ink-soft">{step === "phone" ? t.intro : t.codeSent}</p>
+          {step === "code" && (
+            <p className="mt-2 text-sm text-ink">
+              {t.sentTo}: <bdi dir="ltr" className="font-medium">{phone.trim()}</bdi>
+            </p>
+          )}
           {error && (
             <p role="alert" className="mt-3 text-sm font-medium text-danger">
               {error}
@@ -246,9 +281,22 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
               <button type="submit" disabled={busy} className={`${btnPrimary} w-full`}>
                 {busy ? t.signingIn : t.signIn}
               </button>
-              <button type="button" className="w-full cursor-pointer text-sm text-primary" onClick={() => setStep("phone")}>
-                {t.changePhone}
-              </button>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <button type="button" className="cursor-pointer text-primary disabled:cursor-default disabled:text-ink-soft" disabled={busy || cooldown > 0} onClick={() => void requestCode()}>
+                  {cooldown > 0 ? t.resendIn(cooldown) : t.resend}
+                </button>
+                <button
+                  type="button"
+                  className="cursor-pointer text-primary"
+                  onClick={() => {
+                    setStep("phone");
+                    setCode("");
+                    setError(null);
+                  }}
+                >
+                  {t.changePhone}
+                </button>
+              </div>
             </form>
           )}
         </div>
@@ -280,13 +328,27 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-3">
-        {(["pending", "approved", "paid"] as const).map((key) => (
+        {(["approved", "pending", "paid"] as const).map((key) => (
           <div key={key} className={`${card} p-4`}>
             <dt className="text-xs text-ink-soft">{t[key]}</dt>
-            <dd className="mt-1 text-2xl font-semibold text-ink">{money(portal.totals[key], portal.currency)}</dd>
+            <dd className={`mt-1 text-2xl font-semibold ${key === "approved" ? "text-primary" : "text-ink"}`}>{money(portal.totals[key], portal.currency)}</dd>
           </div>
         ))}
       </dl>
+
+      <section className={`${card} p-5`} aria-labelledby="affiliate-how">
+        <h2 id="affiliate-how" className="text-base font-semibold text-ink">
+          {t.how}
+        </h2>
+        <ol className="mt-3 grid gap-3 sm:grid-cols-3">
+          {[t.how1, t.how2, t.how3].map((text, index) => (
+            <li key={text} className="flex items-center gap-3 text-sm text-ink">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-xs font-semibold">{index + 1}</span>
+              {text}
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section className={`${card} p-5`}>
         <h2 className="text-base font-semibold text-ink">{t.links}</h2>
@@ -301,9 +363,14 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
                   {item.url}
                 </p>
               </div>
-              <button type="button" onClick={() => void copy(item.url)} className="shrink-0 cursor-pointer text-sm font-semibold text-primary">
-                {copied === item.url ? t.copied : t.copy}
-              </button>
+              <span className="flex shrink-0 items-center gap-4 text-sm font-semibold">
+                <a href={`https://wa.me/?text=${encodeURIComponent(item.url)}`} target="_blank" rel="noreferrer" className="text-primary">
+                  {t.whatsapp}
+                </a>
+                <button type="button" onClick={() => void copy(item.url)} className="cursor-pointer text-primary">
+                  {copied === item.url ? t.copied : t.copy}
+                </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -339,7 +406,10 @@ export function AffiliatePortal({ workspaceId }: { workspaceId: string }) {
           <ul className="mt-3 divide-y divide-line">
             {portal.payouts.map((payout) => (
               <li key={payout.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                <span className="text-ink-soft">{when.format(new Date(payout.paidAt))}</span>
+                <span className="text-ink-soft">
+                  {when.format(new Date(payout.paidAt))}
+                  {payout.method && <span className="ms-2 text-xs">{t.methods[payout.method] ?? payout.method}</span>}
+                </span>
                 <span className="font-semibold text-ink">{money(payout.amount, payout.currency)}</span>
               </li>
             ))}

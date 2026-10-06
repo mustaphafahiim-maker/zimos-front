@@ -3,7 +3,9 @@ import {
   type Order,
   type OrderStage,
   type OrderTimelineEvent,
+  type ShipmentStatus,
 } from "@store-builder/api-client";
+import { providerName } from "@/lib/providers";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -17,7 +19,7 @@ import { STAGE_TONE, useOrderLabels } from "../orderLabels";
 const STRINGS = {
   en: {
     title: "Timeline",
-    description: "Everything that happened to this order: status changes, edits, notes, messages and webhooks.",
+    description: "Everything that happened to this order: status changes, edits, notes, messages, webhooks and courier updates.",
     empty: "Nothing recorded yet.",
     placed: "Order placed",
     by_user: "by {name}",
@@ -41,6 +43,16 @@ const STRINGS = {
     webhook_pending: "waiting to be sent",
     webhook_failed: "failed, will retry",
     webhook_exhausted: "failed",
+    courier_update: "{carrier} update",
+    message_email: "Email to the customer",
+    message_sms: "SMS to the customer",
+    message_whatsapp: "WhatsApp to the customer",
+    message_push: "Notification to the customer's browser",
+    message_sent: "sent",
+    message_delivered: "delivered",
+    message_read: "read",
+    message_failed: "not sent",
+    message_bot: "by the WhatsApp assistant",
     "a_order.update": "Address or notes edited",
     "a_order.meta_update": "Tags or flags changed",
     "a_order.archive": "Order archived",
@@ -54,14 +66,18 @@ const STRINGS = {
     "a_shipment.create": "Shipment created",
     "a_shipment.update": "Shipment updated",
     "a_refund.create": "Refund recorded",
+    "a_dropship.push_order": "Sent to the supplier",
+    "a_dropship.status_update": "The supplier updated the order",
+    "a_dropship.forward_failed": "Could not send to the supplier",
+    supplierStatus: "At the supplier: {status}",
     waybill: "Tracking number {number}",
     courier: "Courier: {name}",
     tags: "Tags: {tags}",
   },
   ar: {
     title: "السجل الزمني",
-    description: "كل ما حدث لهذا الأوردر: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks.",
-    empty: "لا يوجد شيء مسجّل بعد.",
+    description: "كل ما حدث لهذا الأوردر: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks وتحديثات شركة الشحن.",
+    empty: "مفيش شيء مسجّل لسه.",
     placed: "تم إنشاء الأوردر",
     by_user: "بواسطة {name}",
     by_userUnknown: "بواسطة أحد أعضاء الفريق",
@@ -72,7 +88,7 @@ const STRINGS = {
     reason_baseline: "الحالة عند بدء السجل",
     reason_payment_expired: "انتهت مهلة الدفع",
     reason_customer_blocked: "العميل محظور",
-    reason_switched_to_cod: "تم التحويل إلى الدفع عند الاستلام",
+    reason_switched_to_cod: "اتحوّل للدفع عند الاستلام",
     note_public: "ملاحظة ظاهرة للعميل",
     note_internal: "ملاحظة داخلية",
     automation: "رسالة تلقائية · {trigger}",
@@ -80,10 +96,20 @@ const STRINGS = {
     automation_failed: "فشلت",
     automation_skipped: "تم التخطي",
     webhook: "Webhook {event}",
-    webhook_delivered: "تم التسليم",
+    webhook_delivered: "اتسلّم",
     webhook_pending: "في انتظار الإرسال",
     webhook_failed: "فشل وسيُعاد",
     webhook_exhausted: "فشل",
+    courier_update: "تحديث من {carrier}",
+    message_email: "إيميل للعميل",
+    message_sms: "رسالة SMS للعميل",
+    message_whatsapp: "واتساب للعميل",
+    message_push: "إشعار على متصفح العميل",
+    message_sent: "اتبعت",
+    message_delivered: "وصل",
+    message_read: "اتقرا",
+    message_failed: "ماتبعتش",
+    message_bot: "من مساعد الواتساب",
     "a_order.update": "تعديل العنوان أو الملاحظات",
     "a_order.meta_update": "تغيير التاجز أو العلامات",
     "a_order.archive": "تمت أرشفة الأوردر",
@@ -91,12 +117,16 @@ const STRINGS = {
     "a_order.financial_state_change": "تغيّرت حالة الدفع",
     "a_order.payment_received": "تم استلام دفعة",
     "a_order.payment_expired": "انتهت مهلة الدفع",
-    "a_order.switched_to_cod": "تم التحويل إلى الدفع عند الاستلام",
+    "a_order.switched_to_cod": "اتحوّل للدفع عند الاستلام",
     "a_order.reopened_after_payment": "أُعيد فتحه بعد دفع متأخر",
     "a_order.items_update": "تعديل المنتجات",
     "a_shipment.create": "تم إنشاء شحنة",
     "a_shipment.update": "تم تحديث الشحنة",
     "a_refund.create": "تم تسجيل استرداد",
+    "a_dropship.push_order": "اتبعت للمورّد",
+    "a_dropship.status_update": "المورّد حدّث الأوردر",
+    "a_dropship.forward_failed": "معرفناش نبعته للمورّد",
+    supplierStatus: "عند المورّد: {status}",
     waybill: "رقم التتبع {number}",
     courier: "شركة الشحن: {name}",
     tags: "التاجز: {tags}",
@@ -122,6 +152,9 @@ function auditDetail(t: Strings, after: Record<string, unknown> | null): string 
   if (typeof after.waybillNumber === "string") parts.push(fmt(t.waybill, { number: after.waybillNumber }));
   if (Array.isArray(after.tags)) parts.push(fmt(t.tags, { tags: after.tags.join("، ") || "—" }));
   if (typeof after.cancellationReason === "string") parts.push(after.cancellationReason);
+  if (typeof after.externalStatus === "string") parts.push(fmt(t.supplierStatus, { status: humanize(after.externalStatus) }));
+  if (typeof after.externalOrderId === "string") parts.push(after.externalOrderId);
+  if (typeof after.error === "string") parts.push(after.error);
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -180,6 +213,44 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
         </>
       );
     }
+    if (event.type === "courier") {
+      const status = typeof d.status === "string" ? (d.status as ShipmentStatus) : null;
+      return (
+        <>
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span className="font-medium text-ink">{fmt(t.courier_update, { carrier: providerName(String(d.carrierCode ?? "")) })}</span>
+            {status && <StatusBadge value={status} tone="neutral" text={labels.shipment(status)} />}
+          </div>
+          {typeof d.description === "string" && d.description && (
+            <p className="mt-1 text-sm text-ink-soft">
+              <bdi>{d.description}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
+    if (event.type === "message") {
+      const channel = lookup(t, `message_${String(d.channel)}`) ?? humanize(String(d.channel));
+      const status = lookup(t, `message_${String(d.status)}`) ?? humanize(String(d.status));
+      const failed = d.status === "failed";
+      return (
+        <>
+          <p className="text-sm font-medium text-ink">
+            {channel} — <span className={failed ? "text-danger" : undefined}>{status}</span>
+          </p>
+          {typeof d.subject === "string" && d.subject && (
+            <p className="mt-1 text-sm text-ink">
+              <bdi>{d.subject}</bdi>
+            </p>
+          )}
+          {failed && typeof d.error === "string" && d.error && (
+            <p className="mt-1 text-xs text-ink-soft">
+              <bdi>{d.error}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
     if (event.type === "webhook") {
       const status = lookup(t, `webhook_${String(d.status)}`) ?? humanize(String(d.status));
       return (
@@ -218,7 +289,7 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
               <p className="mt-1 text-xs text-ink-soft">
                 <time dateTime={event.at}>{formatDateTime(event.at)}</time>
                 {" · "}
-                {actorText(t, event.actor)}
+                {event.type === "message" && event.data.bot ? t.message_bot : actorText(t, event.actor)}
               </p>
             </li>
           ))}

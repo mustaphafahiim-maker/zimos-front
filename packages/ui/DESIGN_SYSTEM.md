@@ -1,5 +1,10 @@
 # Zimos design system
 
+> Historical cross-app reference: the dashboard CSS has since changed some
+> light neutrals, its display-font stack and card radius. Current CSS still
+> wins. See `docs/UI_SYSTEM.md` for the current dashboard foundation and the
+> development-only Glass proposal; this document is not a rollout instruction.
+
 The visual identity for all four frontends. It continues the existing
 "Nile & Souk" palette rather than replacing it: a blue/teal primary family, a
 warm amber secondary, and a Clean Corporate / Modern SaaS base (clear hierarchy,

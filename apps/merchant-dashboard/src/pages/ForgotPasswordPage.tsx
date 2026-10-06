@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -23,7 +24,7 @@ const STRINGS = {
     sent: "إذا كان هذا البريد الإلكتروني مسجّلًا لدينا، سيصلك رابط لتعيين كلمة مرور جديدة خلال دقائق.",
     email: "البريد الإلكتروني",
     send: "إرسال رابط إعادة التعيين",
-    sending: "جارٍ الإرسال…",
+    sending: "بنبعت…",
     back: "← العودة لتسجيل الدخول",
     failed: "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
   },
@@ -49,7 +50,7 @@ export function ForgotPasswordPage() {
       // Only a genuine server-side failure lands here (the endpoint never
       // rejects a merely-unknown email) — surface it and let them retry.
       setError(
-        err instanceof ApiError ? err.message : t.failed
+        err instanceof ApiError ? errorMessageNow(err) : t.failed
       );
     } finally {
       setSubmitting(false);
@@ -57,9 +58,9 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className="w-full max-w-sm">
           <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
 

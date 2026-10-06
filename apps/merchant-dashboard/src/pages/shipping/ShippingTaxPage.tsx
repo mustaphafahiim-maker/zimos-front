@@ -31,6 +31,12 @@ import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
 import { ShippingSettingsSection } from "./ShippingSettingsSection";
+import { ShippingProfilesSection } from "./ShippingProfilesSection";
+import { ShippingOptionsSection } from "./ShippingOptionsSection";
+import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
+import { StorePlacesSection } from "./StorePlacesSection";
+import { DeliveryTimesSection } from "./DeliveryTimesSection";
+import { AddressLookupSection } from "./AddressLookupSection";
 import { WeightTiersSection } from "./WeightTiersSection";
 
 // Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
@@ -164,17 +170,17 @@ const STRINGS = {
     edit: "تعديل",
     delete: "حذف",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
-    working: "جارٍ التنفيذ…",
+    saving: "بنحفظ…",
+    working: "بننفّذ…",
     activate: "تفعيل",
     deactivate: "إيقاف",
     activated: "تم تفعيل «{name}».",
-    deactivated: "تم إيقاف «{name}».",
+    deactivated: "اتوقف «{name}».",
     added: "تمت إضافة «{name}».",
-    deleted: "تم حذف «{name}».",
+    deleted: "اتمسح «{name}».",
     deleteTitle: "حذف «{name}»؟",
     zonesHeading: "مناطق الشحن",
-    zonesEmpty: "لا توجد مناطق شحن بعد. أضف أول منطقة.",
+    zonesEmpty: "مفيش مناطق شحن لسه. أضف أول منطقة.",
     addZone: "إضافة منطقة",
     editZone: "تعديل المنطقة",
     saveZone: "حفظ المنطقة",
@@ -187,7 +193,7 @@ const STRINGS = {
     noCountries: "بدون دول",
     deleteZoneBody: "حذف المنطقة يحذف أسعارها أيضًا. الطلبات المسجّلة من قبل تحتفظ بمبلغ الشحن الذي حُسب عليها.",
     deleteZoneConfirm: "حذف المنطقة",
-    ratesEmpty: "لا توجد أسعار في هذه المنطقة بعد.",
+    ratesEmpty: "مفيش أسعار في هذه المنطقة لسه.",
     addRate: "إضافة سعر",
     editRate: "تعديل السعر",
     saveRate: "حفظ السعر",
@@ -231,7 +237,7 @@ const STRINGS = {
     estMinDays: "مدة التوصيل المتوقعة — أقل عدد أيام",
     estMinDaysHint: "اختياري. يظهر للعملاء في صفحة الدفع.",
     estMaxDays: "مدة التوصيل المتوقعة — أقصى عدد أيام",
-    errAmount: "أدخل مبلغًا صحيحًا.",
+    errAmount: "اكتب مبلغًا صحيحًا.",
     errNoTiers: "أضف شريحة واحدة على الأقل.",
     errTierAmount: "كل شريحة تحتاج مبلغًا صحيحًا.",
     errTierSubtotal: "كل شريحة تحتاج حدًا أدنى صحيحًا للمجموع الفرعي.",
@@ -241,11 +247,11 @@ const STRINGS = {
     errDaysOrder: "لا يمكن أن يكون أقصى عدد أيام أقل من أقل عدد أيام.",
     taxHeading: "نسب الضريبة",
     taxOffNote: "الضريبة متوقفة في هذا المتجر — هذه النسب لا تُطبَّق في صفحة الدفع. فعّل الضريبة من الأعلى لاستخدامها.",
-    taxEmpty: "لا توجد نسب ضريبة بعد. أضف أول نسبة.",
+    taxEmpty: "مفيش نسب ضريبة لسه. أضف أول نسبة.",
     addTax: "إضافة نسبة ضريبة",
     editTax: "تعديل نسبة الضريبة",
     saveTax: "حفظ نسبة الضريبة",
-    taxSaved: "تم حفظ نسبة الضريبة.",
+    taxSaved: "اتحفظت نسبة الضريبة.",
     taxRate: "النسبة",
     appliesToShipping: "تُطبَّق على الشحن",
     colPricesIncludeTax: "الأسعار شاملة الضريبة",
@@ -254,7 +260,7 @@ const STRINGS = {
     countryHint: "اختياري، كود من حرفين.",
     region: "المحافظة",
     taxRateHint: "نسبة مئوية، مثل 14 لـ 14%.",
-    errPercent: "أدخل نسبة مئوية تساوي 0 أو أكثر.",
+    errPercent: "اكتب نسبة مئوية تساوي 0 أو أكثر.",
     errCountry: "استخدم كود دولة من حرفين.",
     deleteTaxBody: "تُحذف نسبة الضريبة هذه فورًا. الطلبات السابقة تحتفظ بالضريبة التي حُسبت عليها.",
     deleteTaxConfirm: "حذف نسبة الضريبة",
@@ -398,30 +404,50 @@ function ShippingTaxBody() {
     reloadTax();
   }
 
+  const [tab, setTab] = useShippingTab();
+
   return (
     <div className="max-w-5xl space-y-12">
       <PageHeader
+        tutorial="shipping"
         title={tr.title}
         description={tr.description}
       />
 
-      <ShippingSettingsSection onSaved={refreshWorkspace} />
+      <ShippingTabsBar value={tab} onChange={setTab} />
 
-      <CarrierConnectionsSection />
+      {tab === "rates" && <ShippingSettingsSection onSaved={refreshWorkspace} />}
 
-      <StoreShippingTaxSettings
-        taxEnabled={taxEnabled}
-        onTaxEnabledChange={setTaxEnabled}
-        onSaved={refreshWorkspace}
-      />
+      {tab === "rates" && <ShippingProfilesSection />}
 
-      <WeightTiersSection
-        zones={zoneList}
-        workspace={currentWorkspace}
-        currency="EGP"
-        onWorkspaceChanged={refreshWorkspace}
-      />
+      {/* Address suggestions at checkout: off, the places list or Google Maps (handoff 184). */}
+      {tab === "places" && <AddressLookupSection />}
+      {/* The store's own regions → cities → areas and their prices (handoff 163/164). */}
+      {tab === "places" && <StorePlacesSection />}
+      {tab === "delivery" && <DeliveryTimesSection />}
 
+      {tab === "options" && <ShippingOptionsSection />}
+
+      {tab === "carriers" && <CarrierConnectionsSection />}
+
+      {tab === "taxes" && (
+        <StoreShippingTaxSettings
+          taxEnabled={taxEnabled}
+          onTaxEnabledChange={setTaxEnabled}
+          onSaved={refreshWorkspace}
+        />
+      )}
+
+      {tab === "rates" && (
+        <WeightTiersSection
+          zones={zoneList}
+          workspace={currentWorkspace}
+          currency="EGP"
+          onWorkspaceChanged={refreshWorkspace}
+        />
+      )}
+
+      {tab === "rates" && (
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-lg font-medium text-ink">{tr.zonesHeading}</h2>
@@ -453,6 +479,9 @@ function ShippingTaxBody() {
         </DataState>
       </section>
 
+      )}
+
+      {tab === "taxes" && (
       <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -513,6 +542,7 @@ function ShippingTaxBody() {
           </div>
         </DataState>
       </section>
+      )}
 
       <Modal
         open={zoneForm !== null}

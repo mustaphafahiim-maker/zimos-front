@@ -3,7 +3,7 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: { loadMore: "Load more", loading: "Loading…" },
-  ar: { loadMore: "عرض المزيد", loading: "جارٍ التحميل…" },
+  ar: { loadMore: "عرض المزيد", loading: "بنحمّل…" },
 } satisfies Messages;
 
 interface LoadMoreProps {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, Check, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import { Alert, Button, Card, cn } from "@store-builder/ui";
+import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import {
   automationFlowsDelete,
   automationFlowsEnableTemplate,
@@ -61,6 +61,7 @@ const STRINGS = {
     buttons: "Quick-reply buttons",
     close: "Close",
     templateEnabled: "“{name}” is on. Review its steps below.",
+    templateCoupon: "Coupon for the last reminder (optional)",
     rulesTitle: "Your automations",
     noRules: "No automations yet",
     noRulesDesc: "Switch on a ready-made one above, or build your own sequence.",
@@ -114,8 +115,9 @@ const STRINGS = {
     buttons: "أزرار الرد السريع",
     close: "إغلاق",
     templateEnabled: "تم تفعيل «{name}». راجع خطواتها بالأسفل.",
+    templateCoupon: "كود خصم للتذكير الأخير (اختياري)",
     rulesTitle: "الأتمتة الخاصة بك",
-    noRules: "لا توجد أتمتة بعد",
+    noRules: "مفيش أتمتة لسه",
     noRulesDesc: "فعّل واحدة جاهزة من الأعلى، أو ابنِ سلسلتك الخاصة.",
     active: "مفعّلة",
     whenTrigger: "عند",
@@ -128,7 +130,7 @@ const STRINGS = {
     created: "تم إنشاء الأتمتة.",
     deleteTitle: "حذف هذه الأتمتة؟",
     deleteDesc: "ستتوقف «{name}» عن العمل، وتتوقف السلاسل المنتظرة أيضًا. سجل تشغيلها السابق يبقى.",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     cancel: "إلغاء",
     deleted: "تم حذف الأتمتة.",
     runsTitle: "سجل التشغيل",
@@ -230,10 +232,14 @@ export function AutomationsPage() {
     }
   }
 
+  // The coupon a template that offers one gives in its last message (abandoned cart).
+  const [templateCoupons, setTemplateCoupons] = useState<Record<string, string>>({});
+
   async function enableTemplate(template: AutomationFlowTemplate) {
     setEnabling(template.key);
     try {
-      await automationFlowsEnableTemplate(apiClient, workspaceId, template.key, locale === "en" ? "en" : "ar");
+      const couponCode = template.acceptsCoupon ? (templateCoupons[template.key] ?? "").trim() : "";
+      await automationFlowsEnableTemplate(apiClient, workspaceId, template.key, locale === "en" ? "en" : "ar", couponCode ? { couponCode } : {});
       toast.success(fmt(t.templateEnabled, { name: template.name[locale === "en" ? "en" : "ar"] }));
       await Promise.all([rules.refresh({ silent: true }), templates.refresh({ silent: true })]);
       if (template.whatsappTemplates.length > 0) setMessagesOf(template);
@@ -249,6 +255,7 @@ export function AutomationsPage() {
   return (
     <div className="min-w-0 max-w-6xl">
       <PageHeader
+        tutorial="automations"
         title={t.title}
         description={t.description}
         actions={
@@ -282,6 +289,17 @@ export function AutomationsPage() {
                     <p className="mt-0.5 text-xs text-ink-soft">{template.description[lang]}</p>
                   </div>
                 </div>
+                {template.acceptsCoupon && !template.ruleId && (
+                  <Input
+                    className="mt-3 h-8 text-xs"
+                    dir="ltr"
+                    maxLength={100}
+                    aria-label={t.templateCoupon}
+                    placeholder={t.templateCoupon}
+                    value={templateCoupons[template.key] ?? ""}
+                    onChange={(e) => setTemplateCoupons((prev) => ({ ...prev, [template.key]: e.target.value }))}
+                  />
+                )}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1">
                   {template.whatsappTemplates.length > 0 ? (
                     <button type="button" onClick={() => setMessagesOf(template)} className="cursor-pointer text-xs text-primary hover:underline">

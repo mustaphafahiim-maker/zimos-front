@@ -2,16 +2,18 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import type { ShopperPaymentStatus, StorefrontPaymentMethod } from "@store-builder/api-client";
+import { codSwitchDeposit, type ShopperPaymentStatus, type StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CheckIcon } from "@/components/Icons";
+import { CodSwitch } from "@/components/payment/CodSwitch";
 import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { getPaymentToken, paymentPageUrl, savePaymentToken, usePreviewToken } from "@/lib/payments";
+import { getPaymentReturn, getPaymentToken, paymentPageUrl, savePaymentToken, usePreviewToken } from "@/lib/payments";
 import { useIsClient } from "@/lib/useIsClient";
 import { orderErrorMessage } from "@/lib/placeOrder";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { usePaymentMethodText } from "@/lib/paymentMethodText";
 
 // While the latest attempt is open, ask again this often, for this long. Each
 // ask may make the server check with the gateway (throttled there too).
@@ -20,10 +22,12 @@ const POLL_FOR_MS = 2 * 60 * 1000;
 
 /**
  * Signed fields a gateway puts on the redirect (Paymob: hmac / id; Kashier:
- * signature / paymentStatus); their presence means "just came back". The
- * server works out which gateway signed them.
+ * signature / paymentStatus; the sandbox gateway: sbx_sig); their presence
+ * means "just came back". The server works out which gateway signed them.
  */
-const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus"];
+// sbx_setup_sig: the sandbox's "save a card" page, for a free trial with nothing to pay.
+// token / PayerID: PayPal (handoff 183) — nothing signed, the return makes the server ask PayPal (and capture).
+const GATEWAY_REDIRECT_MARKERS = ["hmac", "id", "signature", "paymentStatus", "sbx_sig", "sbx_setup_sig", "token", "PayerID"];
 
 function gatewayQuery(search: URLSearchParams): Record<string, string> | null {
   if (!GATEWAY_REDIRECT_MARKERS.some((key) => search.has(key))) return null;
@@ -131,7 +135,7 @@ function PaymentPage() {
         orderId,
         token,
         {
-          paymentMethod: method.method === "wallet" ? "wallet" : "card",
+          paymentMethod: method.method === "cod" ? "card" : method.method,
           ...(method.provider ? { paymentProvider: method.provider } : {}),
           returnUrl: paymentPageUrl(basePath, orderId),
         },
@@ -145,7 +149,11 @@ function PaymentPage() {
     }
   }
 
-  const methodName = (m: StorefrontPaymentMethod) => (m.method === "wallet" ? t.payment.wallet : t.payment.card);
+  // An order placed in a funnel goes back into it once paid (lib/payments savePaymentReturn).
+  const funnelReturn = isClient ? getPaymentReturn(workspaceId, orderId) : null;
+  const more = usePaymentMethodText();
+  const methodName = (m: StorefrontPaymentMethod) =>
+    m.method === "wallet" ? t.payment.wallet : m.method === "valu" ? more.valu : m.method === "kiosk" ? more.kiosk : (m.method as string) === "paypal" ? t.express.paypal : t.payment.card;
   const thankYou = storeHref(basePath, `/orders/${orderId}?number=${encodeURIComponent(status?.orderNumber ?? "")}`);
   const expiresAt =
     status?.expiresAt &&
@@ -172,9 +180,15 @@ function PaymentPage() {
                 <CheckIcon /> {t.payment.paid}
               </p>
               <p className="text-sm text-ink-soft">{t.payment.paidHint}</p>
-              <StoreLink href={`/orders/${orderId}?number=${encodeURIComponent(status.orderNumber)}`} className={btnPrimary}>
-                {t.payment.viewOrder}
-              </StoreLink>
+              {funnelReturn ? (
+                <StoreLink href={funnelReturn} className={btnPrimary}>
+                  {t.funnel.continue}
+                </StoreLink>
+              ) : (
+                <StoreLink href={`/orders/${orderId}?number=${encodeURIComponent(status.orderNumber)}`} className={btnPrimary}>
+                  {t.payment.viewOrder}
+                </StoreLink>
+              )}
             </div>
           ) : status.status === "cod" ? (
             <div className="space-y-4">
@@ -182,9 +196,15 @@ function PaymentPage() {
                 <CheckIcon /> {t.payment.codDone}
               </p>
               <p className="text-sm text-ink-soft">{t.payment.codDoneHint}</p>
-              <a href={thankYou} className={btnPrimary}>
-                {t.payment.viewOrder}
-              </a>
+              {funnelReturn ? (
+                <StoreLink href={funnelReturn} className={btnPrimary}>
+                  {t.funnel.continue}
+                </StoreLink>
+              ) : (
+                <a href={thankYou} className={btnPrimary}>
+                  {t.payment.viewOrder}
+                </a>
+              )}
             </div>
           ) : status.status === "expired" || status.status === "cancelled" ? (
             <div className="space-y-4">
@@ -229,16 +249,20 @@ function PaymentPage() {
                     </button>
                   ))}
                 {status.canSwitchToCod && token && (
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() =>
-                      void act("cod", () => client.switchOrderToCod(workspaceId, orderId, token, preview))
-                    }
-                    className={btnSecondary}
-                  >
-                    {busy === "cod" ? t.payment.switching : t.payment.switchToCod}
-                  </button>
+                  <CodSwitch
+                    client={client}
+                    workspaceId={workspaceId}
+                    orderId={orderId}
+                    token={token}
+                    previewToken={preview}
+                    deposit={codSwitchDeposit(status)}
+                    disabled={busy !== null && busy !== "cod"}
+                    label={t.payment.switchToCod}
+                    busyLabel={t.payment.switching}
+                    onBusy={(on) => setBusy(on ? "cod" : null)}
+                    onDone={setStatus}
+                    errorText={(err) => orderErrorMessage(err, t.form.errors)}
+                  />
                 )}
               </div>
             </div>

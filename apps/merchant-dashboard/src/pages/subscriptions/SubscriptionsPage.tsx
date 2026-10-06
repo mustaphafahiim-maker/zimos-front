@@ -45,6 +45,7 @@ const STRINGS = {
     kpiActive: "Active",
     kpiActiveHint: "{amount} per period",
     kpiPastDue: "Payment failed",
+    kpiTrialing: "On a free trial",
     kpiNew: "New this month",
     kpiRevenue: "Collected",
     colCustomer: "Customer",
@@ -97,6 +98,9 @@ const STRINGS = {
     mode_installments: "Installments: the same amount a fixed number of times",
     interval: "Every",
     payments: "Number of payments",
+    trialDays: "Free trial (days)",
+    trialHint: "Optional, up to 90. The first order charges nothing for the product and the first charge comes after the trial. One trial per customer; the store's card must be able to save cards without a payment when nothing else is due.",
+    planTrial: "{days}-day free trial",
     planSaved: "Plan saved.",
     emptyPlans: "No products yet.",
   },
@@ -107,6 +111,7 @@ const STRINGS = {
     tabList: "الاشتراكات",
     tabPlans: "خطط المنتجات",
     kpiActive: "نشطة",
+    kpiTrialing: "في فترة تجربة",
     kpiActiveHint: "{amount} كل فترة",
     kpiPastDue: "فشل الدفع",
     kpiNew: "جديدة هذا الشهر",
@@ -132,7 +137,7 @@ const STRINGS = {
     status_paused: "متوقف",
     status_cancelled: "ملغي",
     status_completed: "مكتمل",
-    noCard: "لا توجد بطاقة محفوظة",
+    noCard: "مفيش بطاقة محفوظة",
     retry: "فشلت المحاولة {n}",
     none: "—",
     pause: "إيقاف",
@@ -142,11 +147,11 @@ const STRINGS = {
     firstOrder: "أول طلب",
     statusFilter: "الحالة",
     anyStatus: "كل الحالات",
-    emptyTitle: "لا توجد اشتراكات بعد",
+    emptyTitle: "مفيش اشتراكات لسه",
     emptyDescription: "ضع منتجًا على خطة من «خطط المنتجات». عندما يدفع العميل بالبطاقة يبدأ الاشتراك هنا.",
     cancelTitle: "إلغاء هذا الاشتراك؟",
     cancelDescription: "لن يُخصم من العميل مرة أخرى. الطلبات المدفوعة لا تُرد.",
-    cancelling: "جارٍ الإلغاء…",
+    cancelling: "بنلغي…",
     plansIntro: "سعر المنتج هو ما يُخصم في كل دفعة. الخطط تحتاج دفعًا بالبطاقة على بوابة تحفظ البطاقات؛ طلب الدفع عند الاستلام لا يبدأ خطة.",
     colProductName: "المنتج",
     colCurrent: "طريقة البيع",
@@ -161,8 +166,11 @@ const STRINGS = {
     mode_installments: "تقسيط: نفس المبلغ عددًا محددًا من المرات",
     interval: "كل",
     payments: "عدد الدفعات",
+    trialDays: "فترة تجربة مجانية (بالأيام)",
+    trialHint: "اختياري، حتى ٩٠ يومًا. الطلب الأول لا يُحتسب فيه المنتج وأول خصم بعد فترة التجربة. تجربة واحدة لكل عميل؛ ويلزم أن تحفظ بوابة الدفع البطاقة دون دفع إذا لم يكن هناك مبلغ آخر مستحق.",
+    planTrial: "تجربة مجانية {days} يوم",
     planSaved: "تم حفظ الخطة.",
-    emptyPlans: "لا توجد منتجات بعد.",
+    emptyPlans: "مفيش منتجات لسه.",
   },
 } satisfies Messages;
 
@@ -311,13 +319,14 @@ function SubscriptionsTab({ onGoToPlans }: { onGoToPlans: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard
           label={t.kpiActive}
           value={String(overview.data?.active ?? "—")}
           hint={overview.data ? fmt(t.kpiActiveHint, { amount: formatMoney(overview.data.activeAmount, currency) }) : undefined}
           icon={<Repeat aria-hidden />}
         />
+        <KpiCard label={t.kpiTrialing} value={String(overview.data?.trialing ?? "—")} />
         <KpiCard label={t.kpiPastDue} value={String(overview.data?.pastDue ?? "—")} />
         <KpiCard label={t.kpiNew} value={String(overview.data?.newThisMonth ?? "—")} />
         <KpiCard label={t.kpiRevenue} value={overview.data ? formatMoney(overview.data.revenue, currency) : "—"} />
@@ -329,7 +338,7 @@ function SubscriptionsTab({ onGoToPlans }: { onGoToPlans: () => void }) {
             <option value="">
               {t.statusFilter}: {t.anyStatus}
             </option>
-            {(["active", "past_due", "paused", "cancelled", "completed"] as const).map((key) => (
+            {(["trialing", "active", "past_due", "paused", "cancelled", "completed"] as const).map((key) => (
               <option key={key} value={key}>
                 {t[`status_${key}`]}
               </option>
@@ -389,7 +398,9 @@ function PlansTab() {
   const describe = (plan: ProductBillingPlan | null) => {
     if (!plan) return t.once;
     const every = everyText(t, plan.interval, plan.intervalCount ?? 1);
-    return plan.mode === "installments" ? fmt(t.planPayments, { payments: plan.payments, every }) : fmt(t.planOf, { kind: t.kind_subscription, every });
+    if (plan.mode === "installments") return fmt(t.planPayments, { payments: plan.payments, every });
+    const text = fmt(t.planOf, { kind: t.kind_subscription, every });
+    return plan.trialDays ? `${text} · ${fmt(t.planTrial, { days: plan.trialDays })}` : text;
   };
 
   const columns: Column<ProductPlanRow>[] = [
@@ -449,6 +460,7 @@ function PlanModal({ product, onClose, onSaved }: { product: ProductPlanRow | nu
   const [mode, setMode] = useState<"once" | "subscription" | "installments">("once");
   const [interval, setIntervalValue] = useState<BillingInterval>("month");
   const [payments, setPayments] = useState("3");
+  const [trialDays, setTrialDays] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -458,11 +470,15 @@ function PlanModal({ product, onClose, onSaved }: { product: ProductPlanRow | nu
     setMode(plan ? plan.mode : "once");
     setIntervalValue(plan?.interval ?? "month");
     setPayments(plan && plan.mode === "installments" ? String(plan.payments) : "3");
+    setTrialDays(plan && plan.mode === "subscription" && plan.trialDays ? String(plan.trialDays) : "");
     setError(null);
   }, [product]);
 
   const count = Math.floor(Number(payments));
-  const valid = mode !== "installments" || (Number.isFinite(count) && count >= 2 && count <= 36);
+  const trial = trialDays.trim() === "" ? 0 : Math.floor(Number(trialDays));
+  const valid =
+    (mode !== "installments" || (Number.isFinite(count) && count >= 2 && count <= 36)) &&
+    (mode !== "subscription" || (Number.isFinite(trial) && trial >= 0 && trial <= 90));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -470,7 +486,11 @@ function PlanModal({ product, onClose, onSaved }: { product: ProductPlanRow | nu
     setBusy(true);
     setError(null);
     const plan: ProductBillingPlan | null =
-      mode === "once" ? null : mode === "subscription" ? { mode, interval, intervalCount: 1 } : { mode, interval, intervalCount: 1, payments: count };
+      mode === "once"
+        ? null
+        : mode === "subscription"
+          ? { mode, interval, intervalCount: 1, ...(trial > 0 ? { trialDays: trial } : {}) }
+          : { mode, interval, intervalCount: 1, payments: count };
     try {
       await productPlanSet(apiClient, workspaceId, product.id, plan);
       toast.success(t.planSaved);
@@ -508,6 +528,9 @@ function PlanModal({ product, onClose, onSaved }: { product: ProductPlanRow | nu
         )}
         {mode === "installments" && (
           <TextField label={t.payments} type="number" min={2} max={36} required value={payments} onChange={(e) => setPayments(e.target.value)} />
+        )}
+        {mode === "subscription" && (
+          <TextField label={t.trialDays} hint={t.trialHint} type="number" min={0} max={90} value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
         )}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>

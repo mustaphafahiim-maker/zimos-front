@@ -6,10 +6,15 @@ import { ApiError, orderTrackingByToken, type TrackResult } from "@store-builder
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { SearchIcon } from "./Icons";
 import { TrackOrderProgress } from "./TrackOrderProgress";
 import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackDeliveryEstimate } from "./TrackDeliveryEstimate";
 import { TrackOrderDownloads } from "./TrackOrderDownloads";
+import { TrackOrderTransfer } from "./TrackOrderTransfer";
+import { TrackOrderSubscriptions } from "./TrackOrderSubscriptions";
+import { ShopperReturns } from "./returns/ShopperReturns";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -17,6 +22,10 @@ const api = createStorefrontApiClient();
 export function TrackOrder() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { t, intlLocale, money } = useStore();
+  // The store's own country's numbers, as its checkout takes them (lib/orderForm validateOrderForm):
+  // an Egyptian mobile in Egypt, a full number elsewhere.
+  const egypt = useStoreCountry() === "EG";
+  const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : /^\+?\d{8,15}$/.test(normalizePhone(raw)));
 
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
@@ -69,7 +78,7 @@ export function TrackOrder() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!isEgyptianMobile(phone)) next.phone = t.form.errors.phone;
+    if (!validPhone(phone)) next.phone = egypt ? t.form.errors.phone : t.form.errors.phoneIntl;
     if (!number.trim()) next.number = t.track.errors.orderNumber;
     setErrors(next);
     if (next.phone) return document.getElementById("track-phone")?.focus();
@@ -83,7 +92,8 @@ export function TrackOrder() {
       // A "#" typed in front of the order number isn't part of it.
       const found = await api.trackOrder(
         workspaceId,
-        normalizePhone(phone),
+        // Digits only (the API refuses a "+"); it normalizes the number as the checkout did.
+        normalizePhone(phone).replace(/^\+/, ""),
         number.replace(/^#/, "").trim()
       );
       setResult(found);
@@ -98,6 +108,8 @@ export function TrackOrder() {
   // Every amount in one result is in the order's own currency, not the store's
   // current one — an order placed before a currency change still adds up.
   const currency = result?.currency;
+  // The order's signed token comes with every answer (by link or by phone + number); returns name the order by it.
+  const trackingToken = (result as (TrackResult & { trackingToken?: string }) | null)?.trackingToken ?? null;
 
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
@@ -119,9 +131,9 @@ export function TrackOrder() {
               id="track-phone"
               type="tel"
               inputMode="tel"
-              autoComplete="tel-national"
+              autoComplete={egypt ? "tel-national" : "tel"}
               dir="ltr"
-              placeholder={t.form.phonePlaceholder}
+              placeholder={egypt ? t.form.phonePlaceholder : undefined}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               aria-invalid={errors.phone ? true : undefined}
@@ -179,6 +191,7 @@ export function TrackOrder() {
                 </span>
               </div>
               <TrackOrderProgress result={result} />
+              <TrackDeliveryEstimate result={result} />
 
               {result.items.length > 0 && (
                 <>
@@ -219,6 +232,13 @@ export function TrackOrder() {
               </dl>
 
               <TrackOrderDownloads result={result} />
+
+              <TrackOrderSubscriptions result={result} />
+
+              <TrackOrderTransfer result={result} workspaceId={workspaceId} />
+
+              {/* Return items, when the store lets shoppers ask (handoff 186). */}
+              {trackingToken && <ShopperReturns key={trackingToken} token={trackingToken} workspaceId={workspaceId} />}
 
               <TrackOrderNotes result={result} />
 

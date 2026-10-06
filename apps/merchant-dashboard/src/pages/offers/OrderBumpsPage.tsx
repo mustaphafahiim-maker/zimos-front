@@ -25,6 +25,7 @@ import { OfferPicker } from "@/components/OfferPicker";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { ProductSelect, RuleCard, useStoreProducts } from "./OfferRuleParts";
+import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
  * Two screens with one shape (SPEC §10.3, §10.4): an order bump is an offer
@@ -86,9 +87,9 @@ const STRINGS = {
     upsellsDescription: "عرض واحد في صفحة الشكر، يُضاف لنفس أوردر الدفع عند الاستلام بضغطة — قبل أن يؤكده أحد.",
     newBump: "إضافة طلب جديدة",
     newUpsell: "عرض جديد",
-    emptyBumps: "لا توجد إضافات طلب بعد",
+    emptyBumps: "مفيش إضافات طلب لسه",
     emptyBumpsHint: "اعرض إضافة صغيرة في مكان الطلب نفسه — شاحن، لون ثانٍ، علبة هدية.",
-    emptyUpsells: "لا توجد عروض بعد الشراء",
+    emptyUpsells: "مفيش عروض بعد الشراء",
     emptyUpsellsHint: "بعد الأوردر مباشرة، اعرض شيئًا آخر يناسبه.",
     onProduct: "على: {name}",
     onAll: "على كل المنتجات",
@@ -113,12 +114,12 @@ const STRINGS = {
     details: "الوصف",
     preCheckedLabel: "محدد افتراضيًا",
     preCheckedHint: "العميل يقدر يلغي التحديد. استخدمه بحذر: إضافة لم يطلبها أحد تزيد الرفض عند الاستلام.",
-    offerRequired: "اختر العرض الذي يُباع.",
+    offerRequired: "اختار العرض الذي يُباع.",
     cancel: "إلغاء",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
-    saved: "تم الحفظ.",
-    deleted: "تم الحذف.",
+    saving: "بنحفظ…",
+    saved: "اتحفظ.",
+    deleted: "اتمسح.",
     deleteConfirm: "حذف هذه القاعدة؟",
   },
 } satisfies Messages;
@@ -167,6 +168,8 @@ function OfferRulesPage({ kind }: { kind: Kind }) {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const { list, save, remove } = useRules(kind);
+  // Each rule's views, acceptances and added revenue (SPEC §10.11).
+  const stats = useOfferStats();
   const [editing, setEditing] = useState<Row | "new" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const rows = list.data ?? [];
@@ -238,6 +241,7 @@ function OfferRulesPage({ kind }: { kind: Kind }) {
                     {row.preChecked && <span className="ms-2 text-xs text-ink-soft">· {t.preChecked}</span>}
                   </p>
                 )}
+                <OfferNumbers stat={(isBump ? stats?.bumps : stats?.upsells)?.[row.id]} />
               </RuleCard>
             ))}
           </div>

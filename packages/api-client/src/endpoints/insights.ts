@@ -138,6 +138,7 @@ export interface InsightsAttribution {
   range: { from: string; to: string; timeZone: string };
   currency: string;
   groupBy: InsightsAttributionGroup;
+  touch?: "first" | "last";
   funnelId: string | null;
   totals: {
     visitors: number;
@@ -156,6 +157,8 @@ export interface InsightsAttributionParams {
   from?: string;
   to?: string;
   groupBy?: InsightsAttributionGroup;
+  /** Which of the order's touches gets the sale: its last (default) or first. */
+  touch?: "first" | "last";
   funnelId?: string;
   utm_source?: string;
   utm_medium?: string;

@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { WhatsappTemplatesPanel } from "@/components/WhatsappTemplates";
 
 const STRINGS = {
   en: {
@@ -80,12 +81,12 @@ const STRINGS = {
     connected: "مربوط",
     errorStatus: "محتاج مراجعة",
     guideTitle: "إزاي تجيب البيانات من Meta",
-    step1: "ادخل developers.facebook.com وسجّل دخول، واعمل App جديد نوعه “Business”.",
-    step2: "جوه الـ App ضيف منتج “WhatsApp” واربطه بحساب واتساب بيزنس بتاعك.",
-    step3: "افتح WhatsApp ← API Setup وانسخ “Phone number ID” (و“WhatsApp Business Account ID” لو حابب).",
+    step1: "ادخل developers.facebook.com وسجّل دخول، واعمل App جديد نوعه «Business».",
+    step2: "جوه الـ App ضيف منتج «WhatsApp» واربطه بحساب واتساب بيزنس بتاعك.",
+    step3: "افتح WhatsApp ← API Setup وانسخ «Phone number ID» (و«WhatsApp Business Account ID» لو حابب).",
     step4:
       "اعمل Access token دايم: Business Settings ← System users ← ضيف System user ← Generate token بصلاحيات whatsapp_business_messaging و whatsapp_business_management.",
-    step5: "افتح App settings ← Basic وانسخ “App Secret”. بنستخدمه عشان نتأكد إن الرسايل جاية فعلًا من Meta.",
+    step5: "افتح App settings ← Basic وانسخ «App Secret». بنستخدمه عشان نتأكد إن الرسايل جاية فعلًا من Meta.",
     step6: "الصق كل ده تحت ودوس «اربط». هنتأكد من البيانات مع Meta على طول.",
     phoneNumberId: "Phone number ID",
     phoneNumberIdHint: "أرقام بس، من WhatsApp ← API Setup.",
@@ -116,7 +117,7 @@ const STRINGS = {
     cancelReconnect: "إلغاء",
     webhookTitle: "الـ Webhook (عشان توصلك الردود)",
     webhookHint:
-      "في الـ App بتاعك افتح WhatsApp ← Configuration ← Webhook ← Edit. الصق الـ Callback URL والـ Verify token اللي تحت، دوس “Verify and save”، وبعدين “Manage” واشترك في خانة “messages”.",
+      "في الـ App بتاعك افتح WhatsApp ← Configuration ← Webhook ← Edit. الصق الـ Callback URL والـ Verify token اللي تحت، دوس «Verify and save»، وبعدين «Manage» واشترك في خانة «messages».",
     webhookUrl: "Callback URL",
     verifyToken: "Verify token",
     copied: "اتنسخ.",
@@ -127,7 +128,7 @@ const STRINGS = {
     disconnectDescription:
       "مش هتقدر تبعت أو تستقبل رسايل واتساب لحد ما تربط تاني. المحادثات القديمة هتفضل موجودة.",
     disconnected: "واتساب اتفصل.",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 
@@ -176,11 +177,15 @@ export function WhatsappSection() {
           onRetry={() => integration.refresh()}
         >
           {data && isConnected && !reconnecting ? (
-            <ConnectedView
-              integration={data as WhatsappIntegrationConnected}
-              onReconnect={() => setReconnecting(true)}
-              onDisconnect={() => setConfirmDisconnect(true)}
-            />
+            <>
+              <ConnectedView
+                integration={data as WhatsappIntegrationConnected}
+                onReconnect={() => setReconnecting(true)}
+                onDisconnect={() => setConfirmDisconnect(true)}
+              />
+              {/* The account's templates and their status in Meta (components/WhatsappTemplates.tsx). */}
+              <WhatsappTemplatesPanel />
+            </>
           ) : data ? (
             <div className="space-y-5">
               {!isConnected && <SetupGuide />}

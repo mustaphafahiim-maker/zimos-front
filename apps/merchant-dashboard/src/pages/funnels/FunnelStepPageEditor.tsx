@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Eye, PackageCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, PackageCheck, Redo2, Undo2 } from "lucide-react";
 import { Button } from "@store-builder/ui";
 import type { PageSection, PageTree } from "@store-builder/api-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -22,10 +22,21 @@ import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { BlockLibrary } from "../website/editor/BlockLibrary";
 import { SectionCard } from "../website/editor/SectionCard";
 import { SectionInspector } from "../website/editor/SectionInspector";
-import { createSection, moveSection, sectionLabel, type BlockPreset } from "../website/editor/blocks";
-import { EditorLocaleContext } from "../website/editor/editorLocale";
+import { createSection, insertSection, moveSection, sectionLabel, type BlockPreset } from "../website/editor/blocks";
+import { EditorLocaleContext, editorUi } from "../website/editor/editorLocale";
+import { LayerList } from "../website/editor/LayerList";
+import { ResizableSplit } from "../website/editor/ResizableSplit";
+import { SavedSectionsLibrary } from "../website/editor/SavedSections";
+import { PageProductField } from "../website/editor/DataBinding";
+import { namedStylesOf } from "../website/editor/ElementStylePanel";
+import { useStepHistory } from "./useStepHistory";
+import { duplicateSection, inlineTextIds, setElementText } from "../website/editor/canvasTools";
+import { applyCanvasEdit, nudgeElement } from "../website/editor/canvasEdits";
+import { stepEdit } from "@/lib/canvasDrag";
+import { PageSettingsButton } from "../website/editor/PageSettingsDialog";
 import { PAGE_STRINGS, STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
 import type { UiStep } from "./funnelAdapter";
+import { StepDetailsForm } from "./StepDetailsForm";
 
 /**
  * The page view of one funnel step: the website editor's block library,
@@ -36,6 +47,13 @@ import type { UiStep } from "./funnelAdapter";
  * editor's one Save button along with the flow, and count towards "unsaved
  * changes" like any other edit. The shared editor pieces speak the merchant's
  * language through EditorLocaleContext.
+ *
+ * The website editor's tools work here too (item 94): undo / redo
+ * (useStepHistory), the layer list with its "add a section here" slots, the
+ * page's product, named styles and the saved sections library. Its preview
+ * is the website editor's canvas too (item 95): sections are picked, added,
+ * dragged and resized on the page, text is edited with a double-click, and
+ * X-ray outlines every box.
  */
 
 /** Sets `productId` on every product card that doesn't name a product yet. */
@@ -76,7 +94,10 @@ export function FunnelStepPageEditor({
   offerProduct,
   onSelectStep,
   onTreeChange,
+  onSeoChange,
   onBack,
+  funnelId,
+  details,
 }: {
   workspaceId: string;
   steps: UiStep[];
@@ -85,10 +106,25 @@ export function FunnelStepPageEditor({
   offerProduct: { id: string; name: string } | null;
   onSelectStep: (key: string) => void;
   onTreeChange: (tree: PageTree) => void;
+  /** The step's SEO from its page settings, into the funnel draft. Without it (a split-test variant) there are no page settings. */
+  onSeoChange?: (seo: Record<string, unknown>) => void;
   onBack: () => void;
+  /** The funnel: its own saved sections in the library, and saving one for it only. */
+  funnelId?: string;
+  /** Page settings → Details (StepDetailsForm): the title, and a generic page's address. */
+  details?: {
+    generic: boolean;
+    taken: string[];
+    pathOf: (key: string) => string;
+    onApply: (changes: { name: string; key: string }) => void;
+  };
 }) {
   const t = useT(PAGE_STRINGS);
   const { locale } = useLocale();
+  const ui = editorUi(locale);
+  const history = useStepHistory(step.key, step.tree, onTreeChange);
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  const [layersOpen, setLayersOpen] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -100,15 +136,25 @@ export function FunnelStepPageEditor({
   if (seededKey !== step.key) {
     setSeededKey(step.key);
     setSelectedId(null);
+    setInsertIndex(null);
   }
 
   const sections = step.tree.sections;
+  // The funnel's pages in its own order (the page list's), for the previous / next buttons.
+  const stepIndex = steps.findIndex((s) => s.key === step.key);
+  const previousStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
+  const nextStep = stepIndex >= 0 && stepIndex < steps.length - 1 ? steps[stepIndex + 1] : null;
   const selected = sections.find((s) => s.id === selectedId) ?? null;
 
+  const { change } = history;
   const setSections = useCallback(
-    (next: PageSection[]) => onTreeChange({ ...step.tree, sections: next }),
-    [onTreeChange, step.tree]
+    (next: PageSection[], key?: string) => {
+      // An edit that changes nothing (a drop in place) records no undo step.
+      if (next !== step.tree.sections) change({ ...step.tree, sections: next }, key);
+    },
+    [change, step.tree]
   );
+  const pageProductId = typeof (step.tree as { productId?: unknown }).productId === "string" ? ((step.tree as { productId?: string }).productId ?? "") : "";
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -129,13 +175,25 @@ export function FunnelStepPageEditor({
   }
 
   function addBlock(preset: BlockPreset) {
-    const section = createSection(preset, locale);
-    setSections([...sections, section]);
+    insert(createSection(preset, locale));
+  }
+
+  /** Into the slot picked in the layer list, else at the end. */
+  function insert(section: PageSection) {
+    setSections(insertSection(sections, section, insertIndex ?? sections.length));
+    setInsertIndex(null);
     selectSection(section.id);
   }
 
+  function setPageProduct(productId: string) {
+    const { productId: _old, ...rest } = step.tree as PageTree & { productId?: string };
+    void _old;
+    change((productId ? { ...rest, productId } : rest) as PageTree);
+  }
+
   function updateSection(next: PageSection) {
-    setSections(sections.map((s) => (s.id === next.id ? next : s)));
+    // One undo step per burst of typing in a section, as in the website editor.
+    setSections(sections.map((s) => (s.id === next.id ? next : s)), `section:${next.id}`);
   }
 
   function deleteSection(section: PageSection) {
@@ -145,7 +203,20 @@ export function FunnelStepPageEditor({
   }
 
   const inspector = selected && (
-    <SectionInspector section={selected} onChange={updateSection} onDelete={() => setPendingDelete(selected)} onClose={() => setSelectedId(null)} />
+    <SectionInspector
+      section={selected}
+      onChange={updateSection}
+      funnelId={funnelId}
+      namedStyles={namedStylesOf(step.tree.globalStyles)}
+      onNamedStylesChange={(named) => change({ ...step.tree, globalStyles: { ...(step.tree.globalStyles ?? {}), named } })}
+      onDelete={() => setPendingDelete(selected)}
+      onDuplicate={() => {
+        const copy = duplicateSection(selected);
+        setSections(insertSection(sections, copy, sections.findIndex((s) => s.id === selected.id) + 1));
+        selectSection(copy.id);
+      }}
+      onClose={() => setSelectedId(null)}
+    />
   );
 
   return (
@@ -160,31 +231,107 @@ export function FunnelStepPageEditor({
           collapseLabel={t.collapsePanel}
           expandLabel={t.expandPanel}
         >
-          <BlockLibrary onAdd={addBlock} />
+          {/* The outline and the libraries share the pane on an adjustable split, as in the website editor. */}
+          <ResizableSplit
+            storageKey="zimos:funnel-page-editor:layer-split"
+            label={ui.resizeSplit}
+            hint={ui.resizeSplitHint}
+            topCollapsed={!layersOpen}
+            top={
+              <LayerList
+                sections={sections}
+                selectedId={selectedId}
+                insertIndex={insertIndex}
+                onSelect={(id) => selectSection(id)}
+                onDelete={setPendingDelete}
+                onMove={(from, to) => setSections(moveSection(sections, from, to))}
+                onInsertAt={setInsertIndex}
+                open={layersOpen}
+                onOpenChange={setLayersOpen}
+              />
+            }
+            bottom={
+              <>
+                <PageProductField value={pageProductId} onChange={setPageProduct} />
+                <SavedSectionsLibrary onInsert={insert} funnelId={funnelId} />
+                <BlockLibrary onAdd={addBlock} insertPosition={insertIndex === null ? null : insertIndex + 1} onCancelInsert={() => setInsertIndex(null)} />
+              </>
+            }
+          />
         </CollapsiblePane>
 
         <main className="min-w-0 flex-1 bg-paper p-4 md:p-6 lg:overflow-y-auto">
           <div className="mx-auto max-w-2xl">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0 flex-1 space-y-1">
+              <div className="min-w-72 flex-1 space-y-1">
                 <label htmlFor="page-step" className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
                   {t.step}
                 </label>
-                <Select id="page-step" value={step.key} onChange={(e) => onSelectStep(e.target.value)} className="h-9 max-w-sm" dir="auto">
-                  {steps.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.name} · {STEP_TYPE_LABELS[locale][s.type]}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex max-w-sm items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={previousStep ? fmt(t.previousPage, { name: previousStep.name }) : t.firstPage}
+                    title={previousStep ? fmt(t.previousPage, { name: previousStep.name }) : t.firstPage}
+                    disabled={!previousStep}
+                    onClick={() => previousStep && onSelectStep(previousStep.key)}
+                  >
+                    <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
+                  </Button>
+                  <Select id="page-step" value={step.key} onChange={(e) => onSelectStep(e.target.value)} className="h-9 min-w-0 flex-1" dir="auto">
+                    {steps.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.name} · {STEP_TYPE_LABELS[locale][s.type]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={nextStep ? fmt(t.nextPage, { name: nextStep.name }) : t.lastPage}
+                    title={nextStep ? fmt(t.nextPage, { name: nextStep.name }) : t.lastPage}
+                    disabled={!nextStep}
+                    onClick={() => nextStep && onSelectStep(nextStep.key)}
+                  >
+                    <ChevronRight className="size-4 rtl:-scale-x-100" aria-hidden />
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button size="icon" variant="ghost" aria-label={ui.undo} title={`${ui.undo} (Ctrl+Z)`} disabled={!history.canUndo} onClick={history.undo}>
+                  <Undo2 className="size-4 rtl:-scale-x-100" aria-hidden />
+                </Button>
+                <Button size="icon" variant="ghost" aria-label={ui.redo} title={`${ui.redo} (Ctrl+Shift+Z)`} disabled={!history.canRedo} onClick={history.redo}>
+                  <Redo2 className="size-4 rtl:-scale-x-100" aria-hidden />
+                </Button>
                 <Button variant="outline" onClick={onBack}>
                   <span aria-hidden className="inline-block rtl:rotate-180">
                     ←
                   </span>
                   {t.backToFlow}
                 </Button>
+                {onSeoChange && (
+                  <PageSettingsButton
+                    key={step.key}
+                    name={step.name}
+                    seo={step.seo}
+                    scripts={{ kind: "step", id: step.id }}
+                    onSaveSeo={onSeoChange}
+                    details={
+                      details && (
+                        <StepDetailsForm
+                          name={step.name}
+                          stepKey={step.key}
+                          type={step.type}
+                          generic={details.generic}
+                          taken={details.taken.filter((k) => k !== step.key)}
+                          pathOf={details.pathOf}
+                          onApply={details.onApply}
+                        />
+                      )
+                    }
+                  />
+                )}
                 <Button variant={previewOpen ? "secondary" : "outline"} aria-pressed={previewOpen} onClick={() => setPreviewOpen((o) => !o)}>
                   <Eye className="size-4" aria-hidden /> {t.preview}
                 </Button>
@@ -201,7 +348,7 @@ export function FunnelStepPageEditor({
                 <p className="min-w-0 flex-1 text-sm text-primary-dark dark:text-primary" dir="auto">
                   {fmt(t.useProductHint, { product: offerProduct.name })}
                 </p>
-                <Button size="sm" variant="outline" onClick={() => onTreeChange(fillProductCards(step.tree, offerProduct.id))}>
+                <Button size="sm" variant="outline" onClick={() => change(fillProductCards(step.tree, offerProduct.id))}>
                   <PackageCheck className="size-4" aria-hidden /> <span dir="auto">{fmt(t.useProduct, { product: offerProduct.name })}</span>
                 </Button>
               </div>
@@ -260,9 +407,47 @@ export function FunnelStepPageEditor({
               hint: t.previewHint,
               refresh: t.refresh,
               desktop: t.desktop,
+              tablet: t.tablet,
               mobile: t.mobile,
               close: t.close,
               frameTitle: t.frameTitle,
+              xray: ui.previewXray,
+            }}
+            // The website editor's canvas (item 95): pick, insert, drag and resize, double-click text, X-ray.
+            canvas={{
+              selectedId,
+              labels: Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)])),
+              strings: {
+                addAbove: ui.addAbove,
+                addBelow: ui.addBelow,
+                moveUp: ui.moveSectionUp,
+                moveDown: ui.moveSectionDown,
+                dragSection: ui.canvasDragSection,
+                dragElement: ui.canvasDragElement,
+                resizeHeight: ui.canvasResizeHeight,
+                resizeColumns: ui.canvasResizeColumns,
+                resizeImage: ui.canvasResizeImage,
+                auto: ui.canvasAuto,
+                editText: ui.canvasEditText,
+              },
+              onSelect: (id) => selectSection(id),
+              onInsert: setInsertIndex,
+              onMoveSection: (id, direction) => {
+                const from = sections.findIndex((s) => s.id === id);
+                const to = direction === "up" ? from - 1 : from + 1;
+                if (from >= 0 && to >= 0 && to < sections.length) setSections(moveSection(sections, from, to));
+              },
+              onCanvasEdit: (edit) => setSections(applyCanvasEdit(sections, edit)),
+              onCanvasStep: (canvasStep) => {
+                if (canvasStep.kind === "element") {
+                  setSections(nudgeElement(sections, canvasStep.sectionId, canvasStep.elementId, canvasStep.delta));
+                  return;
+                }
+                const edit = stepEdit(canvasStep);
+                if (edit) setSections(applyCanvasEdit(sections, edit), `canvas:${canvasStep.kind}:${canvasStep.sectionId}`);
+              },
+              inlineText: inlineTextIds(sections),
+              onTextEdit: (elementId, text) => setSections(setElementText(sections, elementId, text)),
             }}
             onClose={() => setPreviewOpen(false)}
           />

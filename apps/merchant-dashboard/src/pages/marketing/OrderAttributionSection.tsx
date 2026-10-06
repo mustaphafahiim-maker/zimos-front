@@ -18,6 +18,7 @@ interface Touch {
   campaign?: string;
   content?: string;
   term?: string;
+  adId?: string;
   fbclid?: string;
   ttclid?: string;
   gclid?: string;
@@ -48,6 +49,7 @@ const STRINGS = {
     campaign: "Campaign",
     content: "Ad",
     term: "Keyword",
+    adId: "Ad ID",
     ref: "Referral",
     referrer: "Came from",
     landingPage: "Landing page",
@@ -76,6 +78,7 @@ const STRINGS = {
     campaign: "الحملة",
     content: "الإعلان",
     term: "الكلمة",
+    adId: "معرّف الإعلان",
     ref: "رابط إحالة",
     referrer: "جاء من",
     landingPage: "صفحة الدخول",
@@ -121,6 +124,7 @@ function TouchBlock({ t, title, touch }: { t: T; title: string; touch: Touch }) 
         <Row label={t.campaign} value={touch.campaign} />
         <Row label={t.content} value={touch.content} />
         <Row label={t.term} value={touch.term} />
+        <Row label={t.adId} value={touch.adId} />
         <Row label={t.click} value={click} />
         <Row label={t.ref} value={touch.ref} />
         <Row label={t.referrer} value={touch.referrer} ltr />

@@ -14,7 +14,7 @@
  * courier that has no cancel API; resend with acknowledgeManualCancel).
  */
 import type { ApiClient } from "../client";
-import type { Order, OrderStage } from "../types";
+import type { Order, OrderStage, PaymentMethod } from "../types";
 
 const base = (workspaceId: string, orderId?: string) =>
   `/workspaces/${workspaceId}/orders${orderId ? `/${orderId}` : ""}`;
@@ -55,7 +55,29 @@ export interface OrderStatusChangePayload {
   carrierCode?: string;
   waybillNumber?: string;
   trackingUrl?: string;
+  /**
+   * Tell the customer (SPEC §4.6): false changes the order quietly (no email,
+   * push or automation); true sends the stage's order email even while its
+   * template is off; unset follows the store's settings.
+   */
+  notifyCustomer?: boolean;
 }
+
+/**
+ * The moves that reach the customer (an email, a push, the store's
+ * automations), so the "Notify the customer" choice means something:
+ * confirmed, the follow-up calls, each shipping step and the cancellation.
+ * Reopening and "back to the queue" tell the customer nothing.
+ */
+export const ORDER_STAGES_THAT_NOTIFY: readonly OrderStage[] = [
+  "ready_to_ship",
+  "needs_follow_up",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "returned",
+  "cancelled",
+];
 
 /** Moves the order to another stage. Answers the order as GET one does. */
 export async function ordersChangeStatus(
@@ -197,16 +219,27 @@ export interface OrderListFilters {
   archived?: "exclude" | "only" | "include";
   tag?: string;
   source?: OrderSource;
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   governorate?: string;
   carrier?: string;
   seen?: boolean;
   test?: boolean;
+  /** Orders containing this product. */
+  productId?: string;
+  funnelId?: string;
+  dataQuality?: "good" | "low";
+  /** Two letters, any case. */
+  ipCountry?: string;
+  /** A discount code the order used, any case. */
+  discountCode?: string;
+  /** The visit's utm_source / utm_campaign (last touch, else first), any case. */
+  utmSource?: string;
+  utmCampaign?: string;
 }
 
 // -------------------------------------------------- timeline, neighbours --
 
-export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook";
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier" | "message";
 
 export interface OrderTimelineEvent {
   id: string;
@@ -216,7 +249,11 @@ export interface OrderTimelineEvent {
   /**
    * status: { from, to, reason } · audit: { action, entity, before, after } ·
    * note: { body, visibility } · automation: { trigger, status, detail } ·
-   * webhook: { eventType, status, attempts, responseStatus }
+   * webhook: { eventType, status, attempts, responseStatus } ·
+   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId } ·
+   * message: { channel: "email" | "sms" | "whatsapp" | "push", template, subject, status, error, bot? }
+   *   — a message the customer was sent about the order; `subject` is its line
+   *   (an email's subject, an SMS's text, a push's title, a WhatsApp template and values)
    */
   data: Record<string, unknown>;
 }
@@ -266,6 +303,8 @@ export interface OrderBulkPayload {
   /** ship: a connected courier's code, or a name for a manual shipment. */
   carrierCode?: string;
   notes?: string;
+  /** set_status: as OrderStatusChangePayload.notifyCustomer, for every order. */
+  notifyCustomer?: boolean;
 }
 
 export interface OrderBulkResult {
@@ -313,7 +352,7 @@ export interface OrderDraft {
   items: OrderDraftItem[];
   contact?: { fullName: string; phone: string; email?: string };
   shippingAddress?: { country: string; province?: string; city?: string; addressLine?: string };
-  paymentMethod?: "cod" | "card" | "wallet" | "bank_transfer";
+  paymentMethod?: PaymentMethod;
   discountCode?: string;
   /** Minor units. Set by staff to replace the calculated shipping. */
   shippingAmount?: number;

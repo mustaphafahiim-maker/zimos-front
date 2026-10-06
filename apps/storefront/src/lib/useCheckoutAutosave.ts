@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ApiClient, CaptureCheckoutSessionPayload } from "@store-builder/api-client";
+import { botGuardAutosaveFields } from "./botGuard";
 import { isEgyptianMobile, normalizePhone } from "./egypt";
-import type { OrderFormValues } from "./orderForm";
+import { isEgyptForm, type OrderFormValues } from "./orderForm";
+import { currentTouches } from "./touches";
 import { getVisitorId } from "./visitorId";
 
-const DEBOUNCE_MS = 1500;
+// SPEC §6.2: a lost order is captured once typing pauses for 800 ms.
+const DEBOUNCE_MS = 800;
+const INTL_PHONE = /^\+?\d{8,15}$/;
 /** How long submit waits for an autosave already on the wire. */
 const FLUSH_WAIT_MS = 2000;
 const MAX_LINES = 20;
@@ -21,8 +25,11 @@ export interface AutosaveLine {
 /**
  * Autosaves the checkout form for abandoned-checkout recovery.
  *
- * Nothing is sent until the phone is a valid mobile and there is at least one
- * line; after that, every change is saved once typing pauses. The backend
+ * Nothing is sent until there is at least one line and either a name (two
+ * letters or more) or a phone that is valid for the form's country (an
+ * Egyptian mobile on an Egyptian form); after that, every change is saved
+ * once typing pauses. A number still being typed is left out of the save,
+ * and the server keeps the last valid one it has. The backend
  * upserts on the visitor id, so repeats are harmless. Failures are silent —
  * the autosave must never get in the way of the order.
  *
@@ -51,7 +58,8 @@ export function useCheckoutAutosave({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inflight = useRef<Promise<void> | null>(null);
 
-  const phone = isEgyptianMobile(values.phone) ? normalizePhone(values.phone) : "";
+  const phoneValid = isEgyptForm(values) ? isEgyptianMobile(values.phone) : INTL_PHONE.test(normalizePhone(values.phone));
+  const phone = phoneValid ? normalizePhone(values.phone) : "";
   const fullName = values.fullName.trim().slice(0, 200);
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()) ? values.email.trim() : "";
   const linesKey = JSON.stringify(
@@ -73,11 +81,11 @@ export function useCheckoutAutosave({
   }, [phone, fullName, email, linesKey]);
 
   useEffect(() => {
-    if (!workspaceId || !phone || items.length === 0) return;
+    if (!workspaceId || (!phone && fullName.length < 2) || items.length === 0) return;
     if (stopped.current || payloadKey === lastSaved.current) return;
 
     const payload: CaptureCheckoutSessionPayload = {
-      contact: { phone, ...(fullName ? { fullName } : {}), ...(email ? { email } : {}) },
+      contact: { ...(phone ? { phone } : {}), ...(fullName ? { fullName } : {}), ...(email ? { email } : {}) },
       items,
       source,
       visitorId: getVisitorId(workspaceId),
@@ -90,7 +98,12 @@ export function useCheckoutAutosave({
       inflight.current = (inflight.current ?? Promise.resolve()).then(async () => {
         if (stopped.current) return;
         try {
-          const session = await client.captureCheckoutSession(workspaceId, payload);
+          // The bot guard's token and honeypot (SPEC §5.1): without them a guarded store stores nothing.
+          const guard = await botGuardAutosaveFields(client, workspaceId);
+          if (stopped.current) return;
+          // How the shopper came (first / last touch, lib/touches.ts): kept on the lost order and the order it becomes.
+          const attribution = currentTouches();
+          const session = await client.captureCheckoutSession(workspaceId, { ...payload, ...guard, ...(attribution ? { attribution } : {}) });
           sessionId.current = session.id;
           lastSaved.current = payloadKey;
         } catch (err) {

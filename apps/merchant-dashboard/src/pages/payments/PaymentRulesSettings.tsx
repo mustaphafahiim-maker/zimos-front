@@ -15,7 +15,7 @@ import { basisPointsToPercentInput, majorToMinor, minorToMajorInput, percentToBa
 import { Select } from "@/components/Select";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
-import { useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
@@ -24,6 +24,9 @@ const STRINGS = {
     cod: "Cash on delivery",
     card: "Card",
     wallet: "Mobile wallet",
+    valu: "valU installments",
+    kiosk: "Kiosk (Aman / Masary)",
+    paypal: "PayPal",
     bank_transfer: "Manual transfer",
     none: "No change",
     fee: "Add a fee",
@@ -41,6 +44,13 @@ const STRINGS = {
     save: "Save",
     saved: "Payment rules saved.",
     invalid: "Enter a value greater than zero for every rule.",
+    addOther: "+ Amount in another currency",
+    otherCurrency: "Currency",
+    otherValue: "Amount",
+    removeOther: "Remove",
+    othersHint: "A fixed amount is in the store's currency ({store}); an order in another currency (a funnel selling in it) gets the amount set for that currency, else none.",
+    othersHintPercent: "An order in a currency listed here gets that fixed amount instead of the percentage.",
+    invalidCurrency: "Use a 3-letter currency code (like USD), once per method — beside a fixed amount, not the store's own.",
   },
   ar: {
     title: "قواعد الدفع",
@@ -48,6 +58,9 @@ const STRINGS = {
     cod: "الدفع عند الاستلام",
     card: "بطاقة",
     wallet: "محفظة إلكترونية",
+    valu: "تقسيط valU",
+    kiosk: "الدفع في الكشك (أمان / مصاري)",
+    paypal: "باي بال",
     bank_transfer: "تحويل يدوي",
     none: "بدون تغيير",
     fee: "أضف رسومًا",
@@ -60,11 +73,18 @@ const STRINGS = {
     label: "الاسم في الطلب",
     labelPlaceholder: "رسوم الدفع عند الاستلام",
     funnelsTitle: "طرق الدفع لكل مسار بيع",
-    funnelsDesc: "اختر طرق الدفع التي يعرضها كل مسار بيع عند إتمام الطلب. المسار الذي لم يُحدَّد له شيء يعرض كل الطرق.",
-    noFunnels: "لا توجد مسارات بيع بعد.",
+    funnelsDesc: "اختار طرق الدفع التي يعرضها كل مسار بيع عند إتمام الطلب. المسار الذي لم يُحدَّد له شيء يعرض كل الطرق.",
+    noFunnels: "مفيش مسارات بيع لسه.",
     save: "حفظ",
-    saved: "تم حفظ قواعد الدفع.",
-    invalid: "أدخل قيمة أكبر من صفر لكل قاعدة.",
+    saved: "اتحفظت قواعد الدفع.",
+    invalid: "اكتب قيمة أكبر من صفر لكل قاعدة.",
+    addOther: "+ مبلغ بعملة تانية",
+    otherCurrency: "العملة",
+    otherValue: "المبلغ",
+    removeOther: "حذف",
+    othersHint: "المبلغ الثابت بعملة المتجر ({store})؛ الطلب بعملة تانية (مسار بيع بيبيع بيها) بياخد المبلغ المحدد للعملة دي، وإلا مفيش.",
+    othersHintPercent: "الطلب بعملة من اللي هنا بياخد المبلغ الثابت ده بدل النسبة.",
+    invalidCurrency: "اكتب كود عملة من 3 حروف (زي USD)، مرة واحدة لكل طريقة — وجنب المبلغ الثابت مش عملة المتجر نفسها.",
   },
 } satisfies Messages;
 
@@ -73,16 +93,25 @@ interface Draft {
   valueType: "fixed" | "percent";
   value: string;
   label: string;
+  /** Fixed amounts in other currencies than the store's (SPEC §11.5), same kind and name. */
+  others: Array<{ currency: string; value: string }>;
 }
-const EMPTY: Draft = { kind: "none", valueType: "fixed", value: "", label: "" };
+const EMPTY: Draft = { kind: "none", valueType: "fixed", value: "", label: "", others: [] };
 
-function toDraft(rule: PaymentRuleAdjustment | undefined): Draft {
-  if (!rule || !rule.enabled) return EMPTY;
+/** A method's rules as one row: its percentage or store-currency amount, plus amounts in other currencies. */
+function toDraft(rules: PaymentRuleAdjustment[], store: string): Draft {
+  const live = rules.filter((r) => r.enabled);
+  const main =
+    live.find((r) => r.valueType === "percent") ?? live.find((r) => (r.currency ?? store) === store) ?? live[0];
+  if (!main) return EMPTY;
   return {
-    kind: rule.type,
-    valueType: rule.valueType,
-    value: rule.valueType === "percent" ? basisPointsToPercentInput(rule.value) : minorToMajorInput(rule.value),
-    label: rule.label ?? "",
+    kind: main.type,
+    valueType: main.valueType,
+    value: main.valueType === "percent" ? basisPointsToPercentInput(main.value) : minorToMajorInput(main.value),
+    label: main.label ?? "",
+    others: live
+      .filter((r) => r !== main && r.valueType === "fixed")
+      .map((r) => ({ currency: r.currency ?? store, value: minorToMajorInput(r.value) })),
   };
 }
 
@@ -111,13 +140,16 @@ export function PaymentRulesSettings({
 
   useEffect(() => {
     if (!rules.data) return;
-    setDrafts(Object.fromEntries(rules.data.methods.map((m) => [m, toDraft(rules.data!.adjustments.find((a) => a.method === m))])));
+    const store = rules.data.storeCurrency ?? "EGP";
+    setDrafts(Object.fromEntries(rules.data.methods.map((m) => [m, toDraft(rules.data!.adjustments.filter((a) => a.method === m), store)])));
     setByFunnel(rules.data.methodsByFunnel);
   }, [rules.data]);
 
   if (!rules.data) return null;
   const patch = (method: string, change: Partial<Draft>) =>
     setDrafts((d) => ({ ...d, [method]: { ...(d[method] ?? EMPTY), ...change } }));
+
+  const store = rules.data.storeCurrency ?? "EGP";
 
   async function save() {
     const adjustments: PaymentRuleAdjustment[] = [];
@@ -126,7 +158,18 @@ export function PaymentRulesSettings({
       if (d.kind === "none") continue;
       const value = d.valueType === "percent" ? percentToBasisPoints(d.value) : majorToMinor(d.value);
       if (!Number.isFinite(value) || value <= 0 || (d.valueType === "percent" && value > 10000)) return toast.error(t.invalid);
-      adjustments.push({ method, type: d.kind, valueType: d.valueType, value, label: d.label.trim() || null, enabled: true });
+      const label = d.label.trim() || null;
+      adjustments.push({ method, type: d.kind, valueType: d.valueType, value, label, enabled: true, currency: d.valueType === "percent" ? null : store });
+      const seen = new Set<string>();
+      for (const other of d.others) {
+        const currency = other.currency.trim().toUpperCase();
+        // Beside a fixed amount (in the store's currency) the others are other currencies; beside a percentage any currency.
+        if (!/^[A-Z]{3}$/.test(currency) || (d.valueType === "fixed" && currency === store) || seen.has(currency)) return toast.error(t.invalidCurrency);
+        seen.add(currency);
+        const amount = majorToMinor(other.value);
+        if (!Number.isFinite(amount) || amount <= 0) return toast.error(t.invalid);
+        adjustments.push({ method, type: d.kind, valueType: "fixed", value: amount, label, enabled: true, currency });
+      }
     }
     setSaving(true);
     try {
@@ -199,6 +242,43 @@ export function PaymentRulesSettings({
                       className="lg:col-span-2"
                       onChange={(e) => patch(method, { label: e.target.value })}
                     />
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-5">
+                      {d.others.map((other, i) => (
+                        <div key={i} className="flex flex-wrap items-end gap-3">
+                          <TextField
+                            label={t.otherCurrency}
+                            dir="ltr"
+                            maxLength={3}
+                            className="w-28"
+                            value={other.currency}
+                            disabled={!canManage}
+                            onChange={(e) => patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, currency: e.target.value.toUpperCase() } : o)) })}
+                          />
+                          <TextField
+                            label={t.otherValue}
+                            inputMode="decimal"
+                            dir="ltr"
+                            className="w-40"
+                            value={other.value}
+                            disabled={!canManage}
+                            onChange={(e) => patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, value: e.target.value } : o)) })}
+                          />
+                          {canManage && (
+                            <Button type="button" variant="ghost" className="min-h-11 text-danger" onClick={() => patch(method, { others: d.others.filter((_, j) => j !== i) })}>
+                              {t.removeOther}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        {canManage && (
+                          <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => patch(method, { others: [...d.others, { currency: "", value: "" }] })}>
+                            {t.addOther}
+                          </Button>
+                        )}
+                        <p className="text-xs text-ink-soft">{d.valueType === "percent" ? t.othersHintPercent : fmt(t.othersHint, { store })}</p>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>

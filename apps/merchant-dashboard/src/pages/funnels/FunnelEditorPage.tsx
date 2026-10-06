@@ -28,6 +28,7 @@ import {
   History,
   LayoutTemplate,
   Megaphone,
+  MousePointerClick,
   PartyPopper,
   Pause,
   PencilRuler,
@@ -85,6 +86,7 @@ import {
   saveFunnelDiff,
   starterPlan,
   tempId,
+  uniqueStepKey,
   useFunnelErrorMessage,
   type SaveProgress,
   type StarterTemplateId,
@@ -122,7 +124,12 @@ import {
 } from "./funnelFlow";
 import { pageElementCount } from "./funnelPages";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
+import { GenericPagesPanel } from "./GenericPagesPanel";
+import { flowSteps, genericPagePath, genericPageTree, isGenericStep, type GenericPreset } from "./genericPageRules";
 import { StepChain } from "./StepChain";
+import { StepStatsLine, StepThumbnail, useFlowZoom, useStepStats } from "./FlowMapTools";
+import { LinkPoints, linkPoint, linkPointsOf, pointOfEdge, pointY, useLinkLabels, type LinkDrag, type LinkPoint } from "./FlowLinkPoints";
+import { ShareToMarketplaceButton } from "./marketplace/ShareTemplateDialog";
 
 // ------------------------------------------------------------------ meta --
 
@@ -146,7 +153,7 @@ export const STEP_TYPES: Record<UiStepType, StepTypeMeta> = {
 
 const STEP_TYPE_ORDER: UiStepType[] = ["article", "landing", "sales", "opt_in", "checkout", "upsell", "downsell", "thank_you", "custom"];
 
-const CONDITION_ORDER: UiEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer"];
+const CONDITION_ORDER: UiEdgeCondition[] = ["always", "completed_checkout", "accepted_offer", "declined_offer", "clicked_through"];
 
 const STATUS_TONE: Record<FunnelStatus, "neutral" | "success" | "warning"> = {
   draft: "neutral",
@@ -180,6 +187,8 @@ const EDGE_TONE: Record<UiEdgeCondition, { stroke: string; dash?: string; pill: 
   completed_checkout: { stroke: "var(--color-primary)", pill: "border-primary/40 bg-primary-soft text-primary-dark dark:text-primary", icon: CreditCard },
   accepted_offer: { stroke: "var(--color-success)", pill: "border-success/40 bg-success-soft text-success", icon: Check },
   declined_offer: { stroke: "var(--color-danger)", dash: "6 5", pill: "border-danger/40 bg-danger-soft text-danger", icon: X },
+  // One button's own path (a link point on the card).
+  clicked_through: { stroke: "var(--color-ink)", pill: "border-line-strong bg-paper-raised text-ink", icon: MousePointerClick },
 };
 
 function StepIcon({ type, className }: { type: UiStepType; className?: string }) {
@@ -190,7 +199,8 @@ function StepIcon({ type, className }: { type: UiStepType; className?: string })
 /** Entry = the only step with no incoming edge (backend resolveEntry). */
 function entryKeysOf(funnel: UiFunnel): string[] {
   const targeted = new Set(funnel.edges.map((e) => e.toStepKey));
-  return funnel.steps.filter((s) => !targeted.has(s.key)).map((s) => s.key);
+  // Generic pages (genericPageRules.ts) are off the path: never the start.
+  return flowSteps(funnel.steps, funnel.edges).filter((s) => !targeted.has(s.key)).map((s) => s.key);
 }
 
 // ------------------------------------------------------------ validation --
@@ -365,7 +375,7 @@ export function FunnelEditorPage() {
    */
   function addStep(type: UiStepType) {
     if (!funnel) return;
-    const openEnd = [...funnel.steps].reverse().find((s) => !funnel.edges.some((e) => e.fromStepKey === s.key));
+    const openEnd = [...funnel.steps].reverse().find((s) => !isGenericStep(s, funnel.edges) && !funnel.edges.some((e) => e.fromStepKey === s.key));
     const anchor = selected ?? openEnd ?? null;
     if (anchor) {
       addAfter(anchor.key, type);
@@ -375,6 +385,16 @@ export function FunnelEditorPage() {
     const step = newStep(type, locale, takenKeys(funnel), { x: last ? last.x + CARD_GAP_X : 40, y: last ? last.y : 64 });
     patch((f) => ({ ...f, steps: [...f.steps, step] }));
     setSelectedKey(step.key);
+  }
+
+  /** A generic page (contact, about, policies): a custom step off the map, opened in the page editor. */
+  function addGenericPage(preset: GenericPreset, name: string, body: string) {
+    if (!funnel) return;
+    // Its key is its address (/f/<funnel>/p/<key>): named after what it is.
+    const key = uniqueStepKey(preset === "blank" ? "page" : preset, takenKeys(funnel));
+    const step = { ...newStep("custom", locale, takenKeys(funnel), { x: 40, y: 64 }), key, name, tree: genericPageTree(preset, name, body) };
+    patch((f) => ({ ...f, steps: [...f.steps, step] }));
+    openPage(step.key);
   }
 
   function addAfter(fromKey: string, type: UiStepType) {
@@ -578,12 +598,25 @@ export function FunnelEditorPage() {
                   {dirty && <span className="text-xs text-ink-soft">{t.unsavedChanges}</span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
-                  <FunnelIssuesButton
-                    funnelId={funnelId}
-                    version={Number(!dirty)}
-                    stepNames={Object.fromEntries(funnel.steps.map((s) => [s.key, s.name]))}
-                  />
+                  {publicUrl && (
+                    <Button variant="outline" onClick={preview}>
+                      <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
+                    </Button>
+                  )}
+                  <Button onClick={() => void save()} disabled={!dirty || busy}>
+                    {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
+                    {saving ? (progress && progress.total > 0 ? fmt(t.savingProgress, { done: progress.done, total: progress.total }) : c.saving) : c.save}
+                  </Button>
+                  <Button variant="outline" onClick={() => void publish()} disabled={busy}>
+                    {statusBusy ? <Spinner className="size-4" /> : <Rocket className="size-4" aria-hidden />}
+                    {funnel.status === "draft" ? t.publish : t.republish}
+                  </Button>
+                </div>
+              </div>
+              {/* Tools on their own, quieter row: how you look at the funnel and what is wrong
+                  with it at the start, the less frequent actions at the end. */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <div role="group" aria-label={t.views} className="inline-flex rounded-xl border border-line bg-paper p-0.5">
                     {(["flow", "page"] as const).map((v) => {
                       const Glyph = v === "flow" ? Workflow : PencilRuler;
@@ -616,6 +649,15 @@ export function FunnelEditorPage() {
                     {allProblems.length === 0 ? <CircleCheck className="size-3.5" aria-hidden /> : <TriangleAlert className="size-3.5" aria-hidden />}
                     {allProblems.length === 0 ? t.readyToPublish : allProblems.length === 1 ? t.oneToFix : fmt(t.toFix, { n: allProblems.length })}
                   </button>
+                  <FunnelIssuesButton
+                    funnelId={funnelId}
+                    version={Number(!dirty)}
+                    stepNames={Object.fromEntries(funnel.steps.map((s) => [s.key, s.name]))}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
+                  <ShareToMarketplaceButton funnelId={funnelId} unsaved={dirty} />
                   <HistoryMenu
                     workspaceId={workspaceId}
                     funnel={funnel}
@@ -624,15 +666,6 @@ export function FunnelEditorPage() {
                       void reloadFromServer().catch((err) => toast.error(describeError(err)));
                     }}
                   />
-                  {publicUrl && (
-                    <Button variant="outline" onClick={preview}>
-                      <ExternalLink className="size-4 rtl:-scale-x-100" aria-hidden /> {t.preview}
-                    </Button>
-                  )}
-                  <Button onClick={() => void save()} disabled={!dirty || busy}>
-                    {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                    {saving ? (progress && progress.total > 0 ? fmt(t.savingProgress, { done: progress.done, total: progress.total }) : c.saving) : c.save}
-                  </Button>
                   {funnel.status === "published" ? (
                     <Button variant="outline" onClick={() => void setStatus("paused")} disabled={busy}>
                       <Pause className="size-4" aria-hidden /> {t.pause}
@@ -642,10 +675,6 @@ export function FunnelEditorPage() {
                       <Play className="size-4" aria-hidden /> {t.resume}
                     </Button>
                   ) : null}
-                  <Button variant="outline" onClick={() => void publish()} disabled={busy}>
-                    {statusBusy ? <Spinner className="size-4" /> : <Rocket className="size-4" aria-hidden />}
-                    {funnel.status === "draft" ? t.publish : t.republish}
-                  </Button>
                 </div>
               </div>
               {saveError && (
@@ -727,7 +756,19 @@ export function FunnelEditorPage() {
             offerProduct={pageOffer ? { id: pageOffer.productId, name: pageOffer.productName } : null}
             onSelectStep={setSelectedKey}
             onTreeChange={(tree: PageTree) => updateStep(pageStep.key, { tree })}
+            onSeoChange={(seo) => updateStep(pageStep.key, { seo })}
             onBack={() => setView("flow")}
+            funnelId={funnelId}
+            details={{
+              generic: isGenericStep(pageStep, funnel.edges),
+              // The step may go back to the key it is saved under.
+              taken: takenKeys(funnel).filter((k) => k !== baseline?.steps.find((s) => s.id && s.id === pageStep.id)?.key),
+              pathOf: (key) => genericPagePath(funnel, key),
+              onApply: ({ name, key }) => {
+                updateStep(pageStep.key, { name, key });
+                if (key !== pageStep.key) setSelectedKey(key);
+              },
+            }}
           />
         ) : (
           <p className="px-6 py-10 text-center text-sm text-ink-soft">{PAGE_STRINGS[locale].noSteps}</p>
@@ -753,9 +794,9 @@ export function FunnelEditorPage() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
               <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onSortEnd}>
-                <SortableContext items={funnel.steps.map((s) => s.key)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={flowSteps(funnel.steps, funnel.edges).map((s) => s.key)} strategy={verticalListSortingStrategy}>
                   <ul className="space-y-1">
-                    {funnel.steps.map((s) => (
+                    {flowSteps(funnel.steps, funnel.edges).map((s) => (
                       <SortableStepRow
                         key={s.key}
                         step={s}
@@ -769,10 +810,11 @@ export function FunnelEditorPage() {
                 </SortableContext>
               </DndContext>
             </div>
+            <GenericPagesPanel funnel={funnel} selectedKey={selectedKey} onAdd={addGenericPage} onOpen={openPage} onDelete={setPendingDelete} />
           </aside>
 
           <FlowCanvas
-            funnel={funnel}
+            funnel={{ ...funnel, steps: flowSteps(funnel.steps, funnel.edges) }}
             entryKey={entryKeys.length === 1 ? entryKeys[0] : null}
             selectedKey={selectedKey}
             problemsByStep={grouped.byStep}
@@ -785,6 +827,14 @@ export function FunnelEditorPage() {
             onOpenPage={openPage}
             onTidy={() => patch(tidyFunnel)}
             onApplyTemplate={applyTemplate}
+            onLink={(fromKey, toKey, point) => patch((f) => linkPoint(f, fromKey, toKey, point))}
+            onLinkNew={(fromKey, point, type) => {
+              if (!funnel) return;
+              const { funnel: next, key } = addStepAfter(funnel, fromKey, type, locale, takenKeys(funnel));
+              // addStepAfter's own path out is replaced by the point's.
+              patch(() => linkPoint({ ...next, edges: next.edges.slice(0, -1) }, fromKey, key, point));
+              setSelectedKey(key);
+            }}
           />
 
           <aside
@@ -1071,7 +1121,11 @@ function StepTypeList({ onPick }: { onPick: (type: UiStepType) => void }) {
   );
 }
 
-type CanvasMenu = { kind: "after"; key: string; x: number; y: number } | { kind: "edge"; id: string; x: number; y: number };
+type CanvasMenu =
+  | { kind: "after"; key: string; x: number; y: number }
+  | { kind: "edge"; id: string; x: number; y: number }
+  // A link point dropped on empty map, or "A new step…": the new step it leads to.
+  | { kind: "link"; fromKey: string; point: LinkPoint; x: number; y: number };
 
 /** A short sample of each connector style, so "yes" and "no" read without a tooltip. */
 function LegendLine({ condition }: { condition: UiEdgeCondition }) {
@@ -1127,6 +1181,8 @@ function FlowCanvas({
   onOpenPage,
   onTidy,
   onApplyTemplate,
+  onLink,
+  onLinkNew,
 }: {
   funnel: UiFunnel;
   entryKey: string | null;
@@ -1141,6 +1197,8 @@ function FlowCanvas({
   onOpenPage: (key: string) => void;
   onTidy: () => void;
   onApplyTemplate: (id: StarterTemplateId) => void;
+  onLink: (fromKey: string, toKey: string, point: LinkPoint) => void;
+  onLinkNew: (fromKey: string, point: LinkPoint, type: UiStepType) => void;
 }) {
   const drag = useRef<{ key: string; dx: number; dy: number; moved: boolean } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1148,10 +1206,15 @@ function FlowCanvas({
   const c = useCommon();
   const { locale, dir } = useLocale();
   const [menu, setMenu] = useState<CanvasMenu | null>(null);
+  const [linkDrag, setLinkDrag] = useState<LinkDrag | null>(null);
+  const pointLabels = useLinkLabels();
 
   const byKey = useMemo(() => new Map(funnel.steps.map((s) => [s.key, s])), [funnel.steps]);
   const width = Math.max(900, ...funnel.steps.map((s) => s.x + CARD_W + 120));
   const height = Math.max(520, ...funnel.steps.map((s) => s.y + CARD_H + 120));
+  // Zoom, pan and each step's numbers (FlowMapTools).
+  const map = useFlowZoom(containerRef, { width, height });
+  const stats = useStepStats(funnel.id || null);
 
   // Connectors between the same two steps (an offer's "yes" and "no" both
   // going to thank-you) fan out, so neither line nor label hides the other.
@@ -1167,8 +1230,11 @@ function FlowCanvas({
       if (!from || !to) return [];
       const group = groups.get(`${e.fromStepKey}>${e.toStepKey}`) ?? [e];
       const off = (group.indexOf(e) - (group.length - 1) / 2) * 56;
+      // From the link point it belongs to, when the card has one for it.
+      const points = linkPointsOf(from, pointLabels);
+      const at = pointOfEdge(points, e);
       const x1 = from.x + CARD_W;
-      const y1 = from.y + CARD_H / 2;
+      const y1 = at >= 0 ? from.y + pointY(at) : from.y + CARD_H / 2;
       const x2 = to.x;
       const y2 = to.y + CARD_H / 2;
       const bend = Math.max(48, Math.abs(x2 - x1) / 2);
@@ -1178,21 +1244,27 @@ function FlowCanvas({
           from,
           to,
           d: `M ${x1} ${y1} C ${x1 + bend} ${y1 + off}, ${x2 - bend} ${y2 + off}, ${x2} ${y2}`,
+          pointLabel: at >= 0 && e.condition === "clicked_through" ? points[at].label : null,
           // Midpoint of the cubic at t = 0.5.
           mx: (x1 + x2) / 2,
           my: (y1 + y2) / 2 + 0.75 * off,
         },
       ];
     });
-  }, [funnel.edges, byKey]);
+  }, [funnel.edges, byKey, pointLabels]);
+
+  // A link point let go of: on a card, that step; on the empty map, a new one.
+  function dropLink(drag: LinkDrag) {
+    const target = funnel.steps.find(
+      (s) => s.key !== drag.fromKey && drag.x2 >= s.x && drag.x2 <= s.x + CARD_W && drag.y2 >= s.y && drag.y2 <= s.y + CARD_H
+    );
+    if (target) onLink(drag.fromKey, target.key, drag.point);
+    else setMenu({ kind: "link", fromKey: drag.fromKey, point: drag.point, x: drag.x2, y: drag.y2 });
+  }
 
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>, step: UiStep) {
     if (e.button !== 0) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
-    const scrollTop = containerRef.current?.scrollTop ?? 0;
-    const px = e.clientX - (rect?.left ?? 0) + scrollLeft;
-    const py = e.clientY - (rect?.top ?? 0) + scrollTop;
+    const { x: px, y: py } = map.toMap(e);
     drag.current = { key: step.key, dx: px - step.x, dy: py - step.y, moved: false };
     e.currentTarget.setPointerCapture(e.pointerId);
     onSelect(step.key);
@@ -1201,11 +1273,7 @@ function FlowCanvas({
   function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     const d = drag.current;
     if (!d) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
-    const scrollTop = containerRef.current?.scrollTop ?? 0;
-    const px = e.clientX - (rect?.left ?? 0) + scrollLeft;
-    const py = e.clientY - (rect?.top ?? 0) + scrollTop;
+    const { x: px, y: py } = map.toMap(e);
     d.moved = true;
     onMove(d.key, Math.max(0, Math.round(px - d.dx)), Math.max(0, Math.round(py - d.dy)));
   }
@@ -1218,6 +1286,7 @@ function FlowCanvas({
   function pick(type: UiStepType) {
     if (!menu) return;
     if (menu.kind === "after") onAddAfter(menu.key, type);
+    else if (menu.kind === "link") onLinkNew(menu.fromKey, menu.point, type);
     else onInsert(menu.id, type);
     setMenu(null);
   }
@@ -1228,6 +1297,8 @@ function FlowCanvas({
         <Button size="xs" variant="outline" onClick={onTidy} disabled={funnel.steps.length < 2} title={t.tidyHint}>
           <WandSparkles className="size-3" aria-hidden /> {t.tidy}
         </Button>
+        {map.controls}
+        {stats.picker}
         <ul className="ms-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-soft">
           <li className="inline-flex items-center gap-1.5">
             <LegendLine condition="accepted_offer" /> {t.legendYes}
@@ -1253,7 +1324,12 @@ function FlowCanvas({
         {funnel.steps.length === 0 ? (
           <TemplatePicker onApply={onApplyTemplate} />
         ) : (
-          <div className="relative" style={{ width, height }}>
+          <div style={{ width: width * map.zoom, height: height * map.zoom }}>
+          <div
+            className={cn("relative", map.panning ? "cursor-grabbing" : "cursor-grab")}
+            style={{ width, height, transform: `scale(${map.zoom})`, transformOrigin: "0 0" }}
+            {...map.panHandlers}
+          >
             <svg className="pointer-events-none absolute inset-0" width={width} height={height}>
               <defs>
                 {CONDITION_ORDER.map((cond) => (
@@ -1278,9 +1354,18 @@ function FlowCanvas({
                   />
                 );
               })}
+              {linkDrag && (
+                <path
+                  d={`M ${linkDrag.x1} ${linkDrag.y1} C ${linkDrag.x1 + 60} ${linkDrag.y1}, ${linkDrag.x2 - 60} ${linkDrag.y2}, ${linkDrag.x2} ${linkDrag.y2}`}
+                  fill="none"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                />
+              )}
             </svg>
 
-            {connectors.map(({ edge: e, from, to, mx, my }) => {
+            {connectors.map(({ edge: e, from, to, mx, my, pointLabel }) => {
               const tone = EDGE_TONE[e.condition];
               const Glyph = tone.icon;
               const active = e.fromStepKey === selectedKey || e.toStepKey === selectedKey;
@@ -1289,8 +1374,8 @@ function FlowCanvas({
                 <div key={`label-${e.id}`} className="absolute z-[1] -translate-x-1/2 -translate-y-1/2" style={{ left: mx, top: my }}>
                   <div dir={dir} className={cn("flex items-center gap-1 rounded-full border py-0.5 ps-2 pe-0.5 text-[11px] font-medium shadow-xs", tone.pill, active && "ring-2 ring-primary/30")}>
                     {Glyph && <Glyph className="size-3 shrink-0" aria-hidden />}
-                    <span className="whitespace-nowrap" title={CONDITION_LABELS[locale][e.condition]}>
-                      {CONNECTOR_LABELS[locale][e.condition]}
+                    <span className="max-w-28 truncate whitespace-nowrap" title={CONDITION_LABELS[locale][e.condition]} dir="auto">
+                      {pointLabel ?? CONNECTOR_LABELS[locale][e.condition]}
                     </span>
                     <button
                       type="button"
@@ -1337,7 +1422,7 @@ function FlowCanvas({
                 >
                   <div dir={dir} className="flex h-full flex-col gap-1.5">
                     <div className="flex items-center gap-2">
-                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", isSelected ? "bg-primary text-white" : STEP_TONE[s.type])}>
+                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", isSelected ? "bg-primary text-primary-foreground" : STEP_TONE[s.type])}>
                         <StepIcon type={s.type} className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -1366,10 +1451,19 @@ function FlowCanvas({
                         </span>
                       </p>
                     )}
-                    <p className={cn("mt-auto flex items-center gap-1.5 text-xs", empty ? "text-danger" : "text-ink-soft")}>
-                      <FileText className="size-3.5 shrink-0" aria-hidden />
-                      {empty ? t.emptyPage : sectionCount === 1 ? t.oneSection : fmt(t.sections, { n: sectionCount })}
-                    </p>
+                    {empty ? (
+                      <p className="flex items-center gap-1.5 text-xs text-danger">
+                        <FileText className="size-3.5 shrink-0" aria-hidden />
+                        {t.emptyPage}
+                      </p>
+                    ) : (
+                      <div title={sectionCount === 1 ? t.oneSection : fmt(t.sections, { n: sectionCount })}>
+                        <StepThumbnail tree={s.tree} />
+                      </div>
+                    )}
+                    <div className="mt-auto">
+                      <StepStatsLine stats={stats.byKey.get(s.key)} />
+                    </div>
                   </div>
                 </div>
               );
@@ -1381,16 +1475,32 @@ function FlowCanvas({
                 <button
                   key={`add-${s.key}`}
                   type="button"
-                  onClick={() => setMenu({ kind: "after", key: s.key, x: s.x + CARD_W + 16, y: s.y + CARD_H / 2 - 12 })}
+                  onClick={() => setMenu({ kind: "after", key: s.key, x: s.x + CARD_W + 16, y: s.y + CARD_H - 32 })}
                   aria-label={label}
                   title={label}
-                  style={{ left: s.x + CARD_W - 11, top: s.y + CARD_H / 2 - 11 }}
+                  style={{ left: s.x + CARD_W - 11, top: s.y + CARD_H - 30 }}
                   className="absolute z-[3] flex size-[22px] cursor-pointer items-center justify-center rounded-full border border-line bg-paper-raised text-ink-soft shadow-xs hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <Plus className="size-3.5" aria-hidden />
                 </button>
               );
             })}
+
+            {funnel.steps.map((s) => (
+              <LinkPoints
+                key={`points-${s.key}`}
+                step={s}
+                steps={funnel.steps}
+                edges={funnel.edges}
+                cardWidth={CARD_W}
+                toMap={map.toMap}
+                onDrag={setLinkDrag}
+                onDrop={dropLink}
+                onPick={(point, toKey) =>
+                  toKey ? onLink(s.key, toKey, point) : setMenu({ kind: "link", fromKey: s.key, point, x: s.x + CARD_W + 24, y: s.y + 40 })
+                }
+              />
+            ))}
 
             {menu && (
               <>
@@ -1408,6 +1518,7 @@ function FlowCanvas({
                 </div>
               </>
             )}
+          </div>
           </div>
         )}
       </div>
@@ -1525,8 +1636,8 @@ function StepInspector({
             value={step.type}
             onChange={(e) => {
               const type = e.target.value as UiStepType;
-              // Only a checkout step has a form to offer a bump on.
-              onChange(type === "checkout" ? { type } : { type, bumpOfferId: null });
+              // Only a step with an order form (checkout, a sales page's COD form) offers a bump.
+              onChange(type === "checkout" || type === "sales" ? { type } : { type, bumpOfferId: null });
             }}
           >
             {STEP_TYPE_ORDER.map((type) => (
@@ -1588,10 +1699,11 @@ function StepInspector({
           </div>
         )}
 
-        {step.type === "checkout" && (
+        {(step.type === "checkout" || step.type === "sales") && (
           <div className="space-y-2 rounded-2xl border border-line bg-paper p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.bump}</p>
             <p className="text-xs text-ink-soft">{t.bumpHint}</p>
+            {step.type === "sales" && <p className="text-xs text-ink-soft">{t.bumpHintSales}</p>}
             <OfferPicker
               workspaceId={workspaceId}
               value={step.bumpOfferId}

@@ -19,7 +19,7 @@
  */
 import type { ApiClient } from "../client";
 
-export type TrackingPixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+export type TrackingPixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest";
 export type TrackingPixelScopeType = "all" | "funnels" | "products";
 
 export interface TrackingPixelScope {

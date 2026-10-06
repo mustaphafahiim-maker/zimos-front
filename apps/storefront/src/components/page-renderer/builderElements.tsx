@@ -1,5 +1,5 @@
 import {
-  resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   type StorefrontProductDetail,
 } from "@store-builder/api-client";
@@ -13,6 +13,10 @@ import { getStoreMeta } from "@/lib/storeMeta";
 import { CheckoutSummaryBlock, FunnelActionButton, OrderSummaryBlock, TabsBlock } from "./builderClient";
 import { GallerySlideshow } from "./GallerySlideshow";
 import type { PageRendererFunnel } from "./PageRenderer";
+import { FunnelCodForm } from "../funnel/FunnelCodForm";
+import { PickedPrice } from "./builderMoreClient";
+import { variantPriceTags } from "./builderMore";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import { type Props, bool, num, qaList, resolveHref, safeUrl, str, strList } from "./props";
 
 /**
@@ -90,6 +94,11 @@ export function CarouselElement({ props }: { props: Props }) {
 }
 
 /** A fixed star rating the merchant states themselves — for real averages use reviews_list. */
+/** `currency_converter` (SPEC §9.3): lets the shopper view this page's prices in another of the store's currencies. */
+export function CurrencyConverterElement({ props, t }: { props: Props; t: Dictionary }) {
+  return <CurrencySwitcher inline label={str(props, "label") || t.currency.label} note={t.currency.note} />;
+}
+
 export function StarsDisplayElement({ props, t }: { props: Props; t: Dictionary }) {
   const rating = num(props, "rating", 0, 0, 5);
   if (rating === 0) return null;
@@ -126,13 +135,17 @@ export async function PriceElement({
   const price = product ? priceOf(product) : undefined;
   if (!product || price === undefined) return null;
   const compareAt = props.showCompareAt === false ? null : compareAtOf(product);
+  // Follows the variant the shopper picks on the page (item 93, builderMore.tsx).
+  const byVariant = variantPriceTags(product, currency, locale);
+  if (props.showCompareAt === false) for (const tag of Object.values(byVariant)) tag.compareAt = null;
   return (
-    <p className="flex flex-wrap items-baseline gap-3">
-      <span className={`font-bold text-ink ${PRICE_SIZE[str(props, "size")] ?? PRICE_SIZE.medium}`}>
-        {formatPrice(price, currency, locale)}
-      </span>
-      {compareAt !== null && <span className="text-base text-ink-soft line-through">{formatPrice(compareAt, currency, locale)}</span>}
-    </p>
+    <PickedPrice
+      productId={product.id}
+      initial={{ amount: price, price: formatPrice(price, currency, locale), compareAt: compareAt === null ? null : formatPrice(compareAt, currency, locale) }}
+      byVariant={byVariant}
+      currency={currency}
+      sizeClass={PRICE_SIZE[str(props, "size")] ?? PRICE_SIZE.medium}
+    />
   );
 }
 
@@ -202,7 +215,12 @@ export async function CodFormElement({
   funnel?: PageRendererFunnel;
   editable?: boolean;
 }) {
-  if (funnel) return null;
+  // In a funnel: the funnel's own order form, which moves the shopper on (components/funnel/FunnelCodForm).
+  if (funnel) {
+    if (editable) return null;
+    const funnelProduct = await productFor(workspaceId, str(props, "productId"));
+    return funnelProduct ? <FunnelCodForm product={funnelProduct} title={str(props, "title")} /> : null;
+  }
   const [store, product] = await Promise.all([
     getStoreMeta(workspaceId).catch(() => null),
     productFor(workspaceId, str(props, "productId")),
@@ -217,7 +235,7 @@ export async function CodFormElement({
         product={product}
         bump={orderBumpOf(store.orderBump, [product.id])}
         checkoutSettings={
-          { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<
+          { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<
             typeof resolveCheckoutSettings
           >
         }

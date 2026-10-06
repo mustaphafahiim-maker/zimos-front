@@ -11,7 +11,7 @@ import {
 } from "@store-builder/api-client";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { unmetPasswordRules } from "@/lib/passwordRules";
 import { UsernameField } from "@/components/UsernameField";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
@@ -20,6 +20,8 @@ import { PlanPicker, PlanSummary, type PlanChoice } from "@/components/plans/Pla
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { rememberPlanChoice } from "@/lib/planChoice";
+import { rememberReferralCode } from "@/lib/referralCode";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -75,26 +77,26 @@ const STRINGS = {
     hide: "إخفاء كلمة المرور",
     passwordRules: "كلمة المرور لا تستوفي بعض الشروط المذكورة أسفلها.",
     mismatch: "كلمة المرور وتأكيدها غير متطابقين.",
-    chooseUsername: "اختر اسم مستخدم متاحًا أولًا.",
-    usernameTaken: "استخدم شخص آخر هذا الاسم للتو. اختر اسمًا آخر.",
+    chooseUsername: "اختار اسم مستخدم متاحًا أولًا.",
+    usernameTaken: "استخدم شخص آخر هذا الاسم للتو. اختار اسمًا آخر.",
     emailTaken: "يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول بدلًا من ذلك.",
-    planGone: "هذه الخطة لم تعد متاحة. اختر خطة أخرى.",
-    planRequired: "اختر خطة للمتابعة.",
+    planGone: "هذه الخطة لم تعد متاحة. اختار خطة أخرى.",
+    planRequired: "اختار خطة للمتابعة.",
     termsRequired: "وافق على الشروط للمتابعة.",
     unavailable: "التسجيل غير متاح حاليًا. حاول مرة أخرى لاحقًا.",
     tooMany: "محاولات كثيرة. حاول مرة أخرى لاحقًا.",
     generic: "حدث خطأ ما. حاول مرة أخرى.",
     create: "إنشاء الحساب",
-    creating: "جارٍ إنشاء الحساب…",
+    creating: "بنعمل الحساب…",
     haveAccount: "لديك حساب بالفعل؟",
     signIn: "تسجيل الدخول",
-    planStepTitle: "اختر خطتك",
+    planStepTitle: "اختار خطتك",
     planStepSubtitle: "يمكنك تغييرها لاحقًا. اشترك عندما تكون جاهزًا لنشر متجرك.",
     continue: "متابعة",
     yourPlan: "خطتك",
     change: "تغيير",
     stepOf: "الخطوة {n} من {total}",
-    loading: "جارٍ تحميل الخطط…",
+    loading: "بنحمّل الخطط…",
   },
 } satisfies Messages;
 
@@ -136,6 +138,8 @@ export function RegisterPage() {
   const { register, login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  // A ZIMOS referral link (/register?ref=CODE): offered again in Billing once the store exists.
+  useEffect(() => rememberReferralCode(params.get("ref")), [params]);
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const planHeadingId = useId();
@@ -203,7 +207,7 @@ export function RegisterPage() {
     if (isApiErrorCode(err, "TERMS_REQUIRED")) return t.termsRequired;
     if (isApiErrorCode(err, "SIGNUP_UNAVAILABLE")) return t.unavailable;
     if (err instanceof ApiError && err.status === 429) return t.tooMany;
-    if (err instanceof ApiError) return err.message || t.generic;
+    if (err instanceof ApiError) return errorMessageNow(err);
     return t.generic;
   }
 
@@ -270,9 +274,9 @@ export function RegisterPage() {
   const stepNumber = step === "plan" ? 1 : step === "account" ? (planStep ? 2 : 1) : totalSteps;
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <div className={step === "plan" ? "w-full max-w-xl" : "w-full max-w-sm"}>
           {totalSteps > 1 && (
             <p className="mb-3 text-xs font-medium text-ink-soft">

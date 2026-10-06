@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { Button, Spinner } from "@store-builder/ui";
+import { CloudOff, Lock } from "lucide-react";
 import { isPermissionError } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
@@ -8,14 +9,18 @@ const STRINGS = {
   en: {
     empty: "Nothing here yet.",
     loading: "Loading…",
-    permission: "You don't have permission to view this. Ask an owner to update your role.",
+    permissionTitle: "This page isn't part of your role",
+    permission: "Ask the store owner to give you access from Settings → Team.",
+    errorTitle: "We couldn't load this",
     retry: "Try again",
   },
   ar: {
-    empty: "لا يوجد شيء هنا بعد.",
-    loading: "جارٍ التحميل…",
-    permission: "ليست لديك صلاحية لعرض هذا. اطلب من المالك تحديث دورك.",
-    retry: "حاول مرة أخرى",
+    empty: "لسه مفيش حاجة هنا.",
+    loading: "بيحمّل…",
+    permissionTitle: "الصفحة دي مش ضمن صلاحياتك",
+    permission: "اطلب من صاحب المتجر يفتحهالك من الإعدادات ← الفريق.",
+    errorTitle: "معرفناش نحمّل الصفحة دي",
+    retry: "جرّب تاني",
   },
 } satisfies Messages;
 
@@ -59,23 +64,35 @@ export function DataState({
 
   if (error) {
     const permission = isPermissionError(error);
+    const Icon = permission ? Lock : CloudOff;
     return (
-      <Alert variant="danger" className="flex flex-col gap-3">
-        <span>{permission ? t.permission : errorMessage(error)}</span>
+      <div
+        role="alert"
+        className="flex flex-col items-center rounded-[var(--radius-card)] bg-paper-raised px-6 py-10 text-center shadow-[var(--shadow-card)] ring-1 ring-line"
+      >
+        <span
+          className={
+            permission
+              ? "mb-3 flex size-11 items-center justify-center rounded-2xl bg-paper-sunken text-ink-soft"
+              : "mb-3 flex size-11 items-center justify-center rounded-2xl bg-danger-soft text-danger"
+          }
+        >
+          <Icon className="size-5" aria-hidden />
+        </span>
+        <p className="text-[15px] font-semibold text-ink">{permission ? t.permissionTitle : t.errorTitle}</p>
+        <p className="mt-1 max-w-md text-sm text-ink-soft">{permission ? t.permission : errorMessage(error)}</p>
         {onRetry && !permission && (
-          <div>
-            <Button size="sm" variant="outline" onClick={onRetry} className="min-h-11">
-              {t.retry}
-            </Button>
-          </div>
+          <Button variant="outline" onClick={onRetry} className="mt-4 min-h-11">
+            {t.retry}
+          </Button>
         )}
-      </Alert>
+      </div>
     );
   }
 
   if (empty) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-12 text-center text-sm text-ink-soft">
+      <div className="rounded-[var(--radius-card)] border border-dashed border-line-strong/40 bg-paper-raised/60 px-6 py-12 text-center text-sm text-ink-soft">
         {emptyMessage ?? t.empty}
       </div>
     );

@@ -11,9 +11,11 @@ import {
 } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { track } from "@/lib/track";
 import { StoreLink } from "../StoreRoute";
 import { CheckIcon } from "../Icons";
 import { btnPrimary, btnSecondary, card, container, input, label as labelClass } from "../ui";
+import { pickText } from "@/lib/i18n";
 
 /*
  * Sales notifications and the newsletter sign-up (SPEC §10.7, §10.9).
@@ -73,7 +75,7 @@ const SHOWN_KEY = (workspaceId: string) => `zimos.social-proof.${workspaceId}`;
 /** "Ahmed from Mansoura bought X · 12 min ago", one real order at a time, in a corner. */
 export function SocialProofPopup({ workspaceId }: { workspaceId: string }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const pathname = usePathname() ?? "";
   const [config, setConfig] = useState<StorefrontSocialProof | null>(null);
   const [index, setIndex] = useState<number | null>(null);
@@ -185,7 +187,7 @@ function NewsletterFields({
   onDone: () => void;
 }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -211,6 +213,8 @@ function NewsletterFields({
         ...(website ? { website } : {}),
       });
       setResult({ couponCode: answer.couponCode });
+      // A sign-up is the ad platforms' Lead (SPEC §13.2), like a funnel opt-in; never a bot's.
+      if (!website) track("Lead", { contentName: "newsletter" });
       onDone();
     } catch {
       setError(text.failed);
@@ -310,7 +314,7 @@ function NewsletterFields({
  */
 export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
   const { locale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const pathname = usePathname() ?? "";
   const [config, setConfig] = useState<StorefrontNewsletter | null>(null);
   const [open, setOpen] = useState(false);

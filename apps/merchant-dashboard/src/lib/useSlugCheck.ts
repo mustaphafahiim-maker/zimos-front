@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, type SlugCheckResult } from "@store-builder/api-client";
+import { ApiError, storeAddressCheck, type SlugCheckResult } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 
 /** What the address field is currently able to say about what's been typed. */
@@ -34,7 +34,7 @@ const DEBOUNCE_MS = 400;
  * strength of a network blip would strand the merchant. The backend checks
  * again on write, so letting them continue lets nothing unsafe through.
  */
-export function useSlugCheck(slug: string): SlugCheckState {
+export function useSlugCheck(slug: string, workspaceId?: string): SlugCheckState {
   const [settled, setSettled] = useState<{ slug: string; state: Settled } | null>(null);
 
   useEffect(() => {
@@ -43,7 +43,10 @@ export function useSlugCheck(slug: string): SlugCheckState {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const result = await apiClient.checkWorkspaceSlug(slug, controller.signal);
+        // Changing an existing store's address: its own current and previous ones are not "taken".
+        const result = workspaceId
+          ? await storeAddressCheck(apiClient, slug, workspaceId, controller.signal)
+          : await apiClient.checkWorkspaceSlug(slug, controller.signal);
         if (controller.signal.aborted) return;
         setSettled({
           slug,
@@ -71,7 +74,7 @@ export function useSlugCheck(slug: string): SlugCheckState {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [slug]);
+  }, [slug, workspaceId]);
 
   if (slug.length === 0) return { status: "empty" };
   if (settled?.slug !== slug) return { status: "checking" };

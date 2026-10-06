@@ -28,7 +28,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https:",
   "img-src * data: blob:",
   "media-src * data: blob:",
-  "font-src 'self' https: data:",
+  `font-src 'self' https: data:${devHosts}`,
   `connect-src *${isDev ? " ws: wss:" : ""}`,
   `frame-src https:${devHosts}`,
   "object-src 'none'",
@@ -45,7 +45,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@store-builder/api-client", "@store-builder/ui", "@store-builder/image-tools"],
+  transpilePackages: ["@store-builder/api-client", "@store-builder/ui", "@store-builder/image-tools", "@store-builder/error-reporter"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

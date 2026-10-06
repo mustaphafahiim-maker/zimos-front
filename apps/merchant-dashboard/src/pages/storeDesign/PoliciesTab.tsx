@@ -24,6 +24,7 @@ const STRINGS = {
     intro:
       "Written once, linked from the store footer, every funnel and the checkout. Shipping, returns and privacy policies are required for TikTok ads.",
     variables: "You can use {{store.name}}, {{store.address}}, {{store.email}} and {{store.phone}} — they are filled in from Store information.",
+    shipping_policy: "Shipping policy",
     refund_policy: "Refund policy",
     privacy_policy: "Privacy policy",
     terms_of_service: "Terms of service",
@@ -41,6 +42,7 @@ const STRINGS = {
     intro:
       "تُكتب مرة واحدة وتظهر في فوتر المتجر وكل مسارات البيع وصفحة إتمام الطلب. سياسات الشحن والاسترجاع والخصوصية مطلوبة لإعلانات تيك توك.",
     variables: "يمكنك استخدام {{store.name}} و {{store.address}} و {{store.email}} و {{store.phone}} — تُملأ من بيانات المتجر.",
+    shipping_policy: "سياسة الشحن",
     refund_policy: "سياسة الاسترجاع",
     privacy_policy: "سياسة الخصوصية",
     terms_of_service: "شروط الخدمة",

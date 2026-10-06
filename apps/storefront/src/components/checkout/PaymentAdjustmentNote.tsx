@@ -12,7 +12,8 @@ export function PaymentAdjustmentNote({ method, currency = "EGP" }: { method: St
   const { money, locale } = useStore();
   const rule = (method as StorefrontPaymentMethod & { adjustment?: PaymentRuleOnMethod }).adjustment;
   if (!rule) return null;
-  const amount = rule.valueType === "percent" ? `${rule.value / 100}%` : money(rule.value, currency);
+  // A fixed amount is in its own currency (the one the checkout is in).
+  const amount = rule.valueType === "percent" ? `${rule.value / 100}%` : money(rule.value, rule.currency ?? currency);
   const ar = locale === "ar";
   const text =
     rule.type === "fee"

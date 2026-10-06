@@ -17,6 +17,7 @@ import { formatMinorMoney } from "@/lib/format";
 import { useReport, type ReportRange } from "@/lib/reportRange";
 import { getIntlLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { ExportButton, formatRate, KpiGrid, RateBar, SplitBar } from "./parts";
+import { useReportMoney } from "@/lib/reportCurrency";
 
 interface TabProps {
   workspaceId: string;
@@ -57,13 +58,13 @@ const PRODUCT_STRINGS = {
     units: "القطع",
     sales: "المبيعات",
     conversion: "التحويل",
-    delivery: "تم التسليم",
+    delivery: "اتسلّم",
     returns: "المرتجع",
     landing: "صفحات الهبوط",
     landingHint: "أول صفحة في كل زيارة، وما اشترته هذه الزيارات.",
     page: "الصفحة",
     sessions: "الزيارات",
-    empty: "لا يوجد شيء في هذه الفترة بعد.",
+    empty: "مفيش شيء في هذه الفترة لسه.",
   },
 } satisfies Messages;
 
@@ -76,7 +77,8 @@ export function ProductsTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetProducts(apiClient, workspaceId, { ...span(range), limit: 50 }),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const empty = <p className="px-4 pb-4 text-sm text-ink-soft">{t.empty}</p>;
 
   const productColumns: Column<ProductRow>[] = [
@@ -134,7 +136,7 @@ export function ProductsTab({ workspaceId, range, onError }: TabProps) {
             flush
             actions={<ExportButton workspaceId={workspaceId} report="products" range={range} onError={onError} />}
           >
-            <DataTable columns={productColumns} rows={data.products} rowKey={(row) => row.productId} minWidth="62rem" empty={empty} />
+            <DataTable phoneCards={false} columns={productColumns} rows={data.products} rowKey={(row) => row.productId} minWidth="62rem" empty={empty} />
           </Section>
           <Section
             title={t.landing}
@@ -142,7 +144,7 @@ export function ProductsTab({ workspaceId, range, onError }: TabProps) {
             flush
             actions={<ExportButton workspaceId={workspaceId} report="landing_pages" range={range} onError={onError} />}
           >
-            <DataTable columns={landingColumns} rows={data.landingPages} rowKey={(row) => row.path} minWidth="38rem" empty={empty} />
+            <DataTable phoneCards={false} columns={landingColumns} rows={data.landingPages} rowKey={(row) => row.path} minWidth="38rem" empty={empty} />
           </Section>
         </div>
       )}
@@ -215,13 +217,13 @@ const DELIVERY_STRINGS = {
     place: "المحافظة",
     courier: "شركة الشحن",
     orders: "الطلبات",
-    shipped: "تم شحنها",
+    shipped: "اتشحنت",
     confirmation: "التأكيد",
     delivery: "التسليم",
     returns: "المرتجع",
     speed: "متوسط الأيام",
     sales: "المبيعات المُسلَّمة",
-    empty: "لا توجد طلبات في هذه الفترة بعد.",
+    empty: "مفيش طلبات في هذه الفترة لسه.",
     awaiting_payment: "بانتظار الدفع",
     pending_confirmation: "بانتظار التأكيد",
     needs_follow_up: "تحتاج متابعة",
@@ -229,7 +231,7 @@ const DELIVERY_STRINGS = {
     shipped_stage: "مع شركة الشحن",
     out_for_delivery: "خرجت للتسليم",
     delivery_failed: "فشل التسليم",
-    delivered: "تم التسليم",
+    delivered: "اتسلّم",
     returned: "مرتجع",
     cancelled: "ملغي",
   },
@@ -269,7 +271,8 @@ export function DeliveryTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetDelivery(apiClient, workspaceId, span(range)),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const empty = <p className="px-4 pb-4 text-sm text-ink-soft">{t.empty}</p>;
   const number = (n: number) => new Intl.NumberFormat(getIntlLocale(), { maximumFractionDigits: 1 }).format(n);
 
@@ -343,7 +346,7 @@ export function DeliveryTab({ workspaceId, range, onError }: TabProps) {
             flush
             actions={<ExportButton workspaceId={workspaceId} report="governorates" range={range} onError={onError} />}
           >
-            <DataTable columns={placeColumns} rows={data.governorates} rowKey={(row) => row.name} minWidth="58rem" empty={empty} />
+            <DataTable phoneCards={false} columns={placeColumns} rows={data.governorates} rowKey={(row) => row.name} minWidth="58rem" empty={empty} />
           </Section>
 
           <Section
@@ -352,7 +355,7 @@ export function DeliveryTab({ workspaceId, range, onError }: TabProps) {
             flush
             actions={<ExportButton workspaceId={workspaceId} report="carriers" range={range} onError={onError} />}
           >
-            <DataTable columns={carrierColumns} rows={data.carriers} rowKey={(row) => row.name} minWidth="50rem" empty={empty} />
+            <DataTable phoneCards={false} columns={carrierColumns} rows={data.carriers} rowKey={(row) => row.name} minWidth="50rem" empty={empty} />
           </Section>
         </div>
       )}
@@ -412,10 +415,10 @@ const CUSTOMER_STRINGS = {
     topHint: "حسب المبيعات في هذه الفترة.",
     customer: "العميل",
     orders: "الطلبات",
-    delivered: "تم التسليم",
+    delivered: "اتسلّم",
     sales: "المبيعات",
     unnamed: "بدون اسم",
-    empty: "لا يوجد عملاء في هذه الفترة بعد.",
+    empty: "مفيش عملاء في هذه الفترة لسه.",
   },
 } satisfies Messages;
 
@@ -434,7 +437,8 @@ export function CustomersTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetCustomers(apiClient, workspaceId, span(range)),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const months = data ? Math.max(0, ...data.cohorts.map((c) => c.retention.length)) : 0;
 
   const topColumns: Column<TopRow>[] = [
@@ -542,6 +546,7 @@ export function CustomersTab({ workspaceId, range, onError }: TabProps) {
             actions={<ExportButton workspaceId={workspaceId} report="customers" range={range} onError={onError} />}
           >
             <DataTable
+            phoneCards={false}
               columns={topColumns}
               rows={data.topCustomers}
               rowKey={(row) => row.customerId}

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Star } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Star, X } from "lucide-react";
 import { Alert, Button, Card, cn } from "@store-builder/ui";
 import type { Review, ReviewStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -10,6 +10,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
+import { ImportReviewsButton } from "./ImportReviewsDialog";
 import { DataState } from "@/components/DataState";
 import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -20,6 +21,7 @@ import {
   ManualReviewBadge,
   ReviewPhotos,
   reviewAuthor,
+  type ReviewRow,
 } from "./ManualReviewParts";
 
 /** "" is the All tab — the backend simply omits the status filter. */
@@ -51,6 +53,9 @@ const STRINGS = {
     saving: "Saving…",
     toastApproved: "Review approved — it is live on your storefront.",
     toastRejected: "Review rejected — it stays hidden.",
+    onlyImported: "Imported reviews only",
+    clearImported: "Imported reviews only — remove this filter",
+    emptyImported: "No imported reviews here. Reviews come in with a product imported from an AliExpress, Etsy, CJ or YouCan link.",
   },
   ar: {
     title: "التقييمات",
@@ -64,19 +69,22 @@ const STRINGS = {
     statusPending: "قيد المراجعة",
     statusApproved: "مقبول",
     statusRejected: "مرفوض",
-    emptyPending: "لا يوجد ما ينتظر المراجعة.",
+    emptyPending: "مفيش ما ينتظر المراجعة.",
     emptyApproved: "لم تتم الموافقة على أي تقييم بعد.",
-    emptyRejected: "لا توجد تقييمات مرفوضة.",
-    emptyAll: "لا توجد تقييمات بعد. تصل بمجرد أن يكتب عميل استلم منتجًا تقييمه.",
+    emptyRejected: "مفيش تقييمات مرفوضة.",
+    emptyAll: "مفيش تقييمات لسه. تصل بمجرد أن يكتب عميل استلم منتجًا تقييمه.",
     ratingAria: "{n} من 5",
     unknownProduct: "منتج محذوف",
     unknownCustomer: "عميل بدون اسم",
     noComment: "قيّم بدون تعليق.",
     approve: "قبول",
     reject: "رفض",
-    saving: "جارٍ الحفظ…",
-    toastApproved: "تم قبول التقييم — أصبح ظاهرًا في متجرك.",
-    toastRejected: "تم رفض التقييم — سيبقى مخفيًا.",
+    saving: "بنحفظ…",
+    toastApproved: "التقييم اتقبل وبقى ظاهر في متجرك.",
+    toastRejected: "التقييم اترفض وهيفضل مخفي.",
+    onlyImported: "المستوردة بس",
+    clearImported: "المستوردة بس — شيل الفلتر ده",
+    emptyImported: "مفيش تقييمات مستوردة هنا. التقييمات بتيجي مع المنتج لما تستورده من لينك علي إكسبريس أو إتسي أو CJ أو يوكان.",
   },
 } satisfies Messages;
 
@@ -84,13 +92,20 @@ export function ReviewsPage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   // Pending first: this page is a moderation queue before it is an archive.
-  const [status, setStatus] = useState<StatusFilter>("pending");
+  // ?status= and ?source=import come from the product link import (handoff 180).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [status, setStatus] = useState<StatusFilter>(() => {
+    const asked = searchParams.get("status");
+    return asked === "all" ? "" : asked === "approved" || asked === "rejected" ? asked : "pending";
+  });
+  // The API filters by status only; the list is not paged, so the source is filtered here.
+  const onlyImported = searchParams.get("source") === "import";
 
   const list = useAsync(
     () => apiClient.listReviews(workspaceId, { status: status || undefined }),
     [workspaceId, status]
   );
-  const reviews = list.data ?? [];
+  const reviews = (list.data ?? []).filter((r) => !onlyImported || (r as ReviewRow).source === "import");
 
   const tabs: ReadonlyArray<FilterTab<StatusFilter>> = [
     { value: "pending", label: t.tabPending },
@@ -123,18 +138,38 @@ export function ReviewsPage() {
       <PageHeader
         title={t.title}
         description={t.description}
-        actions={<AddReviewButton onAdded={() => list.refresh({ silent: true })} />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ImportReviewsButton onImported={() => list.refresh({ silent: true })} />
+            <AddReviewButton onAdded={() => list.refresh({ silent: true })} />
+          </div>
+        }
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterTabs tabs={tabs} value={status} onChange={setStatus} label={t.filterLabel} />
+        {onlyImported && (
+          <button
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.delete("source");
+              setSearchParams(next, { replace: true });
+            }}
+            aria-label={t.clearImported}
+            className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-[var(--radius-pill)] bg-primary-soft px-3 text-sm font-medium text-primary-dark hover:bg-primary-soft/70"
+          >
+            {t.onlyImported}
+            <X className="size-4" aria-hidden />
+          </button>
+        )}
       </div>
 
       <DataState
         loading={list.loading}
         error={list.error}
         empty={reviews.length === 0}
-        emptyMessage={emptyMessage}
+        emptyMessage={onlyImported ? t.emptyImported : emptyMessage}
         onRetry={() => list.refresh()}
       >
         <div className="space-y-3">

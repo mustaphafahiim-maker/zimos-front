@@ -38,7 +38,7 @@ const STRINGS = {
   ar: {
     title: "البطاقات المحفوظة",
     save: "احفظ هذه البطاقة للعميل",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     savedToast: "تم حفظ البطاقة.",
     card: "{brand} تنتهي بـ {last4}",
     expires: "تنتهي {date}",
@@ -51,7 +51,7 @@ const STRINGS = {
     removeTitle: "نسيان هذه البطاقة؟",
     removeDesc: "لن يمكن الخصم منها بعد ذلك. يستطيع العميل الدفع مرة أخرى لحفظها.",
     removedToast: "تم حذف البطاقة.",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 

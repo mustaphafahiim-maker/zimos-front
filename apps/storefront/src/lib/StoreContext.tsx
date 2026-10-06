@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import type { MoneyFormat } from "./moneyFormat";
 import type {
   CheckoutSettings,
   LegalPolicyKey,
@@ -16,6 +17,7 @@ import {
   type Dictionary,
   type Locale,
 } from "./i18n";
+import type { StoreTexts } from "./storeTexts";
 
 export interface StoreInfo {
   /** The route segment the store was reached by — its UUID or its slug. */
@@ -25,9 +27,13 @@ export interface StoreInfo {
   slug: string;
   name: string;
   currency: string;
+  /** Where the currency symbol goes and whether decimals show (GET /store/:ws `currencyFormat`). */
+  currencyFormat?: MoneyFormat | null;
   logoUrl: string | null;
   /** Merchant contact number from themeSettings, if saved. */
   phone: string | null;
+  /** The languages the store offers (default first), as GET /store/:ws `languages` gives them; French joins the switch from here. */
+  languages?: string[];
   /** Which optional checkout fields the merchant shows/requires (GET /store/:ws `checkout`). */
   checkout: CheckoutSettings;
   /** The thank-you page settings (GET /store/:ws `thankYou`); absent means the built-in page. */
@@ -36,6 +42,12 @@ export interface StoreInfo {
   legal?: LegalPolicyKey[];
   /** The checkout's order bump (GET /store/:ws `orderBump`); null when none can be offered. */
   orderBump: StorefrontOrderBump | null;
+  /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
+  country?: string | null;
+  /** The place codes the store does not deliver to (GET /store/:ws `hiddenPlaces`; lib/useShippingPlaces). */
+  hiddenPlaces?: string[];
+  /** The merchant's own wording in this language (GET /store/:ws `storefrontTexts`; lib/storeTexts), laid over `t`. */
+  storefrontTexts?: StoreTexts;
 }
 
 export interface StoreContextValue {
@@ -52,9 +64,10 @@ function build(locale: Locale, store: StoreInfo | null): StoreContextValue {
     locale,
     dir: dirFor(locale),
     intlLocale: intlLocaleFor(locale),
-    t: getDictionary(locale),
+    // Client components never see the server's per-request texts, so the store's are passed in.
+    t: getDictionary(locale, store?.storefrontTexts ?? null),
     store,
-    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale),
+    money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale, store?.currencyFormat ?? null),
   };
 }
 
@@ -82,6 +95,15 @@ export function StoreContextProvider({
 export function useStore(): StoreContextValue {
   const ctx = useContext(StoreContext);
   return useMemo(() => ctx ?? build(DEFAULT_LOCALE, null), [ctx]);
+}
+
+/**
+ * The dictionary for a component handed its own `locale`: the store's, with the
+ * merchant's wording, inside a store; the plain one anywhere else.
+ */
+export function useDictionary(locale: Locale): Dictionary {
+  const ctx = useContext(StoreContext);
+  return ctx && ctx.locale === locale ? ctx.t : getDictionary(locale, ctx?.store?.storefrontTexts ?? null);
 }
 
 /**

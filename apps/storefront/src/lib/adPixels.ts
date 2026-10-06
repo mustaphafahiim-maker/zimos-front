@@ -17,7 +17,7 @@ import type { TrackData, TrackEvent } from "./track";
  * no pixels sends nothing.
  */
 
-export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest";
 
 export interface StorePixel {
   platform: PixelPlatform;
@@ -25,6 +25,11 @@ export interface StorePixel {
   scope: { type: "all" | "funnels" | "products"; ids: string[] };
   /** Google Ads conversion label, for an `AW-` id. */
   adsConversionLabel?: string;
+  /**
+   * The ready Google Ads `send_to` per conversion kind ("AW-…/label"), for an
+   * `AW-` id with labels (GET /store/:ws, handoff 169). A kind without one is not sent.
+   */
+  sendTo?: Partial<Record<ConversionEvent, string>>;
 }
 
 type Fn = (...args: unknown[]) => void;
@@ -33,6 +38,7 @@ type PixelWindow = Window & {
   fbq?: Fn;
   ttq?: TikTokInstance & { instance?: (id: string) => TikTokInstance };
   snaptr?: Fn;
+  pintrk?: Fn;
   gtag?: Fn;
   dataLayer?: unknown[];
 };
@@ -54,6 +60,14 @@ const SNAP: Record<TrackEvent, string> = {
   AddPaymentInfo: "ADD_BILLING",
   Purchase: "PURCHASE",
   Lead: "SIGN_UP",
+};
+// Pinterest's standard events; a page view is its own call (pintrk("page")), and
+// checkout steps before the purchase have no Pinterest event.
+const PINTEREST: Partial<Record<TrackEvent, string>> = {
+  ViewContent: "pagevisit",
+  AddToCart: "addtocart",
+  Purchase: "checkout",
+  Lead: "lead",
 };
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
@@ -77,6 +91,35 @@ let browserPurchase = true;
 
 export type PurchaseTiming = "on_order" | "on_confirmed" | "on_delivered";
 
+/**
+ * How an order is reported to the ad platforms (dashboard → Tracking tools →
+ * "Report orders as"): a Purchase, or a Lead for cash-on-delivery stores that
+ * optimise on orders placed. Same moment, value and event id either way; a
+ * funnel can override the store (its public settings.conversionEvent).
+ */
+export type ConversionEvent = "purchase" | "lead";
+let storeConversion: ConversionEvent = "purchase";
+const funnelConversion = new Map<string, ConversionEvent>();
+
+/** `conversionEvent` of GET /store/:workspaceId, defaulting to purchase. */
+export function storeConversionEventOf(store: unknown): ConversionEvent {
+  return (store as { conversionEvent?: unknown } | null)?.conversionEvent === "lead" ? "lead" : "purchase";
+}
+
+/** A funnel's own choice while its pages are on screen; null = the store's. */
+export function setFunnelConversionEvent(funnelId: string, kind: ConversionEvent | null): void {
+  if (typeof window === "undefined") return;
+  if (kind) funnelConversion.set(funnelId, kind);
+  else funnelConversion.delete(funnelId);
+}
+
+/** The name an order's conversion goes out under, for the funnel being walked or the store. */
+function orderEvent(): TrackEvent {
+  const funnelId = getTrackingContext()?.funnelId;
+  const kind = (funnelId ? funnelConversion.get(funnelId) : undefined) ?? storeConversion;
+  return kind === "lead" ? "Lead" : "Purchase";
+}
+
 /** `purchaseEventTiming` of GET /store/:workspaceId, defaulting to the usual on_order. */
 export function purchaseTimingOf(store: unknown): PurchaseTiming {
   const v = (store as { purchaseEventTiming?: unknown } | null)?.purchaseEventTiming;
@@ -84,6 +127,8 @@ export function purchaseTimingOf(store: unknown): PurchaseTiming {
 }
 /** Scoped Snap pixels already initialised (Snap has no per-pixel send, so they are added on first match). */
 const snapInitialised = new Set<string>();
+/** Pinterest tags loaded so far: like Snap, an event goes to every loaded tag, so scoped ones load on first match. */
+const pinterestLoaded = new Set<string>();
 
 const VIEWED_KEY = "zimos_pixel_products";
 
@@ -98,9 +143,16 @@ function viewedProducts(): string[] {
 }
 
 /** components/TrackingPixels calls this with the store's pixels before any event is sent. */
-export function registerPixels(pixels: StorePixel[], purchaseTiming: PurchaseTiming = "on_order"): void {
+export function registerPixels(
+  pixels: StorePixel[],
+  purchaseTiming: PurchaseTiming = "on_order",
+  conversionEvent: ConversionEvent = "purchase"
+): void {
   registry = pixels;
   browserPurchase = purchaseTiming === "on_order";
+  storeConversion = conversionEvent;
+  // The store-wide Pinterest tags are loaded by the tag script itself (components/TrackingPixels).
+  for (const p of pixels) if (p.platform === "pinterest" && p.scope.type === "all") pinterestLoaded.add(p.pixelId);
   setPixelInfoProvider(pixels.length ? pixelInfo : null);
 }
 
@@ -183,10 +235,20 @@ function sendPageViewTo(pixels: StorePixel[]): void {
         w.snaptr("track", "PAGE_VIEW");
       }
       if (p.platform === "google" && w.gtag) w.gtag("event", "page_view", { send_to: p.pixelId });
+      if (p.platform === "pinterest" && w.pintrk) {
+        loadPinterest(w, p.pixelId);
+        w.pintrk("page");
+      }
     }
   } catch {
     /* a broken third-party script must never break the store */
   }
+}
+
+function loadPinterest(w: PixelWindow, tagId: string): void {
+  if (pinterestLoaded.has(tagId) || !w.pintrk) return;
+  pinterestLoaded.add(tagId);
+  w.pintrk("load", tagId);
 }
 
 function initSnap(w: PixelWindow, pixelId: string): void {
@@ -200,6 +262,8 @@ function initSnap(w: PixelWindow, pixelId: string): void {
 export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
   if (typeof window === "undefined") return;
   if (event === "Purchase" && !browserPurchase) return;
+  // The order goes out as a Purchase or a Lead (each platform's own name), with the same data.
+  const name: TrackEvent = event === "Purchase" ? orderEvent() : event;
   const w = window as PixelWindow;
   const value = data.valueMinor !== undefined ? Math.round(data.valueMinor) / 100 : undefined;
   const common = { value, currency: data.currency };
@@ -217,7 +281,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
           w.fbq(
             "trackSingle",
             p.pixelId,
-            event,
+            name,
             {
               ...common,
               content_ids: data.contentIds,
@@ -243,7 +307,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         // server-side Events API call carries for this order.
         else
           ttq.track(
-            TIKTOK[event],
+            TIKTOK[name],
             { ...common, content_id: data.contentIds?.[0], content_type: "product", quantity: data.numItems },
             dedupeId ? { event_id: dedupeId } : undefined
           );
@@ -254,7 +318,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
     if (w.snaptr && snap.length) {
       for (const p of snap) initSnap(w, p.pixelId);
       // event_id is Snap Conversions API v3's dedup field — same order id sent server-side.
-      w.snaptr("track", SNAP[event], {
+      w.snaptr("track", SNAP[name], {
         price: value,
         currency: data.currency,
         item_ids: data.contentIds,
@@ -264,27 +328,53 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
       });
     }
 
+    const pinterest = active("pinterest");
+    if (w.pintrk && pinterest.length) {
+      for (const p of pinterest) loadPinterest(w, p.pixelId);
+      if (event === "PageView") w.pintrk("page");
+      else if (PINTEREST[name]) {
+        // event_id: the same id a server-side copy would carry, for Pinterest to dedup.
+        w.pintrk("track", PINTEREST[name], {
+          value,
+          currency: data.currency,
+          order_quantity: data.numItems,
+          order_id: data.orderId,
+          event_id: dedupeId,
+          line_items: data.contentIds?.map((id) => ({ product_id: id })),
+        });
+      }
+    }
+
     const google = active("google");
     if (w.gtag && google.length) {
       // send_to keeps the event off the Google tags whose scope does not cover this page.
-      w.gtag("event", GOOGLE[event], {
+      w.gtag("event", GOOGLE[name], {
         ...(event === "PageView" ? { page_path: window.location.pathname } : common),
         transaction_id: data.orderId,
         items: data.contentIds?.map((id) => ({ item_id: id })),
         send_to: google.map((p) => p.pixelId),
       });
+      // The order's Google Ads conversion: the purchase or the lead action, per how the order is
+      // reported. transaction_id (the order id) keeps a reload of the thank-you page from counting twice.
       if (event === "Purchase") {
+        const kind: ConversionEvent = name === "Lead" ? "lead" : "purchase";
         for (const p of google) {
-          if (!p.adsConversionLabel || !/^AW-/i.test(p.pixelId)) continue;
-          w.gtag("event", "conversion", { ...common, transaction_id: data.orderId, send_to: `${p.pixelId}/${p.adsConversionLabel}` });
+          const sendTo = p.sendTo?.[kind];
+          if (!sendTo || !/^AW-/i.test(p.pixelId)) continue;
+          w.gtag("event", "conversion", { ...common, transaction_id: data.orderId, send_to: sendTo });
         }
       }
     }
 
-    // Tag Manager gets every event on its dataLayer; the merchant's own tags decide what to do with it.
+    // Tag Manager gets every event on its dataLayer in GA4's ecommerce shape — what the ready-made
+    // container (dashboard → Tracking tools) listens to; an order reported as a lead goes out as
+    // generate_lead. The previous ecommerce object is cleared first, as Google documents, so no
+    // field of one event leaks into the next. event_id is the id the server-side copy carries.
     if (w.dataLayer && active("gtm").length && event !== "PageView") {
+      w.dataLayer.push({ ecommerce: null });
       w.dataLayer.push({
-        event: GOOGLE[event],
+        event: GOOGLE[name],
+        event_id: dedupeId,
         ecommerce: { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) },
       });
     }
@@ -295,9 +385,29 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
 
 // ------------------------------------------------------------- store pixels --
 
-const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity"];
+const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity", "pinterest"];
 // IDs are validated by the backend; re-checked here because they are placed in inline scripts.
 const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
+
+const SEND_TO = /^AW-[A-Za-z0-9]{4,20}\/[A-Za-z0-9_-]{4,60}$/;
+
+/**
+ * An AW- pixel's Google Ads targets per conversion kind: the API's ready
+ * `sendTo` (handoff 169), or, from an older API, the purchase label alone.
+ */
+function adsSendTo(pixelId: string, raw: unknown, purchaseLabel: string | undefined): StorePixel["sendTo"] | undefined {
+  if (!/^AW-/i.test(pixelId)) return undefined;
+  const out: Partial<Record<ConversionEvent, string>> = {};
+  if (raw && typeof raw === "object") {
+    for (const kind of ["purchase", "lead"] as const) {
+      const v = (raw as Record<string, unknown>)[kind];
+      if (typeof v === "string" && SEND_TO.test(v) && v.startsWith(`${pixelId}/`)) out[kind] = v;
+    }
+  } else if (purchaseLabel) {
+    out.purchase = `${pixelId}/${purchaseLabel}`;
+  }
+  return out.purchase || out.lead ? out : undefined;
+}
 
 /**
  * The pixels from store metadata. GET /store/:workspaceId sends
@@ -319,7 +429,8 @@ export function storePixelsOf(store: unknown): StorePixel[] {
       const type = scope.type === "funnels" || scope.type === "products" ? scope.type : "all";
       const ids = Array.isArray(scope.ids) ? scope.ids.filter((x): x is string => typeof x === "string") : [];
       const label = typeof r.adsConversionLabel === "string" && SAFE.test(r.adsConversionLabel) ? r.adsConversionLabel : undefined;
-      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}) });
+      const sendTo = platform === "google" ? adsSendTo(pixelId, r.sendTo, label) : undefined;
+      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}), ...(sendTo ? { sendTo } : {}) });
     }
     return out;
   }

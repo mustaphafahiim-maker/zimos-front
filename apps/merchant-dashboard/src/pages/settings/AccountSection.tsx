@@ -10,6 +10,9 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CopyButton } from "@/components/CopyButton";
 import { UsernameField } from "@/components/UsernameField";
 import { useToast } from "@/components/Toast";
+import { PhoneVerification } from "./PhoneVerification";
+import { ProfileEditor } from "./ProfileEditor";
+import { EmailChange } from "./EmailChange";
 
 /** How often a username may be changed (the backend's CHANGE_INTERVAL_DAYS). */
 const CHANGE_INTERVAL_DAYS = 30;
@@ -40,12 +43,12 @@ const STRINGS = {
     idHint: "قد يطلبه فريق الدعم للعثور على حسابك.",
     copyId: "نسخ المعرّف",
     save: "حفظ اسم المستخدم",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     rule: "يمكنك تغيير اسم المستخدم مرة واحدة كل 30 يومًا.",
     nextChange: "غيّرت اسم المستخدم مؤخرًا. يمكنك تغييره مرة أخرى في {date}.",
     saved: "تم حفظ اسم المستخدم.",
-    taken: "استخدم شخص آخر هذا الاسم للتو. اختر اسمًا آخر.",
-    chooseAvailable: "اختر اسم مستخدم متاحًا أولًا.",
+    taken: "استخدم شخص آخر هذا الاسم للتو. اختار اسمًا آخر.",
+    chooseAvailable: "اختار اسم مستخدم متاحًا أولًا.",
   },
 } satisfies Messages;
 
@@ -100,18 +103,12 @@ export function AccountSection() {
     <section className="rounded-[var(--radius-card)] border border-line p-5">
       <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+      <ProfileEditor />
 
       <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-ink-soft">{t.name}</dt>
-          <dd className="mt-0.5 font-medium text-ink">{user.fullName}</dd>
-        </div>
-        <div>
-          <dt className="text-ink-soft">{t.email}</dt>
-          <dd className="mt-0.5 break-all font-medium text-ink">
-            <bdi dir="ltr">{user.email}</bdi>
-          </dd>
-        </div>
+        {/* The sign-in email, and changing it (EmailChange.tsx). */}
+        <EmailChange label={t.email} />
+        <PhoneVerification />
         <div className="sm:col-span-2">
           <dt className="text-ink-soft">{t.id}</dt>
           <dd className="mt-0.5 flex flex-wrap items-center gap-2">

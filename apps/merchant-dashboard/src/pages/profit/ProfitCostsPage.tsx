@@ -99,8 +99,8 @@ const STRINGS = {
     reset: "استخدم افتراضيات المتجر",
     resetDone: "يستخدم الآن افتراضيات المتجر.",
     setUnitCost: "حدّد تكلفة القطعة",
-    invalid: "أدخل رقمًا صحيحًا",
-    noProducts: "لا توجد منتجات بعد.",
+    invalid: "اكتب رقمًا صحيحًا",
+    noProducts: "مفيش منتجات لسه.",
   },
 } satisfies Messages;
 

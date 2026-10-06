@@ -3,12 +3,15 @@
 import { useId, useState } from "react";
 import type { Cart } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { GOVERNORATES } from "@/lib/egypt";
+import { useShippingPlaces } from "@/lib/useShippingPlaces";
 import { useShipTo } from "@/lib/shipTo";
 import { useStore } from "@/lib/StoreContext";
 import { useShippingQuote } from "@/lib/useShippingQuote";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { input } from "@/components/ui";
 import { FreeShippingHint, ShippingFee } from "./ShippingFee";
+import { DeliveryEstimateLine } from "../DeliveryEstimateLine";
+import { arOrEn } from "@/lib/i18n";
 
 /**
  * The money half of the cart (drawer and page): subtotal, shipping, and the
@@ -33,10 +36,14 @@ export function CartShippingSummary({
   const [client] = useState(() => createStorefrontApiClient());
   const [shipTo, setShipTo] = useShipTo(workspaceId);
   const selectId = useId();
+  const country = useStoreCountry();
+  // The store's country's places it delivers to; a country without a list has no picker.
+  const places = useShippingPlaces(country);
   const shipping = useShippingQuote({
     client,
     workspaceId,
     governorate: shipTo,
+    country,
     lines: cart.items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity })),
     enabled,
   });
@@ -47,7 +54,7 @@ export function CartShippingSummary({
 
   return (
     <div className="space-y-3">
-      {!unpriced && (
+      {!unpriced && places.length > 0 && (
         <div className="flex items-center gap-2">
           <label htmlFor={selectId} className="shrink-0 text-sm text-ink-soft">
             {t.cart.shipTo}
@@ -59,9 +66,9 @@ export function CartShippingSummary({
             className={`${input} min-h-10 cursor-pointer py-1.5 text-sm`}
           >
             <option value="">{t.cart.shipToPlaceholder}</option>
-            {GOVERNORATES.map((g) => (
+            {places.map((g) => (
               <option key={g.code} value={g.code}>
-                {g[locale]}
+                {g[arOrEn(locale)]}
               </option>
             ))}
           </select>
@@ -86,6 +93,8 @@ export function CartShippingSummary({
           </div>
         )}
       </dl>
+
+      <DeliveryEstimateLine estimate={shipping.deliveryEstimate} />
 
       <FreeShippingHint progress={shipping.freeShipping} line={shipping.line} currency={currency} />
     </div>

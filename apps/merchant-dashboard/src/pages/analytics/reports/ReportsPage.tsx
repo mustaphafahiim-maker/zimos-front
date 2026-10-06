@@ -14,6 +14,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CustomersTab, DeliveryTab, ProductsTab } from "./DetailTabs";
 import { OverviewTab } from "./OverviewTab";
 import { DateRangeControl, ExportButton, formatRate } from "./parts";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -97,8 +98,9 @@ function Insights({ workspaceId, range }: { workspaceId: string; range: ReportRa
     () => reportsGetInsights(apiClient, workspaceId, { from: range.from, to: range.to }),
     [workspaceId, range.from, range.to]
   );
+  const inReport = useReportMoney();
   if (!data || data.insights.length === 0) return null;
-  const money = (value: unknown) => formatMinorMoney(Number(value ?? 0), data.currency);
+  const money = (value: unknown) => formatMinorMoney(...inReport(Number(value ?? 0), data.currency));
   const rate = (value: unknown) => formatRate(value === null || value === undefined ? null : Number(value));
 
   function sentence(insight: ReportsInsight): string {
@@ -198,6 +200,8 @@ export function ReportsPage() {
           onChange={selectTab}
           tabs={TABS.map((value) => ({ value, label: t[value] }))}
         />
+        <div className="flex flex-wrap items-start gap-2">
+        <ReportCurrencySelect />
         <DateRangeControl
           range={range}
           onPreset={setPreset}
@@ -205,6 +209,7 @@ export function ReportsPage() {
           onCompare={setCompare}
           showCompare={tab === "overview"}
         />
+        </div>
       </div>
 
       {tab === "overview" && (

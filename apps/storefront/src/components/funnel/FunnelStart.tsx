@@ -9,6 +9,7 @@ import { funnelErrorKind } from "@/lib/funnelErrors";
 import { funnelVisitorId } from "@/lib/funnelSession";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { rememberVisitUtm } from "@/lib/visitUtm";
 import { FunnelUnavailable } from "./FunnelUnavailable";
 
 /**
@@ -56,6 +57,8 @@ export function FunnelStart({
     // Once per mount (Strict Mode runs effects twice); a retry goes through the button.
     if (started.current) return;
     started.current = true;
+    // The ad link's UTM values outlive the move to the step page (display rules, handoff 191).
+    rememberVisitUtm();
     void start();
   }, [start]);
 

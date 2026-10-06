@@ -1,5 +1,18 @@
-import { catalogCollectionFlags } from "@store-builder/api-client";
+import { catalogCollectionFlags, isSmartCollection } from "@store-builder/api-client";
 import { CollectionVisibilityFields } from "./components/CollectionVisibilityFields";
+import {
+  CollectionsEmpty,
+  SmartCollectionBadge,
+  SmartCollectionFields,
+  SmartCollectionNote,
+  smartDraftOf,
+  smartDraftReady,
+  smartRulesChanged,
+  smartRulesOf,
+} from "./components/SmartCollectionFields";
+import { CollectionSeoFields, collectionSeoOf, collectionSeoPayload, downloadCollectionsCsv } from "./components/CollectionSeoFields";
+import { storeUrl } from "@/lib/storeAddress";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -18,6 +31,8 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowDown,
   ArrowUp,
+  Download,
+  ExternalLink,
   Folder,
   GripVertical,
   IndentDecrease,
@@ -81,6 +96,12 @@ const STRINGS = {
     indent: "Put {name} inside the collection above",
     outdent: "Move {name} out one level",
     orderProducts: "Order the products in {name}",
+    preview: "Open {name} in the store",
+    subcategories: "{n} subcategories",
+    subcategory: "1 subcategory",
+    inHeader: "In header",
+    hiddenBadge: "Hidden",
+    exportCsv: "Export",
     edit: "Edit {name}",
     delete: "Delete {name}",
     editTitle: "Edit collection",
@@ -124,8 +145,8 @@ const STRINGS = {
     description:
       "طريقة تجميع المنتجات في متجرك، حتى ثلاثة مستويات. اسحب المجموعة لإعادة ترتيبها — واسحبها جانبًا لوضعها داخل المجموعة التي فوقها — أو استخدم الأسهم.",
     newCollection: "مجموعة جديدة",
-    empty: "لا توجد مجموعات بعد. أنشئ أول مجموعة.",
-    noProducts: "لا توجد منتجات في هذه المجموعة بعد.",
+    empty: "مفيش مجموعات لسه. أنشئ أول مجموعة.",
+    noProducts: "مفيش منتجات في هذه المجموعة لسه.",
     productCountOne: "منتج واحد",
     productCountOther: "عدد المنتجات: {n}",
     reorder: "إعادة ترتيب {name}",
@@ -134,15 +155,21 @@ const STRINGS = {
     indent: "وضع {name} داخل المجموعة التي فوقها",
     outdent: "إخراج {name} مستوى واحدًا",
     orderProducts: "ترتيب منتجات {name}",
+    preview: "فتح {name} في المتجر",
+    subcategories: "{n} تصنيف فرعي",
+    subcategory: "تصنيف فرعي واحد",
+    inHeader: "في الهيدر",
+    hiddenBadge: "مخفي",
+    exportCsv: "تصدير",
     edit: "تعديل {name}",
     delete: "حذف {name}",
     editTitle: "تعديل المجموعة",
-    deleteTitle: "حذف “{name}”؟",
+    deleteTitle: "حذف «{name}»؟",
     deleteDescription:
       "المجموعة مجرد تجميع في المتجر — حذفها نهائي، لكن المنتجات التي بداخلها لن تتأثر. وتنتقل المجموعات التي بداخلها إلى المستوى الأعلى.",
     deleteConfirm: "حذف المجموعة",
-    deleting: "جارٍ الحذف…",
-    deletedToast: "تم حذف “{name}”. المنتجات نفسها لم تتغير.",
+    deleting: "بنمسح…",
+    deletedToast: "تم حذف «{name}». المنتجات نفسها لم تتغير.",
     name: "الاسم",
     namePlaceholder: "الصيف",
     descriptionLabel: "الوصف",
@@ -152,13 +179,13 @@ const STRINGS = {
     parentHint: "يمكن وضع المجموعات بعضها داخل بعض حتى ثلاثة مستويات.",
     image: "الصورة",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ",
     create: "إنشاء",
     savedToast: "تم حفظ المجموعة.",
-    createdToast: "تم إنشاء “{name}”.",
+    createdToast: "اتعمل «{name}».",
     orderSaved: "تم حفظ الترتيب الجديد.",
-    orderTitle: "ترتيب المنتجات في “{name}”",
+    orderTitle: "ترتيب المنتجات في «{name}»",
     orderDescription: "يعرض المتجر منتجات هذه المجموعة بهذا الترتيب عند الترتيب حسب «المميزة».",
     moveProductUp: "تحريك {name} لأعلى",
     moveProductDown: "تحريك {name} لأسفل",
@@ -219,6 +246,10 @@ function CollectionForm({
   const [imageUrl, setImageUrl] = useState(collection?.imageUrl ?? "");
   // Header menu / hidden (components/CollectionVisibilityFields).
   const [flags, setFlags] = useState(() => catalogCollectionFlags(collection));
+  // Search engines and sharing (SPEC §8.9), same keys as a product's.
+  const [seo, setSeo] = useState(() => collectionSeoOf(collection));
+  // Manual, automatic by tags, or every product (components/SmartCollectionFields).
+  const [smart, setSmart] = useState(() => smartDraftOf(collection));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -235,9 +266,12 @@ function CollectionForm({
       description: description.trim(),
       imageUrl: imageUrl || null,
       ...{ showInHeader: flags.showInHeader && !flags.hidden, hidden: flags.hidden },
+      seo: collectionSeoPayload(collection, seo),
     };
     // Sent only when it changed, so an edit never moves a collection by accident.
     if (!collection || (collection.parentId ?? "") !== parentId) payload.parentId = parentId || null;
+    // Rules only when they changed: saving them re-fills the collection.
+    if (smartRulesChanged(collection, smart)) payload.rules = smartRulesOf(smart);
     try {
       if (collection) {
         await apiClient.updateCollection(workspaceId, collection.id, payload);
@@ -279,6 +313,7 @@ function CollectionForm({
           </Select>
         )}
       </Field>
+      <SmartCollectionFields value={smart} onChange={setSmart} disabled={saving} error={fieldErrors.rules} />
       <Field label={t.descriptionLabel} error={fieldErrors.description}>
         {({ id }) => (
           <Textarea
@@ -291,11 +326,12 @@ function CollectionForm({
       </Field>
       <ImageField label={t.image} value={imageUrl} onChange={setImageUrl} />
       <CollectionVisibilityFields value={flags} onChange={setFlags} disabled={saving} />
+      <CollectionSeoFields value={seo} onChange={setSeo} placeholderTitle={name || t.namePlaceholder} disabled={saving} />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="min-h-11">
           {t.cancel}
         </Button>
-        <Button type="submit" disabled={saving || name.trim().length === 0} className="min-h-11">
+        <Button type="submit" disabled={saving || name.trim().length === 0 || !smartDraftReady(smart)} className="min-h-11">
           {saving ? t.saving : collection ? t.save : t.create}
         </Button>
       </div>
@@ -332,6 +368,10 @@ function CollectionRow({
   const c = node.item;
   const label = (key: keyof Strings) => fmt(t[key], { name: c.name });
   const count = productCount(t, c.productCount);
+  const children = flat.filter((n) => n.item.parentId === c.id).length;
+  const rowFlags = catalogCollectionFlags(c);
+  const { currentWorkspace } = useWorkspace();
+  const previewHref = currentWorkspace?.slug ? `${storeUrl(currentWorkspace.slug)}/products?collection=${encodeURIComponent(c.slug)}` : null;
 
   return (
     <li
@@ -369,7 +409,15 @@ function CollectionRow({
           <p className="truncate text-xs text-ink-soft">
             <bdi dir="ltr">{c.slug}</bdi>
             {count && <> · {count}</>}
+            {children > 0 && <> · {children === 1 ? t.subcategory : fmt(t.subcategories, { n: children })}</>}
           </p>
+          {(rowFlags.showInHeader || rowFlags.hidden || isSmartCollection(c)) && (
+            <p className="mt-0.5 flex flex-wrap gap-1">
+              {isSmartCollection(c) && <SmartCollectionBadge />}
+              {rowFlags.showInHeader && <span className="rounded-full bg-primary-soft px-2 text-xs text-primary">{t.inHeader}</span>}
+              {rowFlags.hidden && <span className="rounded-full bg-paper px-2 text-xs text-ink-soft">{t.hiddenBadge}</span>}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center">
           <button type="button" className={iconButton} aria-label={label("moveUp")} title={label("moveUp")}
@@ -392,6 +440,11 @@ function CollectionRow({
             onClick={onOrderProducts}>
             <ListOrdered className="size-4" aria-hidden />
           </button>
+          {previewHref && (
+            <a href={previewHref} target="_blank" rel="noreferrer" className={iconButton} aria-label={label("preview")} title={label("preview")}>
+              <ExternalLink className="size-4" aria-hidden />
+            </a>
+          )}
           <button type="button" className={iconButton} aria-label={label("edit")} title={label("edit")} onClick={onEdit}>
             <Pencil className="size-4" aria-hidden />
           </button>
@@ -522,6 +575,13 @@ function ProductOrderDialog({ collection, onClose }: { collection: CollectionSum
       }
     >
       {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+      <SmartCollectionNote
+        collection={detail.data ?? collection}
+        onSynced={() => {
+          setOrder(null);
+          detail.refresh({ silent: true });
+        }}
+      />
       {detail.loading ? (
         <Spinner className="size-5" />
       ) : detail.error ? (
@@ -651,9 +711,15 @@ export function CollectionsPage() {
         back={{ to: "/catalog", label: t.products }}
         description={t.description}
         actions={
-          <Button onClick={() => setCreating(true)} className="min-h-11">
-            {t.newCollection}
-          </Button>
+          <>
+            <Button variant="outline" className="min-h-11" disabled={flat.length === 0} onClick={() => downloadCollectionsCsv(flat)}>
+              <Download className="size-4" aria-hidden />
+              {t.exportCsv}
+            </Button>
+            <Button onClick={() => setCreating(true)} className="min-h-11">
+              {t.newCollection}
+            </Button>
+          </>
         }
       />
 
@@ -663,13 +729,11 @@ export function CollectionsPage() {
         </Alert>
       )}
 
-      <DataState
-        loading={list.loading}
-        error={list.error}
-        empty={flat.length === 0}
-        emptyMessage={t.empty}
-        onRetry={() => list.refresh()}
-      >
+      {/* No collections: start one, or make "All products" in one tap (components/SmartCollectionFields). */}
+      {!list.loading && !list.error && flat.length === 0 && (
+        <CollectionsEmpty title={t.empty} createLabel={t.newCollection} onCreate={() => setCreating(true)} onCreated={reload} />
+      )}
+      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -739,7 +803,16 @@ export function CollectionsPage() {
         )}
       </Modal>
 
-      {ordering && <ProductOrderDialog collection={ordering} onClose={() => setOrdering(null)} />}
+      {ordering && (
+        <ProductOrderDialog
+          collection={ordering}
+          onClose={() => {
+            setOrdering(null);
+            // A Refresh inside may have changed the product counts.
+            if (isSmartCollection(ordering)) reload();
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}

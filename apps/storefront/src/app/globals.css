@@ -433,3 +433,19 @@ header[data-overlay] .zimos-logo .zimos-logo-on-dark {
     animation: none;
   }
 }
+
+/* The ZIMOS wordmark is navy on light surfaces and white on dark ones (components/ZimosLogo.tsx). */
+.dark {
+  --zimos-word: #ffffff;
+}
+
+/* The phone checkout's bottom bar (components/checkout/CheckoutStickyBar): the
+   page keeps room under its last line, and a focused field scrolls clear of it. */
+@media (width < 64rem) {
+  html:has([data-checkout-bar]) {
+    scroll-padding-bottom: 6rem;
+  }
+  body:has([data-checkout-bar]) {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}

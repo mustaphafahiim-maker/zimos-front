@@ -4,7 +4,7 @@ import { Alert, Button } from "@store-builder/ui";
 import { isApiErrorCode } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { UsernameField } from "@/components/UsernameField";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
@@ -20,12 +20,12 @@ const STRINGS = {
     taken: "Someone just took this username. Choose another one.",
   },
   ar: {
-    title: "اختر اسم المستخدم",
-    body: "يحتاج حسابك إلى اسم مستخدم قبل المتابعة. اقترحنا اسمًا — احتفظ به أو اختر اسمك.",
+    title: "اختار اسم المستخدم",
+    body: "يحتاج حسابك إلى اسم مستخدم قبل المتابعة. اقترحنا اسمًا — احتفظ به أو اختار اسمك.",
     save: "متابعة",
-    saving: "جارٍ الحفظ…",
-    chooseAvailable: "اختر اسم مستخدم متاحًا أولًا.",
-    taken: "استخدم شخص آخر هذا الاسم للتو. اختر اسمًا آخر.",
+    saving: "بنحفظ…",
+    chooseAvailable: "اختار اسم مستخدم متاحًا أولًا.",
+    taken: "استخدم شخص آخر هذا الاسم للتو. اختار اسمًا آخر.",
   },
 } satisfies Messages;
 
@@ -84,9 +84,9 @@ export function ChooseUsernamePage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="auth-glass">
+      <AuthBackdrop />
+      <div className="auth-glass-stage">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5" noValidate>
           <div>
             <h1 className="font-display text-3xl font-medium text-ink">{t.title}</h1>

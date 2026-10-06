@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   ApiError,
+  ORDER_STAGES_THAT_NOTIFY,
   ordersChangeStatus,
   ordersNextStages,
   type Order,
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/Textarea";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { useOrderLabels } from "../orderLabels";
 import { useOrderErrorMessage } from "../orderErrors";
+import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 
 const STRINGS = {
   en: {
@@ -72,7 +74,7 @@ const STRINGS = {
     note_returned: "يسجّل أن الطرد رجع. المخزون لا يرجع إلا عند إعادة تخزين المرتجع.",
     cancel: "إلغاء",
     save: "تغيير الحالة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     done: "تم تغيير الحالة إلى «{stage}».",
   },
 } satisfies Messages;
@@ -138,6 +140,7 @@ function StatusDialog({
   const [followUp, setFollowUp] = useState<"unreachable" | "postponed">("unreachable");
   const [courier, setCourier] = useState("");
   const [waybill, setWaybill] = useState("");
+  const [notify, setNotify] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,6 +148,8 @@ function StatusDialog({
   const hasLiveShipment = (order.shipments ?? []).some((s) => s.status !== "cancelled" && s.status !== "returned");
   const needsCourier = SHIPPING_STAGES.includes(target) && !hasLiveShipment;
   const reasonRequired = target === "cancelled";
+  // SPEC §4.6: the moves the customer hears about can be made quietly instead.
+  const notifies = !reopening && ORDER_STAGES_THAT_NOTIFY.includes(target);
 
   const note = reopening
     ? t.note_reopen
@@ -166,6 +171,7 @@ function StatusDialog({
       ...(needsCourier && courier.trim() ? { carrierCode: courier.trim() } : {}),
       ...(needsCourier && waybill.trim() ? { waybillNumber: waybill.trim() } : {}),
       ...(acknowledgeManualCancel ? { acknowledgeManualCancel: true } : {}),
+      ...(notifies ? { notifyCustomer: notify } : {}),
     };
   }
 
@@ -271,6 +277,8 @@ function StatusDialog({
           </Field>
 
           {note && <p className="text-sm text-ink-soft">{note}</p>}
+
+          {notifies && <NotifyCustomerToggle checked={notify} onChange={setNotify} />}
 
           <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" className="min-h-11" onClick={onClose} disabled={saving}>

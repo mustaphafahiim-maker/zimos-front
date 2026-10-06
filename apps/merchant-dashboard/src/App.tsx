@@ -17,6 +17,7 @@ import { GoLiveDialog } from "@/components/GoLiveDialog";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
+import { EmailChangeConfirmPage } from "@/pages/EmailChangeConfirmPage";
 import { WorkspacePickerPage } from "@/pages/WorkspacePickerPage";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { EditorLayout } from "@/components/EditorLayout";
@@ -27,17 +28,22 @@ import { ProductEditPage } from "@/pages/catalog/ProductEditPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailPage } from "@/pages/orders/OrderDetailPage";
 import { ManualOrderPage } from "@/pages/orders/ManualOrderPage";
+import { ShipmentBatchPage } from "@/pages/orders/ShipmentBatchPage";
+import { ExportFilePage } from "@/pages/exports/ExportFilePage";
+import { OrderBoardPage } from "@/pages/orders/OrderBoardPage";
 import { ConfirmationQueuePage } from "@/pages/confirmation/ConfirmationQueuePage";
 import { ReturnsPage } from "@/pages/returns/ReturnsPage";
 import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
 import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
+import { ContactImportPage } from "@/pages/customers/ContactImportPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
 import { AiStudioPage } from "@/pages/ai/AiStudioPage";
 import { AffiliatesPage } from "@/pages/affiliates/AffiliatesPage";
+import { ReferralProgramPage } from "@/pages/referrals/ReferralProgramPage";
 import { SubscriptionsPage } from "@/pages/subscriptions/SubscriptionsPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 import { ShoppableImagesPage } from "@/pages/shoppable/ShoppableImagesPage";
@@ -65,11 +71,15 @@ import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
 // element table) with the funnel editor, so it is split off with it.
 const ActivityLogPage = lazy(() => import("@/pages/activity/ActivityLogPage").then((m) => ({ default: m.ActivityLogPage })));
 const AppsPage = lazy(() => import("@/pages/apps/AppsPage").then((m) => ({ default: m.AppsPage })));
+const GoogleSheetsPage = lazy(() => import("@/pages/apps/GoogleSheetsPage").then((m) => ({ default: m.GoogleSheetsPage })));
 const InstallAppPage = lazy(() => import("@/pages/apps/InstallAppPage").then((m) => ({ default: m.InstallAppPage })));
 const DropshipProviderPage = lazy(() =>
   import("@/pages/apps/DropshipProviderPage").then((m) => ({ default: m.DropshipProviderPage }))
 );
+const EmailMarketingPage = lazy(() => import("@/pages/apps/EmailMarketingPage").then((m) => ({ default: m.EmailMarketingPage })));
+const AutomationGuidePage = lazy(() => import("@/pages/apps/AutomationGuidePage").then((m) => ({ default: m.AutomationGuidePage })));
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
+const MarketplacePage = lazy(() => import("@/pages/funnels/marketplace/MarketplacePage").then((m) => ({ default: m.MarketplacePage })));
 const FunnelEditorPage = lazy(() =>
   import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
 );
@@ -94,11 +104,11 @@ const SettlementsPage = lazy(() =>
   import("@/pages/settlements/SettlementsPage").then((m) => ({ default: m.SettlementsPage }))
 );
 const InboxPage = lazy(() => import("@/pages/inbox/InboxPage").then((m) => ({ default: m.InboxPage })));
+const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
 const AutomationsPage = lazy(() =>
   import("@/pages/automations/AutomationsPage").then((m) => ({ default: m.AutomationsPage }))
 );
 const MarketingPage = lazy(() => import("@/pages/marketing/MarketingPage").then((m) => ({ default: m.MarketingPage })));
-const CampaignsPage = lazy(() => import("@/pages/campaigns/CampaignsPage").then((m) => ({ default: m.CampaignsPage })));
 const ProfitPage = lazy(() => import("@/pages/profit/RealProfitPage").then((m) => ({ default: m.RealProfitPage })));
 const ProfitCostsPage = lazy(() =>
   import("@/pages/profit/ProfitCostsPage").then((m) => ({ default: m.ProfitCostsPage }))
@@ -107,6 +117,14 @@ const AdsPage = lazy(() => import("@/pages/ads/AdsPage").then((m) => ({ default:
 const StoreDesignPage = lazy(() =>
   import("@/pages/storeDesign/StoreDesignPage").then((m) => ({ default: m.StoreDesignPage }))
 );
+const StoreTextsPage = lazy(() => import("@/pages/website/StoreTextsPage").then((m) => ({ default: m.StoreTextsPage })));
+// Marketing → Gift cards (handoff 189).
+const GiftCardsPage = lazy(() => import("@/pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
+const GiftCardDetailPage = lazy(() => import("@/pages/giftCards/GiftCardDetailPage").then((m) => ({ default: m.GiftCardDetailPage })));
+// Store → Blog (handoff 190).
+const BlogPostsPage = lazy(() => import("@/pages/blog/BlogPostsPage").then((m) => ({ default: m.BlogPostsPage })));
+const BlogPostEditorPage = lazy(() => import("@/pages/blog/BlogPostEditorPage").then((m) => ({ default: m.BlogPostEditorPage })));
+const BlogCategoriesPage = lazy(() => import("@/pages/blog/BlogCategoriesPage").then((m) => ({ default: m.BlogCategoriesPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -125,6 +143,7 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/account/email-change" element={<EmailChangeConfirmPage />} />
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/choose-username" element={<ChooseUsernamePage />} />
@@ -137,6 +156,9 @@ export default function App() {
 
                       <Route path="/orders" element={<OrdersListPage />} />
                       <Route path="/orders/new" element={<ManualOrderPage />} />
+                      <Route path="/orders/board" element={<OrderBoardPage />} />
+                      <Route path="/orders/shipment-batches/:batchId" element={<ShipmentBatchPage />} />
+                      <Route path="/exports/:exportId" element={<ExportFilePage />} />
                       <Route path="/orders/:orderId" element={<OrderDetailPage />} />
 
                       <Route path="/confirmation-queue" element={<ConfirmationQueuePage />} />
@@ -151,11 +173,13 @@ export default function App() {
 
                       <Route path="/reviews" element={<ReviewsPage />} />
                       <Route path="/customers" element={<ContactsPage />} />
+                      <Route path="/customers/import" element={<ContactImportPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/stores" element={<StoresPage />} />
                       <Route path="/digital" element={<DigitalProductsPage />} />
                       <Route path="/ai" element={<AiStudioPage />} />
                       <Route path="/affiliates" element={<AffiliatesPage />} />
+                      <Route path="/referrals" element={<ReferralProgramPage />} />
                       <Route path="/subscriptions" element={<SubscriptionsPage />} />
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/shoppable-images" element={<ShoppableImagesPage />} />
@@ -176,7 +200,13 @@ export default function App() {
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
+                      <Route path="/website/texts" element={<LazyRoute><StoreTextsPage /></LazyRoute>} />
+                      <Route path="/blog" element={<LazyRoute><BlogPostsPage /></LazyRoute>} />
+                      <Route path="/blog/new" element={<LazyRoute><BlogPostEditorPage /></LazyRoute>} />
+                      <Route path="/blog/categories" element={<LazyRoute><BlogCategoriesPage /></LazyRoute>} />
+                      <Route path="/blog/:postId" element={<LazyRoute><BlogPostEditorPage /></LazyRoute>} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
+                      <Route path="/funnels/marketplace" element={<LazyRoute><MarketplacePage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
@@ -188,9 +218,11 @@ export default function App() {
                       />
                       <Route path="/settlements" element={<LazyRoute><SettlementsPage /></LazyRoute>} />
                       <Route path="/inbox" element={<LazyRoute><InboxPage /></LazyRoute>} />
+                      <Route path="/inbox/bot" element={<LazyRoute><WaBotPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
-                      <Route path="/campaigns" element={<LazyRoute><CampaignsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
+                      <Route path="/gift-cards" element={<LazyRoute><GiftCardsPage /></LazyRoute>} />
+                      <Route path="/gift-cards/:giftCardId" element={<LazyRoute><GiftCardDetailPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
                       <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />
                       <Route path="/ads" element={<LazyRoute><AdsPage /></LazyRoute>} />
@@ -200,7 +232,12 @@ export default function App() {
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="/apps" element={<LazyRoute><AppsPage /></LazyRoute>} />
                       <Route path="/activity" element={<LazyRoute><ActivityLogPage /></LazyRoute>} />
+                      <Route path="/apps/google-sheets" element={<LazyRoute><GoogleSheetsPage /></LazyRoute>} />
                       <Route path="/apps/dropship_sandbox" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
+                      <Route path="/apps/dropshipping" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
+                      <Route path="/apps/email-marketing" element={<LazyRoute><EmailMarketingPage /></LazyRoute>} />
+                      <Route path="/apps/zapier" element={<LazyRoute><AutomationGuidePage tool="zapier" /></LazyRoute>} />
+                      <Route path="/apps/make" element={<LazyRoute><AutomationGuidePage tool="make" /></LazyRoute>} />
                       <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />

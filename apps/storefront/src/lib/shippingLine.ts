@@ -20,7 +20,10 @@ export type ShippingLine =
 /**
  * Whether a quote answer means "this store prices shipping". A backend from
  * before `configured` existed only priced tier-priced stores for the
- * storefront, so that is what an answer without it means.
+ * storefront, so that is what an answer without it means. A store that
+ * prices only its own cities / areas reads `configured: true` too (backend
+ * "Shipping quote `configured` with only place prices"), so a place price
+ * needs no case of its own.
  */
 export function quotePricesShipping(quote: ShippingQuote): boolean {
   return quote.configured ?? quote.pricingMode === "weight_tiers";
@@ -35,15 +38,22 @@ export function quotePricesShipping(quote: ShippingQuote): boolean {
  *     else asks for the governorate — never a number that may be wrong;
  *   - an answer for another governorate or basket (`fresh: false`) is being
  *     replaced: calculating;
+ *   - a store that prices shipping but has no price for the address yet
+ *     (`rule: "no_rate"` — e.g. only its cities / areas are priced and the
+ *     shopper picked a region alone, or the cart knows only the governorate)
+ *     asks for the area, never "Free"; once the shopper reached the last
+ *     level of the store's own list (`addressDone`) and it still has no
+ *     price, the old "confirmed on the call" line;
  *   - 0 reads "Free".
  */
 export function shippingLineFor(
   quote: ShippingQuote,
-  { hasGovernorate, fresh }: { hasGovernorate: boolean; fresh: boolean }
+  { hasGovernorate, fresh, addressDone = false }: { hasGovernorate: boolean; fresh: boolean; addressDone?: boolean }
 ): ShippingLine {
   if (!quotePricesShipping(quote)) return { kind: "on_confirmation" };
   if (!hasGovernorate && !(fresh && quote.destinationRequired === false)) return { kind: "pick_governorate" };
   if (!fresh) return { kind: "calculating" };
+  if ((quote.rule as string | undefined) === "no_rate") return addressDone ? { kind: "on_confirmation" } : { kind: "pick_governorate" };
   return quote.amount > 0 ? { kind: "amount", amount: quote.amount } : { kind: "free" };
 }
 

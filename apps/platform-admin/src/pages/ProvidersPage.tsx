@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Activity, RefreshCw } from "lucide-react";
 import { Alert, Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
 import type {
@@ -227,6 +228,11 @@ function CarriersView() {
                     <Td>
                       <span className="font-medium">{c.name}</span>
                       <Mono className="mt-1 block w-fit">{c.code}</Mono>
+                      {c.registered && (
+                        <Link to={`/carriers/${c.code}/areas`} className="mt-1 block text-xs font-medium text-primary hover:underline">
+                          Areas map
+                        </Link>
+                      )}
                       {!c.registered && (
                         <StatusBadge tone="warning" className="mt-1">
                           Not registered

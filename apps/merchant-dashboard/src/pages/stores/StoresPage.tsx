@@ -58,7 +58,7 @@ const STRINGS = {
     title: "كل متاجري",
     description: "ما حدث اليوم في كل متجر تعمل فيه. افتح أي متجر لإدارته.",
     newStore: "متجر جديد",
-    emptyTitle: "لا توجد متاجر بعد",
+    emptyTitle: "مفيش متاجر لسه",
     emptyDescription: "أنشئ أول متجر لتبدأ البيع.",
     current: "مفتوح الآن",
     draft: "مسودة",
@@ -87,7 +87,7 @@ const STRINGS = {
     includeProducts: "المنتجات والخيارات والعروض والتصنيفات",
     includeWebsite: "صفحات الموقع والثيم (كمسودات)",
     includeShipping: "مناطق وأسعار الشحن والضريبة",
-    duplicating: "جارٍ النسخ…",
+    duplicating: "بننسخ…",
     duplicated: "تم نسخ المتجر: {products} منتج و{pages} صفحة.",
   },
 } satisfies Messages;

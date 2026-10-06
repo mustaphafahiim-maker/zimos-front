@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { Inbox } from "lucide-react";
+import { Inbox, Upload } from "lucide-react";
 import { buttonVariants } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,6 +15,7 @@ const STRINGS = {
     all: "All",
     segments: "Segments",
     forms: "Form submissions",
+    import: "Import contacts",
   },
   ar: {
     title: "جهات الاتصال",
@@ -23,6 +24,7 @@ const STRINGS = {
     all: "الكل",
     segments: "الشرائح",
     forms: "رسائل النماذج",
+    import: "استيراد العملاء",
   },
 } satisfies Messages;
 
@@ -52,10 +54,16 @@ export function ContactsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Link to="/form-submissions" className={buttonVariants({ variant: "outline" })}>
-            <Inbox className="size-4" aria-hidden />
-            {t.forms}
-          </Link>
+          <>
+            <Link to="/customers/import" className={buttonVariants({ variant: "outline" })}>
+              <Upload className="size-4" aria-hidden />
+              {t.import}
+            </Link>
+            <Link to="/form-submissions" className={buttonVariants({ variant: "outline" })}>
+              <Inbox className="size-4" aria-hidden />
+              {t.forms}
+            </Link>
+          </>
         }
       />
       <FilterTabs

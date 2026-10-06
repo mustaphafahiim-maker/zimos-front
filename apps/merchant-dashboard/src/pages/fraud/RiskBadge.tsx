@@ -107,7 +107,7 @@ export function useRiskParam(): { risk: RiskLevel | null; query: { riskLevel?: R
 }
 
 /** Orders list → the risk tabs. The choice lives in `?risk=` next to the page's other filters. */
-export function RiskFilter() {
+export function RiskFilter({ counts }: { counts?: Record<RiskLevel, number> | null } = {}) {
   const t = useT(STRINGS);
   const [params, setParams] = useSearchParams();
   const raw = params.get("risk");
@@ -117,7 +117,7 @@ export function RiskFilter() {
     { value: "high" as const, label: t.level_high },
     { value: "moderate" as const, label: t.level_moderate },
     { value: "low" as const, label: t.level_low },
-  ];
+  ].map((tab) => (counts && tab.value !== "all" ? { ...tab, label: `${tab.label} (${counts[tab.value]})` } : tab));
   return (
     <FilterTabs
       tabs={tabs}

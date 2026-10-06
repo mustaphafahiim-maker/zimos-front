@@ -6,6 +6,7 @@ import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, useEditorLocale } from "./editorLocale";
 import { showcaseSummary } from "./showcaseBlocks";
+import { DisplayRulesBadge } from "./DisplayRulesPanel";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -61,7 +62,11 @@ function elementSummary(element: PageElement): string {
     case "shoppable_image":
       return truncate(str("title") || "Shoppable image");
     case "countdown":
-      return truncate([str("label"), props.endsInHours && `${props.endsInHours}h`].filter(Boolean).join(" · "));
+      return truncate(
+        [str("label"), str("endsAt") ? new Date(str("endsAt")).toLocaleString() : props.endsInHours && `${props.endsInHours}h`]
+          .filter(Boolean)
+          .join(" · ")
+      );
     case "video":
     case "embed":
       return truncate(str("title") || str("url") || "Nothing linked yet");
@@ -112,6 +117,8 @@ function elementSummary(element: PageElement): string {
     }
     case "text_link":
       return truncate([str("text"), str("href") && `→ ${str("href")}`].filter(Boolean).join(" "));
+    case "currency_converter":
+      return truncate(str("label") || "Currency");
     case "stars_display":
       return truncate([props.rating && `${props.rating}★`, str("label")].filter(Boolean).join(" · "));
     case "upsell_accept_button":
@@ -222,6 +229,7 @@ export function SectionCard({
                   <span className="min-w-0 flex-1">
                     <span className="text-ink-soft">{spec.label}</span>
                     {summary && <span className="ms-2 text-ink">{summary}</span>}
+                    <DisplayRulesBadge element={element} />
                   </span>
                 </span>
               );

@@ -24,6 +24,7 @@ import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
 import { BarChart, LineAreaChart } from "@/components/charts";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -43,7 +44,10 @@ const STRINGS = {
     salesChart: "Sales per day",
     chartSummary: "{what} for {window}",
     tableTitle: "By {dimension}",
-    tableDesc: "Orders are matched to the UTM values of the visit that placed them.",
+    tableDesc: "Each order counts once, for the touch you pick: the last ad or link before buying, or the first that brought the shopper.",
+    touchLabel: "Credit the sale to",
+    touchLast: "Last touch",
+    touchFirst: "First touch",
     visitors: "Visitors",
     orders: "Orders",
     sales: "Sales",
@@ -79,7 +83,10 @@ const STRINGS = {
     salesChart: "المبيعات يوميًا",
     chartSummary: "{what} خلال {window}",
     tableTitle: "حسب {dimension}",
-    tableDesc: "يُنسب كل طلب إلى قيم UTM الخاصة بالزيارة التي أنشأته.",
+    tableDesc: "يُحتسب كل طلب مرة واحدة حسب ما تختاره: آخر إعلان أو رابط قبل الشراء، أو أول ما جاء بالعميل.",
+    touchLabel: "نسب البيع إلى",
+    touchLast: "آخر نقطة تواصل",
+    touchFirst: "أول نقطة تواصل",
     visitors: "الزوار",
     orders: "الطلبات",
     sales: "المبيعات",
@@ -92,7 +99,7 @@ const STRINGS = {
     cpa: "تكلفة الطلب المسلَّم",
     total: "الإجمالي",
     untracked: "بدون UTM (مباشر، هاتف، يدوي)",
-    emptyTitle: "لا توجد زيارات أو طلبات في هذه الفترة",
+    emptyTitle: "مفيش زيارات أو طلبات في هذه الفترة",
     emptyDesc: "أضف معاملات UTM إلى روابط إعلاناتك — منشئ الروابط في صفحة التسويق يكتبها لك — وستظهر المصادر هنا.",
     openMarketing: "افتح منشئ الروابط",
     spendHint: "سجّل الإنفاق الإعلاني من صفحة الإنفاق الإعلاني ليظهر هنا الإنفاق والعائد الحقيقي.",
@@ -113,6 +120,7 @@ export function AttributionPage() {
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [groupBy, setGroupBy] = useState<InsightsAttributionGroup>("source");
   const [funnelId, setFunnelId] = useState("");
+  const [touch, setTouch] = useState<"last" | "first">("last");
   const [draft, setDraft] = useState({ source: "", campaign: "" });
   const [filters, setFilters] = useState({ source: "", campaign: "" });
 
@@ -122,15 +130,18 @@ export function AttributionPage() {
       insightsGetAttribution(apiClient, workspaceId, {
         ...rangeWindows(range).current,
         groupBy,
+        touch,
         funnelId: funnelId || undefined,
         utm_source: filters.source || undefined,
         utm_campaign: filters.campaign || undefined,
       }),
-    [workspaceId, range, groupBy, funnelId, filters.source, filters.campaign]
+    [workspaceId, range, groupBy, touch, funnelId, filters.source, filters.campaign]
   );
   const data = report.data;
   const currency = data?.currency ?? "EGP";
-  const money = (v: number | null) => (v === null ? "—" : formatMoney(v, currency));
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (v: number | null) => (v === null ? "—" : formatMoney(...inReport(v, currency)));
   const hasSpend = Boolean(data && data.totals.spend !== null);
   const filtered = Boolean(filters.source || filters.campaign);
 
@@ -189,10 +200,19 @@ export function AttributionPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<ReportCurrencySelect />} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <RangeSwitch value={range} onChange={setRange} />
+        <Select
+          aria-label={t.touchLabel}
+          value={touch}
+          onChange={(e) => setTouch(e.target.value === "first" ? "first" : "last")}
+          className="h-9 w-auto max-w-[14rem] font-medium"
+        >
+          <option value="last">{t.touchLast}</option>
+          <option value="first">{t.touchFirst}</option>
+        </Select>
         {(funnels.data?.length ?? 0) > 0 && (
           <Select
             aria-label={t.funnelFilter}
@@ -299,6 +319,7 @@ export function AttributionPage() {
               }
             >
               <DataTable
+            phoneCards={false}
                 columns={columns}
                 rows={data.rows}
                 rowKey={(r) => r.key || "__none"}

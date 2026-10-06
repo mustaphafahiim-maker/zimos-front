@@ -1,7 +1,8 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, ChevronsUpDown, LogOut, Menu, X } from "lucide-react";
-import { cn } from "@store-builder/ui";
+import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Minimize2, Settings, X } from "lucide-react";
+import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
+import { FOCUS_TOGGLE_EVENT, KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
 import {
   NAV_GROUPS,
   NAV_GROUP_LABELS,
@@ -10,12 +11,11 @@ import {
   findNavItem,
   isNavItemVisible,
 } from "@/lib/navigation";
+import { profileAvatarOf } from "@store-builder/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -23,10 +23,17 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
+import { MobileTabBar, tabRoutesFor } from "@/components/MobileTabBar";
+import { useTeammateLocale } from "@/lib/useTeammateLocale";
 
 const STRINGS = {
   en: {
     signOut: "Sign out",
+    accountMenu: "Account menu",
+    settings: "Settings",
+    shortcuts: "Keyboard shortcuts",
+    focus: "Full screen",
+    exitFocus: "Show the side menu",
     selectStore: "Select a store",
     newStore: "+ New store",
     allStores: "All my stores",
@@ -42,7 +49,12 @@ const STRINGS = {
   },
   ar: {
     signOut: "تسجيل الخروج",
-    selectStore: "اختر متجرًا",
+    accountMenu: "قائمة الحساب",
+    settings: "الإعدادات",
+    shortcuts: "اختصارات الكيبورد",
+    focus: "ملء الشاشة",
+    exitFocus: "إظهار القائمة الجانبية",
+    selectStore: "اختار متجرًا",
     newStore: "+ متجر جديد",
     allStores: "كل متاجري",
     openNav: "فتح القائمة",
@@ -57,16 +69,18 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed";
+const NAV_COLLAPSED_KEY = "zimos.nav.groups.collapsed.v3";
+/** Groups that start open. The rest start closed and still show the page you are on. */
+const NAV_OPEN_BY_DEFAULT = new Set(["main", "orders", "products", "customers", "money"]);
 
 function readCollapsedGroups(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(NAV_COLLAPSED_KEY);
     if (raw) return JSON.parse(raw) as Record<string, boolean>;
   } catch {
-    /* private mode or malformed — fall through to every group open */
+    /* private mode or malformed — fall through to the default below */
   }
-  return {};
+  return Object.fromEntries(NAV_GROUPS.filter((group) => !NAV_OPEN_BY_DEFAULT.has(group.id)).map((group) => [group.id, true]));
 }
 
 /**
@@ -74,11 +88,11 @@ function readCollapsedGroups(): Record<string, boolean> {
  * mobile drawer. `onNavigate` lets the drawer close itself when a link is
  * followed. Same approach as the platform-admin console.
  *
- * The sidebar is a dark surface in both themes: its container carries the
- * `dark` class, so the shared controls inside it draw with the dark tokens.
+ * The sidebar and the top bar are Glass panels over the app backdrop
+ * (`.glass-app`, `.glass-nav` in index.css): they follow the theme, so the
+ * controls inside them draw with the ordinary tokens.
  */
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { logout, user } = useAuth();
+function SidebarContent({ onNavigate, inDrawer }: { onNavigate?: () => void; inDrawer?: boolean }) {
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -99,7 +113,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // Collapsing a group hides everything in it except the page you are on, so
   // the sidebar never loses track of where you are.
   const activeTo = findNavItem(location.pathname)?.to;
-  const userLabel = user?.fullName ?? user?.email ?? "";
 
   return (
     <>
@@ -113,21 +126,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <ZimosLogo height={24} />
         </Link>
         <StoreSwitcher onNavigate={onNavigate} />
+        {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="mt-2 lg:hidden" />}
       </div>
       <nav aria-label={t.navLabel} className="shell-scroll flex-1 overflow-y-auto px-3 pb-4">
         <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const isClosed = Boolean(collapsed[group.id]);
+          // A group without a heading has nothing to click, so it is never folded away.
+          const isClosed = Boolean(heading && collapsed[group.id]);
           // Entries this role can't use are left out; a group left empty goes too.
-          const visible = group.items.filter((i) => isNavItemVisible(i, role));
+          // In the phone menu, the tab bar's own pages aren't listed a second time (re-audit N-06).
+          const onTabBar = inDrawer ? new Set(tabRoutesFor(role)) : null;
+          const visible = group.items.filter((i) => isNavItemVisible(i, role) && !onTabBar?.has(i.to));
           if (visible.length === 0) return null;
           const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
 
           return (
             <div
               key={group.id}
-              className={cn(index > 0 && (heading ? "mt-5" : "mt-5 border-t border-white/10 pt-4"))}
+              className={cn(index > 0 && (heading ? "mt-4" : "mt-4 border-t border-line pt-3"))}
             >
               {heading && (
                 <button
@@ -135,7 +152,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={() => setCollapsed((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}
                   aria-expanded={!isClosed}
                   aria-label={fmt(isClosed ? t.expandGroup : t.collapseGroup, { group: heading })}
-                  className="mb-1 flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1 font-mono text-[10px] font-semibold tracking-[0.16em] text-white/45 uppercase transition-colors hover:text-white/80 rtl:font-sans rtl:text-[11px] rtl:tracking-normal"
+                  className="mb-1 flex min-h-8 w-full cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
                 >
                   <span className="flex-1 text-start">{heading}</span>
                   <ChevronDown
@@ -153,8 +170,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                       cn(
-                        "group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-sm font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white",
-                        isActive && "bg-white/[0.11] font-semibold text-white"
+                        "group relative flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink",
+                        isActive && "bg-primary-soft font-semibold text-primary-dark"
                       )
                     }
                   >
@@ -163,13 +180,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         {isActive && (
                           <span
                             aria-hidden
-                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-accent"
+                            className="absolute start-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full bg-primary"
                           />
                         )}
                         <item.icon
                           className={cn(
-                            "size-[18px] shrink-0 text-white/55 group-hover:text-white/90",
-                            isActive && "text-white"
+                            "size-[18px] shrink-0 text-ink-soft group-hover:text-ink",
+                            isActive && "text-primary"
                           )}
                           strokeWidth={1.75}
                           aria-hidden
@@ -184,28 +201,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="flex items-center gap-3 border-t border-white/10 px-4 py-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.12] text-sm font-semibold text-white">
-          {(userLabel || "?").charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-white">{userLabel}</p>
-          {user?.fullName && user.email && (
-            <p className="truncate text-xs text-white/50" dir="ltr">
-              {user.email}
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => logout()}
-          aria-label={t.signOut}
-          title={t.signOut}
-          className="shrink-0 cursor-pointer rounded-md p-2 text-white/60 transition-colors hover:bg-white/[0.08] hover:text-white"
-        >
-          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
-        </button>
-      </div>
     </>
   );
 }
@@ -214,6 +209,66 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
  * The store being worked on, at the top of the sidebar: its name on a glass
  * card, and behind it the list of the merchant's other stores.
  */
+/**
+ * Who is signed in, at the end of the top bar. The avatar opens the account
+ * menu: settings, the keyboard shortcuts and sign out — which is why there is
+ * no sign-out button on show anywhere.
+ */
+function AccountMenu() {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+  const t = useT(STRINGS);
+  const userLabel = user?.fullName ?? user?.email ?? "";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            title={t.accountMenu}
+            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised/60 py-1 ps-1 pe-1 text-start transition-colors hover:bg-primary-soft lg:pe-3"
+          />
+        }
+      >
+        {profileAvatarOf(user) ? (
+          <img src={profileAvatarOf(user) ?? undefined} alt="" className="size-8 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+            {(userLabel || "?").charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="hidden max-w-36 truncate text-sm font-medium text-ink lg:block">{userLabel}</span>
+        <ChevronDown className="hidden size-4 shrink-0 text-ink-soft lg:block" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end" className="min-w-60">
+        <div className="px-2 py-1.5">
+          <p className="truncate text-sm font-medium text-ink">{userLabel}</p>
+          {user?.fullName && user.email && (
+            <p className="truncate text-xs text-ink-soft" dir="ltr">
+              {user.email}
+            </p>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate("/settings")}>
+          <Settings className="size-4" aria-hidden />
+          {t.settings}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(SHORTCUTS_HELP_EVENT))}>
+          <Keyboard className="size-4" aria-hidden />
+          {t.shortcuts}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={() => logout()}>
+          <LogOut className="size-4 rtl:-scale-x-100" aria-hidden />
+          {t.signOut}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   const { currentWorkspace, workspaces, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
@@ -234,18 +289,18 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         onClick={() => setOpen((v) => !v)}
         aria-label={t.switchStore}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-white/15 bg-white/[0.08] px-2.5 py-2 text-start transition-colors hover:bg-white/[0.12]"
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-line bg-paper-raised/60 px-2.5 py-2 text-start transition-colors hover:bg-primary-soft"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#2563eb] text-sm font-semibold text-white">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
           {name.charAt(0).toUpperCase()}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{name}</span>
-        <ChevronsUpDown className="size-4 shrink-0 text-white/50" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{name}</span>
+        <ChevronsUpDown className="size-4 shrink-0 text-ink-soft" aria-hidden />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onMouseDown={() => setOpen(false)} aria-hidden />
-          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-line bg-paper-raised py-1 shadow-xl">
+          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto zimos-glass rounded-xl py-1 shadow-xl">
             {workspaces.map((workspace) => (
               <button
                 key={workspace.id}
@@ -320,8 +375,29 @@ function Breadcrumbs() {
 
 export function DashboardLayout() {
   const { currentWorkspace } = useWorkspace();
+  // The teammate's language, for the notifications that leave the dashboard.
+  useTeammateLocale();
   const location = useLocation();
   const t = useT(STRINGS);
+  const [focus, setFocus] = useState(() => {
+    try {
+      return localStorage.getItem("zimos.focus") === "on";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("zimos.focus", focus ? "on" : "off");
+    } catch {
+      /* private mode — non-fatal */
+    }
+  }, [focus]);
+  useEffect(() => {
+    const toggle = () => setFocus((on) => !on);
+    window.addEventListener(FOCUS_TOGGLE_EVENT, toggle);
+    return () => window.removeEventListener(FOCUS_TOGGLE_EVENT, toggle);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // The tab names the store being worked on, not the product — a merchant with
@@ -347,8 +423,9 @@ export function DashboardLayout() {
   }, [mobileOpen]);
 
   return (
-    <div className="shell-bar flex min-h-screen">
-      <aside className="dark shell-surface sticky top-0 hidden h-dvh w-[264px] shrink-0 md:flex md:flex-col">
+    <div className="glass-app flex min-h-screen" data-focus={focus ? "on" : undefined}>
+      <KeyboardShortcuts />
+      <aside className="zimos-glass zimos-glass-panel glass-nav sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[264px] shrink-0 md:flex md:flex-col">
         <SidebarContent />
       </aside>
 
@@ -361,54 +438,51 @@ export function DashboardLayout() {
             aria-modal="true"
             aria-label={t.navLabel}
             onMouseDown={(e) => e.stopPropagation()}
-            className="dark shell-surface animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-lg"
+            className="zimos-glass glass-nav animate-slide-in-end absolute inset-y-0 end-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)] shadow-lg"
           >
+            {/* Opens from the side of «المزيد» in the tab bar, so the thumb that opened it is near. */}
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label={t.closeNav}
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              className="absolute end-2 top-2.5 z-10 flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
-              <X className="size-4" aria-hidden />
+              <X className="size-5" aria-hidden />
             </button>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent inDrawer onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="dark shell-bar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5">
+        <header className="zimos-glass glass-nav glass-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5 md:top-3 md:mx-3 md:mt-3">
           <div className="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              aria-label={t.openNav}
-              aria-expanded={mobileOpen}
-              className="shrink-0 cursor-pointer rounded-md p-2 text-white/75 hover:bg-white/10 hover:text-white md:hidden"
-            >
-              <Menu className="size-5" aria-hidden />
-            </button>
-            <span className="truncate text-sm font-semibold text-white md:hidden">{storeName}</span>
-            <CommandPalette />
+            {/* Phones open the menu from «المزيد» in the tab bar; one way in, not two. */}
+            <Breadcrumbs />
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* Dashboard-wide locale switch. Lives in the header so it stays
-                reachable on mobile, where the sidebar collapses into the drawer. */}
+            {/* Search, the store's link and alerts. Language and theme are in Settings. */}
+            <CommandPalette />
+            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} className="hidden lg:flex" />}
+            {/* Full screen: the side menu steps aside so the page has the whole width. */}
+            <button
+              type="button"
+              onClick={() => setFocus((on) => !on)}
+              aria-pressed={focus}
+              aria-label={focus ? t.exitFocus : t.focus}
+              title={focus ? t.exitFocus : t.focus}
+              className="hidden shrink-0 cursor-pointer rounded-full p-2 text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink md:inline-flex"
+            >
+              {focus ? <Minimize2 className="size-[18px]" aria-hidden /> : <Maximize2 className="size-[18px]" aria-hidden />}
+            </button>
             <NotificationsBell />
-            <LanguageSwitch className="hidden sm:inline-flex" />
-            <LanguageSwitch compact className="sm:hidden" />
-            <ThemeToggle />
+            <AccountMenu />
           </div>
         </header>
 
-        {/* The page: an inset panel in the frame, with the breadcrumb strip on top. */}
-        <div className="flex min-w-0 flex-1 flex-col bg-paper md:rounded-ss-2xl">
-          <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line bg-paper-raised px-4 py-1.5 sm:px-6 md:rounded-ss-2xl">
-            <Breadcrumbs />
-            {/* The store's public link: on every page, and it follows the store switcher. */}
-            {currentWorkspace?.slug && <StoreLinkBar slug={currentWorkspace.slug} />}
-          </div>
+        {/* The page sits straight on the backdrop. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           <main className="flex-1 p-4 pb-14 sm:p-6 sm:pb-16">
             {/* Subscription expiring / expired, or the store suspended. */}
             <AccessBanner />
@@ -416,11 +490,14 @@ export function DashboardLayout() {
             {/* One crashing page shows an error here; the sidebar and header
                 stay up so the merchant can move on. */}
             <RouteErrorBoundary resetKey={location.pathname}>
-              <Outlet />
+              <div key={location.pathname.split("/")[1] ?? ""} className="page-in">
+                <Outlet />
+              </div>
             </RouteErrorBoundary>
           </main>
         </div>
       </div>
+      <MobileTabBar onMore={() => setMobileOpen(true)} moreOpen={mobileOpen} />
     </div>
   );
 }

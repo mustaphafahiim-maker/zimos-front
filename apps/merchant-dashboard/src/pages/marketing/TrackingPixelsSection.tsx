@@ -2,7 +2,13 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Pencil, Plus, Radio, Send, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
+  GOOGLE_ADS_LABEL,
+  PINTEREST_AD_ACCOUNT_ID,
   funnelsList,
+  googleAdsLabelsOf,
+  googleAdsPixelConfig,
+  pinterestAdAccountIdOf,
+  pinterestPixelConfig,
   trackingPixelsCreate,
   trackingPixelsDelete,
   trackingPixelsList,
@@ -29,6 +35,8 @@ import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { PinterestCapiFields } from "./PinterestCapiFields";
+import { GtmContainerCard } from "./GtmContainerCard";
 
 /**
  * What each platform's ID looks like. The patterns are the backend's
@@ -41,6 +49,7 @@ const PLATFORM_META: Record<TrackingPixelPlatform, { name: string; pattern: RegE
   google: { name: "Google (GA4 / Ads)", pattern: /^(G|AW|GT)-[A-Z0-9]{4,20}$/, example: "G-ABC123XYZ" },
   gtm: { name: "Google Tag Manager", pattern: /^GTM-[A-Z0-9]{4,12}$/, example: "GTM-ABC1234" },
   clarity: { name: "Microsoft Clarity", pattern: /^[a-z0-9]{6,20}$/, example: "abcd1234ef" },
+  pinterest: { name: "Pinterest", pattern: /^\d{10,16}$/, example: "2612345678901" },
 };
 
 const STRINGS = {
@@ -88,8 +97,12 @@ const STRINGS = {
     capiTokenRequired: "Paste the token to turn server events on.",
     testCode: "Test event code",
     testCodeHint: "Optional. While set, server events show up under Test events instead of counting as real ones.",
-    adsLabel: "Ads conversion label",
-    adsLabelHint: "For a Google Ads ID (AW-…): the label of the purchase conversion.",
+    adsLabel: "Purchase conversion label",
+    adsLabelHint: "Google Ads → Goals → Conversions → your action → Tag setup → the part after the slash in send_to",
+    adsLeadLabel: "Lead conversion label",
+    adsLeadLabelHint: "Used when the store or a funnel reports orders as Lead.",
+    adsLabelInvalid: "Use 4 to 60 letters, digits, - or _.",
+    adsLabelNeedsAds: "A conversion label needs a Google Ads id (AW-…)",
     scope: "Applies to",
     chooseFunnels: "Choose funnels",
     chooseProducts: "Choose products",
@@ -113,7 +126,7 @@ const STRINGS = {
     title: "البيكسلات والأكواد",
     description: "أضف أي عدد من البيكسلات لكل منصة. كل بيكسل يمكن أن يعمل على المتجر كله أو على قموع أو منتجات محددة فقط.",
     add: "إضافة بيكسل",
-    emptyTitle: "لا توجد بيكسلات بعد",
+    emptyTitle: "مفيش بيكسلات لسه",
     emptyBody: "أضف أول بيكسل لتتمكن منصات الإعلانات من رؤية زيارات وطلبات متجرك.",
     capiWarning:
       "إذا لم تكن تعرف ما هو الـ Conversions API فاتركه مغلقًا. تشغيله والبيكسل نفسه مربوط في مكان آخر قد يحسب كل طلب مرتين.",
@@ -152,22 +165,26 @@ const STRINGS = {
     capiTokenRequired: "الصق الرمز لتفعيل أحداث السيرفر.",
     testCode: "كود الأحداث التجريبية",
     testCodeHint: "اختياري. طالما هو موجود تظهر أحداث السيرفر في Test events ولا تُحسب كأحداث حقيقية.",
-    adsLabel: "Conversion label للإعلانات",
-    adsLabelHint: "لمعرّف Google Ads (AW-…): الـ label الخاص بتحويل الشراء.",
+    adsLabel: "ليبل تحويل الشراء",
+    adsLabelHint: "في Google Ads افتح الأهداف ← التحويلات ← الإجراء بتاعك ← إعداد العلامة، وانسخ الجزء اللي بعد الـ / في send_to.",
+    adsLeadLabel: "ليبل تحويل العميل المحتمل",
+    adsLeadLabelHint: "بيتستخدم لما المتجر أو قمع يسجّل الطلبات كـ Lead.",
+    adsLabelInvalid: "اكتب من 4 لـ 60 حرف إنجليزي أو رقم، ومسموح بالشرطة (-) والشرطة السفلية (_).",
+    adsLabelNeedsAds: "الليبل محتاج رقم إعلانات جوجل (AW-…)",
     scope: "يعمل على",
-    chooseFunnels: "اختر القموع",
-    chooseProducts: "اختر المنتجات",
-    scopeEmpty: "لا يوجد ما تختار منه بعد.",
-    scopeRequired: "اختر واحدًا على الأقل.",
+    chooseFunnels: "اختار القموع",
+    chooseProducts: "اختار المنتجات",
+    scopeEmpty: "مفيش ما تختار منه لسه.",
+    scopeRequired: "اختار واحدًا على الأقل.",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     cancel: "إلغاء",
     created: "تمت إضافة البيكسل وهو يعمل على متجرك الآن.",
     updated: "تم حفظ البيكسل.",
     deleted: "تم حذف البيكسل.",
     deleteTitle: "حذف هذا البيكسل؟",
     deleteBody: "سيتوقف {name} {id} عن استقبال الأحداث من متجرك.",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     test: "إرسال حدث تجريبي",
     testOk: "{name} قبل الحدث التجريبي.",
     testOkCode: "تم قبول الحدث التجريبي — ستجده في Test events داخل {name}.",
@@ -185,6 +202,10 @@ interface FormState {
   capiToken: string;
   testEventCode: string;
   adsConversionLabel: string;
+  /** The Google Ads lead conversion label (config.adsLeadLabel, handoff 169). */
+  adsLeadLabel: string;
+  /** Pinterest's Conversions API needs the ad account (config.adAccountId). */
+  adAccountId: string;
   scopeType: TrackingPixelScopeType;
   scopeIds: string[];
 }
@@ -197,6 +218,8 @@ const emptyForm = (): FormState => ({
   capiToken: "",
   testEventCode: "",
   adsConversionLabel: "",
+  adsLeadLabel: "",
+  adAccountId: "",
   scopeType: "all",
   scopeIds: [],
 });
@@ -208,7 +231,9 @@ const formOf = (p: TrackingPixelDto): FormState => ({
   capiEnabled: p.capiEnabled,
   capiToken: "",
   testEventCode: p.testEventCode ?? "",
-  adsConversionLabel: p.config.adsConversionLabel ?? "",
+  adsConversionLabel: googleAdsLabelsOf(p).purchase,
+  adsLeadLabel: googleAdsLabelsOf(p).lead,
+  adAccountId: pinterestAdAccountIdOf(p),
   scopeType: p.scope.type,
   scopeIds: p.scope.ids,
 });
@@ -327,74 +352,79 @@ export function TrackingPixelsSection({ onEventsChanged }: { onEventsChanged?: (
   ];
 
   const atLimit = Boolean(data && data.pixels.length >= data.limit);
+  // A Google Tag Manager pixel gets the ready-made container card (handoff 170).
+  const hasGtm = Boolean(data?.pixels.some((p) => p.platform === "gtm"));
 
   return (
-    <Card className="mb-6 gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Radio className="size-4 text-primary" aria-hidden />
-            {t.title}
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
+    <>
+      <Card className="mb-6 gap-0 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Radio className="size-4 text-primary" aria-hidden />
+              {t.title}
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
+          </div>
+          <Button size="sm" onClick={() => setEditing("new")} disabled={!data || atLimit}>
+            <Plus className="size-4" aria-hidden />
+            {t.add}
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setEditing("new")} disabled={!data || atLimit}>
-          <Plus className="size-4" aria-hidden />
-          {t.add}
-        </Button>
-      </div>
 
-      <Alert className="mt-3">{t.capiWarning}</Alert>
+        <Alert className="mt-3">{t.capiWarning}</Alert>
 
-      <div className="mt-3">
-        <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-          {data && data.pixels.length === 0 ? (
-            <EmptyState
-              icon={<Radio className="size-6" aria-hidden />}
-              title={t.emptyTitle}
-              description={t.emptyBody}
-              action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}
-            />
-          ) : (
-            <DataTable columns={columns} rows={data?.pixels ?? []} rowKey={(p) => p.id} minWidth="44rem" />
-          )}
-        </DataState>
-      </div>
-      <p className="mt-3 text-xs text-ink-soft">{t.eventsNote}</p>
+        <div className="mt-3">
+          <DataState loading={loading} error={error} onRetry={() => void refresh()}>
+            {data && data.pixels.length === 0 ? (
+              <EmptyState
+                icon={<Radio className="size-6" aria-hidden />}
+                title={t.emptyTitle}
+                description={t.emptyBody}
+                action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}
+              />
+            ) : (
+              <DataTable columns={columns} rows={data?.pixels ?? []} rowKey={(p) => p.id} minWidth="44rem" />
+            )}
+          </DataState>
+        </div>
+        <p className="mt-3 text-xs text-ink-soft">{t.eventsNote}</p>
 
-      {editing && data && (
-        <PixelDialog
-          key={editing === "new" ? "new" : editing.id}
-          t={t}
-          pixel={editing === "new" ? null : editing}
-          platforms={data.platforms}
-          onClose={() => setEditing(null)}
-          onSaved={async (created) => {
-            setEditing(null);
-            toast.success(created ? t.created : t.updated);
+        {editing && data && (
+          <PixelDialog
+            key={editing === "new" ? "new" : editing.id}
+            t={t}
+            pixel={editing === "new" ? null : editing}
+            platforms={data.platforms}
+            onClose={() => setEditing(null)}
+            onSaved={async (created) => {
+              setEditing(null);
+              toast.success(created ? t.created : t.updated);
+              await refresh({ silent: true });
+            }}
+          />
+        )}
+
+        <ConfirmDialog
+          open={Boolean(deleting)}
+          title={t.deleteTitle}
+          description={deleting ? fmt(t.deleteBody, { name: PLATFORM_META[deleting.platform]?.name ?? deleting.platform, id: deleting.pixelId }) : undefined}
+          confirmLabel={t.delete}
+          cancelLabel={t.cancel}
+          busyLabel={t.deleting}
+          destructive
+          onCancel={() => setDeleting(null)}
+          onConfirm={async () => {
+            if (!deleting) return;
+            await trackingPixelsDelete(apiClient, workspaceId, deleting.id);
+            setDeleting(null);
+            toast.success(t.deleted);
             await refresh({ silent: true });
           }}
         />
-      )}
-
-      <ConfirmDialog
-        open={Boolean(deleting)}
-        title={t.deleteTitle}
-        description={deleting ? fmt(t.deleteBody, { name: PLATFORM_META[deleting.platform]?.name ?? deleting.platform, id: deleting.pixelId }) : undefined}
-        confirmLabel={t.delete}
-        cancelLabel={t.cancel}
-        busyLabel={t.deleting}
-        destructive
-        onCancel={() => setDeleting(null)}
-        onConfirm={async () => {
-          if (!deleting) return;
-          await trackingPixelsDelete(apiClient, workspaceId, deleting.id);
-          setDeleting(null);
-          toast.success(t.deleted);
-          await refresh({ silent: true });
-        }}
-      />
-    </Card>
+      </Card>
+      {data && hasGtm && <GtmContainerCard pixels={data.pixels} />}
+    </>
   );
 }
 
@@ -429,6 +459,27 @@ function PixelDialog({
   const tokenSaved = Boolean(pixel?.capiTokenSet);
   const tokenMissing = form.capiEnabled && capiPossible && !tokenSaved && form.capiToken.trim() === "";
   const scopeMissing = form.scopeType !== "all" && form.scopeIds.length === 0;
+  const pinterest = form.platform === "pinterest";
+  const adAccount = form.adAccountId.trim();
+  // Checked here before saving; the server's own refusal (config.adAccountId) shows the same words.
+  const adAccountBad: "missing" | "invalid" | null = !pinterest
+    ? null
+    : adAccount !== "" && !PINTEREST_AD_ACCOUNT_ID.test(adAccount)
+      ? "invalid"
+      : form.capiEnabled && capiPossible && adAccount === ""
+        ? "missing"
+        : null;
+  const adAccountProblem = adAccountBad ?? (fieldErrors["config.adAccountId"] ? "missing" : null);
+  // Google Ads labels (handoff 169): checked here; the server refuses one on a non-Ads tag.
+  const labelBad = (value: string) => isAdsId && value.trim() !== "" && !GOOGLE_ADS_LABEL.test(value.trim());
+  const purchaseLabelBad = labelBad(form.adsConversionLabel);
+  const leadLabelBad = labelBad(form.adsLeadLabel);
+  const labelError = (bad: boolean, field: string) =>
+    bad ? t.adsLabelInvalid : fieldErrors[field] ? (isAdsId ? t.adsLabelInvalid : t.adsLabelNeedsAds) : undefined;
+  const setLabel = (key: "adsConversionLabel" | "adsLeadLabel", value: string) => {
+    set(key, value);
+    setFieldErrors((prev) => ({ ...prev, [`config.${key}`]: "" }));
+  };
 
   // The scope lists load only when that scope is picked.
   const funnels = useAsync(
@@ -448,7 +499,7 @@ function PixelDialog({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (id === "" || idBad || tokenMissing || scopeMissing) return;
+    if (id === "" || idBad || tokenMissing || scopeMissing || adAccountBad || purchaseLabelBad || leadLabelBad) return;
     setSaving(true);
     setFormError(null);
     setFieldErrors({});
@@ -459,7 +510,12 @@ function PixelDialog({
       capiEnabled: form.capiEnabled && capiPossible,
       testEventCode: info?.testEventCode ? form.testEventCode.trim() || null : undefined,
       scope: { type: form.scopeType, ids: form.scopeType === "all" ? [] : form.scopeIds },
-      config: form.platform === "google" ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null } : undefined,
+      config:
+        form.platform === "google"
+          ? googleAdsPixelConfig(id, { purchase: form.adsConversionLabel, lead: form.adsLeadLabel })
+          : pinterest
+            ? pinterestPixelConfig(form.adAccountId)
+            : undefined,
       ...(token ? { capiToken: token } : {}),
     };
     try {
@@ -484,7 +540,13 @@ function PixelDialog({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="submit" form="tracking-pixel-form" disabled={saving || id === "" || idBad || tokenMissing || scopeMissing}>
+          <Button
+            type="submit"
+            form="tracking-pixel-form"
+            disabled={
+              saving || id === "" || idBad || tokenMissing || scopeMissing || adAccountBad !== null || purchaseLabelBad || leadLabelBad
+            }
+          >
             {saving ? t.saving : t.save}
           </Button>
         </>
@@ -524,18 +586,51 @@ function PixelDialog({
         <TextField label={t.label} value={form.label} maxLength={120} hint={t.labelHint} onChange={(e) => set("label", e.target.value)} />
 
         {isAdsId && (
-          <TextField
-            label={t.adsLabel}
-            dir="ltr"
-            autoComplete="off"
-            value={form.adsConversionLabel}
-            hint={t.adsLabelHint}
-            onChange={(e) => set("adsConversionLabel", e.target.value)}
-            error={fieldErrors.adsConversionLabel}
-          />
+          <>
+            <TextField
+              label={t.adsLabel}
+              dir="ltr"
+              autoComplete="off"
+              maxLength={60}
+              value={form.adsConversionLabel}
+              hint={t.adsLabelHint}
+              onChange={(e) => setLabel("adsConversionLabel", e.target.value)}
+              error={labelError(purchaseLabelBad, "config.adsConversionLabel")}
+            />
+            <TextField
+              label={t.adsLeadLabel}
+              dir="ltr"
+              autoComplete="off"
+              maxLength={60}
+              value={form.adsLeadLabel}
+              hint={t.adsLeadLabelHint}
+              onChange={(e) => setLabel("adsLeadLabel", e.target.value)}
+              error={labelError(leadLabelBad, "config.adsLeadLabel")}
+            />
+          </>
         )}
 
-        {capiPossible && (
+        {capiPossible && pinterest && (
+          <PinterestCapiFields
+            enabled={form.capiEnabled}
+            onEnabledChange={(next) => set("capiEnabled", next)}
+            adAccountId={form.adAccountId}
+            onAdAccountIdChange={(next) => {
+              set("adAccountId", next);
+              setFieldErrors((prev) => ({ ...prev, "config.adAccountId": "" }));
+            }}
+            adAccountProblem={adAccountProblem}
+            token={form.capiToken}
+            onTokenChange={(next) => set("capiToken", next)}
+            tokenMissing={tokenMissing}
+            tokenError={fieldErrors.capiToken}
+            tokenMask={tokenSaved ? (pixel?.capiTokenMask ?? "••••") : null}
+            testEventCode={form.testEventCode}
+            onTestEventCodeChange={(next) => set("testEventCode", next)}
+            warning={t.capiWarning}
+          />
+        )}
+        {capiPossible && !pinterest && (
           <div className="space-y-3 rounded-[0.5rem] border border-line p-3">
             <label className="flex cursor-pointer items-start gap-3">
               <input

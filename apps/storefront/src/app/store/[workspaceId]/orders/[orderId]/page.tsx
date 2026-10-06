@@ -11,16 +11,18 @@ import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
 import {
-  getAcceptedUpsell,
   getOrderSnapshot,
-  type AcceptedUpsell,
   type OrderSnapshot,
 } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
-import { ThankYouUpsell } from "@/components/offers/StoreOffers";
+import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
+import { ThankYouDownloads } from "@/components/ThankYouDownloads";
+import { ThankYouBuyNotes } from "@/components/ThankYouBuyNotes";
+import { OrderUpdatesButton } from "@/components/OrderUpdatesButton";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
+import { GiftCardPaidNote } from "@/components/giftCards/GiftCardPaidNote";
 
 function Confirmation() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
@@ -35,10 +37,6 @@ function Confirmation() {
   const isClient = useIsClient();
   const snapshot = useMemo<OrderSnapshot | null>(
     () => (isClient ? getOrderSnapshot(workspaceId, orderId) : null),
-    [isClient, workspaceId, orderId]
-  );
-  const upsell = useMemo<AcceptedUpsell | null>(
-    () => (isClient ? getAcceptedUpsell(workspaceId, orderId) : null),
     [isClient, workspaceId, orderId]
   );
   // The store’s shareable address: its own origin on a subdomain, the
@@ -57,7 +55,7 @@ function Confirmation() {
     trackPurchaseOnce(snapshot.id, {
       valueMinor: snapshot.totalAmount,
       currency: snapshot.currency,
-      contentIds: snapshot.productIds,
+      contentIds: snapshot.contentIds ?? snapshot.productIds,
       numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
     });
   }, [snapshot]);
@@ -99,17 +97,17 @@ function Confirmation() {
           <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />
         )}
 
-        {upsell && (
-          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
-            <p className="font-semibold text-primary">
-              {t.upsell.accepted(upsell.name)} — {money(upsell.offerAmount, currency)}
-            </p>
-            <p className="mt-0.5 text-ink-soft">{t.upsell.acceptedHint}</p>
-          </div>
-        )}
-
         {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
         <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* A paid online order's digital products, as soon as the payment is captured. */}
+        <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />
+
+        {/* Notifications about this order on this phone, when the store app is on. */}
+        <OrderUpdatesButton workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* What goes with what they just bought (Offers → Cross-sell, on the thank-you page). */}
+        {snapshot && snapshot.productIds.length > 0 && <CrossSellStrip workspaceId={workspaceId} placement="thank_you" productIds={snapshot.productIds} />}
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
@@ -117,16 +115,14 @@ function Confirmation() {
           </h2>
           <StatusTimeline stage={1} />
         </section>
+        <ThankYouBuyNotes workspaceId={workspaceId} orderId={orderId} />
 
         {snapshot && (
           <div className="mt-6">
-            <OrderSnapshotSummary
-              snapshot={snapshot}
-              currency={currency}
-              footnote={upsell ? t.checkout.finalNote : undefined}
-            />
+            <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
           </div>
         )}
+        <GiftCardPaidNote workspaceId={workspaceId} orderId={orderId} />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {wa && (

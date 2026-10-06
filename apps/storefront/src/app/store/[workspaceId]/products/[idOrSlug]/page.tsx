@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   storefrontDesignMeta,
   storefrontProductPage,
@@ -10,23 +11,29 @@ import {
 import { StoreInfoCards } from "@/components/StoreInfoCards";
 import { CodeSlot } from "@/components/CustomCode";
 import { ProductJsonLd } from "@/components/product/ProductJsonLd";
-import { storeOrigin } from "@/lib/domains";
+import { canonicalOrigin } from "@/lib/domains";
 import { ProductContent } from "@/components/product/ProductContent";
 import { storefrontProductReviews } from "@store-builder/api-client";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ArrowIcon } from "@/components/Icons";
 import { Faq } from "@/components/product/Faq";
-import { ProductGallery } from "@/components/product/ProductGallery";
+import { TestedProductGallery } from "@/components/product/TestedProductGallery";
 import { ProductLanding } from "@/components/product/ProductLanding";
+import { ProductVideos } from "@/components/product/ProductVideos";
 import { ProductTabs, type ProductTab } from "@/components/product/ProductTabs";
 import { StoreLink } from "@/components/StoreRoute";
-import { TrustStrip } from "@/components/TrustStrip";
+import { faqFromCards, shippingRows, storeCards } from "@/lib/storePromises";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { orderBumpOf } from "@/lib/commerce";
-import { firstImage, productImages } from "@/lib/product";
+import { firstImage } from "@/lib/product";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
+import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { PageRenderer } from "@/components/page-renderer";
+import { RelatedProducts } from "@/components/product/RelatedProducts";
+import { richTextToPlain } from "@store-builder/api-client";
+import { RichText } from "@/components/RichText";
 
 export const revalidate = 60;
 
@@ -56,13 +63,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const description =
     seoString(product.seo, "description") ??
     (product.description
-      ? product.description.replace(/\s+/g, " ").slice(0, 160)
+      ? richTextToPlain(product.description).replace(/\s+/g, " ").slice(0, 160)
       : getDictionary(locale).meta.storeDescription(store.name));
-  const image = firstImage(product);
+  // The merchant's sharing image and "hide from search engines" (product form → Search engines and sharing).
+  const image = seoString(product.seo, "imageUrl") ?? firstImage(product);
+  const noindex = (product.seo as Record<string, unknown> | undefined)?.noindex === true;
 
   return {
     title,
     description,
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
@@ -87,6 +97,31 @@ export default async function ProductPage({ params }: { params: Params }) {
   if (!store || !product) notFound();
 
   const locale = await getStoreLocale(store);
+
+  // The product's own landing page (page settings → landing page), built in the
+  // page builder with this product as the page's product; the standard page
+  // shows when it is not in the published website.
+  const landingPath = (product as { landingPagePath?: string | null }).landingPagePath;
+  if (landingPath) {
+    const client = await createServerStorefrontApiClient();
+    const landing = await client.getStorefrontPage(workspaceId, landingPath).catch(() => null);
+    if (landing && landing.kind === "page" && (landing.data.page.tree?.sections?.length ?? 0) > 0) {
+      return (
+        <main className="flex-1">
+          <PixelScope productIds={[product.id]} />
+          <PageRenderer
+            tree={{ ...landing.data.page.tree, productId: product.id } as typeof landing.data.page.tree}
+            workspaceId={workspaceId}
+            currency={store.currency}
+            locale={locale}
+            siteStyles={landing.data.site?.globalStyles}
+            pageId={(landing.data.page as { id?: string | null }).id}
+          />
+        </main>
+      );
+    }
+  }
+
   const t = getDictionary(locale);
   // The merchant's bump — not on its own product's page.
   const bump = orderBumpOf(store.orderBump, [product.id]);
@@ -95,15 +130,19 @@ export default async function ProductPage({ params }: { params: Params }) {
   const ps = page.pageSettings;
   // With "form above the description" off, the buy box shows the description itself.
   const descriptionInBuyBox = ps.inline_checkout && !ps.checkout_before_description;
-  // The merchant's own questions replace the store-wide ones.
+  // The store's own shipping / returns / COD cards (lib/storePromises.ts): the
+  // only promises this page makes about them.
+  const cards = storeCards(store);
+  // The product's own questions; else the store-wide ones, answered from the cards.
+  const [payQ, arriveQ, returnsQ] = t.product.faqItems.map((item) => item.q);
   const faqItems =
-    page.cms.faqs.length > 0 ? page.cms.faqs.map((item) => ({ q: item.question, a: item.answer })) : t.product.faqItems;
+    page.cms.faqs.length > 0
+      ? page.cms.faqs.map((item) => ({ q: item.question, a: item.answer }))
+      : faqFromCards(cards, { pay: payQ, arrive: arriveQ, returns: returnsQ });
 
-  // Details / shipping & returns / FAQ as tabs under the buy box. The
-  // shipping tab is the delivery and returns answers from the FAQ, read as
-  // plain paragraphs (the trust strip beside the tabs already carries the
-  // four one-line promises); the FAQ tab is the whole list, as before.
-  const shippingItems = t.product.faqItems.filter((_, i) => i === 1 || i === 2).map((item) => ({ title: item.q, hint: item.a }));
+  // Details / shipping & returns / FAQ as tabs under the buy box, each only
+  // when there is something true to put in it.
+  const shippingItems = shippingRows(cards, locale);
   const tabs: ProductTab[] = [
     ...(product.description && !descriptionInBuyBox
       ? [
@@ -111,32 +150,44 @@ export default async function ProductPage({ params }: { params: Params }) {
             id: "details",
             label: t.shop.details,
             content: (
-              <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
-                {product.description}
+              <div className="rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+                <RichText text={product.description} />
               </div>
             ),
           },
         ]
       : []),
-    {
-      id: "shipping",
-      label: t.shop.shippingReturns,
-      content: (
-        <ul className="divide-y divide-line rounded-2xl border border-line bg-paper-raised">
-          {shippingItems.map((item) => (
-            <li key={item.title} className="px-5 py-4">
-              <p className="text-sm font-semibold text-ink">{item.title}</p>
-              <p className="mt-0.5 text-sm text-ink-soft">{item.hint}</p>
-            </li>
-          ))}
-        </ul>
-      ),
-    },
-    {
-      id: "faq",
-      label: t.product.faq,
-      content: <Faq title={t.product.faq} items={faqItems} titleHidden />,
-    },
+    ...(shippingItems.length > 0
+      ? [
+          {
+            id: "shipping",
+            label: t.shop.shippingReturns,
+            content: (
+              <ul className="divide-y divide-line rounded-2xl border border-line bg-paper-raised">
+                {shippingItems.map((item) => (
+                  <li key={item.title} className="px-5 py-4">
+                    <p className="text-sm font-semibold text-ink">{item.title}</p>
+                    {item.points.map((point, i) => (
+                      <p key={i} className="mt-0.5 text-sm text-ink-soft">
+                        {point}
+                      </p>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            ),
+          },
+        ]
+      : []),
+    ...(faqItems.length > 0
+      ? [
+          {
+            id: "faq",
+            label: t.product.faq,
+            content: <Faq title={t.product.faq} items={faqItems} titleHidden />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -146,7 +197,7 @@ export default async function ProductPage({ params }: { params: Params }) {
       {/* schema.org Product for search engines and Google Merchant. */}
       <ProductJsonLd
         product={product}
-        url={`${storeOrigin(store.slug)}/products/${product.slug}`}
+        url={`${canonicalOrigin(store)}/products/${product.slug}`}
         currency={store.currency}
         storeName={store.name}
       />
@@ -170,7 +221,8 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
             <CodeSlot name="above_gallery" />
-            <ProductGallery images={productImages(product)} name={product.name} />
+            <TestedProductGallery workspaceId={workspaceId} product={product} />
+            <ProductVideos product={product} label={product.name} />
             <CodeSlot name="below_gallery" />
           </div>
           <ProductLanding
@@ -178,7 +230,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             product={product}
             bump={bump}
             description={descriptionInBuyBox ? product.description : null}
-            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
+            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
           />
         </div>
 
@@ -191,15 +243,15 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
-            {/* The merchant's own shipping / returns / COD cards when written; the generic row otherwise. */}
-            {resolveCheckoutForm(store.checkout).show_trust_badges &&
-              (storefrontDesignMeta(store).storeInfo?.cards.length ? (
-                <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
-              ) : (
-                <TrustStrip t={t} inAside />
-              ))}
+            {/* The merchant's own shipping / returns / COD cards, when written; nothing invented otherwise. */}
+            {resolveCheckoutForm(store.checkout).show_trust_badges && cards.length > 0 && (
+              <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
+            )}
           </aside>
         </div>
+
+        {/* Similar products, unless the page settings hide them. */}
+        {!ps.hide_related_products && <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />}
       </div>
     </main>
   );

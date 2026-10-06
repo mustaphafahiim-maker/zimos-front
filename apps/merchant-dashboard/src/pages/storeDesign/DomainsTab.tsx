@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Globe, Star, Trash2 } from "lucide-react";
+import { CheckCircle2, Globe, Star, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
+  domainCounterpartDnsManaged,
+  domainSetRedirectToPrimary,
   funnelsList,
   storeDesignAddDomain,
   storeDesignCheckDomainSsl,
@@ -17,7 +19,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyButton } from "@/components/CopyButton";
@@ -26,11 +28,21 @@ import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { DomainRedirectSwitch } from "./DomainRedirectSwitch";
+import { BuyDomainSection } from "./BuyDomainSection";
+import { BoughtDomainsSection } from "./BoughtDomainsSection";
 
 const STRINGS = {
   en: {
     addTitle: "Connect a domain",
-    addDescription: "Use a domain you own (without www), or a subdomain such as shop.example.com.",
+    addDescription: "Use a domain you own (example.com — its www comes along), or a subdomain such as shop.example.com.",
+    rootHint: "A domain without a subdomain can't use a CNAME: point it with the A records below.",
+    alternativesTitle: "Or, if your DNS provider offers ALIAS / ANAME (CNAME flattening), use this instead of the A records:",
+    counterpart: "Send {host} here too",
+    counterpartHint: "Visitors who type {host} land on {domain}, same page.",
+    counterpartAddRecord: "Add its record above.",
+    counterpartManaged: "We set this up for you",
+    counterpartSsl: "{host} certificate: {status}",
     hostname: "Domain",
     add: "Connect",
     adding: "Connecting…",
@@ -70,15 +82,23 @@ const STRINGS = {
     removeTitle: "Remove this domain?",
     removeBody: "Shoppers opening it will no longer reach your store. Your free store address keeps working.",
     testProvider: "Certificates are issued by a test provider for now: the status here does not mean a real certificate exists.",
+    boughtDns: "Bought here: its DNS is set for you, nothing to add at a DNS provider.",
     noProvider: "No certificate provider is configured yet; certificates cannot be requested.",
   },
   ar: {
     addTitle: "ربط دومين",
-    addDescription: "استخدم دومين تملكه (بدون www) أو دومين فرعي مثل shop.example.com.",
+    addDescription: "استخدم دومين تملكه (example.com — والـ www بتاعه معاه) أو دومين فرعي مثل shop.example.com.",
+    rootHint: "الدومين من غير دومين فرعي مينفعش يتربط بـ CNAME: وجّهه بسجلات A اللي تحت.",
+    alternativesTitle: "أو لو مزود الـ DNS عندك فيه ALIAS / ANAME (CNAME flattening)، استخدم ده بدل سجلات A:",
+    counterpart: "ابعت {host} هنا كمان",
+    counterpartHint: "اللي يكتب {host} هيوصل لـ {domain} على نفس الصفحة.",
+    counterpartAddRecord: "ضيف السجل بتاعه فوق.",
+    counterpartManaged: "جهزناه لك",
+    counterpartSsl: "شهادة {host}: {status}",
     hostname: "الدومين",
     add: "ربط",
-    adding: "جارٍ الربط…",
-    emptyTitle: "لا يوجد دومين مربوط بعد",
+    adding: "بنربط…",
+    emptyTitle: "مفيش دومين مربوط لسه",
     emptyBody: "متجرك يعمل بالفعل على عنوانه المجاني. اربط دومينك الخاص لاستخدامه بدلًا منه.",
     pending_verification: "في انتظار الـ DNS",
     verified: "تم التحقق",
@@ -87,7 +107,7 @@ const STRINGS = {
     primary: "الأساسي",
     ssl: "SSL",
     ssl_none: "لم يُطلب",
-    ssl_pending: "جارٍ الإصدار",
+    ssl_pending: "بنصدر",
     ssl_issued: "آمن",
     ssl_failed: "فشل",
     stepsTitle: "أضف هذه السجلات عند مزود الـ DNS",
@@ -114,6 +134,7 @@ const STRINGS = {
     removeTitle: "حذف هذا الدومين؟",
     removeBody: "من يفتحه لن يصل إلى متجرك. عنوان متجرك المجاني يظل يعمل.",
     testProvider: "الشهادات تصدر حاليًا من مزود تجريبي: الحالة هنا لا تعني وجود شهادة حقيقية.",
+    boughtDns: "اتشترى من هنا: الـ DNS بتاعه متظبط لوحده، مش محتاج تضيف حاجة عند مزود DNS.",
     noProvider: "لم يُضبط مزود شهادات بعد؛ لا يمكن طلب شهادات.",
   },
 } satisfies Messages;
@@ -132,6 +153,10 @@ export function DomainsTab() {
   const [busy, setBusy] = useState<string | null>(null);
   const [dns, setDns] = useState<Record<string, StoreDomainDnsCheck>>({});
   const [removing, setRemoving] = useState<StoreDomain | null>(null);
+  // Bumped after a purchase so "Bought domains" reads its list again.
+  const [boughtVersion, setBoughtVersion] = useState(0);
+  // Domains bought in the dashboard: the platform holds their DNS, so the merchant has no records to add.
+  const [boughtDomainIds, setBoughtDomainIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const publishedFunnels = (funnels.data ?? []).filter((f) => f.status === "published");
 
@@ -182,6 +207,18 @@ export function DomainsTab() {
         {state.data?.certificateProvider === "sandbox" && <Alert>{t.testProvider}</Alert>}
         {state.data && state.data.certificateProvider === null && <Alert variant="danger">{t.noProvider}</Alert>}
 
+        <BuyDomainSection
+          onBought={() => {
+            setBoughtVersion((v) => v + 1);
+            void state.refresh({ silent: true });
+          }}
+          onPurchaseFailed={() => {
+            setBoughtVersion((v) => v + 1);
+            // Bought but not connected (DOMAIN_CONNECT_FAILED) may still have added the domain.
+            void state.refresh({ silent: true });
+          }}
+        />
+
         <Section title={t.addTitle} description={t.addDescription}>
           <form onSubmit={add} className="flex flex-wrap items-start gap-2">
             <Field label={t.hostname} error={addError ?? undefined} labelHidden className="min-w-0 flex-1">
@@ -209,6 +246,22 @@ export function DomainsTab() {
           (state.data?.domains ?? []).map((domain) => {
             const usable = domain.status === "verified" || domain.status === "active";
             const check = dns[domain.id];
+            const counterpart = domain.counterpart ?? null;
+            // The counterpart still needs its record or its certificate.
+            const counterpartPending = Boolean(counterpart?.redirect && counterpart.sslStatus !== "issued");
+            // We created the counterpart's (www) record ourselves (a root domain bought here): nothing to add for it.
+            const counterpartManaged = Boolean(counterpart?.redirect) && domainCounterpartDnsManaged(domain);
+            const dnsHeldByUs = boughtDomainIds.has(domain.id);
+            const recordsToAdd = counterpartManaged ? domain.records.filter((r) => r.purpose !== "redirect") : domain.records;
+            const showSteps = !dnsHeldByUs && (domain.status !== "active" || (counterpartPending && !counterpartManaged));
+            const recordFound = (record: StoreDomain["records"][number]) =>
+              !check
+                ? null
+                : record.type === "TXT"
+                  ? check.txt.found
+                  : record.purpose === "redirect"
+                    ? (check.counterpart?.found ?? null)
+                    : (check.routing?.found ?? check.cname.found);
             const isBusy = (key: string) => busy === `${domain.id}:${key}`;
             return (
               <Section
@@ -230,10 +283,12 @@ export function DomainsTab() {
                 }
               >
                 <div className="space-y-4">
-                  {domain.status !== "active" && (
+                  {dnsHeldByUs && <p className="text-sm text-ink-soft">{t.boughtDns}</p>}
+                  {showSteps && (
                     <div>
                       <p className="text-sm font-medium text-ink">{t.stepsTitle}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">{t.stepsHint}</p>
+                      {domain.isRoot && domain.records.some((r) => r.type === "A") && <p className="mt-0.5 text-xs text-ink-soft">{t.rootHint}</p>}
                       <div className="mt-3 overflow-x-auto">
                         <table className="w-full min-w-[36rem] text-start text-sm">
                           <thead className="text-xs text-ink-soft">
@@ -246,10 +301,10 @@ export function DomainsTab() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-line">
-                            {domain.records.map((record) => {
-                              const result = check ? (record.type === "TXT" ? check.txt.found : check.cname.found) : null;
+                            {recordsToAdd.map((record) => {
+                              const result = recordFound(record);
                               return (
-                                <tr key={record.type}>
+                                <tr key={`${record.type}-${record.name}-${record.value}`}>
                                   <td className="py-2 pe-3 font-medium text-ink">{record.type}</td>
                                   <td className="py-2 pe-3">
                                     <bdi dir="ltr">{record.name}</bdi>
@@ -274,7 +329,71 @@ export function DomainsTab() {
                           </tbody>
                         </table>
                       </div>
+                      {(domain.alternatives ?? []).length > 0 && (
+                        <div className="mt-3 rounded-lg bg-muted px-3 py-2">
+                          <p className="text-xs text-ink-soft">{t.alternativesTitle}</p>
+                          {(domain.alternatives ?? []).map((record) => (
+                            <p key={`${record.type}-${record.name}`} className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                              <span className="font-medium text-ink">{record.type}</span>
+                              <bdi dir="ltr">{record.name}</bdi>
+                              <span aria-hidden>→</span>
+                              <bdi dir="ltr" className="break-all font-mono text-xs">
+                                {record.value}
+                              </bdi>
+                              <CopyButton value={record.value} label={t.copy} />
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {counterpart && (
+                    <div className="space-y-1">
+                      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[var(--color-primary)]"
+                          checked={counterpart.redirect}
+                          disabled={isBusy("counterpart")}
+                          onChange={(e) =>
+                            void run(domain, "counterpart", async () => {
+                              await storeDesignUpdateDomain(apiClient, workspaceId, domain.id, { redirectCounterpart: e.target.checked });
+                              return t.savedToast;
+                            })
+                          }
+                        />
+                        <bdi>{fmt(t.counterpart, { host: counterpart.hostname })}</bdi>
+                      </label>
+                      <p className="text-xs text-ink-soft">
+                        {fmt(t.counterpartHint, { host: counterpart.hostname, domain: domain.hostname })}
+                        {counterpart.redirect && showSteps && !counterpartManaged && <> {t.counterpartAddRecord}</>}
+                      </p>
+                      {counterpartManaged && (
+                        <p className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+                          <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+                          {t.counterpartManaged}
+                        </p>
+                      )}
+                      {counterpart.redirect && usable && (
+                        <p className="text-xs text-ink-soft">
+                          {fmt(t.counterpartSsl, { host: counterpart.hostname, status: t[`ssl_${counterpart.sslStatus}`] })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!domain.isPrimary && (
+                    <DomainRedirectSwitch
+                      domain={domain}
+                      disabled={isBusy("redirect")}
+                      onChange={(redirectToPrimary) =>
+                        void run(domain, "redirect", async () => {
+                          await domainSetRedirectToPrimary(apiClient, workspaceId, domain.id, redirectToPrimary);
+                          return t.savedToast;
+                        })
+                      }
+                    />
                   )}
 
                   {usable && (
@@ -327,7 +446,7 @@ export function DomainsTab() {
                     >
                       {t.checkDns}
                     </Button>
-                    {usable && domain.sslStatus !== "issued" && (
+                    {usable && (domain.sslStatus !== "issued" || counterpartPending) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -367,6 +486,13 @@ export function DomainsTab() {
             );
           })
         )}
+
+        <BoughtDomainsSection
+          version={boughtVersion}
+          onLoaded={(purchases) =>
+            setBoughtDomainIds(new Set(purchases.filter((p) => p.status === "active" || p.status === "expired").flatMap((p) => (p.domainId ? [p.domainId] : []))))
+          }
+        />
 
         <ConfirmDialog
           open={removing !== null}

@@ -4,11 +4,11 @@ import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
   CHECKOUT_FORM_CUSTOM_KEYS,
   CHECKOUT_FORM_LOCKED_KEYS,
-  resolveCheckoutForm,
-  storeDesignSaveCheckoutForm,
-  type CheckoutForm,
-  type CheckoutFormField,
+  resolveCheckoutFormWithBilling,
+  storeDesignSaveCheckoutFormWithBilling,
+  type CheckoutFormFieldWithFile,
   type CheckoutFormLayout,
+  type CheckoutFormWithBilling,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -54,6 +54,8 @@ const STRINGS = {
     type: "Answer type",
     typeText: "Free text",
     typeChoice: "Choose from a list",
+    typeFile: "Photo upload",
+    typeFileHint: "Shoppers attach a photo (JPEG, PNG or WebP). It opens from the order page.",
     options: "Choices (one per line)",
     optionsHint: "A list field with no choices is not shown.",
     addCustom: "Add a custom field",
@@ -71,6 +73,8 @@ const STRINGS = {
     autoRegionHint: "Start the form on the region the shopper chose earlier.",
     autoVariant: "Pre-select a product variant",
     autoVariantHint: "Open product pages with the first available variant chosen.",
+    billing: "Ask for a billing address",
+    billingHint: "Shoppers whose invoice goes to another address can add it; it is the shipping address unless they untick it.",
     thankYouMessage: "Short thank-you message",
     thankYouMessageHint: "One line shown right after the order is placed. Leave empty for none.",
     saved: "Purchase form saved.",
@@ -78,7 +82,7 @@ const STRINGS = {
   ar: {
     tip: "كلما قلّت الحقول، زادت المبيعات.",
     fieldsTitle: "حقول النموذج",
-    fieldsDescription: "اختر ما يملؤه المشتري وترتيبه وما لا يمكن تخطيه. الاسم ورقم الموبايل يُطلبان دائمًا.",
+    fieldsDescription: "اختار ما يملؤه المشتري وترتيبه وما لا يمكن تخطيه. الاسم ورقم الموبايل يُطلبان دائمًا.",
     full_name: "الاسم بالكامل",
     phone: "رقم الموبايل",
     phone_alt: "رقم بديل",
@@ -106,6 +110,8 @@ const STRINGS = {
     type: "نوع الإجابة",
     typeText: "نص حر",
     typeChoice: "اختيار من قائمة",
+    typeFile: "رفع صورة",
+    typeFileHint: "العميل بيرفع صورة (JPEG أو PNG أو WebP) وبتفتحها من صفحة الأوردر.",
     options: "الاختيارات (اختيار في كل سطر)",
     optionsHint: "حقل القائمة بدون اختيارات لا يظهر.",
     addCustom: "إضافة حقل مخصص",
@@ -123,9 +129,11 @@ const STRINGS = {
     autoRegionHint: "يبدأ النموذج بالمنطقة التي اختارها المشتري من قبل.",
     autoVariant: "اختيار نوع المنتج تلقائيًا",
     autoVariantHint: "تفتح صفحة المنتج وأول نوع متاح مختار.",
+    billing: "اطلب عنوان الفاتورة",
+    billingHint: "العميل اللي فاتورته على عنوان تاني يقدر يكتبه؛ ولو ما غيّرش حاجة بيبقى نفس عنوان الشحن.",
     thankYouMessage: "رسالة شكر قصيرة",
     thankYouMessageHint: "سطر واحد يظهر بعد تسجيل الطلب مباشرة. اتركه فارغًا لعدم الإظهار.",
-    saved: "تم حفظ نموذج الشراء.",
+    saved: "اتحفظ نموذج الشراء.",
   },
 } satisfies Messages;
 
@@ -135,16 +143,16 @@ export function CheckoutFormTab() {
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const editor = useSettingsEditor<CheckoutForm>(
-    (settings) => resolveCheckoutForm(settings.checkout_settings),
-    (draft) => storeDesignSaveCheckoutForm(apiClient, workspaceId, draft),
+  const editor = useSettingsEditor<CheckoutFormWithBilling>(
+    (settings) => resolveCheckoutFormWithBilling(settings.checkout_settings),
+    (draft) => storeDesignSaveCheckoutFormWithBilling(apiClient, workspaceId, draft),
     t.saved
   );
   const { draft, setDraft, editable, saving } = editor;
   const [open, setOpen] = useState<string | null>(null);
   const locked = !editable || saving;
 
-  const patchField = (key: string, patch: Partial<CheckoutFormField>) =>
+  const patchField = (key: string, patch: Partial<CheckoutFormFieldWithFile>) =>
     setDraft((prev) => ({ ...prev, fields: prev.fields.map((f) => (f.key === key ? { ...f, ...patch } : f)) }));
 
   function move(index: number, delta: number) {
@@ -181,7 +189,7 @@ export function CheckoutFormTab() {
     setOpen(freeCustomKey);
   }
 
-  const nameOf = (f: CheckoutFormField) =>
+  const nameOf = (f: CheckoutFormFieldWithFile) =>
     f.label[locale] || f.label.ar || f.label.en || (f.custom ? t.customField : t[f.key as keyof typeof t]);
   const unlabelledCustom = draft.fields.some((f) => f.custom && !f.label.ar && !f.label.en);
 
@@ -317,16 +325,21 @@ export function CheckoutFormTab() {
                       />
                       {f.custom && (
                         <>
-                          <Field label={t.type}>
+                          <Field label={t.type} hint={f.type === "file" ? t.typeFileHint : undefined}>
                             {({ id }) => (
                               <Select
                                 id={id}
                                 value={f.type ?? "text"}
                                 disabled={locked}
-                                onChange={(e) => patchField(f.key, { type: e.target.value === "choice" ? "choice" : "text" })}
+                                onChange={(e) =>
+                                  patchField(f.key, {
+                                    type: e.target.value === "choice" ? "choice" : e.target.value === "file" ? "file" : "text",
+                                  })
+                                }
                               >
                                 <option value="text">{t.typeText}</option>
                                 <option value="choice">{t.typeChoice}</option>
+                                <option value="file">{t.typeFile}</option>
                               </Select>
                             )}
                           </Field>
@@ -412,6 +425,13 @@ export function CheckoutFormTab() {
                 checked={draft.auto_select_variant}
                 disabled={locked}
                 onChange={(v) => setDraft((prev) => ({ ...prev, auto_select_variant: v }))}
+              />
+              <ToggleRow
+                label={t.billing}
+                hint={t.billingHint}
+                checked={draft.billing_address === "on"}
+                disabled={locked}
+                onChange={(v) => setDraft((prev) => ({ ...prev, billing_address: v ? "on" : "off" }))}
               />
             </div>
 

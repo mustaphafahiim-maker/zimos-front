@@ -1,3 +1,4 @@
+import { FunnelPagePerformance, type StepPerformance } from "./FunnelPagePerformance";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Workflow } from "lucide-react";
@@ -23,6 +24,7 @@ import { formatMoney, formatPercentValue } from "@/lib/format";
 import { formatAxisDate, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { STEP_TYPE_LABELS } from "@/pages/funnels/FunnelEditorPage.strings";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -35,6 +37,8 @@ const STRINGS = {
     completedHint: "Sessions that completed a checkout",
     conversion: "Conversion",
     conversionHint: "Checkouts ÷ sessions",
+    epc: "EPC",
+    epcHint: "Earnings per visitor: revenue ÷ sessions",
     orders: "Orders",
     revenue: "Revenue",
     upsellOrders: "Upsells taken",
@@ -68,6 +72,8 @@ const STRINGS = {
     sessionsHint: "الزوار الذين بدأوا المسار",
     completed: "الطلبات المكتملة",
     completedHint: "الجلسات التي أتمّت الدفع",
+    epc: "العائد لكل زائر",
+    epcHint: "الإيرادات ÷ الجلسات",
     conversion: "معدل التحويل",
     conversionHint: "الطلبات ÷ الجلسات",
     orders: "الطلبات",
@@ -87,16 +93,22 @@ const STRINGS = {
     colOrders: "الطلبات",
     colRevenue: "الإيراد",
     direct: "مباشر / بلا وسم",
-    noSources: "لا توجد جلسات في هذه الفترة",
+    noSources: "مفيش جلسات في هذه الفترة",
     overTime: "الجلسات والطلبات عبر الزمن",
     overTimeDesc: "يومًا بيوم، على مدار الفترة.",
     sessionsCount: "{n} جلسة",
     ordersCount: "{n} طلب",
-    noSessions: "لا توجد جلسات في هذه الفترة",
+    noSessions: "مفيش جلسات في هذه الفترة",
     noSessionsDesc: "شارك رابط المسار — تبدأ الأرقام بالظهور مع أول زائر.",
   },
 } satisfies Messages;
 
+
+/** Revenue ÷ sessions, from funnel analytics (null with no sessions). */
+const epcOf = (data: unknown): number | null => {
+  const v = (data as { epc?: unknown }).epc;
+  return typeof v === "number" ? v : null;
+};
 
 function Tile({ label, hint, value }: { label: string; hint?: string; value: ReactNode }) {
   return (
@@ -132,7 +144,9 @@ export function FunnelAnalyticsPage() {
 
   const data = detail.data;
   const currency = data?.currency ?? "EGP";
-  const money = (value: number) => <bdi dir="ltr">{formatMoney(value, currency)}</bdi>;
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (value: number) => <bdi dir="ltr">{formatMoney(...inReport(value, currency))}</bdi>;
   const count = (value: number) => <bdi dir="ltr">{formatCount(value)}</bdi>;
   const percent = (value: number | null) => <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>;
 
@@ -144,6 +158,7 @@ export function FunnelAnalyticsPage() {
         description={t.description}
         actions={
           <>
+            <ReportCurrencySelect />
             <RangeSwitch value={range} onChange={setRange} />
             {data && (
               <Link to={`/funnels/${data.funnel.id}`} className="text-sm font-medium text-primary hover:underline">
@@ -159,12 +174,13 @@ export function FunnelAnalyticsPage() {
           <div className="space-y-4">
             <p className="text-xs text-ink-soft">{formatWindow(data.range.from, data.range.to)}</p>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
               <Tile label={t.sessions} hint={t.sessionsHint} value={count(data.sessions)} />
               <Tile label={t.completed} hint={t.completedHint} value={count(data.completed)} />
               <Tile label={t.conversion} hint={t.conversionHint} value={percent(data.conversionRate)} />
               <Tile label={t.orders} value={count(data.orders)} />
               <Tile label={t.revenue} value={money(data.revenue)} />
+              <Tile label={t.epc} hint={t.epcHint} value={epcOf(data) == null ? "—" : money(epcOf(data) as number)} />
               <Tile label={t.upsellOrders} value={count(data.upsellOrders)} />
               <Tile label={t.upsellRevenue} value={money(data.upsellRevenue)} />
             </div>
@@ -207,6 +223,8 @@ export function FunnelAnalyticsPage() {
                     })}
                   </ol>
                 </Panel>
+
+                <FunnelPagePerformance steps={data.steps as StepPerformance[]} count={count} percent={percent} />
 
                 <Panel title={t.overTime} description={t.overTimeDesc}>
                   <div dir="ltr">

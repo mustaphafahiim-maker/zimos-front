@@ -14,6 +14,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { TextField } from "@/components/Field";
+import { LandingPagePicker } from "./LandingPagePicker";
 
 /**
  * How the product's storefront page behaves (SPEC §7.3) plus the three small
@@ -47,6 +48,8 @@ const STRINGS = {
     reviews_enabled_hint: "Approved reviews and the review form on the product page.",
     hide_header: "Hide the store header",
     hide_header_hint: "A landing page with no menu, so the shopper stays on the product.",
+    auto_select_variant: "Choose the first option for the shopper",
+    auto_select_variant_hint: "Off: the shopper picks size, colour… before ordering.",
     hide_related_products: "Hide similar products",
     hide_related_products_hint: "Nothing else is suggested under this product.",
     hidden: "Hidden from the store",
@@ -93,6 +96,8 @@ const STRINGS = {
     reviews_enabled_hint: "التقييمات المعتمدة وفورم إضافة تقييم في صفحة المنتج.",
     hide_header: "إخفاء هيدر المتجر",
     hide_header_hint: "صفحة هبوط بدون قائمة، ليبقى العميل مع المنتج.",
+    auto_select_variant: "اختيار أول نوع تلقائيًا",
+    auto_select_variant_hint: "عند الإيقاف: العميل يختار المقاس واللون… قبل الطلب.",
     hide_related_products: "إخفاء المنتجات المشابهة",
     hide_related_products_hint: "لا تُقترح منتجات أخرى أسفل هذا المنتج.",
     hidden: "مخفي من المتجر",
@@ -110,13 +115,14 @@ const STRINGS = {
     removeRef: "حذف",
     refIncomplete: "اكتب المنصة والكود معًا، أو احذف السطر.",
     save: "حفظ إعدادات الصفحة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ إعدادات الصفحة.",
     discard: "تجاهل التغييرات",
   },
 } satisfies Messages;
 
 type ToggleKey =
+  | "auto_select_variant"
   | "inline_checkout"
   | "checkout_before_description"
   | "skip_cart"
@@ -128,6 +134,7 @@ type ToggleKey =
   | "hidden";
 
 const SELLING: ToggleKey[] = [
+  "auto_select_variant",
   "inline_checkout",
   "checkout_before_description",
   "skip_cart",
@@ -301,6 +308,8 @@ export function ProductPageSettingsSection({ product, onChanged }: { product: Ca
             {DISPLAY.map(toggle)}
           </fieldset>
         </div>
+
+        <LandingPagePicker value={draft.settings.landing_page_id} disabled={busy} onChange={(pageId) => setSetting("landing_page_id", pageId)} />
 
         <div className="space-y-2 border-t border-line pt-4">
           <div>

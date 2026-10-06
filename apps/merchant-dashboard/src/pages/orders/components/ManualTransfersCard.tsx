@@ -36,6 +36,7 @@ const STRINGS = {
     rejectTitle: "Reject this transfer?",
     rejectDesc: "The order stays unpaid. You can cancel it or ask the customer to transfer again.",
     reason: "Reason (optional)",
+    notifyCustomer: "Tell the customer — they can upload a new receipt from the order link",
     confirmedToast: "Transfer confirmed.",
     rejectedToast: "Transfer rejected.",
     reviewedAt: "Reviewed {date}",
@@ -61,10 +62,11 @@ const STRINGS = {
     rejectTitle: "رفض هذا التحويل؟",
     rejectDesc: "يبقى الطلب غير مدفوع. يمكنك إلغاؤه أو طلب تحويل جديد من العميل.",
     reason: "السبب (اختياري)",
+    notifyCustomer: "بلّغ العميل — يقدر يرفع إيصال جديد من رابط الطلب",
     confirmedToast: "تم تأكيد التحويل.",
-    rejectedToast: "تم رفض التحويل.",
+    rejectedToast: "اترفض التحويل.",
     reviewedAt: "روجع في {date}",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 
@@ -89,6 +91,7 @@ export function ManualTransfersCard({
   const transfers = useAsync(() => manualTransferListForOrder(apiClient, workspaceId, orderId).catch(() => []), [workspaceId, orderId]);
   const [dialog, setDialog] = useState<{ kind: "confirm" | "reject"; transfer: ManualTransferPayment } | null>(null);
   const [reason, setReason] = useState("");
+  const [notifyCustomer, setNotifyCustomer] = useState(true);
 
   const list = transfers.data ?? [];
   if (list.length === 0) return null;
@@ -97,7 +100,7 @@ export function ManualTransfersCard({
     if (!dialog) return;
     try {
       if (dialog.kind === "confirm") await manualTransferConfirm(apiClient, workspaceId, orderId, dialog.transfer.id);
-      else await manualTransferReject(apiClient, workspaceId, orderId, dialog.transfer.id, reason.trim());
+      else await manualTransferReject(apiClient, workspaceId, orderId, dialog.transfer.id, reason.trim(), notifyCustomer);
     } catch (err) {
       throw new Error(getErrorMessage(err));
     }
@@ -188,7 +191,13 @@ export function ManualTransfersCard({
         onConfirm={run}
       >
         {dialog?.kind === "reject" && (
-          <TextField label={t.reason} value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
+          <div className="space-y-3">
+            <TextField label={t.reason} value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={notifyCustomer} onChange={(e) => setNotifyCustomer(e.target.checked)} />
+              {t.notifyCustomer}
+            </label>
+          </div>
         )}
       </ConfirmDialog>
     </div>

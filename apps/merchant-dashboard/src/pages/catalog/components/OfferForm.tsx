@@ -31,6 +31,8 @@ const STRINGS = {
     bundlePrice: "Bundle price",
     badge: "Badge",
     badgeHint: "Optional — e.g. “Best value”.",
+    countdown: "Countdown (minutes)",
+    countdownHint: "Optional. As a one-click upsell, the time the shopper has to take it — shown as a timer and enforced. Empty: no countdown.",
     contents: "Bundle contents",
     addLine: "+ Add line",
     quantity: "Quantity",
@@ -53,14 +55,16 @@ const STRINGS = {
     computed: "محسوب من المتغيرات",
     bundlePrice: "سعر الباقة",
     badge: "الشارة",
-    badgeHint: "اختياري — مثل “الأوفر”.",
+    badgeHint: "اختياري — مثل «الأوفر».",
+    countdown: "عدّاد تنازلي (بالدقائق)",
+    countdownHint: "اختياري. كعرض بضغطة واحدة بعد الطلب، الوقت اللي قدام العميل ياخده — بيظهر كعدّاد وبيتطبّق فعلاً. فاضي: من غير عدّاد.",
     contents: "محتويات الباقة",
     addLine: "+ إضافة بند",
     quantity: "الكمية",
     remove: "إزالة",
     isDefault: "العرض الافتراضي لهذا المنتج",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ العرض",
     create: "إنشاء العرض",
   },
@@ -91,6 +95,8 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
   const [pricingMode, setPricingMode] = useState<OfferPricingMode>(offer?.pricingMode ?? "fixed");
   const [price, setPrice] = useState(minorToMajorInput(offer?.priceAmount));
   const [badge, setBadge] = useState(offer?.badge ?? "");
+  // A one-click offer's real countdown (offers.countdown_minutes); the Offer type does not name it yet.
+  const [countdown, setCountdown] = useState(String((offer as { countdownMinutes?: number | null } | undefined)?.countdownMinutes ?? ""));
   const [isDefault, setIsDefault] = useState(offer?.isDefault ?? false);
   const [lines, setLines] = useState<LineDraft[]>(
     offer?.lines?.length
@@ -129,6 +135,9 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
       }
     }
 
+    const countdownValue = Number(countdown);
+    const countdownMinutes = countdown.trim() && Number.isInteger(countdownValue) && countdownValue > 0 ? Math.min(countdownValue, 1440) : null;
+
     setSaving(true);
     try {
       if (isEdit && offer) {
@@ -139,6 +148,7 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
           badge: badge.trim() || null,
           isDefault,
           lines: cleanLines,
+          ...{ countdownMinutes: countdownMinutes },
         };
         await apiClient.updateOffer(workspaceId, offer.id, payload);
       } else {
@@ -149,6 +159,7 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
           badge: badge.trim() || null,
           isDefault,
           lines: cleanLines,
+          ...{ countdownMinutes: countdownMinutes },
         };
         await apiClient.createOffer(workspaceId, productId, payload);
       }
@@ -218,6 +229,18 @@ export function OfferForm({ productId, variants, offer, onDone, onCancel }: Prop
         onChange={(e) => setBadge(e.target.value)}
         error={fieldErrors.badge}
         hint={t.badgeHint}
+      />
+
+      <TextField
+        label={t.countdown}
+        type="number"
+        min={1}
+        max={1440}
+        inputMode="numeric"
+        value={countdown}
+        onChange={(e) => setCountdown(e.target.value)}
+        error={fieldErrors.countdownMinutes}
+        hint={t.countdownHint}
       />
 
       <div className="space-y-2">

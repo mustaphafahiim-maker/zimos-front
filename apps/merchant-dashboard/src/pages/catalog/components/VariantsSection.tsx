@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Card, CardContent } from "@store-builder/ui";
 import type { Variant } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -12,6 +12,8 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useCatalogLabels } from "../catalogLabels";
 import { VariantForm } from "./VariantForm";
+import { useNotTrackedLabel } from "./TrackQuantityField";
+import { useRestockBadge } from "./WaitingRestockCard";
 
 const STRINGS = {
   en: {
@@ -45,7 +47,7 @@ const STRINGS = {
     title: "المتغيرات",
     description: "كل صف قابل للشراء — المقاس / اللون وسعره ومخزونه.",
     add: "إضافة متغير",
-    empty: "لا توجد متغيرات بعد. أضف متغيرًا واحدًا على الأقل حتى يمكن بيع المنتج.",
+    empty: "مفيش متغيرات لسه. أضف متغيرًا واحدًا على الأقل حتى يمكن بيع المنتج.",
     colVariant: "المتغير",
     colSku: "SKU",
     colPrice: "السعر",
@@ -62,7 +64,7 @@ const STRINGS = {
     deleteDescription:
       "تتم أرشفته وليس حذفه، لذلك تبقى بنود الأوردرات وسجل المخزون المرتبطة به كما هي.",
     deleteConfirm: "أرشفة المتغير",
-    working: "جارٍ الأرشفة…",
+    working: "بنأرشف…",
     cancel: "إلغاء",
     archivedToast: "تمت أرشفة المتغير.",
     addedToast: "تمت إضافة المتغير.",
@@ -74,9 +76,14 @@ interface Props {
   productId: string;
   variants: Variant[];
   onChanged: () => void;
+  /** False for a product whose quantity is not tracked: no stock to show or ask for. */
+  tracked?: boolean;
+  /** A warning about the SKUs, shown above the list and under the SKU when editing (handoff 181). */
+  skuNote?: ReactNode;
 }
 
-export function VariantsSection({ productId, variants, onChanged }: Props) {
+export function VariantsSection({ productId, variants, onChanged, tracked = true, skuNote }: Props) {
+  const notTracked = useNotTrackedLabel();
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const errorMessage = useErrorMessage();
@@ -85,6 +92,7 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Variant | null>(null);
   const [deleting, setDeleting] = useState<Variant | null>(null);
+  const restockBadge = useRestockBadge();
 
   async function confirmDelete() {
     if (!deleting) return;
@@ -110,6 +118,7 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
             {t.add}
           </Button>
         </div>
+        {skuNote && variants.length > 0 && <div className="mb-4">{skuNote}</div>}
 
         {variants.length === 0 ? (
           <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
@@ -135,12 +144,19 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
                   <tr key={v.id} className="border-b border-line last:border-0">
                     <td className="py-2 pe-3 text-ink">
                       {formatOptions(v.optionValues) || <span className="text-ink-soft">—</span>}
+                      {restockBadge(v)}
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{v.sku || "—"}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(v.priceAmount, v.currency)}</td>
                     <td className="py-2 pe-3 text-ink-soft">
-                      {v.stockOnHand}
-                      {v.reservedStock ? ` (−${v.reservedStock})` : ""}
+                      {tracked ? (
+                        <>
+                          {v.stockOnHand}
+                          {v.reservedStock ? ` (−${v.reservedStock})` : ""}
+                        </>
+                      ) : (
+                        notTracked
+                      )}
                     </td>
                     <td className="py-2 pe-3">
                       <StatusBadge
@@ -175,6 +191,7 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
       <Modal open={adding} onClose={() => setAdding(false)} title={t.addTitle}>
         <VariantForm
           productId={productId}
+          tracked={tracked}
           onCancel={() => setAdding(false)}
           onDone={() => {
             setAdding(false);
@@ -188,7 +205,9 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
         {editing && (
           <VariantForm
             productId={productId}
+            tracked={tracked}
             variant={editing}
+            skuNote={skuNote}
             onCancel={() => setEditing(null)}
             onDone={() => {
               setEditing(null);

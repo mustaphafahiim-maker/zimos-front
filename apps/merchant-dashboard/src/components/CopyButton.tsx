@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@store-builder/ui";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: { copyLink: "Copy link", copied: "Copied" },
+  ar: { copyLink: "انسخ اللينك", copied: "اتنسخ" },
+} satisfies Messages;
 
 /**
  * Copies `value`, and says so for a moment afterwards.
@@ -11,7 +17,7 @@ import { cn } from "@store-builder/ui";
  */
 export function CopyButton({
   value,
-  label = "Copy link",
+  label,
   className,
   labelClassName,
 }: {
@@ -22,6 +28,8 @@ export function CopyButton({
    *  keeps its aria-label either way, and the icon still flips to a tick. */
   labelClassName?: string;
 }) {
+  const t = useT(STRINGS);
+  const shown = label ?? t.copyLink;
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
 
@@ -59,10 +67,10 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      aria-label={label}
-      title={label}
+      aria-label={shown}
+      title={shown}
       className={cn(
-        "inline-flex cursor-pointer items-center gap-1.5 rounded-[0.5rem] px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-paper hover:text-ink",
+        "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius)] px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-paper hover:text-ink",
         className
       )}
     >
@@ -73,7 +81,7 @@ export function CopyButton({
       )}
       {/* Announced rather than only drawn, so the confirmation isn't visual-only. */}
       <span aria-live="polite" className={labelClassName}>
-        {copied ? "Copied" : label}
+        {copied ? t.copied : shown}
       </span>
     </button>
   );

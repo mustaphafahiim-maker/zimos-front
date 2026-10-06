@@ -3,9 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import type { StorefrontCollection } from "@store-builder/api-client";
 import { ArrowIcon } from "@/components/Icons";
 import { PageRenderer } from "@/components/page-renderer";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { storeCards } from "@/lib/storePromises";
 import { btnPrimary, btnSecondary, container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -13,6 +16,9 @@ import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
+import { LatestPosts } from "@/components/blog/LatestPosts";
 
 export const revalidate = 60;
 
@@ -67,13 +73,17 @@ export default async function StoreHomePage({
   if ((tree?.sections?.length ?? 0) > 0) {
     return (
       <main className="flex-1">
-        <PageRenderer
-          tree={tree}
-          workspaceId={workspaceId}
-          currency={store.currency}
-          locale={locale}
-          siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
-        />
+        <HtmlBlocksProvider blocks={published.kind === "page" ? htmlBlocksOf(published.data.page) : {}}>
+          <PageRenderer
+            tree={tree}
+            workspaceId={workspaceId}
+            currency={store.currency}
+            locale={locale}
+            siteStyles={published.kind === "page" ? published.data.site?.globalStyles : undefined}
+            pageId={published.kind === "page" ? (published.data.page as { id?: string | null }).id : undefined}
+          />
+        </HtmlBlocksProvider>
+        {published.kind === "page" && <PageScripts scripts={scriptsOf(published.data.page)} />}
       </main>
     );
   }
@@ -125,9 +135,12 @@ export default async function StoreHomePage({
         </div>
       </section>
 
-      <div className={`${container} py-8`}>
-        <TrustStrip t={t} />
-      </div>
+      {/* The store's own shipping / returns / COD cards, when it wrote them (lib/storePromises.ts). */}
+      {storeCards(store).length > 0 && (
+        <div className={`${container} py-8`}>
+          <TrustStrip cards={storeCards(store)} locale={locale} />
+        </div>
+      )}
 
       <section
         id="products"
@@ -184,6 +197,9 @@ export default async function StoreHomePage({
           </div>
         )}
       </section>
+
+      {/* The three newest blog posts, when the store has any (handoff 190). */}
+      <LatestPosts workspaceId={workspaceId} t={t} locale={locale} />
     </main>
   );
 }

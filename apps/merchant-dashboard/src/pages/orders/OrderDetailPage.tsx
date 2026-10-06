@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
+import { Button, cn } from "@store-builder/ui";
 import { OrderDigitalSection } from "@/pages/digital/OrderDigitalSection";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -10,10 +12,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
+import { OrderHero } from "./components/OrderHero";
 import { OrderActions } from "./components/OrderActions";
+import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
+import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
 import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
+import { OrderSupplierCard } from "./components/OrderSupplierCard";
 import { ReturnsSection } from "./components/ReturnsSection";
 import { PaymentsSection } from "./components/PaymentsSection";
 import { StatusChanger } from "./components/StatusChanger";
@@ -26,6 +32,7 @@ import { OrderMetaActions, OrderMetaBadges, OrderNeighborArrows, useMarkSeen } f
 import { STAGE_TONE, useOrderLabels } from "./orderLabels";
 import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
 import { OrderAttributionSection } from "@/pages/marketing/OrderAttributionSection";
+import { CustomerHistoryBadge, OrderSessionCard, useLastActionText, useOrderSessionDetails } from "./components/OrderSessionDetails";
 
 const STRINGS = {
   en: {
@@ -34,14 +41,18 @@ const STRINGS = {
     placed: "Placed {date}",
     confirmation: "Confirmation",
     payment: "Payment",
+    moreTools: "More",
+    payOnDelivery: "Paid on delivery",
     fulfillment: "Fulfillment",
   },
   ar: {
     order: "الأوردر",
     back: "الأوردرات",
-    placed: "تم الطلب {date}",
+    placed: "اتطلب {date}",
     confirmation: "التأكيد",
     payment: "الدفع",
+    moreTools: "أكتر",
+    payOnDelivery: "هيتدفع عند الاستلام",
     fulfillment: "التنفيذ",
   },
 } satisfies Messages;
@@ -51,6 +62,7 @@ export function OrderDetailPage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const labels = useOrderLabels();
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const order = useAsync(
     () => apiClient.getOrder(workspaceId, orderId as string),
@@ -65,13 +77,16 @@ export function OrderDetailPage() {
   };
   // Opening the page is what "seen" means.
   useMarkSeen(data, reload);
+  // Session details, the customer's order count and the last action (SPEC §4.4).
+  const session = useOrderSessionDetails(data?.id, `${data?.updatedAt}:${refreshCount}`);
+  const lastAction = useLastActionText()(session.data?.lastAction);
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="max-w-6xl space-y-[var(--bento-gap)]">
       <PageHeader
         title={data ? data.orderNumber : t.order}
         back={{ to: "/orders", label: t.back }}
-        description={data ? fmt(t.placed, { date: formatDateTime(data.createdAt) }) : undefined}
+        description={data ? [fmt(t.placed, { date: formatDateTime(data.createdAt) }), lastAction].filter(Boolean).join(" · ") : undefined}
         titleBadge={
           data?.stage ? (
             <StatusBadge value={data.stage} tone={STAGE_TONE[data.stage]} text={labels.stage(data.stage)} />
@@ -89,53 +104,97 @@ export function OrderDetailPage() {
 
       <DataState loading={order.loading} error={order.error} onRetry={() => order.refresh()}>
         {data && (
-          <div className="space-y-6">
+          <div className="space-y-[var(--bento-gap)]">
+            {/* Who, how to reach them, what they owe and the one next step. */}
+            <OrderHero order={data} />
+
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge
                 label={t.confirmation}
                 value={data.confirmationState}
                 text={labels.confirmation(data.confirmationState)}
               />
-              <StatusBadge label={t.payment} value={data.financialState} text={labels.financial(data.financialState)} />
+              {/* Unpaid is the normal state of a cash-on-delivery order, not a warning (re-audit N-15). */}
+              {data.paymentMethod === "cod" && data.financialState === "pending" ? (
+                <StatusBadge label={t.payment} value="cod_pending" tone="neutral" text={t.payOnDelivery} />
+              ) : (
+                <StatusBadge label={t.payment} value={data.financialState} text={labels.financial(data.financialState)} />
+              )}
               <StatusBadge
                 label={t.fulfillment}
                 value={data.fulfillmentState}
                 text={labels.fulfillment(data.fulfillmentState)}
               />
               <OrderMetaBadges order={data} />
+              <CustomerHistoryBadge details={session.data} />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <OrderActions order={data} onChanged={reload} />
-              <EditItemsButton order={data} onChanged={reload} />
-              <FulfillButton order={data} onChanged={reload} />
-              <OrderMetaActions order={data} onChanged={reload} />
-              <ResendToWebhookButton orderId={data.id} />
+            {/* The order's actions (re-audit N-16): the step that moves it on stays in view, the
+                everyday tools fold under «أكتر», and cancel sits last, apart. */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <WhatsappConfirmButton order={data} onChanged={reload} />
+                <FulfillButton order={data} onChanged={reload} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11 gap-1"
+                  aria-expanded={toolsOpen}
+                  aria-controls="order-more-tools"
+                  onClick={() => setToolsOpen((open) => !open)}
+                >
+                  {t.moreTools}
+                  <ChevronDown className={cn("size-4 transition-transform", toolsOpen && "rotate-180")} aria-hidden />
+                </Button>
+                <div className="ms-auto">
+                  <OrderActions order={data} onChanged={reload} only="cancel" />
+                </div>
+              </div>
+              <div id="order-more-tools" hidden={!toolsOpen} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] bg-paper-sunken p-2">
+                <OrderActions order={data} onChanged={reload} only="tools" />
+                <EditItemsButton order={data} onChanged={reload} />
+                <OrderMetaActions order={data} onChanged={reload} />
+                <ResendToWebhookButton orderId={data.id} />
+              </div>
             </div>
 
-            <ConfirmationPanel order={data} onChanged={reload} />
+            {/* The work (confirm, items, ship, pay, return) on the wide side;
+                notes, tags and the background details beside it. On a phone
+                the work comes first. */}
+            <div className="grid items-start gap-[var(--bento-gap)] lg:grid-cols-3">
+              <div className="min-w-0 space-y-[var(--bento-gap)] lg:col-span-2">
+                <div id="order-confirmation" className="scroll-mt-24">
+                  <ConfirmationPanel order={data} onChanged={reload} />
+                </div>
 
-            <OrderSummary order={data} />
+                <OrderSummary order={data} onChanged={reload} />
 
-            <OrderProtectionSection order={data} />
+                <div id="order-shipments" className="scroll-mt-24">
+                  <ShipmentsSection order={data} onChanged={reload} />
+                </div>
 
-            {/* Where the customer came from (first/last touch); nothing for an order without it. */}
-            <OrderAttributionSection order={data} />
+                <div id="order-payments" className="scroll-mt-24">
+                  <PaymentsSection order={data} onChanged={reload} />
+                </div>
 
-            <PaymentsSection order={data} onChanged={reload} />
+                <OrderDigitalSection orderId={data.id} paid={data.financialState === "paid"} />
 
-            <OrderDigitalSection orderId={data.id} paid={data.financialState === "paid"} />
+                <ReturnsSection order={data} onOrderMaybeChanged={reload} />
 
-            <ShipmentsSection order={data} onChanged={reload} />
+                <OrderTimelineSection order={data} refreshKey={`${data.stage}:${data.updatedAt}:${refreshCount}`} />
+              </div>
 
-            <ReturnsSection order={data} onOrderMaybeChanged={reload} />
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <OrderNotesCard order={data} onChanged={reload} />
-              <OrderTagsCard order={data} onChanged={reload} />
+              <div className="min-w-0 space-y-[var(--bento-gap)]">
+                <OrderNotesCard order={data} onChanged={reload} />
+                <OrderTagsCard order={data} onChanged={reload} />
+                <OrderDiscountsCard order={data} />
+                <OrderProtectionSection order={data} />
+                {/* Where the customer came from (first/last touch); nothing for an order without it. */}
+                <OrderAttributionSection order={data} />
+                <OrderSessionCard details={session.data} />
+                <OrderSupplierCard order={data} onChanged={reload} />
+              </div>
             </div>
-
-            <OrderTimelineSection order={data} refreshKey={`${data.stage}:${data.updatedAt}:${refreshCount}`} />
           </div>
         )}
       </DataState>

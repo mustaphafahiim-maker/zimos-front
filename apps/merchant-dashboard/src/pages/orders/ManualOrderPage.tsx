@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
@@ -100,7 +100,7 @@ const STRINGS = {
     addressLine: "العنوان",
     items: "المنتجات",
     product: "المنتج",
-    chooseProduct: "اختر منتجًا…",
+    chooseProduct: "اختار منتجًا…",
     variant: "النوع",
     offer: "العرض",
     noOffer: "بدون عرض — السعر العادي",
@@ -120,13 +120,13 @@ const STRINGS = {
     discount: "الخصم",
     tax: "الضريبة",
     total: "الإجمالي",
-    pricing: "جارٍ الحساب…",
+    pricing: "بنحسب…",
     addToSee: "أضف منتجًا لعرض الإجمالي.",
     create: "إنشاء الأوردر",
-    creating: "جارٍ الإنشاء…",
+    creating: "بنعمله…",
     created: "تم إنشاء الأوردر {number}.",
     required: "هذا الحقل مطلوب.",
-    noProducts: "لا توجد منتجات نشطة بعد.",
+    noProducts: "مفيش منتجات نشطة لسه.",
   },
 } satisfies Messages;
 
@@ -149,6 +149,8 @@ export function ManualOrderPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const errorMessage = useOrderErrorMessage();
+  // Opened from a conversation (inbox "Create order"): ?phone=&name= start the form.
+  const [params] = useSearchParams();
 
   const products = useAsync(
     () => apiClient.listProducts(workspaceId, { status: "active", limit: 200 }).then((r) => r.products),
@@ -157,8 +159,8 @@ export function ManualOrderPage() {
   const options = useAsync(() => ordersManualOptions(apiClient, workspaceId), [workspaceId]);
 
   // customer
-  const [phone, setPhone] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState(() => params.get("phone") ?? "");
+  const [fullName, setFullName] = useState(() => params.get("name") ?? "");
   const [email, setEmail] = useState("");
   const [customer, setCustomer] = useState<OrderDraftCustomer | null | undefined>(undefined);
   // address
@@ -206,18 +208,31 @@ export function ManualOrderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
-  async function lookup() {
+  async function lookup(fillAddress = false) {
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 10) return setCustomer(undefined);
     try {
       const found = await ordersCustomerByPhone(apiClient, workspaceId, phone.trim());
       setCustomer(found);
-      if (found?.fullName && !fullName.trim()) setFullName(found.fullName);
+      // From a conversation, the name the store has for them beats the WhatsApp profile name.
+      if (found?.fullName && (fillAddress || !fullName.trim())) setFullName(found.fullName);
       if (found?.email && !email.trim()) setEmail(found.email);
+      if (fillAddress && found?.lastAddress) {
+        setProvince(found.lastAddress.province ?? "");
+        setCity(found.lastAddress.city ?? "");
+        setAddressLine(found.lastAddress.addressLine ?? "");
+      }
     } catch {
       setCustomer(undefined);
     }
   }
+
+  // A number that came with the link is looked up at once, and the customer's last address filled in.
+  useEffect(() => {
+    if (!params.get("phone")) return;
+    void lookup(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function useLastAddress() {
     const last = customer?.lastAddress;
@@ -348,7 +363,7 @@ export function ManualOrderPage() {
                   hint={t.phoneHint}
                   error={fieldErrors.phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  onBlur={lookup}
+                  onBlur={() => void lookup()}
                 />
                 <TextField
                   label={t.name}

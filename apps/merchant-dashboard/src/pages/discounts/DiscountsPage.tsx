@@ -28,6 +28,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
+import { CouponLinkDialog } from "./CouponLinkDialog";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
@@ -61,6 +62,7 @@ const STRINGS = {
     enable: "Enable",
     disable: "Disable",
     delete: "Delete",
+    shareLink: "Share link",
     enabledToast: "Discount enabled.",
     disabledToast: "Discount disabled.",
     archivedToast: "Discount archived.",
@@ -110,7 +112,7 @@ const STRINGS = {
     title: "الخصومات",
     description: "أكواد الخصم والخصومات التلقائية التي تُطبَّق عند إتمام الطلب.",
     create: "إنشاء خصم",
-    empty: "لا توجد خصومات بعد. أنشئ أول خصم.",
+    empty: "مفيش خصومات لسه. أنشئ أول خصم.",
     code: "الكود",
     type: "النوع",
     value: "القيمة",
@@ -133,6 +135,7 @@ const STRINGS = {
     enable: "تفعيل",
     disable: "إيقاف",
     delete: "حذف",
+    shareLink: "لينك المشاركة",
     enabledToast: "تم تفعيل الخصم.",
     disabledToast: "تم إيقاف الخصم.",
     archivedToast: "تمت أرشفة الخصم.",
@@ -143,13 +146,13 @@ const STRINGS = {
     archiveDescription:
       "الخصم الذي استخدمه العملاء جزء من السجل المالي، لذلك تتم أرشفته وليس حذفه — يتوقف تطبيقه عند إتمام الطلب ولا يظهر بعدها في التقارير النشطة.",
     archiveConfirm: "أرشفة الخصم",
-    working: "جارٍ الأرشفة…",
+    working: "بنأرشف…",
     cancel: "إلغاء",
-    percentInvalid: "أدخل نسبة بين 0 و100.",
-    amountInvalid: "أدخل مبلغًا صحيحًا.",
+    percentInvalid: "اكتب نسبة بين 0 و100.",
+    amountInvalid: "اكتب مبلغًا صحيحًا.",
     percentTooHigh: "نسبة الخصم لا يمكن أن تزيد عن 100%.",
-    limitInvalid: "أدخل رقمًا صحيحًا، 1 أو أكثر.",
-    productsRequired: "اختر منتجًا واحدًا على الأقل، أو اختر «كل المنتجات».",
+    limitInvalid: "اكتب رقمًا صحيحًا، 1 أو أكثر.",
+    productsRequired: "اختار منتجًا واحدًا على الأقل، أو اختار «كل المنتجات».",
     savedToast: "تم حفظ الخصم.",
     createdCodeToast: "تم إنشاء «{code}».",
     createdAutomaticToast: "تم إنشاء خصم تلقائي.",
@@ -170,13 +173,13 @@ const STRINGS = {
     allProducts: "كل المنتجات",
     specificProducts: "منتجات محددة",
     stackable: "يمكن استخدامه مع خصومات أخرى",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ الخصم",
-    loading: "جارٍ التحميل",
+    loading: "بنحمّل",
     filterProducts: "ابحث في المنتجات…",
-    selectedCount: "تم تحديد {count}",
-    noProducts: "لا توجد منتجات بعد — أضف منتجًا من صفحة المنتجات أولًا.",
-    noMatch: "لا توجد منتجات مطابقة.",
+    selectedCount: "اخترت {count}",
+    noProducts: "مفيش منتجات بعد — أضف منتجًا من صفحة المنتجات أولًا.",
+    noMatch: "مفيش منتجات مطابقة.",
   },
 } satisfies Messages;
 
@@ -242,6 +245,7 @@ export function DiscountsPage() {
 
   const [formTarget, setFormTarget] = useState<Discount | "new" | null>(null);
   const [deleting, setDeleting] = useState<Discount | null>(null);
+  const [sharing, setSharing] = useState<Discount | null>(null);
 
   const reload = () => list.refresh({ silent: true });
   const discounts = list.data ?? [];
@@ -327,6 +331,11 @@ export function DiscountsPage() {
                     className="whitespace-nowrap px-4 py-3 text-end"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {d.code && d.status !== "archived" && (
+                      <Button size="sm" variant="ghost" onClick={() => setSharing(d)}>
+                        {t.shareLink}
+                      </Button>
+                    )}
                     {d.status !== "archived" && (
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(d)}>
                         {d.status === "active" ? t.disable : t.enable}
@@ -365,6 +374,14 @@ export function DiscountsPage() {
           />
         )}
       </Modal>
+
+      {sharing && (
+        <CouponLinkDialog
+          discount={sharing}
+          statusText={displayStatus(sharing) === "active" ? null : t[`status_${displayStatus(sharing)}`]}
+          onClose={() => setSharing(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}

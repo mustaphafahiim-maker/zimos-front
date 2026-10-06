@@ -31,6 +31,8 @@ export interface CurrencyDashboard {
   settings: CurrencySettings;
   /** quote → units per 1 base, for the display currencies. */
   rates: Record<string, number>;
+  /** quote → units per 1 base for the analytics currency switcher: the display currencies and a few common ones. Display only. */
+  reportRates?: Record<string, number>;
   ratesFetchedAt: string | null;
   availableCurrencies: string[];
   /** "sandbox" until a real rates provider is configured. */
@@ -70,5 +72,15 @@ export async function currenciesRefreshRates(client: ApiClient, workspaceId: str
 
 export async function currenciesGetForStore(client: ApiClient, workspaceId: string): Promise<CurrencyStorefront> {
   const { currencies } = await client.request<{ currencies: CurrencyStorefront }>(`/store/${workspaceId}/currencies`, { auth: false });
+  return currencies;
+}
+
+/**
+ * The store's own currency, until its first order (currencies/baseCurrency.js).
+ * Every variant and offer moves to it with the same amounts; 409
+ * BASE_CURRENCY_LOCKED once the store has an order.
+ */
+export async function currenciesSetBase(client: ApiClient, workspaceId: string, currency: string): Promise<CurrencyDashboard> {
+  const { currencies } = await client.request<{ currencies: CurrencyDashboard }>(`${base(workspaceId)}/base`, { method: "PUT", body: { currency } });
   return currencies;
 }

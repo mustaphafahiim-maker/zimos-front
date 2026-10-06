@@ -92,11 +92,31 @@ export function formatOptions(options: Record<string, string> | null | undefined
   return entries.map(([k, v]) => `${k}: ${v}`).join(" · ");
 }
 
+/**
+ * A place name in the screen's language. The storefront saves known places as
+ * "القاهرة (Cairo)"; the Arabic screen shows «القاهرة», the English one
+ * "Cairo" (re-audit N-14). Anything else is shown as it is.
+ */
+export function placeName(name: string | null | undefined): string {
+  if (!name) return "";
+  const match = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name.trim());
+  if (!match) return name;
+  const [, first, second] = match;
+  const arabic = /[\u0600-\u06FF]/;
+  const ar = arabic.test(first) ? first : arabic.test(second) ? second : null;
+  const latin = !arabic.test(second) ? second : !arabic.test(first) ? first : null;
+  if (!ar || !latin) return name;
+  return getLocale() === "ar" ? ar.trim() : latin.trim();
+}
+
 export function formatAddress(address: OrderAddressSnapshot | null | undefined): string {
-  if (!address) return "No shipping address";
-  return [address.addressLine, address.city, address.province, address.postalCode, address.country]
-    .filter(Boolean)
-    .join(", ");
+  if (!address) return getLocale() === "ar" ? "مفيش عنوان شحن" : "No shipping address";
+  // Egypt is the default market: its code adds nothing. A city repeated as the
+  // governorate (Cairo, Cairo) is shown once. Arabic joins with the Arabic comma.
+  const parts = [address.addressLine, placeName(address.city), placeName(address.province), address.postalCode, address.country === "EG" ? null : address.country]
+    .filter((part): part is string => Boolean(part))
+    .filter((part, i, all) => all.indexOf(part) === i);
+  return parts.join(getLocale() === "ar" ? "، " : ", ");
 }
 
 /** Human label for a variant in a picker: options, or SKU, or a short id. */
@@ -104,7 +124,7 @@ export function variantLabel(variant: Variant): string {
   const opts = formatOptions(variant.optionValues);
   if (opts) return opts;
   if (variant.sku) return variant.sku;
-  return `Variant ${variant.id.slice(0, 8)}`;
+  return `${getLocale() === "ar" ? "نوع" : "Variant"} ${variant.id.slice(0, 8)}`;
 }
 
 const HUMANIZE: Record<string, string> = {
@@ -120,11 +140,70 @@ const HUMANIZE: Record<string, string> = {
   arrived_late: "Arrived late",
   bank_transfer: "Bank transfer",
   cod: "Cash on delivery",
+  valu: "valU",
+  paypal: "PayPal",
 };
 
-/** "partially_paid" -> "Partially paid" */
+/**
+ * Arabic for every status value a badge can show without its own label
+ * (StatusBadge falls back to humanize). Egyptian, short, one word per concept.
+ */
+const HUMANIZE_AR: Record<string, string> = {
+  draft: "مسودة",
+  active: "شغّال",
+  archived: "مؤرشف",
+  scheduled: "متجدول",
+  expired: "خلص",
+  disabled: "متوقف",
+  inactive: "متوقف",
+  pending: "مستني",
+  confirmed: "متأكد",
+  rejected: "مرفوض",
+  unreachable: "مبيردش",
+  postponed: "متأجل",
+  partially_paid: "مدفوع جزء",
+  paid: "مدفوع",
+  unpaid: "مش مدفوع",
+  failed: "فشل",
+  refunded: "اترجّع",
+  partially_refunded: "اترجّع جزء",
+  unfulfilled: "لسه متشحنش",
+  partially_fulfilled: "اتشحن جزء",
+  fulfilled: "اتشحن",
+  returned: "مرتجع",
+  created: "اتعمل",
+  picked_up: "المندوب استلم",
+  in_transit: "في الطريق",
+  out_for_delivery: "خرج للتوصيل",
+  delivered: "اتسلّم",
+  cancelled: "ملغي",
+  requested: "متطلب",
+  approved: "موافق عليه",
+  received: "وصل",
+  open: "مفتوح",
+  closed: "مقفول",
+  completed: "خلص",
+  processing: "بيتعمل",
+  matched: "متطابق",
+  unmatched: "مش متطابق",
+  no_longer_wanted: "مش عايزه",
+  not_as_described: "مش زي الوصف",
+  wrong_item: "منتج غلط",
+  damaged: "تالف",
+  arrived_late: "وصل متأخر",
+  bank_transfer: "تحويل بنكي",
+  cod: "دفع عند الاستلام",
+  card: "كارت",
+  wallet: "محفظة",
+  instapay: "إنستاباي",
+  valu: "valU",
+  paypal: "باي بال",
+};
+
+/** "partially_paid" -> "Partially paid" (or its Arabic in the Arabic dashboard) */
 export function humanize(value: string | null | undefined): string {
   if (!value) return "—";
+  if (getLocale() === "ar" && HUMANIZE_AR[value]) return HUMANIZE_AR[value];
   if (HUMANIZE[value]) return HUMANIZE[value];
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
 }

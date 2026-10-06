@@ -14,7 +14,7 @@ import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, placeName } from "@/lib/format";
 import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
 import { ContactInsights } from "./ContactInsights";
 
@@ -88,7 +88,7 @@ const STRINGS = {
     summary: "عدد الطلبات: {orders} · درجة الموثوقية: {score}",
     ordersTitle: "الطلبات",
     ordersDescription: "كل طلبات هذا العميل، الأحدث أولًا.",
-    ordersEmpty: "لا توجد طلبات من هذا العميل بعد.",
+    ordersEmpty: "مفيش طلبات من هذا العميل لسه.",
     ordersIncomplete: "تم البحث في أول 1,000 طلب في المتجر فقط، لذلك قد تكون هذه القائمة غير مكتملة.",
     confLabel: "التأكيد",
     shipLabel: "الشحن",
@@ -118,7 +118,7 @@ const STRINGS = {
     blacklistConfirmTitle: "حظر هذا العميل؟",
     blacklistConfirmDescription: "لن يتمكن من إتمام أي طلب حتى تلغي حظره.",
     blacklistConfirm: "حظر",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     reason: "السبب",
     reasonPlaceholder: "فشل التوصيل أكثر من مرة",
     reasonRequired: "اكتب سبب حظر هذا العميل.",
@@ -129,7 +129,7 @@ const STRINGS = {
     customerUnblacklisted: "تم إلغاء حظر العميل.",
     addressesTitle: "العناوين",
     addAddress: "إضافة عنوان",
-    noAddresses: "لا توجد عناوين مسجّلة.",
+    noAddresses: "مفيش عناوين مسجّلة.",
     defaultBadge: "الافتراضي",
     editAddress: "تعديل العنوان",
     addressSaved: "تم حفظ العنوان.",
@@ -489,7 +489,7 @@ function AddressesSection({
             >
               <div className="min-w-0 text-sm">
                 <p className="text-ink">
-                  {[a.addressLine, a.city, a.province, a.postalCode, a.country]
+                  {[a.addressLine, placeName(a.city), placeName(a.province), a.postalCode, a.country === "EG" ? null : a.country]
                     .filter(Boolean)
                     .join(", ")}
                 </p>

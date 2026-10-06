@@ -6,7 +6,7 @@ import {
   type ApiErrorCode,
   type CarrierCancelFailedDetails,
 } from "@store-builder/api-client";
-import { fmt } from "@/i18n/LocaleContext";
+import { fmt, getLocale } from "@/i18n/LocaleContext";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { providerName } from "@/lib/providers";
 import { formatDate } from "@/lib/format";
@@ -30,8 +30,9 @@ const STRINGS = {
     VALIDATION_ERROR: "Some fields need attention. Check the highlighted values and try again.",
     UNAUTHENTICATED: "Your session has ended. Sign in again to continue.",
     FORBIDDEN: "You don't have permission to do that. Ask the store owner to update your role.",
+    APP_NOT_INSTALLED: "This needs an app your store has uninstalled. Install it again from the Apps page.",
     SUBSCRIPTION_REQUIRED:
-      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Settings → Plan and referral code.",
+      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Settings → Plan & billing.",
     STORE_SUSPENDED:
       "This store has been suspended by Zimos, so new products and funnels can't be created. Contact Zimos support.",
     NOT_FOUND: "We couldn't find that. It may have been deleted.",
@@ -69,6 +70,9 @@ const STRINGS = {
     PRODUCT_HAS_ORDERS: "This product has orders, so it can only be archived.",
     PRODUCT_IN_FUNNEL: "This product is used in a funnel. Remove it from the funnel first.",
     PRODUCT_NOT_ARCHIVED: "Only an archived product can be restored.",
+    SMART_COLLECTION:
+      "This collection fills itself from its rules, so products can't be added or removed by hand. Change its rules or the products' tags instead.",
+    NOT_SMART_COLLECTION: "This collection is manual, so it has no rules to refresh from.",
     CARRIERS_NOT_CONFIGURED: "Courier integrations aren't available on this server yet. Please contact support.",
     CARRIER_AUTH_FAILED: "The courier rejected the API key. Check it in the courier's dashboard and connect again.",
     CARRIER_PERMISSION_DENIED:
@@ -80,6 +84,7 @@ const STRINGS = {
       "The courier doesn't share its address list with this account. Type the governorate, city and area as the courier spells them.",
     CARRIER_ADDRESS_REJECTED: "The courier didn't recognise the delivery address. Check the spelling and try again.",
     CARRIER_CURRENCY_UNSUPPORTED: "This courier only collects cash in EGP, and this order is in another currency.",
+    SHIPPING_GROUP_CURRENCY: "A group priced in another currency than the store's is for funnels only: take its products out, or keep it in the store's currency.",
     CARRIER_COD_LIMIT: "The cash-on-delivery amount is above this courier's limit.",
     CARRIER_NOT_CONNECTED: "This courier isn't connected to your store anymore.",
     CARRIER_CANCEL_FAILED: "The courier didn't cancel the shipment, so nothing was changed.",
@@ -95,6 +100,11 @@ const STRINGS = {
       "The courier created the delivery, but it couldn't be saved here. Cancel it in the courier's dashboard, then book the order again.",
     SHIPPING_TIERS_REQUIRED: "Add at least one weight tier before pricing shipping by weight.",
     DEFAULT_ITEM_WEIGHT_REQUIRED: "Set a default item weight first. It's required while shipping is priced by weight tier.",
+    // handoff 184
+    ADDRESS_LOOKUP_KEY_REQUIRED: "Add your Google API key to use Google Maps suggestions.",
+    ADDRESS_LOOKUP_INVALID_KEY:
+      "Google refused this key. Check you copied it whole and that the Places API (New) is turned on for it in your Google Cloud console.",
+    ADDRESS_LOOKUP_UNAVAILABLE: "We couldn't reach Google to check the key. Try again in a few minutes.",
     GATEWAYS_NOT_CONFIGURED: "Online payments aren't available on this server yet. Please contact support.",
     GATEWAY_AUTH_FAILED: "The payment gateway rejected these keys. Copy them again from its dashboard and reconnect.",
     GATEWAY_KEYS_MODE_MISMATCH: "One key is a test key and the other a live key. Use both from the same mode.",
@@ -108,11 +118,34 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
     PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
+    STORE_NOT_SET_UP: "Set up your store (add a product) before connecting a domain.",
+    DOMAIN_TAKEN: "That domain is already connected to a store.",
+    DOMAIN_PRICE_CHANGED: "The price changed — check it and confirm again.",
+    DOMAIN_UNAVAILABLE: "This domain isn't available anymore. Search for another name.",
+    DOMAIN_PURCHASE_FAILED: "The domain couldn't be bought — nothing was charged. Try again in a few minutes.",
+    DOMAIN_NOT_ACTIVE: "Only a bought domain that's active or expired can be renewed.",
     TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
+    EMAIL_DOMAIN_TAKEN: "Another store already sends from this domain.",
+    // handoff 195/198/199
+    PURCHASE_LIMIT: "A product's purchase limits don't allow this quantity. Check the quantities and try again.",
+    // handoff 181/182
+    DROPSHIP_INVALID_CREDENTIALS: "The store or supplier refused these details. Check the address and the key, then connect again.",
+    DROPSHIP_PRODUCT_NOT_FOUND: "We couldn't find that product. Check its number or code and try again.",
+    DROPSHIP_ALREADY_IMPORTED: "You already imported this product. You'll find it in your products.",
+    DROPSHIP_ORDER_REJECTED: "The store refused this order. Check that all its products are in that store, then send it again.",
+    DROPSHIP_NOT_CONNECTED: "Connect this store or supplier first.",
+    DROPSHIP_UNAVAILABLE: "We couldn't reach the store or supplier right now. Try again in a moment.",
+    EMAIL_MARKETING_INVALID_CREDENTIALS: "The service refused this API key. Copy it again from your account there and connect.",
+    EMAIL_MARKETING_NOT_CONNECTED: "Connect this service first.",
+    EMAIL_MARKETING_LIST_NOT_FOUND: "That list isn't in your account anymore. Pick another one.",
+    EMAIL_MARKETING_NO_LIST: "Pick a list first.",
+    EMAIL_MARKETING_REJECTED: "The service refused this. Check your account there, then try again.",
+    EMAIL_MARKETING_UNAVAILABLE: "We couldn't reach the service right now. Try again in a moment.",
     draftRequired: "Your store is in draft mode. Subscribe to publish it.",
     limitFunnels: "You've reached your plan's funnels for this month ({used} of {max}). You can create more from {date}.",
     limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
     limitDrafts: "Subscribe to one of your stores before starting another.",
+    limitDomains: "You've reached your plan's domain limit ({used} of {max}). Upgrade your plan to add another.",
     cancelFailedPermission:
       "The courier refused to cancel the delivery: the connected API key doesn't have Full Access. The order was not cancelled. Reconnect the courier with a Full Access key under Shipping, or cancel the delivery in the courier's dashboard first.",
     cancelFailedAuth:
@@ -126,108 +159,200 @@ const STRINGS = {
       "This {name} connection uses the {name} sandbox, which only creates test shipments, so nothing was booked. A production {name} account is required: connect one under Shipping.",
     cancelFailedApiAccess:
       "{name} refused to cancel the delivery: it hasn't enabled API access for this account. The order was not cancelled. Ask {name} to enable API access, or cancel the delivery in {name}'s dashboard first.",
+    // backend requests 2026-10-06
+    DOMAIN_CONNECT_FAILED:
+      "The domain was bought, but it couldn't be connected to your store yet. Our support team will finish connecting it — you don't need to buy it again.",
+    // handoff 180/187
+    IMPORT_SOURCE_UNREACHABLE:
+      "We couldn't read the product from that page — it may be private, blocked or too slow. Check the link and try again, or download the product as a sheet and import the file.",
+    IMPORT_SOURCE_NO_PRODUCT_DATA: "That page does not publish its product details. Download them as a sheet and import the file instead.",
+    IMPORT_LINK_NOT_HTTPS: "The link must start with https:// — copy it again from the browser's address bar.",
+    LINK_INVALID: "Paste the full product link, starting with https://",
+    LINK_HAS_CREDENTIALS: "The link must not contain a username or password.",
+    IMPORT_LINK_NOT_PRODUCT: "That isn't a product link we can read. Paste a product page link from Shopify, AliExpress, Etsy, CJ or YouCan.",
+    INVALID_FILE: "We couldn't read this file. Check its type and try again.",
+    FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
+    NO_FILE: "Choose a file first.",
+    // handoff 193/196/197
+    WEBHOOK_ENDPOINT_LIMIT:
+      "Your store already has 25 webhooks, the most it can hold — every Zapier or Make trigger is one. Remove one you no longer use, then try again.",
+    // handoff 189
+    GIFT_CARD_NO_EMAIL: "This card has no recipient email. Add one from “Edit details”, then send it again.",
+    GIFT_CARD_NOT_FOUND: "This gift card code is not valid.",
+    GIFT_CARD_UNUSABLE: "This gift card can't be used: it has expired, has no balance left or was disabled.",
+    // handoff 190
+    SLUG_TAKEN: "This link is already used. Choose another one.",
+    // handoff 192
+    ALREADY_SUBMITTED: "This funnel is already in the template marketplace or waiting for review. Change it from “Your templates”.",
+    SUBMISSION_WITHDRAWN: "This template was withdrawn, so it can't be changed anymore. Share the funnel again instead.",
+    FUNNEL_GONE: "The funnel this template came from was deleted, so there's nothing to send again.",
+    MARKETPLACE_NO_PAGES: "This funnel has no pages yet. Build its pages first, then share it.",
+    MARKETPLACE_TOO_LARGE: "This funnel is too big to share. Remove a few sections or pages and try again.",
+    MARKETPLACE_GONE: "This template isn't in the marketplace anymore.",
+    MARKETPLACE_BAD_PICTURE: "The picture link has to start with https://.",
   },
   ar: {
-    network: "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
-    generic: "حدث خطأ ما. حاول مرة أخرى.",
-    VALIDATION_ERROR: "بعض الحقول تحتاج إلى مراجعة. راجع القيم المحددة وحاول مرة أخرى.",
-    UNAUTHENTICATED: "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
-    FORBIDDEN: "ليست لديك صلاحية للقيام بذلك. اطلب من مالك المتجر تحديث دورك.",
+    network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
+    generic: "حصلت مشكلة عندنا. جرّب تاني بعد شوية.",
+    VALIDATION_ERROR: "فيه خانات محتاجة تتظبط — معلّمة باللون الأحمر. صلّحها وجرّب تاني.",
+    UNAUTHENTICATED: "الجلسة خلصت. ادخل تاني وهترجع لنفس المكان.",
+    FORBIDDEN: "الحاجة دي مش ضمن صلاحياتك. اطلب من صاحب المتجر يفتحهالك.",
+    APP_NOT_INSTALLED: "ده محتاج تطبيق إنت شلته من متجرك. نزّله تاني من صفحة التطبيقات.",
     SUBSCRIPTION_REQUIRED:
-      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع الإعدادات ← الخطة وكود الإحالة.",
-    STORE_SUSPENDED: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
-    NOT_FOUND: "لم نعثر على هذا العنصر. ربما تم حذفه.",
-    CONFLICT: "تغيّر هذا العنصر في الأثناء. أعد التحميل وحاول مرة أخرى.",
-    RATE_LIMITED: "طلبات كثيرة جدًا. انتظر قليلًا ثم حاول مرة أخرى.",
-    IDEMPOTENCY_KEY_CONFLICT: "تم إرسال هذا الطلب من قبل. أعد التحميل لرؤية النتيجة.",
-    INSUFFICIENT_STOCK: "لا يوجد مخزون كافٍ لذلك.",
-    DUPLICATE_RESOURCE: "هذا العنصر موجود بالفعل.",
-    INVALID_REFERENCE: "عنصر مرتبط بهذا لم يعد موجودًا. أعد التحميل وحاول مرة أخرى.",
-    INTERNAL_SERVER_ERROR: "حدث خطأ غير متوقع في الخادم. حاول مرة أخرى.",
-    ORDER_CANCELLED: "هذا الأوردر ملغي، لذلك لا يمكن تعديله.",
-    ORDER_ALREADY_CANCELLED: "هذا الأوردر ملغي بالفعل.",
-    ORDER_ALREADY_SHIPPED: "تم شحن هذا الأوردر ولم يعد من الممكن تعديله. افتح مرتجعًا بدلًا من ذلك.",
-    ORDER_NOT_CONFIRMED: "أكّد أوردر الدفع عند الاستلام قبل حجز شركة الشحن.",
-    ORDER_NOT_PAID: "يجب دفع هذا الأوردر المدفوع مسبقًا قبل حجز شركة الشحن.",
-    SHIPMENT_ALREADY_EXISTS: "يوجد لهذا الأوردر شحنة نشطة بالفعل. ألغِها قبل إضافة شحنة أخرى.",
-    CARRIER_NAME_RESERVED: "هذا اسم شركة شحن يمكن ربطها. اختر خيار الشركة نفسها للشحن معها.",
-    SHIPPING_ADDRESS_REQUIRED: "لا يوجد عنوان شحن لهذا الأوردر. أضف عنوانًا أولًا.",
-    ORDER_NOT_COD: "أوردرات الدفع عند الاستلام فقط هي التي تُؤكَّد بالهاتف.",
-    ORDER_ALREADY_CONFIRMED: "هذا الأوردر مؤكد بالفعل.",
-    TASK_ALREADY_LOCKED: "موظف آخر يعمل على هذا الأوردر الآن.",
-    TASK_ALREADY_DONE: "هذا الأوردر له نتيجة نهائية بالفعل. أعد التحميل لرؤيتها.",
-    TASK_NOT_LOCKED_BY_YOU: "انتهت مدة استلامك لهذا الأوردر واستلمه شخص آخر. أعد تحميل القائمة.",
-    TASK_NOT_CLAIMED: "لم يعد أحد يعمل على هذا الأوردر.",
-    TASK_NOT_DONE: "هذا الأوردر ما زال في القائمة. سجّل نتيجة بدلًا من ذلك.",
-    OUTCOME_UNCHANGED: "الأوردر له هذه النتيجة بالفعل.",
-    CORRECTION_NOT_ALLOWED: "لا يمكن تغيير هذه النتيجة: تم إلغاء الأوردر من صفحة الأوردر.",
-    ORDER_REJECTED: "تعذّر تسجيل هذا الأوردر.",
-    INVALID_PHONE: "أدخل رقم هاتف صحيحًا.",
-    CART_NOT_FOUND: "هذه السلة لم تعد موجودة.",
-    CART_TOKEN_OR_ITEM_REQUIRED: "لا يوجد ما يمكن إتمام شرائه.",
-    STEP_MISMATCH: "هذه الصفحة لم تعد محدّثة. أعد التحميل للمتابعة.",
-    FUNNEL_PAUSED: "مسار البيع هذا متوقف مؤقتًا.",
-    PAGE_PATH_RESERVED: "هذا المسار محجوز لصفحة أساسية في المتجر. اختر مسارًا آخر.",
-    PRODUCT_HAS_ORDERS: "هذا المنتج عليه أوردرات، لذلك يمكن أرشفته فقط.",
-    PRODUCT_IN_FUNNEL: "هذا المنتج مستخدم في مسار بيع. احذفه من المسار أولًا.",
-    PRODUCT_NOT_ARCHIVED: "يمكن استعادة المنتج المؤرشف فقط.",
-    CARRIERS_NOT_CONFIGURED: "ربط شركات الشحن غير متاح على هذا الخادم بعد. تواصل مع الدعم.",
-    CARRIER_AUTH_FAILED: "رفضت شركة الشحن مفتاح API. تحقق منه في لوحة تحكم الشركة وأعد الربط.",
+      "اشتراكك خلص، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة لحد ما تجدّده. المنتجات والمسارات والأوردرات اللي عندك شغالة عادي — جدّد من الإعدادات ← الباقة والفواتير.",
+    STORE_SUSPENDED: "زيموس وقّفت المتجر ده، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة. كلّم دعم زيموس.",
+    NOT_FOUND: "مش لاقيين الحاجة دي. ممكن تكون اتمسحت.",
+    CONFLICT: "حد عدّل هنا في نفس الوقت. اعمل تحديث للصفحة وجرّب تاني.",
+    RATE_LIMITED: "طلبات كتير ورا بعض. استنى دقيقة وجرّب تاني.",
+    IDEMPOTENCY_KEY_CONFLICT: "الطلب ده اتبعت قبل كده. اعمل تحديث للصفحة وشوف النتيجة.",
+    INSUFFICIENT_STOCK: "الكمية دي مش موجودة في المخزن.",
+    DUPLICATE_RESOURCE: "ده موجود قبل كده.",
+    INVALID_REFERENCE: "حاجة مربوطة بده اتمسحت. اعمل تحديث للصفحة وجرّب تاني.",
+    INTERNAL_SERVER_ERROR: "حصلت مشكلة في السيرفر. جرّب تاني بعد شوية.",
+    ORDER_CANCELLED: "الأوردر ده ملغي، فمينفعش يتعدّل.",
+    ORDER_ALREADY_CANCELLED: "الأوردر ده ملغي أصلًا.",
+    ORDER_ALREADY_SHIPPED: "الأوردر ده اتشحن خلاص ومينفعش يتعدّل. افتح مرتجع بداله.",
+    ORDER_NOT_CONFIRMED: "أكّد الأوردر الأول (دفع عند الاستلام) قبل ما تحجز المندوب.",
+    ORDER_NOT_PAID: "الأوردر ده مدفوع أونلاين ولسه متدفعش. استنى الدفع قبل ما تحجز المندوب.",
+    SHIPMENT_ALREADY_EXISTS: "الأوردر ده ليه شحنة شغالة. الغيها الأول لو عايز تعمل واحدة تانية.",
+    CARRIER_NAME_RESERVED: "ده اسم شركة شحن ممكن تربطها. اختارها من القايمة عشان تشحن معاها.",
+    SHIPPING_ADDRESS_REQUIRED: "الأوردر ده مالوش عنوان شحن. ضيف العنوان الأول.",
+    ORDER_NOT_COD: "أوردرات الدفع عند الاستلام بس هي اللي بتتأكد بالتليفون.",
+    ORDER_ALREADY_CONFIRMED: "الأوردر ده متأكد خلاص.",
+    TASK_ALREADY_LOCKED: "فيه زميل شغال على الأوردر ده دلوقتي.",
+    TASK_ALREADY_DONE: "الأوردر ده اتسجّلت نتيجته خلاص. اعمل تحديث للصفحة وشوفها.",
+    TASK_NOT_LOCKED_BY_YOU: "وقتك على الأوردر ده خلص وزميل تاني أخده. اعمل تحديث للقايمة.",
+    TASK_NOT_CLAIMED: "محدش شغال على الأوردر ده دلوقتي.",
+    TASK_NOT_DONE: "الأوردر ده لسه في القايمة. سجّل نتيجة المكالمة الأول.",
+    OUTCOME_UNCHANGED: "دي نفس نتيجة الأوردر اللي متسجلة.",
+    CORRECTION_NOT_ALLOWED: "مينفعش تغيّر النتيجة دي: الأوردر اتلغى من صفحته.",
+    ORDER_REJECTED: "مقدرناش نسجّل الأوردر ده.",
+    INVALID_PHONE: "اكتب رقم موبايل صحيح.",
+    CART_NOT_FOUND: "السلة دي مبقتش موجودة.",
+    CART_TOKEN_OR_ITEM_REQUIRED: "مفيش حاجة في السلة تطلبها.",
+    STEP_MISMATCH: "الصفحة دي قديمة. اعمل تحديث وكمّل.",
+    FUNNEL_PAUSED: "مسار البيع ده موقوف دلوقتي.",
+    PAGE_PATH_RESERVED: "اللينك ده محجوز لصفحة أساسية في المتجر. اختار لينك تاني.",
+    PRODUCT_HAS_ORDERS: "المنتج ده عليه أوردرات، فينفع تأرشفه بس مش تمسحه.",
+    PRODUCT_IN_FUNNEL: "المنتج ده مستخدم في مسار بيع. شيله من المسار الأول.",
+    PRODUCT_NOT_ARCHIVED: "ينفع ترجّع المنتج المؤرشف بس.",
+    SMART_COLLECTION: "المجموعة دي بتتملى لوحدها من الشروط بتاعتها، فمينفعش تضيف أو تشيل منتجات منها بإيدك. غيّر شروطها أو تاجز المنتجات.",
+    NOT_SMART_COLLECTION: "المجموعة دي يدوية، فمفيهاش شروط تتحدّث منها.",
+    CARRIERS_NOT_CONFIGURED: "ربط شركات الشحن لسه مش متاح هنا. كلّم الدعم.",
+    CARRIER_AUTH_FAILED: "شركة الشحن رفضت المفتاح (API key). اتأكد منه في لوحة الشركة واربط تاني.",
     CARRIER_PERMISSION_DENIED:
-      "قبلت شركة الشحن تسجيل الدخول، لكنها لم تفعّل الربط عبر API لهذا الحساب. بياناتك صحيحة: اطلب من شركة الشحن تفعيل الربط عبر API لحسابك، ثم حاول مرة أخرى.",
+      "شركة الشحن قبلت الدخول، بس لسه مفعّلتش الربط (API) لحسابك. بياناتك صح: اطلب منهم يفعّلوا الربط وجرّب تاني.",
     CARRIER_SANDBOX_NOT_ALLOWED:
-      "ربط شركة الشحن هذا يستخدم بيئة التجربة (Sandbox) الخاصة بها، وهي تنشئ شحنات تجريبية فقط، لذلك لم يُحجز شيء. يلزم حساب إنتاج (Production): اربطه من صفحة الشحن.",
-    CARRIER_ADDRESS_UNMATCHED: "تعذّرت مطابقة عنوان الأوردر مع قائمة شركة الشحن. اختر منطقة التوصيل.",
+      "الربط ده على حساب تجريبي (Sandbox) عند شركة الشحن، وده بيعمل شحنات تجريبية بس، فمفيش حاجة اتحجزت. محتاج حساب حقيقي (Production): اربطه من صفحة الشحن.",
+    CARRIER_ADDRESS_UNMATCHED: "مقدرناش نطابق عنوان الأوردر مع مناطق شركة الشحن. اختار منطقة التوصيل بنفسك.",
     CARRIER_ADDRESS_NAMES_REQUIRED:
-      "شركة الشحن لا تتيح قائمة عناوينها لهذا الحساب. اكتب المحافظة والمدينة والمنطقة كما تكتبها شركة الشحن.",
-    CARRIER_ADDRESS_REJECTED: "لم تتعرّف شركة الشحن على عنوان التوصيل. راجع طريقة الكتابة وحاول مرة أخرى.",
-    CARRIER_CURRENCY_UNSUPPORTED: "شركة الشحن هذه تحصّل بالجنيه المصري فقط، وهذا الأوردر بعملة أخرى.",
-    CARRIER_COD_LIMIT: "مبلغ الدفع عند الاستلام أعلى من الحد المسموح لشركة الشحن هذه.",
-    CARRIER_NOT_CONNECTED: "شركة الشحن هذه لم تعد مربوطة بمتجرك.",
-    CARRIER_CANCEL_FAILED: "لم تلغِ شركة الشحن الشحنة، لذلك لم يتم تغيير أي شيء.",
-    CARRIER_CREDENTIALS_UNREADABLE: "تعذّرت قراءة مفتاح شركة الشحن المحفوظ. أعد ربط الشركة.",
-    SHIPMENT_NOT_CARRIER_MANAGED: "هذه الشحنة لم تُحجز عبر شركة شحن مربوطة.",
-    LABEL_NOT_AVAILABLE: "شركة الشحن هذه لا توفر ملصقات قابلة للطباعة.",
-    CARRIER_TIER_UNMAPPED: "شريحة الوزن هذه ليس لها نوع طرد عند شركة الشحن. احجزها كشريحة أخرى، أو اربطها من إعدادات الشركة.",
+      "شركة الشحن مش بتشارك قايمة مناطقها مع الحساب ده. اكتب المحافظة والمدينة والمنطقة زي ما الشركة بتكتبها.",
+    CARRIER_ADDRESS_REJECTED: "شركة الشحن معرفتش عنوان التوصيل. راجع الكتابة وجرّب تاني.",
+    CARRIER_CURRENCY_UNSUPPORTED: "الشركة دي بتحصّل بالجنيه المصري بس، والأوردر ده بعملة تانية.",
+    SHIPPING_GROUP_CURRENCY: "المجموعة اللي أسعارها بعملة غير عملة المتجر لمسارات البيع بس: شيل منتجاتها، أو خليها بعملة المتجر.",
+    CARRIER_COD_LIMIT: "مبلغ التحصيل أكبر من الحد المسموح عند شركة الشحن دي.",
+    CARRIER_NOT_CONNECTED: "شركة الشحن دي مبقتش مربوطة بمتجرك.",
+    CARRIER_CANCEL_FAILED: "شركة الشحن ملغتش الشحنة، فمفيش حاجة اتغيّرت.",
+    CARRIER_CREDENTIALS_UNREADABLE: "مفتاح شركة الشحن المتسجل مبقاش بيتقري. اربط الشركة تاني.",
+    SHIPMENT_NOT_CARRIER_MANAGED: "الشحنة دي متحجزتش عن طريق شركة شحن مربوطة.",
+    LABEL_NOT_AVAILABLE: "الشركة دي مش بتوفّر بوليصة للطباعة.",
+    CARRIER_TIER_UNMAPPED: "شريحة الوزن دي مالهاش نوع شحنة عند الشركة. احجزها بشريحة تانية، أو اربطها من إعدادات الشركة.",
     CARRIER_MANUAL_CANCEL_REQUIRED:
-      "لا يمكن إلغاء شحنات هذه الشركة من هنا. ألغِ الشحنة من لوحة تحكم شركة الشحن أولًا، ثم أكّد ذلك هنا.",
+      "الشركة دي مش بتلغي الشحنات من هنا. الغي الشحنة من لوحة شركة الشحن الأول، وبعدين أكّد هنا.",
     CARRIER_CONNECT_CONFLICT:
-      "تم ربط شركة الشحن هذه من تبويب آخر أو بواسطة زميل في نفس اللحظة، لذلك لم يُحفظ هذا الطلب. أعد التحميل لرؤية الربط، ثم احفظ مرة أخرى إذا احتجت.",
+      "الشركة دي اتربطت من تاب تاني أو زميل ربطها في نفس اللحظة، فالحفظ ده متمش. اعمل تحديث وشوف الربط، واحفظ تاني لو محتاج.",
     CARRIER_BOOKING_NOT_SAVED:
-      "أنشأت شركة الشحن الشحنة، لكن تعذّر حفظها هنا. ألغِها من لوحة تحكم شركة الشحن، ثم احجز الأوردر مرة أخرى.",
-    SHIPPING_TIERS_REQUIRED: "أضف شريحة وزن واحدة على الأقل قبل تسعير الشحن بالوزن.",
-    DEFAULT_ITEM_WEIGHT_REQUIRED: "حدد الوزن الافتراضي للمنتج أولًا. هو مطلوب طالما الشحن يُسعَّر حسب شريحة الوزن.",
-    GATEWAYS_NOT_CONFIGURED: "الدفع الإلكتروني غير متاح على هذا الخادم بعد. تواصل مع الدعم.",
-    GATEWAY_AUTH_FAILED: "رفضت بوابة الدفع هذه المفاتيح. انسخها مرة أخرى من لوحة تحكمها وأعد الربط.",
-    GATEWAY_KEYS_MODE_MISMATCH: "أحد المفتاحين للتجربة والآخر للتشغيل. استخدم المفتاحين من نفس النوع.",
-    GATEWAY_KEYS_UNRECOGNISED: "هذه لا تبدو مفاتيح هذه البوابة. تأكد أنك نسخت المفاتيح الصحيحة.",
-    GATEWAY_NOT_CONNECTED: "بوابة الدفع هذه لم تعد مربوطة بمتجرك.",
-    GATEWAY_HAS_PENDING_PAYMENTS: "توجد أوردرات ما زالت تنتظر الدفع عبر هذه البوابة. انتظر حتى تُدفع أو تنتهي مهلتها، ثم ألغِ الربط.",
-    GATEWAY_CREDENTIALS_UNREADABLE: "تعذّرت قراءة مفاتيح البوابة المحفوظة. أعد ربط البوابة.",
-    PAYMENT_METHOD_UNAVAILABLE: "طريقة الدفع هذه غير متاحة الآن.",
-    REFUND_EXCEEDS_ELIGIBLE_AMOUNT: "هذا أكثر من المبلغ المتبقي القابل للاسترداد في هذا الأوردر.",
-    REFUND_EXCEEDS_PAYMENT: "لا توجد دفعة واحدة متبقٍ فيها هذا المبلغ. استرد كل دفعة على حدة.",
-    REFUND_PAYMENT_INVALID: "لا يمكن استرداد هذه الدفعة عبر البوابة.",
-    ORDER_TEST_PAYMENT: "هذا الأوردر دُفع في وضع التجربة، لذلك لا يمكن شحنه.",
-    PLAN_LIMIT_REACHED: "بلغت الحد المسموح في خطتك. رقِّ خطتك لإضافة المزيد.",
-    TRIAL_NOT_AVAILABLE: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
-    draftRequired: "متجرك في وضع المسودة. اشترك لنشره.",
-    limitFunnels: "بلغت الحد الشهري لمسارات البيع في خطتك ({used} من {max}). يمكنك إنشاء المزيد بدءًا من {date}.",
-    limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
-    limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
+      "شركة الشحن عملت الشحنة بس مقدرناش نسجلها هنا. الغيها من لوحة الشركة واحجز الأوردر تاني.",
+    SHIPPING_TIERS_REQUIRED: "ضيف شريحة وزن واحدة على الأقل قبل ما تسعّر الشحن بالوزن.",
+    DEFAULT_ITEM_WEIGHT_REQUIRED: "حدد وزن افتراضي للمنتج الأول. لازم طول ما الشحن متسعّر بالوزن.",
+    // handoff 184
+    ADDRESS_LOOKUP_KEY_REQUIRED: "ضيف مفتاح Google API بتاعك عشان تستخدم اقتراحات خرائط جوجل.",
+    ADDRESS_LOOKUP_INVALID_KEY:
+      "جوجل رفضت المفتاح ده. اتأكد إنك نسخته كله، وإن Places API (New) متفعّل عليه في Google Cloud console بتاعك.",
+    ADDRESS_LOOKUP_UNAVAILABLE: "مقدرناش نوصل لجوجل عشان نجرّب المفتاح. جرّب تاني بعد كام دقيقة.",
+    GATEWAYS_NOT_CONFIGURED: "الدفع الأونلاين لسه مش متاح هنا. كلّم الدعم.",
+    GATEWAY_AUTH_FAILED: "بوابة الدفع رفضت المفاتيح دي. انسخها تاني من لوحة البوابة واربط من جديد.",
+    GATEWAY_KEYS_MODE_MISMATCH: "مفتاح منهم تجريبي والتاني حقيقي. استخدم الاتنين من نفس النوع.",
+    GATEWAY_KEYS_UNRECOGNISED: "المفاتيح دي شكلها مش بتاعة البوابة دي. اتأكد إنك نسخت الصح.",
+    GATEWAY_NOT_CONNECTED: "بوابة الدفع دي مبقتش مربوطة بمتجرك.",
+    GATEWAY_HAS_PENDING_PAYMENTS: "فيه أوردرات لسه مستنية دفع عن طريق البوابة دي. استنى لحد ما تتدفع أو مهلتها تخلص، وبعدين الغي الربط.",
+    GATEWAY_CREDENTIALS_UNREADABLE: "مفاتيح البوابة المتسجلة مبقتش بتتقري. اربط البوابة تاني.",
+    PAYMENT_METHOD_UNAVAILABLE: "طريقة الدفع دي مش متاحة دلوقتي.",
+    REFUND_EXCEEDS_ELIGIBLE_AMOUNT: "المبلغ ده أكبر من اللي فاضل ينفع يترجع في الأوردر.",
+    REFUND_EXCEEDS_PAYMENT: "مفيش دفعة واحدة فاضل فيها المبلغ ده. رجّع كل دفعة لوحدها.",
+    REFUND_PAYMENT_INVALID: "الدفعة دي مينفعش ترجع عن طريق البوابة.",
+    ORDER_TEST_PAYMENT: "الأوردر ده اتدفع تجريبي، فمينفعش يتشحن.",
+    PLAN_LIMIT_REACHED: "وصلت للحد بتاع باقتك. رقّي الباقة عشان تضيف أكتر.",
+    STORE_NOT_SET_UP: "جهّز متجرك الأول (ضيف منتج) قبل ما تربط دومين.",
+    DOMAIN_TAKEN: "الدومين ده مربوط بمتجر تاني.",
+    DOMAIN_PRICE_CHANGED: "السعر اتغير — راجعه وأكّد تاني.",
+    DOMAIN_UNAVAILABLE: "الدومين ده مبقاش متاح. دوّر على اسم تاني.",
+    DOMAIN_PURCHASE_FAILED: "معرفناش نشتري الدومين، ومفيش أي فلوس اتخصمت. جرّب تاني بعد شوية.",
+    DOMAIN_NOT_ACTIVE: "التجديد بيبقى للدومين اللي اشتريته وشغال أو خلصت مدته بس.",
+    TRIAL_NOT_AVAILABLE: "الفترة المجانية مش متاحة للحساب ده.",
+    EMAIL_DOMAIN_TAKEN: "متجر تاني بيبعت من الدومين ده.",
+    // handoff 195/198/199
+    PURCHASE_LIMIT: "الكمية دي برّه حدود الشراء بتاعة المنتج. راجع الكميات وجرّب تاني.",
+    // handoff 181/182
+    DROPSHIP_INVALID_CREDENTIALS: "المتجر أو المورّد رفض البيانات دي. راجع العنوان والمفتاح واربط تاني.",
+    DROPSHIP_PRODUCT_NOT_FOUND: "ملقيناش المنتج ده. اتأكد من رقمه أو الكود بتاعه وجرّب تاني.",
+    DROPSHIP_ALREADY_IMPORTED: "المنتج ده استوردته قبل كده. هتلاقيه في منتجاتك.",
+    DROPSHIP_ORDER_REJECTED: "المتجر رفض الأوردر ده. اتأكد إن كل منتجاته موجودة عنده وابعته تاني.",
+    DROPSHIP_NOT_CONNECTED: "اربط المتجر أو المورّد ده الأول.",
+    DROPSHIP_UNAVAILABLE: "معرفناش نوصل للمتجر أو المورّد دلوقتي. جرّب تاني بعد شوية.",
+    EMAIL_MARKETING_INVALID_CREDENTIALS: "الخدمة رفضت مفتاح الـ API ده. انسخه تاني من حسابك عندهم واربط.",
+    EMAIL_MARKETING_NOT_CONNECTED: "اربط الخدمة دي الأول.",
+    EMAIL_MARKETING_LIST_NOT_FOUND: "القائمة دي مبقتش موجودة في حسابك. اختار قائمة تانية.",
+    EMAIL_MARKETING_NO_LIST: "اختار قائمة الأول.",
+    EMAIL_MARKETING_REJECTED: "الخدمة رفضت ده. راجع حسابك عندهم وجرّب تاني.",
+    EMAIL_MARKETING_UNAVAILABLE: "معرفناش نوصل للخدمة دلوقتي. جرّب تاني بعد شوية.",
+    draftRequired: "متجرك لسه مسودة. اشترك عشان تنشره.",
+    limitFunnels: "وصلت لحد مسارات البيع في باقتك الشهر ده ({used} من {max}). تقدر تعمل تاني من {date}.",
+    limitStores: "وصلت لأقصى عدد متاجر في باقتك ({used} من {max}). رقّي باقة متجر من متاجرك عشان تضيف واحد كمان.",
+    limitDrafts: "اشترك في متجر من متاجرك الأول قبل ما تبدأ متجر جديد.",
+    limitDomains: "وصلت لأقصى عدد دومينات في باقتك ({used} من {max}). رقّي الباقة عشان تضيف دومين تاني.",
     cancelFailedPermission:
-      "رفضت شركة الشحن إلغاء الشحنة لأن مفتاح API المربوط ليس بصلاحية Full Access. لم يتم إلغاء الأوردر. أعد ربط الشركة بمفتاح Full Access من صفحة الشحن، أو ألغِ الشحنة من لوحة تحكم الشركة أولًا.",
+      "شركة الشحن رفضت تلغي الشحنة لأن المفتاح المربوط مش بصلاحية Full Access. الأوردر متلغاش. اربط الشركة تاني بمفتاح Full Access من صفحة الشحن، أو الغي الشحنة من لوحة الشركة الأول.",
     cancelFailedAuth:
-      "رفضت شركة الشحن مفتاح API المحفوظ، لذلك لم تُلغَ الشحنة ولم يتغير الأوردر. أعد ربط الشركة من صفحة الشحن.",
+      "شركة الشحن رفضت المفتاح المتسجل، فالشحنة متلغتش والأوردر زي ما هو. اربط الشركة تاني من صفحة الشحن.",
     courierReply: "رد شركة الشحن: {message}",
     carrierPermissionNamed:
-      "قبلت {name} تسجيل الدخول، لكنها لم تفعّل الربط عبر API لهذا الحساب. بياناتك صحيحة: اطلب من {name} تفعيل الربط عبر API لحسابك، ثم حاول مرة أخرى.",
+      "{name} قبلت الدخول، بس لسه مفعّلتش الربط (API) لحسابك. بياناتك صح: اطلب من {name} تفعّل الربط وجرّب تاني.",
     carrierPermissionBosta:
-      "رفضت بوسطة هذا الإجراء بمفتاح API المربوط. راجع صلاحية المفتاح في لوحة تحكم بوسطة، أو أعد الربط بمفتاح صلاحياته Full Access.",
+      "بوسطة رفضت العملية دي بالمفتاح المربوط. راجع صلاحية المفتاح في لوحة بوسطة، أو اربط بمفتاح صلاحيته Full Access.",
     carrierSandboxNamed:
-      "ربط {name} هذا يستخدم بيئة التجربة (Sandbox) الخاصة بـ {name}، وهي تنشئ شحنات تجريبية فقط، لذلك لم يُحجز شيء. يلزم حساب إنتاج (Production) لدى {name}: اربطه من صفحة الشحن.",
+      "ربط {name} ده على حساب تجريبي (Sandbox)، وده بيعمل شحنات تجريبية بس، فمفيش حاجة اتحجزت. محتاج حساب حقيقي (Production) عند {name}: اربطه من صفحة الشحن.",
     cancelFailedApiAccess:
-      "رفضت {name} إلغاء الشحنة لأنها لم تفعّل الربط عبر API لهذا الحساب. لم يتم إلغاء الأوردر. اطلب من {name} تفعيل الربط عبر API، أو ألغِ الشحنة من لوحة تحكم {name} أولًا.",
+      "{name} رفضت تلغي الشحنة لأنها لسه مفعّلتش الربط (API) لحسابك. الأوردر متلغاش. اطلب من {name} تفعّل الربط، أو الغي الشحنة من لوحة {name} الأول.",
+    // backend requests 2026-10-06
+    DOMAIN_CONNECT_FAILED: "الدومين اتشترى، بس لسه مقدرناش نربطه بمتجرك. فريق الدعم هيكمّل ربطه — مش محتاج تشتريه تاني.",
+    // handoff 180/187
+    IMPORT_SOURCE_UNREACHABLE:
+      "معرفناش نقرا المنتج من الصفحة دي — ممكن تكون مقفولة أو بطيئة. اتأكد من اللينك وجرّب تاني، أو نزّل المنتج كشيت واستورد الملف.",
+    IMPORT_SOURCE_NO_PRODUCT_DATA: "الصفحة دي مش بتعرض بيانات المنتج. نزّلها كشيت واستورد الملف بدل اللينك.",
+    IMPORT_LINK_NOT_HTTPS: "اللينك لازم يبدأ بـ https:// — انسخه تاني من شريط العنوان في المتصفح.",
+    LINK_INVALID: "الصق لينك المنتج كامل، بيبدأ بـ https://",
+    LINK_HAS_CREDENTIALS: "اللينك ميكونش فيه اسم مستخدم أو باسورد.",
+    IMPORT_LINK_NOT_PRODUCT: "ده مش لينك منتج نقدر نقراه. الصق لينك صفحة منتج من شوبيفاي أو علي إكسبريس أو إتسي أو CJ أو يوكان.",
+    INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
+    FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
+    NO_FILE: "اختار ملف الأول.",
+    // handoff 193/196/197
+    WEBHOOK_ENDPOINT_LIMIT: "متجرك فيه ٢٥ webhook، وده أقصى عدد — وكل حدث في زابير أو ميك بيبقى واحد منهم. امسح واحد مش بتستخدمه وجرّب تاني.",
+    // handoff 189
+    GIFT_CARD_NO_EMAIL: "الكارت ده مالوش إيميل مستلم. ضيفه من «عدّل البيانات» وبعدين ابعته تاني.",
+    GIFT_CARD_NOT_FOUND: "كود كارت الهدية ده مش صحيح.",
+    GIFT_CARD_UNUSABLE: "كارت الهدية ده مينفعش يتستخدم: يا إما انتهى، يا رصيده خلص، يا اتوقف.",
+    // handoff 190
+    SLUG_TAKEN: "اللينك ده مستخدم قبل كده. اختار لينك تاني.",
+    // handoff 192
+    ALREADY_SUBMITTED: "مسار البيع ده متبعت قبل كده، وهو منشور أو مستني المراجعة. عدّله من «قوالبك».",
+    SUBMISSION_WITHDRAWN: "القالب ده اتسحب، فمينفعش يتعدّل تاني. شارك مسار البيع من جديد بدل كده.",
+    FUNNEL_GONE: "مسار البيع اللي القالب ده جاي منه اتمسح، فمفيش حاجة تتبعت تاني.",
+    MARKETPLACE_NO_PAGES: "مسار البيع ده لسه مفيهوش صفحات. اعمل صفحاته الأول وبعدين شاركه.",
+    MARKETPLACE_TOO_LARGE: "مسار البيع ده كبير أوي على المشاركة. شيل شوية أقسام أو صفحات وجرّب تاني.",
+    MARKETPLACE_GONE: "القالب ده مبقاش موجود في السوق.",
+    MARKETPLACE_BAD_PICTURE: "رابط الصورة لازم يبدأ بـ https://.",
   },
 } satisfies Messages;
 
@@ -245,6 +370,7 @@ const OWN_KEY_LIST = [
   "limitFunnels",
   "limitStores",
   "limitDrafts",
+  "limitDomains",
 ] as const;
 type CodeKey = Exclude<keyof typeof STRINGS.en, (typeof OWN_KEY_LIST)[number]>;
 const OWN_KEYS: ReadonlySet<string> = new Set(OWN_KEY_LIST);
@@ -272,51 +398,66 @@ function isNetworkError(err: unknown): boolean {
  */
 export function useErrorMessage() {
   const t = useT(STRINGS);
-  return useCallback(
-    (err: unknown, overrides?: ErrorOverrides): string => {
-      if (isNetworkError(err)) return t.network;
-      const code = apiErrorCode(err);
-      if (code) {
-        const override = overrides?.[code];
-        if (override) return override;
-        if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
-        // A draft store (not subscribed yet) is not an expired one.
-        if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
-        if (code === "PLAN_LIMIT_REACHED") {
-          const limit = apiErrorDetails<{ limit?: string; max?: number; used?: number; resetsAt?: string }>(err);
-          const counts = { max: limit?.max ?? "", used: limit?.used ?? "" };
-          if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
-          if (limit?.limit === "stores") return fmt(t.limitStores, counts);
-          if (limit?.limit === "draft_stores") return t.limitDrafts;
-        }
-        if (code === "CARRIER_CANCEL_FAILED") {
-          // Only order cancellation raises it. The courier-side cause decides
-          // what the merchant can do next; the courier's own words come along
-          // for anything we can't name.
-          const details = apiErrorDetails<CarrierCancelFailedDetails>(err);
-          const cause = details?.carrierErrorCode;
-          if (cause === "CARRIER_PERMISSION_DENIED") {
-            const carrierCode = details?.carrierCode;
-            return carrierCode && !KEY_SCOPE_CARRIERS.has(carrierCode)
-              ? fmt(t.cancelFailedApiAccess, { name: providerName(carrierCode) })
-              : t.cancelFailedPermission;
-          }
-          if (cause === "CARRIER_AUTH_FAILED") return t.cancelFailedAuth;
-          const reply = err instanceof ApiError ? err.message : "";
-          return reply ? `${t.CARRIER_CANCEL_FAILED} ${fmt(t.courierReply, { message: reply })}` : t.CARRIER_CANCEL_FAILED;
-        }
-        if (code in t && !OWN_KEYS.has(code)) return t[code as CodeKey];
+  return useCallback((err: unknown, overrides?: ErrorOverrides): string => translateError(t, err, overrides), [t]);
+}
+
+/**
+ * The same sentence outside a component (event handlers in plain modules,
+ * lib/errors.ts), in the language active right now.
+ */
+export function errorMessageNow(err: unknown, overrides?: ErrorOverrides): string {
+  return translateError(STRINGS[getLocale()], err, overrides);
+}
+
+/** True when a sentence has no Arabic letters — the server's English, shown in the Arabic UI. */
+const ARABIC_LETTER = /[؀-ۿ]/;
+
+function translateError(t: (typeof STRINGS)["en"], err: unknown, overrides?: ErrorOverrides): string {
+  if (isNetworkError(err)) return t.network;
+  const code = apiErrorCode(err);
+  if (code) {
+    const override = overrides?.[code];
+    if (override) return override;
+    if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
+    // A draft store (not subscribed yet) is not an expired one.
+    if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
+    if (code === "PLAN_LIMIT_REACHED") {
+      const limit = apiErrorDetails<{ limit?: string; max?: number; allowed?: number; used?: number; resetsAt?: string }>(err);
+      const counts = { max: limit?.max ?? limit?.allowed ?? "", used: limit?.used ?? "" };
+      if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
+      if (limit?.limit === "stores") return fmt(t.limitStores, counts);
+      if (limit?.limit === "draft_stores") return t.limitDrafts;
+      if (limit?.limit === "domains") return fmt(t.limitDomains, counts);
+    }
+    if (code === "CARRIER_CANCEL_FAILED") {
+      // Only order cancellation raises it. The courier-side cause decides
+      // what the merchant can do next; the courier's own words come along
+      // for anything we can't name.
+      const details = apiErrorDetails<CarrierCancelFailedDetails>(err);
+      const cause = details?.carrierErrorCode;
+      if (cause === "CARRIER_PERMISSION_DENIED") {
+        const carrierCode = details?.carrierCode;
+        return carrierCode && !KEY_SCOPE_CARRIERS.has(carrierCode)
+          ? fmt(t.cancelFailedApiAccess, { name: providerName(carrierCode) })
+          : t.cancelFailedPermission;
       }
-      if (err instanceof ApiError) {
-        if (err.status === 403) return t.FORBIDDEN;
-        // An unknown code: the server's sentence beats saying nothing useful.
-        return err.message || t.generic;
-      }
-      if (err instanceof Error && err.message) return err.message;
-      return t.generic;
-    },
-    [t]
-  );
+      if (cause === "CARRIER_AUTH_FAILED") return t.cancelFailedAuth;
+      const reply = err instanceof ApiError ? err.message : "";
+      return reply ? `${t.CARRIER_CANCEL_FAILED} ${fmt(t.courierReply, { message: reply })}` : t.CARRIER_CANCEL_FAILED;
+    }
+    if (code in t && !OWN_KEYS.has(code)) return t[code as CodeKey];
+  }
+  if (err instanceof ApiError) {
+    if (err.status === 403) return t.FORBIDDEN;
+    if (err.status === 401) return t.UNAUTHENTICATED;
+    // An unknown code: the server's sentence beats saying nothing useful —
+    // unless it is English inside the Arabic dashboard.
+    if (!err.message) return t.generic;
+    if (t === STRINGS.ar && !ARABIC_LETTER.test(err.message)) return t.generic;
+    return err.message;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return t.generic;
 }
 
 /**
@@ -337,6 +478,72 @@ export function useCarrierErrorMessage() {
         CARRIER_SANDBOX_NOT_ALLOWED: fmt(t.carrierSandboxNamed, { name }),
         ...overrides,
       });
+    },
+    [t, errorMessage]
+  );
+}
+
+// handoff 180: the product link import's own refusals, in the merchant's words.
+/**
+ * `useErrorMessage` for a product link import. The server answers a link it
+ * cannot use with VALIDATION_ERROR on `url` (not https, not a product page)
+ * or IMPORT_SOURCE_UNREACHABLE (refused, too slow, or no product data on the
+ * page); each gets its own sentence instead of the generic form copy.
+ */
+export function useImportLinkErrorMessage() {
+  const t = useT(STRINGS);
+  const errorMessage = useErrorMessage();
+  return useCallback(
+    (err: unknown): string => {
+      const code = apiErrorCode(err);
+      // The backend now names each refusal (LINK_*); older answers are told apart by their text below.
+      if (code === "LINK_NOT_HTTPS") return t.IMPORT_LINK_NOT_HTTPS;
+      if (code === "LINK_NOT_PRODUCT") return t.IMPORT_LINK_NOT_PRODUCT;
+      if (code === "LINK_NO_PRODUCT_DATA") return t.IMPORT_SOURCE_NO_PRODUCT_DATA;
+      const details = apiErrorDetails<unknown>(err);
+      const urlProblems = (Array.isArray(details) ? details : [])
+        .filter((d): d is { field: string; message: string } => !!d && d.field === "url" && typeof d.message === "string")
+        .map((d) => d.message);
+      if (code === "VALIDATION_ERROR" && urlProblems.length > 0) {
+        if (urlProblems.some((m) => /must start with https|full product link/i.test(m))) return t.IMPORT_LINK_NOT_HTTPS;
+        if (urlProblems.some((m) => /not a Shopify product link|can be imported/i.test(m))) return t.IMPORT_LINK_NOT_PRODUCT;
+      }
+      if (code === "IMPORT_SOURCE_UNREACHABLE" && urlProblems.some((m) => /no product data|not a shopify product/i.test(m))) {
+        return t.IMPORT_SOURCE_NO_PRODUCT_DATA;
+      }
+      return errorMessage(err);
+    },
+    [t, errorMessage]
+  );
+}
+
+// handoff 192: the template marketplace's refusals, in the merchant's words.
+/**
+ * `useErrorMessage` for the template marketplace. Keyed on code and field,
+ * never on the server's sentence (it comes back in Arabic for an Arabic
+ * dashboard): a funnel with no pages is a VALIDATION_ERROR on `funnelId`, one
+ * too big to share a VALIDATION_ERROR with no field at all, a picture link
+ * that isn't https one on `thumbnailUrl`. Pass `about: "template"` for calls
+ * on a listed template (preview, use), where NOT_FOUND means it was unlisted
+ * or withdrawn in the meantime.
+ */
+export function useMarketplaceErrorMessage() {
+  const t = useT(STRINGS);
+  const errorMessage = useErrorMessage();
+  return useCallback(
+    (err: unknown, about: "template" | "submission" = "submission"): string => {
+      const code = apiErrorCode(err);
+      const details = apiErrorDetails<unknown>(err);
+      const fields = (Array.isArray(details) ? details : [])
+        .filter((d): d is { field: string } => !!d && typeof (d as { field?: unknown }).field === "string")
+        .map((d) => d.field);
+      if (code === "VALIDATION_ERROR") {
+        if (fields.includes("funnelId")) return t.MARKETPLACE_NO_PAGES;
+        if (fields.includes("thumbnailUrl")) return t.MARKETPLACE_BAD_PICTURE;
+        if (fields.length === 0) return t.MARKETPLACE_TOO_LARGE;
+      }
+      if (code === "NOT_FOUND" && about === "template") return t.MARKETPLACE_GONE;
+      return errorMessage(err);
     },
     [t, errorMessage]
   );

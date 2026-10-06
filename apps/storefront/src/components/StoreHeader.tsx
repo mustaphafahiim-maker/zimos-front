@@ -4,12 +4,16 @@ import { storefrontHeaderCollections } from "@store-builder/api-client";
 import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
-import { getDictionary, type Locale } from "@/lib/i18n";
+import { AccountHeaderLink, useAccountMenuLink } from "@/components/account/AccountHeaderLink";
+import { brandingRemoved } from "@/components/PoweredByZimos";
+import type { Locale } from "@/lib/i18n";
+import { useDictionary } from "@/lib/StoreContext";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type LogoSize, type ResolvedShellLink } from "@/lib/storeShell";
 import { AnnouncementBar } from "./AnnouncementBar";
 import { CartIcon } from "./CartIcon";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 import { MobileMenu } from "./MobileMenu";
 import { SearchBox } from "./SearchBox";
 import { NavDropdown, menuChildren } from "./shell/NavDropdown";
@@ -63,7 +67,7 @@ const NAV_LINK =
   "zt-nav-link hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
 
 export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: Locale }) {
-  const t = getDictionary(locale);
+  const t = useDictionary(locale);
   const { header, announcement } = useStoreShell(store);
   const size = header.logoSize;
   const centred = header.logoAlign === "center";
@@ -101,12 +105,14 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   });
 
   // The sheet: the menu (or Home, as always), then the cart and order tracking.
+  const accountLink = useAccountMenuLink();
   const sheetLinks: ResolvedShellLink[] = [
     ...(menu ?? [{ key: "home", label: t.common.home, href: "/", external: false }]),
     ...(header.showCart ? [{ key: "cart", label: t.common.cart, href: "/cart", external: false }] : []),
     ...(header.showTrackOrder
       ? [{ key: "track", label: t.common.trackOrder, href: "/track", external: false }]
       : []),
+    ...(accountLink ? [accountLink] : []),
   ];
 
   const logo = (
@@ -131,7 +137,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           height={LOGO_IMG_PX[size]}
           className={`zt-logo-img ${LOGO_IMG_CLASS[size]} shrink-0 rounded-xl object-contain transition-[background-color,box-shadow] duration-200 group-data-[overlay]/header:bg-white/90 group-data-[overlay]/header:p-1 group-data-[overlay]/header:shadow-sm motion-reduce:transition-none`}
         />
-      ) : (
+      ) : brandingRemoved(store) ? null : (
         // `.zimos-logo[data-overlay ancestor]` forces the dark-surface
         // (light wordmark) export regardless of the `auto` surface prop —
         // see the header rules in globals.css.
@@ -161,6 +167,10 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <LanguageSwitch />
         </span>
       )}
+      {/* View prices in another of the store's currencies (display only). */}
+      <span className="hidden sm:contents">
+        <CurrencySwitcher workspaceId={store.id} label={t.currency.label} />
+      </span>
       {/* On a phone the theme toggle lives in the menu sheet; a wrapper hides
           it here because the button's own recipe sets its display. */}
       {header.showTheme && (
@@ -168,6 +178,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <ThemeToggle />
         </span>
       )}
+      <AccountHeaderLink />
       {header.showCart && <CartIcon />}
       {(sheetLinks.length > 0 || header.showTheme) && (
         <MobileMenu

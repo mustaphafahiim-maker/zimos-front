@@ -35,20 +35,32 @@ import { WhatsappSection } from "./WhatsappSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
+import { AppearanceSection } from "./AppearanceSection";
+import { AccountSettingsSection } from "./AccountSettingsSection";
+import { StoreAddressSection } from "./StoreAddressSection";
 import { SecuritySection } from "./SecuritySection";
 import { TeamInviteForm } from "./TeamInviteForm";
+import { TeamMemberGroups } from "./TeamMemberGroups";
 import { DevelopersSection } from "./DevelopersSection";
 import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { SectionTabs } from "@/components/SectionTabs";
 import { OrderEmailsSection } from "./OrderEmailsSection";
 
 const STRINGS = {
   en: {
     pageTitle: "Settings",
     pageDescription: "Your store profile and the people who can manage it.",
+    tabsLabel: "Settings sections",
+    tab_store: "Store identity",
+    tab_messages: "Messages",
+    tab_team: "Team",
+    tab_billing: "Plan & billing",
+    tab_account: "My account",
+    tab_developers: "Developers",
     // Store profile
-    profileTitle: "Store profile",
+    profileTitle: "Store identity",
     profileDescription: "The name, logo, and tagline shown across your dashboard and storefront.",
-    profileSaved: "Store profile saved.",
+    profileSaved: "Store identity saved.",
     name: "Name",
     logo: "Logo",
     logoAlt: "Store logo",
@@ -108,16 +120,23 @@ const STRINGS = {
   },
   ar: {
     pageTitle: "الإعدادات",
-    pageDescription: "بيانات متجرك والأشخاص الذين يمكنهم إدارته.",
-    profileTitle: "بيانات المتجر",
-    profileDescription: "اسم المتجر وشعاره وشعاره النصي كما تظهر في لوحة التحكم والمتجر.",
-    profileSaved: "تم حفظ بيانات المتجر.",
+    pageDescription: "هوية متجرك، والناس اللي بيديروه معاك، وباقتك.",
+    tabsLabel: "أقسام الإعدادات",
+    tab_store: "هوية المتجر",
+    tab_messages: "الرسايل",
+    tab_team: "الفريق",
+    tab_billing: "الباقة والفواتير",
+    tab_account: "حسابي",
+    tab_developers: "المطورين",
+    profileTitle: "هوية المتجر",
+    profileDescription: "اسم المتجر وشعاره والجملة اللي بتعرّف بيه، زي ما بتظهر في لوحة التحكم والمتجر.",
+    profileSaved: "اتحفظت هوية المتجر.",
     name: "الاسم",
     logo: "الشعار",
     logoAlt: "شعار المتجر",
     logoNone: "لا يوجد",
-    logoResizing: "جارٍ تصغير الصورة…",
-    logoUploading: "جارٍ الرفع…",
+    logoResizing: "بنصغّر الصورة…",
+    logoUploading: "بنرفع…",
     logoUpload: "رفع الشعار",
     logoFormats: "PNG أو JPEG أو GIF أو WEBP، بحد أقصى 5 ميجابايت.",
     remove: "إزالة",
@@ -134,7 +153,7 @@ const STRINGS = {
     previewSale: "تخفيض",
     previewDetails: "عرض التفاصيل",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     teamTitle: "أعضاء الفريق",
     teamDescription: "الأشخاص الذين يمكنهم الدخول إلى هذا المتجر، والدور الذي يحدد ما يمكنهم فعله.",
     inviteMember: "دعوة عضو",
@@ -157,7 +176,7 @@ const STRINGS = {
     removeDescription: "سيفقد إمكانية الدخول إلى هذا المتجر فورًا. يمكنك دعوته مرة أخرى لاحقًا.",
     removeConfirm: "إزالة العضو",
     cancel: "إلغاء",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     role_owner: "مالك المتجر",
     role_workspace_manager: "مدير مساحة العمل",
     role_editor: "محرر",
@@ -182,31 +201,99 @@ function useStoreFromLink() {
   }, [wanted, currentWorkspace?.id, workspaces, selectWorkspace]);
 }
 
+const SETTINGS_TABS = ["store", "messages", "team", "billing", "account", "developers"] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+/** Old deep links (#whatsapp, #notifications…) still land on the right tab. */
+const HASH_TAB: Record<string, SettingsTab> = {
+  whatsapp: "messages",
+  notifications: "account",
+  billing: "billing",
+  team: "team",
+  security: "account",
+  developers: "developers",
+};
+
+/**
+ * The tab in the URL (?tab=), else the one an old #hash link means, else
+ * billing for a return from the payment page (?workspace=), else the store.
+ */
+function useSettingsTab(): [SettingsTab, (tab: SettingsTab) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get("tab");
+  const fromHash = HASH_TAB[window.location.hash.replace("#", "")];
+  const tab: SettingsTab = (SETTINGS_TABS as readonly string[]).includes(raw ?? "")
+    ? (raw as SettingsTab)
+    : fromHash ?? (params.get("workspace") ? "billing" : "store");
+  const set = (next: SettingsTab) =>
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        out.set("tab", next);
+        return out;
+      },
+      { replace: true }
+    );
+  return [tab, set];
+}
+
 export function SettingsPage() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   useStoreFromLink();
+  const [tab, setTab] = useSettingsTab();
+
+  // An old #anchor link: once its tab is drawn, bring the section into view.
+  useEffect(() => {
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 150);
+    return () => window.clearTimeout(timer);
+  }, [tab]);
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="max-w-3xl space-y-8">
       <PageHeader
         title={t.pageTitle}
         description={t.pageDescription}
       />
-      <AccountSection />
-      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
-      <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
-      <CatalogSettingsSection key={`catalog-${workspaceId}`} />
-      <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
-      {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
-      <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
-      {/* The emails customers get about their orders. */}
-      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
-      <BillingSection key={`billing-${workspaceId}`} />
-      <TeamSection key={`team-${workspaceId}`} />
-      <SecuritySection key={`security-${workspaceId}`} />
-      <DevelopersSection key={`developers-${workspaceId}`} />
+      {/* Fifteen sections used to stack on one page; now they sit in six tabs. */}
+      <SectionTabs
+        label={t.tabsLabel}
+        value={tab}
+        onChange={setTab}
+        tabs={SETTINGS_TABS.map((key) => ({ value: key, label: t[`tab_${key}`] }))}
+      />
+      {tab === "store" && (
+        <>
+          <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+          {/* The store's address (<slug>.zimos.co), part of the account settings (SPEC §17.3). */}
+          <StoreAddressSection key={`store-address-${workspaceId}`} />
+          <AccountSettingsSection key={`account-settings-${workspaceId}`} />
+          <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
+          <CatalogSettingsSection key={`catalog-${workspaceId}`} />
+        </>
+      )}
+      {tab === "messages" && (
+        <>
+          <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
+          {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
+          <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+          {/* The emails customers get about their orders. */}
+          <OrderEmailsSection key={`order-emails-${workspaceId}`} />
+        </>
+      )}
+      {tab === "team" && <TeamSection key={`team-${workspaceId}`} />}
+      {tab === "billing" && <BillingSection key={`billing-${workspaceId}`} />}
+      {tab === "account" && (
+        <>
+          <AccountSection />
+          <AppearanceSection />
+          <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
+          <SecuritySection key={`security-${workspaceId}`} />
+        </>
+      )}
+      {tab === "developers" && <DevelopersSection key={`developers-${workspaceId}`} />}
     </div>
   );
 }
@@ -493,74 +580,78 @@ function TeamSection() {
 
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
         <div className="mt-4 space-y-8">
-          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-4 py-3 font-medium">{t.member}</th>
-                  <th className="px-4 py-3 font-medium">{t.role}</th>
-                  <th className="px-4 py-3 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
-                  const isSelf = Boolean(member.user && user && member.user.id === user.id);
-                  return (
-                    <tr key={member.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-ink">
-                          {member.user?.fullName || member.user?.email || "—"}
-                          {isSelf && (
-                            <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
-                          )}
-                        </div>
-                        {member.user?.email && (
-                          <div className="text-xs text-ink-soft">{member.user.email}</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {isSelf ? (
-                          <span className="text-ink-soft">{roleName(member.role)}</span>
-                        ) : (
-                          <Select
-                            aria-label={fmt(t.roleFor, { who: member.user?.email ?? t.roleForFallback })}
-                            value={member.role.id}
-                            onChange={(e) => changeRole(member, e.target.value)}
-                            className="max-w-[220px]"
-                          >
-                            {roles.map((role) => (
-                              <option key={role.id} value={role.id}>
-                                {roleName(role)}
-                              </option>
-                            ))}
-                          </Select>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        {isSelf ? (
-                          <span
-                            className="text-xs text-ink-soft"
-                            title={t.cantRemoveSelf}
-                          >
-                            —
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:bg-danger-soft"
-                            onClick={() => setRemoving(member)}
-                          >
-                            {t.remove}
-                          </Button>
-                        )}
-                      </td>
+          <TeamMemberGroups members={members} invitedCount={invites.length}>
+            {(list) => (
+              <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                      <th className="px-4 py-3 font-medium">{t.member}</th>
+                      <th className="px-4 py-3 font-medium">{t.role}</th>
+                      <th className="px-4 py-3 font-medium" />
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {list.map((member) => {
+                      const isSelf = Boolean(member.user && user && member.user.id === user.id);
+                      return (
+                        <tr key={member.id} className="border-b border-line last:border-0">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-ink">
+                              {member.user?.fullName || member.user?.email || "—"}
+                              {isSelf && (
+                                <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
+                              )}
+                            </div>
+                            {member.user?.email && (
+                              <div className="text-xs text-ink-soft">{member.user.email}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isSelf ? (
+                              <span className="text-ink-soft">{roleName(member.role)}</span>
+                            ) : (
+                              <Select
+                                aria-label={fmt(t.roleFor, { who: member.user?.email ?? t.roleForFallback })}
+                                value={member.role.id}
+                                onChange={(e) => changeRole(member, e.target.value)}
+                                className="max-w-[220px]"
+                              >
+                                {roles.map((role) => (
+                                  <option key={role.id} value={role.id}>
+                                    {roleName(role)}
+                                  </option>
+                                ))}
+                              </Select>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-end">
+                            {isSelf ? (
+                              <span
+                                className="text-xs text-ink-soft"
+                                title={t.cantRemoveSelf}
+                              >
+                                —
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger hover:bg-danger-soft"
+                                onClick={() => setRemoving(member)}
+                              >
+                                {t.remove}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TeamMemberGroups>
 
           {invites.length > 0 && (
             <div>

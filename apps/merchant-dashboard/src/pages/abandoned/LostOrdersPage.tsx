@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Download, MessageCircle, Phone, ShoppingBag, Trash2 } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { Download, Filter, MessageCircle, Phone, ShoppingBag, Trash2 } from "lucide-react";
+import { Alert, Button, Card, cn } from "@store-builder/ui";
 import {
   LOST_ORDER_REASONS,
   LOST_ORDER_RECOVERY_STATUSES,
@@ -13,6 +13,8 @@ import {
   lostOrdersExport,
   lostOrdersList,
   lostOrdersStats,
+  lostOrdersRevealPhone,
+  lostOrdersSendWhatsapp,
   lostOrdersUpdate,
   type LostOrder,
   type LostOrderReason,
@@ -42,6 +44,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { LostOrderProductFilter, LostOrdersBulkBar, useLostOrderSelection } from "./LostOrdersBulk";
+import { LostOrderTiming } from "./LostOrderTiming";
 
 /**
  * System role keys carrying orders.manage, which every action here needs
@@ -59,6 +63,13 @@ const STRINGS = {
     exporting: "Exporting…",
     exported: "{n} lost orders exported.",
     statLost: "Lost this month",
+    statLine: "{lost} lost this month · {recovered} won back, {amount}",
+    filtersToggle: "Filters",
+    filtersCount: "Filters ({n})",
+    range: "Period",
+    range_today: "Today",
+    range_7: "7 days",
+    range_30: "30 days",
     statRate: "Lost per 100 visits",
     statRateNone: "No visits recorded yet",
     statRecovered: "Recovered this month",
@@ -74,6 +85,8 @@ const STRINGS = {
     anySource: "Store and funnels",
     source_store: "Store",
     source_funnel: "Funnel",
+    cameFrom: "Came from {source}",
+    cameFromTitle: "Medium: {medium} · Ad: {ad} · Landing page: {page}",
     from: "From",
     to: "To",
     colCustomer: "Customer",
@@ -109,6 +122,8 @@ const STRINGS = {
     orderPlaced: "Order {order}",
     more: "+{n} more",
     whatsappMessage: "Hello {name}, you left your order unfinished. You can complete it here: {link}",
+    whatsappSent: "Recovery message sent from your WhatsApp number.",
+    whatsappFromStore: "Send the recovery message from your WhatsApp number",
     saved: "Saved.",
     emptyTitle: "No lost orders",
     emptyDescription: "Checkouts that are left unfinished or refused will show up here.",
@@ -129,20 +144,26 @@ const STRINGS = {
     placeOrder: "Create order",
     placing: "Creating…",
     converted: "Order {order} created.",
-    abandonedAfter: "A checkout counts as left after {n} minutes without activity.",
   },
   ar: {
-    title: "الطلبات المفقودة",
-    description: "كل طلب لم يكتمل: تُرك دون إتمام، أو رُفض بقاعدة، أو لم يُؤكَّد رقمه. استرجعها أو حوّلها إلى أوردرات.",
+    title: "الأوردرات المفقودة",
+    description: "كل أوردر ماكملش: اتساب في النص، أو اترفض بقاعدة، أو رقمه ما اتأكدش. رجّعه أو حوّله لأوردر.",
     exportCsv: "تصدير",
-    exporting: "جارٍ التصدير…",
+    exporting: "بنصدّر…",
     exported: "تم تصدير {n} طلب مفقود.",
     statLost: "المفقود هذا الشهر",
+    statLine: "{lost} مفقود الشهر ده · رجّعت {recovered} بـ {amount}",
+    filtersToggle: "الفلاتر",
+    filtersCount: "الفلاتر ({n})",
+    range: "الفترة",
+    range_today: "النهارده",
+    range_7: "٧ أيام",
+    range_30: "٣٠ يوم",
     statRate: "المفقود لكل 100 زيارة",
-    statRateNone: "لا توجد زيارات مسجلة بعد",
+    statRateNone: "مفيش زيارات مسجلة لسه",
     statRecovered: "المسترجَع هذا الشهر",
     statRecoveredHint: "أوردرات تم استرجاعها: {n}",
-    tabsLabel: "الطلبات المفقودة حسب حالة المراجعة",
+    tabsLabel: "الأوردرات المفقودة حسب المراجعة",
     tab_all: "الكل",
     tab_under_review: "تحت المراجعة",
     tab_completed: "مكتملة",
@@ -150,9 +171,11 @@ const STRINGS = {
     filterReason: "السبب",
     anyReason: "أي سبب",
     filterSource: "المصدر",
-    anySource: "المتجر والفانلز",
+    anySource: "المتجر ومسارات البيع",
     source_store: "المتجر",
-    source_funnel: "فانل",
+    source_funnel: "مسار بيع",
+    cameFrom: "جه من {source}",
+    cameFromTitle: "الوسيط: {medium} · الإعلان: {ad} · صفحة الوصول: {page}",
     from: "من",
     to: "إلى",
     colCustomer: "العميل",
@@ -188,13 +211,15 @@ const STRINGS = {
     orderPlaced: "الأوردر {order}",
     more: "+{n} أخرى",
     whatsappMessage: "أهلًا {name}، طلبك لسه ما اكتملش. تقدر تكمّله من هنا: {link}",
-    saved: "تم الحفظ.",
-    emptyTitle: "لا توجد طلبات مفقودة",
+    whatsappSent: "اتبعتت رسالة الاسترجاع من رقم واتساب بتاعك.",
+    whatsappFromStore: "ابعت رسالة الاسترجاع من رقم واتساب بتاعك",
+    saved: "اتحفظ.",
+    emptyTitle: "مفيش طلبات مفقودة",
     emptyDescription: "الطلبات التي تُترك دون إتمام أو تُرفض ستظهر هنا.",
-    emptyFiltered: "لا توجد نتائج بهذه التصفية.",
+    emptyFiltered: "مفيش نتائج بهذه التصفية.",
     removeTitle: "حذف هذا الطلب المفقود؟",
     removeDescription: "سيختفي من القائمة ويتوقف رابط الاسترجاع الخاص به.",
-    removing: "جارٍ الحذف…",
+    removing: "بنمسح…",
     cancel: "إلغاء",
     removed: "تم حذف الطلب المفقود.",
     convertTitle: "تحويل إلى أوردر",
@@ -206,9 +231,8 @@ const STRINGS = {
     address: "العنوان",
     required: "املأ هذا الحقل.",
     placeOrder: "إنشاء الأوردر",
-    placing: "جارٍ الإنشاء…",
+    placing: "بنعمله…",
     converted: "تم إنشاء الأوردر {order}.",
-    abandonedAfter: "يُعتبر الطلب متروكًا بعد {n} دقيقة بدون نشاط.",
   },
 } satisfies Messages;
 
@@ -224,6 +248,10 @@ function isTab(value: unknown): value is LostOrderTab {
 }
 
 /** Digits with the country code, for a wa.me link. Egyptian local numbers get 20. */
+const reachable = (phone: string | null | undefined) => Boolean(phone && (/\d{6,}/.test(phone) || isMasked(phone)));
+/** Phones are masked for roles without customers.reveal_sensitive; the row actions ask for the number (audited). */
+const isMasked = (phone: string | null | undefined) => Boolean(phone && phone.includes("*"));
+
 function whatsappNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("00")) return digits.slice(2);
@@ -250,6 +278,7 @@ export function LostOrdersPage() {
   const [source, setSource] = useState<"" | "store" | "funnel">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [productId, setProductId] = useState("");
 
   const filters = useMemo(
     () => ({
@@ -258,10 +287,23 @@ export function LostOrdersPage() {
       source: source || undefined,
       from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
       to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
+      productId: productId || undefined,
     }),
-    [tab, reason, source, from, to]
+    [tab, reason, source, from, to, productId]
   );
-  const filtered = Boolean(reason || source || from || to);
+  const filtered = Boolean(reason || source || from || to || productId);
+  const activeFilters = [reason, source, from || to, productId].filter(Boolean).length;
+  // Phones: the five filters fold behind one button (re-audit N-18); wide screens always show them.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Date shortcuts, in the device's own days (the date fields are the browser's mm/dd/yyyy otherwise).
+  const setRange = (days: 0 | 7 | 30) => {
+    const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - (days === 0 ? 0 : days - 1));
+    setFrom(day(start));
+    setTo(day(today));
+  };
 
   const [abandonedAfter, setAbandonedAfter] = useState<number | null>(null);
   const list = useCursorList<LostOrder>(
@@ -303,6 +345,45 @@ export function LostOrdersPage() {
     return `https://wa.me/${whatsappNumber(session.phone)}?text=${encodeURIComponent(text)}`;
   }
 
+  // With the store's WhatsApp connected, the row's WhatsApp sends the recovery template from that number (§6.3).
+  const storeWhatsapp = useAsync(
+    () => apiClient.getWhatsappIntegration(workspaceId).then((i) => Boolean(i && "connected" in i && i.connected)).catch(() => false),
+    [workspaceId]
+  );
+  const sendsFromStore = storeWhatsapp.data === true;
+
+  async function sendFromStore(session: LostOrder) {
+    try {
+      const res = await lostOrdersSendWhatsapp(apiClient, workspaceId, session.id);
+      replace({ ...session, recoveryStatus: res.recoveryStatus });
+      toast.success(t.whatsappSent);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  }
+
+  /** WhatsApp or call a masked number: the server hands over the one number, and logs it. */
+  async function reach(session: LostOrder, kind: "whatsapp" | "call") {
+    // Opened now, while the click still counts as the shopper's gesture; pointed at WhatsApp once the number is in.
+    const win = kind === "whatsapp" ? window.open("", "_blank") : null;
+    try {
+      const phone = await lostOrdersRevealPhone(apiClient, workspaceId, session.id);
+      if (!phone) {
+        win?.close();
+        return;
+      }
+      if (kind === "call") {
+        window.location.href = `tel:${phone}`;
+        return;
+      }
+      if (win) win.location.href = whatsappHref({ ...session, phone });
+      if (canManage && session.recoveryStatus === "not_contacted") void update(session, { recoveryStatus: "contacted" });
+    } catch (err) {
+      win?.close();
+      toast.error(errorMessage(err));
+    }
+  }
+
   async function runExport() {
     setExporting(true);
     try {
@@ -335,6 +416,7 @@ export function LostOrdersPage() {
     void stats.refresh({ silent: true });
   }
 
+  const selection = useLostOrderSelection(list.items);
   const columns: Column<LostOrder>[] = [
     {
       key: "customer",
@@ -348,6 +430,24 @@ export function LostOrdersPage() {
             {s.phone}
           </bdi>
           {s.source === "funnel" && <div className="text-xs text-ink-soft">{t.source_funnel}</div>}
+          {s.trafficSource?.source && (
+            <div
+              className="truncate text-xs text-ink-soft"
+              title={fmt(t.cameFromTitle, {
+                medium: s.trafficSource.medium ?? "—",
+                ad: s.trafficSource.adId ?? "—",
+                page: s.trafficSource.landingPage ?? "—",
+              })}
+            >
+              {fmt(t.cameFrom, { source: s.trafficSource.source })}
+              {s.trafficSource.campaign && (
+                <>
+                  {" · "}
+                  <bdi>{s.trafficSource.campaign}</bdi>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ),
     },
@@ -425,13 +525,26 @@ export function LostOrdersPage() {
       align: "end",
       cell: (s) => (
         <div className="flex flex-wrap justify-end gap-1.5">
+          {/* A lost order captured from a name alone has no number to reach. */}
+          {reachable(s.phone) && (
+            <>
           <a
             href={whatsappHref(s)}
             target="_blank"
             rel="noreferrer"
-            title={t.whatsapp}
-            aria-label={t.whatsapp}
-            onClick={() => {
+            title={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
+            aria-label={sendsFromStore ? t.whatsappFromStore : t.whatsapp}
+            onClick={(e) => {
+              if (sendsFromStore) {
+                e.preventDefault();
+                void sendFromStore(s);
+                return;
+              }
+              if (isMasked(s.phone)) {
+                e.preventDefault();
+                void reach(s, "whatsapp");
+                return;
+              }
               if (canManage && s.recoveryStatus === "not_contacted") void update(s, { recoveryStatus: "contacted" });
             }}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
@@ -440,12 +553,19 @@ export function LostOrdersPage() {
           </a>
           <a
             href={`tel:${s.phone}`}
+            onClick={(e) => {
+              if (!isMasked(s.phone)) return;
+              e.preventDefault();
+              void reach(s, "call");
+            }}
             title={t.call}
             aria-label={t.call}
             className="inline-flex size-9 items-center justify-center rounded-md border border-line text-ink hover:border-primary/50 hover:text-primary"
           >
             <Phone className="size-4" aria-hidden />
           </a>
+            </>
+          )}
           {canManage && s.status !== "converted" && (
             <>
               <Button variant="outline" size="sm" className="min-h-9" onClick={() => setConverting(s)}>
@@ -484,7 +604,16 @@ export function LostOrdersPage() {
       />
 
       {stats.data && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <p className="mb-3 text-sm text-ink-soft sm:hidden">
+          {fmt(t.statLine, {
+            lost: stats.data.lost,
+            recovered: stats.data.recovered,
+            amount: formatMinorMoney(stats.data.recoveredAmount, stats.data.currency),
+          })}
+        </p>
+      )}
+      {stats.data && (
+        <div className="mb-4 hidden gap-3 sm:grid sm:grid-cols-3">
           <KpiCard label={t.statLost} value={String(stats.data.lost)} />
           <KpiCard
             label={t.statRate}
@@ -503,7 +632,8 @@ export function LostOrdersPage() {
         label={t.tabsLabel}
         value={tab}
         tabs={LOST_ORDER_TABS.map((key) => ({ value: key, label: t[`tab_${key}`] }))}
-        className="mb-3"
+        className="mb-3 max-w-full flex-nowrap overflow-x-auto"
+        buttonClassName="min-h-11 shrink-0 whitespace-nowrap"
         onChange={(next) =>
           setParams(
             (prev) => {
@@ -517,7 +647,26 @@ export function LostOrdersPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Button
+        variant="outline"
+        className="mb-3 min-h-11 gap-2 sm:hidden"
+        aria-expanded={filtersOpen}
+        aria-controls="lost-order-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        <Filter className="size-4" aria-hidden />
+        {activeFilters > 0 ? fmt(t.filtersCount, { n: activeFilters }) : t.filtersToggle}
+      </Button>
+      <div id="lost-order-filters" className={cn("mb-4 grid gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-5", !filtersOpen && "hidden")}>
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5" role="group" aria-label={t.range}>
+          <span className="text-sm text-ink-soft">{t.range}</span>
+          {([0, 7, 30] as const).map((days) => (
+            <Button key={days} variant="outline" size="sm" className="min-h-9" onClick={() => setRange(days)}>
+              {days === 0 ? t.range_today : days === 7 ? t.range_7 : t.range_30}
+            </Button>
+          ))}
+        </div>
+        <LostOrderProductFilter value={productId} onChange={setProductId} />
         <Field label={t.filterReason}>
           {(props) => (
             <Select {...props} value={reason} onChange={(e) => setReason(e.target.value as "" | LostOrderReason)}>
@@ -543,10 +692,17 @@ export function LostOrdersPage() {
         <TextField label={t.to} type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
       </div>
 
+      <LostOrdersBulkBar
+        selection={selection}
+        onDone={() => {
+          list.reload();
+          void stats.refresh({ silent: true });
+        }}
+      />
       <DataState loading={list.loading} error={list.items.length ? null : list.error} onRetry={list.reload}>
         <Card className="p-0">
           <DataTable
-            columns={columns}
+            columns={[selection.column, ...columns]}
             rows={list.items}
             rowKey={(s) => s.id}
             minWidth="68rem"
@@ -560,7 +716,15 @@ export function LostOrdersPage() {
           />
         </Card>
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
-        {abandonedAfter !== null && <p className="mt-3 text-xs text-ink-soft">{fmt(t.abandonedAfter, { n: abandonedAfter })}</p>}
+        {abandonedAfter !== null && (
+          <LostOrderTiming
+            minutes={abandonedAfter}
+            onSaved={() => {
+              list.reload();
+              void stats.refresh({ silent: true });
+            }}
+          />
+        )}
       </DataState>
 
       <ConvertModal

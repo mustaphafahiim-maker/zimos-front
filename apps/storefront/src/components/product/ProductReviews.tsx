@@ -9,13 +9,16 @@ import {
 } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { getVisitorId } from "@/lib/visitorId";
+import { ReviewPhotoPicker, useReviewPhotos } from "./ReviewPhotoPicker";
 import { btnPrimary, btnSecondary, card, input, label as labelClass } from "../ui";
+import { pickText } from "@/lib/i18n";
 
 /**
  * Reviews on the product page (SPEC §7.7): the average and how the stars
  * split, the approved reviews with their photos, and the form. Only a shopper
- * who received the product can review it — the server checks the phone
- * against delivered orders — and a new review waits for the merchant's
+ * who received the product can review it — the server checks the order number
+ * and the phone against a delivered order — and a new review waits for the merchant's
  * approval, so nothing here is ever invented or shown unmoderated.
  */
 
@@ -28,7 +31,8 @@ const TEXT = {
     anonymous: "Customer",
     write: "Write a review",
     formTitle: "Your review",
-    formHint: "Use the mobile number you ordered with. Only customers who received this product can review it.",
+    formHint: "Use the order number and mobile number from your order confirmation. Only customers who received this product can review it.",
+    orderNumber: "Order number",
     phone: "Mobile number",
     rating: "Your rating",
     stars: (n: number) => `${n} out of 5`,
@@ -37,8 +41,15 @@ const TEXT = {
     sending: "Sending…",
     cancel: "Cancel",
     thanks: "Thank you! Your review will appear once the store approves it.",
-    notBuyer: "We couldn't find a delivered order of this product for this number.",
+    notBuyer: "We couldn't find a delivered order of this product with this order number and mobile number.",
     phoneRequired: "Enter the mobile number you ordered with.",
+    orderRequired: "Enter your order number — it's on your order confirmation.",
+    photos: "Photos (optional, up to 3)",
+    addPhoto: "Add a photo",
+    removePhoto: (n: number) => `Remove photo ${n}`,
+    waitPhotos: "Wait for your photos to finish uploading.",
+    photoExpired: "A photo has expired — remove it and add it again.",
+    tooFast: "Too many tries — wait a minute and try again.",
     failed: "Your review wasn't sent — try again.",
     photoAlt: "Customer photo",
   },
@@ -50,7 +61,8 @@ const TEXT = {
     anonymous: "عميل",
     write: "اكتب تقييمًا",
     formTitle: "تقييمك",
-    formHint: "اكتب رقم الموبايل الذي طلبت به. التقييم متاح فقط لمن استلم هذا المنتج.",
+    formHint: "اكتب رقم الطلب ورقم الموبايل اللي في تأكيد طلبك. التقييم متاح فقط لمن استلم هذا المنتج.",
+    orderNumber: "رقم الطلب",
     phone: "رقم الموبايل",
     rating: "تقييمك",
     stars: (n: number) => `${n} من 5`,
@@ -59,8 +71,15 @@ const TEXT = {
     sending: "جارٍ الإرسال…",
     cancel: "إلغاء",
     thanks: "شكرًا لك! سيظهر تقييمك بعد موافقة المتجر.",
-    notBuyer: "لم نجد طلبًا مستلَمًا لهذا المنتج بهذا الرقم.",
+    notBuyer: "لم نجد طلبًا مستلَمًا لهذا المنتج برقم الطلب ورقم الموبايل دول.",
     phoneRequired: "اكتب رقم الموبايل الذي طلبت به.",
+    orderRequired: "اكتب رقم الطلب — موجود في تأكيد طلبك.",
+    photos: "صور (اختياري، لحد 3)",
+    addPhoto: "أضف صورة",
+    removePhoto: (n: number) => `شيل الصورة ${n}`,
+    waitPhotos: "استنى لحد ما الصور تخلص رفع.",
+    photoExpired: "صورة انتهت صلاحيتها — شيلها وضيفها تاني.",
+    tooFast: "محاولات كتير — استنى دقيقة وجرّب تاني.",
     failed: "لم يتم إرسال تقييمك — حاول مرة أخرى.",
     photoAlt: "صورة من العميل",
   },
@@ -81,16 +100,21 @@ export function ProductReviews({
   productId,
   rating,
   reviews,
+  formOnly = false,
 }: {
   workspaceId: string;
   productId: string;
   rating: StorefrontRatingSummary;
   reviews: StorefrontReview[];
+  /** The builder's review_form element: only the button and the form, no summary or list. */
+  formOnly?: boolean;
 }) {
   const { locale, intlLocale } = useStore();
-  const text = TEXT[locale] ?? TEXT.ar;
+  const text = pickText(TEXT, locale);
   const [open, setOpen] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
+  const photos = useReviewPhotos(workspaceId);
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -100,6 +124,14 @@ export function ProductReviews({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (orderNumber.trim().length < 3) {
+      setError(text.orderRequired);
+      return;
+    }
+    if (photos.uploading) {
+      setError(text.waitPhotos);
+      return;
+    }
     if (phone.trim().length < 6) {
       setError(text.phoneRequired);
       return;
@@ -107,15 +139,33 @@ export function ProductReviews({
     setBusy(true);
     setError(null);
     try {
-      await storefrontSubmitReview(createStorefrontApiClient(), workspaceId, productId, {
-        phone: phone.trim(),
-        rating: stars,
-        ...(comment.trim() ? { comment: comment.trim() } : {}),
-      });
+      await storefrontSubmitReview(
+        createStorefrontApiClient(),
+        workspaceId,
+        productId,
+        {
+          orderNumber: orderNumber.trim(),
+          phone: phone.trim(),
+          rating: stars,
+          ...(comment.trim() ? { comment: comment.trim() } : {}),
+          ...(photos.ids.length > 0 ? { photoIds: photos.ids } : {}),
+        },
+        getVisitorId(workspaceId)
+      );
       setSent(true);
       setOpen(false);
+      photos.reset();
     } catch (err) {
-      setError(err instanceof ApiError && err.code === "NO_DELIVERED_PURCHASE" ? text.notBuyer : text.failed);
+      const code = err instanceof ApiError ? err.code : null;
+      setError(
+        code === "REVIEW_NOT_VERIFIED"
+          ? text.notBuyer
+          : code === "REVIEW_PHOTO_INVALID"
+            ? text.photoExpired
+            : err instanceof ApiError && err.status === 429
+              ? text.tooFast
+              : text.failed
+      );
     } finally {
       setBusy(false);
     }
@@ -129,9 +179,11 @@ export function ProductReviews({
   return (
     <section aria-labelledby="product-reviews-title" className="mt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="product-reviews-title" className="text-xl font-semibold text-ink">
-          {text.title}
-        </h2>
+        {!formOnly && (
+          <h2 id="product-reviews-title" className="text-xl font-semibold text-ink">
+            {text.title}
+          </h2>
+        )}
         {!open && !sent && (
           <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
             {text.write}
@@ -139,7 +191,7 @@ export function ProductReviews({
         )}
       </div>
 
-      {rating.count > 0 && rating.average !== null ? (
+      {formOnly ? null : rating.count > 0 && rating.average !== null ? (
         <div className={`${card} mt-4 grid gap-5 p-5 sm:grid-cols-[12rem_1fr] sm:items-center`}>
           <div className="text-center">
             <p className="text-4xl font-bold text-ink" dir="ltr">
@@ -200,6 +252,22 @@ export function ProductReviews({
             </div>
           </fieldset>
           <div>
+            <label htmlFor="review-order" className={labelClass}>
+              {text.orderNumber}
+            </label>
+            <input
+              id="review-order"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              dir="ltr"
+              maxLength={40}
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              className={input}
+            />
+          </div>
+          <div>
             <label htmlFor="review-phone" className={labelClass}>
               {text.phone}
             </label>
@@ -227,6 +295,7 @@ export function ProductReviews({
               className={input}
             />
           </div>
+          <ReviewPhotoPicker state={photos} text={text} />
           <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger empty:hidden">
             {error}
           </p>
@@ -241,7 +310,7 @@ export function ProductReviews({
         </form>
       )}
 
-      {reviews.length > 0 && (
+      {!formOnly && reviews.length > 0 && (
         <ul className="mt-4 grid gap-4 md:grid-cols-2">
           {reviews.map((review) => (
             <li key={review.id} className={`${card} space-y-3 p-5`}>

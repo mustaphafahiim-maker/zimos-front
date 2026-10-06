@@ -26,8 +26,8 @@ const STRINGS = {
   ar: {
     anyProduct: "كل المنتجات",
     search: "ابحث في المنتجات",
-    noMatch: "لا توجد منتجات مطابقة.",
-    selected: "تم تحديد {count}",
+    noMatch: "مفيش منتجات مطابقة.",
+    selected: "اخترت {count}",
     active: "مفعّل",
     inactive: "متوقف",
     edit: "تعديل",

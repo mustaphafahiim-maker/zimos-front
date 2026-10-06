@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { errorReporter } from "@/lib/errorReporting";
 
 const STRINGS = {
   en: {
@@ -64,6 +65,8 @@ export class RouteErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     this.setState({ errorKey: this.props.resetKey });
     console.error("Dashboard page crashed:", error, info.componentStack);
+    // Caught here, so the page's global handler never sees it (packages/error-reporter).
+    void errorReporter.report(error, { handled: true, boundary: "route" });
   }
 
   render() {

@@ -11,6 +11,7 @@ import { formatMinorMoney } from "@/lib/format";
 import { formatBucket, formatCompactMoney, useReport, type ReportRange } from "@/lib/reportRange";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { changePercent, FunnelChart, formatRate, KpiGrid, OrdersHeatmap, SplitBar, type KpiCell } from "./parts";
+import { useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -64,6 +65,9 @@ const STRINGS = {
     cod: "Cash on delivery",
     card: "Card",
     wallet: "Wallet",
+    valu: "valU installments",
+    kiosk: "Kiosk (Aman / Masary)",
+    paypal: "PayPal",
     bank_transfer: "Bank transfer",
     mobile: "Mobile",
     desktop: "Desktop",
@@ -117,10 +121,13 @@ const STRINGS = {
     heatmap: "متى تأتي الطلبات",
     heatmapHint: "حسب اليوم والساعة بتوقيت المتجر. الأغمق أكثر ازدحامًا.",
     days: "الأحد,الإثنين,الثلاثاء,الأربعاء,الخميس,الجمعة,السبت",
-    noRows: "لا توجد زيارات في هذه الفترة بعد.",
+    noRows: "مفيش زيارات في هذه الفترة لسه.",
     cod: "الدفع عند الاستلام",
     card: "بطاقة",
     wallet: "محفظة",
+    valu: "تقسيط valU",
+    kiosk: "الدفع في الكشك (أمان / مصاري)",
+    paypal: "باي بال",
     bank_transfer: "تحويل بنكي",
     mobile: "موبايل",
     desktop: "كمبيوتر",
@@ -153,9 +160,10 @@ export function OverviewTab({ workspaceId, range }: { workspaceId: string; range
     [workspaceId, range.from, range.to, range.compare]
   );
 
+  const inReport = useReportMoney();
   const view = useMemo(() => {
     if (!data) return null;
-    const money = (minor: number | null) => formatMinorMoney(minor ?? 0, data.currency);
+    const money = (minor: number | null) => formatMinorMoney(...inReport(minor ?? 0, data.currency));
     const display = (key: ChartMetric, value: number | null) =>
       MONEY_METRICS.has(key) ? money(value) : key === "conversionRate" ? formatRate(value) : formatCount(value);
     const numbers = (rows: ReportsSeriesPoint[] | null, key: ChartMetric) =>
@@ -182,7 +190,7 @@ export function OverviewTab({ workspaceId, range }: { workspaceId: string; range
       };
     });
     return { money, display, cells, points };
-  }, [data, metric, t]);
+  }, [data, metric, t, inReport]);
 
   const channelColumns: Column<ChannelRow>[] = [
     {
@@ -279,6 +287,7 @@ export function OverviewTab({ workspaceId, range }: { workspaceId: string; range
 
           <Section title={t.channels} description={t.channelsHint} flush>
             <DataTable
+            phoneCards={false}
               columns={channelColumns}
               rows={data.channels}
               rowKey={(row) => `${row.source}/${row.medium ?? ""}`}

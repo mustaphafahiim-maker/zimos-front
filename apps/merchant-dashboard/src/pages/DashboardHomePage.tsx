@@ -1,343 +1,524 @@
-import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Workflow } from "lucide-react";
-import { Button, Card, CardHeader, CardTitle, CardDescription, Spinner, cn } from "@store-builder/ui";
-import type { Order } from "@store-builder/api-client";
+import { ChevronDown, PackagePlus, Plus, ShoppingCart, Workflow } from "lucide-react";
+import { Button, cn } from "@store-builder/ui";
+import {
+  homeGetOverview,
+  profitGetPnl,
+  type ConfirmationQueueCounts,
+  type HomeOverview,
+  type Order,
+  type OrderPipeline,
+  type ProfitPnl,
+} from "@store-builder/api-client";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { useAuth } from "@/context/AuthContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { apiClient } from "@/lib/apiClient";
-import { fetchOrderStats } from "@/lib/orderStats";
 import { isPermissionError } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney } from "@/lib/format";
-import type { AnalyticsPair } from "@/lib/analytics";
-import { fetchAnalyticsPair, takePrefetchedAnalyticsSummary } from "@/lib/analyticsPrefetch";
+import { rangeWindows } from "@/lib/analytics";
 import { canViewAnalytics } from "@/lib/analyticsAccess";
+import { useRememberedChoice } from "@/lib/rememberedChoice";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Select } from "@/components/Select";
+import { Bento, BentoSkeleton, BentoTile } from "@/components/Bento";
 import { StoreOverview } from "@/pages/home/StoreOverview";
 import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
+import { SiteAnalytics } from "@/pages/home/SiteAnalytics";
+import {
+  LostTile,
+  NeedsYouTile,
+  OrdersTile,
+  ProductTile,
+  ProfitTile,
+  RateTile,
+  SalesTile,
+  WhereTile,
+  type HomeRange,
+} from "@/pages/home/HomeAnswers";
+import { STAGE_TONE, useOrderLabels } from "@/pages/orders/orderLabels";
+import { HelpCards } from "@/components/Education";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
-    welcome: "Welcome back",
-    welcomeNamed: "Welcome back, {name}",
-    subtitle: "The last 30 days, compared to the 30 before.",
-    loadError: "Couldn't load your store stats right now.",
-    empty: "No orders yet — once your first order comes in, your stats will show up here.",
-    totalOrders: "Total orders",
-    totalRevenue: "Total revenue",
-    awaitingConfirmation: "Awaiting confirmation",
-    awaitingHint: "Call them from the queue",
-    unfulfilled: "Unfulfilled",
-    basedOnRecent: "Based on the most recent {count} orders",
-    grossSales: "Gross sales",
-    orders: "Orders",
-    collected: "Cash collected",
-    vsPrevious: "vs previous 30 days",
-    recentTitle: "Recent orders",
-    viewAll: "View all",
-    noOrders: "No orders yet — the first one shows up here the moment it comes in.",
-    quickTitle: "Quick stats",
-    confirmationRate: "Confirmation rate",
-    deliveryRate: "Delivery rate",
-    conversionRate: "Store conversion rate",
-    noSessions: "Turns on with the first store visit",
-    topProducts: "Top products",
-    noProducts: "Nothing sold in the last 30 days.",
-    units: "{n} sold",
-    funnelsTitle: "Funnels",
-    noFunnels: "No funnel sessions in the last 30 days.",
-    funnelSessions: "{n} sessions",
+    morning: "Good morning, {name}",
+    evening: "Good evening, {name}",
+    morningPlain: "Good morning",
+    eveningPlain: "Good evening",
+    subtitle: "Here is what needs you, and how {store} is doing.",
+    period: "Period",
+    today: "Today",
+    week: "7 days",
+    month: "30 days",
+    newOrder: "New order",
+    newProduct: "Add product",
+    loadError: "We couldn't load your numbers.",
+    recentTitle: "Latest orders",
+    viewAll: "All orders",
+    noOrders: "No orders yet. The first one shows up here the moment it arrives.",
+    recentError: "We couldn't load your latest orders.",
+    shareStore: "Share your store link",
     channelStore: "Store",
     channelFunnel: "Funnel",
-    ordersTitle: "Orders",
-    ordersDesc: "Track and fulfill customer orders.",
-    catalogTitle: "Catalog",
-    catalogDesc: "Manage products, variants, and offers.",
-    customersTitle: "Customers",
-    customersDesc: "See who's buying and manage their details.",
+    details: "All the numbers in detail",
+    product: "Product",
+    store: "Store",
+    allProducts: "All products",
+    allStores: "All stores",
+    clearFilters: "Clear filters",
+    filteredNote: "Only the numbers below are filtered; latest orders are for the whole store, and profit by product is on the profit report.",
+    numbers: "Your numbers",
+    numbersFor: "Numbers for {name}",
+    detailsHint: "Visits, funnel, offers, sources and every metric of the period.",
   },
   ar: {
-    welcome: "مرحبًا بعودتك",
-    welcomeNamed: "مرحبًا بعودتك، {name}",
-    subtitle: "آخر 30 يومًا، مقارنةً بالثلاثين يومًا التي قبلها.",
-    loadError: "تعذّر تحميل إحصائيات متجرك الآن.",
-    empty: "لا توجد طلبات بعد — ستظهر إحصائياتك هنا بمجرد وصول أول طلب.",
-    totalOrders: "إجمالي الطلبات",
-    totalRevenue: "إجمالي الإيرادات",
-    awaitingConfirmation: "بانتظار التأكيد",
-    awaitingHint: "اتصل بهم من قائمة التأكيد",
-    unfulfilled: "غير مُنفّذة",
-    basedOnRecent: "بناءً على أحدث {count} طلب",
-    grossSales: "إجمالي المبيعات",
-    orders: "الطلبات",
-    collected: "المبالغ المحصَّلة",
-    vsPrevious: "مقارنةً بالثلاثين يومًا السابقة",
-    recentTitle: "أحدث الطلبات",
-    viewAll: "عرض الكل",
-    noOrders: "لا توجد طلبات بعد — سيظهر أول طلب هنا لحظة وصوله.",
-    quickTitle: "أرقام سريعة",
-    confirmationRate: "نسبة التأكيد",
-    deliveryRate: "نسبة التسليم",
-    conversionRate: "معدل تحويل المتجر",
-    noSessions: "يبدأ مع أول زيارة للمتجر",
-    topProducts: "المنتجات الأكثر مبيعًا",
-    noProducts: "لم يُبَع شيء خلال آخر 30 يومًا.",
-    units: "بيع منه {n}",
-    funnelsTitle: "مسارات البيع",
-    noFunnels: "لا توجد جلسات في مسارات البيع خلال آخر 30 يومًا.",
-    funnelSessions: "{n} جلسة",
+    morning: "صباح الخير يا {name}",
+    evening: "مساء الخير يا {name}",
+    morningPlain: "صباح الخير",
+    eveningPlain: "مساء الخير",
+    subtitle: "ده اللي مستنيك، وأحوال {store} عاملة إزاي.",
+    period: "الفترة",
+    today: "النهارده",
+    week: "٧ أيام",
+    month: "٣٠ يوم",
+    newOrder: "أوردر جديد",
+    newProduct: "ضيف منتج",
+    loadError: "معرفناش نجيب أرقامك دلوقتي.",
+    recentTitle: "آخر الأوردرات",
+    viewAll: "كل الأوردرات",
+    noOrders: "لسه مفيش أوردرات. أول ما ييجي أوردر هيظهر هنا على طول.",
+    recentError: "معرفناش نجيب آخر الأوردرات.",
+    shareStore: "شارك لينك متجرك",
     channelStore: "المتجر",
     channelFunnel: "مسار بيع",
-    ordersTitle: "الطلبات",
-    ordersDesc: "تابع طلبات العملاء ونفّذها.",
-    catalogTitle: "الكتالوج",
-    catalogDesc: "أدِر المنتجات والأنواع والعروض.",
-    customersTitle: "العملاء",
-    customersDesc: "اعرف من يشتري وأدِر بياناته.",
+    details: "كل الأرقام بالتفصيل",
+    product: "المنتج",
+    store: "المتجر",
+    allProducts: "كل المنتجات",
+    allStores: "كل المتاجر",
+    clearFilters: "امسح الفلاتر",
+    filteredNote: "الأرقام اللي تحت بس اتفلترت؛ آخر الأوردرات للمتجر كله، وربح كل منتج في تقرير الأرباح.",
+    numbers: "أرقامك",
+    numbersFor: "أرقام {name}",
+    detailsHint: "الزيارات، مسار الشراء، العروض، المصادر وكل مؤشرات الفترة.",
   },
 } satisfies Messages;
 
-// Icon chips, from the dashboard's own tokens.
-const TONES = {
-  primary: "bg-primary-soft text-primary-dark dark:text-primary",
-  success: "bg-success-soft text-success",
-  accent: "bg-accent-soft text-accent-dark dark:text-accent",
-  neutral: "bg-paper text-ink",
-} as const;
+const RANGES: HomeRange[] = ["today", "7d", "30d"];
 
 /**
- * The store at a glance. With analytics.view it shows the last 30 days against
- * the 30 before (from /analytics/summary), recent orders, quick rates, top
- * products and funnels. Without it — a role that can't read analytics, or a
- * custom role the server refuses — it falls back to the order roll-up this
- * page always showed. The confirmation queue count comes from the queue itself
- * in both cases.
+ * The home answers first (docs/ux/05-proposal.md §3): what is waiting for the
+ * merchant, then what the period earned and why, in sentences, with every
+ * tile one tap from the screen that acts on it. The full metric wall of the
+ * period stays one tap away under "All the numbers in detail".
+ *
+ * Roles without analytics.view see the to-do tile and the latest orders.
  */
 export function DashboardHomePage() {
   const { currentWorkspace } = useWorkspace();
+  const { user } = useAuth();
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const common = useCommon();
+  const errorMessage = useErrorMessage();
   const analyticsAllowed = canViewAnalytics(currentWorkspace?.role);
-
-  // Null: analytics are not available to this role, so the fallback shows.
-  const summary = useAsync<AnalyticsPair | null>(
+  const [range, setRange] = useRememberedChoice<HomeRange>("home.answers.range", "7d", RANGES);
+  // Item 172: narrow the numbers to one product or one store (website), remembered like the period.
+  const [productId, setProductId] = useRememberedChoice<string>("home.answers.product", "");
+  const [websiteId, setWebsiteId] = useRememberedChoice<string>("home.answers.website", "");
+  const filtered = Boolean(productId || websiteId);
+  const productChoices = useAsync(
     () =>
       analyticsAllowed
-        ? (takePrefetchedAnalyticsSummary(workspaceId, "30d") ?? fetchAnalyticsPair(workspaceId, "30d")).catch((err) => {
+        ? apiClient
+            .listProducts(workspaceId, { limit: 100 })
+            .then((r) => r.products.map((p) => ({ id: p.id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name)))
+            .catch(() => [])
+        : Promise.resolve([]),
+    [workspaceId, analyticsAllowed]
+  );
+  const websiteChoices = useAsync(
+    () =>
+      analyticsAllowed
+        ? apiClient
+            .listWebsites(workspaceId)
+            .then((list) => list.map((w) => ({ id: w.id, name: w.name })))
+            .catch(() => [])
+        : Promise.resolve([]),
+    [workspaceId, analyticsAllowed]
+  );
+
+  // The heading over the numbers names what they are filtered to («أرقام Demo T-Shirt»).
+  const filterName = [
+    productChoices.data?.find((p) => p.id === productId)?.name,
+    websiteChoices.data?.find((w) => w.id === websiteId)?.name,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // A remembered product or store that no longer exists falls back to all (the API would refuse it).
+  useEffect(() => {
+    if (productId && productChoices.data && productChoices.data.length > 0 && !productChoices.data.some((p) => p.id === productId)) setProductId("");
+  }, [productId, productChoices.data, setProductId]);
+  useEffect(() => {
+    if (websiteId && websiteChoices.data && !websiteChoices.data.some((w) => w.id === websiteId)) setWebsiteId("");
+  }, [websiteId, websiteChoices.data, setWebsiteId]);
+
+  // null means "this role can't see it"; any other failure stays an error, never a zero (audit N-01).
+  const queue = useAsync<ConfirmationQueueCounts | null>(
+    () => apiClient.getConfirmationQueueCounts(workspaceId).catch(nullIfDenied),
+    [workspaceId]
+  );
+  const pipeline = useAsync<OrderPipeline | null>(
+    () => apiClient.getOrderPipeline(workspaceId).catch(nullIfDenied),
+    [workspaceId]
+  );
+  const overview = useAsync<HomeOverview | null>(
+    () =>
+      analyticsAllowed
+        ? homeGetOverview(apiClient, workspaceId, {
+            ...rangeWindows(range).current,
+            compare: "previous",
+            productId: productId || undefined,
+            websiteId: websiteId || undefined,
+          }).catch((err) => {
             if (isPermissionError(err)) return null;
             throw err;
           })
         : Promise.resolve(null),
-    [workspaceId, analyticsAllowed]
+    [workspaceId, range, analyticsAllowed, productId, websiteId]
   );
-  const analytics = summary.data;
-  const withAnalytics = Boolean(analytics);
-
-  // Awaiting = not finished yet: waiting for a call, or someone on it.
-  const queue = useAsync(
+  // Profit needs financial_reports.view; a role without it simply gets no profit tiles.
+  const pnl = useAsync<ProfitPnl | null>(
+    () =>
+      analyticsAllowed && !filtered
+        ? profitGetPnl(apiClient, workspaceId, { ...rangeWindows(range).current, groupBy: "product" }).catch(() => null)
+        : Promise.resolve(null),
+    [workspaceId, range, analyticsAllowed, filtered]
+  );
+  const recent = useAsync<Order[] | null>(
     () =>
       apiClient
-        .getConfirmationQueueCounts(workspaceId)
-        .then((counts) => counts.pending + counts.inProgress)
-        .catch(() => null),
+        .listOrders(workspaceId, { limit: 5 })
+        .then((page) => page.orders as Order[])
+        .catch(nullIfDenied),
     [workspaceId]
   );
 
-  // Only once analytics are known to be unavailable: this walks the order list.
-  const legacy = useAsync(
-    () => (summary.loading || withAnalytics ? Promise.resolve(null) : fetchOrderStats(workspaceId)),
-    [workspaceId, summary.loading, withAnalytics]
-  );
+  const firstName = (user?.fullName ?? "").trim().split(/\s+/)[0] ?? "";
+  const morning = new Date().getHours() < 12;
+  const greeting = firstName
+    ? fmt(morning ? t.morning : t.evening, { name: firstName })
+    : morning
+      ? t.morningPlain
+      : t.eveningPlain;
+  const rangeLabel: Record<HomeRange, string> = { today: t.today, "7d": t.week, "30d": t.month };
 
-  const extra = useAsync(
-    () =>
-      withAnalytics
-        ? apiClient
-            .listOrders(workspaceId, { limit: 6 })
-            .then((page) => ({ recent: page.orders as Order[] }))
-            .catch(() => ({ recent: null }))
-        : Promise.resolve(null),
-    [workspaceId, withAnalytics]
+  const todoLoading = queue.loading || pipeline.loading;
+  const numbersLoading = overview.loading || pnl.loading;
+  const ov = overview.data;
+  // Work waiting beats the setup checklist: with orders to handle, the to-do tile comes first.
+  const stages = pipeline.data?.stages;
+  const hasTodo = Boolean(
+    (queue.data?.pendingDue ?? 0) > 0 || stages?.ready_to_ship || stages?.delivery_failed || stages?.needs_follow_up
   );
-
-  const loading = summary.loading || (!withAnalytics && legacy.loading);
-  const error = summary.error ?? (!withAnalytics ? legacy.error : null);
+  const noOrdersYet = pipeline.data?.total === 0;
+  // A failed to-do list may hide work, so it keeps the top spot like a full one.
+  const todoFailed = Boolean(queue.error || pipeline.error);
+  const todoFirst = hasTodo || todoFailed;
 
   return (
-    <div className="min-w-0 max-w-6xl">
-      <h1 className="font-display text-2xl font-medium text-ink">
-        {currentWorkspace ? fmt(t.welcomeNamed, { name: currentWorkspace.name }) : t.welcome}
-      </h1>
-
-      <div className="mt-8">
-        {loading ? (
-          <div className="flex min-h-[7rem] items-center justify-center text-ink-soft">
-            <Spinner className="size-6" />
-          </div>
-        ) : error ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-ink-soft">{t.loadError}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void summary.refresh();
-                void queue.refresh();
-                if (!withAnalytics) void legacy.refresh();
-              }}
-            >
-              {common.retry}
-            </Button>
-          </div>
-        ) : analytics ? (
-          <AnalyticsOverview
-            pair={analytics}
-            recent={extra.data?.recent ?? null}
-            extraLoading={extra.loading}
-          />
-        ) : legacy.data && legacy.data.totalOrders === 0 ? (
-          <div className="rounded-[var(--radius-card)] border border-dashed border-line px-6 py-10 text-center text-sm text-ink-soft">
-            {t.empty}
-          </div>
-        ) : legacy.data ? (
-          <>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <LegacyStatCard label={t.totalOrders} value={legacy.data.totalOrders} />
-              <LegacyStatCard label={t.totalRevenue} value={formatMoney(legacy.data.totalRevenue, legacy.data.currency)} />
-              <LegacyStatCard label={t.awaitingConfirmation} value={queue.data ?? "—"} to="/confirmation-queue" />
-              <LegacyStatCard label={t.unfulfilled} value={legacy.data.unfulfilledCount} to="/orders" />
+    <div className="mx-auto min-w-0 max-w-6xl">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold text-ink">{greeting}</h1>
+          {currentWorkspace && (
+            <p className="mt-1 text-sm text-ink-soft">{fmt(t.subtitle, { store: currentWorkspace.name })}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {analyticsAllowed && (
+            <div role="group" aria-label={t.period} className="flex rounded-full bg-paper-sunken p-1">
+              {RANGES.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={range === value}
+                  onClick={() => setRange(value)}
+                  className={cn(
+                    "min-h-9 cursor-pointer rounded-full px-3.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink",
+                    range === value && "bg-paper-raised text-ink shadow-[var(--shadow-card)]"
+                  )}
+                >
+                  {rangeLabel[value]}
+                </button>
+              ))}
             </div>
-            {legacy.data.reachedCap && (
-              <p className="mt-2 text-xs text-ink-soft">{fmt(t.basedOnRecent, { count: legacy.data.cap })}</p>
-            )}
-          </>
-        ) : null}
+          )}
+          <Button variant="outline" asChild className="hidden h-10 sm:inline-flex">
+            <Link to="/catalog/new">
+              <PackagePlus aria-hidden />
+              {t.newProduct}
+            </Link>
+          </Button>
+          <Button asChild className="h-10">
+            <Link to="/orders/new">
+              <Plus aria-hidden />
+              {t.newOrder}
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          { title: t.ordersTitle, desc: t.ordersDesc, to: "/orders" },
-          { title: t.catalogTitle, desc: t.catalogDesc, to: "/catalog" },
-          { title: t.customersTitle, desc: t.customersDesc, to: "/customers" },
-        ].map((item) => (
-          <Link key={item.to} to={item.to} className="block">
-            <Card className="h-full transition-colors hover:border-primary/40">
-              <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
-                <CardDescription>{item.desc}</CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {!todoLoading && !todoFirst && <SetupGuideCard />}
+
+      {/* What's waiting is for the whole store, so it comes before the product / store filter,
+          which only changes the numbers below it (re-audit N-20). */}
+      <Bento className="lg:grid-cols-2">
+        {todoLoading ? (
+          <BentoSkeleton span={2} />
+        ) : (
+          <NeedsYouTile
+            queue={queue.error ? null : queue.data}
+            pipeline={pipeline.error ? null : pipeline.data}
+            failed={todoFailed}
+            onRetry={() => {
+              if (queue.error) void queue.refresh();
+              if (pipeline.error) void pipeline.refresh();
+            }}
+          />
+        )}
+        {!todoLoading && todoFirst && (
+          <div className="order-last col-span-2">
+            <SetupGuideCard className="" />
+          </div>
+        )}
+      </Bento>
+
+      {analyticsAllowed && ((productChoices.data?.length ?? 0) > 0 || (websiteChoices.data?.length ?? 0) > 1) && (
+        <div className="my-[var(--bento-gap)] flex flex-wrap items-center gap-2">
+          <h2 className="me-auto text-sm font-semibold text-ink">{filtered ? fmt(t.numbersFor, { name: filterName }) : t.numbers}</h2>
+          {(productChoices.data?.length ?? 0) > 0 && (
+            <Select
+              aria-label={t.product}
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              className={cn("h-10 w-auto max-w-[14rem]", productId && "border-primary text-primary-dark")}
+            >
+              <option value="">{t.allProducts}</option>
+              {productChoices.data?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {/* One website means one store: no point in choosing. */}
+          {(websiteChoices.data?.length ?? 0) > 1 && (
+            <Select
+              aria-label={t.store}
+              value={websiteId}
+              onChange={(e) => setWebsiteId(e.target.value)}
+              className={cn("h-10 w-auto max-w-[14rem]", websiteId && "border-primary text-primary-dark")}
+            >
+              <option value="">{t.allStores}</option>
+              {websiteChoices.data?.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {filtered && (
+            <>
+              <Button
+                variant="ghost"
+                className="min-h-10"
+                onClick={() => {
+                  setProductId("");
+                  setWebsiteId("");
+                }}
+              >
+                {t.clearFilters}
+              </Button>
+              <span className="text-xs text-ink-soft">{t.filteredNote}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {analyticsAllowed && !((productChoices.data?.length ?? 0) > 0 || (websiteChoices.data?.length ?? 0) > 1) && <div className="h-[var(--bento-gap)]" />}
+
+      <Bento>
+
+        {analyticsAllowed &&
+          (numbersLoading && !ov ? (
+            <>
+              <BentoSkeleton span={2} />
+              <BentoSkeleton />
+              <BentoSkeleton />
+              <BentoSkeleton />
+              <BentoSkeleton />
+            </>
+          ) : overview.error ? (
+            <BentoTile span={2}>
+              <p className="text-sm text-ink">{t.loadError}</p>
+              <p className="mt-1 text-xs text-ink-soft">{errorMessage(overview.error)}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 min-h-11 self-start"
+                onClick={() => {
+                  void overview.refresh();
+                  void pnl.refresh();
+                }}
+              >
+                {common.retry}
+              </Button>
+            </BentoTile>
+          ) : (
+            <>
+              {pnl.data && <ProfitTile pnl={pnl.data} range={range} />}
+              {ov && (
+                <>
+                  <SalesTile overview={ov} />
+                  <OrdersTile overview={ov} />
+                  <RateTile overview={ov} kind="confirmation" />
+                  <RateTile overview={ov} kind="delivery" />
+                </>
+              )}
+              <ProductTile pnl={pnl.data} overview={ov} range={range} />
+              {ov && <LostTile overview={ov} range={range} />}
+              {ov && <WhereTile overview={ov} range={range} storeWideVisits={ov.eventScope === "store"} />}
+            </>
+          ))}
+
+        {/* With no orders at all, the to-do tile already says so and points at the store link. */}
+        {!(noOrdersYet && recent.data?.length === 0) && (
+          <RecentOrdersTile orders={recent.data} loading={recent.loading} error={recent.error} onRetry={() => void recent.refresh()} />
+        )}
+      </Bento>
+
+      {analyticsAllowed && <Details />}
+
+      {/* Help center, Telegram and support chat, when ZIMOS has set them (components/Education.tsx). */}
+      <HelpCards />
     </div>
   );
 }
 
-function AnalyticsOverview({
-  pair,
-  recent,
-  extraLoading,
+/** A 403 means this role can't see it (null, the tile hides); anything else stays an error. */
+function nullIfDenied(err: unknown): null {
+  if (isPermissionError(err)) return null;
+  throw err;
+}
+
+function RecentOrdersTile({
+  orders,
+  loading,
+  error,
+  onRetry,
 }: {
-  pair: AnalyticsPair;
-  recent: Order[] | null;
-  extraLoading: boolean;
+  orders: Order[] | null;
+  loading: boolean;
+  error: unknown;
+  onRetry: () => void;
 }) {
   const t = useT(STRINGS);
-  const { current } = pair;
-  const currency = current.currency ?? "EGP";
-  const money = (v: number | string) => <bdi dir="ltr">{formatMoney(v, currency)}</bdi>;
-
-  return (
-    <>
-      <SetupGuideCard />
-      <div className="mb-8">
-        <StoreOverview />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <div>
-          <Panel
-            title={t.recentTitle}
-            action={
-              <Link to="/orders" className="text-sm font-medium text-primary hover:underline">
-                {t.viewAll}
-              </Link>
-            }
-          >
-            {recent === null ? (
-              extraLoading ? (
-                <div className="flex h-24 items-center justify-center text-ink-soft">
-                  <Spinner className="size-5" />
-                </div>
-              ) : (
-                <p className="text-sm text-ink-soft">—</p>
-              )
-            ) : recent.length === 0 ? (
-              <p className="text-sm text-ink-soft">{t.noOrders}</p>
-            ) : (
-              <div className="space-y-1">
-                {recent.map((order) => (
-                  <Link
-                    key={order.id}
-                    to={`/orders/${order.id}`}
-                    className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-paper"
-                  >
-                    <div className={cn("rounded-lg p-2 [&>svg]:size-4", order.funnelId ? TONES.accent : TONES.primary)}>
-                      {order.funnelId ? <Workflow aria-hidden /> : <ShoppingCart aria-hidden />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">
-                        <bdi dir="ltr">{order.orderNumber}</bdi>
-                        <span className="ms-2 font-normal text-ink-soft" dir="auto">
-                          {order.contactSnapshot?.fullName || "—"}
-                        </span>
-                      </p>
-                      <p className="truncate text-xs text-ink-soft">
-                        {order.funnelId ? t.channelFunnel : t.channelStore} · {formatDateTime(order.createdAt)}
-                      </p>
-                    </div>
-                    <StatusBadge value={order.confirmationState} />
-                    <span className="tabular-nums text-sm font-medium text-ink">{money(order.totalAmount)}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Panel>
+  const common = useCommon();
+  const labels = useOrderLabels();
+  if (loading) return <BentoSkeleton span={4} />;
+  if (error) {
+    return (
+      <BentoTile span={4} eyebrow={t.recentTitle} icon={ShoppingCart}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink">{t.recentError}</p>
+          <Button variant="outline" className="min-h-11" onClick={onRetry}>
+            {common.retry}
+          </Button>
         </div>
-
-      </div>
-    </>
-  );
-}
-
-function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+      </BentoTile>
+    );
+  }
+  // A role without order access: no tile, rather than a false "no orders yet".
+  if (!orders) return null;
   return (
-    <Card className="gap-0 p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-ink">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </Card>
+    <BentoTile span={4} eyebrow={t.recentTitle} icon={ShoppingCart} action={orders?.length ? { to: "/orders", label: t.viewAll } : undefined}>
+      {!orders || orders.length === 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink-soft">{t.noOrders}</p>
+          <Button variant="outline" asChild className="min-h-11">
+            <Link to="/store-settings">{t.shareStore}</Link>
+          </Button>
+        </div>
+      ) : (
+        <ul className="-mx-2 divide-y divide-line">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link
+                to={`/orders/${order.id}`}
+                className="flex min-h-14 items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-paper-sunken"
+              >
+                <span
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-xl [&>svg]:size-4",
+                    order.funnelId ? "bg-accent-soft text-accent-dark" : "bg-primary-soft text-primary-dark"
+                  )}
+                >
+                  {order.funnelId ? <Workflow aria-hidden /> : <ShoppingCart aria-hidden />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-ink">
+                    <bdi>{order.contactSnapshot?.fullName || "—"}</bdi>
+                  </span>
+                  <span className="block truncate text-xs text-ink-soft">
+                    <bdi dir="ltr">{order.orderNumber}</bdi> · {order.funnelId ? t.channelFunnel : t.channelStore} ·{" "}
+                    {formatDateTime(order.createdAt)}
+                  </span>
+                </span>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-sm font-semibold text-ink tabular-nums">
+                    <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency ?? "EGP")}</bdi>
+                  </span>
+                  {order.stage && (
+                    <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={labels.stage(order.stage)} />
+                  )}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </BentoTile>
   );
 }
 
-function LegacyStatCard({ label, value, to }: { label: string; value: ReactNode; to?: string }) {
-  const card = (
-    <Card className={to ? "h-full p-4 transition-colors hover:border-primary/40" : "h-full p-4"}>
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{label}</p>
-      <p className="mt-1 font-display text-2xl font-medium text-ink">{value}</p>
-    </Card>
-  );
-  return to ? (
-    <Link to={to} className="block">
-      {card}
-    </Link>
-  ) : (
-    card
+/** The full metric wall of the period, folded away until asked for. */
+function Details() {
+  const t = useT(STRINGS);
+  const [open, setOpen] = useState(false);
+  return (
+    <details
+      className="group mt-[var(--bento-gap)] rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line"
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-medium text-ink">{t.details}</span>
+          <span className="block text-xs text-ink-soft">{t.detailsHint}</span>
+        </span>
+        <ChevronDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      {open && (
+        <div className="space-y-8 border-t border-line px-4 py-5 sm:px-5">
+          <StoreOverview />
+          <SiteAnalytics />
+        </div>
+      )}
+    </details>
   );
 }

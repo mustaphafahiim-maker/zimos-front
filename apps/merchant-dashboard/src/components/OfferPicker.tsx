@@ -29,10 +29,10 @@ const STRINGS = {
   ar: {
     search: "بحث في العروض",
     searchPlaceholder: "اسم المنتج أو العرض",
-    none: "اختر عرضًا…",
-    loading: "جارٍ تحميل العروض…",
-    empty: "لا توجد عروض فعّالة بعد. أضف عرضًا من صفحة المنتج (العروض).",
-    noMatch: "لا يوجد عرض يطابق البحث.",
+    none: "اختار عرضًا…",
+    loading: "بنحمّل العروض…",
+    empty: "مفيش عروض فعّالة لسه. أضف عرضًا من صفحة المنتج (العروض).",
+    noMatch: "مفيش عرض يطابق البحث.",
     failed: "تعذّر تحميل العروض.",
     current: "العرض المختار",
     option: "{offer} — {price}",
@@ -42,7 +42,7 @@ const STRINGS = {
     problem_no_lines: "بلا متغيرات فعّالة",
     problem_custom_fields: "يطلب بيانات من العميل",
     unusable: "{offer} ({reason})",
-    currentGone: "لم يعد العرض المختار صالحًا للعرض. اختر عرضًا آخر.",
+    currentGone: "لم يعد العرض المختار صالحًا للعرض. اختار عرضًا آخر.",
   },
 } satisfies Messages;
 

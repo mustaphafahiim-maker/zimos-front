@@ -13,6 +13,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";
+import { ConversionEventChoice } from "./ConversionEventChoice";
 
 const STRINGS = {
   en: {
@@ -30,7 +31,7 @@ const STRINGS = {
   },
   ar: {
     title: "متى يُسجَّل الشراء",
-    description: "اختر اللحظة التي يُحسب فيها الطلب كـ Purchase عند منصات الإعلانات، لتتعلم من الطلبات الحقيقية.",
+    description: "اختار اللحظة التي يُحسب فيها الطلب كـ Purchase عند منصات الإعلانات، لتتعلم من الطلبات الحقيقية.",
     on_order: "عند إنشاء الطلب",
     on_order_hint: "الإعداد المعتاد. يُرسل من المتصفح ومن السيرفر في نفس الوقت.",
     on_confirmed: "عند تأكيد الطلب",
@@ -107,6 +108,7 @@ export function PurchaseTimingSection() {
             </div>
           )}
         </DataState>
+        {data && <ConversionEventChoice settings={data} disabled={saving} onSaved={setData} />}
       </div>
     </Card>
   );

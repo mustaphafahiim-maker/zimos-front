@@ -32,7 +32,7 @@ const STRINGS = {
   },
   ar: {
     live: "مباشر",
-    reconnecting: "جارٍ إعادة الاتصال…",
+    reconnecting: "بنعيد الاتصال…",
     allStore: "المتجر كله",
     funnelFilter: "المتجر أو مسار البيع",
     fullscreen: "ملء الشاشة",
@@ -43,7 +43,7 @@ const STRINGS = {
     noCheckouts: "لا أحد في صفحة إتمام الطلب الآن.",
     checkout: "{items} منتج · {amount}",
     purchases: "أحدث المشتريات",
-    noPurchases: "لا توجد طلبات خلال آخر 24 ساعة.",
+    noPurchases: "مفيش طلبات خلال آخر 24 ساعة.",
     sec: "منذ {s} ث",
     min: "منذ {m} د",
     hour: "منذ {h} س",
@@ -132,7 +132,6 @@ export function LivePanel({
   fullscreenTarget: React.RefObject<HTMLElement | null>;
 }) {
   const t = useT(STRINGS);
-  const funnels = useAsync(() => funnelsList(apiClient, workspaceId).catch(() => []), [workspaceId]);
   // Re-render every few seconds so "12s ago" keeps counting between snapshots.
   const [, setNow] = useState(0);
   useEffect(() => {
@@ -160,21 +159,7 @@ export function LivePanel({
           <span className={cn("size-2 rounded-full", connected ? "animate-pulse bg-success" : "bg-line-strong")} aria-hidden />
           {connected ? t.live : t.reconnecting}
         </span>
-        {(funnels.data?.length ?? 0) > 0 && (
-          <Select
-            aria-label={t.funnelFilter}
-            value={funnelId}
-            onChange={(e) => onFunnelChange(e.target.value)}
-            className="h-9 w-auto max-w-[14rem] font-medium"
-          >
-            <option value="">{t.allStore}</option>
-            {funnels.data?.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </Select>
-        )}
+        <LiveFunnelSelect workspaceId={workspaceId} value={funnelId} onChange={onFunnelChange} />
         <Button
           variant="outline"
           size="sm"
@@ -259,6 +244,38 @@ export function LivePanel({
         </>
       )}
     </div>
+  );
+}
+
+/** "Whole store" or one funnel; nothing when the store has no funnels. Shared by the realtime tabs. */
+export function LiveFunnelSelect({
+  workspaceId,
+  value,
+  onChange,
+  className,
+}: {
+  workspaceId: string;
+  value: string;
+  onChange: (funnelId: string) => void;
+  className?: string;
+}) {
+  const t = useT(STRINGS);
+  const funnels = useAsync(() => funnelsList(apiClient, workspaceId).catch(() => []), [workspaceId]);
+  if ((funnels.data?.length ?? 0) === 0) return null;
+  return (
+    <Select
+      aria-label={t.funnelFilter}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn("h-9 w-auto max-w-[14rem] font-medium", className)}
+    >
+      <option value="">{t.allStore}</option>
+      {funnels.data?.map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.name}
+        </option>
+      ))}
+    </Select>
   );
 }
 

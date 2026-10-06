@@ -1,10 +1,20 @@
 "use client";
 
-import { storefrontQuoteExtras, type StorefrontQuoteExtras } from "@store-builder/api-client";
+import {
+  deliveryEstimateOf,
+  storefrontQuoteExtras,
+  type DeliveryEstimate,
+  storefrontShippingQuoteFor,
+  type ShippingQuotePlacePayload,
+  type StorefrontQuoteExtras,
+} from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
 import { provinceFor } from "./orderForm";
+import { getVisitorId } from "./visitorId";
 import { quotePricesShipping, shippingLineFor, type ShippingLine } from "./shippingLine";
+import { quoteOptionsOf, type ShippingOptionChoice } from "./shippingChoice";
+import type { PlaceAddress } from "./useStorePlaces";
 
 const DEBOUNCE_MS = 300;
 
@@ -24,6 +34,10 @@ export interface ShippingQuoteState {
   freeShipping: FreeShippingProgress | null;
   /** The automatic discount, the minimum order and the bundle saving the quote reports (lane 3). */
   extras: StorefrontQuoteExtras;
+  /** The store's shipping options for this cart (standard first); absent or [] = no choice (shippingChoice.ts). */
+  options?: ShippingOptionChoice[];
+  /** When the order should arrive at this address (handoff 199); null while unknown or off. */
+  deliveryEstimate?: DeliveryEstimate | null;
 }
 
 /**
@@ -32,7 +46,8 @@ export interface ShippingQuoteState {
  * number charged.
  *
  * The quote is asked for as soon as there are lines (with or without a
- * governorate), then again whenever the governorate or the lines change. A
+ * governorate), then again whenever the governorate, the picked place (the
+ * store's own region → city → area, lib/useStorePlaces) or the lines change. A
  * failed quote falls back to "on confirmation" — it must never block the
  * order. `enabled: false` asks nothing (a closed cart drawer).
  */
@@ -40,22 +55,28 @@ export function useShippingQuote({
   client,
   workspaceId,
   governorate,
+  country = "EG",
   lines,
+  place = null,
   enabled = true,
 }: {
   client: ApiClient;
   workspaceId: string;
   /** The governorate code ("" until chosen). */
   governorate: string;
+  /** The order's country: the form's, which starts on the store's (lib/storeCountry). */
+  country?: string;
   lines: QuoteLine[];
+  /** The place picked from the store's own list: priced by its id (rule "store_place_rate"). */
+  place?: PlaceAddress | null;
   enabled?: boolean;
 }): ShippingQuoteState {
-  const province = provinceFor(governorate);
+  const province = place ? place.province : provinceFor(governorate);
   const items = lines
     .filter((l) => l.quantity > 0)
     .map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity }));
   // The effect keys on content, not on the fresh array each render.
-  const requestKey = JSON.stringify([workspaceId, province, items]);
+  const requestKey = JSON.stringify([workspaceId, country, province, place?.placeId ?? null, items]);
   const active = enabled && items.length > 0;
 
   const [state, setState] = useState<{ key: string; quote: ShippingQuote | null; failed: boolean } | null>(null);
@@ -64,8 +85,14 @@ export function useShippingQuote({
     if (!active) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      client
-        .getShippingQuote(workspaceId, { country: "EG", governorate: province ?? null, items })
+      // For this visitor: a product A/B test's price counts, as the order will charge it.
+      const body: ShippingQuotePlacePayload = {
+        country,
+        governorate: province ?? null,
+        items,
+        ...(place ? { city: place.city ?? null, area: place.area ?? null, placeId: place.placeId } : {}),
+      };
+      storefrontShippingQuoteFor(client, workspaceId, body, { visitorId: getVisitorId(workspaceId) })
         .then((quote) => {
           if (!cancelled) setState({ key: requestKey, quote, failed: false });
         })
@@ -88,7 +115,11 @@ export function useShippingQuote({
     return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null, extras };
   }
 
-  const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
+  // Only a pick that reached the last level of the store's own list completes the address (no_rate, shippingLine.ts).
+  const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey, addressDone: Boolean(place?.final) });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras };
+  const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
+  // Only the answer for this very address and basket: an older one is about another place.
+  const deliveryEstimate = state.key === requestKey ? deliveryEstimateOf(state.quote) : null;
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options, deliveryEstimate };
 }

@@ -68,6 +68,7 @@ export async function funnelExtrasDiscardDraft(client: ApiClient, workspaceId: s
 
 export type FunnelIssueCode =
   | "graph"
+  | "untranslated_text"
   | "page_without_product"
   | "unlinked_button"
   | "image_without_alt"
@@ -82,6 +83,9 @@ export interface FunnelIssue {
   field?: string | null;
   /** English, from the server; the dashboard translates by `code` where it can. */
   message: string;
+  /** untranslated_text: the language the texts are missing in, and how many. */
+  locale?: string;
+  count?: number;
 }
 
 export interface FunnelIssues {
@@ -277,6 +281,16 @@ export interface FunnelOwnSettings {
   faviconUrl: string | null;
   title: string | null;
   description: string | null;
+  /** The funnel's own scripts, on every step (storefront FunnelCode). */
+  headCode?: string | null;
+  bodyCode?: string | null;
+  /** Its shipping group (Shipping → groups); null = each product's own. */
+  shippingProfileId?: string | null;
+  /**
+   * Its own free-shipping threshold, minor units in the funnel's currency;
+   * null = the store's (a funnel selling in another currency has none then).
+   */
+  freeShippingThresholdAmount?: number | null;
 }
 
 export async function funnelSettingsGet(client: ApiClient, workspaceId: string, funnelId: string): Promise<FunnelOwnSettings> {

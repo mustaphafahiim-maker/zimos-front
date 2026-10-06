@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { ApiError, storeSubmitForm } from "@store-builder/api-client";
 import { btnPrimary, input } from "@/components/ui";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { getVisitorId } from "@/lib/visitorId";
+import { FormPhotoInput, StarsInput } from "./builderMoreClient";
 
 export interface PageFormLabels {
   name: string;
@@ -37,6 +39,12 @@ interface PageFormProps {
    * "label: answer" line each, so the forms API needs nothing new.
    */
   extra?: { fields: string[]; choiceLabel: string; choices: string[]; checkboxLabel: string };
+  /**
+   * One photo input and one 1–5 stars input (item 93). Unlike the inputs
+   * above, these travel in `fields` under their label: the server checks
+   * them against the published form (backend contacts/formFiles.js).
+   */
+  inputs?: { fileLabel: string; fileRequired: boolean; ratingLabel: string };
 }
 
 /** The page path as the API knows it: without the `/store/<ref>` prefix. */
@@ -51,8 +59,10 @@ function pagePathOf(pathname: string, workspaceId: string): string {
  * reads the element's own tags from the published page, so nothing the
  * shopper's browser sends decides how they are tagged.
  */
-export function PageForm({ workspaceId, elementId, title, submitLabel, successMessage, askConsent, disabled, labels, extra }: PageFormProps) {
+export function PageForm({ workspaceId, elementId, title, submitLabel, successMessage, askConsent, disabled, labels, extra, inputs }: PageFormProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [rating, setRating] = useState(0);
+  const [photo, setPhoto] = useState<{ uploadId: string | null; uploading: boolean }>({ uploadId: null, uploading: false });
   const [ticked, setTicked] = useState(false);
   const extraLines = () => {
     if (!extra) return [];
@@ -75,6 +85,14 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
       setError(labels.needContact);
       return;
     }
+    if (photo.uploading) return;
+    if (inputs?.fileLabel && inputs.fileRequired && !photo.uploadId) {
+      setError(`${inputs.fileLabel} *`);
+      return;
+    }
+    const fields: Record<string, string> = {};
+    if (inputs?.ratingLabel && rating > 0) fields[inputs.ratingLabel] = String(rating);
+    if (inputs?.fileLabel && photo.uploadId) fields[inputs.fileLabel] = photo.uploadId;
     setState("sending");
     setError(null);
     try {
@@ -88,11 +106,20 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
         message: [form.message.trim(), ...extraLines()].filter(Boolean).join("\n").slice(0, 4000) || undefined,
         marketingConsent: form.consent,
         website: form.website || undefined,
+        ...(Object.keys(fields).length > 0 ? { fields, visitorId: getVisitorId(workspaceId) } : {}),
       });
       setState("sent");
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
-      setError(code === "INVALID_PHONE" ? labels.invalidPhone : code === "CONTACT_REQUIRED" ? labels.needContact : labels.error);
+      setError(
+        code === "INVALID_PHONE"
+          ? labels.invalidPhone
+          : code === "CONTACT_REQUIRED"
+            ? labels.needContact
+            : (code === "FORM_FILE_INVALID" || code === "FORM_FILE_REQUIRED") && inputs?.fileLabel
+              ? `${inputs.fileLabel} *`
+              : labels.error
+      );
       setState("idle");
     }
   }
@@ -201,6 +228,20 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
               </select>
             </div>
           )}
+          {inputs?.ratingLabel && <StarsInput id={`${id}-stars`} label={inputs.ratingLabel} value={rating} onChange={setRating} />}
+          {inputs?.fileLabel && (
+            <FormPhotoInput
+              id={`${id}-photo`}
+              workspaceId={workspaceId}
+              label={inputs.fileLabel}
+              required={inputs.fileRequired}
+              disabled={disabled}
+              onChange={(uploadId, uploading) => {
+                setPhoto({ uploadId, uploading });
+                if (uploadId) setError(null);
+              }}
+            />
+          )}
           {extra?.checkboxLabel && (
             <label className="flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={ticked} onChange={(e) => setTicked(e.target.checked)} />
@@ -229,7 +270,7 @@ export function PageForm({ workspaceId, elementId, title, submitLabel, successMe
               {error}
             </p>
           )}
-          <button type="submit" disabled={state === "sending"} className={`${btnPrimary} w-full`}>
+          <button type="submit" disabled={state === "sending" || photo.uploading} className={`${btnPrimary} w-full`}>
             {state === "sending" ? labels.sending : submitLabel}
           </button>
         </form>

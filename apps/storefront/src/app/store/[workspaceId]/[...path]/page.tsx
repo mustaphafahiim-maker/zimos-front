@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageRenderer } from "@/components/page-renderer";
+import { PageScripts } from "@/components/PageScripts";
+import { scriptsOf } from "@/lib/pageScripts";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, isStoreUnavailable } from "@/lib/storeMeta";
 import type { StorefrontPageResult } from "@store-builder/api-client";
 import { getStoreBasePath } from "@/lib/storeRoute";
+import { HtmlBlocksProvider } from "@/components/HtmlBlock";
+import { htmlBlocksOf } from "@/lib/htmlBlocks";
 
 export const revalidate = 60;
 
@@ -48,6 +52,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title,
     description: page.og?.description || undefined,
     alternates: { canonical },
+    // "Hide from search engines" in the page settings.
+    ...((page.seo as { noindex?: unknown } | undefined)?.noindex === true ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title,
       description: page.og?.description || undefined,
@@ -96,13 +102,17 @@ export default async function CustomStorePage({ params }: { params: Params }) {
 
   return (
     <main className="flex-1">
-      <PageRenderer
-        tree={page.tree}
-        workspaceId={workspaceId}
-        currency={store.currency}
-        locale={locale}
-        siteStyles={result.data.site?.globalStyles}
-      />
+      <HtmlBlocksProvider blocks={htmlBlocksOf(page)}>
+        <PageRenderer
+          tree={page.tree}
+          workspaceId={workspaceId}
+          currency={store.currency}
+          locale={locale}
+          siteStyles={result.data.site?.globalStyles}
+          pageId={(page as { id?: string | null }).id}
+        />
+      </HtmlBlocksProvider>
+      <PageScripts scripts={scriptsOf(page)} />
     </main>
   );
 }

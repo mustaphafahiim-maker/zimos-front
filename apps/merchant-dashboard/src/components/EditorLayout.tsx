@@ -12,7 +12,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 export function EditorLayout() {
   const location = useLocation();
   return (
-    <div className="flex h-dvh flex-col bg-paper">
+    <div className="glass-editor flex h-dvh flex-col bg-paper">
       <div className="shrink-0 px-3 pt-3 empty:hidden">
         <AccessBanner />
       </div>
