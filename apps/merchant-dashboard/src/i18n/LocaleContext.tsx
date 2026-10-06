@@ -142,9 +142,28 @@ export function useT<K extends string>(messages: { en: Record<K, string>; ar: Re
   return messages[locale];
 }
 
-/** "Hello {name}" + { name: "Sara" } -> "Hello Sara" */
+/**
+ * "Hello {name}" + { name: "Sara" } -> "Hello Sara". A number is written with
+ * the language's digits («٣ أوردرات» in Arabic, never a stray "3"), grouped
+ * only from 5 digits so years and codes stay whole (re-audit N-10).
+ */
 export function fmt(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (_, k: string) => (k in values ? String(values[k]) : `{${k}}`));
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => {
+    if (!(k in values)) return `{${k}}`;
+    const value = values[k];
+    return typeof value === "number" ? formatCountForText(value) : String(value);
+  });
+}
+
+function formatCountForText(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  try {
+    // "min2" is newer than this TypeScript lib's option type; engines without it fall back to grouping.
+    const options = { useGrouping: "min2", maximumFractionDigits: 2 } as unknown as Intl.NumberFormatOptions;
+    return new Intl.NumberFormat(getIntlLocale(), options).format(value);
+  } catch {
+    return String(value);
+  }
 }
 
 /** Shared strings used across many screens. */

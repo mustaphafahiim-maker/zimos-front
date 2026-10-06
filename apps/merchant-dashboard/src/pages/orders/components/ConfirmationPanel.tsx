@@ -15,6 +15,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useToast } from "@/components/Toast";
@@ -27,19 +28,19 @@ const STRINGS = {
     title: "Confirmation",
     needsConfirmation: "This cash-on-delivery order must be confirmed with the customer before it can ship.",
     attemptsOne: "1 call attempt so far.",
-    attemptsOther: "{n} call attempts so far.",
+    attemptsOther: "{tries} so far.",
     callback: "Callback scheduled for {time}.",
     waiting:
-      "Waiting for the offers window: the customer is still on the sales funnel's offers and may add to this order. It can be confirmed in {n} min (at {time}).",
+      "Waiting for the offers window: the customer is still on the sales funnel's offers and may add to this order. It can be confirmed in {left} (at {time}).",
     waitingSoon: "Waiting for the offers window: it can be confirmed in a moment.",
-    heldBy: "{name} is calling the customer now (claim expires in {n} min). Confirming here is blocked until they finish or release it.",
+    heldBy: "{name} is calling the customer now ({left} left). Confirming here is blocked until they finish or release it.",
     someone: "Another agent",
     confirm: "Confirm order",
     confirming: "Confirming…",
     rejectHint: "To reject it, use Cancel order.",
     openQueue: "Open confirmation queue",
     confirmedToast: "Order confirmed. It's ready to ship.",
-    lockedBy: "{name} is already on this call (claim expires in {n} min).",
+    lockedBy: "{name} is already on this call ({left} left).",
     assignedTo: "Assigned to {name}.",
     assignedToYou: "Assigned to you.",
     assignedToOther: "Assigned to {name}. Only they or a manager can confirm it.",
@@ -54,32 +55,32 @@ const STRINGS = {
   },
   ar: {
     title: "التأكيد",
-    needsConfirmation: "يجب تأكيد أوردر الدفع عند الاستلام مع العميل قبل شحنه.",
-    attemptsOne: "محاولة اتصال واحدة حتى الآن.",
-    attemptsOther: "{n} محاولات اتصال حتى الآن.",
-    callback: "معاودة الاتصال مجدولة في {time}.",
-    heldBy: "{name} يتصل بالعميل الآن (ينتهي الاستلام خلال {n} دقيقة). التأكيد من هنا متوقف حتى ينتهي أو يُرجعه للقائمة.",
-    someone: "موظف آخر",
-    confirm: "تأكيد الأوردر",
-    confirming: "جارٍ التأكيد…",
-    rejectHint: "لرفضه، استخدم إلغاء الأوردر.",
-    openQueue: "فتح قائمة التأكيد",
-    confirmedToast: "تم تأكيد الأوردر. أصبح جاهزًا للشحن.",
-    lockedBy: "{name} في هذه المكالمة بالفعل (ينتهي الاستلام خلال {n} دقيقة).",
+    needsConfirmation: "أوردر الدفع عند الاستلام لازم يتأكد مع العميل قبل ما يتشحن.",
+    attemptsOne: "اتصلنا مرة واحدة لحد دلوقتي.",
+    attemptsOther: "{tries} لحد دلوقتي.",
+    callback: "المكالمة التانية معادها {time}.",
+    heldBy: "{name} بيكلّم العميل دلوقتي (باقي {left}). التأكيد من هنا واقف لحد ما يخلص أو يرجّعه للقايمة.",
+    someone: "حد تاني من الفريق",
+    confirm: "أكّد الأوردر",
+    confirming: "بنأكّد…",
+    rejectHint: "لو العميل رفض، استخدم «إلغاء الأوردر».",
+    openQueue: "افتح قايمة التأكيد",
+    confirmedToast: "الأوردر اتأكد وبقى جاهز للشحن.",
+    lockedBy: "{name} مستلم المكالمة دي (باقي {left}).",
     waiting:
-      "في انتظار نافذة العروض: ما زال العميل في عروض مسار البيع وقد يضيف إلى هذا الطلب. يمكن تأكيده خلال {n} دقيقة (في {time}).",
-    waitingSoon: "في انتظار نافذة العروض: يمكن تأكيده بعد لحظات.",
-    assignedTo: "المعيّن له: {name}.",
-    assignedToYou: "المعيّن له: أنت.",
-    assignedToOther: "معيّن لـ {name}، ولا يؤكده غيره إلا المدير.",
+      "مستني العروض تخلص: العميل لسه في عروض مسار البيع وممكن يزوّد على الأوردر ده. هتقدر تأكده بعد {left} (الساعة {time}).",
+    waitingSoon: "مستني العروض تخلص: هتقدر تأكده كمان شوية.",
+    assignedTo: "متوزع على {name}.",
+    assignedToYou: "متوزع عليك.",
+    assignedToOther: "متوزع على {name}، ومحدش يأكده غيره إلا المدير.",
     history: "سجل التأكيد",
-    customerDetails: "راجع هذه البيانات مع العميل",
-    outcome_confirmed: "مؤكد",
-    outcome_rejected: "مرفوض",
-    outcome_unreachable: "تعذّر الوصول",
-    outcome_postponed: "مؤجل",
-    via: "عبر {channel}",
-    unknownAgent: "مستخدم غير معروف",
+    customerDetails: "راجع البيانات دي مع العميل",
+    outcome_confirmed: "اتأكد",
+    outcome_rejected: "اترفض",
+    outcome_unreachable: "مردّش",
+    outcome_postponed: "اتأجل",
+    via: "عن طريق {channel}",
+    unknownAgent: "مستخدم مش معروف",
   },
 } satisfies Messages;
 
@@ -145,7 +146,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         setError(
           fmt(t.lockedBy, {
             name: lock?.lockedBy?.fullName ?? t.someone,
-            n: minutesUntil(lock?.lockExpiresAt ?? null, Date.now()),
+            left: countOf("minute", minutesUntil(lock?.lockExpiresAt ?? null, Date.now())),
           })
         );
       } else if (isApiErrorCode(err, "TASK_ASSIGNED_TO_OTHER")) {
@@ -166,7 +167,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
       <div className="space-y-1 text-sm text-ink-soft">
         <p className="text-ink">{t.needsConfirmation}</p>
         {task && task.attemptCount > 0 && (
-          <p>{task.attemptCount === 1 ? t.attemptsOne : fmt(t.attemptsOther, { n: task.attemptCount })}</p>
+          <p>{task.attemptCount === 1 ? t.attemptsOne : fmt(t.attemptsOther, { tries: countOf("call", task.attemptCount) })}</p>
         )}
         {task?.nextRetryAt && task.status === "queued" && (
           <p>{fmt(t.callback, { time: formatDateTime(task.nextRetryAt) })}</p>
@@ -183,13 +184,13 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         {waiting && (
           <p role="status" className="font-medium text-accent-dark">
             {waitingMinutes > 0
-              ? fmt(t.waiting, { n: waitingMinutes, time: formatDateTime(task?.availableAt as string) })
+              ? fmt(t.waiting, { left: countOf("minute", waitingMinutes), time: formatDateTime(task?.availableAt as string) })
               : t.waitingSoon}
           </p>
         )}
         {heldByOther && (
           <p className="font-medium text-accent-dark">
-            {fmt(t.heldBy, { name: task?.lockedBy?.fullName ?? t.someone, n: heldMinutes })}
+            {fmt(t.heldBy, { name: task?.lockedBy?.fullName ?? t.someone, left: countOf("minute", heldMinutes) })}
           </p>
         )}
       </div>

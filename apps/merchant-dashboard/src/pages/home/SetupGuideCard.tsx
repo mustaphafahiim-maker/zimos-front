@@ -33,8 +33,7 @@ const STRINGS = {
     order: "Place a test order",
     orderHint: "Order from your own store to see the whole loop: confirm, ship, deliver.",
     next: "Next step",
-    doneSteps: "{n} steps done",
-    doneStep: "1 step done",
+    doneLabel: "Done",
   },
   ar: {
     title: "جهّز متجرك",
@@ -57,8 +56,7 @@ const STRINGS = {
     order: "اعمل أوردر تجريبي",
     orderHint: "اطلب من متجرك بنفسك وشوف الدورة كلها: تأكيد، شحن، تسليم.",
     next: "الخطوة الجاية",
-    doneSteps: "خلصت {n} خطوات",
-    doneStep: "خلصت خطوة واحدة",
+    doneLabel: "خلصت",
   },
 } satisfies Messages;
 
@@ -153,7 +151,8 @@ export function SetupGuideCard({ className = "mb-[var(--bento-gap)]" }: { classN
       )}
       {done.length > 0 && (
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
-          <span className="font-medium text-success">{done.length === 1 ? t.doneStep : fmt(t.doneSteps, { n: done.length })}:</span>
+          <span className="font-medium text-success">{/* One count on the card (the required steps, above); this line only names what's done (N-13). */}
+          {t.doneLabel}:</span>
           {done.map((step) => (
             <span key={step.key} className="inline-flex items-center gap-1">
               <CheckCircle2 className="size-3.5 text-success" aria-hidden />

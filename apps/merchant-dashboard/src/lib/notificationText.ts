@@ -1,5 +1,23 @@
 import type { MerchantNotificationDto, MerchantNotificationType } from "@store-builder/api-client";
 import { fmt, type Messages } from "@/i18n/LocaleContext";
+import { formatMoney } from "@/lib/format";
+
+/**
+ * The server stores an order total as text ("250.00 EGP"). Shown in the
+ * dashboard's own money format («٢٥٠٫٠٠ ج.م.») like every other amount
+ * (re-audit N-10); anything that doesn't parse is shown as it came.
+ */
+function displayTotal(raw: string): string {
+  const match = /^(-?\d+(?:\.\d+)?)\s+([A-Z]{3})$/.exec(raw.trim());
+  if (!match) return raw;
+  const [, amount, currency] = match;
+  try {
+    const digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    return formatMoney(Math.round(Number(amount) * 10 ** digits), currency);
+  } catch {
+    return raw;
+  }
+}
 
 /**
  * Merchant notifications arrive with a title/body in the store's language
@@ -73,7 +91,7 @@ export const NOTIFICATION_STRINGS = {
     exportFailedBody: "جرّب التصدير مرة أخرى، أو ضيّق الفلاتر.",
     autoBookingFailedTitle: "لم يُحجز الطلب {orderNumber} تلقائيًا مع {integration}",
     autoBookingFailedBody: "{reason} احجزه من صفحة الطلب.",
-    batchDoneTitle: "تم حجز {booked} من {total} طلب مع {carrier}",
+    batchDoneTitle: "اتحجز {booked} من {total} أوردر مع {carrier}",
     batchFailedBody: "لم يُحجز {failed}. افتح التقرير لمعرفة السبب وإعادة إرسالها.",
   },
 } satisfies Messages;
@@ -81,6 +99,11 @@ export const NOTIFICATION_STRINGS = {
 export type NotificationStrings = Record<keyof (typeof NOTIFICATION_STRINGS)["en"], string>;
 
 const str = (value: unknown): string => (typeof value === "string" || typeof value === "number" ? String(value) : "");
+/** A count as a number, so `fmt` writes it with the viewer's digits. */
+const num = (value: unknown): number | string => {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
+  return Number.isFinite(n) ? n : str(value);
+};
 
 export function notificationTypeLabel(t: NotificationStrings, type: MerchantNotificationType): string {
   return t[`type_${type.replace(".", "_")}` as keyof NotificationStrings] ?? type;
@@ -98,12 +121,12 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
         const place = d.governorate && typeof d.governorate === "object" ? str((d.governorate as Record<string, unknown>)[t.lang]) : str(d.governorate);
         return {
           title: fmt(t.orderNewTitle, { orderNumber: str(d.orderNumber) }),
-          body: [more && product ? fmt(t.orderNewMore, { product, n: more }) : product, str(d.total), place].filter(Boolean).join(" · ") || null,
+          body: [more && product ? fmt(t.orderNewMore, { product, n: more }) : product, displayTotal(str(d.total)), place].filter(Boolean).join(" · ") || null,
         };
       }
       return {
         title: fmt(t.orderNewTitle, { orderNumber: str(d.orderNumber) }),
-        body: [str(d.customerName), str(d.total)].filter(Boolean).join(" — ") || null,
+        body: [str(d.customerName), displayTotal(str(d.total))].filter(Boolean).join(" — ") || null,
       };
     case "order.suspicious":
       if (!d.orderNumber) break;
@@ -132,7 +155,7 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
     case "shipping.batch_done":
       if (d.total === undefined) break;
       return {
-        title: fmt(t.batchDoneTitle, { booked: str(d.booked), total: str(d.total), carrier: str(d.carrierName) || str(d.carrierCode) }),
+        title: fmt(t.batchDoneTitle, { booked: num(d.booked), total: num(d.total), carrier: str(d.carrierName) || str(d.carrierCode) }),
         body: Number(d.failed) > 0 ? fmt(t.batchFailedBody, { failed: str(d.failed) }) : null,
       };
     case "plan.limit_reached":

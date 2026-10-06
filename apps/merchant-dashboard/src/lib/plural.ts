@@ -38,3 +38,47 @@ export function pluralOf(strings: object, base: string, count: number): string {
   }
   return plural(count, forms);
 }
+
+/**
+ * The everyday counted words, written once so every screen says them the same
+ * way: «دقيقة واحدة / دقيقتين / ٥ دقايق / ١١ دقيقة», «أوردر واحد / أوردرين /
+ * ٣ أوردرات / ١١ أوردر» (re-audit N-10). Put the result into a template as a
+ * whole word group: `fmt("باقي {left}", { left: countOf("minute", n) })`.
+ */
+const UNITS = {
+  minute: {
+    en: { one: "1 minute", other: "{n} minutes" },
+    ar: { one: "دقيقة واحدة", two: "دقيقتين", few: "{n} دقايق", other: "{n} دقيقة" },
+  },
+  hour: {
+    en: { one: "1 hour", other: "{n} hours" },
+    ar: { one: "ساعة واحدة", two: "ساعتين", few: "{n} ساعات", other: "{n} ساعة" },
+  },
+  day: {
+    en: { one: "1 day", other: "{n} days" },
+    ar: { one: "يوم واحد", two: "يومين", few: "{n} أيام", other: "{n} يوم" },
+  },
+  order: {
+    en: { one: "1 order", other: "{n} orders" },
+    ar: { one: "أوردر واحد", two: "أوردرين", few: "{n} أوردرات", other: "{n} أوردر" },
+  },
+  item: {
+    en: { one: "1 item", other: "{n} items" },
+    ar: { one: "منتج واحد", two: "منتجين", few: "{n} منتجات", other: "{n} منتج" },
+  },
+  call: {
+    en: { one: "1 call", other: "{n} calls" },
+    ar: { one: "مكالمة واحدة", two: "مكالمتين", few: "{n} مكالمات", other: "{n} مكالمة" },
+  },
+  piece: {
+    en: { one: "1 piece", other: "{n} pieces" },
+    ar: { one: "قطعة واحدة", two: "قطعتين", few: "{n} قطع", other: "{n} قطعة" },
+  },
+} satisfies Record<string, { en: PluralForms; ar: PluralForms }>;
+
+export type CountUnit = keyof typeof UNITS;
+
+export function countOf(unit: CountUnit, count: number): string {
+  const language = getIntlLocale().toLowerCase().startsWith("ar") ? "ar" : "en";
+  return plural(count, UNITS[unit][language]);
+}

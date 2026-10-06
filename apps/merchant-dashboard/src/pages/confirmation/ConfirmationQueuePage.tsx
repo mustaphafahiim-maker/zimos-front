@@ -33,7 +33,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { pluralOf } from "@/lib/plural";
+import { countOf, pluralOf } from "@/lib/plural";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { LoadMore } from "@/components/LoadMore";
@@ -110,16 +110,16 @@ const STRINGS = {
     callbackLater: "Callback scheduled for {time}",
     waitingTitle: "Waiting for the offers window",
     waitingBody:
-      "The customer is still on the sales funnel's offers and may add to this order. It opens for confirmation in {n} min (at {time}), with its final total.",
+      "The customer is still on the sales funnel's offers and may add to this order. It opens for confirmation in {left} (at {time}), with its final total.",
     waitingSoon: "The customer is still on the sales funnel's offers. It opens for confirmation in a moment.",
     waitingCount: "{n} waiting for the offers window",
     lastAttempt: "Last: {outcome} by {agent}, {time}",
-    yourClaim: "You're on this call · your claim expires in {n} min",
+    yourClaim: "You're on this call · {left} left",
     yourClaimExpired: "Your claim expired. Claim it again before saving — someone else may take it.",
-    heldBy: "{name} is on this call · claim expires in {n} min",
+    heldBy: "{name} is on this call · {left} left",
     heldByExpired: "{name}'s claim expired — anyone can take it over.",
     someone: "Another agent",
-    lockedBy: "{name} is already on this call (claim expires in {n} min).",
+    lockedBy: "{name} is already on this call ({left} left).",
     doneAt: "{outcome} · {time}",
     doneBy: "by {agent}",
     orderCancelled: "Order cancelled",
@@ -177,7 +177,7 @@ const STRINGS = {
     answer_other: "{n} calls left",
     answerDue: "{n} of them are due now",
     answerMine: "you are on {n}",
-    lockSoon: "Only {n} min left on your claim — save the result now.",
+    lockSoon: "Only {left} left on your claim — save the result now.",
     emptyAction: "See all orders",
   },
   ar: {
@@ -218,18 +218,18 @@ const STRINGS = {
     toastReleased: "{order} رجع للقايمة.",
     callbackDue: "معاد المكالمة التانية جه من {time}",
     callbackLater: "المكالمة التانية معادها {time}",
-    waitingTitle: "في انتظار نافذة العروض",
+    waitingTitle: "مستني العروض تخلص",
     waitingBody:
-      "ما زال العميل في عروض مسار البيع وقد يضيف إلى هذا الطلب. يُتاح للتأكيد خلال {n} دقيقة (في {time}) بإجماليه النهائي.",
-    waitingSoon: "ما زال العميل في عروض مسار البيع. يُتاح الطلب للتأكيد بعد لحظات.",
-    waitingCount: "{n} في انتظار نافذة العروض",
+      "العميل لسه بيتفرج على عروض مسار البيع وممكن يزوّد على الأوردر ده. هيفتح للتأكيد بعد {left} (الساعة {time}) بإجماليه النهائي.",
+    waitingSoon: "العميل لسه في عروض مسار البيع. الأوردر هيفتح للتأكيد كمان شوية.",
+    waitingCount: "{n} مستنيين العروض تخلص",
     lastAttempt: "آخر محاولة: {outcome} بواسطة {agent}، {time}",
-    yourClaim: "إنت مستلم المكالمة دي · باقي {n} دقيقة",
+    yourClaim: "إنت مستلم المكالمة دي · باقي {left}",
     yourClaimExpired: "وقتك خلص. استلمه تاني قبل ما تحفظ — ممكن حد تاني ياخده.",
-    heldBy: "{name} مستلم المكالمة دي · باقي {n} دقيقة",
+    heldBy: "{name} مستلم المكالمة دي · باقي {left}",
     heldByExpired: "وقت {name} خلص — أي حد يقدر يستلمه.",
     someone: "زميل",
-    lockedBy: "{name} مستلم المكالمة دي (باقي {n} دقيقة).",
+    lockedBy: "{name} مستلم المكالمة دي (باقي {left}).",
     doneAt: "{outcome} · {time}",
     doneBy: "بواسطة {agent}",
     orderCancelled: "أوردر ملغي",
@@ -288,7 +288,7 @@ const STRINGS = {
     answer_other: "باقي {n} مكالمة",
     answerDue: "{n} منهم معادهم جه",
     answerMine: "إنت شغال على {n}",
-    lockSoon: "باقي {n} دقيقة بس على استلامك — سجّل النتيجة دلوقتي.",
+    lockSoon: "باقي {left} بس على استلامك — سجّل النتيجة دلوقتي.",
     emptyAction: "شوف كل الأوردرات",
   },
 } satisfies Messages;
@@ -730,7 +730,7 @@ function WaitingCard({ task, now }: { task: ConfirmationTask; now: number }) {
         </p>
         <p className="text-sm text-ink-soft">
           {minutes > 0
-            ? fmt(t.waitingBody, { n: minutes, time: formatDateTime(task.availableAt as string) })
+            ? fmt(t.waitingBody, { left: countOf("minute", minutes), time: formatDateTime(task.availableAt as string) })
             : t.waitingSoon}
         </p>
       </div>
@@ -810,7 +810,7 @@ function OpenCard({
       const lock = apiErrorDetails<ConfirmationLockDetails>(err);
       return fmt(t.lockedBy, {
         name: lock?.lockedBy?.fullName ?? t.someone,
-        n: minutesUntil(lock?.lockExpiresAt ?? null, Date.now()),
+        left: countOf("minute", minutesUntil(lock?.lockExpiresAt ?? null, Date.now())),
       });
     }
     if (isApiErrorCode(err, "TASK_ASSIGNED_TO_OTHER")) {
@@ -880,11 +880,11 @@ function OpenCard({
   const minutesLeft = minutesUntil(task.lockExpiresAt, now);
   const lockSoon = mine && !expired && minutesLeft <= 3;
   if (mine) {
-    lockLine = expired ? t.yourClaimExpired : lockSoon ? fmt(t.lockSoon, { n: minutesLeft }) : fmt(t.yourClaim, { n: minutesLeft });
+    lockLine = expired ? t.yourClaimExpired : lockSoon ? fmt(t.lockSoon, { left: countOf("minute", minutesLeft) }) : fmt(t.yourClaim, { left: countOf("minute", minutesLeft) });
   } else if (inProgress) {
     lockLine = expired
       ? fmt(t.heldByExpired, { name: holderName })
-      : fmt(t.heldBy, { name: holderName, n: minutesUntil(task.lockExpiresAt, now) });
+      : fmt(t.heldBy, { name: holderName, left: countOf("minute", minutesUntil(task.lockExpiresAt, now)) });
   }
 
   let callbackLine: string | null = null;

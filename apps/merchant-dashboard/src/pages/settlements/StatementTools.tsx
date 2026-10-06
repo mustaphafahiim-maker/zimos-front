@@ -11,7 +11,8 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { formatDate, formatMoney, humanize } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
+import { providerName } from "@/lib/providers";
 import { formatCount } from "@/lib/analytics";
 import { Field, TextField } from "@/components/Field";
 import { Modal } from "@/components/Modal";
@@ -141,7 +142,7 @@ export function HeldByCouriers({ workspaceId, refreshKey }: { workspaceId: strin
             <tbody>
               {data.carriers.map((c) => (
                 <tr key={c.carrierCode} className="border-b border-line last:border-b-0">
-                  <td className="px-4 py-2.5 font-medium text-ink">{humanize(c.carrierCode)}</td>
+                  <td className="px-4 py-2.5 font-medium text-ink">{providerName(c.carrierCode)}</td>
                   <td className="tabular-nums px-4 py-2.5 text-end">{formatCount(c.orders)}</td>
                   <td className="tabular-nums px-4 py-2.5 text-end">{money(c.buckets.upTo7)}</td>
                   <td className="tabular-nums px-4 py-2.5 text-end">{money(c.buckets.upTo14)}</td>
@@ -304,7 +305,7 @@ function StatementModal({
                 <option value="">{t.chooseCourier}</option>
                 {carriers.map((c) => (
                   <option key={c} value={c}>
-                    {humanize(c)}
+                    {providerName(c)}
                   </option>
                 ))}
               </Select>

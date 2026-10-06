@@ -166,7 +166,16 @@ are listed under *Handoff items done*.
       button says «استلم» where no dialer opens; filters labelled on phones
       («مين شغال عليها»). Card gap doubling fixed once in index.css for all
       36 `<Card className="space-y-…">` sites. 517 → 319 px per card at 390.
-- [ ] R2-6 … R2-12 — see the plan.
+- [x] R2-6 Numbers and plurals (N-10, N-13, part of N-14): `fmt` writes
+      every number with the viewer's digits (grouped from 5 digits, so years
+      and codes stay whole); `countOf(unit, n)` in lib/plural.ts for
+      minutes, hours, days, orders, items, calls, pieces («دقيقتين»، «٣
+      أوردرات»، «١١ أوردر»); used in the queue and order confirmation panel
+      (copy now Egyptian), order session details, bulk bar, settlements;
+      notification totals in the app's money format; the setup guide shows
+      one count; the merchant's own courier reads «المندوب بتاعك» everywhere
+      `providerName` is used (no more «manual-courier»). Checked ar + en.
+- [ ] R2-7 … R2-12 — see the plan.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`

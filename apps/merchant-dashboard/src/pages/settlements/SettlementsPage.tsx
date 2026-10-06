@@ -7,7 +7,9 @@ import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatDate, formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { ApiError, getErrorMessage } from "@/lib/errors";
-import { fmt, getIntlLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
+import { providerName } from "@/lib/providers";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { DataState } from "@/components/DataState";
@@ -25,7 +27,7 @@ const STRINGS = {
     title: "COD settlements",
     description:
       "Match the cash couriers collected on delivered orders with what they actually transferred to you.",
-    answerDue: "Couriers still owe you {amount} for {n} delivered orders. Record what reached you below.",
+    answerDue: "Couriers still owe you {amount} for {orders} delivered. Record what reached you below.",
     answerClear: "No money is waiting with the couriers right now.",
     kpiUnsettled: "Unsettled orders",
     kpiDue: "Due from couriers",
@@ -36,7 +38,7 @@ const STRINGS = {
     unsettledDesc: "Pick the orders a courier paid you for, adjust the amounts, then save a draft.",
     noUnsettled: "No unsettled COD orders",
     noUnsettledDesc: "Delivered cash-on-delivery orders with money still due will show up here.",
-    carrierOrders: "{n} orders · {due} due",
+    carrierOrders: "{orders} · {due} due",
     selectAll: "Select all",
     selectOrder: "Select order {number}",
     colOrder: "Order",
@@ -85,7 +87,7 @@ const STRINGS = {
     errEmpty: "This settlement has no orders.",
   },
   ar: {
-    answerDue: "شركات الشحن لسه عليها {amount} لـ {n} أوردر اتسلّم. سجّل اللي وصلك تحت.",
+    answerDue: "شركات الشحن لسه عليها {amount} عن {orders} اتسلّموا. سجّل اللي وصلك تحت.",
     answerClear: "مفيش فلوس متأخرة عند شركات الشحن دلوقتي.",
     title: "تحصيل شركات الشحن",
     description: "طابق الفلوس اللي شركات الشحن حصّلتها من الطلبات المتسلّمة مع اللي حوّلوهولك فعلاً.",
@@ -98,7 +100,7 @@ const STRINGS = {
     unsettledDesc: "اختار الطلبات اللي شركة الشحن دفعتلك تمنها، عدّل المبالغ، وبعدين احفظ مسودة.",
     noUnsettled: "مفيش طلبات دفع عند الاستلام محتاجة تسوية",
     noUnsettledDesc: "الطلبات اللي اتسلّمت ولسه ليك فلوس فيها هتظهر هنا.",
-    carrierOrders: "{n} طلب · {due} مستحق",
+    carrierOrders: "{orders} · {due} مستحق",
     selectAll: "اختار الكل",
     selectOrder: "اختار الطلب {number}",
     colOrder: "الطلب",
@@ -278,7 +280,7 @@ export function SettlementsPage() {
         title={t.title}
         description={
           // The answer first: how much the couriers still hold.
-          s ? (s.dueFromCouriers > 0 ? fmt(t.answerDue, { amount: formatMoney(s.dueFromCouriers, currency), n: new Intl.NumberFormat(getIntlLocale()).format(s.unsettledOrders) }) : t.answerClear) : t.description
+          s ? (s.dueFromCouriers > 0 ? fmt(t.answerDue, { amount: formatMoney(s.dueFromCouriers, currency), orders: countOf("order", s.unsettledOrders) }) : t.answerClear) : t.description
         }
         actions={
           <StatementImport
@@ -325,11 +327,11 @@ export function SettlementsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
                       <div>
                         <p className="font-medium text-ink" dir="auto">
-                          {c.carrierCode}
+                          {providerName(c.carrierCode)}
                         </p>
                         <p className="text-xs text-ink-soft">
                           {fmt(t.carrierOrders, {
-                            n: c.orders,
+                            orders: countOf("order", c.orders),
                             due: formatMoney(c.dueAmount, currency),
                           })}
                         </p>
@@ -505,7 +507,7 @@ export function SettlementsPage() {
                   className: "text-ink",
                   cell: (row) => (
                     <span className="block" dir="auto">
-                      {row.carrierCode}
+                      {providerName(row.carrierCode)}
                     </span>
                   ),
                 },

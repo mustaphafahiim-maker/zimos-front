@@ -4,6 +4,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrderLabels } from "../orderLabels";
@@ -25,11 +26,11 @@ const STRINGS = {
     firstOrder: "First order",
     inAll: "{n} in all",
     newCustomer: "New customer",
-    returning: "Returning customer · {n} orders",
+    returning: "Returning customer · {orders}",
     sec: "{n} s",
     min: "{n} min",
     hours: "{h} h {m} min",
-    days: "{n} days",
+    days: "{days}",
     lastAction: "Last action: {what}, {when}",
     lastActionBy: "Last action: {what}, {when} {by}",
     placed: "Order placed",
@@ -66,11 +67,11 @@ const STRINGS = {
     firstOrder: "أول أوردر",
     inAll: "{n} إجمالي",
     newCustomer: "عميل جديد",
-    returning: "عميل متكرر · {n} أوردر",
+    returning: "عميل متكرر · {orders}",
     sec: "{n} ث",
     min: "{n} د",
     hours: "{h} س {m} د",
-    days: "{n} يوم",
+    days: "{days}",
     lastAction: "آخر إجراء: {what}، {when}",
     lastActionBy: "آخر إجراء: {what}، {when} {by}",
     placed: "تم الطلب",
@@ -108,7 +109,7 @@ function duration(t: Strings, seconds: number): string {
   if (seconds < 60) return fmt(t.sec, { n: seconds });
   if (seconds < 3600) return fmt(t.min, { n: Math.round(seconds / 60) });
   if (seconds < 2 * 86400) return fmt(t.hours, { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60) });
-  return fmt(t.days, { n: Math.round(seconds / 86400) });
+  return fmt(t.days, { days: countOf("day", Math.round(seconds / 86400)) });
 }
 
 /** "Last action: Moved to Confirmed, 4 Oct 2026, 16:15 by Mona" — for the header line. */
@@ -152,7 +153,7 @@ export function CustomerHistoryBadge({ details }: { details: OrderSessionDetails
   return c.isNewCustomer ? (
     <StatusBadge value="new_customer" tone="success" text={t.newCustomer} />
   ) : (
-    <StatusBadge value="returning_customer" tone="info" text={fmt(t.returning, { n: c.totalOrders })} />
+    <StatusBadge value="returning_customer" tone="info" text={fmt(t.returning, { orders: countOf("order", c.totalOrders) })} />
   );
 }
 

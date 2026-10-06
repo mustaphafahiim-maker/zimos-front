@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
@@ -37,7 +38,7 @@ const STRINGS = {
     a_unarchive: "Restore from archive",
     a_mark_seen: "Mark as seen",
     a_mark_unseen: "Mark as not seen",
-    title: "{action} — {count} orders",
+    title: "{action} — {orders}",
     status: "New status",
     reason: "Reason (optional)",
     statusHint: "Orders that can't take this status from where they are stay as they are.",
@@ -52,12 +53,12 @@ const STRINGS = {
     apply: "Apply",
     applying: "Working…",
     resultTitle: "Result",
-    resultOk: "{count} orders updated.",
+    resultOk: "{orders} updated.",
     resultFailed: "{count} could not be updated:",
     close: "Close",
   },
   ar: {
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     clear: "إلغاء التحديد",
     action: "إجراء جماعي",
     choose: "اختر إجراء…",
@@ -69,7 +70,7 @@ const STRINGS = {
     a_unarchive: "استرجاع من الأرشيف",
     a_mark_seen: "تعليم كمشاهَد",
     a_mark_unseen: "تعليم كغير مشاهَد",
-    title: "{action} — {count} أوردر",
+    title: "{action} — {orders}",
     status: "الحالة الجديدة",
     reason: "السبب (اختياري)",
     statusHint: "الأوردرات التي لا تقبل هذه الحالة من وضعها الحالي تبقى كما هي.",
@@ -84,8 +85,8 @@ const STRINGS = {
     apply: "تطبيق",
     applying: "جارٍ التنفيذ…",
     resultTitle: "النتيجة",
-    resultOk: "تم تحديث {count} أوردر.",
-    resultFailed: "تعذّر تحديث {count}:",
+    resultOk: "اتحدّث {orders}.",
+    resultFailed: "معرفناش نحدّث {count}:",
     close: "إغلاق",
   },
 } satisfies Messages;
@@ -217,7 +218,7 @@ export function OrderBulkBar({
       <Modal
         open={action !== null}
         onClose={() => (busy ? undefined : setAction(null))}
-        title={action ? fmt(t.title, { action: t[`a_${action}`], count: selectedIds.length }) : ""}
+        title={action ? fmt(t.title, { action: t[`a_${action}`], orders: countOf("order", selectedIds.length) }) : ""}
       >
         <form onSubmit={submit} className="space-y-4" noValidate>
           {error && (
@@ -318,7 +319,7 @@ export function OrderBulkBar({
       >
         {result && (
           <div className="space-y-3">
-            <p className="text-sm text-ink">{fmt(t.resultOk, { count: result.succeeded })}</p>
+            <p className="text-sm text-ink">{fmt(t.resultOk, { orders: countOf("order", result.succeeded) })}</p>
             {failures.length > 0 && (
               <>
                 <p className="text-sm font-medium text-danger">{fmt(t.resultFailed, { count: failures.length })}</p>

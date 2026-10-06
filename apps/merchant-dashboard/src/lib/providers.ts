@@ -1,3 +1,4 @@
+import { getIntlLocale } from "@/i18n/LocaleContext";
 /**
  * Courier and payment gateway logos, looked up by provider code.
  *
@@ -35,7 +36,10 @@ const KNOWN_NAMES: Record<string, string> = {
 };
 
 export function providerName(code: string): string {
-  return KNOWN_NAMES[normalize(code)] ?? code;
+  const key = normalize(code);
+  // The merchant's own delivery (no courier company): said in their language, never "manual-courier" (re-audit N-14).
+  if (key === "manual" || key === "manualcourier") return getIntlLocale().startsWith("ar") ? "المندوب بتاعك" : "Your own courier";
+  return KNOWN_NAMES[key] ?? code;
 }
 
 /** The logo's URL, and its dark-theme variant when one exists. */
