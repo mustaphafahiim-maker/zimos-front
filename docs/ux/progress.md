@@ -105,8 +105,11 @@ are listed under *Handoff items done*.
 - [x] 161 store scripts: Store settings → Custom code → «السكريبتات» — table /
       phone cards, add/edit dialog (position, pages, code ≤50k), reorder,
       toggle, delete; storefront injects by page type with the existing guards.
-- [ ] 165 checkout file + billing · 167 Lead instead of Purchase ·
-      168 Pinterest CAPI (agent running) · 163/164 storefront pickers
+- [x] 165 checkout photo field + optional billing address (form settings,
+      storefront checkout on cart/product/funnel, order page thumbnails + card)
+- [x] 167 «سجّل الطلبات كـ» Purchase/Lead per store and funnel (+ storefront events)
+- [x] 168 Pinterest server events (ad account id, token mask, test events)
+- [ ] 163/164 storefront place pickers + quote, S13 checkout phone layout
 - [x] 172 home filters: product and store (when >1 website) pickers on the
       home, remembered per store; profit tiles step aside while filtered (P&L
       has no product split); «الزيارات للمتجر كله» note; stale ids reset.
