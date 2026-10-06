@@ -204,6 +204,16 @@ are listed under *Handoff items done*.
       notice, «جهزناه لك» for a managed www, renew dialog with a price
       quote for 1–10 years and price-change re-confirm, funnel/website
       plain-text email overrides that stay plain (row chip «نص بسيط»).
+- [x] 181 Your other store (Shopify / WooCommerce): /apps/dropshipping
+      «متجرك التاني» group with credential forms from credentialFields and
+      help lines; import by «رقم المنتج في متجرك»; SKU warning on the
+      product page, variant dialog and bulk editor for linked products;
+      order Supplier card «اتبعت لمتجرك كأوردر رقم …». Checked with a local
+      mock Shopify; one backend request (app store entries).
+- [x] 182 Email marketing: /apps/email-marketing — Mailchimp, Klaviyo and the
+      test list; connect / list / tags / leads-buyers / save / «زامن
+      دلوقتي» with progress / last error / disconnect; install from the
+      page. Checked end to end with the sandbox provider.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
