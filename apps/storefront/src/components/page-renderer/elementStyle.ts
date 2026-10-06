@@ -102,7 +102,7 @@ function declarations(style: Style | undefined): string[] {
  * Colour, size and weight have to reach the text inside the element, whose
  * own classes set them; the rest styles the wrapper box.
  */
-const INHERITED = ["color:", "font-size:", "font-weight:", "line-height:", "text-align:"];
+const INHERITED = ["color:", "font-size:", "font-weight:", "line-height:", "text-align:", "font-family:"];
 
 function rules(selector: string, styles: DeviceStyles): string {
   const block = (style: Style | undefined) => {

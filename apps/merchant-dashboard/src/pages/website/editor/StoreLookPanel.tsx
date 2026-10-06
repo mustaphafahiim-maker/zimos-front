@@ -20,6 +20,7 @@ import {
 } from "./storeLook";
 import type { ShellPart } from "./storeShell";
 import { ORIGINAL_LOOK, THEME_CHOICES, THEME_SPECS, accentGrounds, type ColorMode } from "./storeThemes";
+import { StoreFontsSection } from "./StoreFontsSection";
 import { ThemeSketch } from "./ThemeSketch";
 
 /**
@@ -249,6 +250,8 @@ export function StoreLookPanel({
               })}
             </div>
           </section>
+
+          <StoreFontsSection look={look} onChange={(next) => onChange(next, "look:fonts")} />
 
           <section className="space-y-2">
             <Label>{ui.corners}</Label>

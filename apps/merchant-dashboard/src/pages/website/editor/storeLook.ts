@@ -1,4 +1,4 @@
-import type { Workspace } from "@store-builder/api-client";
+import { parseFontRef, type Workspace } from "@store-builder/api-client";
 import { normalizeHex } from "@/lib/brandColors";
 import type { PreviewTheme, ShellPreview } from "@/lib/previewBridge";
 import {
@@ -77,6 +77,9 @@ export interface StoreLook {
   /** Original look only; a theme brings its own. */
   secondaryColor: string | null;
   fontFamily: FontKey;
+  /** A Google or uploaded font over the look's own (g:Name / c:id; StoreFontsSection.tsx); "" for none. */
+  bodyFont?: string;
+  headingFont?: string;
   cornerRadius: RadiusKey;
   logoUrl: string | null;
   announcement: StoreAnnouncementLook;
@@ -145,6 +148,8 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
     primaryColorDark: color("primaryColorDark"),
     secondaryColor: color("secondaryColor"),
     fontFamily: font,
+    bodyFont: parseFontRef(ts.bodyFont) ? (ts.bodyFont as string) : "",
+    headingFont: parseFontRef(ts.headingFont) ? (ts.headingFont as string) : "",
     cornerRadius: radius,
     logoUrl: workspace?.logoUrl ?? null,
     announcement: readAnnouncement(header.announcement),
@@ -200,6 +205,8 @@ export function lookToPreview(look: StoreLook): PreviewTheme {
     ...(look.primaryColorDark ? { primaryColorDark: look.primaryColorDark } : {}),
     ...(look.secondaryColor ? { secondaryColor: look.secondaryColor } : {}),
     fontFamily: look.fontFamily,
+    bodyFont: look.bodyFont ?? "",
+    headingFont: look.headingFont ?? "",
     cornerRadius: look.cornerRadius,
     logoUrl: look.logoUrl,
   };
@@ -230,6 +237,11 @@ export function lookToWorkspacePatch(
   else delete themeSettings.storeTheme;
   if (look.primaryColorDark) themeSettings.primaryColorDark = look.primaryColorDark;
   else delete themeSettings.primaryColorDark;
+  // The store's own fonts stay through a theme switch: they are the merchant's explicit choice.
+  for (const key of ["bodyFont", "headingFont"] as const) {
+    if (look[key]) themeSettings[key] = look[key];
+    else delete themeSettings[key];
+  }
 
   themeSettings.header = writeHeader(existing?.header, look.header, announcementPatch(look.announcement));
   const footer = writeFooter(existing?.footer, look.footer);
@@ -301,6 +313,8 @@ export function sameLook(a: StoreLook, b: StoreLook): boolean {
     a.primaryColorDark === b.primaryColorDark &&
     a.secondaryColor === b.secondaryColor &&
     a.fontFamily === b.fontFamily &&
+    (a.bodyFont ?? "") === (b.bodyFont ?? "") &&
+    (a.headingFont ?? "") === (b.headingFont ?? "") &&
     a.cornerRadius === b.cornerRadius &&
     a.logoUrl === b.logoUrl &&
     sameAnnouncement(a.announcement, b.announcement) &&

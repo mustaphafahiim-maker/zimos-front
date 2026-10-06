@@ -39,6 +39,7 @@ import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore }
 import { storeThemeOf } from "@/lib/brandTheme";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
 import { ThemeChrome } from "@/components/shell/ThemeChrome";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
@@ -206,11 +207,13 @@ export default async function StoreLayout({
             lang={intlLocaleFor(locale)}
             dir={dirFor(locale)}
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-            style={brandStyle(store.themeSettings)}
+            style={{ ...brandStyle(store.themeSettings), ...storeFontVars(store.themeSettings) }}
             data-store-theme={theme ?? undefined}
             suppressHydrationWarning
           >
             {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
+            {/* The store's own body and heading fonts (lib/storeFonts.tsx). */}
+            <FontAssets refs={Object.values(storeFontRefs(store.themeSettings))} store={workspaceId} />
             <DocumentLocale locale={locale} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             <HideInFunnel>

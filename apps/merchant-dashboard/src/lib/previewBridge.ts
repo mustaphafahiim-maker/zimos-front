@@ -53,6 +53,9 @@ export interface PreviewTheme {
   cornerRadius?: string;
   /** Undefined leaves the saved logo alone; null previews "no logo". */
   logoUrl?: string | null;
+  /** g:Name / c:id, or "" for the look's own font. */
+  bodyFont?: string;
+  headingFont?: string;
 }
 
 import { readCanvasDrag, readCanvasStep, type CanvasDragMessage, type CanvasStep } from "./canvasDrag";

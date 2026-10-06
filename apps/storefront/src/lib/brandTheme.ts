@@ -228,6 +228,9 @@ export interface PreviewTheme {
   cornerRadius?: string;
   /** Undefined leaves the store's saved logo alone; null previews "no logo". */
   logoUrl?: string | null;
+  /** A font reference (g:Name / c:id), or "" for the look's own font (components/preview/fontPreview.ts). */
+  bodyFont?: string;
+  headingFont?: string;
 }
 
 export function readPreviewTheme(raw: unknown): PreviewTheme | null {
@@ -247,6 +250,10 @@ export function readPreviewTheme(raw: unknown): PreviewTheme | null {
   if (font) theme.fontFamily = font;
   const radius = choice(input, "cornerRadius", THEME_RADII);
   if (radius) theme.cornerRadius = radius;
+  for (const key of ["bodyFont", "headingFont"] as const) {
+    const raw = input[key];
+    if (raw === "" || (typeof raw === "string" && /^(?:g:[A-Za-z0-9][A-Za-z0-9 ]{1,39}|c:[0-9a-f]{12})$/.test(raw))) theme[key] = raw as string;
+  }
   if (input.logoUrl === null) {
     theme.logoUrl = null;
   } else if (typeof input.logoUrl === "string") {

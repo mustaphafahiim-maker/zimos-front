@@ -8,6 +8,8 @@
  * address must match a pattern with no character that can leave url("…").
  */
 
+import { fontFamilyName, parseFontRef } from "@store-builder/api-client";
+
 type Style = Record<string, unknown>;
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -64,6 +66,9 @@ export function extraDeclarations(style: Style | undefined): string[] {
 
   if (typeof style.overflow === "string" && OVERFLOW.has(style.overflow)) out.push(`overflow:${style.overflow}`);
   if (typeof style.cursor === "string" && CURSOR.has(style.cursor)) out.push(`cursor:${style.cursor}`);
+  // A Google or uploaded font (lib/storeFonts.tsx loads it); the name comes from parseFontRef's patterns.
+  const font = parseFontRef(style.fontFamily);
+  if (font) out.push(`font-family:"${fontFamilyName(font)}","Tajawal",ui-sans-serif,system-ui,sans-serif`);
   return out;
 }
 

@@ -220,3 +220,5 @@ export * from "./endpoints/richText";
 export * from "./endpoints/orderExportPresets";
 // Google Sheets: a Google account and the sheets orders, lost orders and leads are written to (modules/sheets).
 export * from "./endpoints/googleSheets";
+// Fonts: Google fonts and the store's uploaded ones, referenced as g:Name / c:id (modules/fonts).
+export * from "./endpoints/storeFonts";

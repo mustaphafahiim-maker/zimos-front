@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { applyFontPreview } from "./fontPreview";
 import {
   BRAND_VAR_NAMES,
   brandVars,
@@ -148,6 +149,7 @@ function applyTheme(theme: PreviewTheme | null) {
     if (name in vars) wrapper.style.setProperty(name, vars[name], "important");
     else wrapper.style.removeProperty(name);
   }
+  applyFontPreview(theme);
   applyLogo(theme.logoUrl);
 }
 

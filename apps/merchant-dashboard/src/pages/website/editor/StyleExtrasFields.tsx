@@ -5,6 +5,7 @@ import { Select } from "@/components/Select";
 import { normalizeHex } from "@/lib/brandColors";
 import { useEditorLocale } from "./editorLocale";
 import { ImageField } from "./ImageField";
+import { FontSelect, useStoreFonts } from "./FontSelect";
 
 /**
  * The rest of an element's Style and Layout tabs (SPEC §9.3, Lightfunnels'
@@ -17,6 +18,8 @@ import { ImageField } from "./ImageField";
 
 const STRINGS = {
   en: {
+    fontFamily: "Font",
+    storeFont: "The store's font",
     backgroundTitle: "Gradient and image",
     gradientFrom: "Gradient start colour",
     gradientTo: "Gradient end colour",
@@ -60,6 +63,8 @@ const STRINGS = {
     unset: "Default",
   },
   ar: {
+    fontFamily: "الخط",
+    storeFont: "خط المتجر",
     backgroundTitle: "التدرّج والصورة",
     gradientFrom: "لون بداية التدرّج",
     gradientTo: "لون نهاية التدرّج",
@@ -121,6 +126,7 @@ export function StyleExtrasFields({
 }) {
   const t: T = STRINGS[useEditorLocale()] as unknown as T;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const fonts = useStoreFonts();
 
   const number = (key: keyof T & string, min: number, max: number) => {
     const value = own[key];
@@ -228,8 +234,22 @@ export function StyleExtrasFields({
   }
 
   const image = typeof own.backgroundImage === "string" ? own.backgroundImage : "";
+  const font = typeof own.fontFamily === "string" ? own.fontFamily : "";
+  const inheritedFont = inherited("fontFamily");
   return (
     <>
+      <Field label={t.fontFamily}>
+        {({ id }) => (
+          <FontSelect
+            id={id}
+            value={font}
+            emptyLabel={typeof inheritedFont === "string" ? `${t.unset} (${inheritedFont.replace(/^[gc]:/, "")})` : t.storeFont}
+            uploaded={fonts.data ?? []}
+            onChange={(ref) => setValue("fontFamily", ref || undefined)}
+          />
+        )}
+      </Field>
+
       {device === "mobile" && (
         <div className="space-y-2">
           {check("hiddenPortrait")}

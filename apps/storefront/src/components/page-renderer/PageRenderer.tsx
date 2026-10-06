@@ -64,6 +64,7 @@ import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
 import { animationAttributes, animationOf, pageHasAnimation } from "./elementAnimation";
 import { EntranceAnimations } from "./EntranceAnimations";
+import { FontAssets, treeFontRefs } from "@/lib/storeFonts";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
 import { HtmlBlock } from "@/components/HtmlBlock";
@@ -492,6 +493,7 @@ export async function PageRenderer({
       {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
       {pageHasAnimation(tree) && <EntranceAnimations />}
+      <FontAssets refs={treeFontRefs(tree)} store={workspaceId} />
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />
