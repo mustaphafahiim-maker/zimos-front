@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Globe, Star, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
+  domainSetRedirectToPrimary,
   funnelsList,
   storeDesignAddDomain,
   storeDesignCheckDomainSsl,
@@ -26,6 +27,7 @@ import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { DomainRedirectSwitch } from "./DomainRedirectSwitch";
 
 const STRINGS = {
   en: {
@@ -339,6 +341,19 @@ export function DomainsTab() {
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {!domain.isPrimary && (
+                    <DomainRedirectSwitch
+                      domain={domain}
+                      disabled={isBusy("redirect")}
+                      onChange={(redirectToPrimary) =>
+                        void run(domain, "redirect", async () => {
+                          await domainSetRedirectToPrimary(apiClient, workspaceId, domain.id, redirectToPrimary);
+                          return t.savedToast;
+                        })
+                      }
+                    />
                   )}
 
                   {usable && (

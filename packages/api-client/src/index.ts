@@ -230,3 +230,5 @@ export * from "./endpoints/funnelBulk";
 export * from "./endpoints/storefrontTexts";
 // Store scripts: the merchant's own code by position and page type (customCode/storeScripts.js).
 export * from "./endpoints/storeScripts";
+// Per-domain "redirect to the primary domain" switch (domains/domainSettings.js, item 177).
+export * from "./endpoints/domainRedirect";
