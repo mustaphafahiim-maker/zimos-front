@@ -79,6 +79,7 @@ const DropshipProviderPage = lazy(() =>
 const EmailMarketingPage = lazy(() => import("@/pages/apps/EmailMarketingPage").then((m) => ({ default: m.EmailMarketingPage })));
 const AutomationGuidePage = lazy(() => import("@/pages/apps/AutomationGuidePage").then((m) => ({ default: m.AutomationGuidePage })));
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
+const MarketplacePage = lazy(() => import("@/pages/funnels/marketplace/MarketplacePage").then((m) => ({ default: m.MarketplacePage })));
 const FunnelEditorPage = lazy(() =>
   import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
 );
@@ -197,6 +198,7 @@ export default function App() {
                       <Route path="/website" element={<WebsitePage />} />
                       <Route path="/website/texts" element={<LazyRoute><StoreTextsPage /></LazyRoute>} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
+                      <Route path="/funnels/marketplace" element={<LazyRoute><MarketplacePage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />

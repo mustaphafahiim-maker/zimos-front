@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Eye } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
-import { funnelsList } from "@store-builder/api-client";
+import { funnelsList, type MarketplaceTemplateCard } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -14,15 +14,17 @@ import { STARTER_TEMPLATE_IDS, starterPlan, type StarterTemplateId, type UiStepT
 import { STARTER_TEMPLATE_TEXT, STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
 import { StepThumbnail } from "./FlowMapTools";
+import { MarketplaceBrowser } from "./marketplace/MarketplaceBrowser";
+import { TemplatePreviewDialog } from "./marketplace/TemplatePreviewDialog";
+import { MARKET_STRINGS } from "./marketplace/marketplaceStrings";
 
 /**
  * The funnel wizard's template gallery (SPEC §9.1): the starter templates —
  * filtered by what they do, each in an Arabic and an English version, each
- * with a preview of its pages — and, in "Your funnels", any funnel of this
- * store to start a new one from (a copy of its pages and links).
- *
- * Nothing is invented: there is no template marketplace, so no "bought" tab,
- * no prices and no usage counts.
+ * with a preview of its pages — then «سوق القوالب», the templates other stores
+ * shared and the platform listed (handoff 192: free, with their real usage
+ * counts), and in "Your funnels" any funnel of this store to start a new one
+ * from (a copy of its pages and links).
  */
 
 const STRINGS = {
@@ -80,7 +82,10 @@ const KIND_TEST: Record<Exclude<Kind, "any">, (types: UiStepType[]) => boolean> 
   advertorial: (types) => types.includes("article"),
 };
 
-export type GalleryPick = { kind: "starter"; id: StarterTemplateId; lang: Locale } | { kind: "copy"; funnelId: string; name: string };
+export type GalleryPick =
+  | { kind: "starter"; id: StarterTemplateId; lang: Locale }
+  | { kind: "copy"; funnelId: string; name: string }
+  | { kind: "market"; id: string; name: string; stepCount: number };
 
 export function FunnelTemplateGallery({
   goal,
@@ -97,8 +102,11 @@ export function FunnelTemplateGallery({
   leading?: React.ReactNode;
 }) {
   const t = useT(STRINGS);
+  const m = useT(MARKET_STRINGS);
   const workspaceId = useWorkspaceId();
-  const [tab, setTab] = useState<"all" | "mine">("all");
+  const [tab, setTab] = useState<"all" | "market" | "mine">("all");
+  const [marketPreview, setMarketPreview] = useState<MarketplaceTemplateCard | null>(null);
+  const pickMarket = (tpl: MarketplaceTemplateCard) => onChange({ kind: "market", id: tpl.id, name: tpl.name, stepCount: tpl.stepCount });
   const [kind, setKind] = useState<Kind>("any");
   const [lang, setLang] = useState<Locale>(locale);
   const [preview, setPreview] = useState<StarterTemplateId | null>(null);
@@ -117,7 +125,16 @@ export function FunnelTemplateGallery({
 
   return (
     <div className="space-y-3">
-      <FilterTabs label={t.tabs} value={tab} onChange={setTab} tabs={[{ value: "all", label: t.all }, { value: "mine", label: t.mine }]} />
+      <FilterTabs
+        label={t.tabs}
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: "all", label: t.all },
+          { value: "market", label: m.title },
+          { value: "mine", label: t.mine },
+        ]}
+      />
 
       {tab === "all" ? (
         <>
@@ -160,6 +177,20 @@ export function FunnelTemplateGallery({
               );
             })}
           </div>
+        </>
+      ) : tab === "market" ? (
+        <>
+          <p className="text-xs text-ink-soft">{m.pickHint}</p>
+          <MarketplaceBrowser mode="pick" selectedId={value?.kind === "market" ? value.id : null} onPick={pickMarket} onPreview={setMarketPreview} />
+          <TemplatePreviewDialog
+            template={marketPreview}
+            onClose={() => setMarketPreview(null)}
+            useLabel={m.pickThis}
+            onUse={(tpl) => {
+              pickMarket(tpl);
+              setMarketPreview(null);
+            }}
+          />
         </>
       ) : (
         <DataState loading={mine.loading} error={mine.error} empty={(mine.data ?? []).length === 0} emptyMessage={t.noneMine} onRetry={() => void mine.refresh()}>

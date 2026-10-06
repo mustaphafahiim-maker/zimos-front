@@ -129,6 +129,7 @@ import { flowSteps, genericPagePath, genericPageTree, isGenericStep, type Generi
 import { StepChain } from "./StepChain";
 import { StepStatsLine, StepThumbnail, useFlowZoom, useStepStats } from "./FlowMapTools";
 import { LinkPoints, linkPoint, linkPointsOf, pointOfEdge, pointY, useLinkLabels, type LinkDrag, type LinkPoint } from "./FlowLinkPoints";
+import { ShareToMarketplaceButton } from "./marketplace/ShareTemplateDialog";
 
 // ------------------------------------------------------------------ meta --
 
@@ -656,6 +657,7 @@ export function FunnelEditorPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
+                  <ShareToMarketplaceButton funnelId={funnelId} unsaved={dirty} />
                   <HistoryMenu
                     workspaceId={workspaceId}
                     funnel={funnel}

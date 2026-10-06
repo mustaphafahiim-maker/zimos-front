@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Copy, Eye, Layers, Link2, MoreHorizontal, MousePointerClick, Pause, Pencil, Play, Plus, Share2, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { BarChart3, Copy, Eye, Layers, Link2, MoreHorizontal, MousePointerClick, Pause, Pencil, Play, Plus, Share2, ShoppingBag, Store, Trash2, Upload, Wallet } from "lucide-react";
 import { FunnelShareDialog, FunnelWizard } from "./FunnelWizard";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
@@ -44,6 +44,8 @@ import {
 import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
 import { FunnelBulkBar } from "./FunnelBulkBar";
+import { ShareTemplateDialog } from "./marketplace/ShareTemplateDialog";
+import { MARKET_STRINGS } from "./marketplace/marketplaceStrings";
 
 const STRINGS = {
   en: {
@@ -212,11 +214,14 @@ export function FunnelsPage() {
   const c = useCommon();
   const { intlLocale } = useLocale();
   const describeError = useFunnelErrorMessage();
+  const m = useT(MARKET_STRINGS);
   const list = useAsync(() => funnelsList(apiClient, workspaceId), [workspaceId]);
 
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<FunnelDto | null>(null);
   const [sharing, setSharing] = useState<FunnelDto | null>(null);
+  // The funnel being sent to the template marketplace (handoff 192).
+  const [marketing, setMarketing] = useState<FunnelDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const funnels = list.data ?? [];
@@ -347,6 +352,9 @@ export function FunnelsPage() {
         actions={
           <>
             {analyticsAllowed && <RangeSwitch value={range} onChange={setRange} />}
+            <Button variant="outline" onClick={() => navigate("/funnels/marketplace")}>
+              <Store className="size-4" aria-hidden /> {m.title}
+            </Button>
             <Button onClick={() => setCreating(true)}>
               <Plus className="size-4" aria-hidden /> {t.createFunnel}
             </Button>
@@ -396,7 +404,14 @@ export function FunnelsPage() {
             icon={<Layers />}
             title={t.emptyTitle}
             description={t.emptyDescription}
-            action={<Button onClick={() => setCreating(true)}>{t.createFunnel}</Button>}
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => setCreating(true)}>{t.createFunnel}</Button>
+                <Button variant="outline" onClick={() => navigate("/funnels/marketplace")}>
+                  <Store className="size-4" aria-hidden /> {m.title}
+                </Button>
+              </div>
+            }
           />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
@@ -499,6 +514,10 @@ export function FunnelsPage() {
                                 <Share2 className="size-4" aria-hidden />
                                 {t.share}
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setMarketing(f)}>
+                                <Upload className="size-4" aria-hidden />
+                                {m.share}
+                              </DropdownMenuItem>
                               {url && (
                                 <DropdownMenuItem onClick={() => void copyLink(url)}>
                                   <Link2 className="size-4" aria-hidden />
@@ -528,6 +547,7 @@ export function FunnelsPage() {
       </Modal>
 
       <FunnelShareDialog funnel={sharing} onClose={() => setSharing(null)} />
+      <ShareTemplateDialog open={marketing !== null} funnelId={marketing?.id} onClose={() => setMarketing(null)} />
 
       <ConfirmDialog
         open={deleting !== null}
