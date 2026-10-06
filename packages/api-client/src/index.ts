@@ -272,3 +272,5 @@ export * from "./endpoints/productLinkImport";
 export * from "./endpoints/contactImport";
 // Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
 export * from "./endpoints/shopperAccounts";
+// Store blog: posts as blocks, categories, the posts index and the home page's latest posts (modules/blog, handoff 190).
+export * from "./endpoints/blog";

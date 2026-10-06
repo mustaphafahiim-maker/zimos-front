@@ -169,6 +169,8 @@ const STRINGS = {
     INVALID_FILE: "We couldn't read this file. Check its type and try again.",
     FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
     NO_FILE: "Choose a file first.",
+    // handoff 190
+    SLUG_TAKEN: "This link is already used. Choose another one.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -312,6 +314,8 @@ const STRINGS = {
     INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
     FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
     NO_FILE: "اختار ملف الأول.",
+    // handoff 190
+    SLUG_TAKEN: "اللينك ده مستخدم قبل كده. اختار لينك تاني.",
   },
 } satisfies Messages;
 
