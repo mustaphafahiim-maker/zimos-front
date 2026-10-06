@@ -12,6 +12,7 @@ import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
 import { CustomCodeSection } from "./CustomCodeSection";
 import { DomainsTab } from "./DomainsTab";
+import { StoreAccessTab } from "./StoreAccessTab";
 import { LanguagesTab } from "./LanguagesTab";
 import { SectionTabs } from "@/components/SectionTabs";
 import { CustomerAccountsTab } from "./CustomerAccountsTab";
@@ -22,7 +23,7 @@ import { PrivacyTab } from "./PrivacyTab";
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "custom-code", "customer-accounts", "privacy"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "store-access", "custom-code", "customer-accounts", "privacy"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -39,6 +40,7 @@ const STRINGS = {
     seo: "SEO",
     "custom-code": "Custom code",
     domains: "Domains",
+    "store-access": "Store access",
     languages: "Languages",
     "customer-accounts": "Customer accounts",
     privacy: "Privacy",
@@ -56,6 +58,7 @@ const STRINGS = {
     seo: "SEO",
     "custom-code": "أكواد التخصيص",
     domains: "الدومينات",
+    "store-access": "دخول المتجر",
     languages: "اللغات",
     "customer-accounts": "حسابات العملاء",
     privacy: "الخصوصية",
@@ -91,6 +94,7 @@ export function StoreDesignPage() {
       {active === "seo" && <SeoTab key={workspaceId} />}
       {active === "custom-code" && <CustomCodeSection key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
+      {active === "store-access" && <StoreAccessTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
       {active === "customer-accounts" && <CustomerAccountsTab key={workspaceId} />}
       {active === "privacy" && <PrivacyTab key={workspaceId} />}
