@@ -230,3 +230,5 @@ export * from "./endpoints/funnelBulk";
 export * from "./endpoints/storefrontTexts";
 // Store scripts: the merchant's own code by position and page type (customCode/storeScripts.js).
 export * from "./endpoints/storeScripts";
+// Webhook custom headers: per-endpoint headers, sealed and shown masked (webhooks/customHeaders.js).
+export * from "./endpoints/webhookHeaders";

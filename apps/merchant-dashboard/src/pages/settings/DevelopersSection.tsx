@@ -3,7 +3,6 @@ import { Alert, Button, cn } from "@store-builder/ui";
 import {
   ApiError,
   developersCreateApiKey,
-  developersCreateWebhook,
   developersDeleteWebhook,
   developersListApiKeys,
   developersListWebhookDeliveries,
@@ -17,8 +16,9 @@ import {
   type ApiKeyScope,
   type WebhookDeliveryDto,
   type WebhookEndpointDto,
+  type WebhookEventInfo,
   type WebhookFilter,
-  webhooksCreateFiltered,
+  webhooksCreateEndpoint,
 } from "@store-builder/api-client";
 import { apiClient, apiBaseUrl } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -32,6 +32,7 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
 import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
+import { EditWebhookEndpointModal, WebhookHeadersField, WebhookHeadersNote, WebhookTopicsField, useWebhookHeaders } from "./WebhookEndpointFields";
 import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -99,16 +100,15 @@ const STRINGS = {
     noEndpoints: "No webhook endpoints yet.",
     url: "Endpoint URL",
     urlHint: "Must start with https://",
-    events: "Events",
     allEvents: "All events",
-    allEventsHint: "Including events added later.",
-    pickEvents: "Choose events",
+    needEvents: "Choose at least one event.",
     endpointCreatedTitle: "Copy your signing secret",
     endpointCreatedBody: "Your server uses it to check each request really came from us. It's shown only now and when you rotate it.",
     active: "Active",
     paused: "Paused",
     pause: "Pause",
     resume: "Resume",
+    edit: "Edit",
     sendTest: "Send test",
     testing: "Sending…",
     testDelivered: "Test delivered — your server answered {status}.",
@@ -190,16 +190,15 @@ const STRINGS = {
     noEndpoints: "مفيش روابط ويب هوك لسه.",
     url: "الرابط",
     urlHint: "لازم يبدأ بـ https://",
-    events: "الأحداث",
     allEvents: "كل الأحداث",
-    allEventsHint: "حتى اللي هتتضاف بعدين.",
-    pickEvents: "اختار الأحداث",
+    needEvents: "اختار حدث واحد على الأقل.",
     endpointCreatedTitle: "انسخ مفتاح التوقيع",
     endpointCreatedBody: "السيرفر بتاعك بيستخدمه عشان يتأكد إن كل طلب جاي مننا فعلاً. بيظهر دلوقتي بس، ولما تغيّره.",
     active: "شغال",
     paused: "متوقف",
     pause: "إيقاف",
     resume: "تشغيل",
+    edit: "تعديل",
     sendTest: "إرسال تجربة",
     testing: "بيتبعت…",
     testDelivered: "التجربة وصلت — السيرفر رد بـ {status}.",
@@ -517,6 +516,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
   const [removing, setRemoving] = useState<WebhookEndpointDto | null>(null);
   const [history, setHistory] = useState<WebhookEndpointDto | null>(null);
+  const [editing, setEditing] = useState<WebhookEndpointDto | null>(null);
 
   const endpoints = hooks.data?.endpoints ?? [];
   const eventLabel = (events: string[]) => (events.includes("*") ? t.allEvents : events.join(", "));
@@ -583,8 +583,12 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                     {endpoint.secretHint}
                   </code>
                 </p>
+                <WebhookHeadersNote endpoint={endpoint} />
                 <WebhookEndpointNotes endpoint={endpoint} />
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditing(endpoint)}>
+                    {t.edit}
+                  </Button>
                   <Button size="sm" variant="outline" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
                     {testing === endpoint.id ? t.testing : t.sendTest}
                   </Button>
@@ -671,6 +675,18 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
       />
 
       {history && <DeliveriesModal t={t} endpoint={history} onClose={() => setHistory(null)} />}
+
+      {editing && (
+        <EditWebhookEndpointModal
+          endpoint={editing}
+          events={hooks.data?.events ?? []}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void hooks.refresh({ silent: true });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -684,7 +700,7 @@ function NewEndpointModal({
 }: {
   t: T;
   open: boolean;
-  events: Array<{ name: string; description: string }>;
+  events: WebhookEventInfo[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -694,6 +710,8 @@ function NewEndpointModal({
   const [all, setAll] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
   const [filter, setFilter] = useState<WebhookFilter | null>(null);
+  const headers = useWebhookHeaders();
+  const [eventsError, setEventsError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -703,6 +721,8 @@ function NewEndpointModal({
     setAll(true);
     setPicked([]);
     setFilter(null);
+    headers.reset();
+    setEventsError(undefined);
     setError(null);
     setSecret(null);
     onClose();
@@ -710,16 +730,23 @@ function NewEndpointModal({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
+    const noEvents = !all && picked.length === 0;
+    setEventsError(noEvents ? t.needEvents : undefined);
+    const customHeaders = headers.build();
+    if (noEvents || !customHeaders) return;
+    setBusy(true);
     try {
-      const body = { url: url.trim(), events: all ? ["*"] : picked };
-      const created = filter
-        ? await webhooksCreateFiltered(apiClient, workspaceId, { ...body, filter })
-        : await developersCreateWebhook(apiClient, workspaceId, body);
+      const created = await webhooksCreateEndpoint(apiClient, workspaceId, {
+        url: url.trim(),
+        events: all ? ["*"] : picked,
+        ...(filter ? { filter } : {}),
+        ...(customHeaders.length > 0 ? { customHeaders } : {}),
+      });
       setSecret(created.signingSecret);
       onCreated();
     } catch (err) {
+      headers.fromServer(err);
       setError(errorMessage(err));
     } finally {
       setBusy(false);
@@ -736,8 +763,8 @@ function NewEndpointModal({
   }
 
   return (
-    <Modal open={open} onClose={close} title={t.addEndpoint}>
-      <form onSubmit={submit} className="space-y-4">
+    <Modal open={open} onClose={close} title={t.addEndpoint} className="max-w-2xl">
+      <form onSubmit={submit} className="space-y-5">
         <TextField
           label={t.url}
           hint={t.urlHint}
@@ -748,49 +775,25 @@ function NewEndpointModal({
           required
           onChange={(e) => setUrl(e.target.value)}
         />
-        <fieldset className="space-y-2">
-          <legend className="mb-1 text-sm font-medium text-ink">{t.events}</legend>
-          <label className="flex cursor-pointer items-start gap-2">
-            <input type="radio" name="webhook-events" className="mt-1" checked={all} onChange={() => setAll(true)} />
-            <span>
-              <span className="block text-sm text-ink">{t.allEvents}</span>
-              <span className="block text-xs text-ink-soft">{t.allEventsHint}</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <input type="radio" name="webhook-events" className="mt-1" checked={!all} onChange={() => setAll(false)} />
-            <span className="text-sm text-ink">{t.pickEvents}</span>
-          </label>
-          {!all && (
-            <div className="ms-6 space-y-2">
-              {events.map((event) => (
-                <label key={event.name} className="flex cursor-pointer items-start gap-2">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={picked.includes(event.name)}
-                    onChange={(e) =>
-                      setPicked((prev) => (e.target.checked ? [...prev, event.name] : prev.filter((n) => n !== event.name)))
-                    }
-                  />
-                  <span>
-                    <code dir="ltr" className="block font-mono text-sm text-ink">
-                      {event.name}
-                    </code>
-                    <span className="block text-xs text-ink-soft">{event.description}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-        </fieldset>
+        <WebhookTopicsField
+          events={events}
+          all={all}
+          picked={picked}
+          onAllChange={setAll}
+          onPickedChange={(next) => {
+            setPicked(next);
+            if (next.length > 0) setEventsError(undefined);
+          }}
+          error={eventsError}
+        />
         <WebhookFilterField value={filter} onChange={setFilter} />
+        <WebhookHeadersField rows={headers.rows} errors={headers.errors} onChange={headers.setRows} onErrorsChange={headers.setErrors} />
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={busy}>
             {t.cancel}
           </Button>
-          <Button type="submit" disabled={busy || url.trim() === "" || (!all && picked.length === 0)}>
+          <Button type="submit" disabled={busy || url.trim() === ""}>
             {busy ? t.creating : t.create}
           </Button>
         </div>
