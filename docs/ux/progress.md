@@ -53,7 +53,12 @@ are listed under *Handoff items done*.
       setup guide's promise), first error scrolled into view and focused,
       leave-page warning while basics are unsaved, advanced sections folded
       under «إعدادات تانية» (offers stay visible).
-- [ ] S9 Onboarding — next
+- [x] S9 Onboarding: setup guide leads with «الخطوة الجاية», other steps
+      below, done steps in one line; domain step → /store-settings/domains;
+      test-order step opens the store; local percent digits; sign-in pages
+      calm (no glass/blobs) with a language switch; login email LTR; sign
+      out on the plan step. (Covers S15 auth restyle too.)
+- [ ] S10 Dialogs and toasts — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint

@@ -272,6 +272,7 @@ export function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                dir="ltr"
                 autoComplete="email"
                 required
                 value={email}

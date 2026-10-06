@@ -1,4 +1,5 @@
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 
 /**
  * What sits behind the sign-in pages: three slow, blurred shapes in the brand
@@ -17,6 +18,10 @@ export function AuthBackdrop() {
       <header className="absolute inset-x-0 top-6 z-10 flex justify-center">
         <ZimosLogo height={30} />
       </header>
+      {/* The language can be chosen before signing in, not only in Settings. */}
+      <div className="absolute end-4 top-5 z-10">
+        <LanguageSwitch />
+      </div>
     </>
   );
 }
