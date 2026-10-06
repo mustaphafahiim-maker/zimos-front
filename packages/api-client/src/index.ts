@@ -256,3 +256,5 @@ export * from "./endpoints/emailSendingDomain";
 export * from "./endpoints/orderEmailDesign";
 // The checkout's place pickers: the store's own regions → cities → areas, and the quote by place (handoff 163/164).
 export * from "./endpoints/storefrontPlaces";
+// Shopper returns: the store's setting, photos and source on the staff lists, and the shopper's request (handoff 186).
+export * from "./endpoints/shopperReturns";
