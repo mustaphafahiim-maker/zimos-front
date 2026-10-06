@@ -214,6 +214,13 @@ are listed under *Handoff items done*.
       test list; connect / list / tags / leads-buyers / save / «زامن
       دلوقتي» with progress / last error / disconnect; install from the
       page. Checked end to end with the sandbox provider.
+- [x] 183 Express checkout: «دفع سريع» card at the top of checkout (Apple
+      Pay where the browser supports it, Google Pay, yellow PayPal) that
+      validates and submits the page's own form, then «أو ادفع بطريقة
+      تانية»; PayPal return handled; dashboard Payments connects Stripe
+      (express switch, webhook note) and PayPal (currency notice), wallet
+      badges, real method names; «باي بال» in labels/filters/rules. Checked
+      with the sandbox gateway on a second local backend (two paid orders).
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
