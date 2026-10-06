@@ -343,7 +343,15 @@ are listed under *Handoff items done*.
       category and tag pages, post page with OpenGraph + JSON-LD, «من
       مدونتنا» on the built-in home. No page-builder "latest posts" section
       yet; local uploads give http URLs the API refuses (https only).
-- [ ] 192, 196, 197 — interrupted by a
+- [x] 196 Cookie consent: Store settings → «الخصوصية» (off / notice / ask
+      first, countries to ask with a one-tap Europe add, policy link,
+      wording per language, preview); storefront banner that holds Meta,
+      Clarity and GTM until accept (only for asked countries), consent sent
+      with events and the order, «إعدادات الكوكيز» in both footers, events
+      fired before pixels mount are replayed after accept. Open: the
+      product page's phone buy bar isn't given room yet (the banner covers
+      it until the shopper answers).
+- [ ] 192, 197 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
