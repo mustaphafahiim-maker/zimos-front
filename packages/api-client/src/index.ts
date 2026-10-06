@@ -272,3 +272,5 @@ export * from "./endpoints/productLinkImport";
 export * from "./endpoints/contactImport";
 // Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
 export * from "./endpoints/shopperAccounts";
+// Wishlist for signed-in shoppers and the merchant's most wished products (shopperAccounts/wishlist.js, handoff 188).
+export * from "./endpoints/wishlist";

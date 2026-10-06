@@ -9,6 +9,7 @@ import { storeHref } from "@/lib/storeHref";
 import { useStore } from "@/lib/StoreContext";
 import { isAccountsOffError, isShopperSignedOutError, useShopperApi, useShopperConfig, type ShopperApi } from "@/lib/shopperSession";
 import { ShopperSignIn } from "./ShopperSignIn";
+import { mergeGuestWishlist } from "@/lib/wishlist";
 import { UserIcon } from "./accountIcons";
 
 /**
@@ -83,6 +84,7 @@ function ShellSkeleton() {
 
 const TABS = [
   { key: "orders", href: "/account" },
+  { key: "wishlist", href: "/account/wishlist" },
   { key: "addresses", href: "/account/addresses" },
   { key: "profile", href: "/account/profile" },
 ] as const;
@@ -133,6 +135,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
 
   function signedIn(session: ShopperSession) {
     setMeState({ token: session.token, value: { customer: session.customer, addresses: session.addresses } });
+    mergeGuestWishlist(api, session.token);
     const next = nextPath();
     if (next) router.push(storeHref(basePath, next));
   }
@@ -190,7 +193,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   } else if (!current) {
     body = <ShellSkeleton />;
   } else {
-    const active = pathname.endsWith("/account/addresses")
+    const active = pathname.endsWith("/account/wishlist") ? "wishlist" : pathname.endsWith("/account/addresses")
       ? "addresses"
       : pathname.endsWith("/account/profile")
         ? "profile"
@@ -217,7 +220,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
                     aria-current={selected ? "page" : undefined}
                     className={`${selected ? btnPrimary : btnSecondary} whitespace-nowrap`}
                   >
-                    {a[tab.key]}
+                    {tab.key === "wishlist" ? t.wishlist.title : a[tab.key]}
                   </StoreLink>
                 </li>
               );
