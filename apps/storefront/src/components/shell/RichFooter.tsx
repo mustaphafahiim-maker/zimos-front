@@ -2,6 +2,7 @@ import { storefrontDesignMeta, storefrontGeneralMeta, type StorefrontMeta } from
 import type { ReactNode } from "react";
 import { PoweredByZimos, brandingRemoved } from "@/components/PoweredByZimos";
 import { ShellLink } from "@/components/ShellLink";
+import { CookieSettingsButton } from "@/components/CookieConsent";
 import { StoreLink } from "@/components/StoreRoute";
 import type { Locale } from "@/lib/i18n";
 import { useDictionary } from "@/lib/StoreContext";
@@ -141,6 +142,7 @@ export function RichFooter({
 
       <div className="zs-footer__bottom">
         <p>{t.footer.rights(store.name, year)}</p>
+        <CookieSettingsButton />
         {/* The social accounts sit with the brand; without it, here. */}
         {!footer.showBrand && social.length > 0 && (
           <div className="zs-footer__social">

@@ -1,5 +1,6 @@
 import { sendContextEvent, setTrackingContext, type AnalyticsEventName } from "./analyticsEvents";
 import { sendToAdPixels } from "./adPixels";
+import { whenPixelsMay } from "./cookieConsent";
 
 /**
  * Commerce events. Two destinations:
@@ -69,7 +70,7 @@ export function track(event: TrackEvent, input: TrackData = {}): void {
   if (typeof window === "undefined") return;
   const data: TrackData =
     event === "PageView" || input.orderId || input.eventId ? input : { ...input, eventId: newEventId() };
-  sendToAdPixels(event, data);
+  whenPixelsMay(() => sendToAdPixels(event, data)); // held on a store that asks first, until the shopper's choice is known
   const own = FIRST_PARTY[event];
   if (!own) return;
   try {

@@ -943,6 +943,16 @@ const en = {
     emptyTag: "No posts with this tag yet.",
     backToBlog: "Back to the blog",
   },
+  /** The cookie banner and the footer's "Cookie settings" (handoff 196, components/CookieConsent). */
+  cookies: {
+    label: "Cookies",
+    message: "We use cookies to improve your visit and measure our ads.",
+    accept: "Accept",
+    reject: "Reject",
+    ok: "OK",
+    settings: "Cookie settings",
+    policy: "Privacy policy",
+  },
 };
 
 export type Dictionary = typeof en;
@@ -1788,6 +1798,15 @@ const ar: Dictionary = {
     emptyCategory: "لسه مفيش مقالات في التصنيف ده.",
     emptyTag: "لسه مفيش مقالات بالوسم ده.",
     backToBlog: "ارجع للمدونة",
+  },
+  cookies: {
+    label: "الكوكيز",
+    message: "بنستخدم الكوكيز عشان نحسّن زيارتك ونقيس إعلاناتنا.",
+    accept: "موافق",
+    reject: "لا شكرًا",
+    ok: "تمام",
+    settings: "إعدادات الكوكيز",
+    policy: "سياسة الخصوصية",
   },
 };
 

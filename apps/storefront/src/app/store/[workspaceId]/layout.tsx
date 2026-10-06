@@ -16,6 +16,7 @@ import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
 import { OtpGate } from "@/components/OtpGate";
 import { TrackingPixels } from "@/components/TrackingPixels";
+import { ConsentGate, CookieConsentBanner } from "@/components/CookieConsent";
 import { purchaseTimingOf, storeConversionEventOf, storePixelsOf } from "@/lib/adPixels";
 import {
   resolveCheckoutFormWithBilling,
@@ -25,6 +26,7 @@ import {
   storefrontGeneralMeta,
   storefrontStoreApp,
   hiddenPlacesOf,
+  storefrontCookieConsentOf,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
 import { storeCode } from "@/lib/headCode";
@@ -179,6 +181,7 @@ export default async function StoreLayout({
   const theme = storeThemeOf(store.themeSettings);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
+  const consent = storefrontCookieConsentOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
   // The merchant's own code slots and scripts. The API returns none to a staff
   // preview, and components/CustomCode.tsx decides where the rest may run.
@@ -203,7 +206,9 @@ export default async function StoreLayout({
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} conversionEvent={storeConversionEventOf(store)} />
+              <ConsentGate consent={consent}>
+                <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} conversionEvent={storeConversionEventOf(store)} />
+              </ConsentGate>
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its
@@ -221,6 +226,7 @@ export default async function StoreLayout({
             {/* The store's own body and heading fonts (lib/storeFonts.tsx). */}
             <FontAssets refs={Object.values(storeFontRefs(store.themeSettings))} store={workspaceId} />
             <DocumentLocale locale={locale} />
+            <CookieConsentBanner consent={consent} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             <HideInFunnel>
               <CodeSlot name="above_header" />

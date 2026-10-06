@@ -288,3 +288,5 @@ export * from "./endpoints/purchaseLimits";
 export * from "./endpoints/deliveryEstimates";
 // Store blog: posts as blocks, categories, the posts index and the home page's latest posts (modules/blog, handoff 190).
 export * from "./endpoints/blog";
+// Cookie consent: the store's banner (off / notice / ask first), who is asked, policy link and wording; the storefront's reader (handoff 196).
+export * from "./endpoints/cookieConsent";
