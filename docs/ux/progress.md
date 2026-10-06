@@ -373,6 +373,17 @@ are listed under *Handoff items done*.
       X-Store-Gate CORS is done on the backend; one nice-to-have request
       (lockFunnels in the public gate view).
 
+## Handoff items 201–222 (backend 2026-10-06, fourth batch)
+Three agents at a time (16 GB machine), brief in the scratchpad's BATCH4.md.
+200 (email campaigns) was withdrawn by the backend.
+- [ ] 220 self-service, 221 delivery slots, 222 referral program — agent running
+- [ ] 201 gift cards online, 203 loyalty points, 204 store credit — agent running
+- [ ] 208 free gift, 214 gift wrap, 215 mix-and-match box — agent running
+- [ ] 205 price lists, 218 VIP tiers, 219 B2B quotes — next
+- [ ] 206 stock locations, 207 suppliers / purchase orders / counts — next
+- [ ] 209 customer notes, 210 size charts, 211 search analytics, 212 product Q&A — next
+- [ ] 202 scheduled reports, 213 licence alert, 216 holiday mode, 217 Google sign-in — next
+
 ## Round 3 (in progress)
 - [x] W3-1 Wording pass 3: ~250 «جارٍ …» busy labels → Egyptian present
       («بنحفظ…»، «بنبعت…»، «بندوّر على طلبك…») and ~60 common «تم …» toasts
