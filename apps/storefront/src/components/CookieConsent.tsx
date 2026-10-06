@@ -62,10 +62,12 @@ export function ConsentGate({ consent, children }: { consent: CookieConsentSetti
   return allowed ? <>{children}</> : null;
 }
 
-// The phone bars the banner sits above: the theme's bottom toolbar (store-sections.css
+// The phone bars the banner sits above: the product page's buy bar while it shows,
+// the theme's bottom toolbar (store-sections.css
 // .zs-toolbar) and the checkout's order bar (checkout/CheckoutStickyBar), which wins.
 const OFFSETS = `@media (width < 48rem){.brand-theme:has(.zs-toolbar) [data-cookie-banner]{bottom:calc(55px + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}
-@media (width < 64rem){.brand-theme:has([data-checkout-bar]) [data-cookie-banner]{bottom:calc(5rem + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}`;
+@media (width < 64rem){.brand-theme:has([data-checkout-bar]) [data-cookie-banner]{bottom:calc(5rem + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}
+@media (width < 48rem){.brand-theme:has([data-buy-bar][aria-hidden="false"]) [data-cookie-banner]{bottom:calc(4.5rem + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}`;
 
 /**
  * The banner, at the bottom of every page: one "OK" for a notice, "Accept" and

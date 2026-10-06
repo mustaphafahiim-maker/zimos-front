@@ -349,8 +349,9 @@ are listed under *Handoff items done*.
       Clarity and GTM until accept (only for asked countries), consent sent
       with events and the order, «إعدادات الكوكيز» in both footers, events
       fired before pixels mount are replayed after accept. Open: the
-      product page's phone buy bar isn't given room yet (the banner covers
-      it until the shopper answers).
+      product page's phone buy bar now gets room too (the banner lifts above
+      it while the bar shows) — typechecked; the browser check waits until
+      the demo store is open again (the 197 agent is testing its gate).
 - [x] 192 Template marketplace: /funnels/marketplace «القوالب» (search, kind,
       order, language, preview per page at phone / computer width, «استخدم
       القالب ده») and «قوالبك» (review status, reviewer's note, edit,

@@ -782,6 +782,7 @@ export function ProductLanding({
       {/* Sticky mobile bar */}
       {ps.sticky_buy_button && (
       <div
+        data-buy-bar
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper-raised/95 px-4 py-3 shadow-lg backdrop-blur transition-transform duration-200 md:hidden ${
           formVisible ? "translate-y-full" : "translate-y-0"
         }`}
