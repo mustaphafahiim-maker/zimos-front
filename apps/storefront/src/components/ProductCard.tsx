@@ -10,6 +10,7 @@ import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, 
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
+import { WishlistHeart } from "./wishlist/WishlistHeart";
 import { skeleton } from "./ui";
 
 export function ProductCard({
@@ -170,6 +171,7 @@ export function ProductCard({
             {product.variants.length === 0 ? t.common.unavailable : t.common.outOfStock}
           </span>
         )}
+        <WishlistHeart productId={product.id} className="absolute bottom-2 end-2" />
       </div>
 
       <div className="flex flex-1 flex-col p-4">

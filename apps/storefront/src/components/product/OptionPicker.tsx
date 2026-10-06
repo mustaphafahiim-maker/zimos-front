@@ -9,7 +9,7 @@ import { productPageText } from "./productPageText";
 /**
  * One option of the product ("Size", "اللون"), drawn the way the merchant
  * chose: buttons (the default), a dropdown, colour swatches or pictures. A
- * value with no stock left stays visible, struck through, and cannot be
+ * value with no stock left stays visible, struck through, and can still be
  * picked. In a language the merchant translated the option into, its name
  * and values are shown from `labels` (backend translations/moreTexts.js);
  * the values themselves stay what the variants and swatches are keyed by.
@@ -56,7 +56,7 @@ export function OptionPicker({
           {group.values.map((value) => {
             const ok = isAvailable(value);
             return (
-              <option key={value} value={value} disabled={!ok}>
+              <option key={value} value={value}>
                 {ok ? show(value) : `${show(value)} — ${text.soldOut}`}
               </option>
             );
@@ -78,11 +78,10 @@ export function OptionPicker({
             "aria-pressed": isSelected,
             "aria-label": ok ? show(value) : `${show(value)} — ${text.soldOut}`,
             title: show(value),
-            disabled: !ok,
             onClick: () => onSelect(value),
           };
           const ring = isSelected ? "border-primary ring-2 ring-primary/30" : "border-line hover:border-primary";
-          const off = ok ? "cursor-pointer" : "cursor-not-allowed opacity-50";
+          const off = ok ? "cursor-pointer" : "cursor-pointer opacity-50";
 
           const color = type === "color" ? display?.swatches?.[value] : undefined;
           if (color) {
@@ -121,7 +120,7 @@ export function OptionPicker({
                 isSelected
                   ? "border-primary bg-primary-soft text-primary"
                   : "border-line bg-paper-raised text-ink hover:border-primary"
-              } ${ok ? "cursor-pointer" : "cursor-not-allowed text-ink-soft line-through decoration-1 opacity-60"}`}
+              } ${ok ? "cursor-pointer" : "cursor-pointer text-ink-soft line-through decoration-1 opacity-60"}`}
             >
               {show(value)}
             </button>

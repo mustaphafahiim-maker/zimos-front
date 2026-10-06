@@ -793,6 +793,36 @@ const en = {
       generic: "Something went wrong. Try again.",
     },
   },
+  /** Wishlist for signed-in shoppers (frontend-handoff 188): the hearts and the account tab. */
+  wishlist: {
+    title: "Wishlist",
+    add: "Add to wishlist",
+    remove: "Remove from wishlist",
+    removeShort: "Remove",
+    signInToKeep: "Sign in to keep your wishlist",
+    onThisDevice: "For now it's saved on this device only.",
+    unavailable: "Unavailable",
+    count: (n: number) => (n === 1 ? "1 saved product" : `${n} saved products`),
+    empty: "Your wishlist is empty",
+    emptyHint: "Tap the heart on any product to find it here later.",
+    removed: "Removed from your wishlist.",
+    full: "Your wishlist is full (200 products). Remove one to add another.",
+    notForSale: "This product isn't for sale right now.",
+    failed: "We couldn't update your wishlist. Try again.",
+    close: "Close",
+  },
+  /** Back-in-stock alerts (frontend-handoff 194): the sign-up that takes the cart buttons' place on a sold-out variant. */
+  backInStock: {
+    notifyMe: "Notify me when it's back",
+    intro: "Leave your mobile number or email. You get one message when it's back, nothing else.",
+    submit: "Notify me",
+    sending: "Saving…",
+    done: "We'll tell you once when it's back",
+    doneTo: "One message to",
+    inStockNow: "Good news: it's back in stock. You can order it now.",
+    tooMany: "Too many requests from this device. Try again in an hour.",
+    failed: "We couldn't save that. Try again.",
+  },
   meta: {
     storeDescription: (store: string) => `Shop ${store} — cash on delivery across Egypt.`,
   },
@@ -1530,6 +1560,39 @@ const ar: Dictionary = {
       tooMany: "محاولات كتير. استنى شوية وجرّب تاني.",
       generic: "حصلت مشكلة. جرّب تاني.",
     },
+  },
+  wishlist: {
+    title: "المفضلة",
+    add: "ضيف للمفضلة",
+    remove: "شيل من المفضلة",
+    removeShort: "شيل",
+    signInToKeep: "سجّل دخول عشان تحفظ مفضلتك",
+    onThisDevice: "دلوقتي محفوظة على الجهاز ده بس.",
+    unavailable: "مش متاح",
+    count: (n) =>
+      n === 1
+        ? "منتج واحد في مفضلتك"
+        : n === 2
+          ? "منتجين في مفضلتك"
+          : `${arNum(n)} ${n % 100 >= 3 && n % 100 <= 10 ? "منتجات" : "منتج"} في مفضلتك`,
+    empty: "مفضلتك فاضية",
+    emptyHint: "دوس على القلب في أي منتج عشان تلاقيه هنا بعدين.",
+    removed: "اتشال من المفضلة.",
+    full: "مفضلتك مليانة (٢٠٠ منتج). شيل منتج عشان تضيف غيره.",
+    notForSale: "المنتج ده مش متاح للبيع دلوقتي.",
+    failed: "معرفناش نعدّل مفضلتك. جرّب تاني.",
+    close: "اقفل",
+  },
+  backInStock: {
+    notifyMe: "بلغني لما يرجع",
+    intro: "سيب رقم موبايلك أو إيميلك. هيوصلك رسالة واحدة لما يرجع، ومفيش غيرها.",
+    submit: "بلغني",
+    sending: "لحظة…",
+    done: "هنبلغك مرة واحدة لما يرجع",
+    doneTo: "رسالة واحدة على",
+    inStockNow: "خبر حلو: رجع متاح. تقدر تطلبه دلوقتي.",
+    tooMany: "طلبات كتير من الجهاز ده. جرّب تاني بعد ساعة.",
+    failed: "معرفناش نسجّلك. جرّب تاني.",
   },
   meta: {
     storeDescription: (store) => `تسوّق من ${store} — الدفع عند الاستلام في كل مصر.`,
