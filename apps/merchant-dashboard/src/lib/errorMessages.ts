@@ -176,6 +176,13 @@ const STRINGS = {
     GIFT_CARD_NO_EMAIL: "This card has no recipient email. Add one from “Edit details”, then send it again.",
     GIFT_CARD_NOT_FOUND: "This gift card code is not valid.",
     GIFT_CARD_UNUSABLE: "This gift card can't be used: it has expired, has no balance left or was disabled.",
+    // handoff 191/192
+    ALREADY_SUBMITTED: "This funnel is already in the marketplace or waiting for review. Change it from «Your templates».",
+    SUBMISSION_WITHDRAWN: "This template was withdrawn, so it can't be changed anymore. Share the funnel again instead.",
+    FUNNEL_GONE: "The funnel this template came from was deleted, so there's nothing to send again.",
+    marketplaceNoPages: "This funnel has no pages yet. Build its pages first, then share it.",
+    marketplaceTooLarge: "This funnel is too big to share. Remove a few sections or pages and try again.",
+    marketplaceGone: "This template isn't in the marketplace anymore.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -325,6 +332,13 @@ const STRINGS = {
     GIFT_CARD_NO_EMAIL: "الكارت ده مالوش إيميل مستلم. ضيفه من «عدّل البيانات» وبعدين ابعته تاني.",
     GIFT_CARD_NOT_FOUND: "كود كارت الهدية ده مش صحيح.",
     GIFT_CARD_UNUSABLE: "كارت الهدية ده مينفعش يتستخدم: يا إما انتهى، يا رصيده خلص، يا اتوقف.",
+    // handoff 191/192
+    ALREADY_SUBMITTED: "مسار البيع ده متبعت قبل كده، وهو منشور أو مستني المراجعة. عدّله من «قوالبك في السوق».",
+    SUBMISSION_WITHDRAWN: "القالب ده اتسحب، فمينفعش يتعدّل تاني. شارك مسار البيع من جديد بدل كده.",
+    FUNNEL_GONE: "مسار البيع اللي القالب ده جاي منه اتمسح، فمفيش حاجة تتبعت تاني.",
+    marketplaceNoPages: "مسار البيع ده لسه مفيهوش صفحات. اعمل صفحاته الأول وبعدين شاركه.",
+    marketplaceTooLarge: "مسار البيع ده كبير أوي على المشاركة. شيل شوية أقسام أو صفحات وجرّب تاني.",
+    marketplaceGone: "القالب ده مبقاش موجود في السوق.",
   },
 } satisfies Messages;
 
@@ -479,6 +493,34 @@ export function useImportLinkErrorMessage() {
       if (code === "IMPORT_SOURCE_UNREACHABLE" && urlProblems.some((m) => /no product data|not a shopify product/i.test(m))) {
         return t.IMPORT_SOURCE_NO_PRODUCT_DATA;
       }
+      return errorMessage(err);
+    },
+    [t, errorMessage]
+  );
+}
+
+// handoff 191/192: the template marketplace's refusals, in the merchant's words.
+/**
+ * `useErrorMessage` for the template marketplace. The server answers a
+ * funnel with no pages, or one too big to share, with a VALIDATION_ERROR (on
+ * `funnelId`, or with no field), and a template unlisted in the meantime
+ * with NOT_FOUND.
+ */
+export function useMarketplaceErrorMessage() {
+  const t = useT(STRINGS);
+  const errorMessage = useErrorMessage();
+  return useCallback(
+    (err: unknown): string => {
+      const code = apiErrorCode(err);
+      const details = apiErrorDetails<unknown>(err);
+      const fields = (Array.isArray(details) ? details : [])
+        .filter((d): d is { field: string } => !!d && typeof (d as { field?: unknown }).field === "string")
+        .map((d) => d.field);
+      if (code === "VALIDATION_ERROR") {
+        if (fields.includes("funnelId")) return t.marketplaceNoPages;
+        if (err instanceof ApiError && /too large/i.test(err.message)) return t.marketplaceTooLarge;
+      }
+      if (code === "NOT_FOUND" && err instanceof ApiError && /template/i.test(err.message)) return t.marketplaceGone;
       return errorMessage(err);
     },
     [t, errorMessage]

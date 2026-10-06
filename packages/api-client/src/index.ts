@@ -280,3 +280,5 @@ export * from "./endpoints/wishlist";
 export * from "./endpoints/stockAlerts";
 // Gift cards: issue, list, adjust, reveal / resend, products sold as gift cards; the shopper's balance check and checkout field (handoff 189).
 export * from "./endpoints/giftCards";
+// Funnel template marketplace: browse, preview and use listed templates; submit, edit, resubmit and withdraw your own (marketplace/, handoff 192).
+export * from "./endpoints/marketplaceTemplates";
