@@ -88,8 +88,8 @@ const STRINGS = {
     remove: "حذف",
     incomplete: "أكمل الحقول المطلوبة في كل عنصر، أو احذف الفارغ منها.",
     save: "حفظ المحتوى",
-    saving: "جارٍ الحفظ…",
-    saved: "تم حفظ محتوى المنتج.",
+    saving: "بنحفظ…",
+    saved: "اتحفظ محتوى المنتج.",
     discard: "تجاهل التغييرات",
   },
 } satisfies Messages;

@@ -83,7 +83,7 @@ const STRINGS = {
     confirm_generic: "سيُطبَّق هذا على كل الأوردرات المحددة.",
     cancel: "إلغاء",
     apply: "تطبيق",
-    applying: "جارٍ التنفيذ…",
+    applying: "بننفّذ…",
     resultTitle: "النتيجة",
     resultOk: "اتحدّث {orders}.",
     resultFailed: "معرفناش نحدّث {count}:",

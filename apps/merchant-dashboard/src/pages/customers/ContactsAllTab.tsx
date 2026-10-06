@@ -76,7 +76,7 @@ const STRINGS = {
   },
   ar: {
     add: "إضافة جهة اتصال",
-    exporting: "جارٍ التصدير…",
+    exporting: "بنصدّر…",
     exported: "تم تصدير {count} جهة اتصال.",
     kpiAll: "جهات الاتصال",
     kpiCustomers: "عملاء",

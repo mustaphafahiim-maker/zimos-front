@@ -46,7 +46,7 @@ const STRINGS = {
     show: "إظهار كلمة المرور",
     hide: "إخفاء كلمة المرور",
     signIn: "تسجيل الدخول",
-    signingIn: "جارٍ تسجيل الدخول…",
+    signingIn: "بندخّلك…",
     newHere: "جديد على زيموس؟",
     createAccount: "أنشئ حسابًا",
     wrongCredentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -55,7 +55,7 @@ const STRINGS = {
     resentNotice: "إذا كان هناك حساب مسجّل بهذا البريد الإلكتروني، ستصلك رسالة تأكيد جديدة خلال دقائق.",
     noVerificationEmail: "لم تجد رسالة التأكيد؟",
     resend: "إعادة إرسال الرسالة",
-    resending: "جارٍ الإرسال…",
+    resending: "بنبعت…",
     expired: "الجلسة خلصت. ادخل تاني وهترجع لنفس المكان اللي كنت فيه.",
   },
 } satisfies Messages;

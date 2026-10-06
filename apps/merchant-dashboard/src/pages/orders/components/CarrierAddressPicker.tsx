@@ -44,7 +44,7 @@ const STRINGS = {
     chooseCity: "اختر مدينة",
     chooseDistrict: "اختر منطقة",
     chooseCityFirst: "اختر مدينة أولًا",
-    loadingPlaces: "جارٍ التحميل…",
+    loadingPlaces: "بنحمّل…",
     suggested: "الأقرب للعنوان",
     allDistricts: "كل المناطق",
     allCities: "كل المدن",

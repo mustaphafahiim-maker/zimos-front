@@ -170,7 +170,7 @@ const STRINGS = {
     deleteTitle: "حذف «{name}»؟",
     deleteDescription: "يُحذف الكورس ودروسه نهائيًا.",
     hasStudents: "يوجد طلاب مسجلون في هذا الكورس. أرجعه لمسودة بدلًا من الحذف.",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     enrollTitle: "منح صلاحية الدخول",
     phone: "الهاتف",
     studentName: "الاسم (اختياري)",

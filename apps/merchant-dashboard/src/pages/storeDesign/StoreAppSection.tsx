@@ -43,7 +43,7 @@ const STRINGS = {
     color: "لون الشريط",
     colorHint: "فارغ: اللون الأساسي لمتجرك.",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ إعدادات تطبيق المتجر.",
   },
 } satisfies Messages;

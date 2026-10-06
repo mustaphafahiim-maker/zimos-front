@@ -70,7 +70,7 @@ const STRINGS = {
     nothing: "اختر تغييرًا واحدًا على الأقل.",
     cancel: "إلغاء",
     apply: "تطبيق على {count} منتج",
-    applying: "جارٍ التطبيق…",
+    applying: "بنطبّق…",
     done: "تم تحديث {count} منتج.",
   },
 } satisfies Messages;

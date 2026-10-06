@@ -94,7 +94,7 @@ const STRINGS = {
     noMatch: "لا توجد منتجات مطابقة.",
     cancel: "إلغاء",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     productsSaved: "تم حفظ المنتجات.",
   },
 } satisfies Messages;

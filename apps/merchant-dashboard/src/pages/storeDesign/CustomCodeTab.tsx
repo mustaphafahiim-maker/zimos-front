@@ -97,7 +97,7 @@ const STRINGS = {
     empty: "فارغ",
     lastEdit: "آخر تعديل {date}",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     discard: "تجاهل",
     saved: "تم حفظ الكود.",
   },

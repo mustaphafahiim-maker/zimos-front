@@ -92,9 +92,9 @@ const STRINGS = {
     suggestionsRequired: "اختر منتجًا واحدًا على الأقل للاقتراح.",
     cancel: "إلغاء",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
-    saved: "تم الحفظ.",
-    deleted: "تم الحذف.",
+    saving: "بنحفظ…",
+    saved: "اتحفظ.",
+    deleted: "اتمسح.",
     deleteConfirm: "حذف «{name}»؟",
   },
 } satisfies Messages;

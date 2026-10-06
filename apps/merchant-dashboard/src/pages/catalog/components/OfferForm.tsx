@@ -64,7 +64,7 @@ const STRINGS = {
     remove: "إزالة",
     isDefault: "العرض الافتراضي لهذا المنتج",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     save: "حفظ العرض",
     create: "إنشاء العرض",
   },

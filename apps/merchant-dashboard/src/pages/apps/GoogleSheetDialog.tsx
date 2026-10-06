@@ -111,10 +111,10 @@ const STRINGS = {
     selected: "{count} متختار",
     save: "حفظ الشيت",
     create: "إنشاء الشيت",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     needName: "اكتب اسم للشيت.",
     needColumns: "ضيف عمود واحد على الأقل بعنوان.",
-    loading: "جارٍ التحميل…",
+    loading: "بنحمّل…",
   },
 } satisfies Messages;
 

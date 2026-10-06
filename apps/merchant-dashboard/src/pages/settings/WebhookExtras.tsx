@@ -81,7 +81,7 @@ const STRINGS = {
     filterLabel: "فلترة سجل الإرسال بالنتيجة",
     empty: "لسه مفيش حاجة اتبعتت.",
     resend: "إعادة الإرسال",
-    sending: "جارٍ الإرسال…",
+    sending: "بنبعت…",
     attempts: "{count} محاولة",
     noAnswer: "مفيش رد",
     pending: "في الانتظار",

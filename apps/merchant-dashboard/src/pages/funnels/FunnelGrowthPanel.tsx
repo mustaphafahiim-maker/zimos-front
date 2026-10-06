@@ -178,7 +178,7 @@ const STRINGS = {
     seoTitle: "عنوان البحث",
     seoDescription: "وصف البحث",
     save: "حفظ الإعدادات",
-    saved: "تم الحفظ.",
+    saved: "اتحفظ.",
   },
 } satisfies Messages;
 

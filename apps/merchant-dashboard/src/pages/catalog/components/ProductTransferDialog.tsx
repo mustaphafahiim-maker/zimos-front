@@ -72,8 +72,8 @@ const STRINGS = {
     exportHint:
       "يحمّل كل المنتجات غير المؤرشفة — بالمتغيرات والعروض والمجموعات ومحتوى الصفحة — في ملف JSON واحد. استورده في متجر ZIMOS آخر لنسخ منتجاتك.",
     exportButton: "تحميل JSON",
-    exporting: "جارٍ التجهيز…",
-    working: "جارٍ استيراد {total} منتج…",
+    exporting: "بنجهّز…",
+    working: "بنستورد {total} منتج…",
     done: "تم استيراد {created} من {total} منتج.",
     failedTitle: "تعذّر استيراد {count}:",
     row: "صف {row}",

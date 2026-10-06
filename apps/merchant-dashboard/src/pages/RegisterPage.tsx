@@ -87,7 +87,7 @@ const STRINGS = {
     tooMany: "محاولات كثيرة. حاول مرة أخرى لاحقًا.",
     generic: "حدث خطأ ما. حاول مرة أخرى.",
     create: "إنشاء الحساب",
-    creating: "جارٍ إنشاء الحساب…",
+    creating: "بنعمل الحساب…",
     haveAccount: "لديك حساب بالفعل؟",
     signIn: "تسجيل الدخول",
     planStepTitle: "اختر خطتك",
@@ -96,7 +96,7 @@ const STRINGS = {
     yourPlan: "خطتك",
     change: "تغيير",
     stepOf: "الخطوة {n} من {total}",
-    loading: "جارٍ تحميل الخطط…",
+    loading: "بنحمّل الخطط…",
   },
 } satisfies Messages;
 

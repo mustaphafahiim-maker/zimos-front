@@ -118,7 +118,7 @@ const STRINGS = {
     blacklistConfirmTitle: "حظر هذا العميل؟",
     blacklistConfirmDescription: "لن يتمكن من إتمام أي طلب حتى تلغي حظره.",
     blacklistConfirm: "حظر",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     reason: "السبب",
     reasonPlaceholder: "فشل التوصيل أكثر من مرة",
     reasonRequired: "اكتب سبب حظر هذا العميل.",

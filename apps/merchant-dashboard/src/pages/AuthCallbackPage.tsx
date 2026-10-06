@@ -17,7 +17,7 @@ const STRINGS = {
     failedTitle: "تعذّر تسجيل الدخول بجوجل",
     failedBody: "حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.",
     back: "← العودة لتسجيل الدخول",
-    signingIn: "جارٍ تسجيل الدخول…",
+    signingIn: "بندخّلك…",
   },
 } satisfies Messages;
 

@@ -26,7 +26,7 @@ const STRINGS = {
   },
   ar: {
     save: "حفظ كمسودة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "اتحفظت المسودة. مفيش حاجة اتبعتت لشركة الشحن.",
     savedAt: "مسودة محفوظة {date}",
     savedAtBy: "مسودة محفوظة {date} بواسطة {name}",

@@ -50,7 +50,7 @@ const STRINGS = {
     colorOf: "لون {value}",
     imageOf: "صورة {value}",
     save: "حفظ شكل الخيارات",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ شكل الخيارات.",
     discard: "تجاهل التغييرات",
   },

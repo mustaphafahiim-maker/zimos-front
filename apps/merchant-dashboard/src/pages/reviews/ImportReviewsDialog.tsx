@@ -69,7 +69,7 @@ const STRINGS = {
     cancel: "إلغاء",
     close: "إغلاق",
     run: "استيراد",
-    running: "جارٍ الاستيراد…",
+    running: "بنستورد…",
     done: "اتضاف {imported} · {duplicates} موجودين قبل كده · {filtered} اتشالوا بالفلاتر (من {found}).",
   },
 } satisfies Messages;

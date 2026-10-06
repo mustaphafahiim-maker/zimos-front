@@ -27,7 +27,7 @@ const STRINGS = {
     anyProduct: "كل المنتجات",
     search: "ابحث في المنتجات",
     noMatch: "لا توجد منتجات مطابقة.",
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     active: "مفعّل",
     inactive: "متوقف",
     edit: "تعديل",

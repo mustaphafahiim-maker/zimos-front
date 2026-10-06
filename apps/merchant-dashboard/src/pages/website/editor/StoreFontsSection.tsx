@@ -43,7 +43,7 @@ const STRINGS = {
     name: "اسم الخط",
     namePlaceholder: "مثلًا: خط البراند",
     choose: "اختار ملف",
-    uploading: "جارٍ الرفع…",
+    uploading: "بنرفع…",
     remove: "امسح {name}",
     needName: "اكتب اسم الخط الأول.",
   },

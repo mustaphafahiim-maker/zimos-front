@@ -57,7 +57,7 @@ const STRINGS = {
     missing: "اختر المنتج واكتب اسم العميل.",
     cancel: "إلغاء",
     add: "إضافة التقييم",
-    adding: "جارٍ الإضافة…",
+    adding: "بنضيف…",
     added: "تمت إضافة التقييم.",
   },
 } satisfies Messages;

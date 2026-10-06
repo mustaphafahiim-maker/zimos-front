@@ -77,7 +77,7 @@ const STRINGS = {
     cancel: "إلغاء",
     save: "حفظ {count} تغيير",
     noChanges: "لا توجد تغييرات",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم تحديث {count} متغير.",
   },
 } satisfies Messages;

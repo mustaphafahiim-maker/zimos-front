@@ -21,7 +21,7 @@ const STRINGS = {
   },
   ar: {
     title: "تأكيد بريدك الجديد",
-    confirming: "جارٍ تأكيد بريدك الجديد…",
+    confirming: "بنأكد إيميلك الجديد…",
     success: "أصبح بريد الدخول الخاص بك {email}.",
     openSettings: "العودة إلى حسابك",
     signIn: "تسجيل الدخول",

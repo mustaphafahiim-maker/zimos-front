@@ -128,7 +128,7 @@ const STRINGS = {
     disconnectDescription:
       "مش هتقدر تبعت أو تستقبل رسايل واتساب لحد ما تربط تاني. المحادثات القديمة هتفضل موجودة.",
     disconnected: "واتساب اتفصل.",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 

@@ -50,7 +50,7 @@ const STRINGS = {
     deleteTitle: "حذف «{name}»؟",
     deleteDescription: "تتم أرشفته وليس حذفه، لذلك يحتفظ أي أوردر تم من خلال هذا العرض بسجله.",
     deleteConfirm: "أرشفة العرض",
-    working: "جارٍ الأرشفة…",
+    working: "بنأرشف…",
     cancel: "إلغاء",
     archivedToast: "تمت أرشفة العرض.",
     createdToast: "تم إنشاء العرض.",

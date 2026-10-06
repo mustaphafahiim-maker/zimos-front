@@ -68,7 +68,7 @@ const STRINGS = {
     perItem: "صف لكل منتج",
     format: "الملف",
     save: "احفظ القالب",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     cancel: "رجوع",
     delete: "امسح القالب",
     needName: "سمّي القالب.",

@@ -72,7 +72,7 @@ const STRINGS = {
     addedTags: "الوسوم المضافة",
     deleteTitle: "حذف هذه الرسالة؟",
     deleteDescription: "تُحذف الرسالة نهائيًا. جهة الاتصال تبقى.",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     deleted: "تم حذف الرسالة.",
   },
 } satisfies Messages;

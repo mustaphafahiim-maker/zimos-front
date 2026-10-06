@@ -31,7 +31,7 @@ const STRINGS = {
     removedToast: "Tags removed from {count} contacts.",
   },
   ar: {
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     add: "إضافة وسوم",
     remove: "إزالة وسوم",
     clear: "إلغاء التحديد",
@@ -43,7 +43,7 @@ const STRINGS = {
     tagsHint: "افصل بين الوسوم بفاصلة، أو اختر من الوسوم المستخدمة.",
     inUse: "وسوم مستخدمة",
     apply: "تطبيق",
-    applying: "جارٍ التطبيق…",
+    applying: "بنطبّق…",
     cancel: "إلغاء",
     close: "إغلاق",
     needTags: "اكتب وسمًا واحدًا على الأقل أو اختره.",

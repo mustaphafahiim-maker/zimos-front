@@ -103,9 +103,9 @@ const STRINGS = {
     reject: "رفض",
     restock: "إعادة إلى المخزون",
     restockedAt: "أُعيد إلى المخزون {date}",
-    saving: "جارٍ الحفظ…",
-    toastApproved: "تم قبول المرتجع. أعد القطع إلى المخزون عند وصولها.",
-    toastRejected: "تم رفض المرتجع.",
+    saving: "بنحفظ…",
+    toastApproved: "اتقبل المرتجع. رجّع القطع للمخزون لما توصل.",
+    toastRejected: "اترفض المرتجع.",
     toastRestocked: "تمت إعادة القطع المرتجعة إلى المخزون.",
   },
 } satisfies Messages;

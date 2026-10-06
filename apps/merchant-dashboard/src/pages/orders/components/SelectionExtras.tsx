@@ -22,10 +22,10 @@ const STRINGS = {
   },
   ar: {
     invoices: "طباعة الفواتير",
-    preparing: "جارٍ التجهيز…",
+    preparing: "بنجهّز…",
     skipped: "لم تُطبع، لا فاتورة لها بعد: {orders}",
     resend: "إعادة الإرسال للويب هوك",
-    resending: "جارٍ الإرسال…",
+    resending: "بنبعت…",
     resent: "أُعيد إرسال {orders} طلب ({deliveries} إرسال).",
     noEndpoint: "لا يوجد ويب هوك يستقبل الطلبات الجديدة. أضفه من الإعدادات ← الويب هوك.",
     tooMany: "اختر {max} طلب على الأكثر لإعادة الإرسال.",

@@ -69,7 +69,7 @@ const STRINGS = {
   },
   ar: {
     editAddress: "تعديل العنوان / الملاحظات",
-    preparing: "جارٍ التجهيز…",
+    preparing: "بنجهّز…",
     downloadWaybill: "تحميل بوليصة الشحن",
     cancelOrder: "إلغاء الأوردر",
     cancelled: "ملغي",
@@ -79,7 +79,7 @@ const STRINGS = {
       "يحرر حجز المخزون ويعلّم التأكيد كمرفوض. يمكن استرداد قيمة الأوردر المدفوع هنا أيضًا.",
     cancelConfirm: "إلغاء هذا الأوردر",
     keepOrder: "الإبقاء على الأوردر",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     reason: "التفاصيل",
     reasonKind: "السبب",
     reason_customer: "العميل ألغى",
@@ -107,7 +107,7 @@ const STRINGS = {
     addressLine: "العنوان",
     internalNotes: "ملاحظات داخلية",
     cancel: "إلغاء",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saveChanges: "حفظ التغييرات",
   },
 } satisfies Messages;

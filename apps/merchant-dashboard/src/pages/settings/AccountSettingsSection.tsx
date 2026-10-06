@@ -47,7 +47,7 @@ const STRINGS = {
     country: "الدولة",
     noCountry: "—",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ إعدادات الحساب.",
   },
 } satisfies Messages;

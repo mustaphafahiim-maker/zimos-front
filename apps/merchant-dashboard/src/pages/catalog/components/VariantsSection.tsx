@@ -63,7 +63,7 @@ const STRINGS = {
     deleteDescription:
       "تتم أرشفته وليس حذفه، لذلك تبقى بنود الأوردرات وسجل المخزون المرتبطة به كما هي.",
     deleteConfirm: "أرشفة المتغير",
-    working: "جارٍ الأرشفة…",
+    working: "بنأرشف…",
     cancel: "إلغاء",
     archivedToast: "تمت أرشفة المتغير.",
     addedToast: "تمت إضافة المتغير.",

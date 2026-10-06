@@ -76,7 +76,7 @@ const STRINGS = {
     comingSoon: "قريبًا",
     test: "تجريبي",
     install: "تثبيت",
-    installing: "جارٍ التثبيت…",
+    installing: "بنثبّت…",
     open: "فتح",
     uninstall: "إلغاء التثبيت",
     installedBadge: "مثبّت",
@@ -95,7 +95,7 @@ const STRINGS = {
     uninstallBody: "مفتاح الـ API بتاعه هيقف فورًا والـ webhooks هتتشال.",
     uninstallFeatureBody: "هيوقف في متجرك ولوحة التحكم لحد ما تثبّته تاني. إعداداتك محفوظة.",
     cancel: "إلغاء",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 

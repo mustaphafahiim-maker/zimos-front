@@ -26,7 +26,7 @@ const STRINGS = {
     newStep: "A new step…",
   },
   ar: {
-    order: "تم الطلب",
+    order: "اتطلب",
     yes: "أيوه، ضيفه",
     no: "لا، شكرًا",
     next: "متابعة",

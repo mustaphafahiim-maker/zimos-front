@@ -32,7 +32,7 @@ const STRINGS = {
   },
   ar: {
     live: "مباشر",
-    reconnecting: "جارٍ إعادة الاتصال…",
+    reconnecting: "بنعيد الاتصال…",
     allStore: "المتجر كله",
     funnelFilter: "المتجر أو مسار البيع",
     fullscreen: "ملء الشاشة",

@@ -30,7 +30,7 @@ const STRINGS = {
     duplicated: "“{name}” created as a draft.",
   },
   ar: {
-    selected: "تم تحديد {count}",
+    selected: "اخترت {count}",
     bulkEdit: "تعديل جماعي",
     clear: "إلغاء التحديد",
     selectAll: "اختار كل المنتجات في الصفحة دي",
@@ -38,7 +38,7 @@ const STRINGS = {
     selectRow: "تحديد {name}",
     transfer: "استيراد / تصدير",
     duplicate: "نسخ",
-    duplicating: "جارٍ النسخ…",
+    duplicating: "بننسخ…",
     duplicated: "تم إنشاء «{name}» كمسودة.",
   },
 } satisfies Messages;

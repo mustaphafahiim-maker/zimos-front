@@ -76,7 +76,7 @@ const STRINGS = {
     included: "ضمن قسم",
     cancel: "إلغاء",
     send: "إرسال الدعوة",
-    sending: "جارٍ الإرسال…",
+    sending: "بنبعت…",
     sent: "الدعوة اتبعتت لـ {email}.",
     pick: "علّم على قسم واحد على الأقل.",
     "s.orders": "الطلبات",

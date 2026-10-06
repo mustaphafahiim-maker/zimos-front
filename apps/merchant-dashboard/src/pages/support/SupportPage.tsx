@@ -73,7 +73,7 @@ const STRINGS = {
     message: "الرسالة",
     messagePlaceholder: "اشرح المشكلة. أضف أرقام الأوردرات أو الروابط إن كانت تساعد.",
     send: "إرسال الطلب",
-    sending: "جارٍ الإرسال…",
+    sending: "بنبعت…",
     sent: "تم إرسال طلبك. سنرد عليك هنا.",
     subjectTooShort: "أدخل موضوعًا من 3 أحرف على الأقل.",
     messageRequired: "اكتب رسالة.",

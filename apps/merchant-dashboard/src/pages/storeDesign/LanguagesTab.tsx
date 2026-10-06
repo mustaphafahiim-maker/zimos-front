@@ -87,7 +87,7 @@ const STRINGS = {
     name: "الاسم",
     descriptionField: "الوصف",
     save: "حفظ",
-    saved: "تم حفظ الترجمة.",
+    saved: "اتحفظت الترجمة.",
     languagesSaved: "تم حفظ اللغات.",
     noLanguage: "فعّل لغة أخرى بالأعلى لتبدأ الترجمة.",
     nothing: "لا يوجد ما يُترجم هنا بعد.",

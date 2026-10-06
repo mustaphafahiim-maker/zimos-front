@@ -117,9 +117,9 @@ const STRINGS = {
     offerRequired: "اختر العرض الذي يُباع.",
     cancel: "إلغاء",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
-    saved: "تم الحفظ.",
-    deleted: "تم الحذف.",
+    saving: "بنحفظ…",
+    saved: "اتحفظ.",
+    deleted: "اتمسح.",
     deleteConfirm: "حذف هذه القاعدة؟",
   },
 } satisfies Messages;

@@ -111,7 +111,7 @@ const STRINGS = {
     editTitle: "تعديل «{name}»",
     saved: "تم حفظ الرسالة.",
     enabled: "«{name}» تُرسل الآن للعملاء.",
-    disabled: "تم إيقاف «{name}».",
+    disabled: "اتوقف «{name}».",
     storeDefault: "زي إيميلات المتجر",
     custom_funnel: "مخصص لمسار البيع ده",
     custom_website: "مخصص للموقع ده",

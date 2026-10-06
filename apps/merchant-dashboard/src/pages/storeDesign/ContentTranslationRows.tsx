@@ -46,7 +46,7 @@ const STRINGS = {
     progress: "اتترجم {done} من {total}",
     original: "الأصل",
     save: "حفظ",
-    saved: "تم حفظ الترجمة.",
+    saved: "اتحفظت الترجمة.",
     show: "ترجمة",
     hide: "إغلاق",
   },

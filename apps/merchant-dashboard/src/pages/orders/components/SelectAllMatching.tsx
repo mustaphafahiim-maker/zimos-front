@@ -22,7 +22,7 @@ const STRINGS = {
     selectAll: "حدّد كل الأوردرات في القائمة ({total})",
     selectFirst: "حدّد أول {max} من {total} أوردر في القائمة",
     selectAllUnknown: "حدّد كل الأوردرات في القائمة",
-    loading: "جارٍ التحديد…",
+    loading: "بنحدد…",
     allSelected: "تم تحديد كل الأوردرات في القائمة ({count}).",
     capped: "الإجراء الجماعي بياخد {max} أوردر بالكتير في المرة: تم تحديد أول {count}.",
     clear: "إلغاء التحديد",

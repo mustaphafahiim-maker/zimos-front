@@ -314,6 +314,13 @@ are listed under *Handoff items done*.
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
+## Round 3 (in progress)
+- [x] W3-1 Wording pass 3: ~250 «جارٍ …» busy labels → Egyptian present
+      («بنحفظ…»، «بنبعت…»، «بندوّر على طلبك…») and ~60 common «تم …» toasts
+      («اتحفظ.»، «اتعمل «…».»، «اتنسخ اللينك») across 170 dashboard files;
+      the lab (design-system) and the storefront text mirror
+      (storeTextsCatalog.ts) left alone.
+
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
   (postgres/postgres). Backend `.env` from `.env.example` with

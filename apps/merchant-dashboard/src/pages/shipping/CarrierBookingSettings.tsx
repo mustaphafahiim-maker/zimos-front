@@ -46,7 +46,7 @@ const STRINGS = {
     courierNotes: "ملاحظات للمندوب",
     courierNotesHint: "تُرسل مع كل حجز ما لم يكن للأوردر ملاحظات خاصة به.",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ إعدادات الحجز مع {name}.",
   },
 };

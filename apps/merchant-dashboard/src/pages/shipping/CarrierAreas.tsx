@@ -72,7 +72,7 @@ const STRINGS = {
     saved: "{area} أصبحت {place} مع {name}.",
     resetDone: "عادت {area} إلى الربط التلقائي.",
     rematch: "إعادة الربط",
-    rematched: "تم ربط {matched} من {places} مكان بالاسم.",
+    rematched: "اتربط {matched} من {places} مكان بالاسم.",
     close: "إغلاق",
   },
 };

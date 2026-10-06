@@ -64,9 +64,9 @@ const STRINGS = {
     reason: "السبب (اختياري)",
     notifyCustomer: "بلّغ العميل — يقدر يرفع إيصال جديد من رابط الطلب",
     confirmedToast: "تم تأكيد التحويل.",
-    rejectedToast: "تم رفض التحويل.",
+    rejectedToast: "اترفض التحويل.",
     reviewedAt: "روجع في {date}",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
   },
 } satisfies Messages;
 

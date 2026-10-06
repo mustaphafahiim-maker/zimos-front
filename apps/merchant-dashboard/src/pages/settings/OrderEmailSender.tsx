@@ -28,7 +28,7 @@ const STRINGS = {
     replyTo: "بريد الرد (Reply-To)",
     replyToHint: "حيث يصل رد العميل. فارغ: لن تصلك الردود.",
     save: "حفظ المُرسِل",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ المُرسِل.",
   },
 } satisfies Messages;

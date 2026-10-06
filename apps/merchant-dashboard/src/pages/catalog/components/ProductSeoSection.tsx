@@ -39,7 +39,7 @@ const STRINGS = {
     count: "{n} / {max}",
     preview: "معاينة جوجل",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ إعدادات البحث.",
   },
 } satisfies Messages;

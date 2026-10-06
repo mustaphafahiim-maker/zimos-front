@@ -26,7 +26,7 @@ const STRINGS = {
     manual: "أضفته أنت",
     imported: "مستورد",
     delete: "حذف",
-    deleting: "جارٍ الحذف…",
+    deleting: "بنمسح…",
     confirm: "حذف هذا التقييم؟ لا يمكن التراجع.",
     deleted: "تم حذف التقييم.",
   },

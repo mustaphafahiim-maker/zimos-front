@@ -74,7 +74,7 @@ const STRINGS = {
     note_returned: "يسجّل أن الطرد رجع. المخزون لا يرجع إلا عند إعادة تخزين المرتجع.",
     cancel: "إلغاء",
     save: "تغيير الحالة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     done: "تم تغيير الحالة إلى «{stage}».",
   },
 } satisfies Messages;

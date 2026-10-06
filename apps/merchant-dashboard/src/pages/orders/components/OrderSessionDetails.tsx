@@ -74,7 +74,7 @@ const STRINGS = {
     days: "{days}",
     lastAction: "آخر إجراء: {what}، {when}",
     lastActionBy: "آخر إجراء: {what}، {when} {by}",
-    placed: "تم الطلب",
+    placed: "اتطلب",
     movedTo: "اتنقل لـ {stage}",
     note: "اتضافت ملاحظة",
     automation: "أتمتة {trigger}",

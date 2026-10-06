@@ -35,10 +35,10 @@ const STRINGS = {
     refresh: "تحديث",
     empty: "لا توجد طلبات هنا",
     more: "عرض المزيد",
-    loading: "جارٍ التحميل…",
+    loading: "بنحمّل…",
     moveTo: "نقل {order} إلى",
     moveLabel: "نقل إلى…",
-    moved: "تم نقل {order} إلى {stage}.",
+    moved: "{order} اتنقل لـ «{stage}».",
   },
 } satisfies Messages;
 

@@ -58,12 +58,12 @@ const STRINGS = {
     difference: "الفرق",
     shipping: "الشحن",
     discount: "الخصم",
-    pricing: "جارٍ الحساب…",
+    pricing: "بنحسب…",
     cancel: "إلغاء",
     save: "حفظ المنتجات",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم تحديث المنتجات.",
-    ORDER_ALREADY_PAID: "تم دفع هذا الأوردر؛ صحّحه باسترداد بدلًا من التعديل.",
+    ORDER_ALREADY_PAID: "الأوردر ده اتدفع؛ صحّحه باسترداد بدل التعديل.",
   },
 } satisfies Messages;
 

@@ -153,7 +153,7 @@ const STRINGS = {
     needsAction: "أضف خطوة واحدة على الأقل غير الانتظار.",
     endsOnWait: "لا يمكن أن ينتهي التسلسل بانتظار.",
     save: "حفظ",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     cancel: "إلغاء",
   },
 } satisfies Messages;

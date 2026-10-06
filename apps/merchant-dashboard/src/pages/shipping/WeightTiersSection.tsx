@@ -115,7 +115,7 @@ const STRINGS = {
     addTier: "إضافة شريحة",
     removeTier: "حذف الشريحة",
     saveTiers: "حفظ الشرائح",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     tiersSaved: "تم حفظ شرائح الوزن.",
     noTiers: "لا توجد شرائح بعد. أضف أول شريحة، مثلًا حتى 1 كجم.",
     errTierWeight: "أدخل وزنًا أكبر من الشريحة السابقة.",
@@ -141,7 +141,7 @@ const STRINGS = {
     wizardBack: "رجوع",
     wizardSwitch: "التحويل للتسعير بالشرائح",
     cancel: "إلغاء",
-    working: "جارٍ التنفيذ…",
+    working: "بننفّذ…",
     errDefaultWeight: "أدخل وزنًا أكبر من 0 كجم.",
   },
 } satisfies Messages;

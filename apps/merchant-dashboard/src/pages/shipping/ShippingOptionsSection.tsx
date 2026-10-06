@@ -62,7 +62,7 @@ const STRINGS = {
     add: "إضافة خيار",
     remove: "حذف",
     save: "حفظ الخيارات",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     saved: "تم حفظ خيارات الشحن.",
   },
 } satisfies Messages;

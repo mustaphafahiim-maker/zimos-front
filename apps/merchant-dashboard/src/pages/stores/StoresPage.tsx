@@ -87,7 +87,7 @@ const STRINGS = {
     includeProducts: "المنتجات والخيارات والعروض والتصنيفات",
     includeWebsite: "صفحات الموقع والثيم (كمسودات)",
     includeShipping: "مناطق وأسعار الشحن والضريبة",
-    duplicating: "جارٍ النسخ…",
+    duplicating: "بننسخ…",
     duplicated: "تم نسخ المتجر: {products} منتج و{pages} صفحة.",
   },
 } satisfies Messages;

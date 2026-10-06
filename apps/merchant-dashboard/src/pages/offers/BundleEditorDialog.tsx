@@ -124,7 +124,7 @@ const STRINGS = {
     valueInvalid: "شريحة {n}: أدخل قيمة صحيحة.",
     cancel: "إلغاء",
     save: "حفظ الباقة",
-    saving: "جارٍ الحفظ…",
+    saving: "بنحفظ…",
     created: "تم إنشاء الباقة.",
     saved: "تم حفظ الباقة.",
   },

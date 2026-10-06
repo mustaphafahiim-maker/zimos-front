@@ -188,7 +188,7 @@ export const AFFILIATE_STRINGS = {
     removeTitle: "حذف {name}؟",
     removeDescription: "رابطه سيتوقف عن العمل. لا يمكن التراجع عن الحذف.",
     removeConfirm: "حذف",
-    removing: "جارٍ الحذف…",
+    removing: "بنمسح…",
     removedToast: "تم حذف المسوّق.",
     hasCommissions: "لهذا المسوّق عمولات مسجّلة، فلا يمكن حذفه. أوقفه مؤقتًا بدلًا من ذلك.",
 
@@ -244,7 +244,7 @@ export const AFFILIATE_STRINGS = {
     payNote: "ملاحظة",
     payNoteHint: "رقم مرجعي أو رقم التحويل إن وُجد.",
     payConfirm: "دفعت له",
-    paying: "جارٍ الحفظ…",
+    paying: "بنحفظ…",
     paidToast: "تم تسجيل دفع {amount}.",
     nothingToPay: "لا يوجد ما يُدفع: لا توجد عمولة مستحقة.",
 

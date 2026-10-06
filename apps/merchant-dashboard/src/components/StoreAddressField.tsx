@@ -20,7 +20,7 @@ const STRINGS = {
   },
   ar: {
     label: "عنوان المتجر",
-    checking: "جارٍ التحقق من التوفر…",
+    checking: "بنشوف لو متاح…",
     available: "{address} متاح",
     empty: "ده العنوان اللي عملاءك هيفتحوه.",
     checkFailed: "مقدرناش نتحقق من العنوان ده دلوقتي.",
