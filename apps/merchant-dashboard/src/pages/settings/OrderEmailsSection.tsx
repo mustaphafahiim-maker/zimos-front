@@ -21,6 +21,7 @@ import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { OrderEmailSender } from "./OrderEmailSender";
+import { SendingDomainSection } from "./SendingDomainSection";
 
 /**
  * Settings → "Order emails" (SPEC §14.5): the emails customers get about
@@ -151,6 +152,8 @@ export function OrderEmailsSection() {
       <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
       {/* The sender name and Reply-To (OrderEmailSender.tsx). */}
       <OrderEmailSender />
+      {/* The store's own From domain (SendingDomainSection.tsx, item 173). */}
+      <SendingDomainSection />
 
       <div className="mt-4">
         {isPermissionError(error) ? (
