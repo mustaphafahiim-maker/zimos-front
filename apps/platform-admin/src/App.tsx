@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequirePermission } from "@/routes/RequirePermission";
@@ -38,6 +38,7 @@ import { NotFoundPage } from "@/pages/NotFoundPage";
 import { QueuesPage } from "@/pages/QueuesPage";
 import { UsagePage } from "@/pages/UsagePage";
 import { NetworkStatsPage } from "@/pages/NetworkStatsPage";
+import { MarketplaceReviewPage } from "@/pages/MarketplaceReviewPage";
 import { P } from "@/lib/permissions";
 
 /** A console page that needs `permission` (the view key its endpoints check). */
@@ -77,6 +78,8 @@ export default function App() {
                 <Route path="/themes" element={gated(P.TEMPLATES_VIEW, <ThemesPage />)} />
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
                 <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
+                <Route path="/marketplace" element={gated(P.TEMPLATES_VIEW, <MarketplaceReviewPage />)} />
+                <Route path="/admin/marketplace" element={<Navigate to="/marketplace" replace />} />
                 <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
                 <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />
                 <Route path="/payment-gateways" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="payment" />)} />

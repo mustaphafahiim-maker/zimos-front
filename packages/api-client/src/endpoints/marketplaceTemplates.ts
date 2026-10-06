@@ -2,9 +2,10 @@ import type { ApiClient } from "../client";
 import type { PageTree } from "../types";
 
 /**
- * The funnel template marketplace, merchant side (backend modules/marketplace,
- * handoff 192). Mounted at /workspaces/:ws/marketplace, permission
- * funnels.manage. Free templates only — there is no price anywhere.
+ * The funnel template marketplace (backend modules/marketplace, handoff 192).
+ * Merchant side mounted at /workspaces/:ws/marketplace, permission
+ * funnels.manage; the platform's review queue at /admin/marketplace (end of
+ * this file). Free templates only — there is no price anywhere.
  *
  *   1. A merchant submits one of their funnels as a template; its pages are
  *      copied at that moment (products, offers and bumps taken out).
@@ -164,4 +165,62 @@ export async function marketplaceUpdateSubmission(
 export async function marketplaceWithdrawSubmission(client: ApiClient, workspaceId: string, id: string): Promise<MarketplaceSubmission> {
   const { submission } = await client.request<{ submission: MarketplaceSubmission }>(`${base(workspaceId)}/submissions/${id}`, { method: "DELETE" });
   return submission;
+}
+
+// ------------------------------------------------------------ platform review --
+// Mounted inside /admin (platform staff): templates.view to read the queue,
+// templates.manage to approve, reject or unlist.
+
+export type MarketplaceReviewAction = "approve" | "reject" | "unlist";
+
+/** A submission as the reviewer sees it: the author's own view plus the store it came from. */
+export interface AdminMarketplaceTemplate extends MarketplaceSubmission {
+  workspaceId: string;
+}
+
+/** One link between the template's pages, as copied with it. */
+export interface MarketplaceTemplateEdge {
+  fromStepKey: string;
+  toStepKey: string;
+  condition: unknown;
+  priority: number;
+}
+
+export interface AdminMarketplaceTemplateDetail extends AdminMarketplaceTemplate {
+  steps: Array<{ key: string; stepType: string; name: string }>;
+  pages: MarketplaceTemplatePage[];
+  edges: MarketplaceTemplateEdge[];
+}
+
+/** GET /admin/marketplace — one status at a time, the longest waiting first. */
+export function adminMarketplaceList(
+  client: ApiClient,
+  params: { status?: MarketplaceSubmissionStatus; page?: number; limit?: number } = {}
+): Promise<{ templates: AdminMarketplaceTemplate[]; total: number }> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) query.set(key, String(value));
+  }
+  const qs = query.toString();
+  return client.request(`/admin/marketplace${qs ? `?${qs}` : ""}`);
+}
+
+/** GET /admin/marketplace/:id — any status, with its pages and links for the review preview. */
+export async function adminMarketplaceTemplate(client: ApiClient, id: string): Promise<AdminMarketplaceTemplateDetail> {
+  const { template } = await client.request<{ template: AdminMarketplaceTemplateDetail }>(`/admin/marketplace/${id}`);
+  return template;
+}
+
+/**
+ * POST /admin/marketplace/:id/review — approve lists it; reject (a note is
+ * required, 422 on `note`) and unlist take it off the marketplace with the
+ * note the author sees. 409 SUBMISSION_WITHDRAWN once the author withdrew it.
+ */
+export async function adminMarketplaceReview(
+  client: ApiClient,
+  id: string,
+  body: { action: MarketplaceReviewAction; note?: string | null }
+): Promise<MarketplaceSubmission> {
+  const { template } = await client.request<{ template: MarketplaceSubmission }>(`/admin/marketplace/${id}/review`, { method: "POST", body });
+  return template;
 }
