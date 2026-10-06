@@ -239,7 +239,10 @@ are listed under *Handoff items done*.
       for the whole store; the product / store filter sits under them, above
       the numbers it changes, with the heading «أرقامك» / «أرقام Demo
       T-Shirt» and a note that latest orders stay store-wide.
-- [ ] R2-12 rest: N-18 lost orders filters.
+- [x] N-18 Lost orders on phones: the three stat cards become one line, the
+      status tabs one scrolling row, the five filters fold behind «الفلاتر
+      (n)» with date shortcuts (النهارده / ٧ أيام / ٣٠ يوم); title «الأوردرات
+      المفقودة» like the menu. Round 2 (R2-1 … R2-12) is done; see 00-summary.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

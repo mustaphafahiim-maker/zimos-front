@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Download, MessageCircle, Phone, ShoppingBag, Trash2 } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { Download, Filter, MessageCircle, Phone, ShoppingBag, Trash2 } from "lucide-react";
+import { Alert, Button, Card, cn } from "@store-builder/ui";
 import {
   LOST_ORDER_REASONS,
   LOST_ORDER_RECOVERY_STATUSES,
@@ -63,6 +63,13 @@ const STRINGS = {
     exporting: "Exporting…",
     exported: "{n} lost orders exported.",
     statLost: "Lost this month",
+    statLine: "{lost} lost this month · {recovered} won back, {amount}",
+    filtersToggle: "Filters",
+    filtersCount: "Filters ({n})",
+    range: "Period",
+    range_today: "Today",
+    range_7: "7 days",
+    range_30: "30 days",
     statRate: "Lost per 100 visits",
     statRateNone: "No visits recorded yet",
     statRecovered: "Recovered this month",
@@ -139,17 +146,24 @@ const STRINGS = {
     converted: "Order {order} created.",
   },
   ar: {
-    title: "الطلبات المفقودة",
-    description: "كل طلب لم يكتمل: تُرك دون إتمام، أو رُفض بقاعدة، أو لم يُؤكَّد رقمه. استرجعها أو حوّلها إلى أوردرات.",
+    title: "الأوردرات المفقودة",
+    description: "كل أوردر ماكملش: اتساب في النص، أو اترفض بقاعدة، أو رقمه ما اتأكدش. رجّعه أو حوّله لأوردر.",
     exportCsv: "تصدير",
     exporting: "جارٍ التصدير…",
     exported: "تم تصدير {n} طلب مفقود.",
     statLost: "المفقود هذا الشهر",
+    statLine: "{lost} مفقود الشهر ده · رجّعت {recovered} بـ {amount}",
+    filtersToggle: "الفلاتر",
+    filtersCount: "الفلاتر ({n})",
+    range: "الفترة",
+    range_today: "النهارده",
+    range_7: "٧ أيام",
+    range_30: "٣٠ يوم",
     statRate: "المفقود لكل 100 زيارة",
     statRateNone: "لا توجد زيارات مسجلة بعد",
     statRecovered: "المسترجَع هذا الشهر",
     statRecoveredHint: "أوردرات تم استرجاعها: {n}",
-    tabsLabel: "الطلبات المفقودة حسب حالة المراجعة",
+    tabsLabel: "الأوردرات المفقودة حسب المراجعة",
     tab_all: "الكل",
     tab_under_review: "تحت المراجعة",
     tab_completed: "مكتملة",
@@ -278,6 +292,18 @@ export function LostOrdersPage() {
     [tab, reason, source, from, to, productId]
   );
   const filtered = Boolean(reason || source || from || to || productId);
+  const activeFilters = [reason, source, from || to, productId].filter(Boolean).length;
+  // Phones: the five filters fold behind one button (re-audit N-18); wide screens always show them.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Date shortcuts, in the device's own days (the date fields are the browser's mm/dd/yyyy otherwise).
+  const setRange = (days: 0 | 7 | 30) => {
+    const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - (days === 0 ? 0 : days - 1));
+    setFrom(day(start));
+    setTo(day(today));
+  };
 
   const [abandonedAfter, setAbandonedAfter] = useState<number | null>(null);
   const list = useCursorList<LostOrder>(
@@ -578,7 +604,16 @@ export function LostOrdersPage() {
       />
 
       {stats.data && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <p className="mb-3 text-sm text-ink-soft sm:hidden">
+          {fmt(t.statLine, {
+            lost: stats.data.lost,
+            recovered: stats.data.recovered,
+            amount: formatMinorMoney(stats.data.recoveredAmount, stats.data.currency),
+          })}
+        </p>
+      )}
+      {stats.data && (
+        <div className="mb-4 hidden gap-3 sm:grid sm:grid-cols-3">
           <KpiCard label={t.statLost} value={String(stats.data.lost)} />
           <KpiCard
             label={t.statRate}
@@ -597,7 +632,8 @@ export function LostOrdersPage() {
         label={t.tabsLabel}
         value={tab}
         tabs={LOST_ORDER_TABS.map((key) => ({ value: key, label: t[`tab_${key}`] }))}
-        className="mb-3"
+        className="mb-3 max-w-full flex-nowrap overflow-x-auto"
+        buttonClassName="min-h-11 shrink-0 whitespace-nowrap"
         onChange={(next) =>
           setParams(
             (prev) => {
@@ -611,7 +647,25 @@ export function LostOrdersPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <Button
+        variant="outline"
+        className="mb-3 min-h-11 gap-2 sm:hidden"
+        aria-expanded={filtersOpen}
+        aria-controls="lost-order-filters"
+        onClick={() => setFiltersOpen((open) => !open)}
+      >
+        <Filter className="size-4" aria-hidden />
+        {activeFilters > 0 ? fmt(t.filtersCount, { n: activeFilters }) : t.filtersToggle}
+      </Button>
+      <div id="lost-order-filters" className={cn("mb-4 grid gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-5", !filtersOpen && "hidden")}>
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5" role="group" aria-label={t.range}>
+          <span className="text-sm text-ink-soft">{t.range}</span>
+          {([0, 7, 30] as const).map((days) => (
+            <Button key={days} variant="outline" size="sm" className="min-h-9" onClick={() => setRange(days)}>
+              {days === 0 ? t.range_today : days === 7 ? t.range_7 : t.range_30}
+            </Button>
+          ))}
+        </div>
         <LostOrderProductFilter value={productId} onChange={setProductId} />
         <Field label={t.filterReason}>
           {(props) => (
