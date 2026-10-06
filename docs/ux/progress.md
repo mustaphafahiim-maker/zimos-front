@@ -227,6 +227,17 @@ are listed under *Handoff items done*.
       (express switch, webhook note) and PayPal (currency notice), wallet
       badges, real method names; «باي بال» in labels/filters/rules. Checked
       with the sandbox gateway on a second local backend (two paid orders).
+- [x] 180 Import from a product link: source badges (Shopify, AliExpress,
+      Etsy, CJ, YouCan) lit from the pasted link; after import «اتضاف كمسودة —
+      راجع السعر والمخزون» with the page's price/currency, «راجع المنتج», and
+      «{n} تقييم مستني موافقتك» → Reviews filtered to pending + imported;
+      friendly refusals. Live outside pages unreachable from this machine
+      (success path checked with a forwarded JSON import). Two backend
+      requests (report fields, own codes).
+- [x] 187 Import contacts: /customers/import — template download, file,
+      update/skip, tags, consent note, «راجع الملف» summary with plurals,
+      matched columns, error table (cards on phones), then «استورد»; links
+      from the contacts header and empty state. Checked with real CSVs.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
