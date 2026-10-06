@@ -325,7 +325,18 @@ are listed under *Handoff items done*.
       note. One real COD order paid partly by card. Refund dialog says the
       money goes back to the card — verified for gift-card payment refunds
       (giftCardProvider.js); that a manual refund picks the card is Inferred.
-- [ ] 190, 192, 196, 197, 198/199 — interrupted by a
+- [x] 195 Pre-orders: product card / page «اطلبه مسبقًا» with the ship date
+      and limit, «طلب مسبق» badges in the products list, ship date on cart,
+      checkout, thank-you and order page.
+- [x] 198 Purchase limits: «حدود الشراء» card in the product's «إعدادات
+      تانية» fold (per-customer ≥ minimum checked); storefront limits line,
+      stepper bounded, refusals that name the product in cart and checkout.
+- [x] 199 Delivery dates: Shipping → «مواعيد التوصيل» (working days, cutoff
+      hour, no-delivery weekdays, per governorate / place overrides); «هيوصلك
+      من … لـ …» on product, cart, checkout, thank-you and tracking; «التوصيل
+      المتوقع» on the dashboard order page. Shipping line «بيتحسب بعد ما
+      تختار منطقتك» for places-only stores (the old workaround removed).
+- [ ] 190, 192, 196, 197 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
@@ -335,6 +346,10 @@ are listed under *Handoff items done*.
       («اتحفظ.»، «اتعمل «…».»، «اتنسخ اللينك») across 170 dashboard files;
       the lab (design-system) and the storefront text mirror
       (storeTextsCatalog.ts) left alone.
+- [x] W3-3 Token fix: `--color-paper-sunken` was missing from the dashboard's
+      @theme block since S1, so 61 `bg-paper-sunken` wells, hovers and
+      skeletons rendered transparent; added. Three `*-warning` classes (no
+      such token) → accent.
 - [x] W3-2 «اختر» → «اختار», «أدخل» → «اكتب», «لا يوجد / لا توجد» → «مفيش»,
       and «مفيش … بعد.» → «مفيش … لسه.» (~400 strings, 140 files). Lines
       where Arabic text is an object key (presetCopy.ts maps Arabic preset

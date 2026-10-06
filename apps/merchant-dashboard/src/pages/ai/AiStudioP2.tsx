@@ -232,7 +232,7 @@ export function PageReviewTool({ onDone }: { onDone: () => void }) {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div
-                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-4 text-xl font-bold ${output.score >= 75 ? "border-success text-success" : output.score >= 50 ? "border-warning text-warning" : "border-danger text-danger"}`}
+                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-4 text-xl font-bold ${output.score >= 75 ? "border-success text-success" : output.score >= 50 ? "border-accent text-accent-dark" : "border-danger text-danger"}`}
                 aria-label={`${t.score}: ${output.score}/100`}
               >
                 {output.score}

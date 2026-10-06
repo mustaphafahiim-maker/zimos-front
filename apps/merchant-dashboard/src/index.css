@@ -38,6 +38,8 @@
   --color-ink-soft: var(--color-ink-soft);
   --color-paper: var(--color-paper);
   --color-paper-raised: var(--color-paper-raised);
+  /* Wells, hovers and loading skeletons: was missing, so bg-paper-sunken rendered transparent. */
+  --color-paper-sunken: var(--color-paper-sunken);
   --color-line: var(--color-line);
   --color-line-strong: var(--color-line-strong);
 

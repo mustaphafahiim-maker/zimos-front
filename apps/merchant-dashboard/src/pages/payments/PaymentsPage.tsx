@@ -476,7 +476,7 @@ function GatewayCard({
           {webhookNotes.pending && !connection.lastWebhookAt ? (
             <p className="text-sm text-ink-soft">{webhookNotes.pending}</p>
           ) : (
-            <p className={cn("text-sm", connection.lastWebhookAt ? "text-ink-soft" : "text-warning")}>
+            <p className={cn("text-sm", connection.lastWebhookAt ? "text-ink-soft" : "text-accent-dark")}>
               {connection.lastWebhookAt
                 ? fmt(t.lastWebhook, { date: formatDateTime(connection.lastWebhookAt) })
                 : gateway.webhookSetup.automatic
