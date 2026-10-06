@@ -126,6 +126,8 @@ const STRINGS = {
     DOMAIN_NOT_ACTIVE: "Only a bought domain that's active or expired can be renewed.",
     TRIAL_NOT_AVAILABLE: "The free trial isn't available for this account.",
     EMAIL_DOMAIN_TAKEN: "Another store already sends from this domain.",
+    // handoff 195/198/199
+    PURCHASE_LIMIT: "A product's purchase limits don't allow this quantity. Check the quantities and try again.",
     // handoff 181/182
     DROPSHIP_INVALID_CREDENTIALS: "The store or supplier refused these details. Check the address and the key, then connect again.",
     DROPSHIP_PRODUCT_NOT_FOUND: "We couldn't find that product. Check its number or code and try again.",
@@ -273,6 +275,8 @@ const STRINGS = {
     DOMAIN_NOT_ACTIVE: "التجديد بيبقى للدومين اللي اشتريته وشغال أو خلصت مدته بس.",
     TRIAL_NOT_AVAILABLE: "الفترة المجانية مش متاحة للحساب ده.",
     EMAIL_DOMAIN_TAKEN: "متجر تاني بيبعت من الدومين ده.",
+    // handoff 195/198/199
+    PURCHASE_LIMIT: "الكمية دي برّه حدود الشراء بتاعة المنتج. راجع الكميات وجرّب تاني.",
     // handoff 181/182
     DROPSHIP_INVALID_CREDENTIALS: "المتجر أو المورّد رفض البيانات دي. راجع العنوان والمفتاح واربط تاني.",
     DROPSHIP_PRODUCT_NOT_FOUND: "ملقيناش المنتج ده. اتأكد من رقمه أو الكود بتاعه وجرّب تاني.",

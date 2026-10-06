@@ -261,6 +261,22 @@ export const fr: Dictionary = {
     searching: "Recherche…",
     filled: "Adresse remplie — vérifiez-la ci-dessous",
   },
+  // handoff 195/198/199
+  buyInfo: {
+    preorder: "Précommander",
+    shipsBy: (date) => `Expédié avant le ${date}`,
+    preorderNote: "Épuisé — commandez-le maintenant, il sera expédié dès son retour.",
+    preorderLine: (date) => `Précommande — expédiée avant le ${date}`,
+    preorderLineNoDate: "Précommande",
+    maxPerOrder: (n) => `${n} maximum par commande`,
+    minPerOrder: (n) => `${n} minimum par commande`,
+    maxPerCustomer: (n) => `${n} maximum par client`,
+    limitMax: (n, name) => (name ? `${n} maximum de « ${name} » par commande` : `${n} maximum par commande`),
+    limitMin: (n, name) => (name ? `Commandez au moins ${n} de « ${name} »` : `Commandez au moins ${n}`),
+    limitLeft: (n, name) => (name ? `Vous pouvez encore acheter ${n} de « ${name} »` : `Vous pouvez encore en acheter ${n}`),
+    limitDone: (name) =>
+      name ? `Vous avez déjà acheté le maximum de « ${name} » autorisé par client` : "Vous avez déjà acheté le maximum autorisé par client",
+  },
   checkoutBar: {
     label: "Récapitulatif de la commande",
     order: "Commander",

@@ -274,3 +274,7 @@ export * from "./endpoints/contactImport";
 export * from "./endpoints/shopperAccounts";
 // Element display rules: between dates, by device, country or UTM source; the visitor context (pages/displayRules.js, handoff 191).
 export * from "./endpoints/displayRules";
+// Pre-orders: sold-out variants keep selling up to a limit, with a ship date (handoff 195).
+export * from "./endpoints/preorders";
+// Purchase limits per product: min / max per order and max per customer, and their refusals (handoff 198).
+export * from "./endpoints/purchaseLimits";

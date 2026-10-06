@@ -10,6 +10,7 @@ import { OrderLineThumb } from "./OrderLineThumb";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 import { OrderBillingAddress, OrderCheckoutPhotos } from "./OrderCheckoutExtras";
 import { ShippingOptionNote } from "./ShippingOptionNote";
+import { PreorderLineNote } from "./PreorderLineNote";
 
 const STRINGS = {
   en: {
@@ -176,6 +177,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                             </div>
                           )}
                           <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
+                          <PreorderLineNote item={item} />
                         </div>
                       </div>
                     </td>

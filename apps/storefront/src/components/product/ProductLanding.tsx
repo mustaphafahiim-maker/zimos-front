@@ -87,6 +87,7 @@ import { setChosenVariantImage, variantImageOf } from "@/lib/variantImage";
 import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
 import { RichText } from "../RichText";
+import { ProductBuyNotes, preorderFor, stepperLimits, takesPreorders } from "./ProductBuyNotes";
 
 const FORM_PREFIX = "quick";
 
@@ -174,7 +175,9 @@ export function ProductLanding({
   // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
   const choosing = !autoSelect && groups.some((g) => !selection[g.name]);
   const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
-  const available = !!variant?.inStock;
+  // Sold out but taking pre-orders (handoff 195): still for sale, as a pre-order.
+  const preorder = preorderFor(product, variant);
+  const available = !!variant?.inStock || !!preorder;
   // The gallery leads with the chosen variant's own picture (lib/variantImage).
   const chosenImage = variantImageOf(variant);
   useEffect(() => {
@@ -184,7 +187,7 @@ export function ProductLanding({
   function isValueAvailable(name: string, value: string) {
     return product.variants.some(
       (v) =>
-        v.inStock &&
+        (v.inStock || takesPreorders(product)) &&
         v.optionValues?.[name] === value &&
         Object.entries(selection).every(([n, val]) => n === name || v.optionValues?.[n] === val)
     );
@@ -196,7 +199,7 @@ export function ProductLanding({
   const bundle = useMemo(() => storefrontProductBundle(product), [product]);
   const bundleChoice = useBundleSelection({ client, workspaceId, bundle, product, mainVariant: variant });
   const tiers = useMemo(() => (bundle ? [] : bundleTiers(product)), [bundle, product]);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(() => stepperLimits(product).min ?? 1);
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
@@ -504,7 +507,7 @@ export function ProductLanding({
             </span>
           )}
         </div>
-        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}`}>
+        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}${preorder ? " hidden" : ""}`}>
           {available && <CheckIcon size={16} />}
           {available
             ? t.common.inStock
@@ -515,6 +518,7 @@ export function ProductLanding({
               : t.common.outOfStock}
         </p>
         <BillingPlanNote plan={plan} unitMinor={unit} />
+        <ProductBuyNotes product={product} preorder={preorder} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
@@ -593,7 +597,7 @@ export function ProductLanding({
             {t.product.quantity}
           </span>
           {/* The same stepper the cart page and the cart drawer use. */}
-          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
+          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" {...stepperLimits(product)} />
         </div>
       )}
 
@@ -613,7 +617,7 @@ export function ProductLanding({
           disabled={!available || buying}
           className={`${btnPrimary} w-full`}
         >
-          {buying ? text.buying : buyLabel}
+          {buying ? text.buying : preorder ? t.buyInfo.preorder : buyLabel}
         </button>
         {bundleChoice && custom.fields.length === 0 ? (
           <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
@@ -790,7 +794,7 @@ export function ProductLanding({
             tabIndex={formVisible ? -1 : 0}
             className={`${btnPrimary} flex-1`}
           >
-            {ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow)}
+            {preorder ? t.buyInfo.preorder : ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow)}
           </button>
         </div>
       </div>
