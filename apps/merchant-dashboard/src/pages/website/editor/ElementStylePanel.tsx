@@ -39,6 +39,7 @@ const STRINGS = {
     content: "Content",
     style: "Style",
     layout: "Layout",
+    display: "Display",
     base: "Desktop",
     tablet: "Tablet",
     mobile: "Mobile",
@@ -88,6 +89,7 @@ const STRINGS = {
     content: "المحتوى",
     style: "الشكل",
     layout: "التخطيط",
+    display: "الظهور",
     base: "ديسكتوب",
     tablet: "تابلت",
     mobile: "موبايل",
@@ -506,19 +508,26 @@ export function ElementStylePanel({
   );
 }
 
-/** The Content / Style / Layout switch above an element's fields. */
+export type ElementTab = "content" | "style" | "layout" | "display";
+
+/**
+ * The Content / Style / Layout / Display switch above an element's fields. A
+ * dot on Display marks an element with display rules (DisplayRulesPanel).
+ */
 export function ElementTabs({
   value,
   onChange,
+  displayMarked = false,
 }: {
-  value: "content" | "style" | "layout";
-  onChange: (tab: "content" | "style" | "layout") => void;
+  value: ElementTab;
+  onChange: (tab: ElementTab) => void;
+  displayMarked?: boolean;
 }) {
   const locale = useEditorLocale();
   const t = STRINGS[locale];
   return (
-    <div role="tablist" className="flex gap-1 border-b border-line">
-      {(["content", "style", "layout"] as const).map((tab) => (
+    <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {(["content", "style", "layout", "display"] as const).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -526,11 +535,12 @@ export function ElementTabs({
           aria-selected={value === tab}
           onClick={() => onChange(tab)}
           className={cn(
-            "-mb-px cursor-pointer border-b-2 px-3 py-1.5 text-xs font-medium",
+            "-mb-px inline-flex shrink-0 cursor-pointer items-center gap-1 border-b-2 px-3 py-1.5 text-xs font-medium whitespace-nowrap",
             value === tab ? "border-primary text-primary" : "border-transparent text-ink-soft hover:text-ink"
           )}
         >
           {t[tab]}
+          {tab === "display" && displayMarked && <span className="size-1.5 rounded-full bg-accent" aria-hidden />}
         </button>
       ))}
     </div>

@@ -70,21 +70,52 @@ import { RepeaterElement } from "./repeater";
 import { HtmlBlock } from "@/components/HtmlBlock";
 import { MasonryGridElement, ProductActionElement, productAction } from "./builderMore";
 import { PageTagScope } from "./PageTagScope";
+import { displayRulesOf } from "@store-builder/api-client";
+import { DisplayRulesGate } from "./DisplayRulesGate";
 
 /**
  * An element with a style of its own (the editor's Style and Layout tabs) is
  * wrapped in a box its rules target; any other element is rendered bare, the
  * way it always was.
+ *
+ * Display rules (the Display tab, handoff 191): shoppers get the element
+ * through DisplayRulesGate, which shows it only to the visitors the rules
+ * allow. The editor's preview shows every element, and marks the ones with
+ * rules with a small «Rules» badge (in the same box, which the canvas reads
+ * like a style box).
  */
 function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   const key = styleKey(element);
   // An entrance animation also needs the box (elementAnimation.ts).
   const animation = animationOf(element);
-  if (!key && !animation) return <ElementNode element={element} ctx={ctx} />;
-  return (
-    <div data-zs={key ?? undefined} {...(animation ? animationAttributes(animation) : {})}>
+  const rules = displayRulesOf(element);
+  if (rules && ctx.editable) {
+    return (
+      <div data-zs={key ?? ""} className="relative" {...(animation ? animationAttributes(animation) : {})}>
+        <ElementNode element={element} ctx={ctx} />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute end-1 top-1 z-10 rounded-full bg-black/80 px-2 py-0.5 text-[11px] font-semibold leading-4 text-white shadow-sm ring-1 ring-white/50"
+        >
+          {ctx.t.renderer.displayRules}
+        </span>
+      </div>
+    );
+  }
+  const body =
+    !key && !animation ? (
       <ElementNode element={element} ctx={ctx} />
-    </div>
+    ) : (
+      <div data-zs={key ?? undefined} {...(animation ? animationAttributes(animation) : {})}>
+        <ElementNode element={element} ctx={ctx} />
+      </div>
+    );
+  return rules ? (
+    <DisplayRulesGate rules={rules} workspaceId={ctx.workspaceId}>
+      {body}
+    </DisplayRulesGate>
+  ) : (
+    body
   );
 }
 

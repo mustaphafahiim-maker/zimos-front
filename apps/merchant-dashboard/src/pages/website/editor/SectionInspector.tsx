@@ -30,7 +30,8 @@ import {
 import { MoveButtons } from "./MoveButtons";
 import { SelectParentButton, parentOf, useParentFocus } from "./selectParent";
 import { duplicateElement } from "./canvasTools";
-import { ElementStylePanel, ElementTabs, type NamedStyle } from "./ElementStylePanel";
+import { ElementStylePanel, ElementTabs, type ElementTab, type NamedStyle } from "./ElementStylePanel";
+import { DisplayRulesChip, DisplayRulesPanel, hasDisplayRules } from "./DisplayRulesPanel";
 import { SaveSectionPanel } from "./SavedSections";
 import { BindingFields } from "./DataBinding";
 import {
@@ -742,12 +743,12 @@ export function ElementFieldset({
   element: PageElement;
   onPropChange: (element: PageElement, key: string, value: unknown) => void;
   actions?: ReactNode;
-  /** With it the element gets Style and Layout tabs (ElementStylePanel). */
+  /** With it the element gets Style, Layout (ElementStylePanel) and Display (DisplayRulesPanel) tabs. */
   onSettingsChange?: (element: PageElement, settings: Record<string, unknown> | undefined) => void;
   namedStyles?: NamedStyle[];
   onNamedStylesChange?: (next: NamedStyle[]) => void;
 }) {
-  const [tab, setTab] = useState<"content" | "style" | "layout">("content");
+  const [tab, setTab] = useState<ElementTab>("content");
   const locale = useEditorLocale();
   const spec = ELEMENT_SPECS[element.type];
   const Icon = spec.icon;
@@ -760,7 +761,9 @@ export function ElementFieldset({
         <span className="min-w-0 flex-1 truncate">{elementLabel(element.type, spec.label, locale)}</span>
         {actions}
       </div>
-      {onSettingsChange && <ElementTabs value={tab} onChange={setTab} />}
+      {/* What its display rules do, one tap from the Display tab (handoff 191). */}
+      {tab !== "display" && <DisplayRulesChip element={element} onOpen={onSettingsChange ? () => setTab("display") : undefined} />}
+      {onSettingsChange && <ElementTabs value={tab} onChange={setTab} displayMarked={hasDisplayRules(element)} />}
       {(tab === "content" || !onSettingsChange) &&
         spec.fields.map((field) => (
           <ElementField
@@ -774,7 +777,7 @@ export function ElementFieldset({
       {(tab === "content" || !onSettingsChange) && (
         <BindingFields element={element} onChange={(bindings) => onPropChange(element, "bindings", bindings)} />
       )}
-      {onSettingsChange && tab !== "content" && (
+      {onSettingsChange && (tab === "style" || tab === "layout") && (
         <ElementStylePanel
           element={element}
           tab={tab}
@@ -782,6 +785,9 @@ export function ElementFieldset({
           onSettingsChange={(settings) => onSettingsChange(element, settings)}
           onNamedChange={onNamedStylesChange}
         />
+      )}
+      {onSettingsChange && tab === "display" && (
+        <DisplayRulesPanel element={element} onSettingsChange={(settings) => onSettingsChange(element, settings)} />
       )}
     </div>
   );
