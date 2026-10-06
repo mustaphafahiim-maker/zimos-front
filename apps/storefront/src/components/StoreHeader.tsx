@@ -4,6 +4,7 @@ import { storefrontHeaderCollections } from "@store-builder/api-client";
 import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { AccountHeaderLink, useAccountMenuLink } from "@/components/account/AccountHeaderLink";
 import { brandingRemoved } from "@/components/PoweredByZimos";
 import type { Locale } from "@/lib/i18n";
 import { useDictionary } from "@/lib/StoreContext";
@@ -104,12 +105,14 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
   });
 
   // The sheet: the menu (or Home, as always), then the cart and order tracking.
+  const accountLink = useAccountMenuLink();
   const sheetLinks: ResolvedShellLink[] = [
     ...(menu ?? [{ key: "home", label: t.common.home, href: "/", external: false }]),
     ...(header.showCart ? [{ key: "cart", label: t.common.cart, href: "/cart", external: false }] : []),
     ...(header.showTrackOrder
       ? [{ key: "track", label: t.common.trackOrder, href: "/track", external: false }]
       : []),
+    ...(accountLink ? [accountLink] : []),
   ];
 
   const logo = (
@@ -175,6 +178,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <ThemeToggle />
         </span>
       )}
+      <AccountHeaderLink />
       {header.showCart && <CartIcon />}
       {(sheetLinks.length > 0 || header.showTheme) && (
         <MobileMenu
