@@ -14,6 +14,8 @@ interface FilterTabsProps<T extends string> {
   /** Names the filter for screen readers, e.g. "Filter reviews by status". */
   label: string;
   className?: string;
+  /** Extra classes for each choice, e.g. "min-h-11" for a 44 px touch row on phones. */
+  buttonClassName?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function FilterTabs<T extends string>({
   onChange,
   label,
   className,
+  buttonClassName,
 }: FilterTabsProps<T>) {
   return (
     <div
@@ -47,7 +50,8 @@ export function FilterTabs<T extends string>({
             "cursor-pointer rounded-[0.375rem] px-3 py-1.5 text-sm font-medium transition-colors",
             value === tab.value
               ? "bg-primary-soft text-primary-dark dark:text-primary"
-              : "text-ink-soft hover:text-ink"
+              : "text-ink-soft hover:text-ink",
+            buttonClassName
           )}
         >
           {tab.label}
