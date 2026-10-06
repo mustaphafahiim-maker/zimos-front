@@ -181,7 +181,7 @@ export function OrderFormFields({
               {...a11y(field, !!help)}
               type="text"
               autoComplete="name"
-              required
+              required={f.required}
               placeholder={t.form.fullNamePlaceholder}
               value={value}
               onChange={(e) => set(e.target.value)}

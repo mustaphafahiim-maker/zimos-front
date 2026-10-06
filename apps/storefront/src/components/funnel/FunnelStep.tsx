@@ -415,7 +415,7 @@ export function FunnelCheckout({
   /** The form's heading; the checkout title when unset. */
   title?: string;
 }) {
-  const { t, money, store } = useStore();
+  const { t, money, store, locale } = useStore();
   const funnelCurrency = useFunnelCurrency();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
@@ -613,7 +613,7 @@ export function FunnelCheckout({
           invalidFromServer.length > 0 ? fieldId(FORM_PREFIX, invalidFromServer[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0])
         )?.focus();
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
+        setFormError(orderErrorMessage(err, t.form.errors, locale));
         setSubmitting(false);
       }
       autosave.resume();

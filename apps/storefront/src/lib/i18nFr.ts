@@ -234,6 +234,12 @@ export const fr: Dictionary = {
       cityChoose: "Veuillez choisir votre ville.",
       placeUnavailable: "La boutique ne livre pas cette zone — choisissez-en une autre.",
       placeUnknown: "Cette zone ne figure plus dans la liste de la boutique — choisissez-la à nouveau.",
+      stock: "Une partie de votre commande vient d'être épuisée ou la quantité restante ne suffit pas. Réduisez la quantité ou choisissez un autre produit.",
+      discount: "Ce code promo ne s'applique pas à cette commande. Retirez-le puis passez à nouveau la commande.",
+      tooMany: "Trop de tentatives en peu de temps. Patientez une minute puis réessayez.",
+      minOrder: "Votre commande est en dessous du minimum de la boutique. Ajoutez un peu plus puis réessayez.",
+      storeClosed: "La boutique ne prend pas de commandes pour le moment. Réessayez plus tard.",
+      paymentMethod: "Ce moyen de paiement n'est pas disponible pour le moment. Choisissez-en un autre.",
     },
   },
   places: {
@@ -243,6 +249,10 @@ export const fr: Dictionary = {
     chooseCity: "Choisissez votre ville",
     chooseArea: "Choisissez votre quartier",
     chooseRegionFirst: "Choisissez d'abord la région",
+  },
+  checkoutBar: {
+    label: "Récapitulatif de la commande",
+    order: "Commander",
   },
   bump: {
     title: "Ajouter à votre commande",

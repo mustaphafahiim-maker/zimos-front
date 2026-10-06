@@ -320,6 +320,12 @@ const en = {
       cityChoose: "Please choose your city.",
       placeUnavailable: "The store does not deliver to this area — choose another one.",
       placeUnknown: "This area is no longer on the store's list — choose it again.",
+      stock: "Part of your order just sold out or not enough is left. Lower the quantity or choose another product.",
+      discount: "This discount code can't be used on this order. Remove it and place the order again.",
+      tooMany: "Too many tries in a short time. Wait a minute and try again.",
+      minOrder: "Your order is below the store's minimum. Add a little more and try again.",
+      storeClosed: "The store isn't taking orders right now. Please try again later.",
+      paymentMethod: "This payment method isn't available right now. Choose another one.",
     },
   },
   /** The store's own place list at checkout: region → city → area (handoff 163). */
@@ -330,6 +336,11 @@ const en = {
     chooseCity: "Choose your city",
     chooseArea: "Choose your area",
     chooseRegionFirst: "Choose the region first",
+  },
+  /** The phone checkout's bottom bar: the total and the order button, always in reach. */
+  checkoutBar: {
+    label: "Order summary",
+    order: "Order now",
   },
   bump: {
     title: "Add to your order",
@@ -870,6 +881,12 @@ const ar: Dictionary = {
       cityChoose: "من فضلك اختار المدينة.",
       placeUnavailable: "المتجر مش بيوصل للمنطقة دي — اختار منطقة تانية.",
       placeUnknown: "المنطقة دي مبقتش في قائمة المتجر — اختارها تاني.",
+      stock: "جزء من طلبك خلص أو الكمية المتاحة مش كفاية. قلّل الكمية أو اختار منتج تاني.",
+      discount: "كود الخصم ده مينفعش على الطلب ده. شيله وأكّد الطلب تاني.",
+      tooMany: "محاولات كتير في وقت قصير. استنى دقيقة وحاول تاني.",
+      minOrder: "طلبك أقل من الحد الأدنى للمتجر. زوّد حاجة بسيطة وحاول تاني.",
+      storeClosed: "المتجر مش بياخد طلبات دلوقتي. حاول تاني بعدين.",
+      paymentMethod: "طريقة الدفع دي مش متاحة دلوقتي. اختار طريقة تانية.",
     },
   },
   places: {
@@ -879,6 +896,10 @@ const ar: Dictionary = {
     chooseCity: "اختار مدينتك",
     chooseArea: "اختار منطقتك",
     chooseRegionFirst: "اختار المحافظة الأول",
+  },
+  checkoutBar: {
+    label: "ملخص الطلب",
+    order: "اطلب دلوقتي",
   },
   bump: {
     title: "أضف لطلبك",

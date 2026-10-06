@@ -433,7 +433,7 @@ export function ProductLanding({
         });
         document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
+        setFormError(orderErrorMessage(err, t.form.errors, locale));
         setSubmitting(false);
       }
       autosave.resume();
