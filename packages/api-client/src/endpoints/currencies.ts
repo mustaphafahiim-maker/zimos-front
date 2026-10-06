@@ -31,6 +31,8 @@ export interface CurrencyDashboard {
   settings: CurrencySettings;
   /** quote → units per 1 base, for the display currencies. */
   rates: Record<string, number>;
+  /** quote → units per 1 base for the analytics currency switcher: the display currencies and a few common ones. Display only. */
+  reportRates?: Record<string, number>;
   ratesFetchedAt: string | null;
   availableCurrencies: string[];
   /** "sandbox" until a real rates provider is configured. */

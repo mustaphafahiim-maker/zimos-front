@@ -17,6 +17,7 @@ import { formatMinorMoney } from "@/lib/format";
 import { useReport, type ReportRange } from "@/lib/reportRange";
 import { getIntlLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { ExportButton, formatRate, KpiGrid, RateBar, SplitBar } from "./parts";
+import { useReportMoney } from "@/lib/reportCurrency";
 
 interface TabProps {
   workspaceId: string;
@@ -76,7 +77,8 @@ export function ProductsTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetProducts(apiClient, workspaceId, { ...span(range), limit: 50 }),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const empty = <p className="px-4 pb-4 text-sm text-ink-soft">{t.empty}</p>;
 
   const productColumns: Column<ProductRow>[] = [
@@ -269,7 +271,8 @@ export function DeliveryTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetDelivery(apiClient, workspaceId, span(range)),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const empty = <p className="px-4 pb-4 text-sm text-ink-soft">{t.empty}</p>;
   const number = (n: number) => new Intl.NumberFormat(getIntlLocale(), { maximumFractionDigits: 1 }).format(n);
 
@@ -434,7 +437,8 @@ export function CustomersTab({ workspaceId, range, onError }: TabProps) {
     () => reportsGetCustomers(apiClient, workspaceId, span(range)),
     [workspaceId, range.from, range.to]
   );
-  const money = (minor: number) => formatMinorMoney(minor, data?.currency ?? "EGP");
+  const inReport = useReportMoney();
+  const money = (minor: number) => formatMinorMoney(...inReport(minor, data?.currency ?? "EGP"));
   const months = data ? Math.max(0, ...data.cohorts.map((c) => c.retention.length)) : 0;
 
   const topColumns: Column<TopRow>[] = [

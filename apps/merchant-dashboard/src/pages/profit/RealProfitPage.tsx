@@ -17,6 +17,7 @@ import { RangeSwitch } from "@/components/RangeSwitch";
 import { Section } from "@/components/Section";
 import { BarChart } from "@/components/charts";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -140,7 +141,9 @@ export function RealProfitPage() {
   );
   const data = report.data;
   const currency = data?.currency ?? "EGP";
-  const money = (v: number | null) => (v === null ? "—" : formatMoney(v, currency));
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (v: number | null) => (v === null ? "—" : formatMoney(...inReport(v, currency)));
   const pct = (v: number | null) => formatPercentValue(percentToRatio(v));
 
   const columns = useMemo<Column<ProfitRow>[]>(() => {
@@ -205,6 +208,7 @@ export function RealProfitPage() {
         description={t.description}
         actions={
           <>
+            <ReportCurrencySelect />
             <Button asChild variant="outline" size="sm">
               <Link to="/profit/costs">
                 <SlidersHorizontal className="size-4" aria-hidden />
@@ -369,13 +373,14 @@ function ProfitByDay({
     () => profitGetPnl(apiClient, workspaceId, { ...rangeWindows(range).current, groupBy: "day" }),
     [workspaceId, range]
   );
+  const inReport = useReportMoney();
   if (!days.data) return <div className="h-[200px]" />;
   // Bars cannot go below the axis: losses are drawn as zero and named in the tooltip.
   return (
     <div dir="ltr">
       <BarChart
         points={days.data.rows.map((r) => ({ label: formatAxisDate(r.key), value: Math.max(0, r[version].netProfit) }))}
-        format={(v) => formatMoney(v, currency)}
+        format={(v) => formatMoney(...inReport(v, currency))}
         summary={summary}
       />
     </div>

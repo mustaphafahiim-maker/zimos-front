@@ -11,6 +11,7 @@ import { formatMinorMoney } from "@/lib/format";
 import { formatBucket, formatCompactMoney, useReport, type ReportRange } from "@/lib/reportRange";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { changePercent, FunnelChart, formatRate, KpiGrid, OrdersHeatmap, SplitBar, type KpiCell } from "./parts";
+import { useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -157,9 +158,10 @@ export function OverviewTab({ workspaceId, range }: { workspaceId: string; range
     [workspaceId, range.from, range.to, range.compare]
   );
 
+  const inReport = useReportMoney();
   const view = useMemo(() => {
     if (!data) return null;
-    const money = (minor: number | null) => formatMinorMoney(minor ?? 0, data.currency);
+    const money = (minor: number | null) => formatMinorMoney(...inReport(minor ?? 0, data.currency));
     const display = (key: ChartMetric, value: number | null) =>
       MONEY_METRICS.has(key) ? money(value) : key === "conversionRate" ? formatRate(value) : formatCount(value);
     const numbers = (rows: ReportsSeriesPoint[] | null, key: ChartMetric) =>
@@ -186,7 +188,7 @@ export function OverviewTab({ workspaceId, range }: { workspaceId: string; range
       };
     });
     return { money, display, cells, points };
-  }, [data, metric, t]);
+  }, [data, metric, t, inReport]);
 
   const channelColumns: Column<ChannelRow>[] = [
     {

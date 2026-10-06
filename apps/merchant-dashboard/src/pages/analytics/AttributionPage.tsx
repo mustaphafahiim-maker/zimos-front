@@ -24,6 +24,7 @@ import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
 import { BarChart, LineAreaChart } from "@/components/charts";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -138,7 +139,9 @@ export function AttributionPage() {
   );
   const data = report.data;
   const currency = data?.currency ?? "EGP";
-  const money = (v: number | null) => (v === null ? "—" : formatMoney(v, currency));
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (v: number | null) => (v === null ? "—" : formatMoney(...inReport(v, currency)));
   const hasSpend = Boolean(data && data.totals.spend !== null);
   const filtered = Boolean(filters.source || filters.campaign);
 
@@ -197,7 +200,7 @@ export function AttributionPage() {
 
   return (
     <div className="min-w-0">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={t.description} actions={<ReportCurrencySelect />} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <RangeSwitch value={range} onChange={setRange} />

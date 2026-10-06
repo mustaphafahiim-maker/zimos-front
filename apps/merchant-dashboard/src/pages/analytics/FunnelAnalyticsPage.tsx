@@ -24,6 +24,7 @@ import { formatMoney, formatPercentValue } from "@/lib/format";
 import { formatAxisDate, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { STEP_TYPE_LABELS } from "@/pages/funnels/FunnelEditorPage.strings";
+import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
   en: {
@@ -143,7 +144,9 @@ export function FunnelAnalyticsPage() {
 
   const data = detail.data;
   const currency = data?.currency ?? "EGP";
-  const money = (value: number) => <bdi dir="ltr">{formatMoney(value, currency)}</bdi>;
+  // In the report currency the teammate picked (lib/reportCurrency.tsx).
+  const inReport = useReportMoney();
+  const money = (value: number) => <bdi dir="ltr">{formatMoney(...inReport(value, currency))}</bdi>;
   const count = (value: number) => <bdi dir="ltr">{formatCount(value)}</bdi>;
   const percent = (value: number | null) => <bdi dir="ltr">{formatPercentValue(percentToRatio(value))}</bdi>;
 
@@ -155,6 +158,7 @@ export function FunnelAnalyticsPage() {
         description={t.description}
         actions={
           <>
+            <ReportCurrencySelect />
             <RangeSwitch value={range} onChange={setRange} />
             {data && (
               <Link to={`/funnels/${data.funnel.id}`} className="text-sm font-medium text-primary hover:underline">
