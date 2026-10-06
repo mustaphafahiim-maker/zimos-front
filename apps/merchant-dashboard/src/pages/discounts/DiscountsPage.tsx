@@ -28,6 +28,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
+import { CouponLinkDialog } from "./CouponLinkDialog";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
@@ -61,6 +62,7 @@ const STRINGS = {
     enable: "Enable",
     disable: "Disable",
     delete: "Delete",
+    shareLink: "Share link",
     enabledToast: "Discount enabled.",
     disabledToast: "Discount disabled.",
     archivedToast: "Discount archived.",
@@ -133,6 +135,7 @@ const STRINGS = {
     enable: "تفعيل",
     disable: "إيقاف",
     delete: "حذف",
+    shareLink: "لينك المشاركة",
     enabledToast: "تم تفعيل الخصم.",
     disabledToast: "تم إيقاف الخصم.",
     archivedToast: "تمت أرشفة الخصم.",
@@ -242,6 +245,7 @@ export function DiscountsPage() {
 
   const [formTarget, setFormTarget] = useState<Discount | "new" | null>(null);
   const [deleting, setDeleting] = useState<Discount | null>(null);
+  const [sharing, setSharing] = useState<Discount | null>(null);
 
   const reload = () => list.refresh({ silent: true });
   const discounts = list.data ?? [];
@@ -327,6 +331,11 @@ export function DiscountsPage() {
                     className="whitespace-nowrap px-4 py-3 text-end"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {d.code && d.status !== "archived" && (
+                      <Button size="sm" variant="ghost" onClick={() => setSharing(d)}>
+                        {t.shareLink}
+                      </Button>
+                    )}
                     {d.status !== "archived" && (
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(d)}>
                         {d.status === "active" ? t.disable : t.enable}
@@ -365,6 +374,14 @@ export function DiscountsPage() {
           />
         )}
       </Modal>
+
+      {sharing && (
+        <CouponLinkDialog
+          discount={sharing}
+          statusText={displayStatus(sharing) === "active" ? null : t[`status_${displayStatus(sharing)}`]}
+          onClose={() => setSharing(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}
