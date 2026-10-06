@@ -238,3 +238,5 @@ export * from "./endpoints/checkoutUploads";
 export * from "./endpoints/conversionEvent";
 // Pinterest Conversions API on a pinterest pixel: ad account id, token, test events (handoff 168).
 export * from "./endpoints/pinterestPixel";
+// Google Ads conversions: purchase and lead conversion labels on an AW- pixel (handoff 169).
+export * from "./endpoints/googleAdsLabels";

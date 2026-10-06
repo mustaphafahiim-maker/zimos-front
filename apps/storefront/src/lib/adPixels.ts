@@ -25,6 +25,11 @@ export interface StorePixel {
   scope: { type: "all" | "funnels" | "products"; ids: string[] };
   /** Google Ads conversion label, for an `AW-` id. */
   adsConversionLabel?: string;
+  /**
+   * The ready Google Ads `send_to` per conversion kind ("AW-…/label"), for an
+   * `AW-` id with labels (GET /store/:ws, handoff 169). A kind without one is not sent.
+   */
+  sendTo?: Partial<Record<ConversionEvent, string>>;
 }
 
 type Fn = (...args: unknown[]) => void;
@@ -349,10 +354,14 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         items: data.contentIds?.map((id) => ({ item_id: id })),
         send_to: google.map((p) => p.pixelId),
       });
+      // The order's Google Ads conversion: the purchase or the lead action, per how the order is
+      // reported. transaction_id (the order id) keeps a reload of the thank-you page from counting twice.
       if (event === "Purchase") {
+        const kind: ConversionEvent = name === "Lead" ? "lead" : "purchase";
         for (const p of google) {
-          if (!p.adsConversionLabel || !/^AW-/i.test(p.pixelId)) continue;
-          w.gtag("event", "conversion", { ...common, transaction_id: data.orderId, send_to: `${p.pixelId}/${p.adsConversionLabel}` });
+          const sendTo = p.sendTo?.[kind];
+          if (!sendTo || !/^AW-/i.test(p.pixelId)) continue;
+          w.gtag("event", "conversion", { ...common, transaction_id: data.orderId, send_to: sendTo });
         }
       }
     }
@@ -375,6 +384,26 @@ const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "goog
 // IDs are validated by the backend; re-checked here because they are placed in inline scripts.
 const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
 
+const SEND_TO = /^AW-[A-Za-z0-9]{4,20}\/[A-Za-z0-9_-]{4,60}$/;
+
+/**
+ * An AW- pixel's Google Ads targets per conversion kind: the API's ready
+ * `sendTo` (handoff 169), or, from an older API, the purchase label alone.
+ */
+function adsSendTo(pixelId: string, raw: unknown, purchaseLabel: string | undefined): StorePixel["sendTo"] | undefined {
+  if (!/^AW-/i.test(pixelId)) return undefined;
+  const out: Partial<Record<ConversionEvent, string>> = {};
+  if (raw && typeof raw === "object") {
+    for (const kind of ["purchase", "lead"] as const) {
+      const v = (raw as Record<string, unknown>)[kind];
+      if (typeof v === "string" && SEND_TO.test(v) && v.startsWith(`${pixelId}/`)) out[kind] = v;
+    }
+  } else if (purchaseLabel) {
+    out.purchase = `${pixelId}/${purchaseLabel}`;
+  }
+  return out.purchase || out.lead ? out : undefined;
+}
+
 /**
  * The pixels from store metadata. GET /store/:workspaceId sends
  * `trackingPixels` (and, from older backends, only the one-ID-per-platform
@@ -395,7 +424,8 @@ export function storePixelsOf(store: unknown): StorePixel[] {
       const type = scope.type === "funnels" || scope.type === "products" ? scope.type : "all";
       const ids = Array.isArray(scope.ids) ? scope.ids.filter((x): x is string => typeof x === "string") : [];
       const label = typeof r.adsConversionLabel === "string" && SAFE.test(r.adsConversionLabel) ? r.adsConversionLabel : undefined;
-      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}) });
+      const sendTo = platform === "google" ? adsSendTo(pixelId, r.sendTo, label) : undefined;
+      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}), ...(sendTo ? { sendTo } : {}) });
     }
     return out;
   }

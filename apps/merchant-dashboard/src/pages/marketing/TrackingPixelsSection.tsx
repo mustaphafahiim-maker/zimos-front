@@ -2,8 +2,11 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Pencil, Plus, Radio, Send, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
+  GOOGLE_ADS_LABEL,
   PINTEREST_AD_ACCOUNT_ID,
   funnelsList,
+  googleAdsLabelsOf,
+  googleAdsPixelConfig,
   pinterestAdAccountIdOf,
   pinterestPixelConfig,
   trackingPixelsCreate,
@@ -93,8 +96,12 @@ const STRINGS = {
     capiTokenRequired: "Paste the token to turn server events on.",
     testCode: "Test event code",
     testCodeHint: "Optional. While set, server events show up under Test events instead of counting as real ones.",
-    adsLabel: "Ads conversion label",
-    adsLabelHint: "For a Google Ads ID (AW-…): the label of the purchase conversion.",
+    adsLabel: "Purchase conversion label",
+    adsLabelHint: "Google Ads → Goals → Conversions → your action → Tag setup → the part after the slash in send_to",
+    adsLeadLabel: "Lead conversion label",
+    adsLeadLabelHint: "Used when the store or a funnel reports orders as Lead.",
+    adsLabelInvalid: "Use 4 to 60 letters, digits, - or _.",
+    adsLabelNeedsAds: "A conversion label needs a Google Ads id (AW-…)",
     scope: "Applies to",
     chooseFunnels: "Choose funnels",
     chooseProducts: "Choose products",
@@ -157,8 +164,12 @@ const STRINGS = {
     capiTokenRequired: "الصق الرمز لتفعيل أحداث السيرفر.",
     testCode: "كود الأحداث التجريبية",
     testCodeHint: "اختياري. طالما هو موجود تظهر أحداث السيرفر في Test events ولا تُحسب كأحداث حقيقية.",
-    adsLabel: "Conversion label للإعلانات",
-    adsLabelHint: "لمعرّف Google Ads (AW-…): الـ label الخاص بتحويل الشراء.",
+    adsLabel: "ليبل تحويل الشراء",
+    adsLabelHint: "في Google Ads افتح الأهداف ← التحويلات ← الإجراء بتاعك ← إعداد العلامة، وانسخ الجزء اللي بعد الـ / في send_to.",
+    adsLeadLabel: "ليبل تحويل العميل المحتمل",
+    adsLeadLabelHint: "بيتستخدم لما المتجر أو قمع يسجّل الطلبات كـ Lead.",
+    adsLabelInvalid: "اكتب من 4 لـ 60 حرف إنجليزي أو رقم، ومسموح بالشرطة (-) والشرطة السفلية (_).",
+    adsLabelNeedsAds: "الليبل محتاج رقم إعلانات جوجل (AW-…)",
     scope: "يعمل على",
     chooseFunnels: "اختر القموع",
     chooseProducts: "اختر المنتجات",
@@ -190,6 +201,8 @@ interface FormState {
   capiToken: string;
   testEventCode: string;
   adsConversionLabel: string;
+  /** The Google Ads lead conversion label (config.adsLeadLabel, handoff 169). */
+  adsLeadLabel: string;
   /** Pinterest's Conversions API needs the ad account (config.adAccountId). */
   adAccountId: string;
   scopeType: TrackingPixelScopeType;
@@ -204,6 +217,7 @@ const emptyForm = (): FormState => ({
   capiToken: "",
   testEventCode: "",
   adsConversionLabel: "",
+  adsLeadLabel: "",
   adAccountId: "",
   scopeType: "all",
   scopeIds: [],
@@ -216,7 +230,8 @@ const formOf = (p: TrackingPixelDto): FormState => ({
   capiEnabled: p.capiEnabled,
   capiToken: "",
   testEventCode: p.testEventCode ?? "",
-  adsConversionLabel: p.config.adsConversionLabel ?? "",
+  adsConversionLabel: googleAdsLabelsOf(p).purchase,
+  adsLeadLabel: googleAdsLabelsOf(p).lead,
   adAccountId: pinterestAdAccountIdOf(p),
   scopeType: p.scope.type,
   scopeIds: p.scope.ids,
@@ -449,6 +464,16 @@ function PixelDialog({
         ? "missing"
         : null;
   const adAccountProblem = adAccountBad ?? (fieldErrors["config.adAccountId"] ? "missing" : null);
+  // Google Ads labels (handoff 169): checked here; the server refuses one on a non-Ads tag.
+  const labelBad = (value: string) => isAdsId && value.trim() !== "" && !GOOGLE_ADS_LABEL.test(value.trim());
+  const purchaseLabelBad = labelBad(form.adsConversionLabel);
+  const leadLabelBad = labelBad(form.adsLeadLabel);
+  const labelError = (bad: boolean, field: string) =>
+    bad ? t.adsLabelInvalid : fieldErrors[field] ? (isAdsId ? t.adsLabelInvalid : t.adsLabelNeedsAds) : undefined;
+  const setLabel = (key: "adsConversionLabel" | "adsLeadLabel", value: string) => {
+    set(key, value);
+    setFieldErrors((prev) => ({ ...prev, [`config.${key}`]: "" }));
+  };
 
   // The scope lists load only when that scope is picked.
   const funnels = useAsync(
@@ -468,7 +493,7 @@ function PixelDialog({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (id === "" || idBad || tokenMissing || scopeMissing || adAccountBad) return;
+    if (id === "" || idBad || tokenMissing || scopeMissing || adAccountBad || purchaseLabelBad || leadLabelBad) return;
     setSaving(true);
     setFormError(null);
     setFieldErrors({});
@@ -481,7 +506,7 @@ function PixelDialog({
       scope: { type: form.scopeType, ids: form.scopeType === "all" ? [] : form.scopeIds },
       config:
         form.platform === "google"
-          ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null }
+          ? googleAdsPixelConfig(id, { purchase: form.adsConversionLabel, lead: form.adsLeadLabel })
           : pinterest
             ? pinterestPixelConfig(form.adAccountId)
             : undefined,
@@ -512,7 +537,9 @@ function PixelDialog({
           <Button
             type="submit"
             form="tracking-pixel-form"
-            disabled={saving || id === "" || idBad || tokenMissing || scopeMissing || adAccountBad !== null}
+            disabled={
+              saving || id === "" || idBad || tokenMissing || scopeMissing || adAccountBad !== null || purchaseLabelBad || leadLabelBad
+            }
           >
             {saving ? t.saving : t.save}
           </Button>
@@ -553,15 +580,28 @@ function PixelDialog({
         <TextField label={t.label} value={form.label} maxLength={120} hint={t.labelHint} onChange={(e) => set("label", e.target.value)} />
 
         {isAdsId && (
-          <TextField
-            label={t.adsLabel}
-            dir="ltr"
-            autoComplete="off"
-            value={form.adsConversionLabel}
-            hint={t.adsLabelHint}
-            onChange={(e) => set("adsConversionLabel", e.target.value)}
-            error={fieldErrors.adsConversionLabel}
-          />
+          <>
+            <TextField
+              label={t.adsLabel}
+              dir="ltr"
+              autoComplete="off"
+              maxLength={60}
+              value={form.adsConversionLabel}
+              hint={t.adsLabelHint}
+              onChange={(e) => setLabel("adsConversionLabel", e.target.value)}
+              error={labelError(purchaseLabelBad, "config.adsConversionLabel")}
+            />
+            <TextField
+              label={t.adsLeadLabel}
+              dir="ltr"
+              autoComplete="off"
+              maxLength={60}
+              value={form.adsLeadLabel}
+              hint={t.adsLeadLabelHint}
+              onChange={(e) => setLabel("adsLeadLabel", e.target.value)}
+              error={labelError(leadLabelBad, "config.adsLeadLabel")}
+            />
+          </>
         )}
 
         {capiPossible && pinterest && (
