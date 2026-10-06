@@ -10,6 +10,7 @@ import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { BillingAddressFields, billingFieldId, useBillingAddress } from "@/components/checkout/BillingAddressFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { ExpressCheckout } from "@/components/checkout/ExpressCheckout";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
   TransferDetails,
@@ -334,6 +335,7 @@ export default function CheckoutPage() {
       <div className="mt-6 max-w-xl">
         <CheckoutProgress done={progressDone} current={progressCurrent} />
       </div>
+      <ExpressCheckout methods={payment.methods} onChoose={setMethodId} submitRef={submitRef} busy={submitting || items.length === 0} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-8 lg:grid-cols-[1fr_24rem]">
         <div className="space-y-6">

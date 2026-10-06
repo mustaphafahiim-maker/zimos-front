@@ -432,6 +432,15 @@ const en = {
     backToStore: "Back to store",
     error: "Something went wrong. Please try again.",
   },
+  /** Express checkout: wallet buttons at the top of checkout, and PayPal as a way to pay (handoff 183). */
+  express: {
+    title: "Express checkout",
+    or: "Or pay another way",
+    payWith: (wallet: string) => `Pay with ${wallet}`,
+    hint: "We use your delivery details below, so fill them in first.",
+    paypal: "PayPal",
+    paypalHint: "Approve the payment on PayPal, then come back here.",
+  },
   upsell: {
     // A funnel offer's saving (FunnelStep).
     save: (amount: string) => `You save ${amount}`,
@@ -990,6 +999,14 @@ const ar: Dictionary = {
     noToken: "افتح الصفحة دي من نفس الجهاز اللي طلبت منه عشان تشوف الدفع.",
     backToStore: "الرجوع للمتجر",
     error: "حصلت مشكلة. جرّب تاني.",
+  },
+  express: {
+    title: "دفع سريع",
+    or: "أو ادفع بطريقة تانية",
+    payWith: (wallet) => `ادفع بـ ${wallet}`,
+    hint: "هنستخدم بيانات التوصيل اللي تحت، فاكتبها الأول.",
+    paypal: "باي بال",
+    paypalHint: "هتوافق على الدفع في PayPal وبعدين ترجع هنا.",
   },
   upsell: {
     // A funnel offer's saving (FunnelStep).
