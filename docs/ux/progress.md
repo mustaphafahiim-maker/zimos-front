@@ -89,9 +89,12 @@ are listed under *Handoff items done*.
       shipping column), start from the platform list, inline prices saved
       together, inherited-price hints; order page names the city/area rule.
       Storefront checkout pickers + quote: pending (after 165 lands).
-- [ ] 160 storefront texts · 161 store scripts · 162 smart collections ·
-      165 checkout file + billing ·
-      166 funnel bulk · 167 Lead instead of Purchase · 168 Pinterest CAPI
+- [x] 162 smart collections (type: manual / by tags / all products, tag
+      chips, refresh, «اعمل مجموعة كل المنتجات» empty state, 409 toast)
+- [x] 166 funnel bulk (select, publish/pause/resume/duplicate/delete, ≤50,
+      results dialog for failures)
+- [ ] 160 storefront texts · 161 store scripts · 165 checkout file + billing ·
+      167 Lead instead of Purchase · 168 Pinterest CAPI
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
