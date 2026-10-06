@@ -256,3 +256,5 @@ export * from "./endpoints/emailSendingDomain";
 export * from "./endpoints/orderEmailDesign";
 // The checkout's place pickers: the store's own regions → cities → areas, and the quote by place (handoff 163/164).
 export * from "./endpoints/storefrontPlaces";
+// Email marketing: contacts who agreed to marketing to Mailchimp / Klaviyo lists (emailMarketing/emailMarketing.js, handoff 182).
+export * from "./endpoints/emailMarketing";
