@@ -16,6 +16,7 @@ import { lineImage } from "@/lib/variantImage";
 import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { CartFreeGifts } from "@/components/gifts/CartFreeGifts";
 
 export default function CartPage() {
   // Still needed for the catalogue lookup — the links go through StoreLink,
@@ -151,6 +152,7 @@ export default function CartPage() {
                 );
               })}
             </ul>
+            <CartFreeGifts cart={cart} className="mt-4" />
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">

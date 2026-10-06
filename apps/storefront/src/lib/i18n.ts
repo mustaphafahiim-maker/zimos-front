@@ -980,6 +980,13 @@ const en = {
     emptyTag: "No posts with this tag yet.",
     backToBlog: "Back to the blog",
   },
+  /** Free gifts the cart earns, or how far it is from them (handoff 208, components/gifts/CartFreeGifts). */
+  freeGifts: {
+    line: (name: string) => `Free gift: ${name}`,
+    free: "Free",
+    missing: (amount: string, name: string) => `Add ${amount} more to get a ${name} free`,
+    progress: (name: string) => `On the way to your free ${name}`,
+  },
   /** The cookie banner and the footer's "Cookie settings" (handoff 196, components/CookieConsent). */
   cookies: {
     label: "Cookies",
@@ -1872,6 +1879,12 @@ const ar: Dictionary = {
     emptyCategory: "لسه مفيش مقالات في التصنيف ده.",
     emptyTag: "لسه مفيش مقالات بالوسم ده.",
     backToBlog: "ارجع للمدونة",
+  },
+  freeGifts: {
+    line: (name) => `هدية مجانية: ${name}`,
+    free: "مجانًا",
+    missing: (amount, name) => `زوّد ${amount} وخد ${name} هدية`,
+    progress: (name) => `فاضلك قد إيه على هدية ${name}`,
   },
   cookies: {
     label: "الكوكيز",

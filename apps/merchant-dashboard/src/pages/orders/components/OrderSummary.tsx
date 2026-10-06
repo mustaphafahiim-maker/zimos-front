@@ -11,6 +11,7 @@ import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 import { OrderBillingAddress, OrderCheckoutPhotos } from "./OrderCheckoutExtras";
 import { ShippingOptionNote } from "./ShippingOptionNote";
 import { PreorderLineNote } from "./PreorderLineNote";
+import { GiftLineBadge } from "./GiftLineBadge";
 import { DeliveryEstimateNote } from "./DeliveryEstimateNote";
 
 const STRINGS = {
@@ -179,6 +180,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                           )}
                           <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
                           <PreorderLineNote item={item} />
+                          <GiftLineBadge item={item} />
                         </div>
                       </div>
                     </td>

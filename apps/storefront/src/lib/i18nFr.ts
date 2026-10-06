@@ -878,6 +878,12 @@ export const fr: Dictionary = {
     emptyTag: "Aucun article avec ce mot-clé pour le moment.",
     backToBlog: "Retour au blog",
   },
+  freeGifts: {
+    line: (name: string) => `Cadeau offert : ${name}`,
+    free: "Offert",
+    missing: (amount: string, name: string) => `Ajoutez ${amount} pour recevoir ${name} en cadeau`,
+    progress: (name: string) => `En route vers votre cadeau : ${name}`,
+  },
   cookies: {
     label: "Cookies",
     message: "Nous utilisons des cookies pour améliorer votre visite et mesurer nos publicités.",
