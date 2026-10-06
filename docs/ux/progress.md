@@ -336,7 +336,14 @@ are listed under *Handoff items done*.
       من … لـ …» on product, cart, checkout, thank-you and tracking; «التوصيل
       المتوقع» on the dashboard order page. Shipping line «بيتحسب بعد ما
       تختار منطقتك» for places-only stores (the old workaround removed).
-- [ ] 190, 192, 196, 197 — interrupted by a
+- [x] 190 Blog: dashboard /blog (drafts / published / scheduled, search,
+      category filter, phone cards), block editor (8 block types, cover and
+      images from the media library, tags, author, SEO incl. noindex,
+      schedule), /blog/categories, menu «المدونة»; storefront /blog index,
+      category and tag pages, post page with OpenGraph + JSON-LD, «من
+      مدونتنا» on the built-in home. No page-builder "latest posts" section
+      yet; local uploads give http URLs the API refuses (https only).
+- [ ] 192, 196, 197 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
