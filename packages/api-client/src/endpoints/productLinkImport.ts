@@ -68,3 +68,14 @@ export function importedPagePrice(description: string | null | undefined): { amo
   const match = /\(Imported price: ([\d.,]+) ([A-Z]{3})\)\s*$/.exec(description ?? "");
   return match ? { amount: match[1], currency: match[2] } : null;
 }
+
+/**
+ * What a finished link import reports since the backend's second batch of
+ * frontend requests: the products it created, the page's currency and how many
+ * reviews wait for approval. Imports from before carry none of these.
+ */
+export interface ProductLinkImportReport {
+  productIds?: string[];
+  results?: { row: number; productId: string; name: string; sourceCurrency: string | null; reviewsImported: number }[];
+  reviewsImported?: number;
+}

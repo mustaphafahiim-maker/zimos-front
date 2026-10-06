@@ -358,6 +358,11 @@ are listed under *Handoff items done*.
       «شارك في سوق القوالب» from the funnels list and editor. Platform
       console /marketplace review queue (approve, reject with a note,
       unlist), templates.view / templates.manage.
+- [x] 180 follow-up: the link import dialog opens the new draft by the
+      report's productIds, shows «السعر بعملة الصفحة: USD — راجعه قبل
+      النشر» and the imported review count; LINK_* refusal codes mapped (the
+      text matching stays only for older answers). 200 (email campaigns) was
+      withdrawn by the backend; nothing had been built for it.
 - [ ] 197 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.

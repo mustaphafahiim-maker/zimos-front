@@ -8,6 +8,7 @@ import {
   type Product,
   type ProductImportSource,
   type ProductLinkImport,
+  type ProductLinkImportReport,
   type Review,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -38,6 +39,7 @@ const STRINGS = {
     noPrice: "The page had no price, so the product was added at 0 — set your selling price before you publish.",
     looking: "Looking for the new product…",
     openProduct: "Review the product",
+    pageCurrency: "The price is in {currency} — check it before publishing.",
     reviewsWaiting_one: "1 review waiting for your approval",
     reviewsWaiting_other: "{n} reviews waiting for your approval",
   },
@@ -55,6 +57,7 @@ const STRINGS = {
     noPrice: "الصفحة مكانش فيها سعر، فالمنتج اتضاف بصفر — حط سعر بيعك قبل ما تنشر.",
     looking: "بندوّر على المنتج الجديد…",
     openProduct: "راجع المنتج",
+    pageCurrency: "السعر بعملة الصفحة: {currency} — راجعه قبل النشر.",
     reviewsWaiting_one: "تقييم واحد مستني موافقتك",
     reviewsWaiting_two: "تقييمين مستنيين موافقتك",
     reviewsWaiting_few: "{n} تقييمات مستنية موافقتك",
@@ -117,9 +120,17 @@ export function LinkImportResult({
   const workspaceId = useWorkspaceId();
   // Shopify links bring no reviews and no tag: the sentence alone is the answer.
   const tagged = source !== "shopify";
+  const report = job as ProductLinkImport & ProductLinkImportReport;
 
   const found = useAsync(async () => {
-    if (!tagged) return { product: null, waiting: 0 };
+    // Newer imports name their product, currency and review count: no searching needed.
+    const firstId = report.productIds?.[0];
+    if (firstId) {
+      const product = (await apiClient.getProduct(workspaceId, firstId).catch(() => null)) as ListedProduct | null;
+      const row = report.results?.find((r) => r.productId === firstId);
+      return { product, waiting: report.reviewsImported ?? row?.reviewsImported ?? 0, currency: row?.sourceCurrency ?? null };
+    }
+    if (!tagged) return { product: null, waiting: 0, currency: null };
     const since = Date.parse(job.createdAt) - 1000;
     const [drafts, pending] = await Promise.all([
       apiClient.listProducts(workspaceId, { status: "draft", limit: 200 }).catch(() => null),
@@ -132,11 +143,12 @@ export function LinkImportResult({
     const imported = ((pending ?? []) as ReviewRow[]).filter((r) => r.source === "import");
     // This product's reviews when it was found; otherwise every imported one still waiting.
     const waiting = product ? imported.filter((r) => r.productId === product.id).length : imported.length;
-    return { product, waiting };
+    return { product, waiting, currency: null as string | null };
   }, [workspaceId, job.id, source]);
 
   const product = found.data?.product ?? null;
   const price = importedPagePrice(product?.description);
+  const pageCurrency = price?.currency ?? found.data?.currency ?? null;
   const firstPrice = Number(product?.variants?.[0]?.priceAmount ?? NaN);
   const waiting = found.data?.waiting ?? 0;
 
@@ -152,6 +164,8 @@ export function LinkImportResult({
             </bdi>{" "}
             — {t.priceAsIs}
           </p>
+        ) : pageCurrency ? (
+          <p className="text-ink">{fmt(t.pageCurrency, { currency: pageCurrency })}</p>
         ) : product && firstPrice === 0 ? (
           <p className="text-ink">{t.noPrice}</p>
         ) : null}

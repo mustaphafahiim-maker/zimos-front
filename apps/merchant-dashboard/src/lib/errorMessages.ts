@@ -167,6 +167,8 @@ const STRINGS = {
       "We couldn't read the product from that page — it may be private, blocked or too slow. Check the link and try again, or download the product as a sheet and import the file.",
     IMPORT_SOURCE_NO_PRODUCT_DATA: "That page does not publish its product details. Download them as a sheet and import the file instead.",
     IMPORT_LINK_NOT_HTTPS: "The link must start with https:// — copy it again from the browser's address bar.",
+    LINK_INVALID: "Paste the full product link, starting with https://",
+    LINK_HAS_CREDENTIALS: "The link must not contain a username or password.",
     IMPORT_LINK_NOT_PRODUCT: "That isn't a product link we can read. Paste a product page link from Shopify, AliExpress, Etsy, CJ or YouCan.",
     INVALID_FILE: "We couldn't read this file. Check its type and try again.",
     FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
@@ -329,6 +331,8 @@ const STRINGS = {
       "معرفناش نقرا المنتج من الصفحة دي — ممكن تكون مقفولة أو بطيئة. اتأكد من اللينك وجرّب تاني، أو نزّل المنتج كشيت واستورد الملف.",
     IMPORT_SOURCE_NO_PRODUCT_DATA: "الصفحة دي مش بتعرض بيانات المنتج. نزّلها كشيت واستورد الملف بدل اللينك.",
     IMPORT_LINK_NOT_HTTPS: "اللينك لازم يبدأ بـ https:// — انسخه تاني من شريط العنوان في المتصفح.",
+    LINK_INVALID: "الصق لينك المنتج كامل، بيبدأ بـ https://",
+    LINK_HAS_CREDENTIALS: "اللينك ميكونش فيه اسم مستخدم أو باسورد.",
     IMPORT_LINK_NOT_PRODUCT: "ده مش لينك منتج نقدر نقراه. الصق لينك صفحة منتج من شوبيفاي أو علي إكسبريس أو إتسي أو CJ أو يوكان.",
     INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
     FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
@@ -492,6 +496,10 @@ export function useImportLinkErrorMessage() {
   return useCallback(
     (err: unknown): string => {
       const code = apiErrorCode(err);
+      // The backend now names each refusal (LINK_*); older answers are told apart by their text below.
+      if (code === "LINK_NOT_HTTPS") return t.IMPORT_LINK_NOT_HTTPS;
+      if (code === "LINK_NOT_PRODUCT") return t.IMPORT_LINK_NOT_PRODUCT;
+      if (code === "LINK_NO_PRODUCT_DATA") return t.IMPORT_SOURCE_NO_PRODUCT_DATA;
       const details = apiErrorDetails<unknown>(err);
       const urlProblems = (Array.isArray(details) ? details : [])
         .filter((d): d is { field: string; message: string } => !!d && d.field === "url" && typeof d.message === "string")
