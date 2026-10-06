@@ -46,7 +46,10 @@ are listed under *Handoff items done*.
       ≤3 min are left on a claim; outcome buttons with icon and meaning
       colour; full-width actions on phones; guiding empty state; filters side
       by side; Egyptian copy. (Callback time for «أجّل» waits on the backend.)
-- [ ] S7 Products list — next
+- [x] S7 Products list: phone cards (photo, name, price, stock, status,
+      actions, select) instead of an 820px table; table/grid from md; a
+      guiding first-product empty state; calm table; Egyptian copy.
+- [ ] S8 Product form — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint

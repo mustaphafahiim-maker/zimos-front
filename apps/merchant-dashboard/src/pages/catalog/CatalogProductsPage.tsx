@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, PackagePlus, Plus } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -13,6 +13,7 @@ import { useProductFilters } from "./components/ProductFilterBar";
 import { primaryImage } from "@/lib/media";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -35,7 +36,7 @@ const STRINGS = {
   en: {
     title: "Products",
     description: "Everything you sell — with variants, offers, and stock.",
-    newProduct: "New product",
+    newProduct: "Add product",
     filterLabel: "Filter products by status",
     tabAll: "All",
     tabActive: "Active",
@@ -43,7 +44,7 @@ const STRINGS = {
     tabArchived: "Archived",
     listView: "List view",
     gridView: "Grid view",
-    manageCollections: "Manage collections →",
+    manageCollections: "Collections",
     emptyAll: "No products yet. Create your first one.",
     emptyActive: "No active products.",
     emptyDraft: "No draft products.",
@@ -70,45 +71,49 @@ const STRINGS = {
     restoreHint: "Restores the product as a draft",
     deletePermanently: "Delete permanently",
     restoredToast: "“{name}” restored as a draft. Set it to Active when it's ready to sell.",
+    emptyTitle: "Add your first product",
+    emptyBody: "A name, a price and one photo are enough to start selling. Variants, offers and stock can come later.",
   },
   ar: {
     title: "المنتجات",
-    description: "كل ما تبيعه — مع المتغيرات والعروض والمخزون.",
-    newProduct: "منتج جديد",
-    filterLabel: "تصفية المنتجات حسب الحالة",
+    description: "كل حاجة بتبيعها — بأنواعها وعروضها ومخزونها.",
+    newProduct: "ضيف منتج",
+    filterLabel: "فلترة المنتجات حسب الحالة",
     tabAll: "الكل",
-    tabActive: "نشط",
+    tabActive: "شغّال",
     tabDraft: "مسودة",
     tabArchived: "المؤرشف",
     listView: "عرض القائمة",
     gridView: "عرض الشبكة",
-    manageCollections: "إدارة المجموعات ←",
-    emptyAll: "لا توجد منتجات بعد. أنشئ أول منتج.",
-    emptyActive: "لا توجد منتجات نشطة.",
-    emptyDraft: "لا توجد منتجات في المسودة.",
-    emptyArchived: "لا توجد منتجات مؤرشفة. المنتجات التي تؤرشفها تظهر هنا.",
-    emptyFilter: "لا توجد منتجات مطابقة للبحث.",
+    manageCollections: "المجموعات",
+    emptyAll: "لسه مفيش منتجات. ضيف أول منتج.",
+    emptyActive: "مفيش منتجات شغّالة.",
+    emptyDraft: "مفيش منتجات مسودة.",
+    emptyArchived: "مفيش منتجات مؤرشفة. اللي هتأرشفه هيظهر هنا.",
+    emptyFilter: "مفيش منتجات بالبحث ده.",
     colProduct: "المنتج",
     colStatus: "الحالة",
-    colPrice: "نطاق السعر",
+    colPrice: "السعر",
     colStock: "المخزون",
     colCreated: "تاريخ الإنشاء",
-    notTracked: "غير متتبع",
+    notTracked: "مش متتبّع",
     preview: "معاينة",
     previewHint: "افتحه في متجرك",
     colActions: "إجراءات",
-    noVariants: "بدون متغيرات",
-    stock: "المخزون: {total} · المتغيرات: {count}",
-    stockOne: "المخزون: {total} · متغير واحد",
-    noWeight: "بدون وزن",
-    noWeightHint: "يوجد متغير بدون وزن. الشحن يستخدم الوزن الافتراضي للمنتج بدلًا منه.",
+    noVariants: "من غير أنواع",
+    stock: "المخزون: {total} · {count} أنواع",
+    stockOne: "المخزون: {total} · نوع واحد",
+    noWeight: "من غير وزن",
+    noWeightHint: "فيه نوع من غير وزن. الشحن هيستخدم الوزن الافتراضي بداله.",
     edit: "تعديل",
     delete: "حذف",
-    restore: "استعادة",
-    restoring: "جارٍ الاستعادة…",
-    restoreHint: "يستعيد المنتج كمسودة",
+    restore: "رجّعه",
+    restoring: "بنرجّعه…",
+    restoreHint: "بيرجّع المنتج كمسودة",
     deletePermanently: "حذف نهائي",
-    restoredToast: "تمت استعادة “{name}” كمسودة. اجعله نشطًا عندما يكون جاهزًا للبيع.",
+    restoredToast: "«{name}» رجع كمسودة. خليه شغّال لما يبقى جاهز للبيع.",
+    emptyTitle: "ضيف أول منتج",
+    emptyBody: "اسم وسعر وصورة واحدة كفاية عشان تبدأ تبيع. الأنواع والعروض والمخزون ممكن بعدين.",
   },
 } satisfies Messages;
 
@@ -283,6 +288,8 @@ export function CatalogProductsPage() {
   }
 
   const rowProps = { products: filtered, t, statusLabel: labels.status, renderActions, selection };
+  // No product at all yet (not a tab or filter that matched none): guide to the first one.
+  const noProductsAtAll = !list.loading && !list.error && list.items.length === 0 && tab === "all" && filtered.length === 0 && !list.hasMore;
 
   return (
     <div className="max-w-6xl">
@@ -293,8 +300,11 @@ export function CatalogProductsPage() {
         actions={
           <>
             <ProductTransferButton onImported={list.reload} />
-            <Button asChild>
-              <Link to="/catalog/new">{t.newProduct}</Link>
+            <Button asChild className="min-h-11">
+              <Link to="/catalog/new">
+                <Plus aria-hidden />
+                {t.newProduct}
+              </Link>
             </Button>
           </>
         }
@@ -305,7 +315,7 @@ export function CatalogProductsPage() {
         {filters.bar}
 
         <div className="ms-auto flex items-center gap-3">
-          <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
+          <div className="hidden gap-1 rounded-[var(--radius)] bg-paper-sunken p-1 md:flex">
             <button
               onClick={() => setView("list")}
               aria-label={t.listView}
@@ -329,7 +339,7 @@ export function CatalogProductsPage() {
               <LayoutGrid className="size-4" aria-hidden />
             </button>
           </div>
-          <Link to="/catalog/collections" className="text-sm text-primary hover:underline">
+          <Link to="/catalog/collections" className="inline-flex min-h-11 items-center text-sm font-medium text-primary-dark hover:underline">
             {t.manageCollections}
           </Link>
         </div>
@@ -337,6 +347,21 @@ export function CatalogProductsPage() {
 
       <ProductBulkBar selection={selection} onDone={list.reload} />
 
+      {noProductsAtAll ? (
+        <EmptyState
+          icon={<PackagePlus aria-hidden />}
+          title={t.emptyTitle}
+          description={t.emptyBody}
+          action={
+            <Button asChild className="min-h-11">
+              <Link to="/catalog/new">
+                <Plus aria-hidden />
+                {t.newProduct}
+              </Link>
+            </Button>
+          }
+        />
+      ) : (
       <DataState
         loading={list.loading}
         error={list.items.length ? null : list.error}
@@ -344,9 +369,14 @@ export function CatalogProductsPage() {
         emptyMessage={list.items.length === 0 ? emptyByTab[tab] : t.emptyFilter}
         onRetry={list.reload}
       >
-        {view === "list" ? <ProductTable {...rowProps} /> : <ProductGrid {...rowProps} />}
+        {/* A phone always gets compact cards; the table and grid start at md. */}
+        <ProductCards {...rowProps} />
+        <div className="hidden md:block">
+          {view === "list" ? <ProductTable {...rowProps} /> : <ProductGrid {...rowProps} />}
+        </div>
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
+      )}
 
       {toRemove && (
         <ProductRemoveDialog
@@ -375,12 +405,51 @@ interface RowsProps {
   selection: ProductSelection;
 }
 
+/** Phones: one compact card per product — photo, name, price, stock, status, and its actions. */
+function ProductCards({ products, t, statusLabel, renderActions, selection }: RowsProps) {
+  return (
+    <>
+      <div className="mb-2 flex min-h-11 items-center gap-2 text-sm text-ink-soft md:hidden">
+        <SelectAllCheckbox selection={selection} products={products} />
+      </div>
+      <ul className="space-y-[var(--bento-gap)] md:hidden">
+        {products.map((product) => (
+          <li
+            key={product.id}
+            className="relative flex gap-3 rounded-[var(--radius-card)] bg-paper-raised p-3 shadow-[var(--shadow-card)] ring-1 ring-line"
+          >
+            <div className="relative z-10 flex items-start pt-1">
+              <SelectRowCheckbox selection={selection} product={product} />
+            </div>
+            <ProductImage media={primaryImage(product)} alt="" className="size-16 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <Link
+                to={`/catalog/${product.id}`}
+                className="block truncate text-[15px] font-medium text-ink after:absolute after:inset-0 after:rounded-[var(--radius-card)]"
+              >
+                {product.name}
+              </Link>
+              <p className="mt-0.5 text-sm font-semibold text-ink tabular-nums">{priceRange(product)}</p>
+              <p className="text-xs text-ink-soft">{stockSummary(product, t)}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <StatusBadge value={product.status} text={statusLabel(product.status)} />
+                <NoWeightBadge product={product} t={t} />
+              </div>
+              <div className="relative z-10 mt-1 flex flex-wrap justify-end gap-1">{renderActions(product)}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function ProductTable({ products, t, statusLabel, renderActions, selection }: RowsProps) {
   return (
-    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+    <div className="overflow-x-auto rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line">
       <table className="w-full min-w-[820px] text-sm">
         <thead>
-          <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+          <tr className="border-b border-line bg-paper-sunken/60 text-start text-xs text-ink-soft">
             <th className="w-10 py-3 ps-4">
               <SelectAllCheckbox selection={selection} products={products} />
             </th>
@@ -446,7 +515,7 @@ function ProductGrid({ products, t, statusLabel, renderActions }: RowsProps) {
       {products.map((product) => (
         <div
           key={product.id}
-          className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised transition-colors hover:border-primary"
+          className="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line transition-shadow hover:shadow-[var(--shadow-raised)]"
         >
           <Link to={`/catalog/${product.id}`} className="block">
             <ProductImage
