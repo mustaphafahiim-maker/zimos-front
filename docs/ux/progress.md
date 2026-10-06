@@ -77,6 +77,9 @@ are listed under *Handoff items done*.
       الباقة والفواتير، حسابي، المطورين) kept in ?tab=; old #whatsapp /
       #notifications links open the right tab; the billing banner links to
       the billing tab.
+- [x] S15 Auth pages — done inside S9 (calm card, language switch, LTR email).
+- [x] S16 Platform admin adopts the family tokens (data-product="store",
+      Readex Pro); the console now matches the dashboard's palette and radii.
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
@@ -105,6 +108,9 @@ are listed under *Handoff items done*.
 - Dashboard: `apps/merchant-dashboard/.env` from `.env.example`;
   `npx vite --port 5173`. Screens checked with Playwright at 390 px and
   1366 px in Arabic.
+- Platform admin: apps/platform-admin/.env from .env.example, npx vite
+  --port 5174; the scratch demo user was given platform_role creator and
+  platform_permissions {*} (scratch DB only).
 
 ## Backend requests
 See `backend-requests.md` (all 6 done by the backend on 2026-10-06).

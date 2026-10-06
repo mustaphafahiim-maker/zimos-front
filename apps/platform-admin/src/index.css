@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource/readex-pro/400.css";
+@import "@fontsource/readex-pro/500.css";
+@import "@fontsource/readex-pro/600.css";
+@import "@fontsource/readex-pro/700.css";
+@import "@store-builder/ui/tokens.css";
 
 /* Tailwind v4 auto-detects template sources from this app's own tree only; it
    never looks inside node_modules, which is where the workspace-linked
@@ -16,150 +21,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------ *
- * Palette — "Nile & Souk": a deep teal drawn from the river, warm amber
- * from spice markets, on a warm paper ground. Deliberately not the
- * cream+terracotta SaaS default. The `--color-*` custom properties
- * hold the light values here and are overridden under `.dark`, so any
- * token-based utility (bg-paper, text-ink, border-line, …) flips with
- * the theme without needing `dark:` variants.
- * Values and rationale: packages/ui/DESIGN_SYSTEM.md.
+ * Palette, type, radii and shadows come from the ZIMOS family token file
+ * (packages/ui/src/tokens.css, imported at the top) — the same values as
+ * the merchant dashboard and the other three products; only --brand
+ * differs (data-product on <html>). Do not redefine colours here.
  * ------------------------------------------------------------------ */
-:root {
-  color-scheme: light;
-
-  --color-ink: #16211f;
-  --color-ink-soft: #3c4a46;
-  --color-paper: #f5f4ef;
-  --color-paper-raised: #ffffff;
-  --color-line: #dcdace;
-  /* Border for interactive controls (inputs, selects, textareas, checkboxes).
-     WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
-     --color-line is a decorative hairline (~1.3:1) and fails that, so controls
-     use this darker step while cards/dividers keep the softer line. Same hue
-     ramp, so the palette identity is unchanged. */
-  --color-line-strong: #8d8c84;
-
-  --color-primary: #1f5d5b;
-  --color-primary-dark: #123c3a;
-  --color-primary-soft: #e4efee;
-
-  --color-accent: #e2a33d;
-  /* Badge text on accent-soft — deep enough to hold 4.5:1 there. */
-  --color-accent-dark: #91641c;
-  --color-accent-soft: #fbf0dc;
-
-  --color-danger: #b3452f;
-  --color-danger-soft: #f6e6e1;
-  /* Badge / toast text on success-soft — deep enough to hold 4.5:1 there. */
-  --color-success: #357150;
-  --color-success-soft: #e5f0e9;
-
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-
-  --radius-card: 0.625rem;
-
-  /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
-     `@store-builder/ui` are built against these. They point at the brand
-     palette above, so those components render in this app's colours and
-     flip with `.dark`, rather than in the library's neutral greys. */
-  --background: var(--color-paper);
-  --foreground: var(--color-ink);
-  --card: var(--color-paper-raised);
-  --card-foreground: var(--color-ink);
-  --popover: var(--color-paper-raised);
-  --popover-foreground: var(--color-ink);
-  --primary: var(--color-primary);
-  --primary-foreground: #ffffff;
-  --secondary: var(--color-primary-soft);
-  --secondary-foreground: var(--color-primary-dark);
-  --muted: #ecebe3;
-  --muted-foreground: var(--color-ink-soft);
-  /* `bg-accent` resolves to the brand amber, so its foreground is dark ink. */
-  --accent: var(--color-accent);
-  --accent-foreground: #16211f;
-  --destructive: var(--color-danger);
-  --border: var(--color-line);
-  --input: var(--color-line-strong);
-  --ring: var(--color-primary);
-  --chart-1: var(--color-primary);
-  --chart-2: var(--color-accent);
-  --chart-3: var(--color-primary-dark);
-  --chart-4: var(--color-accent-dark);
-  --chart-5: var(--color-success);
-  --radius: 0.625rem;
-  --sidebar: var(--color-paper-raised);
-  --sidebar-foreground: var(--color-ink);
-  --sidebar-primary: var(--color-primary);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--color-primary-soft);
-  --sidebar-accent-foreground: var(--color-primary-dark);
-  --sidebar-border: var(--color-line);
-  --sidebar-ring: var(--color-primary);
-}
-
-.dark {
-  color-scheme: dark;
-
-  /* ink / paper / line / accent — same identity as the marketing site's
-     dark palette so the platform reads as one system. */
-  --color-ink: #e7ecf5;
-  --color-ink-soft: #a9b4c9;
-  --color-paper: #0b1220;
-  --color-paper-raised: #121b2e;
-  --color-line: #22304a;
-  --color-line-strong: #4f6a9d;
-
-  /* Primary stays in the teal family, lifted to read on the navy ground.
-     primary-dark stays deep: BrandPanel puts white text on it. */
-  --color-primary: #4db3ac;
-  --color-primary-dark: #2a7f78;
-  --color-primary-soft: #152a35;
-
-  --color-accent: #e8b96a;
-  --color-accent-dark: #d9a441;
-  --color-accent-soft: #2b2013;
-
-  /* danger / success have no marketing counterpart — same recipe:
-     a very dark hue-tinted ground with text light enough to read on it. */
-  --color-danger: #e8846a;
-  --color-danger-soft: #2b1613;
-  --color-success: #5cbf8f;
-  --color-success-soft: #132b1f;
-
-  /* The lifted dark primaries are light, so text on them is dark. */
-  --background: var(--color-paper);
-  --foreground: var(--color-ink);
-  --card: var(--color-paper-raised);
-  --card-foreground: var(--color-ink);
-  --popover: var(--color-paper-raised);
-  --popover-foreground: var(--color-ink);
-  --primary: var(--color-primary);
-  --primary-foreground: #0b1220;
-  --secondary: var(--color-primary-soft);
-  --secondary-foreground: var(--color-primary);
-  --muted: #1a2540;
-  --muted-foreground: var(--color-ink-soft);
-  --accent: var(--color-accent);
-  --accent-foreground: #0b1220;
-  --destructive: var(--color-danger);
-  --border: var(--color-line);
-  --input: var(--color-line-strong);
-  --ring: var(--color-primary);
-  --chart-1: var(--color-primary);
-  --chart-2: var(--color-accent);
-  --chart-3: var(--color-primary-dark);
-  --chart-4: var(--color-accent-dark);
-  --chart-5: var(--color-success);
-  --sidebar: var(--color-paper-raised);
-  --sidebar-foreground: var(--color-ink);
-  --sidebar-primary: var(--color-primary);
-  --sidebar-primary-foreground: #0b1220;
-  --sidebar-accent: var(--color-primary-soft);
-  --sidebar-accent-foreground: var(--color-primary);
-  --sidebar-border: var(--color-line);
-  --sidebar-ring: var(--color-primary);
-}
 
 /* ------------------------------------------------------------------ *
  * Expose the semantic tokens to Tailwind's utility generator. `inline`
@@ -188,7 +54,7 @@
   --color-success-soft: var(--color-success-soft);
 
   --font-display: var(--font-display);
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: var(--font-sans);
 
   --radius-card: var(--radius-card);
 
