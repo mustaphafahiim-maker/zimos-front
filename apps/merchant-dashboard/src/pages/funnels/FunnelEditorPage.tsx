@@ -1420,7 +1420,7 @@ function FlowCanvas({
                 >
                   <div dir={dir} className="flex h-full flex-col gap-1.5">
                     <div className="flex items-center gap-2">
-                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", isSelected ? "bg-primary text-white" : STEP_TONE[s.type])}>
+                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", isSelected ? "bg-primary text-primary-foreground" : STEP_TONE[s.type])}>
                         <StepIcon type={s.type} className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">

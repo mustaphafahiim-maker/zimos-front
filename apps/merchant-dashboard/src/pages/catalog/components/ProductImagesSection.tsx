@@ -286,7 +286,7 @@ export function ProductImagesSection(props: Props) {
               >
                 <ProductImage media={m} alt={fmt(t.imageAlt, { n: i + 1 })} className="aspect-square w-full" />
                 {i === 0 && (
-                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
+                  <span className="absolute start-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
                     <Star className="size-3" aria-hidden /> {t.primary}
                   </span>
                 )}

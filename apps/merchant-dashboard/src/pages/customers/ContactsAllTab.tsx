@@ -269,11 +269,19 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
       ),
     },
     { key: "tags", header: t.colTags, phoneHidden: true, cell: (contact) => <TagChips tags={contact.tags} /> },
-    { key: "orders", header: t.colOrders, align: "end", cell: (contact) => <span className="tabular-nums">{contact.ordersCount}</span> },
+    // On a phone card, a contact with no orders yet skips the zero lines (re-audit N-07).
+    {
+      key: "orders",
+      header: t.colOrders,
+      align: "end",
+      phoneSkip: (contact) => !contact.ordersCount,
+      cell: (contact) => <span className="tabular-nums">{contact.ordersCount}</span>,
+    },
     {
       key: "spent",
       header: t.colSpent,
       align: "end",
+      phoneSkip: (contact) => !contact.ordersCount,
       cell: (contact) => <span className="tabular-nums">{formatMoney(contact.totalSpent, currency)}</span>,
     },
     {
@@ -282,7 +290,7 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
       phoneHidden: true,
       cell: (contact) => <span className="text-ink-soft">{contact.lastOrderAt ? formatDate(contact.lastOrderAt) : t.never}</span>,
     },
-    { key: "delivery", header: t.colDelivery, cell: (contact) => <DeliveryRateBar contact={contact} /> },
+    { key: "delivery", header: t.colDelivery, phoneSkip: (contact) => !contact.ordersCount, cell: (contact) => <DeliveryRateBar contact={contact} /> },
   ];
 
   return (

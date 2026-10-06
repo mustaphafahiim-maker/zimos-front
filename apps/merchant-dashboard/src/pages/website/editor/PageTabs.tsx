@@ -79,7 +79,7 @@ export function PageTabs({
                       "cursor-pointer rounded p-1 text-ink-soft transition-colors",
                       home
                         ? "cursor-not-allowed opacity-30"
-                        : "hover:bg-danger hover:text-white"
+                        : "hover:bg-danger hover:text-paper-raised"
                     )}
                   >
                     <X className="size-3.5" aria-hidden />

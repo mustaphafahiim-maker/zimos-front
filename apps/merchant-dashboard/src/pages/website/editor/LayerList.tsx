@@ -104,7 +104,7 @@ export function LayerList({
       )}
     >
       <span className="h-0.5 flex-1 rounded-full bg-primary/60" />
-      <span className="flex size-4 items-center justify-center rounded-full bg-primary text-white">
+      <span className="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Plus className="size-3" aria-hidden />
       </span>
       <span className="h-0.5 flex-1 rounded-full bg-primary/60" />

@@ -211,7 +211,16 @@ are listed under *Handoff items done*.
       areas and ~60 actions named in Arabic; «الفانل/الفانلز» → «مسار البيع
       / مسارات البيع» (87 places); product status «شغّال» everywhere; «…»
       quotes in Arabic strings; word list added to 06 §6.
-- [ ] R2-11 … R2-12 — see the plan.
+- [x] R2-11 Contrast and phone cards (N-09, N-07): `text-white` on token
+      fills → `text-primary-foreground` / `text-paper-raised` (bell badge,
+      image "main" chip, funnel step dot, shoppable hotspots, editor layers
+      and tabs) so dark mode keeps ≥ 4.5:1; to-do tile rows outlined (R2-2).
+      DataTable phone cards: the title's link stretches over the whole card
+      (tap anywhere opens it; links/buttons/tick boxes inside still work),
+      the tick box gets a 44 px area, blank values ("—", empty) and a
+      column's `phoneSkip(row)` lines are left out (contacts with no orders
+      skip orders/paid/delivery), header-less cells sit outside the <dl>.
+- [ ] R2-12 — see the plan.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

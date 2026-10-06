@@ -327,7 +327,7 @@ function ShoppableEditor({ image, onClose, onSaved }: { image: ShoppableImage | 
               {points.map((point, index) => (
                 <span
                   key={index}
-                  className="pointer-events-none absolute flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-white shadow-lg"
+                  className="pointer-events-none absolute flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-primary-foreground shadow-lg"
                   style={{ left: `${point.x}%`, top: `${point.y}%` }}
                 >
                   {index + 1}
@@ -346,7 +346,7 @@ function ShoppableEditor({ image, onClose, onSaved }: { image: ShoppableImage | 
           <ul className="space-y-2">
             {points.map((point, index) => (
               <li key={index} className="flex items-end gap-2">
-                <span className="mb-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{index + 1}</span>
+                <span className="mb-2 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{index + 1}</span>
                 <Field className="min-w-0 flex-1" label={`${fmt(t.point, { n: index + 1 })} — ${t.product}`} labelHidden>
                   {(props) => (
                     <Select
