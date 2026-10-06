@@ -17,7 +17,7 @@ import type { TrackData, TrackEvent } from "./track";
  * no pixels sends nothing.
  */
 
-export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest";
 
 export interface StorePixel {
   platform: PixelPlatform;
@@ -33,6 +33,7 @@ type PixelWindow = Window & {
   fbq?: Fn;
   ttq?: TikTokInstance & { instance?: (id: string) => TikTokInstance };
   snaptr?: Fn;
+  pintrk?: Fn;
   gtag?: Fn;
   dataLayer?: unknown[];
 };
@@ -54,6 +55,14 @@ const SNAP: Record<TrackEvent, string> = {
   AddPaymentInfo: "ADD_BILLING",
   Purchase: "PURCHASE",
   Lead: "SIGN_UP",
+};
+// Pinterest's standard events; a page view is its own call (pintrk("page")), and
+// checkout steps before the purchase have no Pinterest event.
+const PINTEREST: Partial<Record<TrackEvent, string>> = {
+  ViewContent: "pagevisit",
+  AddToCart: "addtocart",
+  Purchase: "checkout",
+  Lead: "lead",
 };
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
@@ -84,6 +93,8 @@ export function purchaseTimingOf(store: unknown): PurchaseTiming {
 }
 /** Scoped Snap pixels already initialised (Snap has no per-pixel send, so they are added on first match). */
 const snapInitialised = new Set<string>();
+/** Pinterest tags loaded so far: like Snap, an event goes to every loaded tag, so scoped ones load on first match. */
+const pinterestLoaded = new Set<string>();
 
 const VIEWED_KEY = "zimos_pixel_products";
 
@@ -101,6 +112,8 @@ function viewedProducts(): string[] {
 export function registerPixels(pixels: StorePixel[], purchaseTiming: PurchaseTiming = "on_order"): void {
   registry = pixels;
   browserPurchase = purchaseTiming === "on_order";
+  // The store-wide Pinterest tags are loaded by the tag script itself (components/TrackingPixels).
+  for (const p of pixels) if (p.platform === "pinterest" && p.scope.type === "all") pinterestLoaded.add(p.pixelId);
   setPixelInfoProvider(pixels.length ? pixelInfo : null);
 }
 
@@ -183,10 +196,20 @@ function sendPageViewTo(pixels: StorePixel[]): void {
         w.snaptr("track", "PAGE_VIEW");
       }
       if (p.platform === "google" && w.gtag) w.gtag("event", "page_view", { send_to: p.pixelId });
+      if (p.platform === "pinterest" && w.pintrk) {
+        loadPinterest(w, p.pixelId);
+        w.pintrk("page");
+      }
     }
   } catch {
     /* a broken third-party script must never break the store */
   }
+}
+
+function loadPinterest(w: PixelWindow, tagId: string): void {
+  if (pinterestLoaded.has(tagId) || !w.pintrk) return;
+  pinterestLoaded.add(tagId);
+  w.pintrk("load", tagId);
 }
 
 function initSnap(w: PixelWindow, pixelId: string): void {
@@ -264,6 +287,23 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
       });
     }
 
+    const pinterest = active("pinterest");
+    if (w.pintrk && pinterest.length) {
+      for (const p of pinterest) loadPinterest(w, p.pixelId);
+      if (event === "PageView") w.pintrk("page");
+      else if (PINTEREST[event]) {
+        // event_id: the same id a server-side copy would carry, for Pinterest to dedup.
+        w.pintrk("track", PINTEREST[event], {
+          value,
+          currency: data.currency,
+          order_quantity: data.numItems,
+          order_id: data.orderId,
+          event_id: dedupeId,
+          line_items: data.contentIds?.map((id) => ({ product_id: id })),
+        });
+      }
+    }
+
     const google = active("google");
     if (w.gtag && google.length) {
       // send_to keeps the event off the Google tags whose scope does not cover this page.
@@ -295,7 +335,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
 
 // ------------------------------------------------------------- store pixels --
 
-const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity"];
+const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity", "pinterest"];
 // IDs are validated by the backend; re-checked here because they are placed in inline scripts.
 const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
 

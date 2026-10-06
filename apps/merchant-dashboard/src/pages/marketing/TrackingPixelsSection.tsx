@@ -41,6 +41,7 @@ const PLATFORM_META: Record<TrackingPixelPlatform, { name: string; pattern: RegE
   google: { name: "Google (GA4 / Ads)", pattern: /^(G|AW|GT)-[A-Z0-9]{4,20}$/, example: "G-ABC123XYZ" },
   gtm: { name: "Google Tag Manager", pattern: /^GTM-[A-Z0-9]{4,12}$/, example: "GTM-ABC1234" },
   clarity: { name: "Microsoft Clarity", pattern: /^[a-z0-9]{6,20}$/, example: "abcd1234ef" },
+  pinterest: { name: "Pinterest", pattern: /^\d{10,16}$/, example: "2612345678901" },
 };
 
 const STRINGS = {
