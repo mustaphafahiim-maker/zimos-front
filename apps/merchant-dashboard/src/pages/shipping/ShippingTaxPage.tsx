@@ -35,6 +35,7 @@ import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
 import { StorePlacesSection } from "./StorePlacesSection";
+import { DeliveryTimesSection } from "./DeliveryTimesSection";
 import { AddressLookupSection } from "./AddressLookupSection";
 import { WeightTiersSection } from "./WeightTiersSection";
 
@@ -423,6 +424,7 @@ function ShippingTaxBody() {
       {tab === "places" && <AddressLookupSection />}
       {/* The store's own regions → cities → areas and their prices (handoff 163/164). */}
       {tab === "places" && <StorePlacesSection />}
+      {tab === "delivery" && <DeliveryTimesSection />}
 
       {tab === "options" && <ShippingOptionsSection />}
 

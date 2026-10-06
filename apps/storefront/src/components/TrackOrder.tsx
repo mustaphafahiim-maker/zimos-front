@@ -10,6 +10,7 @@ import { useStoreCountry } from "@/lib/storeCountry";
 import { SearchIcon } from "./Icons";
 import { TrackOrderProgress } from "./TrackOrderProgress";
 import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackDeliveryEstimate } from "./TrackDeliveryEstimate";
 import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { TrackOrderTransfer } from "./TrackOrderTransfer";
 import { TrackOrderSubscriptions } from "./TrackOrderSubscriptions";
@@ -190,6 +191,7 @@ export function TrackOrder() {
                 </span>
               </div>
               <TrackOrderProgress result={result} />
+              <TrackDeliveryEstimate result={result} />
 
               {result.items.length > 0 && (
                 <>

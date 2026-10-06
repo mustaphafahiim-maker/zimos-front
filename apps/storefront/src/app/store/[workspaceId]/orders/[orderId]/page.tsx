@@ -18,6 +18,7 @@ import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
 import { ThankYouDownloads } from "@/components/ThankYouDownloads";
+import { ThankYouBuyNotes } from "@/components/ThankYouBuyNotes";
 import { OrderUpdatesButton } from "@/components/OrderUpdatesButton";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
@@ -114,6 +115,7 @@ function Confirmation() {
           </h2>
           <StatusTimeline stage={1} />
         </section>
+        <ThankYouBuyNotes workspaceId={workspaceId} orderId={orderId} />
 
         {snapshot && (
           <div className="mt-6">

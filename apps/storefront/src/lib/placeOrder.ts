@@ -13,6 +13,7 @@ import { adMatchFields } from "./adMatch";
 import { clearPageTags, pageTagFields } from "./pageTags";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
+import { purchaseLimitMessage, saveOrderBuyNotes } from "./buyInfo";
 import type { Dictionary, Locale } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
 import { storeHref } from "./storeHref";
@@ -86,6 +87,7 @@ export function afterOrder({
   phone: string;
 }): string {
   saveOrderSnapshot(workspaceId, snapshotFromOrder(order, phone));
+  saveOrderBuyNotes(workspaceId, order);
   const q = new URLSearchParams({ number: order.orderNumber });
   return storeHref(basePath, `/orders/${order.id}?${q.toString()}`);
 }
@@ -183,6 +185,9 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy, locale?: L
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
   if (isDiscountRefused(err)) return copy.discount;
+  // A product's purchase limits (handoff 198), named in the shopper's words.
+  const limited = purchaseLimitMessage(err, locale);
+  if (limited) return limited;
   const code = err instanceof ApiError ? err.code : undefined;
   const known = code ? ORDER_ERROR_COPY.find(([, codes]) => codes.includes(code)) : undefined;
   if (known) return copy[known[0]] as string;

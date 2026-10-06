@@ -280,3 +280,9 @@ export * from "./endpoints/wishlist";
 export * from "./endpoints/stockAlerts";
 // Gift cards: issue, list, adjust, reveal / resend, products sold as gift cards; the shopper's balance check and checkout field (handoff 189).
 export * from "./endpoints/giftCards";
+// Pre-orders: sold-out variants keep selling up to a limit, with a ship date (handoff 195).
+export * from "./endpoints/preorders";
+// Purchase limits per product: min / max per order and max per customer, and their refusals (handoff 198).
+export * from "./endpoints/purchaseLimits";
+// Estimated delivery dates: the settings, the shopper's window and where it rides (handoff 199).
+export * from "./endpoints/deliveryEstimates";

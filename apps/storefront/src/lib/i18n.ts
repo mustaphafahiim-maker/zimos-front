@@ -349,6 +349,26 @@ const en = {
     searching: "Searching…",
     filled: "Address filled in — check it below",
   },
+  // handoff 195/198/199: pre-orders, purchase limits, delivery dates.
+  buyInfo: {
+    preorder: "Pre-order",
+    shipsBy: (date: string) => `Ships by ${date}`,
+    preorderNote: "Sold out — order it now and it ships as soon as it's back.",
+    preorderLine: (date: string) => `Pre-order — ships by ${date}`,
+    preorderLineNoDate: "Pre-order",
+    maxPerOrder: (n: number) => `Max ${n} per order`,
+    minPerOrder: (n: number) => `Min ${n} per order`,
+    maxPerCustomer: (n: number) => `Max ${n} per customer`,
+    limitMax: (n: number, name: string) => (name ? `At most ${n} of “${name}” per order` : `Max ${n} per order`),
+    limitMin: (n: number, name: string) => (name ? `Order at least ${n} of “${name}”` : `Order at least ${n}`),
+    limitLeft: (n: number, name: string) => (name ? `You can buy ${n} more of “${name}”` : `You can buy ${n} more`),
+    limitDone: (name: string) =>
+      name ? `You already bought the most “${name}” one customer can` : "You already bought the most one customer can",
+    deliveryGet: (from: string, to: string) => `Get it ${from} – ${to}`,
+    deliveryGetDay: (date: string) => `Get it ${date}`,
+    deliveryExpected: "Expected delivery",
+    deliveryRange: (from: string, to: string) => `${from} – ${to}`,
+  },
   /** The phone checkout's bottom bar: the total and the order button, always in reach. */
   checkoutBar: {
     label: "Order summary",
@@ -1163,6 +1183,26 @@ const ar: Dictionary = {
     pickFailed: "معرفناش نستخدم العنوان ده — اكتبه تحت",
     searching: "بندوّر…",
     filled: "العنوان اتملى — راجعه تحت",
+  },
+  // handoff 195/198/199
+  buyInfo: {
+    preorder: "اطلبه مسبقًا",
+    shipsBy: (date) => `هيتشحن قبل ${date}`,
+    preorderNote: "الكمية خلصت — اطلبه دلوقتي ويتشحن لك أول ما يوصل.",
+    preorderLine: (date) => `طلب مسبق — هيتشحن قبل ${date}`,
+    preorderLineNoDate: "طلب مسبق",
+    maxPerOrder: (n) => `بحد أقصى ${arNum(n)} في الطلب`,
+    minPerOrder: (n) => `أقل كمية في الطلب: ${arNum(n)}`,
+    maxPerCustomer: (n) => `بحد أقصى ${arNum(n)} للعميل الواحد`,
+    limitMax: (n, name) => (name ? `بحد أقصى ${arNum(n)} من «${name}» في الطلب` : `بحد أقصى ${arNum(n)} في الطلب`),
+    limitMin: (n, name) => (name ? `اطلب ${arNum(n)} على الأقل من «${name}»` : `اطلب ${arNum(n)} على الأقل`),
+    limitLeft: (n, name) => (name ? `تقدر تشتري ${arNum(n)} كمان بس من «${name}»` : `تقدر تشتري ${arNum(n)} كمان بس`),
+    limitDone: (name) =>
+      name ? `إنت اشتريت قبل كده أقصى كمية مسموحة للعميل الواحد من «${name}»` : "إنت اشتريت قبل كده أقصى كمية مسموحة للعميل الواحد",
+    deliveryGet: (from, to) => `هيوصلك من ${from} لـ ${to}`,
+    deliveryGetDay: (date) => `هيوصلك ${date}`,
+    deliveryExpected: "التوصيل المتوقع",
+    deliveryRange: (from, to) => `من ${from} لـ ${to}`,
   },
   checkoutBar: {
     label: "ملخص الطلب",

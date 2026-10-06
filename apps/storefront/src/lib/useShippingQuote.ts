@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  deliveryEstimateOf,
   storefrontQuoteExtras,
+  type DeliveryEstimate,
   storefrontShippingQuoteFor,
   type ShippingQuotePlacePayload,
   type StorefrontQuoteExtras,
@@ -34,6 +36,8 @@ export interface ShippingQuoteState {
   extras: StorefrontQuoteExtras;
   /** The store's shipping options for this cart (standard first); absent or [] = no choice (shippingChoice.ts). */
   options?: ShippingOptionChoice[];
+  /** When the order should arrive at this address (handoff 199); null while unknown or off. */
+  deliveryEstimate?: DeliveryEstimate | null;
 }
 
 /**
@@ -111,8 +115,11 @@ export function useShippingQuote({
     return { line: state.key === requestKey ? { kind: "on_confirmation" } : { kind: "calculating" }, amount: 0, freeShipping: null, extras };
   }
 
-  const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey });
+  // Only a pick that reached the last level of the store's own list completes the address (no_rate, shippingLine.ts).
+  const line = shippingLineFor(state.quote, { hasGovernorate: Boolean(province), fresh: state.key === requestKey, addressDone: Boolean(place?.final) });
   const freeShipping = quotePricesShipping(state.quote) ? (state.quote.freeShipping ?? null) : null;
   const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options };
+  // Only the answer for this very address and basket: an older one is about another place.
+  const deliveryEstimate = state.key === requestKey ? deliveryEstimateOf(state.quote) : null;
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options, deliveryEstimate };
 }

@@ -10,6 +10,8 @@ import { OrderLineThumb } from "./OrderLineThumb";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 import { OrderBillingAddress, OrderCheckoutPhotos } from "./OrderCheckoutExtras";
 import { ShippingOptionNote } from "./ShippingOptionNote";
+import { PreorderLineNote } from "./PreorderLineNote";
+import { DeliveryEstimateNote } from "./DeliveryEstimateNote";
 
 const STRINGS = {
   en: {
@@ -176,6 +178,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                             </div>
                           )}
                           <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
+                          <PreorderLineNote item={item} />
                         </div>
                       </div>
                     </td>
@@ -205,6 +208,7 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
               </p>
             )}
             <ShippingOptionNote order={order} />
+            <DeliveryEstimateNote order={order} />
             <AmountRow label={t.tax} value={formatMoney(order.taxAmount, c)} />
             <AmountRow label={t.total} value={formatMoney(order.totalAmount, c)} strong />
             {Number(order.amountPaid) > 0 && <AmountRow label={t.paid} value={formatMoney(order.amountPaid, c)} />}

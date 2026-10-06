@@ -24,6 +24,7 @@ import { useCatalogLabels } from "./catalogLabels";
 import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
 import { MostWishedCard } from "./components/MostWishedCard";
 import { WaitingRestockCard } from "./components/WaitingRestockCard";
+import { PreorderBadge } from "./components/PreorderBadge";
 import {
   DuplicateProductButton,
   ProductTransferButton,
@@ -441,6 +442,7 @@ function ProductCards({ products, t, statusLabel, renderActions, selection }: Ro
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <StatusBadge value={product.status} text={statusLabel(product.status)} />
                 <NoWeightBadge product={product} t={t} />
+                <PreorderBadge product={product} />
               </div>
               <div className="relative z-10 mt-1 flex flex-wrap justify-end gap-1">{renderActions(product)}</div>
             </div>
@@ -502,6 +504,7 @@ function ProductTable({ products, t, statusLabel, renderActions, selection }: Ro
                 <span className="inline-flex flex-wrap items-center gap-y-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
                   <StatusBadge value={product.status} text={statusLabel(product.status)} />
                   <NoWeightBadge product={product} t={t} />
+                  <PreorderBadge product={product} />
                 </span>
               </td>
               <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
@@ -550,6 +553,7 @@ function ProductGrid({ products, t, statusLabel, renderActions }: RowsProps) {
               <span className="flex shrink-0 flex-col items-end gap-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
                 <StatusBadge value={product.status} text={statusLabel(product.status)} />
                 <NoWeightBadge product={product} t={t} />
+                <PreorderBadge product={product} />
               </span>
             </div>
             <div className="mt-auto space-y-0.5 text-sm text-ink-soft">

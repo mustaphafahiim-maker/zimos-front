@@ -16,6 +16,7 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { track } from "@/lib/track";
 import { contentIdOf } from "@/lib/contentId";
 import { takeAddSource, takenAddSourceId } from "./addSource";
+import { rethrowCartLimit } from "./buyInfo";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -160,7 +161,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         { variantId, offerId, quantity, ...(customizations ? { customizations } : {}) },
         // The visitor owns any photo among the answers.
         { visitorId: getVisitorId(workspaceId) }
-      );
+      ).catch(rethrowCartLimit);
       setCart(next);
       // AddToCart for the store's own analytics: the line just added, valued at
       // its unit price × the quantity added (not the whole line, which may have
@@ -188,7 +189,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (!workspaceId) return;
       const token = readStoredToken(workspaceId);
       if (!token) return;
-      setCart(await client.updateCartItem(workspaceId, token, itemId, quantity));
+      setCart(await client.updateCartItem(workspaceId, token, itemId, quantity).catch(rethrowCartLimit));
     },
     [workspaceId, client]
   );

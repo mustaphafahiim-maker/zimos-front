@@ -69,6 +69,8 @@ import { useStorePlaces } from "@/lib/useStorePlaces";
 import { CheckoutStickyBar, scrollIntoViewSoon } from "@/components/checkout/CheckoutStickyBar";
 import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
 import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
+import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
+import { DeliveryEstimateLine } from "@/components/DeliveryEstimateLine";
 
 const FORM_PREFIX = "checkout";
 const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
@@ -152,6 +154,7 @@ export default function CheckoutPage() {
 
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
+  const limitNotes = useLimitNotes(cart);
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: items });
 
   // InitiateCheckout once per visit to this page, the first time the cart is
@@ -292,6 +295,7 @@ export default function CheckoutPage() {
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
       const giftCardProblem = giftCard.onError(err);
+      limitNotes.capture(err);
       if (isOrderBumpRefused(err)) {
         // The totals drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
@@ -421,6 +425,7 @@ export default function CheckoutPage() {
                         {product && options && <span className="block text-xs">{options}</span>}
                         <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
+                        <LimitLineNote notes={limitNotes} productId={product?.id} />
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>
                     </li>
@@ -505,6 +510,7 @@ export default function CheckoutPage() {
               </div>
             </dl>
             <GiftCardField state={giftCard} />
+            <DeliveryEstimateLine estimate={shipping.deliveryEstimate} className="mt-3" />
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}
