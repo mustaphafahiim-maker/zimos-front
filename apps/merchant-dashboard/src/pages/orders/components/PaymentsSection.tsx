@@ -24,6 +24,7 @@ import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useOrderLabels } from "../orderLabels";
+import { GiftCardPaymentIcon, GiftCardPaymentName, isGiftCardPayment } from "@/pages/giftCards/GiftCardPaymentName";
 
 const STRINGS = {
   en: {
@@ -358,17 +359,17 @@ function AttemptList({
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-3">
               {/* A method means a gateway attempt; COD / manual records have none. */}
-              {p.method && <ProviderLogo code={p.providerCode} size="sm" />}
+              {isGiftCardPayment(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
               <span className="min-w-0">
                 <span className="font-medium text-ink">
-                  {p.method
+                  {isGiftCardPayment(p) ? <GiftCardPaymentName payment={p} /> : p.method
                     ? fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
                     : p.providerCode}{" "}
                   · {money(p.amount)}
                 </span>
                 <span className="block text-xs text-ink-soft">
                   {formatDateTime(p.createdAt)}
-                  {p.maskedDisplay && ` · ${p.maskedDisplay}`}
+                  {p.maskedDisplay && !isGiftCardPayment(p) && ` · ${p.maskedDisplay}`}
                   {p.failureReason && p.status === "failed" && ` · ${p.failureReason}`}
                 </span>
               </span>

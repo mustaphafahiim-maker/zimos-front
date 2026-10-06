@@ -98,8 +98,8 @@ export function GiftCardsPage() {
       align: "end",
       cell: (card) => (
         <span className="whitespace-nowrap tabular-nums">
-          <span className="font-semibold text-ink">{formatMoney(card.balanceAmount, card.currency)}</span>
-          <span className="text-xs text-ink-soft"> / {formatMoney(card.initialAmount, card.currency)}</span>
+          <span className="font-semibold text-ink">{formatMoney(card.balanceAmount, card.currency)}</span>{" "}
+          <span className="text-xs text-ink-soft">{fmt(t.ofInitial, { initial: formatMoney(card.initialAmount, card.currency) })}</span>
         </span>
       ),
     },
@@ -142,7 +142,9 @@ export function GiftCardsPage() {
               <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
               <Input
                 id={searchId}
-                type="search"
+                // Text, not "search": the browser would add a second clear button beside ours.
+                type="text"
+                enterKeyHint="search"
                 dir="auto"
                 autoComplete="off"
                 maxLength={100}

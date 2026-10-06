@@ -65,6 +65,7 @@ const LABELS = {
     pay_kiosk: "Kiosk (Aman / Masary)",
     pay_paypal: "PayPal",
     pay_bank_transfer: "Bank transfer",
+    pay_gift_card: "Gift card",
     // risk flags
     risk_blacklisted_customer: "Blocked customer",
     risk_duplicate_order: "Possible duplicate order",
@@ -126,6 +127,7 @@ const LABELS = {
     pay_kiosk: "الدفع في الكشك (أمان / مصاري)",
     pay_paypal: "باي بال",
     pay_bank_transfer: "تحويل بنكي",
+    pay_gift_card: "كارت هدية",
     risk_blacklisted_customer: "عميل محظور",
     risk_duplicate_order: "أوردر مكرر محتمل",
     risk_phone_daily_limit: "أوردرات كتير النهارده",

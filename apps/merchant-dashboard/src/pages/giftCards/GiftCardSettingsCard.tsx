@@ -40,8 +40,11 @@ export function GiftCardSettingsCard() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const settings = useAsync(() => giftCardSettingsGet(apiClient, workspaceId), [workspaceId]);
-  // Names for the chosen ids; the picker reads the same list.
-  const products = useAsync(() => apiClient.listProducts(workspaceId, { limit: 200 }).then((r) => r.products), [workspaceId]);
+  // Names for the chosen ids; the picker reads the same list (the first 200, newest first).
+  const catalog = useAsync(() => apiClient.listProducts(workspaceId, { limit: 200 }), [workspaceId]);
+  const products = { data: catalog.data?.products ?? null, loading: catalog.loading, error: catalog.error };
+  // With every product at hand, an id the list lacks is a deleted product.
+  const complete = catalog.data ? catalog.data.nextCursor === null : false;
   const [editing, setEditing] = useState(false);
 
   if (settings.loading) {
@@ -114,6 +117,7 @@ export function GiftCardSettingsCard() {
         products={products.data}
         productsLoading={products.loading}
         productsError={products.error}
+        productsComplete={complete}
         onClose={() => setEditing(false)}
         onSave={async (next) => {
           const result = await giftCardSettingsSave(apiClient, workspaceId, next);
@@ -132,6 +136,7 @@ function SettingsDialog({
   products,
   productsLoading,
   productsError,
+  productsComplete,
   onClose,
   onSave,
 }: {
@@ -140,6 +145,7 @@ function SettingsDialog({
   products: Product[] | null;
   productsLoading: boolean;
   productsError: unknown;
+  productsComplete: boolean;
   onClose: () => void;
   onSave: (next: GiftCardSettings) => Promise<void>;
 }) {
@@ -191,8 +197,8 @@ function SettingsDialog({
     setSaving(true);
     setFailure(null);
     try {
-      // Ids the list no longer has (a deleted product) are dropped, or the API refuses the whole set.
-      const known = products ? selected.filter((id) => products.some((p) => p.id === id)) : selected;
+      // Ids a complete list no longer has (a deleted product) are dropped, or the API refuses the whole set.
+      const known = products && productsComplete ? selected.filter((id) => products.some((p) => p.id === id)) : selected;
       await onSave({ productIds: known, validityDays });
     } catch (err) {
       setFailure(errorMessage(err));
@@ -243,7 +249,8 @@ function SettingsDialog({
                 />
               </div>
               <p className="text-xs text-ink-soft">
-                {pluralOf(t, "products", selected.length)} · {fmt(t.maxProducts, { max: GIFT_CARD_MAX_PRODUCTS })}
+                {selected.length === 0 ? t.noProductsSelected : pluralOf(t, "products", selected.length)} ·{" "}
+                {fmt(t.maxProducts, { max: GIFT_CARD_MAX_PRODUCTS })}
               </p>
               {shown.length === 0 ? (
                 <p className="text-sm text-ink-soft">{t.noMatchProducts}</p>
