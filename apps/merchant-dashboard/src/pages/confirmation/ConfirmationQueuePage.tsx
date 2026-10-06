@@ -93,6 +93,7 @@ const STRINGS = {
     noPhone: "No phone number",
     claiming: "Claiming…",
     claimAndCall: "Claim & call",
+    claimOnly: "Claim",
     takeOver: "Take over",
     reclaim: "Claim again",
     release: "Release",
@@ -102,7 +103,7 @@ const STRINGS = {
     notes: "Notes",
     notesPlaceholder: "Anything worth recording from the call (optional).",
     saving: "Saving…",
-    saveOutcome: "Save outcome",
+    saveOutcome: "Save & next",
     toastMarked: "{order} marked {outcome}.",
     toastReleased: "{order} is back in Pending.",
     callbackDue: "Callback due since {time}",
@@ -145,7 +146,9 @@ const STRINGS = {
     sort_oldest: "Oldest first",
     sort_total_desc: "Total: high to low",
     sort_total_asc: "Total: low to high",
-    assignmentFilter: "Assignment",
+    assignmentFilter: "Who's on it",
+    assignShow: "Assign",
+    assignChange: "Change",
     filterAll: "All tasks",
     filterMine: "Assigned to me",
     filterUnassigned: "Unassigned",
@@ -200,6 +203,7 @@ const STRINGS = {
     noPhone: "مفيش رقم موبايل",
     claiming: "بنستلم…",
     claimAndCall: "استلم واتصل",
+    claimOnly: "استلم",
     takeOver: "استلم مكانه",
     reclaim: "استلم تاني",
     release: "رجّعه للقايمة",
@@ -209,7 +213,7 @@ const STRINGS = {
     notes: "ملاحظات",
     notesPlaceholder: "أي حاجة مهمة من المكالمة (اختياري).",
     saving: "بنحفظ…",
-    saveOutcome: "سجّل النتيجة",
+    saveOutcome: "سجّل واللي بعده",
     toastMarked: "{order}: {outcome}.",
     toastReleased: "{order} رجع للقايمة.",
     callbackDue: "معاد المكالمة التانية جه من {time}",
@@ -251,7 +255,9 @@ const STRINGS = {
     sort_oldest: "الأقدم الأول",
     sort_total_desc: "الأغلى الأول",
     sort_total_asc: "الأرخص الأول",
-    assignmentFilter: "التعيين",
+    assignmentFilter: "مين شغال عليها",
+    assignShow: "وزّع",
+    assignChange: "غيّر",
     filterAll: "الكل",
     filterMine: "بتوعي",
     filterUnassigned: "مش متوزعة",
@@ -418,8 +424,18 @@ export function ConfirmationQueuePage() {
   }
 
   function removeTask(taskId: string) {
+    const index = Array.from(document.querySelectorAll<HTMLElement>("[data-task-card]")).findIndex(
+      (el) => el.dataset.taskCard === taskId
+    );
     list.setItems((prev) => prev.filter((task) => task.id !== taskId));
     void counts.refresh({ silent: true });
+    // «سجّل واللي بعده»: the next order slides into view with its button focused.
+    requestAnimationFrame(() => {
+      const next = document.querySelectorAll<HTMLElement>("[data-task-card]")[Math.max(0, index)];
+      if (!next) return;
+      next.scrollIntoView({ behavior: "smooth", block: "start" });
+      next.querySelector<HTMLElement>("[data-next-action]")?.focus({ preventScroll: true });
+    });
   }
 
   // The header answers "how much is left?" (docs/ux/05-proposal.md §3).
@@ -444,8 +460,8 @@ export function ConfirmationQueuePage() {
       <PageHeader title={t.title} description={queueAnswer ?? t.description} />
 
       <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end sm:gap-x-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <label htmlFor={assignmentId} className="sr-only text-sm text-ink-soft sm:not-sr-only">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <label htmlFor={assignmentId} className="text-xs text-ink-soft sm:text-sm">
             {t.assignmentFilter}
           </label>
           <Select
@@ -468,8 +484,8 @@ export function ConfirmationQueuePage() {
             )}
           </Select>
         </div>
-        <div className="flex min-w-0 items-center gap-2">
-          <label htmlFor={sortId} className="sr-only text-sm text-ink-soft sm:not-sr-only">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <label htmlFor={sortId} className="text-xs text-ink-soft sm:text-sm">
             {t.sortLabel}
           </label>
           <Select
@@ -581,7 +597,7 @@ export function ConfirmationQueuePage() {
             )}
           </div>
         )}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {list.items.map((task) =>
             task.status === "done" ? (
               <DoneCard key={task.id} task={task} onChanged={replaceTask} />
@@ -608,7 +624,23 @@ export function ConfirmationQueuePage() {
 }
 
 /** Order number, items, total, risk flags and the customer's contact — every card's top half. */
-function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; aside?: ReactNode; contactAction?: ReactNode }) {
+/**
+ * The order as the agent needs it for the call: the customer and their phone
+ * first (that's who they are calling), then the order number, items, total and
+ * address in small type (audit N-03).
+ */
+function OrderSummary({
+  task,
+  aside,
+  contactAction,
+  leading,
+}: {
+  task: ConfirmationTask;
+  aside?: ReactNode;
+  contactAction?: ReactNode;
+  /** Before the title, e.g. the bulk tick box. */
+  leading?: ReactNode;
+}) {
   const t = useT(STRINGS);
   const orderLabels = useOrderLabels();
   const now = useNow(60_000);
@@ -616,36 +648,47 @@ function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; 
   const riskFlags = order.riskFlags ?? [];
   const contact = order.contactSnapshot;
   const itemCount = order.items.length;
+  const address = formatAddress(order.shippingAddressSnapshot);
 
   return (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              to={`/orders/${order.id}`}
-              className="font-display text-lg font-medium text-ink hover:text-primary"
-            >
-              <bdi dir="ltr">{order.orderNumber}</bdi>
-            </Link>
-            {riskFlags.length > 0 && (
-              <StatusBadge value="flagged" tone="danger" text={orderLabels.flagged} />
-            )}
+    <div className="space-y-2">
+      <div className="flex items-start gap-2">
+        {leading}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="min-w-0 text-base font-semibold text-ink">{contact.fullName || t.unnamedCustomer}</p>
+            {riskFlags.length > 0 && <StatusBadge value="flagged" tone="danger" text={orderLabels.flagged} />}
             {order.cancelledAt && <StatusBadge value="cancelled" text={t.orderCancelled} />}
+            {aside}
           </div>
           <p className="mt-0.5 text-sm text-ink-soft">
-            {itemCount === 1 ? t.itemsOne : fmt(t.itemsOther, { n: itemCount })} ·{" "}
-            {formatMoney(order.totalAmount, order.currency)}
+            <Link to={`/orders/${order.id}`} className="font-medium text-ink-soft underline-offset-4 hover:text-primary hover:underline">
+              <bdi dir="ltr">{order.orderNumber}</bdi>
+            </Link>
+            {" · "}
+            {itemCount === 1 ? t.itemsOne : fmt(t.itemsOther, { n: itemCount })} · {formatMoney(order.totalAmount, order.currency)}
           </p>
-          {riskFlags.length > 0 && (
-            <p className="mt-0.5 text-xs font-medium text-danger">
-              {riskFlags.map((flag) => orderLabels.riskFlag(flag)).join(" · ")}
-            </p>
-          )}
-          <OrderTimelineLines order={order} now={now} className="mt-1" />
         </div>
-        {aside}
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="font-display text-xl font-medium text-ink">
+          {contact.phone ? (
+            <a href={`tel:${contact.phone}`} className="hover:text-primary">
+              <bdi dir="ltr">{contact.phone}</bdi>
+            </a>
+          ) : (
+            <span className="text-base text-ink-soft">{t.noPhone}</span>
+          )}
+        </p>
+        {contactAction}
+      </div>
+      {address && <p className="line-clamp-2 text-sm text-ink-soft">{address}</p>}
+
+      {riskFlags.length > 0 && (
+        <p className="text-xs font-medium text-danger">{riskFlags.map((flag) => orderLabels.riskFlag(flag)).join(" · ")}</p>
+      )}
+      <OrderTimelineLines order={order} now={now} />
 
       {/* The customer's answers to products' custom fields — confirmed on the call too. */}
       {order.items
@@ -656,24 +699,7 @@ function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; 
             <CustomizationList customizations={item.customizations} compact currency={order.currency} />
           </div>
         ))}
-
-      <div className="rounded-[0.5rem] bg-paper px-4 py-3">
-        <p className="text-sm font-medium text-ink">{contact.fullName || t.unnamedCustomer}</p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p className="font-display text-xl font-medium text-ink">
-            {contact.phone ? (
-              <a href={`tel:${contact.phone}`} className="hover:text-primary">
-                <bdi dir="ltr">{contact.phone}</bdi>
-              </a>
-            ) : (
-              <span className="text-ink-soft">{t.noPhone}</span>
-            )}
-          </p>
-          {contactAction}
-        </div>
-        <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -763,6 +789,7 @@ function OpenCard({
   });
   const channelLabel = useChannelLabels();
   const assignId = useId();
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const { order } = task;
   const inProgress = task.status === "in_progress";
@@ -771,6 +798,8 @@ function OpenCard({
   const holderName = task.lockedBy?.fullName ?? t.someone;
   const rejectionMissing = outcome === "rejected" && rejectionReason.trim() === "";
   const lastAttempt = task.attempts[task.attempts.length - 1];
+  // The dialer opens only on touch phones; elsewhere the button says what it does (N-23).
+  const canDial = Boolean(order.contactSnapshot.phone) && typeof window !== "undefined" && Boolean(window.matchMedia?.("(pointer: coarse)").matches);
   const channel = channelChoice.lockedAt === task.lockedAt ? channelChoice.channel : "call";
   const pickChannel = (next: ConfirmationChannel) => setChannelChoice({ lockedAt: task.lockedAt, channel: next });
   const assignedToOther = Boolean(task.assignedTo) && task.assignedTo?.id !== userId;
@@ -865,20 +894,29 @@ function OpenCard({
   }
 
   return (
-    <Card className="space-y-4 p-5">
-      {selected !== undefined && (
-        <label className="-mt-1 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm text-ink-soft">
-          <input type="checkbox" className="size-4 accent-primary" checked={selected} onChange={onToggleSelected} />
-          {fmt(t.selectTask, { order: order.orderNumber })}
-        </label>
-      )}
+    <Card data-task-card={task.id} className="scroll-mt-20 gap-3 p-4 sm:p-5">
       <OrderSummary
         task={task}
+        leading={
+          selected !== undefined && (
+            <label className="-ms-2 -mt-2.5 flex size-11 shrink-0 cursor-pointer items-center justify-center">
+              <input
+                type="checkbox"
+                className="size-5 accent-primary"
+                checked={selected}
+                onChange={onToggleSelected}
+                aria-label={fmt(t.selectTask, { order: order.orderNumber })}
+              />
+            </label>
+          )
+        }
         aside={<AttemptsBadge count={task.attemptCount} />}
         contactAction={<WhatsAppButton order={order} onOpen={() => mine && !expired && pickChannel("whatsapp")} />}
       />
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+      {/* One quiet line for who has it; a manager opens the picker only when needed. */}
+      {(task.assignedTo || (canManage && team.length > 0)) && (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
         <p className={task.assignedTo ? "font-medium text-ink" : "text-ink-soft"}>
           {!task.assignedTo
             ? t.notAssigned
@@ -886,7 +924,16 @@ function OpenCard({
               ? t.assignedToYou
               : fmt(t.assignedTo, { name: assignedName })}
         </p>
-        {canManage && team.length > 0 && (
+        {canManage && team.length > 0 && !assignOpen && (
+          <button
+            type="button"
+            onClick={() => setAssignOpen(true)}
+            className="min-h-11 cursor-pointer px-1 font-semibold text-primary-dark underline-offset-4 hover:underline"
+          >
+            {task.assignedTo ? t.assignChange : t.assignShow}
+          </button>
+        )}
+        {canManage && team.length > 0 && assignOpen && (
           <>
             <label htmlFor={assignId} className="sr-only">
               {fmt(t.assignTo, { order: order.orderNumber })}
@@ -894,8 +941,12 @@ function OpenCard({
             <Select
               id={assignId}
               value={task.assignedTo?.id ?? ""}
-              onChange={(e) => assign(e.target.value)}
+              onChange={(e) => {
+                setAssignOpen(false);
+                assign(e.target.value);
+              }}
               disabled={busy}
+              autoFocus
               className="h-11 w-auto min-w-44"
             >
               <option value="">{t.nobody}</option>
@@ -908,6 +959,7 @@ function OpenCard({
           </>
         )}
       </div>
+      )}
 
       {(callbackLine || lastAttempt) && (
         <div className="space-y-0.5 text-sm text-ink-soft">
@@ -1010,9 +1062,9 @@ function OpenCard({
           ) : (
             canConfirm &&
             (!inProgress || expired) && (
-              <Button onClick={claim} disabled={busy} className="h-12 flex-1 gap-2 sm:flex-none">
+              <Button data-next-action onClick={claim} disabled={busy} className="h-12 flex-1 gap-2 sm:flex-none">
                 {!inProgress && !mine && <Phone className="size-4" aria-hidden />}
-                {busy ? t.claiming : mine ? t.reclaim : inProgress ? t.takeOver : t.claimAndCall}
+                {busy ? t.claiming : mine ? t.reclaim : inProgress ? t.takeOver : canDial ? t.claimAndCall : t.claimOnly}
               </Button>
             )
           )}

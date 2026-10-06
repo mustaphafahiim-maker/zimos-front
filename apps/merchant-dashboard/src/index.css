@@ -534,3 +534,12 @@ html {
 .glass-editor [data-slot="button"][data-variant="outline"]:hover:not(:disabled) {
   background: var(--color-paper-sunken);
 }
+
+/*
+ * A Card (packages/ui) already spaces its children with a flex gap; the 36
+ * callers that also add `space-y-*` got both, so every gap doubled (re-audit
+ * N-03). Where a caller asks for space-y, that spacing wins alone.
+ */
+[data-slot="card"][class*="space-y-"] {
+  row-gap: 0;
+}

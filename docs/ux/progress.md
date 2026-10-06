@@ -152,7 +152,16 @@ are listed under *Handoff items done*.
       has an error; a 0 quantity warns it shows as sold out; Markdown syntax
       help dropped (toolbar does it); form copy in Egyptian Arabic. Edit
       mode keeps its layout (status select). Checked at 390/1366.
-- [ ] R2-5 … R2-12 — see the plan.
+- [x] R2-5 Queue diet (N-03, N-23): a card is the customer's name, the
+      phone with WhatsApp, then order number · items · total and the address
+      in small type; the tick box sits beside the name (aria-label only);
+      assignment is one line with «وزّع / غيّر» opening the picker for
+      managers, hidden for agents when nobody is assigned; «سجّل واللي
+      بعده» brings the next card into view with its button focused; the
+      button says «استلم» where no dialer opens; filters labelled on phones
+      («مين شغال عليها»). Card gap doubling fixed once in index.css for all
+      36 `<Card className="space-y-…">` sites. 517 → 319 px per card at 390.
+- [ ] R2-6 … R2-12 — see the plan.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
