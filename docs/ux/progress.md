@@ -186,6 +186,14 @@ are listed under *Handoff items done*.
       library). Checked with touch emulation at 390.
 - [ ] R2-8 … R2-12 — see the plan.
 
+## Handoff items 180–187 (backend 2026-10-06, second batch)
+- [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox
+      (2 chars, 250 ms, keyboard, one session per visit) above the address
+      fields on checkout, product quick order and funnel step; a pick fills
+      region → city → area and re-quotes shipping, then the street or focus;
+      dashboard Shipping → المناطق card «اقتراحات العنوان في صفحة الدفع»
+      (off / places list / Google with key). Store left on the places list.
+
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
   (postgres/postgres). Backend `.env` from `.env.example` with
