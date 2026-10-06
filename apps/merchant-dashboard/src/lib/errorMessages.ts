@@ -145,6 +145,9 @@ const STRINGS = {
     IMPORT_SOURCE_NO_PRODUCT_DATA: "That page does not publish its product details. Download them as a sheet and import the file instead.",
     IMPORT_LINK_NOT_HTTPS: "The link must start with https:// — copy it again from the browser's address bar.",
     IMPORT_LINK_NOT_PRODUCT: "That isn't a product link we can read. Paste a product page link from Shopify, AliExpress, Etsy, CJ or YouCan.",
+    INVALID_FILE: "We couldn't read this file. Check it's a CSV or Excel sheet whose first row names the columns, like the template.",
+    FILE_TOO_LARGE: "The file is too large. Choose a smaller file, or split it and import the parts one by one.",
+    NO_FILE: "Choose a file first.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -265,6 +268,9 @@ const STRINGS = {
     IMPORT_SOURCE_NO_PRODUCT_DATA: "الصفحة دي مش بتعرض بيانات المنتج. نزّلها كشيت واستورد الملف بدل اللينك.",
     IMPORT_LINK_NOT_HTTPS: "اللينك لازم يبدأ بـ https:// — انسخه تاني من شريط العنوان في المتصفح.",
     IMPORT_LINK_NOT_PRODUCT: "ده مش لينك منتج نقدر نقراه. الصق لينك صفحة منتج من شوبيفاي أو علي إكسبريس أو إتسي أو CJ أو يوكان.",
+    INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد إنه شيت CSV أو Excel وأول صف فيه أسامي الأعمدة زي النموذج.",
+    FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر، أو قسّمه واستورد الأجزاء واحد ورا التاني.",
+    NO_FILE: "اختار ملف الأول.",
   },
 } satisfies Messages;
 

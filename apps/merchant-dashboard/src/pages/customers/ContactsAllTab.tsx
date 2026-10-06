@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Download, UserPlus, Users } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { Alert, Button, Card, buttonVariants } from "@store-builder/ui";
 import {
   contactsCreate,
   contactsExportCsv,
@@ -60,6 +60,7 @@ const STRINGS = {
     emptyTitle: "No contacts yet",
     emptyDescription: "Everyone who orders or fills in a form on your store shows up here. You can also add a contact by hand.",
     emptyFiltered: "No contact matches these filters.",
+    importSheet: "Import from a sheet",
     addTitle: "Add a contact",
     addDescription: "A lead you met outside the store. They become a customer with their first order.",
     name: "Name",
@@ -100,6 +101,7 @@ const STRINGS = {
     emptyTitle: "لا توجد جهات اتصال بعد",
     emptyDescription: "كل من يطلب أو يملأ نموذجًا في متجرك يظهر هنا. ويمكنك إضافة جهة اتصال يدويًا.",
     emptyFiltered: "لا توجد جهة اتصال تطابق هذه الفلاتر.",
+    importSheet: "استورد من شيت",
     addTitle: "إضافة جهة اتصال",
     addDescription: "عميل محتمل عرفته خارج المتجر. يتحول إلى عميل مع أول طلب.",
     name: "الاسم",
@@ -379,7 +381,14 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
                   icon={<Users className="size-6" aria-hidden />}
                   title={t.emptyTitle}
                   description={t.emptyDescription}
-                  action={<Button onClick={() => setAdding(true)}>{t.add}</Button>}
+                  action={
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button onClick={() => setAdding(true)}>{t.add}</Button>
+                      <Link to="/customers/import" className={buttonVariants({ variant: "outline" })}>
+                        {t.importSheet}
+                      </Link>
+                    </div>
+                  }
                 />
               )
             }

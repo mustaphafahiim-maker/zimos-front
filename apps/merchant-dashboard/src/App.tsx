@@ -37,6 +37,7 @@ import { LostOrdersPage } from "@/pages/abandoned/LostOrdersPage";
 import { FraudPage } from "@/pages/fraud/FraudPage";
 import { ReviewsPage } from "@/pages/reviews/ReviewsPage";
 import { ContactsPage } from "@/pages/customers/ContactsPage";
+import { ContactImportPage } from "@/pages/customers/ContactImportPage";
 import { FormSubmissionsPage } from "@/pages/customers/FormSubmissionsPage";
 import { StoresPage } from "@/pages/stores/StoresPage";
 import { DigitalProductsPage } from "@/pages/digital/DigitalProductsPage";
@@ -162,6 +163,7 @@ export default function App() {
 
                       <Route path="/reviews" element={<ReviewsPage />} />
                       <Route path="/customers" element={<ContactsPage />} />
+                      <Route path="/customers/import" element={<ContactImportPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/stores" element={<StoresPage />} />
                       <Route path="/digital" element={<DigitalProductsPage />} />

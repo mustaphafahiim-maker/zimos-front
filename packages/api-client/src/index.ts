@@ -258,3 +258,5 @@ export * from "./endpoints/orderEmailDesign";
 export * from "./endpoints/storefrontPlaces";
 // Product links from AliExpress, Etsy, CJ and YouCan beside Shopify: sources, kinds, the page price (handoff 180).
 export * from "./endpoints/productLinkImport";
+// Import contacts from a CSV / Excel sheet: template, dry-run check and import (contacts/contactImport.js, handoff 187).
+export * from "./endpoints/contactImport";
