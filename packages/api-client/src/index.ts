@@ -278,3 +278,5 @@ export * from "./endpoints/displayRules";
 export * from "./endpoints/preorders";
 // Purchase limits per product: min / max per order and max per customer, and their refusals (handoff 198).
 export * from "./endpoints/purchaseLimits";
+// Estimated delivery dates: the settings, the shopper's window and where it rides (handoff 199).
+export * from "./endpoints/deliveryEstimates";

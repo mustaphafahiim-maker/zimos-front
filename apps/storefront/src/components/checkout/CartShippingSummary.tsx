@@ -10,6 +10,7 @@ import { useShippingQuote } from "@/lib/useShippingQuote";
 import { useStoreCountry } from "@/lib/storeCountry";
 import { input } from "@/components/ui";
 import { FreeShippingHint, ShippingFee } from "./ShippingFee";
+import { DeliveryEstimateLine } from "../DeliveryEstimateLine";
 import { arOrEn } from "@/lib/i18n";
 
 /**
@@ -92,6 +93,8 @@ export function CartShippingSummary({
           </div>
         )}
       </dl>
+
+      <DeliveryEstimateLine estimate={shipping.deliveryEstimate} />
 
       <FreeShippingHint progress={shipping.freeShipping} line={shipping.line} currency={currency} />
     </div>

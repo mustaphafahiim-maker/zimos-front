@@ -364,6 +364,10 @@ const en = {
     limitLeft: (n: number, name: string) => (name ? `You can buy ${n} more of “${name}”` : `You can buy ${n} more`),
     limitDone: (name: string) =>
       name ? `You already bought the most “${name}” one customer can` : "You already bought the most one customer can",
+    deliveryGet: (from: string, to: string) => `Get it ${from} – ${to}`,
+    deliveryGetDay: (date: string) => `Get it ${date}`,
+    deliveryExpected: "Expected delivery",
+    deliveryRange: (from: string, to: string) => `${from} – ${to}`,
   },
   /** The phone checkout's bottom bar: the total and the order button, always in reach. */
   checkoutBar: {
@@ -1127,6 +1131,10 @@ const ar: Dictionary = {
     limitLeft: (n, name) => (name ? `تقدر تشتري ${arNum(n)} كمان بس من «${name}»` : `تقدر تشتري ${arNum(n)} كمان بس`),
     limitDone: (name) =>
       name ? `إنت اشتريت قبل كده أقصى كمية مسموحة للعميل الواحد من «${name}»` : "إنت اشتريت قبل كده أقصى كمية مسموحة للعميل الواحد",
+    deliveryGet: (from, to) => `هيوصلك من ${from} لـ ${to}`,
+    deliveryGetDay: (date) => `هيوصلك ${date}`,
+    deliveryExpected: "التوصيل المتوقع",
+    deliveryRange: (from, to) => `من ${from} لـ ${to}`,
   },
   checkoutBar: {
     label: "ملخص الطلب",

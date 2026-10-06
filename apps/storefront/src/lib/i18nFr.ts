@@ -276,6 +276,10 @@ export const fr: Dictionary = {
     limitLeft: (n, name) => (name ? `Vous pouvez encore acheter ${n} de « ${name} »` : `Vous pouvez encore en acheter ${n}`),
     limitDone: (name) =>
       name ? `Vous avez déjà acheté le maximum de « ${name} » autorisé par client` : "Vous avez déjà acheté le maximum autorisé par client",
+    deliveryGet: (from, to) => `Livré entre le ${from} et le ${to}`,
+    deliveryGetDay: (date) => `Livré le ${date}`,
+    deliveryExpected: "Livraison prévue",
+    deliveryRange: (from, to) => `du ${from} au ${to}`,
   },
   checkoutBar: {
     label: "Récapitulatif de la commande",

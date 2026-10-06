@@ -3,11 +3,11 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { SectionTabs } from "@/components/SectionTabs";
 
 const STRINGS = {
-  en: { label: "Shipping sections", rates: "Shipping prices", places: "Places", options: "Shipping options", carriers: "Shipping companies", taxes: "Taxes" },
-  ar: { label: "أقسام الشحن", rates: "أسعار الشحن", places: "المناطق", options: "خيارات الشحن", carriers: "شركات الشحن", taxes: "الضرائب" },
+  en: { label: "Shipping sections", rates: "Shipping prices", places: "Places", delivery: "Delivery times", options: "Shipping options", carriers: "Shipping companies", taxes: "Taxes" },
+  ar: { label: "أقسام الشحن", rates: "أسعار الشحن", places: "المناطق", delivery: "مواعيد التوصيل", options: "خيارات الشحن", carriers: "شركات الشحن", taxes: "الضرائب" },
 } satisfies Messages;
 
-const TABS = ["rates", "places", "options", "carriers", "taxes"] as const;
+const TABS = ["rates", "places", "delivery", "options", "carriers", "taxes"] as const;
 export type ShippingTab = (typeof TABS)[number];
 
 /** The shipping page's tabs (SPEC §12.5), kept in the URL (?tab=) so a link opens the right one. */

@@ -518,7 +518,7 @@ export function ProductLanding({
               : t.common.outOfStock}
         </p>
         <BillingPlanNote plan={plan} unitMinor={unit} />
-        <ProductBuyNotes product={product} preorder={preorder} />
+        <ProductBuyNotes product={product} preorder={preorder} delivery={variant?.inStock ? { governorate: values.governorate, place: places.address } : null} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}

@@ -1,9 +1,11 @@
 import {
+  deliveryEstimateOf,
   preorderShipsAtOf,
   purchaseLimitProblems,
   purchaseLimitProductName,
   storefrontPreorderOf,
   storefrontPurchaseLimitsOf,
+  type DeliveryEstimate,
   type PurchaseLimitProblem,
   type StorefrontPreorder,
 } from "@store-builder/api-client";
@@ -11,8 +13,8 @@ import { getDictionary, parseLocale, type Dictionary, type Locale } from "./i18n
 
 /**
  * What the product page, cart and checkout tell the shopper about buying:
- * pre-orders (handoff 195) and purchase limits (198). Display only — the
- * API decides what sells.
+ * pre-orders (handoff 195), purchase limits (198) and the delivery window
+ * (199). Display only — the API decides what sells and when it arrives.
  */
 
 type BuyText = Dictionary["buyInfo"];
@@ -96,6 +98,26 @@ export function rethrowCartLimit(err: unknown): never {
   throw text ? new Error(text) : err;
 }
 
+// ------------------------------------------------------ delivery window --
+
+const WINDOW_DAY: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" };
+
+/** "Get it Thu, Oct 8 – Sat, Oct 10" / «هيوصلك من الخميس، ٨ أكتوبر لـ السبت، ١٠ أكتوبر»; "" when unreadable. */
+export function deliveryGetText(e: Pick<DeliveryEstimate, "from" | "to">, t: BuyText, intlLocale: string): string {
+  const from = formatShopDay(e.from, intlLocale, WINDOW_DAY);
+  const to = formatShopDay(e.to, intlLocale, WINDOW_DAY);
+  if (!from || !to) return "";
+  return from === to ? t.deliveryGetDay(from) : t.deliveryGet(from, to);
+}
+
+/** The window alone, for a line labelled "Expected delivery": «من … لـ …», or the one day. */
+export function deliveryRangeText(e: Pick<DeliveryEstimate, "from" | "to">, t: BuyText, intlLocale: string): string {
+  const from = formatShopDay(e.from, intlLocale, WINDOW_DAY);
+  const to = formatShopDay(e.to, intlLocale, WINDOW_DAY);
+  if (!from || !to) return "";
+  return from === to ? from : t.deliveryRange(from, to);
+}
+
 // ------------------------------------------------------------ thank-you --
 
 /** What the thank-you page says about an order beyond its summary: the pre-ordered lines. */
@@ -103,6 +125,8 @@ export interface OrderBuyNotes {
   orderId: string;
   /** Lines taken as pre-orders, with their expected ship date. */
   preorders: { name: string; shipsAt: string }[];
+  /** The delivery window the order was placed with (handoff 199); absent when none, or when every line is a pre-order. */
+  delivery?: { from: string; to: string } | null;
 }
 
 const notesKey = (workspaceId: string) => `zimos_order_notes_${workspaceId}`;
@@ -129,17 +153,22 @@ function writeNotes(workspaceId: string, notes: OrderBuyNotes): void {
 
 /**
  * Kept on this device from the checkout's answer, like the order snapshot
- * (lib/commerce): the lines saved with `preorderShipsAt`. An order with
- * nothing to say is not stored.
+ * (lib/commerce): the lines saved with `preorderShipsAt`, and the delivery
+ * window of `shippingSnapshot.deliveryEstimate` — left out when every line is
+ * a pre-order, which ships on its own date. An order with nothing to say is
+ * not stored.
  */
-export function saveOrderBuyNotes(workspaceId: string, order: { id: string; items?: unknown[] | null }): void {
+export function saveOrderBuyNotes(workspaceId: string, order: { id: string; items?: unknown[] | null; shippingSnapshot?: unknown }): void {
   if (typeof window === "undefined") return;
   const preorders: OrderBuyNotes["preorders"] = [];
   for (const item of order.items ?? []) {
     const shipsAt = preorderShipsAtOf(item);
     if (shipsAt) preorders.push({ name: (item as { productNameSnapshot?: string }).productNameSnapshot ?? "", shipsAt });
   }
-  if (preorders.length > 0) writeNotes(workspaceId, { orderId: order.id, preorders });
+  const allPreorders = preorders.length > 0 && preorders.length === (order.items ?? []).length;
+  const estimate = allPreorders ? null : deliveryEstimateOf(order);
+  const delivery = estimate ? { from: estimate.from, to: estimate.to } : null;
+  if (preorders.length > 0 || delivery) writeNotes(workspaceId, { orderId: order.id, preorders, delivery });
 }
 
 export function getOrderBuyNotes(workspaceId: string, orderId: string): OrderBuyNotes | null {

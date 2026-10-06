@@ -69,6 +69,7 @@ import { useStorePlaces } from "@/lib/useStorePlaces";
 import { CheckoutStickyBar, scrollIntoViewSoon } from "@/components/checkout/CheckoutStickyBar";
 import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
+import { DeliveryEstimateLine } from "@/components/DeliveryEstimateLine";
 
 const FORM_PREFIX = "checkout";
 const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
@@ -502,6 +503,7 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            <DeliveryEstimateLine estimate={shipping.deliveryEstimate} className="mt-3" />
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}
