@@ -351,7 +351,14 @@ are listed under *Handoff items done*.
       fired before pixels mount are replayed after accept. Open: the
       product page's phone buy bar isn't given room yet (the banner covers
       it until the shopper answers).
-- [ ] 192, 197 — interrupted by a
+- [x] 192 Template marketplace: /funnels/marketplace «القوالب» (search, kind,
+      order, language, preview per page at phone / computer width, «استخدم
+      القالب ده») and «قوالبك» (review status, reviewer's note, edit,
+      resubmit, withdraw); «سوق القوالب» tab in the new-funnel wizard;
+      «شارك في سوق القوالب» from the funnels list and editor. Platform
+      console /marketplace review queue (approve, reject with a note,
+      unlist), templates.view / templates.manage.
+- [ ] 197 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 
