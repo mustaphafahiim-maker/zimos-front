@@ -119,6 +119,8 @@ export interface OrderEmailEditorProps {
   layout: "modal" | "inline";
   /** Shown above the form, e.g. which funnel the email is for. */
   note?: ReactNode;
+  /** Replaces the "saving in simple text replaces the design" line (a funnel's version falls back to the store's design). */
+  simpleNote?: string;
   /** Talks to the server for this email (the store's, or a funnel's / website's). */
   api?: EditorApi;
   onClose: () => void;
@@ -140,7 +142,7 @@ const BUTTON_LINK: Partial<Record<OrderEmailDesignTemplate["key"], string>> = {
 };
 
 export function OrderEmailEditor(props: OrderEmailEditorProps) {
-  const { template, tokens, title, layout, note, onClose, onSaved } = props;
+  const { template, tokens, title, layout, note, simpleNote, onClose, onSaved } = props;
   const t = useT(STRINGS);
   const toast = useToast();
   const workspaceId = useWorkspaceId();
@@ -317,7 +319,7 @@ export function OrderEmailEditor(props: OrderEmailEditorProps) {
       {mode === "simple" ? (
         <>
           <TokenField t={t} multiline label={t.body} value={body} tokens={tokens} maxLength={10000} error={bodyError} onChange={setBody} />
-          {template.blocks?.length ? <p className="text-xs text-ink-soft">{t.switchBackNote}</p> : null}
+          {template.blocks?.length ? <p className="text-xs text-ink-soft">{simpleNote ?? t.switchBackNote}</p> : null}
           {!isDefault && (
             <button
               type="button"
@@ -346,7 +348,7 @@ export function OrderEmailEditor(props: OrderEmailEditorProps) {
   );
 
   const previewPane = (
-    <div className={cn("min-w-0 space-y-2", pane !== "preview" && "max-lg:hidden")}>
+    <div className={cn("min-w-0 space-y-2 lg:sticky lg:top-0 lg:self-start", pane !== "preview" && "max-lg:hidden")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-ink">{t.preview}</p>
         <div role="group" aria-label={t.widthLabel} className="inline-flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
