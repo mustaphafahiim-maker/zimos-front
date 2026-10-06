@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, Button, Card, CardContent } from "@store-builder/ui";
 import {
   isApiErrorCode,
@@ -182,6 +182,37 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
   const tracked = productType !== "physical" || trackInventory;
 
   const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  /**
+   * After a failed save, bring the first problem into view and focus it: on a
+   * phone the field in error is usually off screen above the Save button.
+   */
+  function revealFirstError() {
+    requestAnimationFrame(() => {
+      const first = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [role="alert"]');
+      if (!first) return;
+      first.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof first.focus === "function") first.focus({ preventScroll: true });
+    });
+  }
+
+  // Leaving with typed but unsaved basics asks first (tab close / reload).
+  const initialBasics = useRef(
+    JSON.stringify([product?.name ?? "", product?.description ?? "", product?.status ?? "draft", (product?.tags ?? []).join(", ")])
+  );
+  const dirty =
+    JSON.stringify([name, description, status, tags]) !== initialBasics.current ||
+    (isCreate && (price !== "" || media.length > 0));
+  useEffect(() => {
+    if (!dirty || saving) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving]);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -190,11 +221,11 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
     e.preventDefault();
     if (saving) return;
 
-    // Client-side required-field checks. For a new product: name, description,
-    // at least one image and a price. For edits: just name.
+    // Client-side required-field checks. For a new product: name, at least one
+    // image and a price ("a name, a price and a photo are enough to start" —
+    // the description can come later; the API accepts it empty). For edits: just name.
     const errs: Record<string, string> = {};
     if (name.trim() === "") errs.name = t.nameRequired;
-    if (isCreate && description.trim() === "") errs.description = t.descriptionRequired;
     const missingImage = isCreate && media.length === 0;
 
     const priceMinor = majorToMinor(price);
@@ -217,6 +248,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       setFieldErrors(errs);
       setMediaError(missingImage ? t.imageRequired : null);
       setFormError(null);
+      revealFirstError();
       return;
     }
 
@@ -259,6 +291,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
         onCreated?.(created.product);
       } else if (product) {
         await apiClient.updateProduct(workspaceId, product.id, basics);
+        initialBasics.current = JSON.stringify([name, description, status, tags]);
         toast.success(t.savedToast);
         onSaved?.();
       }
@@ -270,13 +303,14 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       if (isApiErrorCode(err, "DUPLICATE_RESOURCE")) fields.sku = t.skuTaken;
       setFieldErrors(fields);
       setFormError(Object.keys(fields).length === 0 ? errorMessage(err) : null);
+      revealFirstError();
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -294,7 +328,6 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
             <Field
               label={t.description}
-              required={isCreate}
               error={fieldErrors.description}
             >
               {({ id }) => (

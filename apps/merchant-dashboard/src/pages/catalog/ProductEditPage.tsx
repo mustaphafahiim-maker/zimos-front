@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -26,8 +27,9 @@ import { ProductTestSection } from "./components/ProductTestSection";
 const STRINGS = {
   en: {
     newTitle: "New product",
-    newDescription:
-      "Name, description, an image and a price are required. Add more variants, offers and collections after it's created.",
+    newDescription: "A name, a price and one photo are enough. Variants, offers and collections can come after it's created.",
+    more: "More settings",
+    moreHint: "Video, collections, custom fields, page layout, SEO and the product page's content.",
     products: "Products",
     product: "Product",
     noActiveVariant: "Add a variant so customers can buy this product.",
@@ -36,11 +38,12 @@ const STRINGS = {
   },
   ar: {
     newTitle: "منتج جديد",
-    newDescription:
-      "الاسم والوصف وصورة واحدة والسعر مطلوبة. أضف متغيرات وعروضًا ومجموعات أخرى بعد إنشائه.",
+    newDescription: "اسم وسعر وصورة واحدة كفاية. الأنواع والعروض والمجموعات ممكن تضيفها بعد ما يتعمل.",
+    more: "إعدادات تانية",
+    moreHint: "الفيديو، المجموعات، الخانات الإضافية، شكل الصفحة، الـ SEO ومحتوى صفحة المنتج.",
     products: "المنتجات",
     product: "المنتج",
-    noActiveVariant: "أضف متغيرًا حتى يتمكن العملاء من شراء هذا المنتج.",
+    noActiveVariant: "ضيف نوع عشان العملاء يقدروا يشتروا المنتج ده.",
     noActiveVariantArchived:
       "لا يوجد متغير نشط لهذا المنتج. بعد استعادته، أضف متغيرًا أو فعّل متغيرًا حتى يتمكن العملاء من شرائه.",
   },
@@ -107,20 +110,31 @@ export function ProductEditPage() {
               keep={(data.media ?? []).filter(isVideoMedia)}
               onChanged={reload}
             />
-            <ProductVideoSection productId={data.id} media={data.media ?? []} onChanged={reload} />
             <VariantsSection
               productId={data.id}
               variants={data.variants ?? []}
               tracked={data.productType !== "physical" || (data as { trackInventory?: boolean }).trackInventory !== false}
               onChanged={reload}
             />
-            <VariantBulkEditor productId={data.id} variants={data.variants ?? []} onChanged={reload} />
             <OffersSection
               productId={data.id}
               offers={data.offers ?? []}
               variants={data.variants ?? []}
               onChanged={reload}
             />
+
+            {/* Everything a first sale doesn't need, folded (still mounted, so nothing is lost while closed). */}
+            <details className="group rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-ink">{t.more}</span>
+                  <span className="block text-xs text-ink-soft">{t.moreHint}</span>
+                </span>
+                <ChevronDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="space-y-6 border-t border-line p-3 sm:p-4">
+            <ProductVideoSection productId={data.id} media={data.media ?? []} onChanged={reload} />
+            <VariantBulkEditor productId={data.id} variants={data.variants ?? []} onChanged={reload} />
             <ProductCollectionsSection
               productId={data.id}
               memberships={data.collections ?? []}
@@ -137,6 +151,8 @@ export function ProductEditPage() {
             <ProductPageSettingsSection product={data as unknown as CatalogProduct} onChanged={reload} />
             <ProductSeoSection product={data} onChanged={reload} />
             <ProductCmsSection product={data as unknown as CatalogProduct} onChanged={reload} />
+              </div>
+            </details>
           </div>
         )}
       </DataState>

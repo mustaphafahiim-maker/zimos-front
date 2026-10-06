@@ -49,7 +49,11 @@ are listed under *Handoff items done*.
 - [x] S7 Products list: phone cards (photo, name, price, stock, status,
       actions, select) instead of an 820px table; table/grid from md; a
       guiding first-product empty state; calm table; Egyptian copy.
-- [ ] S8 Product form — next
+- [x] S8 Product form: description optional (API accepts it; matches the
+      setup guide's promise), first error scrolled into view and focused,
+      leave-page warning while basics are unsaved, advanced sections folded
+      under «إعدادات تانية» (offers stay visible).
+- [ ] S9 Onboarding — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
@@ -86,3 +90,8 @@ See `backend-requests.md` (all 6 done by the backend on 2026-10-06).
 - 2026-10-06 Dashboard defaults to Arabic when no language was chosen.
 - 2026-10-06 Font: Readex Pro (already a dependency) for Arabic + Latin.
 - 2026-10-06 No new dependencies so far.
+- 2026-10-06 Product description no longer required on create: a frontend-only
+  rule (backend allows ""); the guide promises name + price + photo.
+- 2026-10-06 Unsaved-changes guard is beforeunload only: the app uses
+  BrowserRouter (no data router), so in-app blocking (useBlocker) is not
+  available without a router migration.
