@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
+import { Button, cn } from "@store-builder/ui";
 import { OrderDigitalSection } from "@/pages/digital/OrderDigitalSection";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -39,6 +41,7 @@ const STRINGS = {
     placed: "Placed {date}",
     confirmation: "Confirmation",
     payment: "Payment",
+    moreTools: "More",
     payOnDelivery: "Paid on delivery",
     fulfillment: "Fulfillment",
   },
@@ -48,6 +51,7 @@ const STRINGS = {
     placed: "اتطلب {date}",
     confirmation: "التأكيد",
     payment: "الدفع",
+    moreTools: "أكتر",
     payOnDelivery: "هيتدفع عند الاستلام",
     fulfillment: "التنفيذ",
   },
@@ -58,6 +62,7 @@ export function OrderDetailPage() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const labels = useOrderLabels();
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const order = useAsync(
     () => apiClient.getOrder(workspaceId, orderId as string),
@@ -124,14 +129,33 @@ export function OrderDetailPage() {
               <CustomerHistoryBadge details={session.data} />
             </div>
 
-            {/* The order's actions; one swipeable row on a phone. */}
-            <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-              <OrderActions order={data} onChanged={reload} />
-              <WhatsappConfirmButton order={data} onChanged={reload} />
-              <EditItemsButton order={data} onChanged={reload} />
-              <FulfillButton order={data} onChanged={reload} />
-              <OrderMetaActions order={data} onChanged={reload} />
-              <ResendToWebhookButton orderId={data.id} />
+            {/* The order's actions (re-audit N-16): the step that moves it on stays in view, the
+                everyday tools fold under «أكتر», and cancel sits last, apart. */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <WhatsappConfirmButton order={data} onChanged={reload} />
+                <FulfillButton order={data} onChanged={reload} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11 gap-1"
+                  aria-expanded={toolsOpen}
+                  aria-controls="order-more-tools"
+                  onClick={() => setToolsOpen((open) => !open)}
+                >
+                  {t.moreTools}
+                  <ChevronDown className={cn("size-4 transition-transform", toolsOpen && "rotate-180")} aria-hidden />
+                </Button>
+                <div className="ms-auto">
+                  <OrderActions order={data} onChanged={reload} only="cancel" />
+                </div>
+              </div>
+              <div id="order-more-tools" hidden={!toolsOpen} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] bg-paper-sunken p-2">
+                <OrderActions order={data} onChanged={reload} only="tools" />
+                <EditItemsButton order={data} onChanged={reload} />
+                <OrderMetaActions order={data} onChanged={reload} />
+                <ResendToWebhookButton orderId={data.id} />
+              </div>
             </div>
 
             {/* The work (confirm, items, ship, pay, return) on the wide side;

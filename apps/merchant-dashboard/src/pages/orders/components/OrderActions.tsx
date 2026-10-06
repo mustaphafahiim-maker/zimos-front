@@ -117,7 +117,14 @@ interface Props {
   onChanged: () => void;
 }
 
-export function OrderActions({ order, onChanged }: Props) {
+/**
+ * `only="tools"` renders the everyday tools (edit address, waybill);
+ * `only="cancel"` renders the cancel button and the cancelled / shipped note,
+ * so the order page can put cancel last and apart (re-audit N-16).
+ */
+export function OrderActions({ order, onChanged, only }: Props & { only?: "tools" | "cancel" }) {
+  const showTools = only !== "cancel";
+  const showCancel = only !== "tools";
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(STRINGS);
@@ -218,15 +225,17 @@ export function OrderActions({ order, onChanged }: Props) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {canEdit && (
+      {showTools && canEdit && (
         <Button variant="outline" size="sm" className="min-h-11" onClick={() => setEditing(true)}>
           {t.editAddress}
         </Button>
       )}
-      <Button variant="outline" size="sm" className="min-h-11" onClick={downloadWaybill} disabled={waybillBusy}>
-        {waybillBusy ? t.preparing : t.downloadWaybill}
-      </Button>
-      {canCancel && (
+      {showTools && (
+        <Button variant="outline" size="sm" className="min-h-11" onClick={downloadWaybill} disabled={waybillBusy}>
+          {waybillBusy ? t.preparing : t.downloadWaybill}
+        </Button>
+      )}
+      {showCancel && canCancel && (
         <Button
           variant="danger"
           size="sm"
@@ -239,13 +248,13 @@ export function OrderActions({ order, onChanged }: Props) {
           {t.cancelOrder}
         </Button>
       )}
-      {isCancelled && (
+      {showCancel && isCancelled && (
         <span className="text-sm text-danger">
           {t.cancelled}
           {order.cancellationReason ? ` — ${order.cancellationReason}` : ""}
         </span>
       )}
-      {!isCancelled && isShipped && <span className="text-sm text-ink-soft">{t.shippedNote}</span>}
+      {showCancel && !isCancelled && isShipped && <span className="text-sm text-ink-soft">{t.shippedNote}</span>}
 
       <ConfirmDialog
         open={cancelling}
