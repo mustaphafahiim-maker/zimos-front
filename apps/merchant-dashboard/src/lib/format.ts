@@ -94,9 +94,12 @@ export function formatOptions(options: Record<string, string> | null | undefined
 
 export function formatAddress(address: OrderAddressSnapshot | null | undefined): string {
   if (!address) return getLocale() === "ar" ? "مفيش عنوان شحن" : "No shipping address";
-  return [address.addressLine, address.city, address.province, address.postalCode, address.country]
-    .filter(Boolean)
-    .join(", ");
+  // Egypt is the default market: its code adds nothing. A city repeated as the
+  // governorate (Cairo, Cairo) is shown once. Arabic joins with the Arabic comma.
+  const parts = [address.addressLine, address.city, address.province, address.postalCode, address.country === "EG" ? null : address.country]
+    .filter((part): part is string => Boolean(part))
+    .filter((part, i, all) => all.indexOf(part) === i);
+  return parts.join(getLocale() === "ar" ? "، " : ", ");
 }
 
 /** Human label for a variant in a picker: options, or SKU, or a short id. */

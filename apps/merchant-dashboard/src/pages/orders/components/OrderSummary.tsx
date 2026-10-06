@@ -246,7 +246,13 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
             <h3 className="mb-1 font-medium text-ink">{t.customer}</h3>
             <p className="text-ink-soft">{order.contactSnapshot?.fullName || "—"}</p>
             <p className="text-ink-soft">
-              {order.contactSnapshot?.phone ? <bdi dir="ltr">{order.contactSnapshot.phone}</bdi> : "—"}
+              {order.contactSnapshot?.phone ? (
+                <a href={`tel:${order.contactSnapshot.phone.replace(/[^\d+]/g, "")}`} className="hover:text-primary">
+                  <bdi dir="ltr">{order.contactSnapshot.phone}</bdi>
+                </a>
+              ) : (
+                "—"
+              )}
             </p>
             {order.contactSnapshot?.alternatePhone && (
               <p className="text-ink-soft">

@@ -35,7 +35,13 @@ are listed under *Handoff items done*.
       cards with select, call and WhatsApp (ContactActions), name first;
       select-all on phones; dates start at the device's midnight, not UTC;
       a guiding empty state for a store with no orders yet.
-- [ ] S5 Order page — next
+- [x] S5 Order page: hero card (customer, phone, one-tap call/WhatsApp,
+      address, total, payment) and a next-step card per stage that scrolls to
+      its section; actions swipe in one row on phones; work sections on the
+      wide column, notes/tags/background beside them; tel: link in the
+      summary; Arabic address formatting; Fulfillment no longer sees
+      Analytics links it cannot open.
+- [ ] S6 Confirmation queue — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - (file does not exist yet on 2026-10-06)
