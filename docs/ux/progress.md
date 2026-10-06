@@ -122,7 +122,12 @@ are listed under *Handoff items done*.
 - [x] 173 sending domain for customer emails (records with copy, verify, change, remove)
 - [x] 174 block email designer (simple text / designer, up-down blocks, variables, preview phone/desktop, test send)
 - [x] 175 emails per funnel (funnel settings → Emails) and per website (when >1)
-- [ ] 171 live map (agent running)
+- [x] 171 Live view on a world map: Analytics → مباشر الآن → «المشاهدة
+      المباشرة» tab (5/10/30/60 min, funnel filter, full screen); totals,
+      top places and countries tables, world map + Egypt/Saudi inset with
+      shape + colour per kind, 15 s polling while visible; all states.
+      Map geometry generated from Natural Earth (public domain), no new
+      dependency. Checked at 390/1366 against the real API.
 
 ## Round 2 (plan: `09-plan-round2.md`, from the re-audit `08-reaudit.md`)
 - [x] R2-1 Phone cards in DataTable (before the re-audit).

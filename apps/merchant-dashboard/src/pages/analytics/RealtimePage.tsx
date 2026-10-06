@@ -19,6 +19,7 @@ const STRINGS = {
   en: {
     title: "Realtime",
     description: "The last 30 minutes, refreshed every 10 seconds.",
+    descriptionMap: "Where your visitors, checkouts and orders are right now, refreshed every 15 seconds.",
     back: "Web analytics",
     active: "Active now",
     activeHint: "Visitors in the last 5 minutes",
@@ -47,7 +48,8 @@ const STRINGS = {
   },
   ar: {
     title: "مباشر الآن",
-    description: "آخر 30 دقيقة، ويُحدَّث كل 10 ثوانٍ.",
+    description: "آخر ٣٠ دقيقة، وبيتحدّث كل ١٠ ثواني.",
+    descriptionMap: "زوارك واللي بيكملوا الطلب والطلبات دلوقتي فين، وبيتحدّث كل ١٥ ثانية.",
     back: "زيارات الموقع",
     active: "المتصفحون الآن",
     activeHint: "الزوار خلال آخر 5 دقائق",
@@ -146,7 +148,7 @@ export function RealtimePage() {
 
   return (
     <div ref={frame} className="min-w-0 max-w-7xl bg-paper [&:fullscreen]:max-w-none [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-6">
-      <PageHeader back={{ to: "/analytics/web", label: t.back }} title={t.title} description={t.description} />
+      <PageHeader back={{ to: "/analytics/web", label: t.back }} title={t.title} description={tab === "map" ? t.descriptionMap : t.description} />
 
       <Tabs value={tab} onValueChange={selectTab}>
         <TabsList aria-label={t.tabs} className="mb-2 w-full max-w-full overflow-x-auto sm:w-fit group-data-horizontal/tabs:h-auto">
