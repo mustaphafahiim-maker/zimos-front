@@ -118,6 +118,9 @@ export type FieldSpec =
       hint?: string;
     }
   | { key: string; label: string; kind: "image"; hint?: string }
+  // Picked from the store's catalogue, stored as its id (ProductPickerField.tsx).
+  | { key: string; label: string; kind: "product"; hint?: string }
+  | { key: string; label: string; kind: "collection"; hint?: string }
   | { key: string; label: string; kind: "stringList"; itemLabel: string; hint?: string }
   | { key: string; label: string; kind: "imageList"; hint?: string }
   | { key: string; label: string; kind: "qaList"; hint?: string }
@@ -434,7 +437,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { title: "", showPrice: true, showBuyButton: true },
     fields: [
       { key: "title", label: "Title", kind: "text" },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "showPrice", label: "Show price", kind: "boolean" },
       { key: "showBuyButton", label: "Show buy button", kind: "boolean" },
     ],
@@ -507,8 +510,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       {
         key: "productId",
         label: "Product",
-        kind: "text",
-        placeholder: "Product id or slug",
+        kind: "product",
         hint: "Leave empty to use the newest product.",
       },
       {
@@ -526,7 +528,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text" },
       { key: "limit", label: "How many", kind: "number", min: 3, max: 16 },
-      { key: "collectionId", label: "Collection", kind: "text", hint: "Leave empty for the whole catalogue." },
+      { key: "collectionId", label: "Collection", kind: "collection", hint: "Leave empty for the whole catalogue." },
     ],
   },
   scroll_story: {
@@ -650,7 +652,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     icon: Tag,
     defaultProps: { productId: "", showCompareAt: true, size: "medium" },
     fields: [
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "showCompareAt", label: "Show the price before discount", kind: "boolean" },
       {
         key: "size",
@@ -670,7 +672,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
     defaultProps: { title: "", productId: "", limit: 6 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the newest product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
       { key: "limit", label: "How many reviews", kind: "number", min: 1, max: 50 },
     ],
   },
@@ -682,8 +684,8 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
       { key: "title", label: "Title", kind: "text" },
       {
         key: "productId",
-        label: "Product ID",
-        kind: "text",
+        label: "Product",
+        kind: "product",
         hint: "Leave empty to use the newest product. The form's fields come from Store settings → Purchase form.",
       },
       { key: "contactTags", label: "Tags added to the customer (comma-separated)", kind: "text", hint: "Added to the customer when they place the order with this form — on a store page or in a funnel." },
@@ -741,7 +743,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         ],
       },
       { key: "limit", label: "How many at most", kind: "number", min: 1, max: 24 },
-      { key: "productId", label: "Product ID", kind: "text", hint: "Leave empty to use the page product." },
+      { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the page product." },
     ],
   },
   upsell_decline_link: {

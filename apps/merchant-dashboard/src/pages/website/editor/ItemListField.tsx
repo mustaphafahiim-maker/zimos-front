@@ -4,6 +4,7 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { ImageField } from "./ImageField";
 import { useEditorLocale } from "./editorLocale";
+import { ProductPickerField } from "./ProductPickerField";
 
 /**
  * The inspector's editor for a list of objects — a slider's slides, a row of
@@ -18,6 +19,8 @@ import { useEditorLocale } from "./editorLocale";
 
 export type ItemSubField =
   | { key: string; label: string; labelAr: string; kind: "text" | "textarea" | "image" | "lines"; ltr?: boolean }
+  // Picked from the catalogue, stored as the product's id (ProductPickerField.tsx).
+  | { key: string; label: string; labelAr: string; kind: "product" }
   | {
       key: string;
       label: string;
@@ -96,6 +99,9 @@ export function ItemListField({
               {fields.map((field) => {
                 const fieldLabel = ar ? field.labelAr : field.label;
                 const id = `item-${i}-${field.key}`;
+                if (field.kind === "product") {
+                  return <ProductPickerField key={field.key} kind="product" label={fieldLabel} value={str(item[field.key])} onChange={(v) => patch(i, field.key, v)} />;
+                }
                 if (field.kind === "image") {
                   return <ImageField key={field.key} label={fieldLabel} value={str(item[field.key])} onChange={(url) => patch(i, field.key, url)} />;
                 }

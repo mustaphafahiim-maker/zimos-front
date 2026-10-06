@@ -48,6 +48,7 @@ import { ItemListField } from "./ItemListField";
 import { MAX_SECTION_HEIGHT_PX } from "@/lib/canvasDrag";
 import { sectionMinHeight, setSectionMinHeight } from "./canvasEdits";
 import { HtmlBlockCodeField } from "./HtmlBlockCodeField";
+import { ProductPickerField } from "./ProductPickerField";
 
 /**
  * The right-hand panel. A section has no *props* of its own — the tree gives
@@ -592,6 +593,10 @@ function ElementField({
           )}
         </Field>
       );
+
+    case "product":
+    case "collection":
+      return <ProductPickerField kind={spec.kind} label={label} hint={hint} value={asString(raw)} onChange={(v) => onChange(spec.key, v)} />;
 
     case "image":
       return (
