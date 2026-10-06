@@ -78,8 +78,10 @@ export const EMAIL_BLOCKS_MAX = 40;
 /**
  * A template as the designer sees it: `blocks` null when the plain body is
  * used. In a funnel's or website's list, `overridden` says whether it has its
- * own version (else the store's applies); an override's empty subject, body
- * or blocks come from the store's version.
+ * own version (else the store's applies); an override's empty subject or
+ * body comes from the store's version. Its blocks come from the store's only
+ * while it never set any: one saved with `blocks: null` is plain text of its
+ * own (`overridden: true`, `blocks: null` — frontend request 2026-10-06).
  */
 export type OrderEmailDesignTemplate = OrderEmailTemplateDto & { blocks: EmailBlock[] | null; overridden?: boolean };
 
@@ -114,7 +116,9 @@ export async function orderEmailDesignList(client: ApiClient, workspaceId: strin
  * back to the plain body. Unknown fields or a bad link → 422 naming the
  * block (`blocks.0.url`). With a scope it creates or updates that funnel's or
  * website's version (a new one starts with the store's on/off) and answers
- * the merged template with `overridden: true`.
+ * the merged template with `overridden: true`; there `blocks: null` keeps
+ * that version in its own plain subject + body, even when the store's email
+ * is designed (preview, test and real sends alike).
  */
 export async function orderEmailDesignSave(
   client: ApiClient,

@@ -28,6 +28,11 @@ import { OrderEmailEditor, type EditorApi } from "./OrderEmailEditor";
  * (handoff item 175): every row says whether it is the store's email or that
  * funnel's own version; editing or switching saves the funnel's version, and
  * "Use store email" deletes it again.
+ *
+ * A version saved in "Simple text" sends `blocks: null`, which on a funnel or
+ * website means its own plain subject and message (frontend request
+ * 2026-10-06): the store's design no longer comes back for it, and its row
+ * says "Simple text". A version that never set blocks still uses the store's.
  */
 
 const STRINGS = {
@@ -76,7 +81,9 @@ const STRINGS = {
     disabled_website: "“{name}” is off for this website.",
     editorNote_funnel: "Saving makes this funnel's own version. The store's email stays as it is.",
     editorNote_website: "Saving makes this website's own version. The store's email stays as it is.",
-    simpleNote: "If the store's version of this email is designed, this one keeps that design until you build its own in the designer.",
+    simpleNote_funnel: "Saving in simple text gives this funnel its own plain email: the design isn't used for it. The store's email stays as it is.",
+    simpleNote_website: "Saving in simple text gives this website its own plain email: the design isn't used for it. The store's email stays as it is.",
+    plain: "Simple text",
   },
   ar: {
     readOnly: "يمكن لمالك المتجر أو مدير مساحة العمل فقط تغيير هذه الرسائل.",
@@ -122,7 +129,9 @@ const STRINGS = {
     disabled_website: "«{name}» اتقفل للموقع ده.",
     editorNote_funnel: "الحفظ بيعمل نسخة خاصة بالفانل ده. إيميل المتجر هيفضل زي ما هو.",
     editorNote_website: "الحفظ بيعمل نسخة خاصة بالموقع ده. إيميل المتجر هيفضل زي ما هو.",
-    simpleNote: "لو إيميل المتجر ده متصمم، النسخة دي هتفضل بنفس التصميم لحد ما تعملها تصميم خاص بيها من «مصمم».",
+    simpleNote_funnel: "لو حفظت كنص بسيط، الفانل ده هياخد إيميل نص عادي خاص بيه: التصميم مش هيتستخدم فيه. إيميل المتجر هيفضل زي ما هو.",
+    simpleNote_website: "لو حفظت كنص بسيط، الموقع ده هياخد إيميل نص عادي خاص بيه: التصميم مش هيتستخدم فيه. إيميل المتجر هيفضل زي ما هو.",
+    plain: "نص بسيط",
   },
 } satisfies Messages;
 
@@ -209,7 +218,7 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
         tokens={data.tokens}
         api={editorApi}
         note={kind ? <p className="rounded-[var(--radius)] bg-primary-soft px-3 py-2 text-xs text-primary-dark">{pick(t, `editorNote_${kind}`)}</p> : undefined}
-        simpleNote={kind ? t.simpleNote : undefined}
+        simpleNote={kind ? pick(t, `simpleNote_${kind}`) : undefined}
         onClose={() => setEditing(null)}
         onSaved={(updated) => {
           replace(updated);
@@ -241,6 +250,10 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
                         <>
                           <StatusBadge value={own ? "custom" : "store"} tone={own ? "info" : "neutral"} text={own ? pick(t, `custom_${kind}`) : t.storeDefault} />
                           {own && !template.isEnabled && <StatusBadge value="off" tone="warning" text={pick(t, `off_${kind}`)} />}
+                          {/* How this funnel's own version is written: its plain text, or a design (its own or the store's). */}
+                          {own && (
+                            <span className="rounded-full bg-paper px-2 py-0.5 text-xs font-normal text-ink-soft">{template.blocks?.length ? t.designed : t.plain}</span>
+                          )}
                         </>
                       ) : (
                         template.isCustomised && (
