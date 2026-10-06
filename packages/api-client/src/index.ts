@@ -274,3 +274,5 @@ export * from "./endpoints/contactImport";
 export * from "./endpoints/shopperAccounts";
 // Element display rules: between dates, by device, country or UTM source; the visitor context (pages/displayRules.js, handoff 191).
 export * from "./endpoints/displayRules";
+// Wishlist for signed-in shoppers and the merchant's most wished products (shopperAccounts/wishlist.js, handoff 188).
+export * from "./endpoints/wishlist";

@@ -793,6 +793,24 @@ const en = {
       generic: "Something went wrong. Try again.",
     },
   },
+  /** Wishlist for signed-in shoppers (frontend-handoff 188): the hearts and the account tab. */
+  wishlist: {
+    title: "Wishlist",
+    add: "Add to wishlist",
+    remove: "Remove from wishlist",
+    removeShort: "Remove",
+    signInToKeep: "Sign in to keep your wishlist",
+    onThisDevice: "For now it's saved on this device only.",
+    unavailable: "Unavailable",
+    count: (n: number) => (n === 1 ? "1 saved product" : `${n} saved products`),
+    empty: "Your wishlist is empty",
+    emptyHint: "Tap the heart on any product to find it here later.",
+    removed: "Removed from your wishlist.",
+    full: "Your wishlist is full (200 products). Remove one to add another.",
+    notForSale: "This product isn't for sale right now.",
+    failed: "We couldn't update your wishlist. Try again.",
+    close: "Close",
+  },
   meta: {
     storeDescription: (store: string) => `Shop ${store} — cash on delivery across Egypt.`,
   },
@@ -1530,6 +1548,28 @@ const ar: Dictionary = {
       tooMany: "محاولات كتير. استنى شوية وجرّب تاني.",
       generic: "حصلت مشكلة. جرّب تاني.",
     },
+  },
+  wishlist: {
+    title: "المفضلة",
+    add: "ضيف للمفضلة",
+    remove: "شيل من المفضلة",
+    removeShort: "شيل",
+    signInToKeep: "سجّل دخول عشان تحفظ مفضلتك",
+    onThisDevice: "دلوقتي محفوظة على الجهاز ده بس.",
+    unavailable: "مش متاح",
+    count: (n) =>
+      n === 1
+        ? "منتج واحد في مفضلتك"
+        : n === 2
+          ? "منتجين في مفضلتك"
+          : `${arNum(n)} ${n % 100 >= 3 && n % 100 <= 10 ? "منتجات" : "منتج"} في مفضلتك`,
+    empty: "مفضلتك فاضية",
+    emptyHint: "دوس على القلب في أي منتج عشان تلاقيه هنا بعدين.",
+    removed: "اتشال من المفضلة.",
+    full: "مفضلتك مليانة (٢٠٠ منتج). شيل منتج عشان تضيف غيره.",
+    notForSale: "المنتج ده مش متاح للبيع دلوقتي.",
+    failed: "معرفناش نعدّل مفضلتك. جرّب تاني.",
+    close: "اقفل",
   },
   meta: {
     storeDescription: (store) => `تسوّق من ${store} — الدفع عند الاستلام في كل مصر.`,

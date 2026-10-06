@@ -22,6 +22,7 @@ import { LoadMore } from "@/components/LoadMore";
 import { useToast } from "@/components/Toast";
 import { useCatalogLabels } from "./catalogLabels";
 import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
+import { MostWishedCard } from "./components/MostWishedCard";
 import {
   DuplicateProductButton,
   ProductTransferButton,
@@ -309,6 +310,10 @@ export function CatalogProductsPage() {
           </>
         }
       />
+
+      <div className="mb-4 grid gap-3 empty:hidden md:grid-cols-2">
+        <MostWishedCard />
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FilterTabs tabs={tabs} value={tab} onChange={setTab} label={t.filterLabel} />
