@@ -115,7 +115,9 @@ are listed under *Handoff items done*.
       has no product split); «الزيارات للمتجر كله» note; stale ids reset.
 - [x] 169 Google Ads purchase + lead conversion labels (dialog + storefront send_to)
 - [x] 170 GTM ready-made container download + dataLayer events table (+ storefront pushes)
-- [ ] 171 live map · 173–175 emails · 176–177 domains · 178–179 webhooks/MCP (agents running)
+- [x] 178 webhook custom headers (masked, change/keep) + grouped new topics + edit dialog
+- [x] 179 «مساعدين الذكاء الاصطناعي (MCP)» panel: server URL, tools, AI key shown once, setups
+- [ ] 171 live map · 173–175 emails · 176–177 domains (agents running)
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
