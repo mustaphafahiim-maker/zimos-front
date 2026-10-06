@@ -119,7 +119,10 @@ are listed under *Handoff items done*.
 - [x] 179 «مساعدين الذكاء الاصطناعي (MCP)» panel: server URL, tools, AI key shown once, setups
 - [x] 176 buy a domain (search, buy dialog with the API's price, price-change re-confirm, bought domains table with renew/auto-renew)
 - [x] 177 «حوّل الزوار للدومين الأساسي» switch per non-primary domain
-- [ ] 171 live map · 173–175 emails (agents running)
+- [x] 173 sending domain for customer emails (records with copy, verify, change, remove)
+- [x] 174 block email designer (simple text / designer, up-down blocks, variables, preview phone/desktop, test send)
+- [x] 175 emails per funnel (funnel settings → Emails) and per website (when >1)
+- [ ] 171 live map (agent running)
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
@@ -135,7 +138,7 @@ are listed under *Handoff items done*.
   platform_permissions {*} (scratch DB only).
 
 ## Backend requests
-See `backend-requests.md` (first 6 done by the backend; 3 new from handoff 176).
+See `backend-requests.md` (first 6 done by the backend; 4 new from handoffs 175–176).
 
 ## Decisions
 - 2026-10-06 Glass frame retired on this branch: the brief asks for a light
