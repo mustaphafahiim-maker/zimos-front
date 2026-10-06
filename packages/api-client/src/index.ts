@@ -286,3 +286,5 @@ export * from "./endpoints/preorders";
 export * from "./endpoints/purchaseLimits";
 // Estimated delivery dates: the settings, the shopper's window and where it rides (handoff 199).
 export * from "./endpoints/deliveryEstimates";
+// Cookie consent: the store's banner (off / notice / ask first), who is asked, policy link and wording; the storefront's reader (handoff 196).
+export * from "./endpoints/cookieConsent";
