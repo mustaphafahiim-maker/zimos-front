@@ -58,7 +58,11 @@ are listed under *Handoff items done*.
       test-order step opens the store; local percent digits; sign-in pages
       calm (no glass/blobs) with a language switch; login email LTR; sign
       out on the plan step. (Covers S15 auth restyle too.)
-- [ ] S10 Dialogs and toasts — next
+- [x] S10 Dialogs and toasts: Modal (91 call sites, same props) on Base UI
+      Dialog — focus trap + restore, translated close button, backdrop tap no
+      longer discards forms, bottom sheet on phones; toasts with icon + close,
+      errors stay 10 s; install prompt sits above the phone tab bar.
+- [ ] S11 Profit + settlements — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint

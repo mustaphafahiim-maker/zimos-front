@@ -1,5 +1,13 @@
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { X } from "lucide-react";
 import { cn } from "@store-builder/ui";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: { close: "Close" },
+  ar: { close: "إغلاق" },
+} satisfies Messages;
 
 interface ModalProps {
   open: boolean;
@@ -11,44 +19,57 @@ interface ModalProps {
   className?: string;
 }
 
+/**
+ * The dashboard's dialog, on Base UI's Dialog (docs/UI_RULES.md §8): focus is
+ * trapped inside and returned to what opened it, Escape and the close button
+ * close it, and a tap on the dimmed backdrop does NOT — on a phone that tap
+ * used to throw away a half-typed form (audit U-14). On a phone it rises as
+ * a sheet from the bottom, within thumb reach; from `sm` up it is centred.
+ * Same props as before, so every caller keeps working.
+ */
 export function Modal({ open, onClose, title, description, children, footer, className }: ModalProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
+  const t = useT(STRINGS);
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 py-12"
-      onMouseDown={onClose}
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      disablePointerDismissal
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={cn(
-          "zimos-glass glass-dialog w-full max-w-lg rounded-[var(--radius-card)]",
-          className
-        )}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="border-b border-line px-5 py-4">
-          <h2 className="font-display text-lg font-medium text-ink">{title}</h2>
-          {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
-        </div>
-        <div className="px-5 py-4">{children}</div>
-        {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-line px-5 py-4">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-40 bg-ink/40 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none" />
+        <DialogPrimitive.Viewport className="fixed inset-0 z-40 flex items-end justify-center overflow-y-auto sm:items-start sm:p-4 sm:py-12">
+          <DialogPrimitive.Popup
+            className={cn(
+              "flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-[var(--radius-card)] bg-paper-raised text-ink shadow-[var(--shadow-pop)] ring-1 ring-line outline-none sm:max-h-none sm:rounded-[var(--radius-card)]",
+              "transition-[transform,opacity] duration-200 data-[ending-style]:translate-y-4 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-4 data-[starting-style]:opacity-0 motion-reduce:transition-none",
+              className
+            )}
+          >
+            <div className="flex items-start gap-3 border-b border-line px-5 py-4">
+              <div className="min-w-0 flex-1">
+                <DialogPrimitive.Title className="font-display text-lg font-semibold text-ink">{title}</DialogPrimitive.Title>
+                {description && (
+                  <DialogPrimitive.Description className="mt-1 text-sm text-ink-soft">{description}</DialogPrimitive.Description>
+                )}
+              </div>
+              <DialogPrimitive.Close
+                aria-label={t.close}
+                className="-me-2 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                <X className="size-5" aria-hidden />
+              </DialogPrimitive.Close>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+            {footer && (
+              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
+                {footer}
+              </div>
+            )}
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Viewport>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

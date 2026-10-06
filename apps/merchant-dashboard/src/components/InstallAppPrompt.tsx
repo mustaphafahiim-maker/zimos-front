@@ -111,7 +111,7 @@ export function InstallAppPrompt() {
     <div
       role="dialog"
       aria-label={t.title}
-      className="fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-md items-start gap-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-xl"
+      className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 md:bottom-3 mx-auto flex max-w-md items-start gap-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-xl"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
         {ios ? <Share className="size-5" aria-hidden /> : <Download className="size-5" aria-hidden />}
