@@ -232,3 +232,5 @@ export * from "./endpoints/storefrontTexts";
 export * from "./endpoints/storeScripts";
 // Per-domain "redirect to the primary domain" switch (domains/domainSettings.js, item 177).
 export * from "./endpoints/domainRedirect";
+// Buy a domain: search, purchase, auto-renew and renew (domains/purchases.js, item 176).
+export * from "./endpoints/domainPurchases";
