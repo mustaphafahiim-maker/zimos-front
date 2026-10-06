@@ -22,7 +22,7 @@ const STRINGS = {
   en: {
     title: "Purchase limits",
     description:
-      "How many of this product one order may hold, and one customer may buy. Every variant and offer of it counts together. Orders you create yourself are not limited.",
+      "The fewest and the most of this product one order can hold, and the most one customer can buy. Every variant and offer of it counts together. Orders you create yourself aren't limited.",
     min: "Minimum per order",
     minHint: "The checkout asks for at least this many.",
     max: "Maximum per order",
@@ -33,6 +33,7 @@ const STRINGS = {
     bad: "Enter a whole number from 1 to {max}, or leave it empty.",
     maxBelowMin: "The maximum must be at least the minimum.",
     perCustomerBelowMax: "The per-customer limit must be at least the maximum per order.",
+    perCustomerBelowMin: "The per-customer limit must be at least the minimum per order, or nobody could buy it.",
     none: "No limits: customers can order any quantity.",
     save: "Save",
     saving: "Saving…",
@@ -46,17 +47,18 @@ const STRINGS = {
   ar: {
     title: "حدود الشراء",
     description:
-      "كام قطعة من المنتج ده تكون في الطلب الواحد، وكام قطعة العميل الواحد يقدر يشتري. كل الأنواع والعروض بتاعته بتتحسب مع بعض. الأوردرات اللي إنت بتعملها بنفسك مش بتتقيّد.",
-    min: "أقل كمية في الطلب",
-    minHint: "صفحة الدفع بتطلب العدد ده على الأقل.",
-    max: "أكبر كمية في الطلب",
+      "أقل وأكبر كمية من المنتج ده في الأوردر الواحد، وأكبر كمية العميل الواحد يقدر يشتريها. كل الأنواع والعروض بتاعته بتتحسب مع بعض. الأوردرات اللي إنت بتعملها بنفسك مش بتتقيّد.",
+    min: "أقل كمية في الأوردر",
+    minHint: "صفحة الدفع مش هتقبل أقل من العدد ده.",
+    max: "أكبر كمية في الأوردر",
     maxHint: "السلة وصفحة الدفع بيقفوا عند العدد ده.",
     perCustomer: "أكبر كمية للعميل الواحد",
-    perCustomerHint: "في كل طلباته اللي ماتلغتش، بنعرفه من رقم موبايله.",
+    perCustomerHint: "في كل أوردراته اللي ماتلغتش، بنعرفه من رقم موبايله.",
     empty: "من غير حد",
     bad: "اكتب رقم صحيح من ١ لـ {max}، أو سيبه فاضي.",
     maxBelowMin: "أكبر كمية لازم تكون قد أقل كمية أو أكتر.",
-    perCustomerBelowMax: "حد العميل الواحد لازم يكون قد أكبر كمية في الطلب أو أكتر.",
+    perCustomerBelowMax: "حد العميل الواحد لازم يكون قد أكبر كمية في الأوردر أو أكتر.",
+    perCustomerBelowMin: "حد العميل الواحد لازم يكون قد أقل كمية في الأوردر أو أكتر، وإلا محدش هيقدر يشتريه.",
     none: "من غير حدود: العميل يقدر يطلب أي كمية.",
     save: "احفظ",
     saving: "بيحفظ…",
@@ -156,6 +158,8 @@ function LimitsForm({
     }
     if (!found.max && body.min && body.max && body.min > body.max) found.max = t.maxBelowMin;
     if (!found.maxPerCustomer && body.max && body.maxPerCustomer && body.maxPerCustomer < body.max) found.maxPerCustomer = t.perCustomerBelowMax;
+    // The API takes it, but min > per-customer leaves the product unbuyable.
+    else if (!found.maxPerCustomer && body.min && body.maxPerCustomer && body.maxPerCustomer < body.min) found.maxPerCustomer = t.perCustomerBelowMin;
     return Object.keys(found).length ? { errors: found } : { body };
   }
 

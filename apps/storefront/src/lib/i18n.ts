@@ -1120,9 +1120,9 @@ const ar: Dictionary = {
     preorderLine: (date) => `طلب مسبق — هيتشحن قبل ${date}`,
     preorderLineNoDate: "طلب مسبق",
     maxPerOrder: (n) => `بحد أقصى ${arNum(n)} في الطلب`,
-    minPerOrder: (n) => `أقل كمية في الطلب ${arNum(n)}`,
+    minPerOrder: (n) => `أقل كمية في الطلب: ${arNum(n)}`,
     maxPerCustomer: (n) => `بحد أقصى ${arNum(n)} للعميل الواحد`,
-    limitMax: (n, name) => (name ? `«${name}»: بحد أقصى ${arNum(n)} في الطلب` : `بحد أقصى ${arNum(n)} في الطلب`),
+    limitMax: (n, name) => (name ? `بحد أقصى ${arNum(n)} من «${name}» في الطلب` : `بحد أقصى ${arNum(n)} في الطلب`),
     limitMin: (n, name) => (name ? `اطلب ${arNum(n)} على الأقل من «${name}»` : `اطلب ${arNum(n)} على الأقل`),
     limitLeft: (n, name) => (name ? `تقدر تشتري ${arNum(n)} كمان بس من «${name}»` : `تقدر تشتري ${arNum(n)} كمان بس`),
     limitDone: (name) =>
