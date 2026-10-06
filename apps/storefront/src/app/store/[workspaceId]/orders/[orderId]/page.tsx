@@ -21,6 +21,7 @@ import { ThankYouDownloads } from "@/components/ThankYouDownloads";
 import { OrderUpdatesButton } from "@/components/OrderUpdatesButton";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
+import { GiftCardPaidNote } from "@/components/giftCards/GiftCardPaidNote";
 
 function Confirmation() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
@@ -119,6 +120,7 @@ function Confirmation() {
             <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
           </div>
         )}
+        <GiftCardPaidNote workspaceId={workspaceId} orderId={orderId} />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {wa && (

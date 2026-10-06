@@ -34,6 +34,7 @@ import {
   Store,
   Tag,
   Target,
+  Ticket,
   Truck,
   Undo2,
   Users,
@@ -75,6 +76,7 @@ export type NavKey =
   | "digital"
   | "ai"
   | "affiliates"
+  | "giftCards"
   | "subscriptions"
   | "services"
   | "referrals"
@@ -180,6 +182,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "automations", to: "/automations", icon: Bot },
       { key: "affiliates", to: "/affiliates", icon: UsersRound },
+      { key: "giftCards", to: "/gift-cards", icon: Ticket },
       { key: "ai", to: "/ai", icon: Sparkles },
     ],
   },
@@ -281,6 +284,7 @@ export const NAV_LABELS = {
     digital: "Digital products",
     ai: "AI studio",
     affiliates: "Affiliates",
+    giftCards: "Gift cards",
     subscriptions: "Subscriptions",
     services: "Services",
     referrals: "Refer & earn",
@@ -322,6 +326,7 @@ export const NAV_LABELS = {
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",
     affiliates: "المسوّقون بالعمولة",
+    giftCards: "كروت الهدايا",
     subscriptions: "الاشتراكات",
     services: "الخدمات",
     referrals: "اكسب من الإحالة",

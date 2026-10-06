@@ -278,3 +278,5 @@ export * from "./endpoints/displayRules";
 export * from "./endpoints/wishlist";
 // Back-in-stock alerts: a shopper signs up on a sold-out variant; the merchant sees who waits (stockAlerts/, handoff 194).
 export * from "./endpoints/stockAlerts";
+// Gift cards: issue, list, adjust, reveal / resend, products sold as gift cards; the shopper's balance check and checkout field (handoff 189).
+export * from "./endpoints/giftCards";
