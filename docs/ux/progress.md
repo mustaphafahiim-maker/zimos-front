@@ -41,7 +41,12 @@ are listed under *Handoff items done*.
       wide column, notes/tags/background beside them; tel: link in the
       summary; Arabic address formatting; Fulfillment no longer sees
       Analytics links it cannot open.
-- [ ] S6 Confirmation queue — next
+- [x] S6 Confirmation queue: header answers «باقي ٥ مكالمات · ٤ منهم معادهم
+      جه»; «استلم واتصل» claims then opens the dialer on phones; warning when
+      ≤3 min are left on a claim; outcome buttons with icon and meaning
+      colour; full-width actions on phones; guiding empty state; filters side
+      by side; Egyptian copy. (Callback time for «أجّل» waits on the backend.)
+- [ ] S7 Products list — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - (file does not exist yet on 2026-10-06)

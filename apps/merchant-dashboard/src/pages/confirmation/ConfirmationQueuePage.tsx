@@ -1,7 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Hourglass } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { CheckCircle2, Clock, Hourglass, PartyPopper, Phone, PhoneOff, XCircle, type LucideIcon } from "lucide-react";
+import { Alert, Button, Card, cn } from "@store-builder/ui";
 import {
   ORDER_SORTS,
   apiErrorDetails,
@@ -30,6 +30,8 @@ import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { pluralOf } from "@/lib/plural";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { LoadMore } from "@/components/LoadMore";
@@ -47,12 +49,26 @@ import { ChannelPicker, WhatsAppButton, useChannelLabels } from "./confirmationC
 import { CustomizationList } from "@/pages/orders/components/CustomizationList";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
+
+/** Each outcome's icon and, once picked, its meaning colour (with the word, never colour alone). */
+const OUTCOME_ICON: Record<ConfirmationOutcome, LucideIcon> = {
+  confirmed: CheckCircle2,
+  rejected: XCircle,
+  unreachable: PhoneOff,
+  postponed: Clock,
+};
+const OUTCOME_PICKED: Record<ConfirmationOutcome, string> = {
+  confirmed: "border-success bg-success-soft text-success",
+  rejected: "border-danger bg-danger-soft text-danger",
+  unreachable: "border-accent bg-accent-soft text-accent-dark",
+  postponed: "border-accent bg-accent-soft text-accent-dark",
+};
 const QUEUE_SORTS: readonly ConfirmationQueueSort[] = ["default", ...ORDER_SORTS];
 const PAGE_SIZE = 50;
 
 const STRINGS = {
   en: {
-    title: "Confirmation queue",
+    title: "Confirm orders",
     description: "Call each customer to confirm their order before it moves to fulfilment.",
     tabsLabel: "Queue tabs",
     tabPending: "Pending",
@@ -150,56 +166,63 @@ const STRINGS = {
     bulkDone: "{n} tasks updated.",
     bulkSkipped: "{n} finished tasks were left as they were.",
     via: "via {channel}",
+    answerNone: "No calls waiting. New cash-on-delivery orders land here by themselves.",
+    answer_one: "1 call left",
+    answer_other: "{n} calls left",
+    answerDue: "{n} of them are due now",
+    answerMine: "you are on {n}",
+    lockSoon: "Only {n} min left on your claim — save the result now.",
+    emptyAction: "See all orders",
   },
   ar: {
-    title: "قائمة التأكيد",
-    description: "اتصل بكل عميل لتأكيد طلبه قبل أن ينتقل إلى التجهيز.",
+    title: "تأكيد الأوردرات",
+    description: "كلّم كل عميل وأكّد أوردره قبل ما يتشحن.",
     tabsLabel: "أقسام القائمة",
-    tabPending: "بالانتظار",
-    tabInProgress: "قيد التنفيذ",
-    tabDone: "منتهية",
+    tabPending: "مستنية",
+    tabInProgress: "شغالين عليها",
+    tabDone: "خلصت",
     tabCount: "{label} ({n})",
-    emptyPending: "لا توجد طلبات بانتظار التأكيد حاليًا.",
-    emptyInProgress: "لا أحد في مكالمة الآن.",
-    emptyDone: "لا توجد تأكيدات منتهية بعد.",
-    outcomeConfirmed: "مؤكد",
-    outcomeRejected: "مرفوض",
-    outcomeUnreachable: "تعذّر الوصول",
-    outcomePostponed: "مؤجل",
+    emptyPending: "مفيش أوردرات مستنية تأكيد دلوقتي.",
+    emptyInProgress: "محدش في مكالمة دلوقتي.",
+    emptyDone: "لسه مفيش تأكيدات خلصت.",
+    outcomeConfirmed: "أكّد",
+    outcomeRejected: "رفض",
+    outcomeUnreachable: "مردّش",
+    outcomePostponed: "أجّل",
     itemsOne: "منتج واحد",
     itemsOther: "{n} منتجات",
-    attemptsOne: "محاولة سابقة واحدة",
-    attemptsOther: "{n} محاولات سابقة",
-    unnamedCustomer: "عميل بدون اسم",
-    noPhone: "لا يوجد رقم هاتف",
-    claiming: "جارٍ الاستلام…",
-    claimAndCall: "استلام واتصال",
-    takeOver: "استلام بدلًا منه",
-    reclaim: "استلام مرة أخرى",
-    release: "إرجاع للقائمة",
-    releasing: "جارٍ الإرجاع…",
+    attemptsOne: "اتكلّم مرة قبل كده",
+    attemptsOther: "اتكلّم {n} مرات قبل كده",
+    unnamedCustomer: "عميل من غير اسم",
+    noPhone: "مفيش رقم موبايل",
+    claiming: "بنستلم…",
+    claimAndCall: "استلم واتصل",
+    takeOver: "استلم مكانه",
+    reclaim: "استلم تاني",
+    release: "رجّعه للقايمة",
+    releasing: "بنرجّعه…",
     rejectionReason: "سبب الرفض",
-    rejectionPlaceholder: "غيّر العميل رأيه",
+    rejectionPlaceholder: "العميل غيّر رأيه",
     notes: "ملاحظات",
-    notesPlaceholder: "أي شيء يستحق التسجيل من المكالمة (اختياري).",
-    saving: "جارٍ الحفظ…",
-    saveOutcome: "حفظ النتيجة",
-    toastMarked: "تم تعيين {order} كـ {outcome}.",
-    toastReleased: "عاد {order} إلى قائمة الانتظار.",
-    callbackDue: "موعد معاودة الاتصال حان منذ {time}",
-    callbackLater: "معاودة الاتصال مجدولة في {time}",
+    notesPlaceholder: "أي حاجة مهمة من المكالمة (اختياري).",
+    saving: "بنحفظ…",
+    saveOutcome: "سجّل النتيجة",
+    toastMarked: "{order}: {outcome}.",
+    toastReleased: "{order} رجع للقايمة.",
+    callbackDue: "معاد المكالمة التانية جه من {time}",
+    callbackLater: "المكالمة التانية معادها {time}",
     waitingTitle: "في انتظار نافذة العروض",
     waitingBody:
       "ما زال العميل في عروض مسار البيع وقد يضيف إلى هذا الطلب. يُتاح للتأكيد خلال {n} دقيقة (في {time}) بإجماليه النهائي.",
     waitingSoon: "ما زال العميل في عروض مسار البيع. يُتاح الطلب للتأكيد بعد لحظات.",
     waitingCount: "{n} في انتظار نافذة العروض",
     lastAttempt: "آخر محاولة: {outcome} بواسطة {agent}، {time}",
-    yourClaim: "أنت في هذه المكالمة · ينتهي استلامك خلال {n} دقيقة",
-    yourClaimExpired: "انتهت مدة استلامك. استلمه مرة أخرى قبل الحفظ — قد يستلمه شخص آخر.",
-    heldBy: "{name} في هذه المكالمة · ينتهي الاستلام خلال {n} دقيقة",
-    heldByExpired: "انتهت مدة استلام {name} — يمكن لأي شخص استلامه.",
-    someone: "موظف آخر",
-    lockedBy: "{name} في هذه المكالمة بالفعل (ينتهي الاستلام خلال {n} دقيقة).",
+    yourClaim: "إنت مستلم المكالمة دي · باقي {n} دقيقة",
+    yourClaimExpired: "وقتك خلص. استلمه تاني قبل ما تحفظ — ممكن حد تاني ياخده.",
+    heldBy: "{name} مستلم المكالمة دي · باقي {n} دقيقة",
+    heldByExpired: "وقت {name} خلص — أي حد يقدر يستلمه.",
+    someone: "زميل",
+    lockedBy: "{name} مستلم المكالمة دي (باقي {n} دقيقة).",
     doneAt: "{outcome} · {time}",
     doneBy: "بواسطة {agent}",
     orderCancelled: "أوردر ملغي",
@@ -220,21 +243,21 @@ const STRINGS = {
     cancel: "إلغاء",
     toastCorrected: "تم تغيير {order} إلى {outcome}.",
     sortLabel: "الترتيب",
-    sort_default: "ترتيب القائمة",
-    sort_newest: "الأحدث أولًا",
-    sort_oldest: "الأقدم أولًا",
-    sort_total_desc: "الإجمالي: من الأعلى إلى الأقل",
-    sort_total_asc: "الإجمالي: من الأقل إلى الأعلى",
+    sort_default: "ترتيب القايمة",
+    sort_newest: "الأحدث الأول",
+    sort_oldest: "الأقدم الأول",
+    sort_total_desc: "الأغلى الأول",
+    sort_total_asc: "الأرخص الأول",
     assignmentFilter: "التعيين",
     filterAll: "الكل",
-    filterMine: "طلباتي",
-    filterUnassigned: "غير معيّنة",
-    filterAgents: "معيّنة لموظف",
-    assignedTo: "المعيّن له: {name}",
-    assignedToYou: "المعيّن له: أنت",
-    notAssigned: "غير معيّن",
+    filterMine: "بتوعي",
+    filterUnassigned: "مش متوزعة",
+    filterAgents: "متوزعة على",
+    assignedTo: "متوزع على: {name}",
+    assignedToYou: "متوزع عليك",
+    notAssigned: "مش متوزع",
     assignTo: "تعيين {order} إلى",
-    nobody: "لا أحد (متاح للجميع)",
+    nobody: "محدش (متاح للكل)",
     assignedToast: "تم تعيين {order} إلى {name}.",
     unassignedToast: "أصبح {order} متاحًا لجميع الموظفين.",
     assignedToOther: "معيّن لـ {name}، ولا يستلمه غيره إلا المدير.",
@@ -248,7 +271,16 @@ const STRINGS = {
     clearSelection: "إلغاء التحديد",
     bulkDone: "تم تحديث {n} من المهام.",
     bulkSkipped: "تُركت {n} من المهام المنتهية كما هي.",
-    via: "عبر {channel}",
+    via: "عن طريق {channel}",
+    answerNone: "مفيش مكالمات مستنياك. أوردرات الدفع عند الاستلام الجديدة بتنزل هنا لوحدها.",
+    answer_one: "باقي مكالمة واحدة",
+    answer_two: "باقي مكالمتين",
+    answer_few: "باقي {n} مكالمات",
+    answer_other: "باقي {n} مكالمة",
+    answerDue: "{n} منهم معادهم جه",
+    answerMine: "إنت شغال على {n}",
+    lockSoon: "باقي {n} دقيقة بس على استلامك — سجّل النتيجة دلوقتي.",
+    emptyAction: "شوف كل الأوردرات",
   },
 } satisfies Messages;
 
@@ -387,23 +419,37 @@ export function ConfirmationQueuePage() {
     void counts.refresh({ silent: true });
   }
 
+  // The header answers "how much is left?" (docs/ux/05-proposal.md §3).
+  const c = counts.data;
+  const queueAnswer = !c
+    ? null
+    : c.pending === 0 && c.inProgressMine === 0
+      ? t.answerNone
+      : [
+          c.pending > 0 ? pluralOf(t, "answer", c.pending) : null,
+          c.pendingDue > 0 && c.pendingDue < c.pending ? fmt(t.answerDue, { n: c.pendingDue }) : null,
+          c.inProgressMine > 0 ? fmt(t.answerMine, { n: c.inProgressMine }) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
   const emptyMessage =
     tab === "pending" ? t.emptyPending : tab === "in_progress" ? t.emptyInProgress : t.emptyDone;
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader title={t.title} description={queueAnswer ?? t.description} />
 
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-        <div className="flex items-center gap-2">
-          <label htmlFor={assignmentId} className="text-sm text-ink-soft">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end sm:gap-x-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <label htmlFor={assignmentId} className="sr-only text-sm text-ink-soft sm:not-sr-only">
             {t.assignmentFilter}
           </label>
           <Select
             id={assignmentId}
             value={assignment}
             onChange={(e) => changeAssignment(e.target.value)}
-            className="h-11 w-auto min-w-44"
+            className="h-11 w-full sm:w-auto sm:min-w-44"
           >
             <option value="all">{t.filterAll}</option>
             <option value="me">{t.filterMine}</option>
@@ -419,15 +465,15 @@ export function ConfirmationQueuePage() {
             )}
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <label htmlFor={sortId} className="text-sm text-ink-soft">
+        <div className="flex min-w-0 items-center gap-2">
+          <label htmlFor={sortId} className="sr-only text-sm text-ink-soft sm:not-sr-only">
             {t.sortLabel}
           </label>
           <Select
             id={sortId}
             value={sort}
             onChange={(e) => setSort(e.target.value as ConfirmationQueueSort)}
-            className="h-11 w-auto min-w-48"
+            className="h-11 w-full sm:w-auto sm:min-w-48"
           >
             {QUEUE_SORTS.map((key) => (
               <option key={key} value={key}>
@@ -450,6 +496,18 @@ export function ConfirmationQueuePage() {
         ]}
       />
 
+      {tab === "pending" && !list.loading && !list.error && list.items.length === 0 ? (
+        <EmptyState
+          icon={<PartyPopper aria-hidden />}
+          title={t.emptyPending}
+          description={t.answerNone}
+          action={
+            <Button variant="outline" asChild className="min-h-11">
+              <Link to="/orders">{t.emptyAction}</Link>
+            </Button>
+          }
+        />
+      ) : (
       <DataState
         loading={list.loading}
         error={list.error}
@@ -541,6 +599,7 @@ export function ConfirmationQueuePage() {
         </div>
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
+      )}
     </div>
   );
 }
@@ -739,7 +798,16 @@ function OpenCard({
     }
   }
 
-  const claim = () => run(async () => onChanged(await apiClient.claimConfirmationTask(workspaceId, task.id)));
+  // "Claim & call" does both on a phone: the claim first (so nobody else
+  // takes the order), then the dialer opens on the customer's number.
+  const claim = () =>
+    run(async () => {
+      onChanged(await apiClient.claimConfirmationTask(workspaceId, task.id));
+      const phone = order.contactSnapshot.phone;
+      if (phone && window.matchMedia?.("(pointer: coarse)").matches) {
+        window.location.href = `tel:${phone.replace(/[^\d+]/g, "")}`;
+      }
+    });
 
   const release = () =>
     run(async () => {
@@ -774,8 +842,10 @@ function OpenCard({
     });
 
   let lockLine: string | null = null;
+  const minutesLeft = minutesUntil(task.lockExpiresAt, now);
+  const lockSoon = mine && !expired && minutesLeft <= 3;
   if (mine) {
-    lockLine = expired ? t.yourClaimExpired : fmt(t.yourClaim, { n: minutesUntil(task.lockExpiresAt, now) });
+    lockLine = expired ? t.yourClaimExpired : lockSoon ? fmt(t.lockSoon, { n: minutesLeft }) : fmt(t.yourClaim, { n: minutesLeft });
   } else if (inProgress) {
     lockLine = expired
       ? fmt(t.heldByExpired, { name: holderName })
@@ -850,7 +920,16 @@ function OpenCard({
       )}
 
       {lockLine && (
-        <p className={mine && expired ? "text-sm font-medium text-danger" : "text-sm text-ink-soft"}>
+        <p
+          role={lockSoon || (mine && expired) ? "status" : undefined}
+          className={
+            mine && expired
+              ? "text-sm font-medium text-danger"
+              : lockSoon
+                ? "rounded-[var(--radius)] bg-accent-soft px-3 py-2 text-sm font-medium text-accent-dark"
+                : "text-sm text-ink-soft"
+          }
+        >
           {lockLine}
         </p>
       )}
@@ -860,18 +939,26 @@ function OpenCard({
       {mine && !expired ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {OUTCOMES.map((o) => (
-              <Button
-                key={o}
-                type="button"
-                size="lg"
-                variant={outcome === o ? "primary" : "outline"}
-                onClick={() => setOutcome(o)}
-                disabled={busy}
-              >
-                {outcomeLabel[o]}
-              </Button>
-            ))}
+            {OUTCOMES.map((o) => {
+              const Icon = OUTCOME_ICON[o];
+              const picked = outcome === o;
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  aria-pressed={picked}
+                  onClick={() => setOutcome(o)}
+                  disabled={busy}
+                  className={cn(
+                    "flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-[var(--radius)] border text-sm font-semibold transition-colors disabled:opacity-50",
+                    picked ? OUTCOME_PICKED[o] : "border-line-strong/50 bg-paper-raised text-ink hover:bg-paper-sunken"
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  {outcomeLabel[o]}
+                </button>
+              );
+            })}
           </div>
 
           <ChannelPicker value={channel} onChange={pickChannel} disabled={busy} />
@@ -898,7 +985,7 @@ function OpenCard({
           </Field>
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={save} disabled={busy || !outcome || rejectionMissing}>
+            <Button onClick={save} disabled={busy || !outcome || rejectionMissing} className="h-12 flex-1 sm:flex-none">
               {busy ? t.saving : t.saveOutcome}
             </Button>
             <Button variant="outline" onClick={release} disabled={busy}>
@@ -913,7 +1000,8 @@ function OpenCard({
           ) : (
             canConfirm &&
             (!inProgress || expired) && (
-              <Button onClick={claim} disabled={busy}>
+              <Button onClick={claim} disabled={busy} className="h-12 flex-1 gap-2 sm:flex-none">
+                {!inProgress && !mine && <Phone className="size-4" aria-hidden />}
                 {busy ? t.claiming : mine ? t.reclaim : inProgress ? t.takeOver : t.claimAndCall}
               </Button>
             )
