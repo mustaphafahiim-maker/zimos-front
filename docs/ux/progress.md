@@ -113,7 +113,8 @@ are listed under *Handoff items done*.
 - [x] 172 home filters: product and store (when >1 website) pickers on the
       home, remembered per store; profit tiles step aside while filtered (P&L
       has no product split); «الزيارات للمتجر كله» note; stale ids reset.
-- [ ] 169 Google Ads labels · 170 GTM container (after the pixels agent lands)
+- [x] 169 Google Ads purchase + lead conversion labels (dialog + storefront send_to)
+- [x] 170 GTM ready-made container download + dataLayer events table (+ storefront pushes)
 - [ ] 171 live map · 173–175 emails · 176–177 domains · 178–179 webhooks/MCP (agents running)
 
 ## Local verification setup (any new session)
