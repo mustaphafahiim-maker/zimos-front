@@ -70,6 +70,9 @@ const STRINGS = {
     PRODUCT_HAS_ORDERS: "This product has orders, so it can only be archived.",
     PRODUCT_IN_FUNNEL: "This product is used in a funnel. Remove it from the funnel first.",
     PRODUCT_NOT_ARCHIVED: "Only an archived product can be restored.",
+    SMART_COLLECTION:
+      "This collection fills itself from its rules, so products can't be added or removed by hand. Change its rules or the products' tags instead.",
+    NOT_SMART_COLLECTION: "This collection is manual, so it has no rules to refresh from.",
     CARRIERS_NOT_CONFIGURED: "Courier integrations aren't available on this server yet. Please contact support.",
     CARRIER_AUTH_FAILED: "The courier rejected the API key. Check it in the courier's dashboard and connect again.",
     CARRIER_PERMISSION_DENIED:
@@ -174,6 +177,8 @@ const STRINGS = {
     PRODUCT_HAS_ORDERS: "المنتج ده عليه أوردرات، فينفع تأرشفه بس مش تمسحه.",
     PRODUCT_IN_FUNNEL: "المنتج ده مستخدم في مسار بيع. شيله من المسار الأول.",
     PRODUCT_NOT_ARCHIVED: "ينفع ترجّع المنتج المؤرشف بس.",
+    SMART_COLLECTION: "المجموعة دي بتتملى لوحدها من الشروط بتاعتها، فمينفعش تضيف أو تشيل منتجات منها بإيدك. غيّر شروطها أو تاجز المنتجات.",
+    NOT_SMART_COLLECTION: "المجموعة دي يدوية، فمفيهاش شروط تتحدّث منها.",
     CARRIERS_NOT_CONFIGURED: "ربط شركات الشحن لسه مش متاح هنا. كلّم الدعم.",
     CARRIER_AUTH_FAILED: "شركة الشحن رفضت المفتاح (API key). اتأكد منه في لوحة الشركة واربط تاني.",
     CARRIER_PERMISSION_DENIED:
