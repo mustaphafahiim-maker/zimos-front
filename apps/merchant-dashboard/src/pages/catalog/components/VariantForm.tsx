@@ -8,6 +8,7 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput, formatOptions } from "@/lib/format";
@@ -92,6 +93,8 @@ interface Props {
   variant?: Variant;
   onDone: () => void;
   onCancel: () => void;
+  /** False for a product whose quantity is not tracked: no stock and no overselling choice. */
+  tracked?: boolean;
 }
 
 /** Parse "Size=M, Color=Red" -> { Size: "M", Color: "Red" }. */
@@ -113,12 +116,14 @@ function stringifyOptionValues(values: Record<string, string> | undefined): stri
     .join(", ");
 }
 
-export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
+export function VariantForm({ productId, variant, onDone, onCancel, tracked = true }: Props) {
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
   const isEdit = Boolean(variant);
+  // A new variant is priced in the store's own currency (backend currencies/baseCurrency.js).
+  const storeCurrency = useWorkspace().currentWorkspace?.defaultCurrency ?? "EGP";
 
   const [sku, setSku] = useState(variant?.sku ?? "");
   const [price, setPrice] = useState(minorToMajorInput(variant?.priceAmount));
@@ -222,7 +227,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           value={price}
           onChange={setPrice}
           error={fieldErrors.priceAmount}
-          currency={variant?.currency ?? "EGP"}
+          currency={variant?.currency ?? storeCurrency}
         />
         <MoneyInput
           label={t.cost}
@@ -230,7 +235,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           onChange={setCost}
           error={fieldErrors.costAmount}
           hint={t.optional}
-          currency={variant?.currency ?? "EGP"}
+          currency={variant?.currency ?? storeCurrency}
         />
       </div>
 
@@ -240,7 +245,7 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         onChange={setCompareAt}
         error={fieldErrors.compareAtAmount}
         hint={t.compareAtHint}
-        currency={variant?.currency ?? "EGP"}
+        currency={variant?.currency ?? storeCurrency}
       />
 
       <WeightInput
@@ -256,15 +261,17 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
 
       {!isEdit && (
         <>
-          <TextField
-            label={t.stock}
-            type="number"
-            min={0}
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            error={fieldErrors.stockOnHand}
-            hint={t.stockHint}
-          />
+          {tracked && (
+            <TextField
+              label={t.stock}
+              type="number"
+              min={0}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              error={fieldErrors.stockOnHand}
+              hint={t.stockHint}
+            />
+          )}
           <TextField
             label={t.options}
             value={options}
@@ -302,14 +309,16 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         </>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          checked={allowOverselling}
-          onChange={(e) => setAllowOverselling(e.target.checked)}
-        />
-        {t.allowOverselling}
-      </label>
+      {tracked && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={allowOverselling}
+            onChange={(e) => setAllowOverselling(e.target.checked)}
+          />
+          {t.allowOverselling}
+        </label>
+      )}
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>

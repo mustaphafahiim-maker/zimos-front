@@ -11,6 +11,7 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
@@ -25,6 +26,7 @@ import { Select } from "@/components/Select";
 import { useCatalogLabels } from "../catalogLabels";
 import { ProductImagesSection } from "./ProductImagesSection";
 import { AiDescriptionButton } from "./AiDescriptionButton";
+import { TrackQuantityField } from "./TrackQuantityField";
 
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"];
 const TYPES: ProductType[] = ["physical", "digital", "service"];
@@ -154,6 +156,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const isCreate = mode === "create";
+  // Prices are entered in the store's own currency (the backend prices a new variant in it).
+  const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.defaultCurrency ?? "EGP";
 
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -172,6 +177,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
   const [stock, setStock] = useState("0");
   const [weight, setWeight] = useState("");
   const [allowOverselling, setAllowOverselling] = useState(false);
+  // "Track quantity" (backend catalog/stockTracking.js); physical products only.
+  const [trackInventory, setTrackInventory] = useState((product as { trackInventory?: boolean } | undefined)?.trackInventory !== false);
+  const tracked = productType !== "physical" || trackInventory;
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -229,6 +237,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
       // The fee goes with "extra_fee" only; any other mode clears it server-side.
       shippingMode,
       shippingExtraAmount: extraFeeMinor,
+      ...(productType === "physical" ? { trackInventory } : {}),
     };
 
     try {
@@ -240,9 +249,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
             priceAmount: priceMinor,
             ...(compareMinor !== null ? { compareAtAmount: compareMinor } : {}),
             ...(sku.trim() ? { sku: sku.trim() } : {}),
-            stockOnHand: stockValue,
+            stockOnHand: tracked ? stockValue : 0,
             ...(weightGrams !== null && productType === "physical" ? { weightGrams } : {}),
-            allowOverselling,
+            allowOverselling: tracked ? allowOverselling : true,
           },
         };
         const created = await apiClient.createProduct(workspaceId, payload);
@@ -327,6 +336,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                 )}
               </Field>
             </div>
+            {productType === "physical" && <TrackQuantityField value={trackInventory} onChange={setTrackInventory} disabled={saving} />}
 
             <TextField
               label={t.tags}
@@ -356,6 +366,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
               </Field>
               {shippingMode === "extra_fee" && (
                 <MoneyInput
+                  currency={currency}
                   label={t.extraFee}
                   required
                   value={extraFee}
@@ -380,6 +391,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <MoneyInput
+                  currency={currency}
                   label={t.price}
                   required
                   value={price}
@@ -387,6 +399,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                   error={fieldErrors.price}
                 />
                 <MoneyInput
+                  currency={currency}
                   label={t.compareAt}
                   value={compareAt}
                   onChange={setCompareAt}
@@ -404,17 +417,19 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                   hint={t.skuHint}
                   placeholder={t.skuPlaceholder}
                 />
-                <TextField
-                  label={t.stock}
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={stock}
-                  onChange={(e) => setStock(e.target.value)}
-                  error={fieldErrors.stock}
-                  hint={t.stockHint}
-                />
+                {tracked && (
+                  <TextField
+                    label={t.stock}
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    error={fieldErrors.stock}
+                    hint={t.stockHint}
+                  />
+                )}
               </div>
 
               {productType === "physical" && (
@@ -429,14 +444,16 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
                 />
               )}
 
-              <label className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={allowOverselling}
-                  onChange={(e) => setAllowOverselling(e.target.checked)}
-                />
-                {t.allowOverselling}
-              </label>
+              {tracked && (
+                <label className="flex items-center gap-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={allowOverselling}
+                    onChange={(e) => setAllowOverselling(e.target.checked)}
+                  />
+                  {t.allowOverselling}
+                </label>
+              )}
             </div>
           </CardContent>
         </Card>

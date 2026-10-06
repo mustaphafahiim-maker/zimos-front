@@ -12,6 +12,7 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useCatalogLabels } from "../catalogLabels";
 import { VariantForm } from "./VariantForm";
+import { useNotTrackedLabel } from "./TrackQuantityField";
 
 const STRINGS = {
   en: {
@@ -74,9 +75,12 @@ interface Props {
   productId: string;
   variants: Variant[];
   onChanged: () => void;
+  /** False for a product whose quantity is not tracked: no stock to show or ask for. */
+  tracked?: boolean;
 }
 
-export function VariantsSection({ productId, variants, onChanged }: Props) {
+export function VariantsSection({ productId, variants, onChanged, tracked = true }: Props) {
+  const notTracked = useNotTrackedLabel();
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const errorMessage = useErrorMessage();
@@ -139,8 +143,14 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
                     <td className="py-2 pe-3 text-ink-soft">{v.sku || "—"}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(v.priceAmount, v.currency)}</td>
                     <td className="py-2 pe-3 text-ink-soft">
-                      {v.stockOnHand}
-                      {v.reservedStock ? ` (−${v.reservedStock})` : ""}
+                      {tracked ? (
+                        <>
+                          {v.stockOnHand}
+                          {v.reservedStock ? ` (−${v.reservedStock})` : ""}
+                        </>
+                      ) : (
+                        notTracked
+                      )}
                     </td>
                     <td className="py-2 pe-3">
                       <StatusBadge
@@ -175,6 +185,7 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
       <Modal open={adding} onClose={() => setAdding(false)} title={t.addTitle}>
         <VariantForm
           productId={productId}
+          tracked={tracked}
           onCancel={() => setAdding(false)}
           onDone={() => {
             setAdding(false);
@@ -188,6 +199,7 @@ export function VariantsSection({ productId, variants, onChanged }: Props) {
         {editing && (
           <VariantForm
             productId={productId}
+            tracked={tracked}
             variant={editing}
             onCancel={() => setEditing(null)}
             onDone={() => {

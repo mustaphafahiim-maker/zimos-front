@@ -111,6 +111,7 @@ export function ProductEditPage() {
             <VariantsSection
               productId={data.id}
               variants={data.variants ?? []}
+              tracked={data.productType !== "physical" || (data as { trackInventory?: boolean }).trackInventory !== false}
               onChanged={reload}
             />
             <VariantBulkEditor productId={data.id} variants={data.variants ?? []} onChanged={reload} />

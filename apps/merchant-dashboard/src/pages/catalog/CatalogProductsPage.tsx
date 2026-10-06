@@ -156,6 +156,8 @@ function NoWeightBadge({ product, t }: { product: Product; t: Strings }) {
 function stockSummary(product: Product, t: Strings): string {
   // Digital products and services have no stock to count.
   if (product.productType === "digital" || product.productType === "service") return t.notTracked;
+  // A physical product with "Track quantity" off (backend catalog/stockTracking.js).
+  if ((product as Product & { trackInventory?: boolean }).trackInventory === false) return t.notTracked;
   const variants = product.variants ?? [];
   if (variants.length === 0) return t.noVariants;
   const total = variants.reduce((sum, v) => sum + v.stockOnHand, 0);
