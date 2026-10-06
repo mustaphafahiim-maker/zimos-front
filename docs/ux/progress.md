@@ -305,6 +305,14 @@ are listed under *Handoff items done*.
       steps, «اعمل مفتاح API» with the right scopes (shown once, copy), the
       webhooks the tool subscribed (N of 25), triggers and the envelope;
       Zapier / Make badges on their webhook endpoints.
+- [x] 191 Display rules: every builder / funnel-step element has a «الظهور»
+      tab (dates on the store's clock, devices, countries in/out, UTM
+      source / medium / campaign) with a summary chip and outline marks; the
+      storefront applies device (CSS), country (visitor context) and UTM
+      rules without a gap or flash.
+- [ ] 188/194, 189, 190, 192, 196, 197, 198/199 — interrupted by a
+      container restart (out of memory); WIP saved on the agents' branches,
+      being finished three at a time.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
