@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { LOCALE_COOKIE, parseLocale } from "./i18n";
 import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
 import { STORE_PREVIEW_HEADER, isTokenShaped } from "./storePreview";
+import { STORE_GATE_COOKIE, isGateTokenShaped } from "./storeGate";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -42,6 +43,9 @@ export async function createServerStorefrontApiClient() {
   // The language the shopper chose: the API answers products and collections
   // in it where the store has them translated (the originals otherwise).
   const locale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  // A password-locked store this visitor unlocked (lib/storeGate, handoff 197).
+  const gate = (await cookies()).get(STORE_GATE_COOKIE)?.value;
+  if (isGateTokenShaped(gate)) defaultHeaders["X-Store-Gate"] = gate;
   if (locale) defaultHeaders["X-Store-Locale"] = locale;
   return new ApiClient({ baseUrl, tokenStorage: createMemoryTokenStorage(), defaultHeaders });
 }

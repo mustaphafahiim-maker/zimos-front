@@ -1,6 +1,7 @@
 import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
 import { LOCALE_COOKIE, parseLocale, type Locale } from "./i18n";
 import { readStorePreviewCookie } from "./storePreview";
+import { readStoreGateCookie } from "./storeGate";
 
 /** The shopper's chosen language from its cookie, for the API's X-Store-Locale. */
 function chosenLocale(): string | null {
@@ -28,9 +29,12 @@ export function createStorefrontApiClient(opts: { locale?: Locale | null } = {})
   // Staff previewing a store the public can't see yet (lib/storePreview).
   const preview = readStorePreviewCookie();
   const locale = opts.locale ?? chosenLocale();
+  // A password-locked store this visitor unlocked (lib/storeGate, handoff 197).
+  const gate = readStoreGateCookie();
   const defaultHeaders: Record<string, string> = {
     ...(preview ? { "X-Store-Preview": preview } : {}),
     ...(locale ? { "X-Store-Locale": locale } : {}),
+    ...(gate ? { "X-Store-Gate": gate } : {}),
   };
   return new ApiClient({
     baseUrl,
