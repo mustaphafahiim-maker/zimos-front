@@ -317,7 +317,15 @@ are listed under *Handoff items done*.
       buttons on a sold-out variant (sold-out options can now be picked,
       still struck through); dashboard «مستنيين يرجع» card and «{n} مستني»
       badges on variants. One backend request (wishlist availability).
-- [ ] 189, 190, 192, 196, 197, 198/199 — interrupted by a
+- [x] 189 Gift cards: dashboard /gift-cards (list with phone cards, state
+      tabs, search; issue dialog showing the code once; detail with history,
+      adjust, resend, disable; products sold as gift cards), order page names
+      «كارت هدية •••• XHLV»; storefront balance page, checkout field (with
+      the phone bar showing what's left to pay on delivery) and thank-you
+      note. One real COD order paid partly by card. Refund dialog says the
+      money goes back to the card — verified for gift-card payment refunds
+      (giftCardProvider.js); that a manual refund picks the card is Inferred.
+- [ ] 190, 192, 196, 197, 198/199 — interrupted by a
       container restart (out of memory); WIP saved on the agents' branches,
       being finished three at a time.
 

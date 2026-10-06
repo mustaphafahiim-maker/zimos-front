@@ -44,6 +44,7 @@ const STRINGS = {
     refundTitle: "Refund this order",
     refundGateway: "The money goes back to the shopper's card or wallet through the gateway.",
     refundManual: "This records a refund you hand back yourself (cash, transfer). Nothing is sent to a gateway.",
+    refundGiftCard: "The money goes back onto the shopper's gift card.",
     amount: "Amount",
     amountHint: "At most {max}.",
     fromPayment: "Refund from",
@@ -105,7 +106,8 @@ const STRINGS = {
     codNotCollected: "الدفع كاش عند الاستلام. لسه متحصّلش حاجة، فمفيش حاجة تترد.",
     refundTitle: "استرداد مبلغ من هذا الأوردر",
     refundGateway: "المبلغ يرجع لكارت أو محفظة العميل عن طريق البوابة.",
-    refundManual: "هذا يسجل استردادًا ترجّعه بنفسك (كاش أو تحويل). لا يُرسل شيء لأي بوابة.",
+    refundManual: "ده بيسجّل استرداد بترجّعه إنت بنفسك (كاش أو تحويل). مفيش حاجة بتتبعت لأي بوابة.",
+    refundGiftCard: "الفلوس هترجع على كارت الهدية بتاع العميل.",
     amount: "المبلغ",
     amountHint: "بحد أقصى {max}.",
     fromPayment: "الاسترداد من",
@@ -488,13 +490,17 @@ function RefundDialog({
   }
 
   const attempt = (id: string) => timeline.attempts.find((p) => p.id === id);
+  // A gift card's share is refunded onto the card (backend giftCards/giftCardProvider.js), not in cash.
+  const toGiftCard = viaGateway
+    ? Boolean(paymentId && attempt(paymentId) && isGiftCardPayment(attempt(paymentId)!))
+    : timeline.attempts.some((p) => isGiftCardPayment(p));
 
   return (
     <Modal
       open
       onClose={onClose}
       title={t.refundTitle}
-      description={viaGateway ? t.refundGateway : t.refundManual}
+      description={toGiftCard ? t.refundGiftCard : viaGateway ? t.refundGateway : t.refundManual}
     >
       <form onSubmit={submit} className="space-y-4 p-5">
         {viaGateway && timeline.perPayment.length > 1 && (
