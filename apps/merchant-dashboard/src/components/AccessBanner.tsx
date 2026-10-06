@@ -178,7 +178,7 @@ export function AccessBanner() {
         {notice.billing && canSeeBilling && (
           <>
             {" "}
-            <Link to="/settings" className="font-medium underline underline-offset-2">
+            <Link to="/settings?tab=billing" className="font-medium underline underline-offset-2">
               {t.billingLink}
             </Link>
           </>

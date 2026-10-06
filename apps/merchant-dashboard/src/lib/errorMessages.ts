@@ -32,7 +32,7 @@ const STRINGS = {
     FORBIDDEN: "You don't have permission to do that. Ask the store owner to update your role.",
     APP_NOT_INSTALLED: "This needs an app your store has uninstalled. Install it again from the Apps page.",
     SUBSCRIPTION_REQUIRED:
-      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Settings → Plan and referral code.",
+      "Your subscription has expired, so new products and funnels can't be created until it's renewed. Existing products, funnels and orders keep working — see Settings → Plan & billing.",
     STORE_SUSPENDED:
       "This store has been suspended by Zimos, so new products and funnels can't be created. Contact Zimos support.",
     NOT_FOUND: "We couldn't find that. It may have been deleted.",
@@ -137,7 +137,7 @@ const STRINGS = {
     FORBIDDEN: "الحاجة دي مش ضمن صلاحياتك. اطلب من صاحب المتجر يفتحهالك.",
     APP_NOT_INSTALLED: "ده محتاج تطبيق إنت شلته من متجرك. نزّله تاني من صفحة التطبيقات.",
     SUBSCRIPTION_REQUIRED:
-      "اشتراكك خلص، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة لحد ما تجدّده. المنتجات والمسارات والأوردرات اللي عندك شغالة عادي — جدّد من الإعدادات ← الخطة.",
+      "اشتراكك خلص، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة لحد ما تجدّده. المنتجات والمسارات والأوردرات اللي عندك شغالة عادي — جدّد من الإعدادات ← الباقة والفواتير.",
     STORE_SUSPENDED: "زيموس وقّفت المتجر ده، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة. كلّم دعم زيموس.",
     NOT_FOUND: "مش لاقيين الحاجة دي. ممكن تكون اتمسحت.",
     CONFLICT: "حد عدّل هنا في نفس الوقت. اعمل تحديث للصفحة وجرّب تاني.",

@@ -10,6 +10,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
+import { FilterTabs } from "@/components/FilterTabs";
 import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
@@ -49,6 +50,13 @@ const STRINGS = {
   en: {
     pageTitle: "Settings",
     pageDescription: "Your store profile and the people who can manage it.",
+    tabsLabel: "Settings sections",
+    tab_store: "Store",
+    tab_messages: "Messages",
+    tab_team: "Team",
+    tab_billing: "Plan & billing",
+    tab_account: "My account",
+    tab_developers: "Developers",
     // Store profile
     profileTitle: "Store profile",
     profileDescription: "The name, logo, and tagline shown across your dashboard and storefront.",
@@ -112,7 +120,14 @@ const STRINGS = {
   },
   ar: {
     pageTitle: "الإعدادات",
-    pageDescription: "بيانات متجرك والأشخاص الذين يمكنهم إدارته.",
+    pageDescription: "بيانات متجرك والناس اللي بيديروه معاك.",
+    tabsLabel: "أقسام الإعدادات",
+    tab_store: "المتجر",
+    tab_messages: "الرسايل",
+    tab_team: "الفريق",
+    tab_billing: "الباقة والفواتير",
+    tab_account: "حسابي",
+    tab_developers: "المطورين",
     profileTitle: "بيانات المتجر",
     profileDescription: "اسم المتجر وشعاره وشعاره النصي كما تظهر في لوحة التحكم والمتجر.",
     profileSaved: "تم حفظ بيانات المتجر.",
@@ -186,35 +201,99 @@ function useStoreFromLink() {
   }, [wanted, currentWorkspace?.id, workspaces, selectWorkspace]);
 }
 
+const SETTINGS_TABS = ["store", "messages", "team", "billing", "account", "developers"] as const;
+type SettingsTab = (typeof SETTINGS_TABS)[number];
+
+/** Old deep links (#whatsapp, #notifications…) still land on the right tab. */
+const HASH_TAB: Record<string, SettingsTab> = {
+  whatsapp: "messages",
+  notifications: "account",
+  billing: "billing",
+  team: "team",
+  security: "account",
+  developers: "developers",
+};
+
+/**
+ * The tab in the URL (?tab=), else the one an old #hash link means, else
+ * billing for a return from the payment page (?workspace=), else the store.
+ */
+function useSettingsTab(): [SettingsTab, (tab: SettingsTab) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get("tab");
+  const fromHash = HASH_TAB[window.location.hash.replace("#", "")];
+  const tab: SettingsTab = (SETTINGS_TABS as readonly string[]).includes(raw ?? "")
+    ? (raw as SettingsTab)
+    : fromHash ?? (params.get("workspace") ? "billing" : "store");
+  const set = (next: SettingsTab) =>
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        out.set("tab", next);
+        return out;
+      },
+      { replace: true }
+    );
+  return [tab, set];
+}
+
 export function SettingsPage() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   useStoreFromLink();
+  const [tab, setTab] = useSettingsTab();
+
+  // An old #anchor link: once its tab is drawn, bring the section into view.
+  useEffect(() => {
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 150);
+    return () => window.clearTimeout(timer);
+  }, [tab]);
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="max-w-3xl space-y-8">
       <PageHeader
         title={t.pageTitle}
         description={t.pageDescription}
       />
-      <AccountSection />
-      <AppearanceSection />
-      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
-      <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      {/* The store's address (<slug>.zimos.co), part of the account settings (SPEC §17.3). */}
-      <StoreAddressSection key={`store-address-${workspaceId}`} />
-      <AccountSettingsSection key={`account-settings-${workspaceId}`} />
-      <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
-      <CatalogSettingsSection key={`catalog-${workspaceId}`} />
-      <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
-      {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
-      <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
-      {/* The emails customers get about their orders. */}
-      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
-      <BillingSection key={`billing-${workspaceId}`} />
-      <TeamSection key={`team-${workspaceId}`} />
-      <SecuritySection key={`security-${workspaceId}`} />
-      <DevelopersSection key={`developers-${workspaceId}`} />
+      {/* Fifteen sections used to stack on one page; now they sit in six tabs. */}
+      <FilterTabs
+        label={t.tabsLabel}
+        value={tab}
+        onChange={setTab}
+        tabs={SETTINGS_TABS.map((key) => ({ value: key, label: t[`tab_${key}`] }))}
+      />
+      {tab === "store" && (
+        <>
+          <WorkspaceProfileSection key={`profile-${workspaceId}`} />
+          {/* The store's address (<slug>.zimos.co), part of the account settings (SPEC §17.3). */}
+          <StoreAddressSection key={`store-address-${workspaceId}`} />
+          <AccountSettingsSection key={`account-settings-${workspaceId}`} />
+          <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
+          <CatalogSettingsSection key={`catalog-${workspaceId}`} />
+        </>
+      )}
+      {tab === "messages" && (
+        <>
+          <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
+          {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
+          <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
+          {/* The emails customers get about their orders. */}
+          <OrderEmailsSection key={`order-emails-${workspaceId}`} />
+        </>
+      )}
+      {tab === "team" && <TeamSection key={`team-${workspaceId}`} />}
+      {tab === "billing" && <BillingSection key={`billing-${workspaceId}`} />}
+      {tab === "account" && (
+        <>
+          <AccountSection />
+          <AppearanceSection />
+          <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
+          <SecuritySection key={`security-${workspaceId}`} />
+        </>
+      )}
+      {tab === "developers" && <DevelopersSection key={`developers-${workspaceId}`} />}
     </div>
   );
 }

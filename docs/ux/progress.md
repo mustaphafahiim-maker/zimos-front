@@ -72,7 +72,11 @@ are listed under *Handoff items done*.
       diacritics), a real error state instead of «no results», a close button
       for touch, «أوردر جديد» really opens a new order, confirm-orders action,
       no duplicate rows, Egyptian copy.
-- [ ] S13 Storefront checkout (phone) — next (with 163/164 pickers)
+- [ ] S13 Storefront checkout (phone) — waits for the 165 agent branch (same file)
+- [x] S14 Settings: 15 stacked sections → six tabs (المتجر، الرسايل، الفريق،
+      الباقة والفواتير، حسابي، المطورين) kept in ?tab=; old #whatsapp /
+      #notifications links open the right tab; the billing banner links to
+      the billing tab.
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
