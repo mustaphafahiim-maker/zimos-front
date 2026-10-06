@@ -178,6 +178,8 @@ const STRINGS = {
     GIFT_CARD_NO_EMAIL: "This card has no recipient email. Add one from “Edit details”, then send it again.",
     GIFT_CARD_NOT_FOUND: "This gift card code is not valid.",
     GIFT_CARD_UNUSABLE: "This gift card can't be used: it has expired, has no balance left or was disabled.",
+    // handoff 190
+    SLUG_TAKEN: "This link is already used. Choose another one.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -329,6 +331,8 @@ const STRINGS = {
     GIFT_CARD_NO_EMAIL: "الكارت ده مالوش إيميل مستلم. ضيفه من «عدّل البيانات» وبعدين ابعته تاني.",
     GIFT_CARD_NOT_FOUND: "كود كارت الهدية ده مش صحيح.",
     GIFT_CARD_UNUSABLE: "كارت الهدية ده مينفعش يتستخدم: يا إما انتهى، يا رصيده خلص، يا اتوقف.",
+    // handoff 190
+    SLUG_TAKEN: "اللينك ده مستخدم قبل كده. اختار لينك تاني.",
   },
 } satisfies Messages;
 

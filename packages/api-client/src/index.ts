@@ -286,3 +286,5 @@ export * from "./endpoints/preorders";
 export * from "./endpoints/purchaseLimits";
 // Estimated delivery dates: the settings, the shopper's window and where it rides (handoff 199).
 export * from "./endpoints/deliveryEstimates";
+// Store blog: posts as blocks, categories, the posts index and the home page's latest posts (modules/blog, handoff 190).
+export * from "./endpoints/blog";

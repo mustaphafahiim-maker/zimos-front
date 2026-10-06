@@ -686,7 +686,7 @@ function ButtonColor({ t, value, error, onChange }: { t: T; value: string; error
 }
 
 /** The image: pasted, uploaded (into the media library) or picked from the library. */
-function ImageSource({ t, value, error, onChange }: { t: T; value: string; error?: string; onChange: (url: string) => void }) {
+export function ImageSource({ t, value, error, onChange }: { t: T; value: string; error?: string; onChange: (url: string) => void }) {
   const id = useId();
   const [library, setLibrary] = useState(false);
   return (

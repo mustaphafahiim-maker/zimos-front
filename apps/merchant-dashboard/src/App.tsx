@@ -120,6 +120,10 @@ const StoreTextsPage = lazy(() => import("@/pages/website/StoreTextsPage").then(
 // Marketing → Gift cards (handoff 189).
 const GiftCardsPage = lazy(() => import("@/pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
 const GiftCardDetailPage = lazy(() => import("@/pages/giftCards/GiftCardDetailPage").then((m) => ({ default: m.GiftCardDetailPage })));
+// Store → Blog (handoff 190).
+const BlogPostsPage = lazy(() => import("@/pages/blog/BlogPostsPage").then((m) => ({ default: m.BlogPostsPage })));
+const BlogPostEditorPage = lazy(() => import("@/pages/blog/BlogPostEditorPage").then((m) => ({ default: m.BlogPostEditorPage })));
+const BlogCategoriesPage = lazy(() => import("@/pages/blog/BlogCategoriesPage").then((m) => ({ default: m.BlogCategoriesPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -196,6 +200,10 @@ export default function App() {
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
                       <Route path="/website/texts" element={<LazyRoute><StoreTextsPage /></LazyRoute>} />
+                      <Route path="/blog" element={<LazyRoute><BlogPostsPage /></LazyRoute>} />
+                      <Route path="/blog/new" element={<LazyRoute><BlogPostEditorPage /></LazyRoute>} />
+                      <Route path="/blog/categories" element={<LazyRoute><BlogCategoriesPage /></LazyRoute>} />
+                      <Route path="/blog/:postId" element={<LazyRoute><BlogPostEditorPage /></LazyRoute>} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />

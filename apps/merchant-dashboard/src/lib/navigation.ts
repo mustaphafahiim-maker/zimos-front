@@ -23,6 +23,7 @@ import {
   LineChart,
   LifeBuoy,
   Megaphone,
+  Newspaper,
   MessageCircle,
   Package,
   PiggyBank,
@@ -59,6 +60,7 @@ export type NavKey =
   | "shipping"
   | "payments"
   | "website"
+  | "blog"
   | "funnels"
   | "analytics"
   | "webAnalytics"
@@ -170,6 +172,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "store",
     items: [
       { key: "website", to: "/website", icon: Globe },
+      { key: "blog", to: "/blog", icon: Newspaper },
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "shipping", to: "/shipping", icon: Truck },
       { key: "storeSettings", to: "/store-settings", icon: Store },
@@ -265,6 +268,7 @@ export const NAV_LABELS = {
     shipping: "Shipping",
     payments: "Payments",
     website: "Website",
+    blog: "Blog",
     funnels: "Funnels",
     analytics: "Reports",
     webAnalytics: "Store traffic",
@@ -307,6 +311,7 @@ export const NAV_LABELS = {
     shipping: "الشحن",
     payments: "المدفوعات",
     website: "الموقع",
+    blog: "المدونة",
     funnels: "مسارات البيع",
     analytics: "التقارير",
     webAnalytics: "زيارات الموقع",
