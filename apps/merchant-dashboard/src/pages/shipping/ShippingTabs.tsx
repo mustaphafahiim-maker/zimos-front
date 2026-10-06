@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { useT, type Messages } from "@/i18n/LocaleContext";
-import { FilterTabs } from "@/components/FilterTabs";
+import { SectionTabs } from "@/components/SectionTabs";
 
 const STRINGS = {
   en: { label: "Shipping sections", rates: "Shipping prices", places: "Places", options: "Shipping options", carriers: "Shipping companies", taxes: "Taxes" },
@@ -30,5 +30,5 @@ export function useShippingTab(): [ShippingTab, (tab: ShippingTab) => void] {
 
 export function ShippingTabsBar({ value, onChange }: { value: ShippingTab; onChange: (tab: ShippingTab) => void }) {
   const t = useT(STRINGS);
-  return <FilterTabs label={t.label} value={value} onChange={onChange} tabs={TABS.map((key) => ({ value: key, label: t[key] }))} />;
+  return <SectionTabs label={t.label} value={value} onChange={onChange} tabs={TABS.map((key) => ({ value: key, label: t[key] }))} />;
 }

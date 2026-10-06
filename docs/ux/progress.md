@@ -198,7 +198,12 @@ are listed under *Handoff items done*.
       products; custom roles see all); badge digits localized. Checked at 390
       for owner and three routed roles. Section tabs as a scrolling tablist
       (N-17) still to do.
-- [ ] R2-9 rest (N-17), R2-10 … R2-12 — see the plan.
+- [x] R2-9 rest (N-17): new `SectionTabs` for page sections (Settings,
+      Store settings, Shipping): role=tablist, one tab in the Tab order,
+      ← → Home End (direction-aware), one sideways-scrolling row on phones
+      with the current tab centred, 44 px. FilterTabs stays for list
+      filters. Store settings went from 4 rows of tabs to one at 390.
+- [ ] R2-10 … R2-12 — see the plan.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

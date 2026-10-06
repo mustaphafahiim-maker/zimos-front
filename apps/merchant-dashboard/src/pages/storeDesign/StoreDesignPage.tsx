@@ -1,7 +1,6 @@
 import { StoreLivePreview } from "./StoreLivePreview";
 import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
-import { FilterTabs } from "@/components/FilterTabs";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { CheckoutFormTab } from "./CheckoutFormTab";
@@ -14,6 +13,7 @@ import { SeoTab } from "./SeoTab";
 import { CustomCodeSection } from "./CustomCodeSection";
 import { DomainsTab } from "./DomainsTab";
 import { LanguagesTab } from "./LanguagesTab";
+import { SectionTabs } from "@/components/SectionTabs";
 import { CustomerAccountsTab } from "./CustomerAccountsTab";
 
 /**
@@ -69,12 +69,11 @@ export function StoreDesignPage() {
   return (
     <div>
       <PageHeader title={t.title} description={t.description} />
-      <FilterTabs
+      <SectionTabs
         label={t.tabsLabel}
         tabs={TABS.map((value) => ({ value, label: t[value] }))}
         value={active}
         onChange={(value) => navigate(`/store-settings/${value}`)}
-        className="mb-5"
       />
       {/* The settings, and beside them (wide screens) the real store to check them against. */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">

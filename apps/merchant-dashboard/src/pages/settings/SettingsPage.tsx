@@ -10,7 +10,6 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
-import { FilterTabs } from "@/components/FilterTabs";
 import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
@@ -44,6 +43,7 @@ import { TeamInviteForm } from "./TeamInviteForm";
 import { TeamMemberGroups } from "./TeamMemberGroups";
 import { DevelopersSection } from "./DevelopersSection";
 import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { SectionTabs } from "@/components/SectionTabs";
 import { OrderEmailsSection } from "./OrderEmailsSection";
 
 const STRINGS = {
@@ -258,7 +258,7 @@ export function SettingsPage() {
         description={t.pageDescription}
       />
       {/* Fifteen sections used to stack on one page; now they sit in six tabs. */}
-      <FilterTabs
+      <SectionTabs
         label={t.tabsLabel}
         value={tab}
         onChange={setTab}
