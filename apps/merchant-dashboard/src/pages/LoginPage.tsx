@@ -9,6 +9,7 @@ import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { TwoFactorRequiredError, type TwoFactorChallenge, type VerificationChallenge } from "@store-builder/api-client";
 import { TwoFactorStep } from "@/components/TwoFactorStep";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -32,6 +33,7 @@ const STRINGS = {
     noVerificationEmail: "Can't find the verification email?",
     resend: "Resend the email",
     resending: "Sending…",
+    expired: "Your session ended. Sign in again and you will be back where you were.",
   },
   ar: {
     title: "مرحبًا بعودتك",
@@ -54,6 +56,7 @@ const STRINGS = {
     noVerificationEmail: "لم تجد رسالة التأكيد؟",
     resend: "إعادة إرسال الرسالة",
     resending: "جارٍ الإرسال…",
+    expired: "الجلسة خلصت. ادخل تاني وهترجع لنفس المكان اللي كنت فيه.",
   },
 } satisfies Messages;
 
@@ -92,7 +95,13 @@ export function LoginPage() {
   const [twoFactor, setTwoFactor] = useState<TwoFactorChallenge | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
+  // Where to go after signing in: the page that sent us here (router state), or
+  // the one the session expired on (?next=, set by lib/apiClient). Same-site paths only.
+  const params = new URLSearchParams(location.search);
+  const next = params.get("next");
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+  const from = (location.state as { from?: Location })?.from?.pathname ?? safeNext ?? "/";
+  const sessionExpired = params.get("expired") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -126,7 +135,7 @@ export function LoginPage() {
       if (err instanceof TwoFactorRequiredError) {
         setTwoFactor(err.challenge);
       } else if (err instanceof ApiError) {
-        setError(err.status === 401 ? t.wrongCredentials : err.message);
+        setError(err.status === 401 ? t.wrongCredentials : errorMessageNow(err));
         // AuthContext.login() throws this exact code for a pending_verification
         // account — the only login error we offer a "resend link" affordance for.
         if (err.code === "ACCOUNT_INACTIVE") setNeedsVerification(true);
@@ -150,7 +159,7 @@ export function LoginPage() {
     } catch (err) {
       // Only a genuine server failure reaches here; surface it so they can retry.
       setError(
-        err instanceof ApiError ? err.message : t.resendFailed
+        err instanceof ApiError ? errorMessageNow(err) : t.resendFailed
       );
     } finally {
       setResending(false);
@@ -234,6 +243,7 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {sessionExpired && !error && <Alert>{t.expired}</Alert>}
             {error && <Alert variant="danger">{error}</Alert>}
 
             {needsVerification &&

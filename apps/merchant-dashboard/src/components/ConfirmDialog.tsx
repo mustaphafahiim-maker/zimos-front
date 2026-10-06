@@ -2,6 +2,12 @@ import { useState, type ReactNode } from "react";
 import { Button, Alert } from "@store-builder/ui";
 import { Modal } from "./Modal";
 import { getErrorMessage } from "@/lib/errors";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: { confirm: "Confirm", cancel: "Cancel", busy: "Working…" },
+  ar: { confirm: "تأكيد", cancel: "إلغاء", busy: "ثانية واحدة…" },
+} satisfies Messages;
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -22,14 +28,15 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  busyLabel = "Working…",
+  confirmLabel,
+  cancelLabel,
+  busyLabel,
   destructive = false,
   onCancel,
   onConfirm,
   children,
 }: ConfirmDialogProps) {
+  const t = useT(STRINGS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,14 +68,14 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="outline" onClick={handleCancel} disabled={busy}>
-            {cancelLabel}
+            {cancelLabel ?? t.cancel}
           </Button>
           <Button
             variant={destructive ? "danger" : "primary"}
             onClick={handleConfirm}
             disabled={busy}
           >
-            {busy ? busyLabel : confirmLabel}
+            {busy ? (busyLabel ?? t.busy) : (confirmLabel ?? t.confirm)}
           </Button>
         </>
       }

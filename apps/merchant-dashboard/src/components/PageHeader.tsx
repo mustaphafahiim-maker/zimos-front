@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import type { TutorialTopic } from "@store-builder/api-client";
 import { TutorialLink } from "./Education";
 
@@ -23,14 +24,15 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
       {back && (
         <Link
           to={back.to}
-          className="mb-2 inline-block text-sm text-ink-soft transition-colors hover:text-primary"
+          className="mb-2 inline-flex min-h-9 items-center gap-1.5 text-sm text-ink-soft transition-colors hover:text-primary"
         >
-          ← {back.label}
+          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+          {back.label}
         </Link>
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-medium text-ink">
+          <h1 className="font-display text-2xl font-semibold text-ink">
             {title}
             {titleMeta && (
               <span className="ms-2 align-middle text-base font-normal text-ink-soft">

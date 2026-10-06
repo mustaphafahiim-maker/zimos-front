@@ -3,6 +3,7 @@ import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { ApiError, securityVerifyTwoFactor, type TwoFactorChallenge } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 /**
  * The second step of a sign-in: the code from the email or the authenticator
@@ -88,7 +89,7 @@ export function TwoFactorStep({
       await securityVerifyTwoFactor(apiClient, { challengeToken: challenge.challengeToken, code: code.trim(), rememberDevice: remember });
       await onVerified();
     } catch (err) {
-      if (err instanceof ApiError) setError(err.status === 429 ? t.tooMany : err.status === 401 || err.status === 422 ? t.wrong : err.message);
+      if (err instanceof ApiError) setError(err.status === 429 ? t.tooMany : err.status === 401 || err.status === 422 ? t.wrong : errorMessageNow(err));
       else setError(t.failed);
     } finally {
       setBusy(false);

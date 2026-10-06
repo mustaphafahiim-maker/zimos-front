@@ -21,6 +21,7 @@ import { TermsConsent } from "@/components/plans/TermsConsent";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { rememberPlanChoice } from "@/lib/planChoice";
 import { rememberReferralCode } from "@/lib/referralCode";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -206,7 +207,7 @@ export function RegisterPage() {
     if (isApiErrorCode(err, "TERMS_REQUIRED")) return t.termsRequired;
     if (isApiErrorCode(err, "SIGNUP_UNAVAILABLE")) return t.unavailable;
     if (err instanceof ApiError && err.status === 429) return t.tooMany;
-    if (err instanceof ApiError) return err.message || t.generic;
+    if (err instanceof ApiError) return errorMessageNow(err);
     return t.generic;
   }
 

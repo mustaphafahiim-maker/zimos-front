@@ -24,7 +24,13 @@ are listed under *Handoff items done*.
 - [x] S2 Home answers first: to-do tile, honest profit, product behind a
       loss, rates as "N of 10", lost orders, details folded; fixed the
       hidden bottom menu block and the /abandoned 404. (6b57cf7)
-- [ ] S3 Words everywhere (errors, statuses, dialogs) — next
+- [x] S3 Words everywhere: ~90 error messages rewritten in Egyptian Arabic;
+      getErrorMessage (28 files) and sign-in/up pages go through the same
+      translations; unknown English server text never shows in the Arabic UI;
+      session-expired notice + return to the page; status words in Arabic
+      (StatusBadge fallback, stages: one name «مستني تأكيد»); ConfirmDialog
+      defaults; friendly error / no-permission cards; back arrow mirrors.
+- [ ] S4 Orders list — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - (file does not exist yet on 2026-10-06)

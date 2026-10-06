@@ -8,9 +8,11 @@ export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost
 export const apiClient = new ApiClient({
   baseUrl: apiBaseUrl,
   onSessionExpired: () => {
-    // Full reload so every in-flight auth state resets cleanly.
+    // Full reload so every in-flight auth state resets cleanly. The login page
+    // says why (?expired=1) and brings the merchant back to this page (?next=).
     if (window.location.pathname !== "/login") {
-      window.location.href = "/login";
+      const next = window.location.pathname + window.location.search;
+      window.location.href = `/login?expired=1&next=${encodeURIComponent(next)}`;
     }
   },
 });

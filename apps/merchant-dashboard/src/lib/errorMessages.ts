@@ -6,7 +6,7 @@ import {
   type ApiErrorCode,
   type CarrierCancelFailedDetails,
 } from "@store-builder/api-client";
-import { fmt } from "@/i18n/LocaleContext";
+import { fmt, getLocale } from "@/i18n/LocaleContext";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { providerName } from "@/lib/providers";
 import { formatDate } from "@/lib/format";
@@ -130,108 +130,108 @@ const STRINGS = {
       "{name} refused to cancel the delivery: it hasn't enabled API access for this account. The order was not cancelled. Ask {name} to enable API access, or cancel the delivery in {name}'s dashboard first.",
   },
   ar: {
-    network: "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
-    generic: "حدث خطأ ما. حاول مرة أخرى.",
-    VALIDATION_ERROR: "بعض الحقول تحتاج إلى مراجعة. راجع القيم المحددة وحاول مرة أخرى.",
-    UNAUTHENTICATED: "انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.",
-    FORBIDDEN: "ليست لديك صلاحية للقيام بذلك. اطلب من مالك المتجر تحديث دورك.",
-    APP_NOT_INSTALLED: "هذا يحتاج تطبيقًا ألغيت تثبيته من متجرك. ثبّته مرة أخرى من صفحة التطبيقات.",
+    network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
+    generic: "حصلت مشكلة عندنا. جرّب تاني بعد شوية.",
+    VALIDATION_ERROR: "فيه خانات محتاجة تتظبط — معلّمة باللون الأحمر. صلّحها وجرّب تاني.",
+    UNAUTHENTICATED: "الجلسة خلصت. ادخل تاني وهترجع لنفس المكان.",
+    FORBIDDEN: "الحاجة دي مش ضمن صلاحياتك. اطلب من صاحب المتجر يفتحهالك.",
+    APP_NOT_INSTALLED: "ده محتاج تطبيق إنت شلته من متجرك. نزّله تاني من صفحة التطبيقات.",
     SUBSCRIPTION_REQUIRED:
-      "انتهى اشتراكك، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة حتى يُجدَّد. المنتجات والمسارات والطلبات الحالية تعمل كالمعتاد — راجع الإعدادات ← الخطة وكود الإحالة.",
-    STORE_SUSPENDED: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
-    NOT_FOUND: "لم نعثر على هذا العنصر. ربما تم حذفه.",
-    CONFLICT: "تغيّر هذا العنصر في الأثناء. أعد التحميل وحاول مرة أخرى.",
-    RATE_LIMITED: "طلبات كثيرة جدًا. انتظر قليلًا ثم حاول مرة أخرى.",
-    IDEMPOTENCY_KEY_CONFLICT: "تم إرسال هذا الطلب من قبل. أعد التحميل لرؤية النتيجة.",
-    INSUFFICIENT_STOCK: "لا يوجد مخزون كافٍ لذلك.",
-    DUPLICATE_RESOURCE: "هذا العنصر موجود بالفعل.",
-    INVALID_REFERENCE: "عنصر مرتبط بهذا لم يعد موجودًا. أعد التحميل وحاول مرة أخرى.",
-    INTERNAL_SERVER_ERROR: "حدث خطأ غير متوقع في الخادم. حاول مرة أخرى.",
-    ORDER_CANCELLED: "هذا الأوردر ملغي، لذلك لا يمكن تعديله.",
-    ORDER_ALREADY_CANCELLED: "هذا الأوردر ملغي بالفعل.",
-    ORDER_ALREADY_SHIPPED: "تم شحن هذا الأوردر ولم يعد من الممكن تعديله. افتح مرتجعًا بدلًا من ذلك.",
-    ORDER_NOT_CONFIRMED: "أكّد أوردر الدفع عند الاستلام قبل حجز شركة الشحن.",
-    ORDER_NOT_PAID: "يجب دفع هذا الأوردر المدفوع مسبقًا قبل حجز شركة الشحن.",
-    SHIPMENT_ALREADY_EXISTS: "يوجد لهذا الأوردر شحنة نشطة بالفعل. ألغِها قبل إضافة شحنة أخرى.",
-    CARRIER_NAME_RESERVED: "هذا اسم شركة شحن يمكن ربطها. اختر خيار الشركة نفسها للشحن معها.",
-    SHIPPING_ADDRESS_REQUIRED: "لا يوجد عنوان شحن لهذا الأوردر. أضف عنوانًا أولًا.",
-    ORDER_NOT_COD: "أوردرات الدفع عند الاستلام فقط هي التي تُؤكَّد بالهاتف.",
-    ORDER_ALREADY_CONFIRMED: "هذا الأوردر مؤكد بالفعل.",
-    TASK_ALREADY_LOCKED: "موظف آخر يعمل على هذا الأوردر الآن.",
-    TASK_ALREADY_DONE: "هذا الأوردر له نتيجة نهائية بالفعل. أعد التحميل لرؤيتها.",
-    TASK_NOT_LOCKED_BY_YOU: "انتهت مدة استلامك لهذا الأوردر واستلمه شخص آخر. أعد تحميل القائمة.",
-    TASK_NOT_CLAIMED: "لم يعد أحد يعمل على هذا الأوردر.",
-    TASK_NOT_DONE: "هذا الأوردر ما زال في القائمة. سجّل نتيجة بدلًا من ذلك.",
-    OUTCOME_UNCHANGED: "الأوردر له هذه النتيجة بالفعل.",
-    CORRECTION_NOT_ALLOWED: "لا يمكن تغيير هذه النتيجة: تم إلغاء الأوردر من صفحة الأوردر.",
-    ORDER_REJECTED: "تعذّر تسجيل هذا الأوردر.",
-    INVALID_PHONE: "أدخل رقم هاتف صحيحًا.",
-    CART_NOT_FOUND: "هذه السلة لم تعد موجودة.",
-    CART_TOKEN_OR_ITEM_REQUIRED: "لا يوجد ما يمكن إتمام شرائه.",
-    STEP_MISMATCH: "هذه الصفحة لم تعد محدّثة. أعد التحميل للمتابعة.",
-    FUNNEL_PAUSED: "مسار البيع هذا متوقف مؤقتًا.",
-    PAGE_PATH_RESERVED: "هذا المسار محجوز لصفحة أساسية في المتجر. اختر مسارًا آخر.",
-    PRODUCT_HAS_ORDERS: "هذا المنتج عليه أوردرات، لذلك يمكن أرشفته فقط.",
-    PRODUCT_IN_FUNNEL: "هذا المنتج مستخدم في مسار بيع. احذفه من المسار أولًا.",
-    PRODUCT_NOT_ARCHIVED: "يمكن استعادة المنتج المؤرشف فقط.",
-    CARRIERS_NOT_CONFIGURED: "ربط شركات الشحن غير متاح على هذا الخادم بعد. تواصل مع الدعم.",
-    CARRIER_AUTH_FAILED: "رفضت شركة الشحن مفتاح API. تحقق منه في لوحة تحكم الشركة وأعد الربط.",
+      "اشتراكك خلص، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة لحد ما تجدّده. المنتجات والمسارات والأوردرات اللي عندك شغالة عادي — جدّد من الإعدادات ← الخطة.",
+    STORE_SUSPENDED: "زيموس وقّفت المتجر ده، فمش هتقدر تضيف منتجات أو مسارات بيع جديدة. كلّم دعم زيموس.",
+    NOT_FOUND: "مش لاقيين الحاجة دي. ممكن تكون اتمسحت.",
+    CONFLICT: "حد عدّل هنا في نفس الوقت. اعمل تحديث للصفحة وجرّب تاني.",
+    RATE_LIMITED: "طلبات كتير ورا بعض. استنى دقيقة وجرّب تاني.",
+    IDEMPOTENCY_KEY_CONFLICT: "الطلب ده اتبعت قبل كده. اعمل تحديث للصفحة وشوف النتيجة.",
+    INSUFFICIENT_STOCK: "الكمية دي مش موجودة في المخزن.",
+    DUPLICATE_RESOURCE: "ده موجود قبل كده.",
+    INVALID_REFERENCE: "حاجة مربوطة بده اتمسحت. اعمل تحديث للصفحة وجرّب تاني.",
+    INTERNAL_SERVER_ERROR: "حصلت مشكلة في السيرفر. جرّب تاني بعد شوية.",
+    ORDER_CANCELLED: "الأوردر ده ملغي، فمينفعش يتعدّل.",
+    ORDER_ALREADY_CANCELLED: "الأوردر ده ملغي أصلًا.",
+    ORDER_ALREADY_SHIPPED: "الأوردر ده اتشحن خلاص ومينفعش يتعدّل. افتح مرتجع بداله.",
+    ORDER_NOT_CONFIRMED: "أكّد الأوردر الأول (دفع عند الاستلام) قبل ما تحجز المندوب.",
+    ORDER_NOT_PAID: "الأوردر ده مدفوع أونلاين ولسه متدفعش. استنى الدفع قبل ما تحجز المندوب.",
+    SHIPMENT_ALREADY_EXISTS: "الأوردر ده ليه شحنة شغالة. الغيها الأول لو عايز تعمل واحدة تانية.",
+    CARRIER_NAME_RESERVED: "ده اسم شركة شحن ممكن تربطها. اختارها من القايمة عشان تشحن معاها.",
+    SHIPPING_ADDRESS_REQUIRED: "الأوردر ده مالوش عنوان شحن. ضيف العنوان الأول.",
+    ORDER_NOT_COD: "أوردرات الدفع عند الاستلام بس هي اللي بتتأكد بالتليفون.",
+    ORDER_ALREADY_CONFIRMED: "الأوردر ده متأكد خلاص.",
+    TASK_ALREADY_LOCKED: "فيه زميل شغال على الأوردر ده دلوقتي.",
+    TASK_ALREADY_DONE: "الأوردر ده اتسجّلت نتيجته خلاص. اعمل تحديث للصفحة وشوفها.",
+    TASK_NOT_LOCKED_BY_YOU: "وقتك على الأوردر ده خلص وزميل تاني أخده. اعمل تحديث للقايمة.",
+    TASK_NOT_CLAIMED: "محدش شغال على الأوردر ده دلوقتي.",
+    TASK_NOT_DONE: "الأوردر ده لسه في القايمة. سجّل نتيجة المكالمة الأول.",
+    OUTCOME_UNCHANGED: "دي نفس نتيجة الأوردر اللي متسجلة.",
+    CORRECTION_NOT_ALLOWED: "مينفعش تغيّر النتيجة دي: الأوردر اتلغى من صفحته.",
+    ORDER_REJECTED: "مقدرناش نسجّل الأوردر ده.",
+    INVALID_PHONE: "اكتب رقم موبايل صحيح.",
+    CART_NOT_FOUND: "السلة دي مبقتش موجودة.",
+    CART_TOKEN_OR_ITEM_REQUIRED: "مفيش حاجة في السلة تطلبها.",
+    STEP_MISMATCH: "الصفحة دي قديمة. اعمل تحديث وكمّل.",
+    FUNNEL_PAUSED: "مسار البيع ده موقوف دلوقتي.",
+    PAGE_PATH_RESERVED: "اللينك ده محجوز لصفحة أساسية في المتجر. اختار لينك تاني.",
+    PRODUCT_HAS_ORDERS: "المنتج ده عليه أوردرات، فينفع تأرشفه بس مش تمسحه.",
+    PRODUCT_IN_FUNNEL: "المنتج ده مستخدم في مسار بيع. شيله من المسار الأول.",
+    PRODUCT_NOT_ARCHIVED: "ينفع ترجّع المنتج المؤرشف بس.",
+    CARRIERS_NOT_CONFIGURED: "ربط شركات الشحن لسه مش متاح هنا. كلّم الدعم.",
+    CARRIER_AUTH_FAILED: "شركة الشحن رفضت المفتاح (API key). اتأكد منه في لوحة الشركة واربط تاني.",
     CARRIER_PERMISSION_DENIED:
-      "قبلت شركة الشحن تسجيل الدخول، لكنها لم تفعّل الربط عبر API لهذا الحساب. بياناتك صحيحة: اطلب من شركة الشحن تفعيل الربط عبر API لحسابك، ثم حاول مرة أخرى.",
+      "شركة الشحن قبلت الدخول، بس لسه مفعّلتش الربط (API) لحسابك. بياناتك صح: اطلب منهم يفعّلوا الربط وجرّب تاني.",
     CARRIER_SANDBOX_NOT_ALLOWED:
-      "ربط شركة الشحن هذا يستخدم بيئة التجربة (Sandbox) الخاصة بها، وهي تنشئ شحنات تجريبية فقط، لذلك لم يُحجز شيء. يلزم حساب إنتاج (Production): اربطه من صفحة الشحن.",
-    CARRIER_ADDRESS_UNMATCHED: "تعذّرت مطابقة عنوان الأوردر مع قائمة شركة الشحن. اختر منطقة التوصيل.",
+      "الربط ده على حساب تجريبي (Sandbox) عند شركة الشحن، وده بيعمل شحنات تجريبية بس، فمفيش حاجة اتحجزت. محتاج حساب حقيقي (Production): اربطه من صفحة الشحن.",
+    CARRIER_ADDRESS_UNMATCHED: "مقدرناش نطابق عنوان الأوردر مع مناطق شركة الشحن. اختار منطقة التوصيل بنفسك.",
     CARRIER_ADDRESS_NAMES_REQUIRED:
-      "شركة الشحن لا تتيح قائمة عناوينها لهذا الحساب. اكتب المحافظة والمدينة والمنطقة كما تكتبها شركة الشحن.",
-    CARRIER_ADDRESS_REJECTED: "لم تتعرّف شركة الشحن على عنوان التوصيل. راجع طريقة الكتابة وحاول مرة أخرى.",
-    CARRIER_CURRENCY_UNSUPPORTED: "شركة الشحن هذه تحصّل بالجنيه المصري فقط، وهذا الأوردر بعملة أخرى.",
+      "شركة الشحن مش بتشارك قايمة مناطقها مع الحساب ده. اكتب المحافظة والمدينة والمنطقة زي ما الشركة بتكتبها.",
+    CARRIER_ADDRESS_REJECTED: "شركة الشحن معرفتش عنوان التوصيل. راجع الكتابة وجرّب تاني.",
+    CARRIER_CURRENCY_UNSUPPORTED: "الشركة دي بتحصّل بالجنيه المصري بس، والأوردر ده بعملة تانية.",
     SHIPPING_GROUP_CURRENCY: "المجموعة اللي أسعارها بعملة غير عملة المتجر للفانلز بس: شيل منتجاتها، أو خليها بعملة المتجر.",
-    CARRIER_COD_LIMIT: "مبلغ الدفع عند الاستلام أعلى من الحد المسموح لشركة الشحن هذه.",
-    CARRIER_NOT_CONNECTED: "شركة الشحن هذه لم تعد مربوطة بمتجرك.",
-    CARRIER_CANCEL_FAILED: "لم تلغِ شركة الشحن الشحنة، لذلك لم يتم تغيير أي شيء.",
-    CARRIER_CREDENTIALS_UNREADABLE: "تعذّرت قراءة مفتاح شركة الشحن المحفوظ. أعد ربط الشركة.",
-    SHIPMENT_NOT_CARRIER_MANAGED: "هذه الشحنة لم تُحجز عبر شركة شحن مربوطة.",
-    LABEL_NOT_AVAILABLE: "شركة الشحن هذه لا توفر ملصقات قابلة للطباعة.",
-    CARRIER_TIER_UNMAPPED: "شريحة الوزن هذه ليس لها نوع طرد عند شركة الشحن. احجزها كشريحة أخرى، أو اربطها من إعدادات الشركة.",
+    CARRIER_COD_LIMIT: "مبلغ التحصيل أكبر من الحد المسموح عند شركة الشحن دي.",
+    CARRIER_NOT_CONNECTED: "شركة الشحن دي مبقتش مربوطة بمتجرك.",
+    CARRIER_CANCEL_FAILED: "شركة الشحن ملغتش الشحنة، فمفيش حاجة اتغيّرت.",
+    CARRIER_CREDENTIALS_UNREADABLE: "مفتاح شركة الشحن المتسجل مبقاش بيتقري. اربط الشركة تاني.",
+    SHIPMENT_NOT_CARRIER_MANAGED: "الشحنة دي متحجزتش عن طريق شركة شحن مربوطة.",
+    LABEL_NOT_AVAILABLE: "الشركة دي مش بتوفّر بوليصة للطباعة.",
+    CARRIER_TIER_UNMAPPED: "شريحة الوزن دي مالهاش نوع شحنة عند الشركة. احجزها بشريحة تانية، أو اربطها من إعدادات الشركة.",
     CARRIER_MANUAL_CANCEL_REQUIRED:
-      "لا يمكن إلغاء شحنات هذه الشركة من هنا. ألغِ الشحنة من لوحة تحكم شركة الشحن أولًا، ثم أكّد ذلك هنا.",
+      "الشركة دي مش بتلغي الشحنات من هنا. الغي الشحنة من لوحة شركة الشحن الأول، وبعدين أكّد هنا.",
     CARRIER_CONNECT_CONFLICT:
-      "تم ربط شركة الشحن هذه من تبويب آخر أو بواسطة زميل في نفس اللحظة، لذلك لم يُحفظ هذا الطلب. أعد التحميل لرؤية الربط، ثم احفظ مرة أخرى إذا احتجت.",
+      "الشركة دي اتربطت من تاب تاني أو زميل ربطها في نفس اللحظة، فالحفظ ده متمش. اعمل تحديث وشوف الربط، واحفظ تاني لو محتاج.",
     CARRIER_BOOKING_NOT_SAVED:
-      "أنشأت شركة الشحن الشحنة، لكن تعذّر حفظها هنا. ألغِها من لوحة تحكم شركة الشحن، ثم احجز الأوردر مرة أخرى.",
-    SHIPPING_TIERS_REQUIRED: "أضف شريحة وزن واحدة على الأقل قبل تسعير الشحن بالوزن.",
-    DEFAULT_ITEM_WEIGHT_REQUIRED: "حدد الوزن الافتراضي للمنتج أولًا. هو مطلوب طالما الشحن يُسعَّر حسب شريحة الوزن.",
-    GATEWAYS_NOT_CONFIGURED: "الدفع الإلكتروني غير متاح على هذا الخادم بعد. تواصل مع الدعم.",
-    GATEWAY_AUTH_FAILED: "رفضت بوابة الدفع هذه المفاتيح. انسخها مرة أخرى من لوحة تحكمها وأعد الربط.",
-    GATEWAY_KEYS_MODE_MISMATCH: "أحد المفتاحين للتجربة والآخر للتشغيل. استخدم المفتاحين من نفس النوع.",
-    GATEWAY_KEYS_UNRECOGNISED: "هذه لا تبدو مفاتيح هذه البوابة. تأكد أنك نسخت المفاتيح الصحيحة.",
-    GATEWAY_NOT_CONNECTED: "بوابة الدفع هذه لم تعد مربوطة بمتجرك.",
-    GATEWAY_HAS_PENDING_PAYMENTS: "توجد أوردرات ما زالت تنتظر الدفع عبر هذه البوابة. انتظر حتى تُدفع أو تنتهي مهلتها، ثم ألغِ الربط.",
-    GATEWAY_CREDENTIALS_UNREADABLE: "تعذّرت قراءة مفاتيح البوابة المحفوظة. أعد ربط البوابة.",
-    PAYMENT_METHOD_UNAVAILABLE: "طريقة الدفع هذه غير متاحة الآن.",
-    REFUND_EXCEEDS_ELIGIBLE_AMOUNT: "هذا أكثر من المبلغ المتبقي القابل للاسترداد في هذا الأوردر.",
-    REFUND_EXCEEDS_PAYMENT: "لا توجد دفعة واحدة متبقٍ فيها هذا المبلغ. استرد كل دفعة على حدة.",
-    REFUND_PAYMENT_INVALID: "لا يمكن استرداد هذه الدفعة عبر البوابة.",
-    ORDER_TEST_PAYMENT: "هذا الأوردر دُفع في وضع التجربة، لذلك لا يمكن شحنه.",
-    PLAN_LIMIT_REACHED: "بلغت الحد المسموح في خطتك. رقِّ خطتك لإضافة المزيد.",
-    TRIAL_NOT_AVAILABLE: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
-    draftRequired: "متجرك في وضع المسودة. اشترك لنشره.",
-    limitFunnels: "بلغت الحد الشهري لمسارات البيع في خطتك ({used} من {max}). يمكنك إنشاء المزيد بدءًا من {date}.",
-    limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
-    limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
+      "شركة الشحن عملت الشحنة بس مقدرناش نسجلها هنا. الغيها من لوحة الشركة واحجز الأوردر تاني.",
+    SHIPPING_TIERS_REQUIRED: "ضيف شريحة وزن واحدة على الأقل قبل ما تسعّر الشحن بالوزن.",
+    DEFAULT_ITEM_WEIGHT_REQUIRED: "حدد وزن افتراضي للمنتج الأول. لازم طول ما الشحن متسعّر بالوزن.",
+    GATEWAYS_NOT_CONFIGURED: "الدفع الأونلاين لسه مش متاح هنا. كلّم الدعم.",
+    GATEWAY_AUTH_FAILED: "بوابة الدفع رفضت المفاتيح دي. انسخها تاني من لوحة البوابة واربط من جديد.",
+    GATEWAY_KEYS_MODE_MISMATCH: "مفتاح منهم تجريبي والتاني حقيقي. استخدم الاتنين من نفس النوع.",
+    GATEWAY_KEYS_UNRECOGNISED: "المفاتيح دي شكلها مش بتاعة البوابة دي. اتأكد إنك نسخت الصح.",
+    GATEWAY_NOT_CONNECTED: "بوابة الدفع دي مبقتش مربوطة بمتجرك.",
+    GATEWAY_HAS_PENDING_PAYMENTS: "فيه أوردرات لسه مستنية دفع عن طريق البوابة دي. استنى لحد ما تتدفع أو مهلتها تخلص، وبعدين الغي الربط.",
+    GATEWAY_CREDENTIALS_UNREADABLE: "مفاتيح البوابة المتسجلة مبقتش بتتقري. اربط البوابة تاني.",
+    PAYMENT_METHOD_UNAVAILABLE: "طريقة الدفع دي مش متاحة دلوقتي.",
+    REFUND_EXCEEDS_ELIGIBLE_AMOUNT: "المبلغ ده أكبر من اللي فاضل ينفع يترجع في الأوردر.",
+    REFUND_EXCEEDS_PAYMENT: "مفيش دفعة واحدة فاضل فيها المبلغ ده. رجّع كل دفعة لوحدها.",
+    REFUND_PAYMENT_INVALID: "الدفعة دي مينفعش ترجع عن طريق البوابة.",
+    ORDER_TEST_PAYMENT: "الأوردر ده اتدفع تجريبي، فمينفعش يتشحن.",
+    PLAN_LIMIT_REACHED: "وصلت للحد بتاع باقتك. رقّي الباقة عشان تضيف أكتر.",
+    TRIAL_NOT_AVAILABLE: "الفترة المجانية مش متاحة للحساب ده.",
+    draftRequired: "متجرك لسه مسودة. اشترك عشان تنشره.",
+    limitFunnels: "وصلت لحد مسارات البيع في باقتك الشهر ده ({used} من {max}). تقدر تعمل تاني من {date}.",
+    limitStores: "وصلت لأقصى عدد متاجر في باقتك ({used} من {max}). رقّي باقة متجر من متاجرك عشان تضيف واحد كمان.",
+    limitDrafts: "اشترك في متجر من متاجرك الأول قبل ما تبدأ متجر جديد.",
     cancelFailedPermission:
-      "رفضت شركة الشحن إلغاء الشحنة لأن مفتاح API المربوط ليس بصلاحية Full Access. لم يتم إلغاء الأوردر. أعد ربط الشركة بمفتاح Full Access من صفحة الشحن، أو ألغِ الشحنة من لوحة تحكم الشركة أولًا.",
+      "شركة الشحن رفضت تلغي الشحنة لأن المفتاح المربوط مش بصلاحية Full Access. الأوردر متلغاش. اربط الشركة تاني بمفتاح Full Access من صفحة الشحن، أو الغي الشحنة من لوحة الشركة الأول.",
     cancelFailedAuth:
-      "رفضت شركة الشحن مفتاح API المحفوظ، لذلك لم تُلغَ الشحنة ولم يتغير الأوردر. أعد ربط الشركة من صفحة الشحن.",
+      "شركة الشحن رفضت المفتاح المتسجل، فالشحنة متلغتش والأوردر زي ما هو. اربط الشركة تاني من صفحة الشحن.",
     courierReply: "رد شركة الشحن: {message}",
     carrierPermissionNamed:
-      "قبلت {name} تسجيل الدخول، لكنها لم تفعّل الربط عبر API لهذا الحساب. بياناتك صحيحة: اطلب من {name} تفعيل الربط عبر API لحسابك، ثم حاول مرة أخرى.",
+      "{name} قبلت الدخول، بس لسه مفعّلتش الربط (API) لحسابك. بياناتك صح: اطلب من {name} تفعّل الربط وجرّب تاني.",
     carrierPermissionBosta:
-      "رفضت بوسطة هذا الإجراء بمفتاح API المربوط. راجع صلاحية المفتاح في لوحة تحكم بوسطة، أو أعد الربط بمفتاح صلاحياته Full Access.",
+      "بوسطة رفضت العملية دي بالمفتاح المربوط. راجع صلاحية المفتاح في لوحة بوسطة، أو اربط بمفتاح صلاحيته Full Access.",
     carrierSandboxNamed:
-      "ربط {name} هذا يستخدم بيئة التجربة (Sandbox) الخاصة بـ {name}، وهي تنشئ شحنات تجريبية فقط، لذلك لم يُحجز شيء. يلزم حساب إنتاج (Production) لدى {name}: اربطه من صفحة الشحن.",
+      "ربط {name} ده على حساب تجريبي (Sandbox)، وده بيعمل شحنات تجريبية بس، فمفيش حاجة اتحجزت. محتاج حساب حقيقي (Production) عند {name}: اربطه من صفحة الشحن.",
     cancelFailedApiAccess:
-      "رفضت {name} إلغاء الشحنة لأنها لم تفعّل الربط عبر API لهذا الحساب. لم يتم إلغاء الأوردر. اطلب من {name} تفعيل الربط عبر API، أو ألغِ الشحنة من لوحة تحكم {name} أولًا.",
+      "{name} رفضت تلغي الشحنة لأنها لسه مفعّلتش الربط (API) لحسابك. الأوردر متلغاش. اطلب من {name} تفعّل الربط، أو الغي الشحنة من لوحة {name} الأول.",
   },
 } satisfies Messages;
 
@@ -276,51 +276,65 @@ function isNetworkError(err: unknown): boolean {
  */
 export function useErrorMessage() {
   const t = useT(STRINGS);
-  return useCallback(
-    (err: unknown, overrides?: ErrorOverrides): string => {
-      if (isNetworkError(err)) return t.network;
-      const code = apiErrorCode(err);
-      if (code) {
-        const override = overrides?.[code];
-        if (override) return override;
-        if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
-        // A draft store (not subscribed yet) is not an expired one.
-        if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
-        if (code === "PLAN_LIMIT_REACHED") {
-          const limit = apiErrorDetails<{ limit?: string; max?: number; used?: number; resetsAt?: string }>(err);
-          const counts = { max: limit?.max ?? "", used: limit?.used ?? "" };
-          if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
-          if (limit?.limit === "stores") return fmt(t.limitStores, counts);
-          if (limit?.limit === "draft_stores") return t.limitDrafts;
-        }
-        if (code === "CARRIER_CANCEL_FAILED") {
-          // Only order cancellation raises it. The courier-side cause decides
-          // what the merchant can do next; the courier's own words come along
-          // for anything we can't name.
-          const details = apiErrorDetails<CarrierCancelFailedDetails>(err);
-          const cause = details?.carrierErrorCode;
-          if (cause === "CARRIER_PERMISSION_DENIED") {
-            const carrierCode = details?.carrierCode;
-            return carrierCode && !KEY_SCOPE_CARRIERS.has(carrierCode)
-              ? fmt(t.cancelFailedApiAccess, { name: providerName(carrierCode) })
-              : t.cancelFailedPermission;
-          }
-          if (cause === "CARRIER_AUTH_FAILED") return t.cancelFailedAuth;
-          const reply = err instanceof ApiError ? err.message : "";
-          return reply ? `${t.CARRIER_CANCEL_FAILED} ${fmt(t.courierReply, { message: reply })}` : t.CARRIER_CANCEL_FAILED;
-        }
-        if (code in t && !OWN_KEYS.has(code)) return t[code as CodeKey];
+  return useCallback((err: unknown, overrides?: ErrorOverrides): string => translateError(t, err, overrides), [t]);
+}
+
+/**
+ * The same sentence outside a component (event handlers in plain modules,
+ * lib/errors.ts), in the language active right now.
+ */
+export function errorMessageNow(err: unknown, overrides?: ErrorOverrides): string {
+  return translateError(STRINGS[getLocale()], err, overrides);
+}
+
+/** True when a sentence has no Arabic letters — the server's English, shown in the Arabic UI. */
+const ARABIC_LETTER = /[؀-ۿ]/;
+
+function translateError(t: (typeof STRINGS)["en"], err: unknown, overrides?: ErrorOverrides): string {
+  if (isNetworkError(err)) return t.network;
+  const code = apiErrorCode(err);
+  if (code) {
+    const override = overrides?.[code];
+    if (override) return override;
+    if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
+    // A draft store (not subscribed yet) is not an expired one.
+    if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
+    if (code === "PLAN_LIMIT_REACHED") {
+      const limit = apiErrorDetails<{ limit?: string; max?: number; used?: number; resetsAt?: string }>(err);
+      const counts = { max: limit?.max ?? "", used: limit?.used ?? "" };
+      if (limit?.limit === "funnels_per_month") return fmt(t.limitFunnels, { ...counts, date: formatDate(limit.resetsAt ?? null) });
+      if (limit?.limit === "stores") return fmt(t.limitStores, counts);
+      if (limit?.limit === "draft_stores") return t.limitDrafts;
+    }
+    if (code === "CARRIER_CANCEL_FAILED") {
+      // Only order cancellation raises it. The courier-side cause decides
+      // what the merchant can do next; the courier's own words come along
+      // for anything we can't name.
+      const details = apiErrorDetails<CarrierCancelFailedDetails>(err);
+      const cause = details?.carrierErrorCode;
+      if (cause === "CARRIER_PERMISSION_DENIED") {
+        const carrierCode = details?.carrierCode;
+        return carrierCode && !KEY_SCOPE_CARRIERS.has(carrierCode)
+          ? fmt(t.cancelFailedApiAccess, { name: providerName(carrierCode) })
+          : t.cancelFailedPermission;
       }
-      if (err instanceof ApiError) {
-        if (err.status === 403) return t.FORBIDDEN;
-        // An unknown code: the server's sentence beats saying nothing useful.
-        return err.message || t.generic;
-      }
-      if (err instanceof Error && err.message) return err.message;
-      return t.generic;
-    },
-    [t]
-  );
+      if (cause === "CARRIER_AUTH_FAILED") return t.cancelFailedAuth;
+      const reply = err instanceof ApiError ? err.message : "";
+      return reply ? `${t.CARRIER_CANCEL_FAILED} ${fmt(t.courierReply, { message: reply })}` : t.CARRIER_CANCEL_FAILED;
+    }
+    if (code in t && !OWN_KEYS.has(code)) return t[code as CodeKey];
+  }
+  if (err instanceof ApiError) {
+    if (err.status === 403) return t.FORBIDDEN;
+    if (err.status === 401) return t.UNAUTHENTICATED;
+    // An unknown code: the server's sentence beats saying nothing useful —
+    // unless it is English inside the Arabic dashboard.
+    if (!err.message) return t.generic;
+    if (t === STRINGS.ar && !ARABIC_LETTER.test(err.message)) return t.generic;
+    return err.message;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return t.generic;
 }
 
 /**

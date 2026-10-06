@@ -1,4 +1,6 @@
 import { ApiError } from "@store-builder/api-client";
+import { getLocale } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 export { ApiError };
 
@@ -7,23 +9,21 @@ interface FieldDetail {
   message: string;
 }
 
-/** A human message for any thrown value. */
-export function getErrorMessage(err: unknown, fallback = "Something went wrong. Please try again."): string {
-  if (err instanceof ApiError) {
-    if (err.status === 403) {
-      return err.message || "You don't have permission to do that.";
-    }
-    if (err.status === 0 || err.message === "Failed to fetch") {
-      return "Can't reach the server. Check your connection and try again.";
-    }
-    return err.message || fallback;
-  }
-  if (err instanceof TypeError && /fetch/i.test(err.message)) {
-    return "Can't reach the server. Check your connection and try again.";
-  }
-  if (err instanceof Error) return err.message || fallback;
-  return fallback;
+/**
+ * A human message for any thrown value, in the dashboard's language. Same
+ * sentences as `useErrorMessage` (lib/errorMessages.ts); `fallback` is only
+ * used for something that is not an error at all.
+ */
+export function getErrorMessage(err: unknown, fallback?: string): string {
+  if (fallback && !(err instanceof Error)) return fallback;
+  return errorMessageNow(err);
 }
+
+const FIELD_COPY = {
+  en: { sku: "That SKU is already used by another variant.", field: "Check this field." },
+  ar: { sku: "الكود (SKU) ده مستخدم في نوع تاني.", field: "راجع الخانة دي." },
+};
+const ARABIC_LETTER = /[\u0600-\u06FF]/;
 
 /**
  * Field-level validation errors from a 422, keyed by field name. The backend
@@ -34,7 +34,7 @@ export function getFieldErrors(err: unknown): Record<string, string> {
   if (!(err instanceof ApiError)) return {};
 
   if (err.code === "DUPLICATE_RESOURCE") {
-    return { sku: "That SKU is already used by another variant." };
+    return { sku: FIELD_COPY[getLocale()].sku };
   }
 
   const body = err.details as { error?: { details?: unknown } } | undefined;
@@ -45,9 +45,11 @@ export function getFieldErrors(err: unknown): Record<string, string> {
   for (const d of details as FieldDetail[]) {
     if (d && typeof d.field === "string" && !out[d.field]) {
       // Joi paths like "lines.0.variantId" — key on the leaf and the head.
-      out[d.field] = d.message;
+      // The server words field errors in English; the Arabic dashboard says it plainly instead.
+      const message = getLocale() === "ar" && !ARABIC_LETTER.test(d.message) ? FIELD_COPY.ar.field : d.message;
+      out[d.field] = message;
       const head = d.field.split(".")[0];
-      if (head && !out[head]) out[head] = d.message;
+      if (head && !out[head]) out[head] = message;
     }
   }
   return out;

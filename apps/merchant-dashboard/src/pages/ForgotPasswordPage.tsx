@@ -5,6 +5,7 @@ import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -49,7 +50,7 @@ export function ForgotPasswordPage() {
       // Only a genuine server-side failure lands here (the endpoint never
       // rejects a merely-unknown email) — surface it and let them retry.
       setError(
-        err instanceof ApiError ? err.message : t.failed
+        err instanceof ApiError ? errorMessageNow(err) : t.failed
       );
     } finally {
       setSubmitting(false);

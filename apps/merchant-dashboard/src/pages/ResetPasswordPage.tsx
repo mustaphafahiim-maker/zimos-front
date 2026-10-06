@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/apiClient";
 import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -97,7 +98,7 @@ export function ResetPasswordPage() {
     } catch (err) {
       // Keep the form mounted so they can fix a typo or go request a fresh link.
       setError(
-        err instanceof ApiError ? err.message : t.failed
+        err instanceof ApiError ? errorMessageNow(err) : t.failed
       );
     } finally {
       setSubmitting(false);

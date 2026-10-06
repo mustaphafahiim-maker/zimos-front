@@ -93,7 +93,7 @@ export function formatOptions(options: Record<string, string> | null | undefined
 }
 
 export function formatAddress(address: OrderAddressSnapshot | null | undefined): string {
-  if (!address) return "No shipping address";
+  if (!address) return getLocale() === "ar" ? "مفيش عنوان شحن" : "No shipping address";
   return [address.addressLine, address.city, address.province, address.postalCode, address.country]
     .filter(Boolean)
     .join(", ");
@@ -104,7 +104,7 @@ export function variantLabel(variant: Variant): string {
   const opts = formatOptions(variant.optionValues);
   if (opts) return opts;
   if (variant.sku) return variant.sku;
-  return `Variant ${variant.id.slice(0, 8)}`;
+  return `${getLocale() === "ar" ? "نوع" : "Variant"} ${variant.id.slice(0, 8)}`;
 }
 
 const HUMANIZE: Record<string, string> = {
@@ -123,9 +123,65 @@ const HUMANIZE: Record<string, string> = {
   valu: "valU",
 };
 
-/** "partially_paid" -> "Partially paid" */
+/**
+ * Arabic for every status value a badge can show without its own label
+ * (StatusBadge falls back to humanize). Egyptian, short, one word per concept.
+ */
+const HUMANIZE_AR: Record<string, string> = {
+  draft: "مسودة",
+  active: "شغّال",
+  archived: "مؤرشف",
+  scheduled: "متجدول",
+  expired: "خلص",
+  disabled: "متوقف",
+  inactive: "متوقف",
+  pending: "مستني",
+  confirmed: "متأكد",
+  rejected: "مرفوض",
+  unreachable: "مبيردش",
+  postponed: "متأجل",
+  partially_paid: "مدفوع جزء",
+  paid: "مدفوع",
+  unpaid: "مش مدفوع",
+  failed: "فشل",
+  refunded: "اترجّع",
+  partially_refunded: "اترجّع جزء",
+  unfulfilled: "لسه متشحنش",
+  partially_fulfilled: "اتشحن جزء",
+  fulfilled: "اتشحن",
+  returned: "مرتجع",
+  created: "اتعمل",
+  picked_up: "المندوب استلم",
+  in_transit: "في الطريق",
+  out_for_delivery: "خرج للتوصيل",
+  delivered: "اتسلّم",
+  cancelled: "ملغي",
+  requested: "متطلب",
+  approved: "موافق عليه",
+  received: "وصل",
+  open: "مفتوح",
+  closed: "مقفول",
+  completed: "خلص",
+  processing: "بيتعمل",
+  matched: "متطابق",
+  unmatched: "مش متطابق",
+  no_longer_wanted: "مش عايزه",
+  not_as_described: "مش زي الوصف",
+  wrong_item: "منتج غلط",
+  damaged: "تالف",
+  arrived_late: "وصل متأخر",
+  bank_transfer: "تحويل بنكي",
+  cod: "دفع عند الاستلام",
+  card: "كارت",
+  wallet: "محفظة",
+  instapay: "إنستاباي",
+  valu: "valU",
+};
+
+/** "partially_paid" -> "Partially paid" (or its Arabic in the Arabic dashboard) */
 export function humanize(value: string | null | undefined): string {
   if (!value) return "—";
+  if (getLocale() === "ar" && HUMANIZE_AR[value]) return HUMANIZE_AR[value];
   if (HUMANIZE[value]) return HUMANIZE[value];
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
 }

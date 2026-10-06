@@ -5,6 +5,7 @@ import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { errorMessageNow } from "@/lib/errorMessages";
 
 const STRINGS = {
   en: {
@@ -68,7 +69,7 @@ export function VerifyEmailPage() {
         // generic line for anything else (network, unexpected shape).
         setApiState("error");
         setApiErrorMessage(
-          err instanceof ApiError ? err.message : true
+          err instanceof ApiError ? errorMessageNow(err) : true
         );
       });
   }, [token]);
