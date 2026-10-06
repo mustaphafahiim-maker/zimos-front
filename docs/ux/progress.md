@@ -54,8 +54,13 @@ are listed under *Handoff items done*.
 - [x] Request: errors in the reader's language — dashboard sends Accept-Language
 - [x] Request: postponed/no-answer callback time — CallbackPicker in the queue
 - [x] Request: time-zone aware order dates — list sends `tz` with the dates
+- [x] 163 + 164 (dashboard): Shipping → «المناطق» tab — regions/cities/areas
+      browser, add/rename/hide/delete, import sheet (+sample CSV with the
+      shipping column), start from the platform list, inline prices saved
+      together, inherited-price hints; order page names the city/area rule.
+      Storefront checkout pickers + quote: pending (after 165 lands).
 - [ ] 160 storefront texts · 161 store scripts · 162 smart collections ·
-      163 places · 164 city/area prices · 165 checkout file + billing ·
+      165 checkout file + billing ·
       166 funnel bulk · 167 Lead instead of Purchase · 168 Pinterest CAPI
 
 ## Local verification setup (any new session)

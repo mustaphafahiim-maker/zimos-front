@@ -34,6 +34,7 @@ import { ShippingSettingsSection } from "./ShippingSettingsSection";
 import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
+import { StorePlacesSection } from "./StorePlacesSection";
 import { WeightTiersSection } from "./WeightTiersSection";
 
 // Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
@@ -416,6 +417,9 @@ function ShippingTaxBody() {
       {tab === "rates" && <ShippingSettingsSection onSaved={refreshWorkspace} />}
 
       {tab === "rates" && <ShippingProfilesSection />}
+
+      {/* The store's own regions → cities → areas and their prices (handoff 163/164). */}
+      {tab === "places" && <StorePlacesSection />}
 
       {tab === "options" && <ShippingOptionsSection />}
 

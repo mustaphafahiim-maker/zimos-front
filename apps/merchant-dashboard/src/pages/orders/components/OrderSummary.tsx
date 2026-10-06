@@ -52,6 +52,8 @@ const STRINGS = {
     rule_zone_tier_price: "Zone price for the weight tier",
     rule_default_rate: "Default shipping price",
     rule_no_rate: "No shipping price was set",
+    // The store's own city/area price (Shipping → Places, handoff 164).
+    rule_store_place_rate: "City/area price",
     ruleExtras: "{rule} + {amount} in product extra fees",
   },
   ar: {
@@ -94,7 +96,8 @@ const STRINGS = {
     rule_zone_rate: "سعر منطقة الشحن",
     rule_zone_tier_price: "سعر المنطقة حسب شريحة الوزن",
     rule_default_rate: "سعر الشحن الافتراضي",
-    rule_no_rate: "لم يكن هناك سعر شحن محدد",
+    rule_no_rate: "مكانش فيه سعر شحن متحدد",
+    rule_store_place_rate: "سعر المدينة/المنطقة",
     ruleExtras: "{rule} + {amount} رسوم إضافية للمنتجات",
   },
 } satisfies Messages;
