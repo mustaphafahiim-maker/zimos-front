@@ -266,7 +266,7 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
         </div>
       ),
     },
-    { key: "tags", header: t.colTags, cell: (contact) => <TagChips tags={contact.tags} /> },
+    { key: "tags", header: t.colTags, phoneHidden: true, cell: (contact) => <TagChips tags={contact.tags} /> },
     { key: "orders", header: t.colOrders, align: "end", cell: (contact) => <span className="tabular-nums">{contact.ordersCount}</span> },
     {
       key: "spent",
@@ -277,6 +277,7 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
     {
       key: "lastOrder",
       header: t.colLastOrder,
+      phoneHidden: true,
       cell: (contact) => <span className="text-ink-soft">{contact.lastOrderAt ? formatDate(contact.lastOrderAt) : t.never}</span>,
     },
     { key: "delivery", header: t.colDelivery, cell: (contact) => <DeliveryRateBar contact={contact} /> },

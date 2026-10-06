@@ -304,6 +304,7 @@ export function AdsPage() {
               ) : (
                 <Section title={t.tabCampaigns} flush>
                   <DataTable
+            phoneCards={false}
                     columns={campaignColumns}
                     rows={data.campaigns}
                     rowKey={(c) => `${c.platform}:${c.campaignName}`}
@@ -314,6 +315,7 @@ export function AdsPage() {
             ) : (
               <Section title={t.tabEntries} flush>
                 <DataTable
+            phoneCards={false}
                   columns={entryColumns}
                   rows={entries.data?.entries ?? []}
                   rowKey={(e) => e.id}

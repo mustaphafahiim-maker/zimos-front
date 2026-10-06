@@ -353,6 +353,7 @@ export function RealProfitPage() {
               }
             >
               <DataTable
+            phoneCards={false}
                 columns={columns}
                 rows={groupBy === "day" ? [...finishedRows].reverse() : finishedRows}
                 rowKey={(r) => r.key || "__none"}

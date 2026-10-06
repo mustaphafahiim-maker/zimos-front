@@ -80,6 +80,9 @@ are listed under *Handoff items done*.
 - [x] S15 Auth pages — done inside S9 (calm card, language switch, LTR email).
 - [x] S16 Platform admin adopts the family tokens (data-product="store",
       Readex Pro); the console now matches the dashboard's palette and radii.
+- [x] R2-1 DataTable phone cards (18 screens): each row a card on phones —
+      title, tick box beside it, label/value lines; columns can opt out
+      (phoneHidden); dense numeric reports keep the table (phoneCards=false).
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
