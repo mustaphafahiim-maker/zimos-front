@@ -29,6 +29,8 @@ export interface PlaceAddress {
   area?: string;
   /** The deepest picked place. */
   placeId: string;
+  /** Nothing left to pick under it: an area, or a city / region without any (the address is complete). */
+  final?: boolean;
 }
 
 export interface StorePlacesState extends PlacePicks {
@@ -171,11 +173,13 @@ export function useStorePlaces({
   const address = useMemo<PlaceAddress | null>(() => {
     if (!region?.id) return null;
     const deepest = areaPlace ?? cityPlace ?? region;
+    const below = areaPlace ? [] : ((cityPlace ?? region).children ?? []).filter((p) => p.id);
     return {
       province: (region.code && findPlace(region.code) && provinceFor(region.code)) || region.ar,
       ...(cityPlace ? { city: cityPlace.ar } : {}),
       ...(areaPlace ? { area: areaPlace.ar } : {}),
       placeId: deepest.id as string,
+      final: below.length === 0,
     };
   }, [region, cityPlace, areaPlace]);
 
