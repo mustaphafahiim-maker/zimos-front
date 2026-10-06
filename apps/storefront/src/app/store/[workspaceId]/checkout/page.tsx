@@ -68,6 +68,7 @@ import { CodeSlot } from "@/components/CustomCode";
 import { useStorePlaces } from "@/lib/useStorePlaces";
 import { CheckoutStickyBar, scrollIntoViewSoon } from "@/components/checkout/CheckoutStickyBar";
 import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
+import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
 
 const FORM_PREFIX = "checkout";
 const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
@@ -191,6 +192,7 @@ export default function CheckoutPage() {
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
+  const giftCard = useGiftCard({ client, workspaceId, method, total, currency });
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -251,6 +253,7 @@ export default function CheckoutPage() {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true, place: places.address }),
         ...billing.payload(),
         ...shippingChoice.payload,
+        ...giftCard.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
@@ -284,9 +287,11 @@ export default function CheckoutPage() {
         cartToken: cart.guestToken,
         visitorId: getVisitorId(workspaceId),
       });
+      giftCard.remember(order);
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
+      giftCard.onError(err);
       if (isOrderBumpRefused(err)) {
         // The totals drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
@@ -498,6 +503,7 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            <GiftCardField state={giftCard} />
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}

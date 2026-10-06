@@ -274,3 +274,5 @@ export * from "./endpoints/contactImport";
 export * from "./endpoints/shopperAccounts";
 // Element display rules: between dates, by device, country or UTM source; the visitor context (pages/displayRules.js, handoff 191).
 export * from "./endpoints/displayRules";
+// Gift cards: issue, list, adjust, reveal / resend, products sold as gift cards; the shopper's balance check and checkout field (handoff 189).
+export * from "./endpoints/giftCards";
