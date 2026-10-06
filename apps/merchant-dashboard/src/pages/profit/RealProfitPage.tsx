@@ -33,8 +33,17 @@ const STRINGS = {
     projectedNoHistory: "Adds open orders, assuming all of them get delivered — no delivery history yet.",
     netProfit: "Net profit",
     margin: "Profit margin",
-    maxCpa: "Max affordable CPA",
+    maxCpa: "Most you can pay in ads per order",
     maxCpaHint: "Ad cost per placed order before you lose money",
+    answerUp: "You kept {amount} — {pct} of every pound you sold.",
+    answerDown: "You lost {amount} on what you sold.",
+    answerNone: "No finished orders in this period yet.",
+    answerBiggest: "The biggest cost was {cost}: {pct} of your sales.",
+    cost_costOfGoods: "the products themselves",
+    cost_shipping: "shipping and returns",
+    cost_fees: "collection and gateway fees",
+    cost_adSpend: "ads",
+    cost_zimosFees: "ZIMOS fees",
     deliveryRate: "Delivery rate",
     deliveryHint: "{delivered} delivered · {returned} returned · {open} open",
     statement: "Profit statement",
@@ -82,8 +91,17 @@ const STRINGS = {
     projectedNoHistory: "يضيف الطلبات المفتوحة بافتراض تسليمها كلها — لا يوجد سجل تسليم بعد.",
     netProfit: "صافي الربح",
     margin: "هامش الربح",
-    maxCpa: "أقصى تكلفة إعلان للطلب",
-    maxCpaHint: "تكلفة الإعلان لكل طلب مسجَّل قبل أن تخسر",
+    maxCpa: "أقصى تكلفة إعلان للأوردر",
+    maxCpaHint: "تدفع في الإعلان لحد كده للأوردر قبل ما تخسر",
+    answerUp: "فضلك {amount} — يعني {pct} من كل جنيه بعته.",
+    answerDown: "خسرت {amount} على اللي بعته.",
+    answerNone: "لسه مفيش أوردرات خلصت في الفترة دي.",
+    answerBiggest: "أكبر مصروف كان {cost}: {pct} من مبيعاتك.",
+    cost_costOfGoods: "تكلفة المنتجات نفسها",
+    cost_shipping: "الشحن والمرتجعات",
+    cost_fees: "رسوم التحصيل وبوابات الدفع",
+    cost_adSpend: "الإعلانات",
+    cost_zimosFees: "رسوم زيموس",
     deliveryRate: "نسبة التسليم",
     deliveryHint: "{delivered} مسلَّم · {returned} مرتجع · {open} مفتوح",
     statement: "قائمة الأرباح",
@@ -263,6 +281,11 @@ export function RealProfitPage() {
               </Alert>
             )}
 
+            {/* The answer first (docs/ux/05-proposal.md §3): what was kept, and what ate the most of it. */}
+            {data.costCoverage !== 0 && (
+              <ProfitAnswer statement={statement} money={money} pct={(ratio) => formatPercentValue(ratio, 0)} t={t} />
+            )}
+
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiCard
                 label={t.netProfit}
@@ -383,6 +406,58 @@ function ProfitByDay({
         format={(v) => formatMoney(...inReport(v, currency))}
         summary={summary}
       />
+    </div>
+  );
+}
+
+type CostKey = "costOfGoods" | "shipping" | "fees" | "adSpend" | "zimosFees";
+
+/** One sentence on the period: kept or lost, and the biggest cost as a share of sales. */
+function ProfitAnswer({
+  statement,
+  money,
+  pct,
+  t,
+}: {
+  statement: ProfitStatement;
+  money: (v: number | null) => string;
+  pct: (ratio: number) => string;
+  t: Record<string, string>;
+}) {
+  if (statement.revenue <= 0) {
+    return (
+      <div className="rounded-[var(--radius-card)] bg-paper-raised p-4 text-sm text-ink-soft shadow-[var(--shadow-card)] ring-1 ring-line sm:p-5">
+        {t.answerNone}
+      </div>
+    );
+  }
+  const costs: Record<CostKey, number> = {
+    costOfGoods: statement.costOfGoods,
+    shipping: statement.shipping + statement.returnShipping,
+    fees: statement.fees,
+    adSpend: statement.adSpend,
+    zimosFees: statement.zimosFees,
+  };
+  const biggest = (Object.keys(costs) as CostKey[]).reduce((a, b) => (costs[b] > costs[a] ? b : a));
+  const loss = statement.netProfit < 0;
+  return (
+    <div
+      className={cn(
+        "rounded-[var(--radius-card)] p-4 shadow-[var(--shadow-card)] sm:p-5",
+        loss ? "bg-danger-soft" : "bg-paper-raised ring-1 ring-line"
+      )}
+    >
+      <p className={cn("text-[17px] leading-7 font-semibold", loss ? "text-danger" : "text-ink")}>
+        {fmt(loss ? t.answerDown : t.answerUp, {
+          amount: money(Math.abs(statement.netProfit)),
+          pct: pct(Math.max(0, statement.netProfit) / statement.revenue),
+        })}
+      </p>
+      {costs[biggest] > 0 && (
+        <p className="mt-1 text-sm text-ink">
+          {fmt(t.answerBiggest, { cost: t[`cost_${biggest}`], pct: pct(costs[biggest] / statement.revenue) })}
+        </p>
+      )}
     </div>
   );
 }

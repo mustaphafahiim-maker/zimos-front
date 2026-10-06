@@ -62,7 +62,13 @@ are listed under *Handoff items done*.
       Dialog — focus trap + restore, translated close button, backdrop tap no
       longer discards forms, bottom sheet on phones; toasts with icon + close,
       errors stay 10 s; install prompt sits above the phone tab bar.
-- [ ] S11 Profit + settlements — next
+- [x] S11 Profit + settlements: profit opens with «فضلك X — يعني Y% من كل
+      جنيه بعته» and the biggest cost as a share of sales (hidden when no
+      costs are set, so it never claims a fake profit); plain «أقصى تكلفة
+      إعلان للأوردر»; settlements header «شركات الشحن لسه عليها X لـ N أوردر»;
+      title matches the menu. PageHeader actions wrap: 38 routes checked at
+      390 px, none wider than the screen.
+- [ ] S12 Command bar — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
