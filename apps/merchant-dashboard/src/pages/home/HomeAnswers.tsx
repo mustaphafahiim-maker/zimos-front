@@ -99,6 +99,7 @@ const STRINGS = {
     whereSource: "Your top traffic source is {name}.",
     direct: "direct visits",
     whereAction: "See sales sources",
+    storeWide: "visits are for the whole store",
   },
   ar: {
     when_today: "النهارده",
@@ -177,6 +178,7 @@ const STRINGS = {
     whereSource: "وأكتر مصدر بيجيب زيارات: {name}.",
     direct: "الزيارات المباشرة",
     whereAction: "شوف مصادر المبيعات",
+    storeWide: "الزيارات للمتجر كله",
   },
 } satisfies Messages;
 
@@ -465,7 +467,16 @@ export function LostTile({ overview, range }: { overview: InsightsOverview; rang
   );
 }
 
-export function WhereTile({ overview, range }: { overview: InsightsOverview; range: HomeRange }) {
+export function WhereTile({
+  overview,
+  range,
+  storeWideVisits,
+}: {
+  overview: InsightsOverview;
+  range: HomeRange;
+  /** Filtered by product: visits can't be split by product, so the source line is the whole store's. */
+  storeWideVisits?: boolean;
+}) {
   const t = useStrings();
   const gov = overview.topGovernorates.find((g) => g.orders > 0);
   const source = overview.topSources.find((s) => s.visits > 0);
@@ -476,7 +487,10 @@ export function WhereTile({ overview, range }: { overview: InsightsOverview; ran
         <BentoAnswer>{fmt(t.whereGov, { name: isolate(gov.name), n: formatCount(gov.orders), when: whenOf(t, range) })}</BentoAnswer>
       )}
       {source && (
-        <p className="mt-1 text-sm text-ink-soft">{fmt(t.whereSource, { name: isolate(source.source || t.direct) })}</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          {fmt(t.whereSource, { name: isolate(source.source || t.direct) })}
+          {storeWideVisits && <span className="ms-1 text-xs">({t.storeWide})</span>}
+        </p>
       )}
     </BentoTile>
   );

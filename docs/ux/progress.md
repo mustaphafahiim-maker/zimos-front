@@ -107,6 +107,11 @@ are listed under *Handoff items done*.
       toggle, delete; storefront injects by page type with the existing guards.
 - [ ] 165 checkout file + billing · 167 Lead instead of Purchase ·
       168 Pinterest CAPI (agent running) · 163/164 storefront pickers
+- [x] 172 home filters: product and store (when >1 website) pickers on the
+      home, remembered per store; profit tiles step aside while filtered (P&L
+      has no product split); «الزيارات للمتجر كله» note; stale ids reset.
+- [ ] 169 Google Ads labels · 170 GTM container (after the pixels agent lands)
+- [ ] 171 live map · 173–175 emails · 176–177 domains · 178–179 webhooks/MCP (agents running)
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`

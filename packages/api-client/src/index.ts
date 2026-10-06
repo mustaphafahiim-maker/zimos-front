@@ -230,3 +230,5 @@ export * from "./endpoints/funnelBulk";
 export * from "./endpoints/storefrontTexts";
 // Store scripts: the merchant's own code by position and page type (customCode/storeScripts.js).
 export * from "./endpoints/storeScripts";
+// Home: filter the overview by product and by store (frontend-handoff 172).
+export * from "./endpoints/homeFilters";

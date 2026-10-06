@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, PackagePlus, Plus, ShoppingCart, Workflow } from "lucide-react";
 import { Button, cn } from "@store-builder/ui";
 import {
-  insightsGetOverview,
+  homeGetOverview,
   profitGetPnl,
   type ConfirmationQueueCounts,
-  type InsightsOverview,
+  type HomeOverview,
   type Order,
   type OrderPipeline,
   type ProfitPnl,
@@ -23,6 +23,7 @@ import { rangeWindows } from "@/lib/analytics";
 import { canViewAnalytics } from "@/lib/analyticsAccess";
 import { useRememberedChoice } from "@/lib/rememberedChoice";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Select } from "@/components/Select";
 import { Bento, BentoSkeleton, BentoTile } from "@/components/Bento";
 import { StoreOverview } from "@/pages/home/StoreOverview";
 import { SetupGuideCard } from "@/pages/home/SetupGuideCard";
@@ -63,6 +64,12 @@ const STRINGS = {
     channelStore: "Store",
     channelFunnel: "Funnel",
     details: "All the numbers in detail",
+    product: "Product",
+    store: "Store",
+    allProducts: "All products",
+    allStores: "All stores",
+    clearFilters: "Clear filters",
+    filteredNote: "Filtered: profit by product shows on the profit report.",
     detailsHint: "Visits, funnel, offers, sources and every metric of the period.",
   },
   ar: {
@@ -85,6 +92,12 @@ const STRINGS = {
     channelStore: "المتجر",
     channelFunnel: "مسار بيع",
     details: "كل الأرقام بالتفصيل",
+    product: "المنتج",
+    store: "المتجر",
+    allProducts: "كل المنتجات",
+    allStores: "كل المتاجر",
+    clearFilters: "امسح الفلاتر",
+    filteredNote: "متفلتر: ربح كل منتج تلاقيه في تقرير الأرباح.",
     detailsHint: "الزيارات، مسار الشراء، العروض، المصادر وكل مؤشرات الفترة.",
   },
 } satisfies Messages;
@@ -108,6 +121,38 @@ export function DashboardHomePage() {
   const errorMessage = useErrorMessage();
   const analyticsAllowed = canViewAnalytics(currentWorkspace?.role);
   const [range, setRange] = useRememberedChoice<HomeRange>("home.answers.range", "7d", RANGES);
+  // Item 172: narrow the numbers to one product or one store (website), remembered like the period.
+  const [productId, setProductId] = useRememberedChoice<string>("home.answers.product", "");
+  const [websiteId, setWebsiteId] = useRememberedChoice<string>("home.answers.website", "");
+  const filtered = Boolean(productId || websiteId);
+  const productChoices = useAsync(
+    () =>
+      analyticsAllowed
+        ? apiClient
+            .listProducts(workspaceId, { limit: 100 })
+            .then((r) => r.products.map((p) => ({ id: p.id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name)))
+            .catch(() => [])
+        : Promise.resolve([]),
+    [workspaceId, analyticsAllowed]
+  );
+  const websiteChoices = useAsync(
+    () =>
+      analyticsAllowed
+        ? apiClient
+            .listWebsites(workspaceId)
+            .then((list) => list.map((w) => ({ id: w.id, name: w.name })))
+            .catch(() => [])
+        : Promise.resolve([]),
+    [workspaceId, analyticsAllowed]
+  );
+
+  // A remembered product or store that no longer exists falls back to all (the API would refuse it).
+  useEffect(() => {
+    if (productId && productChoices.data && productChoices.data.length > 0 && !productChoices.data.some((p) => p.id === productId)) setProductId("");
+  }, [productId, productChoices.data, setProductId]);
+  useEffect(() => {
+    if (websiteId && websiteChoices.data && !websiteChoices.data.some((w) => w.id === websiteId)) setWebsiteId("");
+  }, [websiteId, websiteChoices.data, setWebsiteId]);
 
   const queue = useAsync<ConfirmationQueueCounts | null>(
     () => apiClient.getConfirmationQueueCounts(workspaceId).catch(() => null),
@@ -117,23 +162,28 @@ export function DashboardHomePage() {
     () => apiClient.getOrderPipeline(workspaceId).catch(() => null),
     [workspaceId]
   );
-  const overview = useAsync<InsightsOverview | null>(
+  const overview = useAsync<HomeOverview | null>(
     () =>
       analyticsAllowed
-        ? insightsGetOverview(apiClient, workspaceId, { ...rangeWindows(range).current, compare: "previous" }).catch((err) => {
+        ? homeGetOverview(apiClient, workspaceId, {
+            ...rangeWindows(range).current,
+            compare: "previous",
+            productId: productId || undefined,
+            websiteId: websiteId || undefined,
+          }).catch((err) => {
             if (isPermissionError(err)) return null;
             throw err;
           })
         : Promise.resolve(null),
-    [workspaceId, range, analyticsAllowed]
+    [workspaceId, range, analyticsAllowed, productId, websiteId]
   );
   // Profit needs financial_reports.view; a role without it simply gets no profit tiles.
   const pnl = useAsync<ProfitPnl | null>(
     () =>
-      analyticsAllowed
+      analyticsAllowed && !filtered
         ? profitGetPnl(apiClient, workspaceId, { ...rangeWindows(range).current, groupBy: "product" }).catch(() => null)
         : Promise.resolve(null),
-    [workspaceId, range, analyticsAllowed]
+    [workspaceId, range, analyticsAllowed, filtered]
   );
   const recent = useAsync<Order[] | null>(
     () =>
@@ -205,6 +255,57 @@ export function DashboardHomePage() {
         </div>
       </div>
 
+      {analyticsAllowed && ((productChoices.data?.length ?? 0) > 0 || (websiteChoices.data?.length ?? 0) > 1) && (
+        <div className="mb-[var(--bento-gap)] flex flex-wrap items-center gap-2">
+          {(productChoices.data?.length ?? 0) > 0 && (
+            <Select
+              aria-label={t.product}
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              className={cn("h-10 w-auto max-w-[14rem]", productId && "border-primary text-primary-dark")}
+            >
+              <option value="">{t.allProducts}</option>
+              {productChoices.data?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {/* One website means one store: no point in choosing. */}
+          {(websiteChoices.data?.length ?? 0) > 1 && (
+            <Select
+              aria-label={t.store}
+              value={websiteId}
+              onChange={(e) => setWebsiteId(e.target.value)}
+              className={cn("h-10 w-auto max-w-[14rem]", websiteId && "border-primary text-primary-dark")}
+            >
+              <option value="">{t.allStores}</option>
+              {websiteChoices.data?.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {filtered && (
+            <>
+              <Button
+                variant="ghost"
+                className="min-h-10"
+                onClick={() => {
+                  setProductId("");
+                  setWebsiteId("");
+                }}
+              >
+                {t.clearFilters}
+              </Button>
+              <span className="text-xs text-ink-soft">{t.filteredNote}</span>
+            </>
+          )}
+        </div>
+      )}
+
       {!todoLoading && !hasTodo && <SetupGuideCard />}
 
       <Bento>
@@ -253,7 +354,7 @@ export function DashboardHomePage() {
               )}
               <ProductTile pnl={pnl.data} overview={ov} range={range} />
               {ov && <LostTile overview={ov} range={range} />}
-              {ov && <WhereTile overview={ov} range={range} />}
+              {ov && <WhereTile overview={ov} range={range} storeWideVisits={ov.eventScope === "store"} />}
             </>
           ))}
 
