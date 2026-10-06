@@ -262,3 +262,5 @@ export * from "./endpoints/liveMap";
 export * from "./endpoints/addressLookup";
 // Shopper returns: the store's setting, photos and source on the staff lists, and the shopper's request (handoff 186).
 export * from "./endpoints/shopperReturns";
+// Email marketing: contacts who agreed to marketing to Mailchimp / Klaviyo lists (emailMarketing/emailMarketing.js, handoff 182).
+export * from "./endpoints/emailMarketing";

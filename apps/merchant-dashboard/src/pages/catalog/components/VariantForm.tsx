@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   isApiErrorCode,
@@ -95,6 +95,8 @@ interface Props {
   onCancel: () => void;
   /** False for a product whose quantity is not tracked: no stock and no overselling choice. */
   tracked?: boolean;
+  /** Shown under the SKU (a product linked to the merchant's other store: its SKUs are that store's ids). */
+  skuNote?: ReactNode;
 }
 
 /** Parse "Size=M, Color=Red" -> { Size: "M", Color: "Red" }. */
@@ -116,7 +118,7 @@ function stringifyOptionValues(values: Record<string, string> | undefined): stri
     .join(", ");
 }
 
-export function VariantForm({ productId, variant, onDone, onCancel, tracked = true }: Props) {
+export function VariantForm({ productId, variant, onDone, onCancel, tracked = true, skuNote }: Props) {
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const errorMessage = useErrorMessage();
@@ -219,6 +221,7 @@ export function VariantForm({ productId, variant, onDone, onCancel, tracked = tr
         error={fieldErrors.sku}
         placeholder="TSHIRT-M"
       />
+      {skuNote}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <MoneyInput

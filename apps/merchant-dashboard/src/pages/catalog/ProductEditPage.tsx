@@ -23,6 +23,8 @@ import { ProductOptionsDisplaySection } from "./components/ProductOptionsDisplay
 import { ProductCmsSection } from "./components/ProductCmsSection";
 import { VariantBulkEditor } from "./components/VariantBulkEditor";
 import { ProductTestSection } from "./components/ProductTestSection";
+import { isFromStoreProvider } from "@/pages/apps/dropshipStores";
+import { StoreSkuWarning } from "@/pages/apps/StoreSkuWarning";
 
 const STRINGS = {
   en: {
@@ -81,6 +83,8 @@ export function ProductEditPage() {
   const data = product.data;
   const reload = () => product.refresh({ silent: true });
   const hasActiveVariant = (data?.variants ?? []).some((v) => v.status === "active");
+  // Imported from the merchant's Shopify / WooCommerce store: its SKUs link the lines there (handoff 181).
+  const skuNote = isFromStoreProvider(data as unknown as CatalogProduct | null) ? <StoreSkuWarning /> : undefined;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -114,6 +118,7 @@ export function ProductEditPage() {
               productId={data.id}
               variants={data.variants ?? []}
               tracked={data.productType !== "physical" || (data as { trackInventory?: boolean }).trackInventory !== false}
+              skuNote={skuNote}
               onChanged={reload}
             />
             <OffersSection
@@ -134,7 +139,7 @@ export function ProductEditPage() {
               </summary>
               <div className="space-y-6 border-t border-line p-3 sm:p-4">
             <ProductVideoSection productId={data.id} media={data.media ?? []} onChanged={reload} />
-            <VariantBulkEditor productId={data.id} variants={data.variants ?? []} onChanged={reload} />
+            <VariantBulkEditor productId={data.id} variants={data.variants ?? []} skuNote={skuNote} onChanged={reload} />
             <ProductCollectionsSection
               productId={data.id}
               memberships={data.collections ?? []}
