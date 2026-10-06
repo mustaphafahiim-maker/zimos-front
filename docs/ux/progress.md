@@ -175,7 +175,16 @@ are listed under *Handoff items done*.
       notification totals in the app's money format; the setup guide shows
       one count; the merchant's own courier reads «المندوب بتاعك» everywhere
       `providerName` is used (no more «manual-courier»). Checked ar + en.
-- [ ] R2-7 … R2-12 — see the plan.
+- [x] R2-7 Touch sizes and dialogs (N-08, N-24, U-36, U-37): on touch
+      screens every button, field, select and filter tab is ≥ 44 px, in
+      pages and in dialogs, and fields use 16 px text (no iOS zoom) — one
+      `@media (pointer: coarse)` block in index.css (it also beats the old
+      desktop rule that capped role=group buttons at 36 px). Modal: a tap on
+      the backdrop closes a clean dialog; once something was typed, backdrop
+      / Esc / × ask «تسيب التعديلات؟» (كمّل تعديل / سيبها); a caller's own
+      Cancel or a save isn't asked. Swipe-down not added (no gesture
+      library). Checked with touch emulation at 390.
+- [ ] R2-8 … R2-12 — see the plan.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`

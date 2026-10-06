@@ -543,3 +543,36 @@ html {
 [data-slot="card"][class*="space-y-"] {
   row-gap: 0;
 }
+
+/*
+ * Touch screens (re-audit N-08, N-24; audit U-36, U-37): every control is at
+ * least 44 px tall, in pages and in dialogs (which are portalled outside
+ * `main`), and fields use 16 px text so iOS Safari doesn't zoom the page
+ * when one gets focus. Tiny xs buttons (chips, inline helpers) are left alone.
+ */
+@media (pointer: coarse) {
+  [data-slot="input"],
+  [data-slot="select-trigger"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  [data-slot="input"],
+  [data-slot="select-trigger"],
+  select {
+    min-height: 2.75rem;
+  }
+  [data-slot="button"]:not(.h-6):not(.size-6):not(.h-7):not(.size-7) {
+    min-height: 2.75rem;
+  }
+  [data-slot="button"].size-8,
+  [data-slot="button"].size-9,
+  [data-slot="button"].size-10 {
+    min-width: 2.75rem;
+  }
+  /* Same prefix as the desktop rule above, which would otherwise win. */
+  .glass-app main [role="group"] > button,
+  [role="group"] > button {
+    min-height: 2.75rem;
+  }
+}
