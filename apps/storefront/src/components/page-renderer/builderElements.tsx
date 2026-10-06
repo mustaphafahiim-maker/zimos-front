@@ -1,5 +1,5 @@
 import {
-  resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   type StorefrontProductDetail,
 } from "@store-builder/api-client";
@@ -235,7 +235,7 @@ export async function CodFormElement({
         product={product}
         bump={orderBumpOf(store.orderBump, [product.id])}
         checkoutSettings={
-          { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<
+          { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<
             typeof resolveCheckoutSettings
           >
         }

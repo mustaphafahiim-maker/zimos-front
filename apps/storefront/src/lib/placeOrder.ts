@@ -8,6 +8,7 @@ import {
   type Order,
 } from "@store-builder/api-client";
 import { botGuardFields } from "./botGuard";
+import { isExpiredPhotoProblem } from "./checkoutPhoto";
 import { adMatchFields } from "./adMatch";
 import { clearPageTags, pageTagFields } from "./pageTags";
 import { withCheckoutOtp } from "./checkoutOtp";
@@ -124,7 +125,9 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
     out[field] =
       field === "email" && /required/i.test(problem.message)
         ? copy.emailRequired
-        : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
+        : problem.field.startsWith("formFields.custom_") && isExpiredPhotoProblem(problem.message)
+          ? copy.photoExpired
+          : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
   }
   return out;
 }

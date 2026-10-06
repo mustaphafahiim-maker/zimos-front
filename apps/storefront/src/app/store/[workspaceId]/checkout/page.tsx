@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { CheckoutProgress, type CheckoutStep } from "@/components/checkout/CheckoutProgress";
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { BillingAddressFields, billingFieldId, useBillingAddress } from "@/components/checkout/BillingAddressFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
@@ -70,6 +71,7 @@ export default function CheckoutPage() {
   const { t, money, store } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
+  const billing = useBillingAddress(fields);
   const { byVariant } = useCatalog(workspaceId);
 
   // The form starts on the store's country (dashboard → General → Country).
@@ -186,9 +188,10 @@ export default function CheckoutPage() {
     const found = validateOrderForm(values, t, fields, { showAltPhone: true });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
-    if (invalid.length > 0) {
-      setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+    const billingInvalid = billing.check();
+    if (invalid.length > 0 || billingInvalid.length > 0) {
+      setFormError(t.form.errors.summary(invalid.length + billingInvalid.length));
+      document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       return;
     }
     if (!cart || items.length === 0) {
@@ -212,6 +215,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
+        ...billing.payload(),
         ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
@@ -257,16 +261,18 @@ export default function CheckoutPage() {
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
-      if (invalid.length > 0) {
+      // A billing field the server named opens the billing block.
+      const billingInvalid = flushSync(() => billing.showServerErrors(err));
+      if (invalid.length > 0 || billingInvalid.length > 0) {
         // Commit first: a field the server named may be one this form was
         // hiding, and it has to exist before it can take focus.
         flushSync(() => {
           reveal(fromServer);
           setErrors(fromServer);
-          setFormError(t.form.errors.summary(invalid.length));
+          setFormError(t.form.errors.summary(invalid.length + billingInvalid.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+        document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
@@ -307,6 +313,7 @@ export default function CheckoutPage() {
                 showAltPhone
               />
               <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
+              <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
             </div>
             <CodeSlot name="below_form" />
           </section>

@@ -17,6 +17,7 @@ import {
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { ProductBumpCards, useProductBumps } from "@/components/offers/StoreOffers";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { BillingAddressFields, billingFieldId, useBillingAddress } from "@/components/checkout/BillingAddressFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
@@ -417,6 +418,7 @@ export function FunnelCheckout({
   const funnelCurrency = useFunnelCurrency();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
+  const billing = useBillingAddress(fields);
   const saved = usePlacedOrder(sessionId);
   // Only an order placed on this very step and not yet reported counts: one the
   // session already holds belongs to an earlier pass (a funnel that loops back).
@@ -515,9 +517,10 @@ export function FunnelCheckout({
     const found = validateOrderForm(values, t, fields, { showAltPhone: true });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
-    if (invalid.length > 0) {
-      setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+    const billingInvalid = billing.check();
+    if (invalid.length > 0 || billingInvalid.length > 0) {
+      setFormError(t.form.errors.summary(invalid.length + billingInvalid.length));
+      document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       return;
     }
     if (!product || !variant || !variant.inStock || !line) {
@@ -538,6 +541,7 @@ export function FunnelCheckout({
     const checkoutSessionId = await autosave.stop();
     const payload = {
       ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...billing.payload(),
       funnelId,
       // The server adds the step's bump and the product's ticked ones to this order from their offers.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -581,16 +585,20 @@ export function FunnelCheckout({
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalidFromServer = FIELD_ORDER.filter((k) => fromServer[k]);
-      if (invalidFromServer.length > 0) {
+      // A billing field the server named opens the billing block.
+      const billingInvalid = flushSync(() => billing.showServerErrors(err));
+      if (invalidFromServer.length > 0 || billingInvalid.length > 0) {
         // Commit first: a field the server named may be one this form was
         // hiding, and it has to exist before it can take focus.
         flushSync(() => {
           reveal(fromServer);
           setErrors(fromServer);
-          setFormError(t.form.errors.summary(invalidFromServer.length));
+          setFormError(t.form.errors.summary(invalidFromServer.length + billingInvalid.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalidFromServer[0]))?.focus();
+        document.getElementById(
+          invalidFromServer.length > 0 ? fieldId(FORM_PREFIX, invalidFromServer[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0])
+        )?.focus();
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
@@ -688,6 +696,7 @@ export function FunnelCheckout({
             fields={fields}
             showAltPhone
           />
+          <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
         </fieldset>
 
         {onlyCod || !method ? (
