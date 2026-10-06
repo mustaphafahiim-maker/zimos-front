@@ -462,6 +462,7 @@ const en = {
   },
   policies: {
     title: "Policies",
+    shipping_policy: "Shipping policy",
     refund_policy: "Refund policy",
     privacy_policy: "Privacy policy",
     terms_of_service: "Terms of service",
@@ -984,6 +985,7 @@ const ar: Dictionary = {
   },
   policies: {
     title: "السياسات",
+    shipping_policy: "سياسة الشحن",
     refund_policy: "سياسة الاسترجاع",
     privacy_policy: "سياسة الخصوصية",
     terms_of_service: "شروط الخدمة",

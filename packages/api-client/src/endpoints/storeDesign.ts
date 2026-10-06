@@ -331,7 +331,8 @@ export async function storeDesignSaveStoreInfo(
   return workspace;
 }
 
-export const LEGAL_POLICY_KEYS = ["refund_policy", "privacy_policy", "terms_of_service"] as const;
+/** Shipping joined the three of SPEC §8.3 (ad platforms ask for shipping, returns and privacy; the AI writes them). */
+export const LEGAL_POLICY_KEYS = ["shipping_policy", "refund_policy", "privacy_policy", "terms_of_service"] as const;
 export type LegalPolicyKey = (typeof LEGAL_POLICY_KEYS)[number];
 /** Plain text; {{store.name}}, {{store.address}}, {{store.email}}, {{store.phone}} are filled in when served. */
 export type LegalSettings = Record<LegalPolicyKey, string>;
@@ -339,6 +340,7 @@ export type LegalSettings = Record<LegalPolicyKey, string>;
 export function resolveLegal(stored: unknown): LegalSettings {
   const s = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
   return {
+    shipping_policy: typeof s.shipping_policy === "string" ? s.shipping_policy : "",
     refund_policy: typeof s.refund_policy === "string" ? s.refund_policy : "",
     privacy_policy: typeof s.privacy_policy === "string" ? s.privacy_policy : "",
     terms_of_service: typeof s.terms_of_service === "string" ? s.terms_of_service : "",

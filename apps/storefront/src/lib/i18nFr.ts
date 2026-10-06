@@ -376,6 +376,7 @@ export const fr: Dictionary = {
   },
   policies: {
     title: "Politiques",
+    shipping_policy: "Politique de livraison",
     refund_policy: "Politique de remboursement",
     privacy_policy: "Politique de confidentialité",
     terms_of_service: "Conditions d'utilisation",

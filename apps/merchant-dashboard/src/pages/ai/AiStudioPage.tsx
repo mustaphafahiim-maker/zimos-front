@@ -36,6 +36,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
 import { ImageListField } from "@/pages/website/editor/ImageField";
 import { AdCreativesTool, PageReviewTool, StoreBuilderTool } from "./AiStudioP2";
+import { ApplyPoliciesButton } from "./ApplyPoliciesButton";
 
 const STRINGS = {
   en: {
@@ -108,7 +109,7 @@ const STRINGS = {
     policiesDelivery: "Delivery time (days)",
     policiesReturn: "Return window (days)",
     policiesContact: "Contact (phone or email)",
-    policiesNote: "A starting draft, not legal advice. Review it, then paste it into your store policies.",
+    policiesNote: "A starting draft, not legal advice. Review it, then use it as your store policies.",
     policy_shipping: "Shipping policy",
     policy_returns: "Returns policy",
     policy_privacy: "Privacy policy",
@@ -184,7 +185,7 @@ const STRINGS = {
     policiesDelivery: "مدة التوصيل (أيام)",
     policiesReturn: "مدة الإرجاع (أيام)",
     policiesContact: "وسيلة التواصل (هاتف أو بريد)",
-    policiesNote: "مسودة للبدء وليست استشارة قانونية. راجعها ثم الصقها في سياسات متجرك.",
+    policiesNote: "مسودة للبدء وليست استشارة قانونية. راجعها ثم استخدمها كسياسات متجرك.",
     policy_shipping: "سياسة الشحن",
     policy_returns: "سياسة الإرجاع",
     policy_privacy: "سياسة الخصوصية",
@@ -613,9 +614,7 @@ function PoliciesTool({ onDone }: { onDone: () => void }) {
                 </p>
               </section>
             ))}
-            <Link to="/store-settings" className="inline-block text-sm font-medium text-primary hover:underline">
-              {t.goPolicies} →
-            </Link>
+            {gen.job && <ApplyPoliciesButton key={gen.job.id} jobId={gen.job.id} />}
           </div>
         )
       }

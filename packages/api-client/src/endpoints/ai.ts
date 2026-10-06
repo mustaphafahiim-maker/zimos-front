@@ -250,3 +250,20 @@ export async function aiApply<F extends "product" | "page" | "store_builder">(
   const { job } = await client.request<{ job: AiJob<F> }>(`${aiBase(workspaceId)}/jobs/${jobId}/apply`, { method: "POST", body: payload });
   return job;
 }
+
+export type AiPolicyPart = "shipping" | "returns" | "privacy";
+
+/**
+ * Writes a "policies" (or store builder) result into the store's own policies
+ * (backend ai/applyPolicies.js): shipping → shipping_policy, returns →
+ * refund_policy, privacy → privacy_policy. Needs website.edit. `replaced`
+ * names the policies the store already had.
+ */
+export async function aiApplyPolicies(
+  client: ApiClient,
+  workspaceId: string,
+  jobId: string,
+  policies: AiPolicyPart[] = ["shipping", "returns", "privacy"]
+): Promise<{ written: string[]; replaced: string[] }> {
+  return client.request(`${aiBase(workspaceId)}/jobs/${jobId}/apply-policies`, { method: "POST", body: { policies } });
+}

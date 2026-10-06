@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
 import { DialectField, SubmitRow, ToolLayout, useGeneration } from "./AiStudioPage";
+import { ApplyPoliciesButton } from "./ApplyPoliciesButton";
 
 /**
  * The AI studio's P2 tools (SPEC §19.2, item 97; backend ai/featuresP2.js):
@@ -544,6 +545,7 @@ export function StoreBuilderTool({ onDone }: { onDone: () => void }) {
                   </p>
                 </div>
               ))}
+              {gen.job && <ApplyPoliciesButton key={gen.job.id} jobId={gen.job.id} />}
             </section>
             {applied ? (
               <div className="flex flex-wrap gap-3 text-sm">
