@@ -37,6 +37,7 @@ import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { storeThemeOf } from "@/lib/brandTheme";
+import { storeTextsOf } from "@/lib/storeTexts";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
 import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
@@ -168,6 +169,8 @@ export default async function StoreLayout({
     country: storefrontGeneralMeta(store).general.country,
     // The places it does not deliver to: left out of the checkout's list (lib/useShippingPlaces).
     hiddenPlaces: hiddenPlacesOf(store),
+    // The merchant's own wording, this language only (Website → Store texts; lib/storeTexts).
+    storefrontTexts: { [locale]: storeTextsOf(store)[locale] ?? {} },
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.

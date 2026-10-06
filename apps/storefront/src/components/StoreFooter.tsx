@@ -3,7 +3,8 @@
 import { storefrontGeneralMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { SocialLinks } from "./SocialLinks";
 import { StoreLink } from "@/components/StoreRoute";
-import { getDictionary, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import { useDictionary } from "@/lib/StoreContext";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
 import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
@@ -39,7 +40,7 @@ const GRID_COLS: Record<number, string> = {
 };
 
 export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; locale: Locale; year: number }) {
-  const t = getDictionary(locale);
+  const t = useDictionary(locale);
   const { footer } = useStoreShell(store);
   // The fuller footer a store can ask for: logo, contact, social accounts (shell/RichFooter).
   const layout = (store.themeSettings?.footer as { layout?: unknown } | undefined)?.layout;

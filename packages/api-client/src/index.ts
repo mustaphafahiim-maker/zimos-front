@@ -223,3 +223,5 @@ export * from "./endpoints/googleSheets";
 // Fonts: Google fonts and the store's uploaded ones, referenced as g:Name / c:id (modules/fonts).
 export * from "./endpoints/storeFonts";
 export * from "./endpoints/confirmationCallback";
+// Store texts: the storefront's own labels reworded per language (storefront/storefrontTexts.js).
+export * from "./endpoints/storefrontTexts";

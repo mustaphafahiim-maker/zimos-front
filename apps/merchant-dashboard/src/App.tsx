@@ -113,6 +113,7 @@ const AdsPage = lazy(() => import("@/pages/ads/AdsPage").then((m) => ({ default:
 const StoreDesignPage = lazy(() =>
   import("@/pages/storeDesign/StoreDesignPage").then((m) => ({ default: m.StoreDesignPage }))
 );
+const StoreTextsPage = lazy(() => import("@/pages/website/StoreTextsPage").then((m) => ({ default: m.StoreTextsPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -187,6 +188,7 @@ export default function App() {
                       <Route path="/shipping" element={<ShippingTaxPage />} />
                       <Route path="/payments" element={<PaymentsPage />} />
                       <Route path="/website" element={<WebsitePage />} />
+                      <Route path="/website/texts" element={<LazyRoute><StoreTextsPage /></LazyRoute>} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
