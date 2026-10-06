@@ -72,7 +72,7 @@ are listed under *Handoff items done*.
       diacritics), a real error state instead of «no results», a close button
       for touch, «أوردر جديد» really opens a new order, confirm-orders action,
       no duplicate rows, Egyptian copy.
-- [ ] S13 Storefront checkout (phone) — waits for the 165 agent branch (same file)
+- [x] S13 Storefront checkout (phone): sticky total + order bar, shopper-language errors — see R2-3.
 - [x] S14 Settings: 15 stacked sections → six tabs (المتجر، الرسايل، الفريق،
       الباقة والفواتير، حسابي، المطورين) kept in ?tab=; old #whatsapp /
       #notifications links open the right tab; the billing banner links to
@@ -109,7 +109,7 @@ are listed under *Handoff items done*.
       storefront checkout on cart/product/funnel, order page thumbnails + card)
 - [x] 167 «سجّل الطلبات كـ» Purchase/Lead per store and funnel (+ storefront events)
 - [x] 168 Pinterest server events (ad account id, token mask, test events)
-- [ ] 163/164 storefront place pickers + quote, S13 checkout phone layout
+- [x] 163/164 storefront place pickers + quote, S13 checkout phone layout (R2-3)
 - [x] 172 home filters: product and store (when >1 website) pickers on the
       home, remembered per store; profit tiles step aside while filtered (P&L
       has no product split); «الزيارات للمتجر كله» note; stale ids reset.
@@ -134,7 +134,17 @@ are listed under *Handoff items done*.
       badge), «ومكالمتين متأجلين لبعدين» under the list; to-do rows outlined
       so white text sits on the full brand fill (N-09). Checked at 390/1366
       with the API forced to 500, 403 and an empty store.
-- [ ] R2-3 Storefront checkout (S13 + 163/164 pickers) — agent branch to merge.
+- [x] R2-3 Storefront checkout (S13 + handoff 163/164 storefront side):
+      region → city → area pickers from the store's own places, each pick
+      re-quotes shipping and the order sends province/city/area/placeId
+      (also on the product quick-order form and funnel step); phone bar with
+      the estimated total + «اطلب دلوقتي» that hides while the page button
+      or the keyboard is up; known refusals in ar/en/fr, never untranslated
+      English; refused coupon shown beside the code; optional name not
+      marked required (U-62). Checked at 390 (ar, fr) and 1366; 3 scratch
+      COD orders placed with 40.00 / 45.50 place prices. Funnel step
+      typechecked only (only funnel is an unpublished draft). Two backend
+      requests added (quote `configured` flag; cart estimate name match).
 - [ ] R2-4 … R2-12 — see the plan.
 
 ## Local verification setup (any new session)
