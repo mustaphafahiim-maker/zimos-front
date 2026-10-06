@@ -12,6 +12,7 @@ import { cardTitle, storeCards } from "@/lib/storePromises";
 import { pageAndPolicyGroups } from "@/lib/footerLinks";
 import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
+import { CookieSettingsButton } from "./CookieConsent";
 import { container } from "./ui";
 
 /**
@@ -124,6 +125,7 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
       <div className="border-t border-line">
         <div className={`${container} flex flex-col items-center justify-between gap-2 py-4 sm:flex-row`}>
           <p className="text-xs text-ink-soft">{t.footer.rights(store.name, year)}</p>
+          <CookieSettingsButton className="text-ink-soft hover:text-primary" />
           {/* Removed for stores whose plan includes it (Plan.features.remove_branding). */}
           {!brandingRemoved(store) && <PoweredByZimos label={t.footer.poweredBy} />}
         </div>

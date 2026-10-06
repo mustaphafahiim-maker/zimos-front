@@ -824,4 +824,13 @@ export const fr: Dictionary = {
     paidInFull: "Votre carte cadeau a réglé toute la commande — rien à payer à la livraison.",
     notTaken: "Nous n'avons pas pu utiliser votre carte cadeau sur cette commande : le total est payé à la livraison.",
   },
+  cookies: {
+    label: "Cookies",
+    message: "Nous utilisons des cookies pour améliorer votre visite et mesurer nos publicités.",
+    accept: "Accepter",
+    reject: "Refuser",
+    ok: "OK",
+    settings: "Paramètres des cookies",
+    policy: "Politique de confidentialité",
+  },
 };

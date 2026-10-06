@@ -925,6 +925,16 @@ const en = {
     paidInFull: "Your gift card paid the whole order — nothing to pay on delivery.",
     notTaken: "We couldn't use your gift card on this order, so the whole total is paid on delivery.",
   },
+  /** The cookie banner and the footer's "Cookie settings" (handoff 196, components/CookieConsent). */
+  cookies: {
+    label: "Cookies",
+    message: "We use cookies to improve your visit and measure our ads.",
+    accept: "Accept",
+    reject: "Reject",
+    ok: "OK",
+    settings: "Cookie settings",
+    policy: "Privacy policy",
+  },
 };
 
 export type Dictionary = typeof en;
@@ -1752,6 +1762,15 @@ const ar: Dictionary = {
     paidWith: (last4, amount) => `اتدفع بكارت هدية ••••${last4}: ${amount}`,
     paidInFull: "كارت الهدية دفع الطلب كله — مفيش حاجة تدفعها عند الاستلام.",
     notTaken: "مقدرناش نستخدم كارت الهدية في الطلب ده، فهتدفع الإجمالي كله عند الاستلام.",
+  },
+  cookies: {
+    label: "الكوكيز",
+    message: "بنستخدم الكوكيز عشان نحسّن زيارتك ونقيس إعلاناتنا.",
+    accept: "موافق",
+    reject: "لا شكرًا",
+    ok: "تمام",
+    settings: "إعدادات الكوكيز",
+    policy: "سياسة الخصوصية",
   },
 };
 

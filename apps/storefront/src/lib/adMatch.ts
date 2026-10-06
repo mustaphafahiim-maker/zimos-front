@@ -1,5 +1,6 @@
 import { currentTouches } from "./touches";
 import { getVisitorId } from "./visitor";
+import { trackingConsentField } from "./cookieConsent";
 
 /**
  * The ad platforms' browser ids, sent with the checkout (SPEC §13.2) so the
@@ -46,7 +47,7 @@ export function adMatchFields(workspaceId: string): Record<string, unknown> {
       visitorId: getVisitorId(workspaceId),
     };
     for (const key of Object.keys(ids)) if (!ids[key]) delete ids[key];
-    return Object.keys(ids).length ? { adIds: ids } : {};
+    return { ...trackingConsentField(), ...(Object.keys(ids).length ? { adIds: ids } : {}) };
   } catch {
     return {};
   }

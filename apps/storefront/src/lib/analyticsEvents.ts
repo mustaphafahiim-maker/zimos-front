@@ -36,6 +36,7 @@ import {
 } from "./trackerCore";
 import { captureAttribution, getSessionId, getVisitorId, type Attribution } from "./visitor";
 import { currentTouches, type Touches } from "./touches";
+import { consentBatchField } from "./cookieConsent";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -267,6 +268,7 @@ function deliver(workspaceId: string, events: AnalyticsEvent[], urgent: boolean)
   if (Object.keys(attribution).length > 0) body.attribution = attribution;
   const touches = currentTouches();
   if (touches) body.touches = touches;
+  Object.assign(body, consentBatchField()); // the shopper's cookie choice, on a store that asks first
   try {
     const pixel = pixelInfo?.();
     if (pixel && Object.keys(pixel).length > 0) body.pixel = pixel;
