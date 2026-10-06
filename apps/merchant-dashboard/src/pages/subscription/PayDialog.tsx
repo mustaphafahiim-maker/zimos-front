@@ -268,6 +268,17 @@ export function TransferPay({
           </span>
           <CopyButton value={method.accountNumber ?? ""} label={t.copyNumber} />
         </div>
+        {/* Only when the console set one: otherwise nothing link-related shows. */}
+        {method.paymentLink && (
+          <a
+            href={method.paymentLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-10 items-center rounded-md border border-line bg-paper-raised px-3 text-sm font-medium text-ink hover:border-primary hover:text-primary"
+          >
+            {t.payLink}
+          </a>
+        )}
         {note && <p className="text-sm text-ink-soft">{note}</p>}
         <p className="text-xs text-ink-soft">{t.steps}</p>
       </div>

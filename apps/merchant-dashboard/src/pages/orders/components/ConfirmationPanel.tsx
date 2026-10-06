@@ -108,7 +108,9 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
 
   const task = order.confirmationTask ?? null;
   const attempts = task?.attempts ?? [];
-  const open = order.paymentMethod === "cod" && !order.cancelledAt && OPEN_STATES.has(order.confirmationState);
+  // A manually paid order (InstaPay / a wallet) is confirmed only once its payment is approved.
+  const confirmable = order.paymentMethod === "cod" || order.manualPayment?.status === "approved";
+  const open = confirmable && !order.cancelledAt && OPEN_STATES.has(order.confirmationState);
 
   if (!open) {
     return attempts.length > 0 ? (

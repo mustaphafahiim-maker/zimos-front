@@ -53,6 +53,10 @@ const STRINGS = {
     numberLabel: "Number or InstaPay address",
     noteArLabel: "Note in Arabic (optional)",
     noteEnLabel: "Note in English (optional)",
+    linkLabel: "Payment link (optional)",
+    linkHint: "An https link, e.g. your InstaPay link. Leave it empty if there is none: merchants then see the number only.",
+    linkHttps: "The link must start with https://",
+    payLink: "Payment link",
   },
   ar: {
     title: "طرق الدفع",
@@ -89,6 +93,10 @@ const STRINGS = {
     numberLabel: "الرقم أو عنوان إنستاباي",
     noteArLabel: "ملاحظة بالعربية (اختيارية)",
     noteEnLabel: "ملاحظة بالإنجليزية (اختيارية)",
+    linkLabel: "رابط الدفع (اختياري)",
+    linkHint: "رابط https، مثل رابط إنستاباي. اتركه فارغًا إن لم يوجد، وسيرى التجار الرقم فقط.",
+    linkHttps: "يجب أن يبدأ الرابط بـ https://",
+    payLink: "رابط الدفع",
   },
 } satisfies Messages;
 
@@ -173,6 +181,14 @@ export function PaymentMethodsPage() {
                       {m.kind === "manual" ? (
                         <p className="text-sm text-ink-soft">
                           {t.transferTo} <span dir="ltr" className="font-mono text-ink">{m.accountNumber || t.noNumber}</span>
+                          {m.paymentLink && (
+                            <span className="block text-xs">
+                              {t.payLink}:{" "}
+                              <a href={m.paymentLink} target="_blank" rel="noopener noreferrer" dir="ltr" className="text-primary underline">
+                                {m.paymentLink}
+                              </a>
+                            </span>
+                          )}
                           {(m.noteEn || m.noteAr) && <span className="block text-xs">{m.noteEn || m.noteAr}</span>}
                         </p>
                       ) : (
@@ -280,16 +296,28 @@ function AccountDialog({ method, onClose, onSaved }: { method: AdminPaymentMetho
   const t = useT(STRINGS);
   const { locale } = useLocale();
   const [accountNumber, setAccountNumber] = useState(method.accountNumber ?? "");
+  const [paymentLink, setPaymentLink] = useState(method.paymentLink ?? "");
   const [noteAr, setNoteAr] = useState(method.noteAr ?? "");
   const [noteEn, setNoteEn] = useState(method.noteEn ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function save() {
+    const link = paymentLink.trim();
+    // Optional; when given it must be https (the server checks too).
+    if (link && !/^https:\/\//i.test(link)) {
+      setError(t.linkHttps);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await adminApi.updatePaymentMethodAccount(method.code, { accountNumber: accountNumber.trim(), noteAr: noteAr.trim(), noteEn: noteEn.trim() });
+      await adminApi.updatePaymentMethodAccount(method.code, {
+        accountNumber: accountNumber.trim(),
+        paymentLink: link || null,
+        noteAr: noteAr.trim(),
+        noteEn: noteEn.trim(),
+      });
       onSaved();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -316,6 +344,16 @@ function AccountDialog({ method, onClose, onSaved }: { method: AdminPaymentMetho
     >
       <div className="space-y-3">
         <TextField label={t.numberLabel} dir="ltr" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} maxLength={80} required />
+        <TextField
+          label={t.linkLabel}
+          dir="ltr"
+          type="url"
+          placeholder="https://"
+          value={paymentLink}
+          onChange={(e) => setPaymentLink(e.target.value)}
+          maxLength={500}
+          hint={t.linkHint}
+        />
         <TextField label={t.noteArLabel} dir="rtl" value={noteAr} onChange={(e) => setNoteAr(e.target.value)} maxLength={500} />
         <TextField label={t.noteEnLabel} value={noteEn} onChange={(e) => setNoteEn(e.target.value)} maxLength={500} />
         {error && <Alert variant="danger">{error}</Alert>}

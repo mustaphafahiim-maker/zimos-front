@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyButton } from "@/components/CopyButton";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { useToast } from "@/components/Toast";
+import { ManualMethodsSection } from "./ManualMethodsSection";
 
 /**
  * Role keys that manage payments: the backend gates every /payments call on
@@ -191,6 +192,8 @@ export function PaymentsPage() {
     <div className="max-w-3xl space-y-8">
       <PageHeader
         title={t.title} description={t.description} />
+      {/* The store's own InstaPay / wallet numbers: no gateway, and not behind the online-payments switch. */}
+      {roleAllows && <ManualMethodsSection workspaceId={workspaceId} />}
       {!roleAllows ? (
         <Alert>{t.viewOnly}</Alert>
       ) : (
