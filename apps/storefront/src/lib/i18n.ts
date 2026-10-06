@@ -811,6 +811,18 @@ const en = {
     failed: "We couldn't update your wishlist. Try again.",
     close: "Close",
   },
+  /** Back-in-stock alerts (frontend-handoff 194): the sign-up that takes the cart buttons' place on a sold-out variant. */
+  backInStock: {
+    notifyMe: "Notify me when it's back",
+    intro: "Leave your mobile number or email. You get one message when it's back, nothing else.",
+    submit: "Notify me",
+    sending: "Saving…",
+    done: "We'll tell you once when it's back",
+    doneTo: "One message to",
+    inStockNow: "Good news: it's back in stock. You can order it now.",
+    tooMany: "Too many requests from this device. Try again in an hour.",
+    failed: "We couldn't save that. Try again.",
+  },
   meta: {
     storeDescription: (store: string) => `Shop ${store} — cash on delivery across Egypt.`,
   },
@@ -1570,6 +1582,17 @@ const ar: Dictionary = {
     notForSale: "المنتج ده مش متاح للبيع دلوقتي.",
     failed: "معرفناش نعدّل مفضلتك. جرّب تاني.",
     close: "اقفل",
+  },
+  backInStock: {
+    notifyMe: "بلغني لما يرجع",
+    intro: "سيب رقم موبايلك أو إيميلك. هيوصلك رسالة واحدة لما يرجع، ومفيش غيرها.",
+    submit: "بلغني",
+    sending: "لحظة…",
+    done: "هنبلغك مرة واحدة لما يرجع",
+    doneTo: "رسالة واحدة على",
+    inStockNow: "خبر حلو: رجع متاح. تقدر تطلبه دلوقتي.",
+    tooMany: "طلبات كتير من الجهاز ده. جرّب تاني بعد ساعة.",
+    failed: "معرفناش نسجّلك. جرّب تاني.",
   },
   meta: {
     storeDescription: (store) => `تسوّق من ${store} — الدفع عند الاستلام في كل مصر.`,

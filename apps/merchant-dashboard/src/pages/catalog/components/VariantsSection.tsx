@@ -13,6 +13,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useCatalogLabels } from "../catalogLabels";
 import { VariantForm } from "./VariantForm";
 import { useNotTrackedLabel } from "./TrackQuantityField";
+import { useRestockBadge } from "./WaitingRestockCard";
 
 const STRINGS = {
   en: {
@@ -91,6 +92,7 @@ export function VariantsSection({ productId, variants, onChanged, tracked = true
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Variant | null>(null);
   const [deleting, setDeleting] = useState<Variant | null>(null);
+  const restockBadge = useRestockBadge();
 
   async function confirmDelete() {
     if (!deleting) return;
@@ -142,6 +144,7 @@ export function VariantsSection({ productId, variants, onChanged, tracked = true
                   <tr key={v.id} className="border-b border-line last:border-0">
                     <td className="py-2 pe-3 text-ink">
                       {formatOptions(v.optionValues) || <span className="text-ink-soft">—</span>}
+                      {restockBadge(v)}
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{v.sku || "—"}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(v.priceAmount, v.currency)}</td>

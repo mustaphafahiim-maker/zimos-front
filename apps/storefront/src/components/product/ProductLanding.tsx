@@ -67,6 +67,7 @@ import { CodeSlot } from "../CustomCode";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { AddToCartButton } from "../AddToCartButton";
 import { WishlistHeart } from "../wishlist/WishlistHeart";
+import { BackInStock } from "../stockAlert/BackInStock";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
@@ -608,6 +609,7 @@ export function ProductLanding({
           {page.specialOfferText}
         </p>
       )}
+      <BackInStock product={product} variant={variant}>
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
@@ -632,6 +634,7 @@ export function ProductLanding({
         />
         )}
       </div>
+      </BackInStock>
 
       <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
 

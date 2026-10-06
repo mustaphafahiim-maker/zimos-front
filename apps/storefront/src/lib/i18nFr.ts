@@ -713,6 +713,17 @@ export const fr: Dictionary = {
     failed: "Impossible de mettre à jour vos favoris. Réessayez.",
     close: "Fermer",
   },
+  backInStock: {
+    notifyMe: "Prévenez-moi de son retour",
+    intro: "Laissez votre numéro de mobile ou votre e-mail. Un seul message à son retour, rien d'autre.",
+    submit: "Me prévenir",
+    sending: "Un instant…",
+    done: "Nous vous préviendrons une fois à son retour",
+    doneTo: "Un seul message à",
+    inStockNow: "Bonne nouvelle : il est de nouveau en stock. Vous pouvez le commander.",
+    tooMany: "Trop de demandes depuis cet appareil. Réessayez dans une heure.",
+    failed: "Impossible d'enregistrer votre demande. Réessayez.",
+  },
   meta: {
     storeDescription: (store: string) => `Achetez chez ${store} — paiement à la livraison.`,
   },

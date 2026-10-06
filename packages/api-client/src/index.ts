@@ -276,3 +276,5 @@ export * from "./endpoints/shopperAccounts";
 export * from "./endpoints/displayRules";
 // Wishlist for signed-in shoppers and the merchant's most wished products (shopperAccounts/wishlist.js, handoff 188).
 export * from "./endpoints/wishlist";
+// Back-in-stock alerts: a shopper signs up on a sold-out variant; the merchant sees who waits (stockAlerts/, handoff 194).
+export * from "./endpoints/stockAlerts";
