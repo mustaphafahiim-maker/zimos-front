@@ -92,6 +92,21 @@ describe("paying an invoice", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("shows the payment link as a button only for a method that has one", async () => {
+    const linked: BillingPaymentMethod = { ...wallet, paymentLink: "https://ipn.eg/S/zimos/instapay/x" };
+    const { user } = setup({ methods: [{ ...instapay, paymentLink: null }, linked] });
+    await user.click(await screen.findByRole("button", { name: "Pay" }));
+    const dialog = await screen.findByRole("dialog", { name: "Pay your invoice" });
+    await waitFor(() => expect(within(dialog).getByText("zimos@instapay")).toBeInTheDocument());
+    expect(within(dialog).queryByRole("link", { name: "Open the payment link" })).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("radio", { name: "Mobile wallet" }));
+    const link = within(dialog).getByRole("link", { name: "Open the payment link" });
+    expect(link).toHaveAttribute("href", "https://ipn.eg/S/zimos/instapay/x");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("sends the first proof for the charge the server writes with it, held to the amount shown", async () => {
     api.submitBillingPaymentProof.mockResolvedValue({ proof: proof() });
     const { user } = setup({ invoices: [] });

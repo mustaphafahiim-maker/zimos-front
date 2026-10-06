@@ -476,7 +476,7 @@ export function reorderPaymentMethods(codes: string[]): Promise<AdminPaymentMeth
 
 export function updatePaymentMethodAccount(
   code: string,
-  payload: { accountNumber?: string; noteAr?: string; noteEn?: string }
+  payload: { accountNumber?: string; paymentLink?: string | null; noteAr?: string; noteEn?: string }
 ): Promise<AdminPaymentMethod> {
   return apiClient.adminUpdatePaymentMethodAccount(code, payload);
 }

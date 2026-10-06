@@ -3737,6 +3737,8 @@ export interface BillingPaymentMethod {
   label: { ar: string; en: string };
   /** Manual only: where the money goes, and how to send it. */
   accountNumber?: string;
+  /** Manual only, optional (https): shown as a button only when set. */
+  paymentLink?: string | null;
   note?: { ar: string | null; en: string | null };
 }
 
@@ -3791,6 +3793,8 @@ export interface AdminPaymentMethod {
   enabled: boolean;
   /** Manual only. */
   accountNumber?: string | null;
+  /** Manual only, optional (https). Null = no link. */
+  paymentLink?: string | null;
   noteAr?: string | null;
   noteEn?: string | null;
   /** Gateway only: its adapter and environment, by variable names (never a value). */

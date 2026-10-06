@@ -1990,7 +1990,8 @@ export class ApiClient {
   /** A manual method's number and note (payment_methods.edit_numbers), audited old and new. */
   async adminUpdatePaymentMethodAccount(
     code: string,
-    payload: { accountNumber?: string; noteAr?: string; noteEn?: string }
+    /** `paymentLink`: optional, https only; empty clears it. */
+    payload: { accountNumber?: string; paymentLink?: string | null; noteAr?: string; noteEn?: string }
   ): Promise<AdminPaymentMethod> {
     const { method } = await this.request<{ method: AdminPaymentMethod }>(`/admin/payment-methods/${code}/account`, {
       method: "PATCH",
