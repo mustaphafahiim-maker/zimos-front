@@ -172,7 +172,7 @@ const TILES: Tile[] = [
   { key: "checkouts", kind: "count", spark: "checkouts" },
   { key: "crossSellAdds", kind: "count", spark: "crossSell" },
   { key: "newOrders", kind: "count", hint: "hintNewOrders", to: "/orders" },
-  { key: "lostOrders", kind: "count", spark: "lost", hint: "hintLost", to: "/abandoned", inverse: true },
+  { key: "lostOrders", kind: "count", spark: "lost", hint: "hintLost", to: "/abandoned-carts", inverse: true },
   { key: "lostRate", kind: "rate", inverse: true },
   { key: "newCustomers", kind: "count", to: "/customers" },
   { key: "returningCustomers", kind: "count", to: "/customers" },

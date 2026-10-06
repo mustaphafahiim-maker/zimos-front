@@ -70,7 +70,7 @@ const hiddenKey = (workspaceId: string) => `zimos.setupGuide.hidden.${workspaceI
  * what the store really has. It leaves on its own once every required step is
  * done, and can be hidden before that.
  */
-export function SetupGuideCard() {
+export function SetupGuideCard({ className = "mb-[var(--bento-gap)]" }: { className?: string }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const guide = useAsync(() => dashboardSetupGuide(apiClient, workspaceId), [workspaceId]);
@@ -97,7 +97,7 @@ export function SetupGuideCard() {
   }
 
   return (
-    <Card className="mb-8 gap-0 p-5">
+    <Card className={cn("gap-0 p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold text-ink">{t.title}</h2>

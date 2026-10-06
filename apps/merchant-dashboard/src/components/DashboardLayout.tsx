@@ -132,7 +132,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <SidebarShortcuts onNavigate={onNavigate} />
         {NAV_GROUPS.map((group, index) => {
           const heading = group.labelKey ? groupLabels[group.labelKey] : null;
-          const isClosed = Boolean(collapsed[group.id]);
+          // A group without a heading has nothing to click, so it is never folded away.
+          const isClosed = Boolean(heading && collapsed[group.id]);
           // Entries this role can't use are left out; a group left empty goes too.
           const visible = group.items.filter((i) => isNavItemVisible(i, role));
           if (visible.length === 0) return null;
