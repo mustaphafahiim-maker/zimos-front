@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Alert, Button, cn } from "@store-builder/ui";
 import {
   ApiError,
@@ -33,6 +33,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
 import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
 import { EditWebhookEndpointModal, WebhookHeadersField, WebhookHeadersNote, WebhookTopicsField, useWebhookHeaders } from "./WebhookEndpointFields";
+import { AiAssistantsPanel } from "./AiAssistantsPanel";
 import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -247,6 +248,8 @@ export function DevelopersSection() {
   const t = useT(STRINGS);
   const { currentWorkspace } = useWorkspace();
   const [forbidden, setForbidden] = useState(false);
+  // Bumped when the AI assistants panel creates a key, so the keys list shows it.
+  const [keysReload, setKeysReload] = useState(0);
   const canManage = MANAGER_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
 
   return (
@@ -259,7 +262,8 @@ export function DevelopersSection() {
       </div>
       {canManage ? (
         <div className="mt-6 space-y-8">
-          <ApiKeysPanel t={t} onForbidden={() => setForbidden(true)} />
+          <ApiKeysPanel t={t} reload={keysReload} onForbidden={() => setForbidden(true)} />
+          <AiAssistantsPanel onKeyCreated={() => setKeysReload((n) => n + 1)} />
           <WebhooksPanel t={t} onForbidden={() => setForbidden(true)} />
         </div>
       ) : (
@@ -296,7 +300,7 @@ function SecretBox({ t, value }: { t: T; value: string }) {
 // API keys
 // ---------------------------------------------------------------------
 
-function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
+function ApiKeysPanel({ t, reload, onForbidden }: { t: T; reload: number; onForbidden: () => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
@@ -310,6 +314,10 @@ function ApiKeysPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
   }, [workspaceId]);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<ApiKeyDto | null>(null);
+  useEffect(() => {
+    if (reload > 0) void keys.refresh({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reload]);
 
   return (
     <div>

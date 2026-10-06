@@ -232,3 +232,5 @@ export * from "./endpoints/storefrontTexts";
 export * from "./endpoints/storeScripts";
 // Webhook custom headers: per-endpoint headers, sealed and shown masked (webhooks/customHeaders.js).
 export * from "./endpoints/webhookHeaders";
+// MCP server for AI assistants: its URL, the funnel scopes and the tools a key opens (mcp/mcpServer.js).
+export * from "./endpoints/mcp";
