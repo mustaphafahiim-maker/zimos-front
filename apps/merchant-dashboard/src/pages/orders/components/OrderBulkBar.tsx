@@ -61,7 +61,7 @@ const STRINGS = {
     selected: "اخترت {count}",
     clear: "إلغاء التحديد",
     action: "إجراء جماعي",
-    choose: "اختر إجراء…",
+    choose: "اختار إجراء…",
     a_set_status: "تغيير الحالة",
     a_add_tag: "إضافة تاج",
     a_remove_tag: "حذف تاج",

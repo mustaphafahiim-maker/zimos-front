@@ -58,7 +58,7 @@ const STRINGS = {
     title: "كل متاجري",
     description: "ما حدث اليوم في كل متجر تعمل فيه. افتح أي متجر لإدارته.",
     newStore: "متجر جديد",
-    emptyTitle: "لا توجد متاجر بعد",
+    emptyTitle: "مفيش متاجر لسه",
     emptyDescription: "أنشئ أول متجر لتبدأ البيع.",
     current: "مفتوح الآن",
     draft: "مسودة",

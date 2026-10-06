@@ -41,7 +41,7 @@ const STRINGS = {
   },
   ar: {
     title: "شكل الخيارات",
-    description: "اختر كيف يختار العميل كل خيار في المتجر.",
+    description: "اختار كيف يختار العميل كل خيار في المتجر.",
     type_buttons: "أزرار",
     type_dropdown: "قائمة منسدلة",
     type_color: "ألوان",

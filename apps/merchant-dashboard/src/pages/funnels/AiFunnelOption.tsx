@@ -37,7 +37,7 @@ const STRINGS = {
     style_problem_solution: "المشكلة ← الحل",
     style_short: "قصيرة ومباشرة",
     dialect: "اللغة",
-    needsProduct: "اختر المنتج الذي سيبيعه الذكاء الاصطناعي.",
+    needsProduct: "اختار المنتج الذي سيبيعه الذكاء الاصطناعي.",
   },
 } satisfies Messages;
 

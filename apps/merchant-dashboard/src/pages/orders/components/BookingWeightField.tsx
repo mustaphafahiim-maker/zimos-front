@@ -37,7 +37,7 @@ const STRINGS = {
     bookAs: "الحجز كـ",
     orderTier: "شريحة الأوردر ({label})",
     orderTierNone: "نوع الطرد الافتراضي للمتجر",
-    unmapped: "هذه الشريحة ليس لها نوع طرد مربوط في {carrier}. اختر شريحة أخرى، أو اربطها من إعدادات {carrier}.",
+    unmapped: "هذه الشريحة ليس لها نوع طرد مربوط في {carrier}. اختار شريحة أخرى، أو اربطها من إعدادات {carrier}.",
   },
 } satisfies Messages;
 

@@ -29,7 +29,7 @@ export const CONTACT_STRINGS = {
     consentYes: "موافق على الرسائل التسويقية",
     consentNo: "بدون رسائل تسويقية",
     deliveryRate: "نسبة الاستلام",
-    deliveryRateNone: "لا توجد شحنات منتهية بعد",
+    deliveryRateNone: "مفيش شحنات منتهية لسه",
     deliveryRateOf: "تم استلام {delivered} من {closed} شحنة",
     phoneTaken: "يوجد جهة اتصال بنفس رقم الهاتف.",
     invalidPhone: "اكتب رقم هاتف صحيح.",

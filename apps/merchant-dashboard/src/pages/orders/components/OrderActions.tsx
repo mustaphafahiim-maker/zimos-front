@@ -88,11 +88,11 @@ const STRINGS = {
     reason_stock: "المنتج غير متوفر",
     reason_other: "سبب آخر",
     reasonPlaceholder: "العميل غيّر رأيه",
-    reasonRequired: "أدخل سبب الإلغاء.",
+    reasonRequired: "اكتب سبب الإلغاء.",
     cancelledToast: "تم إلغاء الأوردر وتحرير حجز المخزون.",
     refundOnCancel: "رد {amount} دفعها العميل",
     refundAmount: "المبلغ المسترد",
-    refundInvalid: "أدخل مبلغًا بين 0.01 و{max}.",
+    refundInvalid: "اكتب مبلغًا بين 0.01 و{max}.",
     refundFailed: "تم إلغاء الطلب، لكن الاسترداد فشل: {reason} استرده من بطاقة المدفوعات.",
     courierCancelNote:
       "لهذا الأوردر شحنة مع شركة شحن لم تُستلم بعد أو حالتها «فشل». سيتم إلغاؤها لدى الشركة أولًا؛ وإذا رفضت الشركة، فلن يُلغى أي شيء ويبقى الأوردر نشطًا.",

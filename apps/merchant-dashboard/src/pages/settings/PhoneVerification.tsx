@@ -39,7 +39,7 @@ const STRINGS = {
   },
   ar: {
     phone: "الهاتف",
-    none: "لا يوجد رقم هاتف بعد",
+    none: "مفيش رقم هاتف لسه",
     verified: "موثّق",
     unverified: "غير موثّق",
     verify: "توثيق الهاتف",

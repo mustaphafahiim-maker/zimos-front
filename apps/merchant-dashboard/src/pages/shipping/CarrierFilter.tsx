@@ -16,7 +16,7 @@ const STRINGS = {
     search: "ابحث في شركات الشحن",
     country: "الدولة",
     allCountries: "كل الدول",
-    none: "لا توجد شركة شحن تطابق البحث.",
+    none: "مفيش شركة شحن تطابق البحث.",
   },
 } satisfies Messages;
 

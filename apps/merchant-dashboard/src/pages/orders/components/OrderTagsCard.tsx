@@ -28,7 +28,7 @@ const STRINGS = {
     label: "تاج جديد",
     add: "إضافة",
     remove: "حذف التاج {tag}",
-    empty: "لا توجد تاجز على هذا الأوردر.",
+    empty: "مفيش تاجز على هذا الأوردر.",
     suggestions: "مستخدمة من قبل",
   },
 } satisfies Messages;

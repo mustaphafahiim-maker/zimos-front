@@ -76,7 +76,7 @@ const STRINGS = {
     ticketBody: "أرسلت دفعة اشتراك خطة {plan} ({cycle}). أرجو تفعيل متجري.",
     monthly: "شهري",
     yearly: "سنوي",
-    noPlan: "لا توجد خطة لهذا المتجر بعد. تواصل مع فريق Zimos لاختيار خطة.",
+    noPlan: "مفيش خطة لهذا المتجر لسه. تواصل مع فريق Zimos لاختيار خطة.",
     trialNotAvailable: "الفترة التجريبية المجانية غير متاحة لهذا الحساب.",
   },
 } satisfies Messages;

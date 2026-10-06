@@ -75,7 +75,7 @@ const STRINGS = {
     send: "إرسال الطلب",
     sending: "بنبعت…",
     sent: "تم إرسال طلبك. سنرد عليك هنا.",
-    subjectTooShort: "أدخل موضوعًا من 3 أحرف على الأقل.",
+    subjectTooShort: "اكتب موضوعًا من 3 أحرف على الأقل.",
     messageRequired: "اكتب رسالة.",
     listHeading: "طلباتك",
     empty: "لم تتواصل مع الدعم بعد.",

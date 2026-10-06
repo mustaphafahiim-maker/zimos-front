@@ -43,7 +43,7 @@ const STRINGS = {
     noCheckouts: "لا أحد في صفحة إتمام الطلب الآن.",
     checkout: "{items} منتج · {amount}",
     purchases: "أحدث المشتريات",
-    noPurchases: "لا توجد طلبات خلال آخر 24 ساعة.",
+    noPurchases: "مفيش طلبات خلال آخر 24 ساعة.",
     sec: "منذ {s} ث",
     min: "منذ {m} د",
     hour: "منذ {h} س",

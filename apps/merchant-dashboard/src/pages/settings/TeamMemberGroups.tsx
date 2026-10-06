@@ -24,7 +24,7 @@ const STRINGS = {
     seats: "مستخدم {used} من {limit} مقعد في الفريق",
     seatsUnlimited: "مستخدم {used} مقعد في الفريق",
     seatsHint: "الدعوات المعلّقة تشغل مقعدًا حتى تُقبل أو تُحذف.",
-    noMembers: "لا يوجد أحد بصلاحيات جزئية بعد.",
+    noMembers: "مفيش أحد بصلاحيات جزئية لسه.",
   },
 } satisfies Messages;
 

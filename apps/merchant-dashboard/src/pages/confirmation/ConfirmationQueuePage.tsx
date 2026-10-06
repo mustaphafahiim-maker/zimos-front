@@ -274,7 +274,7 @@ const STRINGS = {
     selectAll: "تحديد كل المعروض",
     selectedCount: "المحدد: {n}",
     bulkAgent: "الموظف للمهام المحددة",
-    chooseAgent: "اختر موظفًا",
+    chooseAgent: "اختار موظفًا",
     bulkAssign: "تعيين",
     bulkUnassign: "إلغاء التعيين",
     clearSelection: "إلغاء التحديد",

@@ -137,7 +137,7 @@ const STRINGS = {
     status_paused: "متوقف",
     status_cancelled: "ملغي",
     status_completed: "مكتمل",
-    noCard: "لا توجد بطاقة محفوظة",
+    noCard: "مفيش بطاقة محفوظة",
     retry: "فشلت المحاولة {n}",
     none: "—",
     pause: "إيقاف",
@@ -147,7 +147,7 @@ const STRINGS = {
     firstOrder: "أول طلب",
     statusFilter: "الحالة",
     anyStatus: "كل الحالات",
-    emptyTitle: "لا توجد اشتراكات بعد",
+    emptyTitle: "مفيش اشتراكات لسه",
     emptyDescription: "ضع منتجًا على خطة من «خطط المنتجات». عندما يدفع العميل بالبطاقة يبدأ الاشتراك هنا.",
     cancelTitle: "إلغاء هذا الاشتراك؟",
     cancelDescription: "لن يُخصم من العميل مرة أخرى. الطلبات المدفوعة لا تُرد.",
@@ -170,7 +170,7 @@ const STRINGS = {
     trialHint: "اختياري، حتى ٩٠ يومًا. الطلب الأول لا يُحتسب فيه المنتج وأول خصم بعد فترة التجربة. تجربة واحدة لكل عميل؛ ويلزم أن تحفظ بوابة الدفع البطاقة دون دفع إذا لم يكن هناك مبلغ آخر مستحق.",
     planTrial: "تجربة مجانية {days} يوم",
     planSaved: "تم حفظ الخطة.",
-    emptyPlans: "لا توجد منتجات بعد.",
+    emptyPlans: "مفيش منتجات لسه.",
   },
 } satisfies Messages;
 

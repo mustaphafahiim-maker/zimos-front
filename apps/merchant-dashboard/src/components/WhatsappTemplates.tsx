@@ -35,7 +35,7 @@ const STRINGS = {
   },
   ar: {
     pick: "قالب معتمد",
-    pickNone: "اختر قالبًا…",
+    pickNone: "اختار قالبًا…",
     pickHint: "متزامنة من حساب واتساب الخاص بك. القوالب المعتمدة فقط يمكن إرسالها.",
     params: "{n} متغيرات",
     title: "قوالب الرسائل",
@@ -44,7 +44,7 @@ const STRINGS = {
     syncing: "بنزامن…",
     synced: "آخر مزامنة {at}",
     neverSynced: "لم تتم المزامنة بعد.",
-    empty: "لا توجد قوالب في حساب واتساب بعد. أنشئها من WhatsApp Manager في Meta ثم زامن.",
+    empty: "مفيش قوالب في حساب واتساب لسه. أنشئها من WhatsApp Manager في Meta ثم زامن.",
     noPermission: "ليست لديك صلاحية الاطلاع على قوالب واتساب.",
     rejected: "مرفوض: {reason}",
     status_APPROVED: "معتمد",

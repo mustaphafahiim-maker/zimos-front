@@ -54,7 +54,7 @@ const STRINGS = {
     shortcuts: "اختصارات الكيبورد",
     focus: "ملء الشاشة",
     exitFocus: "إظهار القائمة الجانبية",
-    selectStore: "اختر متجرًا",
+    selectStore: "اختار متجرًا",
     newStore: "+ متجر جديد",
     allStores: "كل متاجري",
     openNav: "فتح القائمة",

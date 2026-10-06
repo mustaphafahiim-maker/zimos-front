@@ -31,7 +31,7 @@ const STRINGS = {
     ORDER_NOT_CONFIRMED: "أكّد الأوردر أولًا قبل شحنه.",
     ORDER_NOT_PAID: "يجب دفع هذا الأوردر قبل شحنه.",
     ORDER_ALREADY_SHIPPED: "الأوردر ده اتشحن ومينفعش يتغيّر.",
-    INSUFFICIENT_STOCK: "لا يوجد مخزون كافٍ لهذا الأوردر.",
+    INSUFFICIENT_STOCK: "مفيش مخزون كافٍ لهذا الأوردر.",
   },
 } satisfies Messages;
 

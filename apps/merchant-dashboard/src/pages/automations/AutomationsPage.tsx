@@ -117,7 +117,7 @@ const STRINGS = {
     templateEnabled: "تم تفعيل «{name}». راجع خطواتها بالأسفل.",
     templateCoupon: "كود خصم للتذكير الأخير (اختياري)",
     rulesTitle: "الأتمتة الخاصة بك",
-    noRules: "لا توجد أتمتة بعد",
+    noRules: "مفيش أتمتة لسه",
     noRulesDesc: "فعّل واحدة جاهزة من الأعلى، أو ابنِ سلسلتك الخاصة.",
     active: "مفعّلة",
     whenTrigger: "عند",

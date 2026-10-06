@@ -60,7 +60,7 @@ const STRINGS = {
     started: "بنحجز {count} أوردر مع {name}.",
     regionSaved: "أصبحت {area} {place} مع {name}.",
     orderSaved: "سيُشحن {order} إلى {place}.",
-    nothingReady: "لا يوجد طلب جاهز للحجز بعد.",
+    nothingReady: "مفيش طلب جاهز للحجز لسه.",
   },
 };
 

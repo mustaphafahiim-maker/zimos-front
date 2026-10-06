@@ -39,7 +39,7 @@ const STRINGS = {
     title: "العروض",
     description: "باقات بسعر محدد من متغير واحد أو أكثر.",
     create: "إنشاء عرض",
-    empty: "لا توجد عروض بعد.",
+    empty: "مفيش عروض لسه.",
     computedPrice: "سعر محسوب",
     variantFallback: "متغير {id}",
     archivedWithProduct: "مؤرشف مع المنتج",

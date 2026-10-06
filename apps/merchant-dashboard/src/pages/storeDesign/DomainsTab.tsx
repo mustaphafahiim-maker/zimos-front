@@ -98,7 +98,7 @@ const STRINGS = {
     hostname: "الدومين",
     add: "ربط",
     adding: "بنربط…",
-    emptyTitle: "لا يوجد دومين مربوط بعد",
+    emptyTitle: "مفيش دومين مربوط لسه",
     emptyBody: "متجرك يعمل بالفعل على عنوانه المجاني. اربط دومينك الخاص لاستخدامه بدلًا منه.",
     pending_verification: "في انتظار الـ DNS",
     verified: "تم التحقق",

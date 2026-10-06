@@ -40,7 +40,7 @@ const STRINGS = {
     description: "ما حصل عليه العميل من المنتجات الرقمية في هذا الطلب.",
     deliverNow: "سلّم الآن",
     delivered: "تم التسليم.",
-    nothingToDeliver: "لا يوجد جديد للتسليم: جهّز تسليم المنتج أولًا.",
+    nothingToDeliver: "مفيش جديد للتسليم: جهّز تسليم المنتج أولًا.",
     state_active: "فعّال",
     state_expired: "منتهي",
     state_used_up: "وصل لحد التحميل",

@@ -62,7 +62,7 @@ const STRINGS = {
     manualTab: "اخترتها بنفسك",
     filterLabel: "تصفية المناطق",
     search: "ابحث عن منطقة",
-    nothing: "لا توجد مناطق مطابقة.",
+    nothing: "مفيش مناطق مطابقة.",
     auto: "مربوطة بالاسم",
     manual: "اخترتها بنفسك",
     missing: "غير موجودة في قائمة {name}",

@@ -64,7 +64,7 @@ const PRODUCT_STRINGS = {
     landingHint: "أول صفحة في كل زيارة، وما اشترته هذه الزيارات.",
     page: "الصفحة",
     sessions: "الزيارات",
-    empty: "لا يوجد شيء في هذه الفترة بعد.",
+    empty: "مفيش شيء في هذه الفترة لسه.",
   },
 } satisfies Messages;
 
@@ -223,7 +223,7 @@ const DELIVERY_STRINGS = {
     returns: "المرتجع",
     speed: "متوسط الأيام",
     sales: "المبيعات المُسلَّمة",
-    empty: "لا توجد طلبات في هذه الفترة بعد.",
+    empty: "مفيش طلبات في هذه الفترة لسه.",
     awaiting_payment: "بانتظار الدفع",
     pending_confirmation: "بانتظار التأكيد",
     needs_follow_up: "تحتاج متابعة",
@@ -418,7 +418,7 @@ const CUSTOMER_STRINGS = {
     delivered: "اتسلّم",
     sales: "المبيعات",
     unnamed: "بدون اسم",
-    empty: "لا يوجد عملاء في هذه الفترة بعد.",
+    empty: "مفيش عملاء في هذه الفترة لسه.",
   },
 } satisfies Messages;
 

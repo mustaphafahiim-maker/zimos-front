@@ -55,9 +55,9 @@ const STRINGS = {
     whatsapp: "واتساب",
     website: "زيارة",
     email: "بريد",
-    emptyTitle: "لا توجد خدمات بعد",
+    emptyTitle: "مفيش خدمات لسه",
     emptyDescription: "سيظهر مقدمو الخدمات هنا عند إضافتهم.",
-    emptyCategory: "لا توجد خدمات في هذا التصنيف بعد.",
+    emptyCategory: "مفيش خدمات في هذا التصنيف لسه.",
     hello: "مرحبًا، وجدت خدمتك «{title}» على زيموس.",
   },
 } satisfies Messages;

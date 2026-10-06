@@ -62,7 +62,7 @@ const STRINGS = {
     tab_export: "تصدير",
     fileHint:
       "ملف Excel أو CSV من القالب، أو ملف JSON مُصدَّر من متجر ZIMOS. الصفوف التي لها نفس الاسم تصبح متغيرات لمنتج واحد.",
-    chooseFile: "اختر ملفًا",
+    chooseFile: "اختار ملفًا",
     template: "تحميل القالب",
     linkLabel: "استورد من لينك (شوبيفاي، علي إكسبريس، إتسي، CJ، يوكان)",
     linkPlaceholder: "https://…",

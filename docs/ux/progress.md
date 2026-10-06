@@ -320,6 +320,12 @@ are listed under *Handoff items done*.
       («اتحفظ.»، «اتعمل «…».»، «اتنسخ اللينك») across 170 dashboard files;
       the lab (design-system) and the storefront text mirror
       (storeTextsCatalog.ts) left alone.
+- [x] W3-2 «اختر» → «اختار», «أدخل» → «اكتب», «لا يوجد / لا توجد» → «مفيش»,
+      and «مفيش … بعد.» → «مفيش … لسه.» (~400 strings, 140 files). Lines
+      where Arabic text is an object key (presetCopy.ts maps Arabic preset
+      copy to English) are skipped. An automatic «هذا X» → «X ده» reorder
+      was tried and dropped: it split compound nouns («البريد الإلكتروني»)
+      and caught «؟»; that needs a hand pass.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`

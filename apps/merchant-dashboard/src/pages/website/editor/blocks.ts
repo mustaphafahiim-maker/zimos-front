@@ -1576,7 +1576,7 @@ const CORE_PRESETS: BlockPreset[] = [
           {
             span: 12,
             elements: ["heading", "text"],
-            content: [{ text: "اختر العرض المناسب لك", level: 2 }, { text: "اكتب سطرًا يوضّح الفرق بين العروض الثلاثة." }],
+            content: [{ text: "اختار العرض المناسب لك", level: 2 }, { text: "اكتب سطرًا يوضّح الفرق بين العروض الثلاثة." }],
             settings: { align: "center" },
           },
         ],
@@ -1629,7 +1629,7 @@ const CORE_PRESETS: BlockPreset[] = [
     elements: ["heading", "orbit_gallery"],
     settings: { width: "wide" },
     content: [
-      { text: "اختر من مجموعتنا", level: 2 },
+      { text: "اختار من مجموعتنا", level: 2 },
       { title: "", limit: 8, collectionId: "" },
     ],
   },
@@ -2436,7 +2436,7 @@ const CORE_PRESETS: BlockPreset[] = [
             { text: ["اكتب اسم الباقة الأولى", "اكتب اسم الباقة الثانية", "اكتب اسم الباقة الثالثة"][i], level: 3 },
             { text: "اكتب هنا السعر ولمن هذه الباقة." },
             { title: "", items: ["اكتب هنا أول ما تتضمنه", "اكتب هنا الشيء الثاني", "اكتب هنا الشيء الثالث"] },
-            { label: "اختر هذه الباقة", href: "/products", variant: i === 1 ? "primary" : "outline" },
+            { label: "اختار هذه الباقة", href: "/products", variant: i === 1 ? "primary" : "outline" },
           ],
           settings: { surface: "card" },
         })),

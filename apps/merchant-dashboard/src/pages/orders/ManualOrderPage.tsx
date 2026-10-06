@@ -100,7 +100,7 @@ const STRINGS = {
     addressLine: "العنوان",
     items: "المنتجات",
     product: "المنتج",
-    chooseProduct: "اختر منتجًا…",
+    chooseProduct: "اختار منتجًا…",
     variant: "النوع",
     offer: "العرض",
     noOffer: "بدون عرض — السعر العادي",
@@ -126,7 +126,7 @@ const STRINGS = {
     creating: "بنعمله…",
     created: "تم إنشاء الأوردر {number}.",
     required: "هذا الحقل مطلوب.",
-    noProducts: "لا توجد منتجات نشطة بعد.",
+    noProducts: "مفيش منتجات نشطة لسه.",
   },
 } satisfies Messages;
 

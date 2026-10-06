@@ -6,7 +6,7 @@
  *
  *   const STRINGS = {
  *     en: { title: "Orders", empty: "No orders yet." },
- *     ar: { title: "الطلبات", empty: "لا توجد طلبات بعد." },
+ *     ar: { title: "الطلبات", empty: "مفيش طلبات لسه." },
  *   } satisfies Messages;
  *   const t = useT(STRINGS);
  *   <h1>{t.title}</h1>

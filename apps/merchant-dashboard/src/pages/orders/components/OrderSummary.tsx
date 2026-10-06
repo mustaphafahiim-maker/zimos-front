@@ -80,7 +80,7 @@ const STRINGS = {
     customer: "العميل",
     altPhone: "رقم بديل",
     shippingAddress: "عنوان الشحن",
-    noAddress: "لا يوجد عنوان شحن",
+    noAddress: "مفيش عنوان شحن",
     note: "ملاحظة",
     payment: "الدفع",
     internalNotes: "ملاحظات داخلية",
@@ -88,7 +88,7 @@ const STRINGS = {
     cancelUnconfirmedHint:
       "شحنة أُلغيت من لوحة تحكم شركة الشحن ما زالت تظهر كأنها تتحرك هناك. راجع لوحة تحكم الشركة؛ التفاصيل في قسم الشحنات.",
     listSep: "، ",
-    rule_no_destination: "لا يوجد عنوان، لذلك لم يُحتسب شحن",
+    rule_no_destination: "مفيش عنوان، لذلك لم يُحتسب شحن",
     rule_offer_override: "سعر الشحن الخاص بالعرض",
     rule_all_items_free: "كل منتجات الطلب مجانية الشحن",
     rule_free_threshold: "مجاني: بلغ الطلب حد الشحن المجاني",

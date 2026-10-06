@@ -91,7 +91,7 @@ const STRINGS = {
   ar: {
     title: "المدفوعات والاستردادات",
     loading: "بنحمّل المدفوعات…",
-    empty: "لا توجد مدفوعات مسجلة على هذا الأوردر.",
+    empty: "مفيش مدفوعات مسجلة على هذا الأوردر.",
     sync: "مزامنة حالة الدفع",
     syncing: "بنتأكد مع البوابة…",
     synced: "حالة الدفع محدّثة.",
@@ -113,7 +113,7 @@ const STRINGS = {
     reasonPlaceholder: "اختياري — مثلًا المنتج غير متوفر",
     confirmRefund: "استرداد {amount}",
     refunding: "بنرجّع الفلوس…",
-    amountInvalid: "أدخل مبلغًا بين 0.01 و{max}.",
+    amountInvalid: "اكتب مبلغًا بين 0.01 و{max}.",
     refundProcessed: "تم استرداد {amount}.",
     refundPending: "تم إرسال استرداد {amount}. البوابة لم تؤكده بعد، وسيتحدث هنا.",
     refundFailed: "رفضت البوابة الاسترداد: {reason}",

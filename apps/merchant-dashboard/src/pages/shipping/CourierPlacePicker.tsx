@@ -17,7 +17,7 @@ const STRINGS = {
     listFailed: "{name}'s list could not be loaded.",
   },
   ar: {
-    chooseLevel: "اختر {level}",
+    chooseLevel: "اختار {level}",
     save: "حفظ",
     cancel: "إلغاء",
     listFailed: "تعذّر تحميل قائمة {name}.",

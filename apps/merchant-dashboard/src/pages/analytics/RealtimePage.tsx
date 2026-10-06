@@ -66,7 +66,7 @@ const STRINGS = {
     paths: "الصفحات",
     referrers: "المواقع المُحيلة",
     countriesTitle: "الدول",
-    empty: "لا يوجد نشاط بعد — يمتلئ السجل مع وصول الزوار.",
+    empty: "مفيش نشاط بعد — يمتلئ السجل مع وصول الزوار.",
     direct: "مباشر",
     viewed: "شاهد {path}",
     fired: "نفّذ {event}",

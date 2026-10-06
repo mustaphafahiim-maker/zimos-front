@@ -35,9 +35,9 @@ const STRINGS = {
     spam: "Can't find it? Check your spam folder.",
   },
   ar: {
-    title: "أدخل الرمز المرسل إليك",
+    title: "اكتب الرمز المرسل إليك",
     sentTo: "أرسلنا رمزًا من 6 أرقام إلى {target}. الرمز صالح لمدة 10 دقائق.",
-    notSent: "اختر وسيلة إرسال الرمز.",
+    notSent: "اختار وسيلة إرسال الرمز.",
     digit: "الرقم {n} من 6",
     codeLabel: "رمز التأكيد",
     confirm: "تأكيد",

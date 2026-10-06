@@ -76,7 +76,7 @@ const STRINGS = {
     skuTaken: "أحد رموز SKU مستخدم لمتغير آخر.",
     cancel: "إلغاء",
     save: "حفظ {count} تغيير",
-    noChanges: "لا توجد تغييرات",
+    noChanges: "مفيش تغييرات",
     saving: "بنحفظ…",
     saved: "تم تحديث {count} متغير.",
   },

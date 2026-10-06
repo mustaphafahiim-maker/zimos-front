@@ -121,7 +121,7 @@ const STRINGS = {
     previewFree: "شحن مجاني",
     previewFailed: "صحّح الشرائح لعرض المعاينة.",
     nameRequired: "اكتب اسمًا للباقة.",
-    valueInvalid: "شريحة {n}: أدخل قيمة صحيحة.",
+    valueInvalid: "شريحة {n}: اكتب قيمة صحيحة.",
     cancel: "إلغاء",
     save: "حفظ الباقة",
     saving: "بنحفظ…",

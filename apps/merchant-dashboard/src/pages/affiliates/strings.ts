@@ -192,7 +192,7 @@ export const AFFILIATE_STRINGS = {
     removedToast: "تم حذف المسوّق.",
     hasCommissions: "لهذا المسوّق عمولات مسجّلة، فلا يمكن حذفه. أوقفه مؤقتًا بدلًا من ذلك.",
 
-    emptyTitle: "لا يوجد مسوّقون بعد",
+    emptyTitle: "مفيش مسوّقون لسه",
     emptyDescription: "أضف مسوّقًا وأعطه رابطه، وكل طلب مُسلَّم جاء عن طريقه يكسبه عمولة.",
 
     createTitle: "إضافة مسوّق",
@@ -246,7 +246,7 @@ export const AFFILIATE_STRINGS = {
     payConfirm: "دفعت له",
     paying: "بنحفظ…",
     paidToast: "تم تسجيل دفع {amount}.",
-    nothingToPay: "لا يوجد ما يُدفع: لا توجد عمولة مستحقة.",
+    nothingToPay: "مفيش ما يُدفع: مفيش عمولة مستحقة.",
 
     colOrder: "الطلب",
     colDate: "التاريخ",
@@ -261,8 +261,8 @@ export const AFFILIATE_STRINGS = {
     anyStatus: "كل الحالات",
     affiliateFilter: "المسوّق",
     anyAffiliate: "كل المسوّقين",
-    emptyCommissions: "لا توجد عمولات بعد.",
-    emptyCommissionsFiltered: "لا توجد عمولات تطابق هذه التصفية.",
+    emptyCommissions: "مفيش عمولات لسه.",
+    emptyCommissionsFiltered: "مفيش عمولات تطابق هذه التصفية.",
     clearFilters: "إلغاء التصفية",
 
     payoutsFor: "المدفوعات إلى",

@@ -49,7 +49,7 @@ const STRINGS = {
     quantity: "كمية {name}",
     remove: "حذف {name}",
     addProduct: "إضافة منتج",
-    chooseProduct: "اختر منتجًا…",
+    chooseProduct: "اختار منتجًا…",
     noOffer: "بدون عرض",
     add: "إضافة",
     empty: "الأوردر يحتاج منتجًا واحدًا على الأقل. لإلغاء الأوردر استخدم الإلغاء.",

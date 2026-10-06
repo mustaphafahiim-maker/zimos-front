@@ -81,7 +81,7 @@ const STRINGS = {
     inUse: "هذا ثيم متجرك الحالي",
     applied: "أصبح «{name}» ثيم متجرك.",
     cancel: "إلغاء",
-    noPreview: "لا توجد معاينة بعد",
+    noPreview: "مفيش معاينة لسه",
     filter: "اعرض",
     all: "الكل",
     free: "مجانية",

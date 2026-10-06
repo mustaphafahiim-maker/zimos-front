@@ -90,7 +90,7 @@ const STRINGS = {
     saved: "اتحفظت الترجمة.",
     languagesSaved: "تم حفظ اللغات.",
     noLanguage: "فعّل لغة أخرى بالأعلى لتبدأ الترجمة.",
-    nothing: "لا يوجد ما يُترجم هنا بعد.",
+    nothing: "مفيش ما يُترجم هنا لسه.",
   },
 } satisfies Messages;
 

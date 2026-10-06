@@ -67,7 +67,7 @@ const STRINGS = {
   ar: {
     title: "المرتجعات",
     loading: "بنحمّل المرتجعات…",
-    empty: "لا توجد مرتجعات على هذا الأوردر.",
+    empty: "مفيش مرتجعات على هذا الأوردر.",
     restocked: "أُعيد إلى المخزون {date}",
     approve: "قبول",
     reject: "رفض",
@@ -84,7 +84,7 @@ const STRINGS = {
     items: "العناصر",
     ordered: "المطلوب {qty}",
     qtyLabel: "الكمية المرتجعة من {name}",
-    chooseItems: "اختر عنصرًا واحدًا على الأقل وكمية لإرجاعها.",
+    chooseItems: "اختار عنصرًا واحدًا على الأقل وكمية لإرجاعها.",
     opening: "بنفتح…",
     open: "فتح المرتجع",
     // The words the customer picks from on the store (handoff 186).
