@@ -366,10 +366,15 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
       }
     }
 
-    // Tag Manager gets every event on its dataLayer; the merchant's own tags decide what to do with it.
+    // Tag Manager gets every event on its dataLayer in GA4's ecommerce shape — what the ready-made
+    // container (dashboard → Tracking tools) listens to; an order reported as a lead goes out as
+    // generate_lead. The previous ecommerce object is cleared first, as Google documents, so no
+    // field of one event leaks into the next. event_id is the id the server-side copy carries.
     if (w.dataLayer && active("gtm").length && event !== "PageView") {
+      w.dataLayer.push({ ecommerce: null });
       w.dataLayer.push({
         event: GOOGLE[name],
+        event_id: dedupeId,
         ecommerce: { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) },
       });
     }

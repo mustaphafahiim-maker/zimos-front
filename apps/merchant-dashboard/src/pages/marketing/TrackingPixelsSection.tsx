@@ -36,6 +36,7 @@ import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { PinterestCapiFields } from "./PinterestCapiFields";
+import { GtmContainerCard } from "./GtmContainerCard";
 
 /**
  * What each platform's ID looks like. The patterns are the backend's
@@ -351,74 +352,79 @@ export function TrackingPixelsSection({ onEventsChanged }: { onEventsChanged?: (
   ];
 
   const atLimit = Boolean(data && data.pixels.length >= data.limit);
+  // A Google Tag Manager pixel gets the ready-made container card (handoff 170).
+  const hasGtm = Boolean(data?.pixels.some((p) => p.platform === "gtm"));
 
   return (
-    <Card className="mb-6 gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Radio className="size-4 text-primary" aria-hidden />
-            {t.title}
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
+    <>
+      <Card className="mb-6 gap-0 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Radio className="size-4 text-primary" aria-hidden />
+              {t.title}
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
+          </div>
+          <Button size="sm" onClick={() => setEditing("new")} disabled={!data || atLimit}>
+            <Plus className="size-4" aria-hidden />
+            {t.add}
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setEditing("new")} disabled={!data || atLimit}>
-          <Plus className="size-4" aria-hidden />
-          {t.add}
-        </Button>
-      </div>
 
-      <Alert className="mt-3">{t.capiWarning}</Alert>
+        <Alert className="mt-3">{t.capiWarning}</Alert>
 
-      <div className="mt-3">
-        <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-          {data && data.pixels.length === 0 ? (
-            <EmptyState
-              icon={<Radio className="size-6" aria-hidden />}
-              title={t.emptyTitle}
-              description={t.emptyBody}
-              action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}
-            />
-          ) : (
-            <DataTable columns={columns} rows={data?.pixels ?? []} rowKey={(p) => p.id} minWidth="44rem" />
-          )}
-        </DataState>
-      </div>
-      <p className="mt-3 text-xs text-ink-soft">{t.eventsNote}</p>
+        <div className="mt-3">
+          <DataState loading={loading} error={error} onRetry={() => void refresh()}>
+            {data && data.pixels.length === 0 ? (
+              <EmptyState
+                icon={<Radio className="size-6" aria-hidden />}
+                title={t.emptyTitle}
+                description={t.emptyBody}
+                action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}
+              />
+            ) : (
+              <DataTable columns={columns} rows={data?.pixels ?? []} rowKey={(p) => p.id} minWidth="44rem" />
+            )}
+          </DataState>
+        </div>
+        <p className="mt-3 text-xs text-ink-soft">{t.eventsNote}</p>
 
-      {editing && data && (
-        <PixelDialog
-          key={editing === "new" ? "new" : editing.id}
-          t={t}
-          pixel={editing === "new" ? null : editing}
-          platforms={data.platforms}
-          onClose={() => setEditing(null)}
-          onSaved={async (created) => {
-            setEditing(null);
-            toast.success(created ? t.created : t.updated);
+        {editing && data && (
+          <PixelDialog
+            key={editing === "new" ? "new" : editing.id}
+            t={t}
+            pixel={editing === "new" ? null : editing}
+            platforms={data.platforms}
+            onClose={() => setEditing(null)}
+            onSaved={async (created) => {
+              setEditing(null);
+              toast.success(created ? t.created : t.updated);
+              await refresh({ silent: true });
+            }}
+          />
+        )}
+
+        <ConfirmDialog
+          open={Boolean(deleting)}
+          title={t.deleteTitle}
+          description={deleting ? fmt(t.deleteBody, { name: PLATFORM_META[deleting.platform]?.name ?? deleting.platform, id: deleting.pixelId }) : undefined}
+          confirmLabel={t.delete}
+          cancelLabel={t.cancel}
+          busyLabel={t.deleting}
+          destructive
+          onCancel={() => setDeleting(null)}
+          onConfirm={async () => {
+            if (!deleting) return;
+            await trackingPixelsDelete(apiClient, workspaceId, deleting.id);
+            setDeleting(null);
+            toast.success(t.deleted);
             await refresh({ silent: true });
           }}
         />
-      )}
-
-      <ConfirmDialog
-        open={Boolean(deleting)}
-        title={t.deleteTitle}
-        description={deleting ? fmt(t.deleteBody, { name: PLATFORM_META[deleting.platform]?.name ?? deleting.platform, id: deleting.pixelId }) : undefined}
-        confirmLabel={t.delete}
-        cancelLabel={t.cancel}
-        busyLabel={t.deleting}
-        destructive
-        onCancel={() => setDeleting(null)}
-        onConfirm={async () => {
-          if (!deleting) return;
-          await trackingPixelsDelete(apiClient, workspaceId, deleting.id);
-          setDeleting(null);
-          toast.success(t.deleted);
-          await refresh({ silent: true });
-        }}
-      />
-    </Card>
+      </Card>
+      {data && hasGtm && <GtmContainerCard pixels={data.pixels} />}
+    </>
   );
 }
 

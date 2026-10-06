@@ -240,3 +240,5 @@ export * from "./endpoints/conversionEvent";
 export * from "./endpoints/pinterestPixel";
 // Google Ads conversions: purchase and lead conversion labels on an AW- pixel (handoff 169).
 export * from "./endpoints/googleAdsLabels";
+// Google Tag Manager: the ready-made container download and its dataLayer events (handoff 170).
+export * from "./endpoints/gtmContainer";
