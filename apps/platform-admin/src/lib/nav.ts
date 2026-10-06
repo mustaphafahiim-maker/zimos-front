@@ -3,6 +3,7 @@ import {
   Activity,
   Ban,
   Building2,
+  ClipboardCheck,
   CreditCard,
   Factory,
   Flag,
@@ -63,6 +64,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Themes", to: "/themes", icon: Palette, permission: P.TEMPLATES_VIEW },
       { label: "Suppliers", to: "/suppliers", icon: Factory, permission: P.TEMPLATES_VIEW },
       { label: "Apps", to: "/apps", icon: Puzzle, permission: P.TEMPLATES_VIEW },
+      { label: "Marketplace review", to: "/marketplace", icon: ClipboardCheck, permission: P.TEMPLATES_VIEW },
     ],
   },
   {

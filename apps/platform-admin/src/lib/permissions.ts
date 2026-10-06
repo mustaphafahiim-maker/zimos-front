@@ -16,6 +16,8 @@ export const P = {
   PLANS_VIEW: "plans.view",
   PLANS_MANAGE: "plans.manage",
   TEMPLATES_VIEW: "templates.view",
+  // Also reviewing merchants' marketplace templates (pages/MarketplaceReviewPage.tsx).
+  TEMPLATES_MANAGE: "templates.manage",
   RISK_VIEW: "risk.view",
   PROVIDERS_VIEW: "providers.view",
   PROVIDERS_MANAGE: "providers.manage",
@@ -60,7 +62,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "plans.view": "Plans — view",
   "plans.manage": "Plans — edit",
   "templates.view": "Templates — view",
-  "templates.manage": "Templates — edit and publish",
+  "templates.manage": "Templates — edit and publish; review marketplace templates",
   "risk.view": "Fraud signals and blocklist — view",
   "risk.manage": "Blocklist — edit",
   "providers.view": "Carriers and payment gateways",

@@ -290,3 +290,5 @@ export * from "./endpoints/deliveryEstimates";
 export * from "./endpoints/blog";
 // Cookie consent: the store's banner (off / notice / ask first), who is asked, policy link and wording; the storefront's reader (handoff 196).
 export * from "./endpoints/cookieConsent";
+// Funnel template marketplace: browse, preview and use listed templates; submit, edit, resubmit and withdraw your own (marketplace/, handoff 192).
+export * from "./endpoints/marketplaceTemplates";

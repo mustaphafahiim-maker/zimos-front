@@ -9,7 +9,9 @@ import {
   funnelsDuplicate,
   funnelExtrasUnshare,
   funnelsListSteps,
+  funnelsUpdate,
   funnelsUpdateStep,
+  marketplaceUseTemplate,
   type FunnelDto,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -24,6 +26,8 @@ import { createFunnelFromStarter, useFunnelErrorMessage, type StarterTemplateId 
 import { AI_FUNNEL_DEFAULTS, AiFunnelFields, AiTemplateCard, createAiFunnel, useAiFunnelText, type AiFunnelSettings } from "./AiFunnelOption";
 import { useAiErrorText } from "@/lib/aiRun";
 import { FunnelTemplateGallery, type GalleryPick } from "./FunnelTemplateGallery";
+import { useMarketplaceErrorMessage } from "@/lib/errorMessages";
+import { MARKET_STRINGS } from "./marketplace/marketplaceStrings";
 
 /**
  * Creating a funnel in three steps (SPEC §9.1): the template, what it is for
@@ -136,6 +140,8 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const describeError = useFunnelErrorMessage();
+  const m = useT(MARKET_STRINGS);
+  const marketError = useMarketplaceErrorMessage();
 
   const [mode, setMode] = useState<"template" | "code">("template");
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -144,6 +150,8 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
   // Which language version of the starter, and a funnel of the store's to copy instead (FunnelTemplateGallery).
   const [templateLang, setTemplateLang] = useState(locale);
   const [copyFrom, setCopyFrom] = useState<{ funnelId: string; name: string } | null>(null);
+  // A template from «سوق القوالب» (handoff 192): copied by the server, then given the link, currency and product below.
+  const [market, setMarket] = useState<{ id: string; name: string; stepCount: number } | null>(null);
   const [currency, setCurrency] = useState("");
   const currencies = useAsync(() => currenciesGet(apiClient, workspaceId).catch(() => null), [workspaceId]);
   // The "AI template" card (AiFunnelOption.tsx): the AI writes the sales page.
@@ -202,6 +210,35 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
         return setBusy(false);
       }
     }
+    // The chosen product goes on every page that has sections (the pages read it from the tree's root).
+    const applyProduct = async (id: string) => {
+      if (!productId || goal !== "sell") return;
+      for (const s of await funnelsListSteps(apiClient, workspaceId, id)) {
+        const tree = s.builderData && typeof s.builderData === "object" ? (s.builderData as Record<string, unknown>) : null;
+        if (!tree || !Array.isArray(tree.sections) || tree.sections.length === 0) continue;
+        await funnelsUpdateStep(apiClient, workspaceId, id, s.id, { builderData: { ...tree, productId } });
+      }
+    };
+    if (market) {
+      let id: string;
+      try {
+        const copy = await marketplaceUseTemplate(apiClient, workspaceId, market.id, { name: name.trim() });
+        id = copy.funnel.id;
+      } catch (err) {
+        setError(marketError(err, "template"));
+        return setBusy(false);
+      }
+      // The copy exists now: a failed finishing touch still opens it.
+      try {
+        if (subdomain) await funnelsUpdate(apiClient, workspaceId, id, { subdomain });
+        await applyCurrency(id);
+        await applyProduct(id);
+        toast.success(fmt(m.usedToast, { name: name.trim() }));
+      } catch (err) {
+        toast.error(describeError(err));
+      }
+      return onCreated(id);
+    }
     if (ai) {
       try {
         const id = await createAiFunnel(workspaceId, { productId, name: name.trim(), subdomain: subdomain || undefined, settings: aiSettings });
@@ -229,13 +266,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
     // The product is a finishing touch: a failure here still leaves a usable
     // funnel, so the merchant is taken to it either way.
     try {
-      if (productId && goal === "sell") {
-        for (const s of await funnelsListSteps(apiClient, workspaceId, funnel.id)) {
-          const tree = s.builderData && typeof s.builderData === "object" ? (s.builderData as Record<string, unknown>) : null;
-          if (!tree || !Array.isArray(tree.sections) || tree.sections.length === 0) continue;
-          await funnelsUpdateStep(apiClient, workspaceId, funnel.id, s.id, { builderData: { ...tree, productId } });
-        }
-      }
+      await applyProduct(funnel.id);
       toast.success(fmt(t.created, { name: funnel.name }));
     } catch (err) {
       toast.error(describeError(err));
@@ -328,6 +359,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                         setGoal(value);
                         setTemplateId("blank");
                         setCopyFrom(null);
+                        setMarket(null);
                         setAi(false);
                       }}
                     />
@@ -339,15 +371,30 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
               <FunnelTemplateGallery
                 goal={goal}
                 locale={locale}
-                value={ai ? null : copyFrom ? { kind: "copy", ...copyFrom } : { kind: "starter", id: templateId, lang: templateLang }}
+                value={
+                  ai
+                    ? null
+                    : market
+                      ? { kind: "market", ...market }
+                      : copyFrom
+                        ? { kind: "copy", ...copyFrom }
+                        : { kind: "starter", id: templateId, lang: templateLang }
+                }
                 onChange={(pick: GalleryPick) => {
                   setAi(false);
+                  if (pick.kind === "market") {
+                    setCopyFrom(null);
+                    setMarket({ id: pick.id, name: pick.name, stepCount: pick.stepCount });
+                    if (!name.trim()) setName(pick.name);
+                    return;
+                  }
+                  setMarket(null);
                   if (pick.kind === "copy") return setCopyFrom({ funnelId: pick.funnelId, name: pick.name });
                   setCopyFrom(null);
                   setTemplateId(pick.id);
                   setTemplateLang(pick.lang);
                 }}
-                leading={goal === "sell" ? <AiTemplateCard active={ai} onSelect={() => { setAi(true); setCopyFrom(null); }} /> : null}
+                leading={goal === "sell" ? <AiTemplateCard active={ai} onSelect={() => { setAi(true); setCopyFrom(null); setMarket(null); }} /> : null}
               />
             </div>
           )}
@@ -364,6 +411,7 @@ export function FunnelWizard({ onCancel, onCreated }: { onCancel: () => void; on
                 ))}
               </Select>
               <p className="text-xs text-ink-soft">{goal === "leads" ? t.goalLeadsHint : t.productHint}</p>
+              {market && <p className="text-xs font-medium text-accent-dark">{m.notCopied}</p>}
               {ai && (
                 <div className="pt-2">
                   <AiFunnelFields value={aiSettings} onChange={setAiSettings} />
