@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
-import { AlertTriangle } from "lucide-react";
-import { Alert, Button, cn } from "@store-builder/ui";
+import { Link } from "react-router-dom";
+import { AlertTriangle, Store } from "lucide-react";
+import { Alert, Button, buttonVariants, cn } from "@store-builder/ui";
 import {
   apiErrorDetails,
   domainPurchaseCreate,
@@ -32,6 +33,8 @@ interface BuyDomainDialogProps {
   onPriceChanged: (domain: string, price: DomainPrice | null) => void;
   /** The domain was taken in the meantime (409 DOMAIN_UNAVAILABLE). */
   onUnavailable: (domain: string) => void;
+  /** Bought, but connecting it to the store failed (502 DOMAIN_CONNECT_FAILED): support finishes it. */
+  onConnectFailed: (domain: string) => void;
   /** Any other failure: the attempt may be on record as a failed purchase with its last error. */
   onFailed: () => void;
 }
@@ -41,9 +44,12 @@ interface BuyDomainDialogProps {
  * auto-renew switch, and the registrar's price exactly as quoted, shown as
  * "price / year × length" — no total is computed here. Confirming sends the
  * price the merchant saw (`acceptPrice`); if the registrar now quotes another,
- * the new price is shown and the merchant confirms again.
+ * the new price is shown and the merchant confirms again. A store without a
+ * website is told to set one up first (nothing is bought); a domain bought
+ * but not connected (502 DOMAIN_CONNECT_FAILED) is handed to the section,
+ * which says so instead of "nothing was charged".
  */
-export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChanged, onUnavailable, onFailed }: BuyDomainDialogProps) {
+export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChanged, onUnavailable, onConnectFailed, onFailed }: BuyDomainDialogProps) {
   const t = useT(PURCHASE_STRINGS);
   const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
@@ -55,13 +61,15 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
   const [price, setPrice] = useState<DomainPrice | null>(result.price);
   const [priceChanged, setPriceChanged] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  // 409 STORE_NOT_SET_UP: checked before anything is bought; the merchant sets up a website first.
+  const [notSetUp, setNotSetUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const length = yearsLabel(t, years, intlLocale);
 
   async function confirm() {
-    if (busy || unavailable) return;
+    if (busy || unavailable || notSetUp) return;
     setBusy(true);
     setError(null);
     try {
@@ -82,6 +90,11 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
         setUnavailable(true);
         setError(errorMessage(err));
         onUnavailable(result.domain);
+      } else if (isApiErrorCode(err, "STORE_NOT_SET_UP")) {
+        setNotSetUp(true);
+      } else if (isApiErrorCode(err, "DOMAIN_CONNECT_FAILED")) {
+        // The domain WAS bought: never "nothing was charged", and never offer to buy it again.
+        onConnectFailed(result.domain);
       } else {
         setError(errorMessage(err));
         onFailed();
@@ -106,7 +119,7 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
           <Button type="button" variant="outline" className="min-h-11 sm:min-h-0" disabled={busy} onClick={close}>
             {t.cancel}
           </Button>
-          <Button type="button" className="min-h-11 sm:min-h-0" disabled={busy || unavailable} onClick={() => void confirm()}>
+          <Button type="button" className="min-h-11 sm:min-h-0" disabled={busy || unavailable || notSetUp} onClick={() => void confirm()}>
             {busy ? t.buying : t.confirm}
           </Button>
         </>
@@ -183,6 +196,19 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
             )}
           </dd>
         </dl>
+
+        {notSetUp && (
+          <Alert className="border-accent/40 bg-accent-soft text-accent-dark">
+            <AlertTriangle aria-hidden />
+            <div className="space-y-2">
+              <p className="font-medium">{t.storeNotSetUp}</p>
+              <Link to="/website" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "min-h-11 bg-paper-raised sm:min-h-8")}>
+                <Store className="size-4" aria-hidden />
+                {t.setUpWebsite}
+              </Link>
+            </div>
+          </Alert>
+        )}
 
         {error && <Alert variant="danger">{error}</Alert>}
       </div>

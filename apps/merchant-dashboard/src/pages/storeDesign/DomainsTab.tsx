@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Globe, Star, Trash2 } from "lucide-react";
+import { CheckCircle2, Globe, Star, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
+  domainCounterpartDnsManaged,
   domainSetRedirectToPrimary,
   funnelsList,
   storeDesignAddDomain,
@@ -38,7 +39,9 @@ const STRINGS = {
     rootHint: "A domain without a subdomain can't use a CNAME: point it with the A records below.",
     alternativesTitle: "Or, if your DNS provider offers ALIAS / ANAME (CNAME flattening), use this instead of the A records:",
     counterpart: "Send {host} here too",
-    counterpartHint: "Visitors who type {host} land on {domain}, same page. Add its record above.",
+    counterpartHint: "Visitors who type {host} land on {domain}, same page.",
+    counterpartAddRecord: "Add its record above.",
+    counterpartManaged: "We set this up for you",
     counterpartSsl: "{host} certificate: {status}",
     hostname: "Domain",
     add: "Connect",
@@ -88,7 +91,9 @@ const STRINGS = {
     rootHint: "الدومين من غير دومين فرعي مينفعش يتربط بـ CNAME: وجّهه بسجلات A اللي تحت.",
     alternativesTitle: "أو لو مزود الـ DNS عندك فيه ALIAS / ANAME (CNAME flattening)، استخدم ده بدل سجلات A:",
     counterpart: "ابعت {host} هنا كمان",
-    counterpartHint: "اللي يكتب {host} هيوصل لـ {domain} على نفس الصفحة. ضيف السجل بتاعه فوق.",
+    counterpartHint: "اللي يكتب {host} هيوصل لـ {domain} على نفس الصفحة.",
+    counterpartAddRecord: "ضيف السجل بتاعه فوق.",
+    counterpartManaged: "جهزناه لك",
     counterpartSsl: "شهادة {host}: {status}",
     hostname: "الدومين",
     add: "ربط",
@@ -207,7 +212,11 @@ export function DomainsTab() {
             setBoughtVersion((v) => v + 1);
             void state.refresh({ silent: true });
           }}
-          onPurchaseFailed={() => setBoughtVersion((v) => v + 1)}
+          onPurchaseFailed={() => {
+            setBoughtVersion((v) => v + 1);
+            // Bought but not connected (DOMAIN_CONNECT_FAILED) may still have added the domain.
+            void state.refresh({ silent: true });
+          }}
         />
 
         <Section title={t.addTitle} description={t.addDescription}>
@@ -240,7 +249,11 @@ export function DomainsTab() {
             const counterpart = domain.counterpart ?? null;
             // The counterpart still needs its record or its certificate.
             const counterpartPending = Boolean(counterpart?.redirect && counterpart.sslStatus !== "issued");
+            // We created the counterpart's (www) record ourselves (a root domain bought here): nothing to add for it.
+            const counterpartManaged = Boolean(counterpart?.redirect) && domainCounterpartDnsManaged(domain);
             const dnsHeldByUs = boughtDomainIds.has(domain.id);
+            const recordsToAdd = counterpartManaged ? domain.records.filter((r) => r.purpose !== "redirect") : domain.records;
+            const showSteps = !dnsHeldByUs && (domain.status !== "active" || (counterpartPending && !counterpartManaged));
             const recordFound = (record: StoreDomain["records"][number]) =>
               !check
                 ? null
@@ -271,7 +284,7 @@ export function DomainsTab() {
               >
                 <div className="space-y-4">
                   {dnsHeldByUs && <p className="text-sm text-ink-soft">{t.boughtDns}</p>}
-                  {!dnsHeldByUs && (domain.status !== "active" || counterpartPending) && (
+                  {showSteps && (
                     <div>
                       <p className="text-sm font-medium text-ink">{t.stepsTitle}</p>
                       <p className="mt-0.5 text-xs text-ink-soft">{t.stepsHint}</p>
@@ -288,7 +301,7 @@ export function DomainsTab() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-line">
-                            {domain.records.map((record) => {
+                            {recordsToAdd.map((record) => {
                               const result = recordFound(record);
                               return (
                                 <tr key={`${record.type}-${record.name}-${record.value}`}>
@@ -352,7 +365,16 @@ export function DomainsTab() {
                         />
                         <bdi>{fmt(t.counterpart, { host: counterpart.hostname })}</bdi>
                       </label>
-                      <p className="text-xs text-ink-soft">{fmt(t.counterpartHint, { host: counterpart.hostname, domain: domain.hostname })}</p>
+                      <p className="text-xs text-ink-soft">
+                        {fmt(t.counterpartHint, { host: counterpart.hostname, domain: domain.hostname })}
+                        {counterpart.redirect && showSteps && !counterpartManaged && <> {t.counterpartAddRecord}</>}
+                      </p>
+                      {counterpartManaged && (
+                        <p className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+                          <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+                          {t.counterpartManaged}
+                        </p>
+                      )}
                       {counterpart.redirect && usable && (
                         <p className="text-xs text-ink-soft">
                           {fmt(t.counterpartSsl, { host: counterpart.hostname, status: t[`ssl_${counterpart.sslStatus}`] })}

@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   domainSearch,
@@ -24,7 +24,10 @@ import { PURCHASE_STRINGS, formatDomainPrice, placeNode } from "./domainPurchase
 interface BuyDomainSectionProps {
   /** A domain was bought: it is now one of the store's domains and a bought domain. */
   onBought: (purchase: DomainPurchase) => void;
-  /** A purchase attempt failed; it may be listed as a failed purchase now. */
+  /**
+   * A purchase attempt failed; it may be listed as a failed purchase now (and,
+   * when it was bought but not connected, the domain may be among the store's).
+   */
   onPurchaseFailed: () => void;
 }
 
@@ -47,6 +50,8 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogRun, setDialogRun] = useState(0);
   const [bought, setBought] = useState<DomainPurchase | null>(null);
+  // Bought, but not connected yet (502 DOMAIN_CONNECT_FAILED): support finishes it.
+  const [notConnected, setNotConnected] = useState<string | null>(null);
   const searchId = useRef(0);
 
   async function search(e: FormEvent) {
@@ -92,6 +97,14 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
     onBought(purchase);
   }
 
+  function handleConnectFailed(domain: string) {
+    setDialogOpen(false);
+    setNotConnected(domain);
+    setResponse(null);
+    setQuery("");
+    onPurchaseFailed();
+  }
+
   const domainNode = (domain: string) => (
     <bdi dir="ltr" className="break-words">
       {domain}
@@ -111,6 +124,23 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
             </p>
           </div>
           <Button type="button" variant="outline" className="min-h-11 sm:min-h-0" onClick={() => setBought(null)}>
+            {t.buyAnother}
+          </Button>
+        </div>
+      </Section>
+    );
+  }
+
+  if (notConnected) {
+    return (
+      <Section title={t.buyTitle}>
+        <div role="status" className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] bg-accent-soft px-4 py-4 sm:flex-row sm:items-center">
+          <AlertTriangle className="size-6 shrink-0 text-accent-dark" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-ink">{placeNode(t.connectFailedTitle, "domain", domainNode(notConnected))}</p>
+            <p className="mt-0.5 text-sm text-ink-soft">{t.connectFailedBody}</p>
+          </div>
+          <Button type="button" variant="outline" className="min-h-11 bg-paper-raised sm:min-h-0" onClick={() => setNotConnected(null)}>
             {t.buyAnother}
           </Button>
         </div>
@@ -208,6 +238,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
           onBought={(purchase) => void handleBought(purchase)}
           onPriceChanged={(domain, price: DomainPrice | null) => updateResult(domain, { price })}
           onUnavailable={(domain) => updateResult(domain, { available: false, price: null, renewalPrice: null })}
+          onConnectFailed={handleConnectFailed}
           onFailed={onPurchaseFailed}
         />
       )}

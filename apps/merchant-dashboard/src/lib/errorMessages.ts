@@ -139,6 +139,9 @@ const STRINGS = {
       "This {name} connection uses the {name} sandbox, which only creates test shipments, so nothing was booked. A production {name} account is required: connect one under Shipping.",
     cancelFailedApiAccess:
       "{name} refused to cancel the delivery: it hasn't enabled API access for this account. The order was not cancelled. Ask {name} to enable API access, or cancel the delivery in {name}'s dashboard first.",
+    // backend requests 2026-10-06
+    DOMAIN_CONNECT_FAILED:
+      "The domain was bought, but it couldn't be connected to your store yet. Our support team will finish connecting it — you don't need to buy it again.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -253,6 +256,8 @@ const STRINGS = {
       "ربط {name} ده على حساب تجريبي (Sandbox)، وده بيعمل شحنات تجريبية بس، فمفيش حاجة اتحجزت. محتاج حساب حقيقي (Production) عند {name}: اربطه من صفحة الشحن.",
     cancelFailedApiAccess:
       "{name} رفضت تلغي الشحنة لأنها لسه مفعّلتش الربط (API) لحسابك. الأوردر متلغاش. اطلب من {name} تفعّل الربط، أو الغي الشحنة من لوحة {name} الأول.",
+    // backend requests 2026-10-06
+    DOMAIN_CONNECT_FAILED: "الدومين اتشترى، بس لسه مقدرناش نربطه بمتجرك. فريق الدعم هيكمّل ربطه — مش محتاج تشتريه تاني.",
   },
 } satisfies Messages;
 
