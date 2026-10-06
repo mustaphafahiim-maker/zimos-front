@@ -57,8 +57,8 @@ const STRINGS = {
     tabsLabel: "Filter orders by stage",
     tabAll: "All",
     searchLabel: "Search orders",
-    searchPlaceholder: "Order number, name, email, phone or waybill",
-    searchHint: "Matches the order number, customer name or email, the full phone number, or a courier waybill number.",
+    searchPlaceholder: "Order #, name, phone or its last 4 digits, waybill",
+    searchHint: "Matches the order number, customer name or email, the phone (or just its last 4+ digits), or a courier waybill number.",
     today: "Today",
     last7: "Last 7 days",
     last30: "Last 30 days",
@@ -105,8 +105,8 @@ const STRINGS = {
     tabsLabel: "فلترة الأوردرات حسب المرحلة",
     tabAll: "الكل",
     searchLabel: "البحث في الأوردرات",
-    searchPlaceholder: "رقم الأوردر، الاسم، الموبايل أو البوليصة",
-    searchHint: "بيدوّر في رقم الأوردر، اسم العميل أو إيميله، رقم الموبايل كامل، أو رقم البوليصة.",
+    searchPlaceholder: "رقم الأوردر، الاسم، الموبايل أو آخر ٤ أرقام، البوليصة",
+    searchHint: "بيدوّر في رقم الأوردر، اسم العميل أو إيميله، الموبايل (أو آخر ٤ أرقام منه)، أو رقم البوليصة.",
     today: "النهارده",
     last7: "آخر 7 أيام",
     last30: "آخر 30 يوم",
@@ -161,14 +161,15 @@ function localDay(at: number): string {
 }
 
 /**
- * The first instant of a picked day on this device's clock, as the API's ISO
- * timestamp: "from 6 Oct" starts at Cairo's midnight, not 2–3 hours later
- * at UTC's. (`to` stays a date: the API runs it to the end of that UTC day —
- * backend-requests.md asks for a time-zone aware end.)
+ * The device's time zone (Africa/Cairo for an Egyptian merchant). Sent with
+ * the dates so the API reads "6 Oct" as that whole day there, not in UTC.
  */
-function startOfLocalDay(day: string): string {
-  const [y, m, d] = day.split("-").map(Number);
-  return new Date(y, m - 1, d).toISOString();
+function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** `value`, once it has stopped changing for `delayMs`. */
@@ -225,8 +226,9 @@ function useOrderFilters() {
     // Dates only reach the API as a valid range.
     query: {
       q: q || undefined,
-      from: rangeInvalid || !from ? undefined : startOfLocalDay(from),
+      from: rangeInvalid ? undefined : from || undefined,
       to: rangeInvalid ? undefined : to || undefined,
+      tz: !rangeInvalid && (from || to) ? deviceTimeZone() : undefined,
     },
     hasSearchFilters: Boolean(q || from || to),
     update,

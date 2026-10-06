@@ -49,7 +49,14 @@ are listed under *Handoff items done*.
 - [ ] S7 Products list — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
-- (file does not exist yet on 2026-10-06)
+- [x] Request: order search by last phone digits — placeholder + hint
+- [x] Request: Fulfillment can book couriers — no UI gate existed; works
+- [x] Request: errors in the reader's language — dashboard sends Accept-Language
+- [x] Request: postponed/no-answer callback time — CallbackPicker in the queue
+- [x] Request: time-zone aware order dates — list sends `tz` with the dates
+- [ ] 160 storefront texts · 161 store scripts · 162 smart collections ·
+      163 places · 164 city/area prices · 165 checkout file + billing ·
+      166 funnel bulk · 167 Lead instead of Purchase · 168 Pinterest CAPI
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
@@ -62,7 +69,7 @@ are listed under *Handoff items done*.
   1366 px in Arabic.
 
 ## Backend requests
-See `backend-requests.md` (6 open).
+See `backend-requests.md` (all 6 done by the backend on 2026-10-06).
 
 ## Decisions
 - 2026-10-06 Glass frame retired on this branch: the brief asks for a light

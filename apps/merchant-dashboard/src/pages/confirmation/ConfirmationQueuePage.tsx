@@ -17,7 +17,9 @@ import {
   type ConfirmationQueueSort,
   type ConfirmationQueueTab,
   type ConfirmationTask,
-  type RecordConfirmationOutcomePayload,
+  CALLBACK_OUTCOMES,
+  confirmationRecordOutcome,
+  type ConfirmationOutcomeWithCallback,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -46,6 +48,7 @@ import { OrderTimelineLines } from "@/pages/orders/components/OrderTimelineLines
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "./confirmationRoles";
 import { ChannelPicker, WhatsAppButton, useChannelLabels } from "./confirmationChannel";
+import { CallbackPicker } from "./CallbackPicker";
 import { CustomizationList } from "@/pages/orders/components/CustomizationList";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
@@ -750,6 +753,8 @@ function OpenCard({
   const [outcome, setOutcome] = useState<ConfirmationOutcome | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [notes, setNotes] = useState("");
+  // «كلّمني بكرة الساعة ٥» — only with postponed / no answer; "" keeps the default delay.
+  const [callbackAt, setCallbackAt] = useState("");
   // The channel belongs to one claim: a fresh claim starts from "call" again,
   // and opening WhatsApp while holding the claim picks WhatsApp.
   const [channelChoice, setChannelChoice] = useState<{ lockedAt: string | null; channel: ConfirmationChannel }>({
@@ -830,10 +835,11 @@ function OpenCard({
   const save = () =>
     run(async () => {
       if (!outcome || rejectionMissing) return;
-      const payload: RecordConfirmationOutcomePayload = { outcome, channel };
+      const payload: ConfirmationOutcomeWithCallback = { outcome, channel };
       if (notes.trim()) payload.notes = notes.trim();
       if (outcome === "rejected") payload.rejectionReason = rejectionReason.trim();
-      await apiClient.recordConfirmationOutcome(workspaceId, task.id, payload);
+      if (callbackAt && (CALLBACK_OUTCOMES as readonly string[]).includes(outcome)) payload.callbackAt = callbackAt;
+      await confirmationRecordOutcome(apiClient, workspaceId, task.id, payload);
       // Arabic has no letter case, so lowercasing is a no-op there.
       toast.success(
         fmt(t.toastMarked, { order: order.orderNumber, outcome: outcomeLabel[outcome].toLowerCase() })
@@ -962,6 +968,10 @@ function OpenCard({
           </div>
 
           <ChannelPicker value={channel} onChange={pickChannel} disabled={busy} />
+
+          {(outcome === "postponed" || outcome === "unreachable") && (
+            <CallbackPicker value={callbackAt} onChange={setCallbackAt} disabled={busy} />
+          )}
 
           {outcome === "rejected" && (
             <TextField
