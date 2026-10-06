@@ -1,5 +1,15 @@
-import { catalogCollectionFlags } from "@store-builder/api-client";
+import { catalogCollectionFlags, isSmartCollection } from "@store-builder/api-client";
 import { CollectionVisibilityFields } from "./components/CollectionVisibilityFields";
+import {
+  CollectionsEmpty,
+  SmartCollectionBadge,
+  SmartCollectionFields,
+  SmartCollectionNote,
+  smartDraftOf,
+  smartDraftReady,
+  smartRulesChanged,
+  smartRulesOf,
+} from "./components/SmartCollectionFields";
 import { CollectionSeoFields, collectionSeoOf, collectionSeoPayload, downloadCollectionsCsv } from "./components/CollectionSeoFields";
 import { storeUrl } from "@/lib/storeAddress";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -238,6 +248,8 @@ function CollectionForm({
   const [flags, setFlags] = useState(() => catalogCollectionFlags(collection));
   // Search engines and sharing (SPEC §8.9), same keys as a product's.
   const [seo, setSeo] = useState(() => collectionSeoOf(collection));
+  // Manual, automatic by tags, or every product (components/SmartCollectionFields).
+  const [smart, setSmart] = useState(() => smartDraftOf(collection));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -258,6 +270,8 @@ function CollectionForm({
     };
     // Sent only when it changed, so an edit never moves a collection by accident.
     if (!collection || (collection.parentId ?? "") !== parentId) payload.parentId = parentId || null;
+    // Rules only when they changed: saving them re-fills the collection.
+    if (smartRulesChanged(collection, smart)) payload.rules = smartRulesOf(smart);
     try {
       if (collection) {
         await apiClient.updateCollection(workspaceId, collection.id, payload);
@@ -299,6 +313,7 @@ function CollectionForm({
           </Select>
         )}
       </Field>
+      <SmartCollectionFields value={smart} onChange={setSmart} disabled={saving} error={fieldErrors.rules} />
       <Field label={t.descriptionLabel} error={fieldErrors.description}>
         {({ id }) => (
           <Textarea
@@ -316,7 +331,7 @@ function CollectionForm({
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="min-h-11">
           {t.cancel}
         </Button>
-        <Button type="submit" disabled={saving || name.trim().length === 0} className="min-h-11">
+        <Button type="submit" disabled={saving || name.trim().length === 0 || !smartDraftReady(smart)} className="min-h-11">
           {saving ? t.saving : collection ? t.save : t.create}
         </Button>
       </div>
@@ -396,8 +411,9 @@ function CollectionRow({
             {count && <> · {count}</>}
             {children > 0 && <> · {children === 1 ? t.subcategory : fmt(t.subcategories, { n: children })}</>}
           </p>
-          {(rowFlags.showInHeader || rowFlags.hidden) && (
+          {(rowFlags.showInHeader || rowFlags.hidden || isSmartCollection(c)) && (
             <p className="mt-0.5 flex flex-wrap gap-1">
+              {isSmartCollection(c) && <SmartCollectionBadge />}
               {rowFlags.showInHeader && <span className="rounded-full bg-primary-soft px-2 text-xs text-primary">{t.inHeader}</span>}
               {rowFlags.hidden && <span className="rounded-full bg-paper px-2 text-xs text-ink-soft">{t.hiddenBadge}</span>}
             </p>
@@ -559,6 +575,13 @@ function ProductOrderDialog({ collection, onClose }: { collection: CollectionSum
       }
     >
       {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+      <SmartCollectionNote
+        collection={detail.data ?? collection}
+        onSynced={() => {
+          setOrder(null);
+          detail.refresh({ silent: true });
+        }}
+      />
       {detail.loading ? (
         <Spinner className="size-5" />
       ) : detail.error ? (
@@ -706,13 +729,11 @@ export function CollectionsPage() {
         </Alert>
       )}
 
-      <DataState
-        loading={list.loading}
-        error={list.error}
-        empty={flat.length === 0}
-        emptyMessage={t.empty}
-        onRetry={() => list.refresh()}
-      >
+      {/* No collections: start one, or make "All products" in one tap (components/SmartCollectionFields). */}
+      {!list.loading && !list.error && flat.length === 0 && (
+        <CollectionsEmpty title={t.empty} createLabel={t.newCollection} onCreate={() => setCreating(true)} onCreated={reload} />
+      )}
+      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -782,7 +803,16 @@ export function CollectionsPage() {
         )}
       </Modal>
 
-      {ordering && <ProductOrderDialog collection={ordering} onClose={() => setOrdering(null)} />}
+      {ordering && (
+        <ProductOrderDialog
+          collection={ordering}
+          onClose={() => {
+            setOrdering(null);
+            // A Refresh inside may have changed the product counts.
+            if (isSmartCollection(ordering)) reload();
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}
