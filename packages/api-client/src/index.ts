@@ -230,3 +230,5 @@ export * from "./endpoints/funnelBulk";
 export * from "./endpoints/storefrontTexts";
 // Store scripts: the merchant's own code by position and page type (customCode/storeScripts.js).
 export * from "./endpoints/storeScripts";
+// Live View on a world map: visitors, checkouts and orders of the last minutes by country and place (analytics/liveMap.js).
+export * from "./endpoints/liveMap";

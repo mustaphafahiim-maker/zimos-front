@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Activity, Eye, Globe, MousePointerClick, Users } from "lucide-react";
-import { Card, cn } from "@store-builder/ui";
+import { lazy, useEffect, useState, type ReactNode, type RefObject, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Activity, Eye, Globe, Map as MapIcon, MousePointerClick, Users } from "lucide-react";
+import { Card, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
 import type { WebAnalyticsRealtimeActivity } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
@@ -9,6 +9,7 @@ import { BarChart } from "@/components/charts";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { LivePanel, useLiveView } from "./LiveView";
+import { LazyRoute } from "@/routes/LazyRoute";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatCount } from "@/lib/analytics";
 import { countryName, flagOf } from "@/lib/webAnalytics";
@@ -40,6 +41,9 @@ const STRINGS = {
     fired: "fired {event}",
     ago: "{s}s ago",
     agoMin: "{m}m ago",
+    tabs: "Realtime views",
+    tabActivity: "Activity",
+    tabMap: "Live view",
   },
   ar: {
     title: "مباشر الآن",
@@ -66,6 +70,9 @@ const STRINGS = {
     fired: "نفّذ {event}",
     ago: "قبل {s} ث",
     agoMin: "قبل {m} د",
+    tabs: "طريقة العرض",
+    tabActivity: "النشاط",
+    tabMap: "المشاهدة المباشرة",
   },
 } satisfies Messages;
 
@@ -106,19 +113,86 @@ function List({ title, rows, render }: { title: string; rows: Array<{ x: string;
   );
 }
 
+// The map and its geometry load only when its tab is opened.
+const LiveMapView = lazy(() => import("./liveMap/LiveMapView").then((m) => ({ default: m.LiveMapView })));
+
+type RealtimeTab = "activity" | "map";
+
+/**
+ * Analytics → Live now: the activity tab (today's numbers, the stream and the
+ * log) and the Live view tab (who is where, on a map). The tab lives in
+ * `?view=`; the funnel filter is shared by both.
+ */
 export function RealtimePage() {
   const t = useT(STRINGS);
-  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
+  const [params, setParams] = useSearchParams();
+  const tab: RealtimeTab = params.get("view") === "map" ? "map" : "activity";
+  const [funnelId, setFunnelId] = useState("");
+  const frame = useRef<HTMLDivElement>(null);
+
+  function selectTab(next: unknown) {
+    if (next !== "activity" && next !== "map") return;
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        if (next === "activity") out.delete("view");
+        else out.set("view", next);
+        return out;
+      },
+      { replace: true }
+    );
+  }
+
+  return (
+    <div ref={frame} className="min-w-0 max-w-7xl bg-paper [&:fullscreen]:max-w-none [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-6">
+      <PageHeader back={{ to: "/analytics/web", label: t.back }} title={t.title} description={t.description} />
+
+      <Tabs value={tab} onValueChange={selectTab}>
+        <TabsList aria-label={t.tabs} className="mb-2 w-full max-w-full overflow-x-auto sm:w-fit group-data-horizontal/tabs:h-auto">
+          <TabsTrigger value="activity" className="min-h-11 px-4">
+            <Activity aria-hidden />
+            {t.tabActivity}
+          </TabsTrigger>
+          <TabsTrigger value="map" className="min-h-11 px-4">
+            <MapIcon aria-hidden />
+            {t.tabMap}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="activity" className="text-base">
+          <RealtimeActivity workspaceId={workspaceId} funnelId={funnelId} onFunnelChange={setFunnelId} frame={frame} />
+        </TabsContent>
+        <TabsContent value="map" className="text-base">
+          <LazyRoute>
+            <LiveMapView workspaceId={workspaceId} funnelId={funnelId} onFunnelChange={setFunnelId} fullscreenTarget={frame} />
+          </LazyRoute>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/** The activity tab: the live panel, the last 30 minutes' numbers and the log (as before the tabs). */
+function RealtimeActivity({
+  workspaceId,
+  funnelId,
+  onFunnelChange,
+  frame,
+}: {
+  workspaceId: string;
+  funnelId: string;
+  onFunnelChange: (funnelId: string) => void;
+  frame: RefObject<HTMLDivElement | null>;
+}) {
+  const t = useT(STRINGS);
+  const { intlLocale } = useLocale();
   const [tick, setTick] = useState(0);
   const [kind, setKind] = useState<"all" | "pageview" | "event">("all");
   const [query, setQuery] = useState("");
 
   // The server pushes a snapshot whenever something changes (LiveView.tsx);
   // the ten-second poll below only runs while that stream is not connected.
-  const [funnelId, setFunnelId] = useState("");
   const live = useLiveView(workspaceId, funnelId);
-  const frame = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (live.connected) return;
@@ -148,16 +222,14 @@ export function RealtimePage() {
     a.type === "event" ? fmt(t.fired, { event: a.eventName ?? "" }) : fmt(t.viewed, { path: a.urlPath ?? "/" });
 
   return (
-    <div ref={frame} className="min-w-0 max-w-7xl bg-paper [&:fullscreen]:max-w-none [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-6">
-      <PageHeader back={{ to: "/analytics/web", label: t.back }} title={t.title} description={t.description} />
-
+    <>
       <div className="mb-4">
         <LivePanel
           workspaceId={workspaceId}
           live={live.snapshot?.live ?? null}
           connected={live.connected}
           funnelId={funnelId}
-          onFunnelChange={setFunnelId}
+          onFunnelChange={onFunnelChange}
           fullscreenTarget={frame}
         />
       </div>
@@ -239,6 +311,6 @@ export function RealtimePage() {
           </div>
         )}
       </DataState>
-    </div>
+    </>
   );
 }
