@@ -987,6 +987,20 @@ const en = {
     missing: (amount: string, name: string) => `Add ${amount} more to get a ${name} free`,
     progress: (name: string) => `On the way to your free ${name}`,
   },
+  /** The checkout's gift wrap and message (handoff 214, components/gifts/GiftOptionsField). */
+  giftWrap: {
+    title: "Is this a gift?",
+    hint: "We'll pack it as a gift, with your message.",
+    wrap: (price: string) => `Gift-wrap it (+${price})`,
+    message: "Gift message",
+    messagePlaceholder: "Happy birthday! With love…",
+    counter: (n: number, max: number) => `${n}/${max}`,
+    hidePrices: "Hide prices in the parcel",
+    hidePricesHint: "No invoice or price tag goes in the box.",
+    notOffered: "This store doesn't offer gift options anymore. Your order goes without them — check it and order again.",
+    wrapGone: "Gift wrap isn't available right now, so we took it off your order. Check the total and order again.",
+    tooLong: (max: number) => `The gift message can be at most ${max} characters.`,
+  },
   /** The cookie banner and the footer's "Cookie settings" (handoff 196, components/CookieConsent). */
   cookies: {
     label: "Cookies",
@@ -1885,6 +1899,19 @@ const ar: Dictionary = {
     free: "مجانًا",
     missing: (amount, name) => `زوّد ${amount} وخد ${name} هدية`,
     progress: (name) => `فاضلك قد إيه على هدية ${name}`,
+  },
+  giftWrap: {
+    title: "ده هدية؟",
+    hint: "هنجهّزه كهدية، ومعاه رسالتك.",
+    wrap: (price) => `غلّفها كهدية (+${price})`,
+    message: "رسالة الإهداء",
+    messagePlaceholder: "كل سنة وانت طيب! مع حبي…",
+    counter: (n, max) => `${arNum(n)}/${arNum(max)}`,
+    hidePrices: "اخفي الأسعار في الشحنة",
+    hidePricesHint: "مش هنحط فاتورة ولا سعر في الشحنة.",
+    notOffered: "المتجر مبقاش بيقدّم خيارات الهدايا، فطلبك هيمشي من غيرها — راجعه واطلب تاني.",
+    wrapGone: "التغليف مش متاح دلوقتي، فشلناه من طلبك. راجع الإجمالي واطلب تاني.",
+    tooLong: (max) => `رسالة الإهداء ممكن تكون ${arNum(max)} حرف بالكتير.`,
   },
   cookies: {
     label: "الكوكيز",
