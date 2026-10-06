@@ -17,7 +17,7 @@ const STRINGS = {
     preview: "Preview",
     edit: "Edit",
     sample: "text",
-    hint: "Select words and use the buttons, or type **bold**, _italic_, “- ” for a list and “## ” for a heading. HTML pasted here is turned into this formatting when you save; anything else in it is removed.",
+    hint: "Select words and use the buttons above. Pasted text keeps its bold, lists and headings.",
     empty: "Nothing to preview yet.",
   },
   ar: {
@@ -31,7 +31,7 @@ const STRINGS = {
     preview: "معاينة",
     edit: "تعديل",
     sample: "نص",
-    hint: "حدّد الكلام واستخدم الأزرار، أو اكتب **عريض** و_مائل_ و«- » للقايمة و«## » للعنوان. أي HTML بيتلزق هنا بيتحوّل للتنسيق ده لما تحفظ، وأي حاجة تانية فيه بتتشال.",
+    hint: "حدّد الكلام واستخدم الأزرار اللي فوق. الكلام اللي بتلزقه بيفضل بالعريض والقوايم والعناوين بتاعته.",
     empty: "مفيش حاجة تتعاين لسه.",
   },
 } satisfies Messages;

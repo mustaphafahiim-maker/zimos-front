@@ -145,7 +145,14 @@ are listed under *Handoff items done*.
       COD orders placed with 40.00 / 45.50 place prices. Funnel step
       typechecked only (only funnel is an unpublished draft). Two backend
       requests added (quote `configured` flag; cart estimate name match).
-- [ ] R2-4 … R2-12 — see the plan.
+- [x] R2-4 First product (N-04): a new product is on sale when saved, with
+      a visible «اعرضه في المتجر على طول» tick that turns it into a draft;
+      the form starts with name → price → quantity → photos, the rest folds
+      under «تفاصيل تانية (اختياري)» and opens itself when one of its fields
+      has an error; a 0 quantity warns it shows as sold out; Markdown syntax
+      help dropped (toolbar does it); form copy in Egyptian Arabic. Edit
+      mode keeps its layout (status select). Checked at 390/1366.
+- [ ] R2-5 … R2-12 — see the plan.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
@@ -172,6 +179,9 @@ See `backend-requests.md` (first 6 done by the backend; 4 new from handoffs 175�
 - 2026-10-06 No new dependencies so far.
 - 2026-10-06 Product description no longer required on create: a frontend-only
   rule (backend allows ""); the guide promises name + price + photo.
+- 2026-10-06 New products default to active (was draft) with a visible
+  draft switch: the status default is a form default, not stock/pricing
+  logic; the API accepts both (re-audit N-04).
 - 2026-10-06 Unsaved-changes guard is beforeunload only: the app uses
   BrowserRouter (no data router), so in-app blocking (useBlocker) is not
   available without a router migration.
