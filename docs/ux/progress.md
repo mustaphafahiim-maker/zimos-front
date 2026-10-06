@@ -293,6 +293,12 @@ are listed under *Handoff items done*.
       Signed-in calls need the backend CORS fix (request filed); verified
       with a preflight shim, one real COD order placed. Store left off.
 
+## Handoff items 188–199 (backend 2026-10-06, third batch)
+- [x] 193 Zapier and Make: app cards open /apps/zapier and /apps/make — three
+      steps, «اعمل مفتاح API» with the right scopes (shown once, copy), the
+      webhooks the tool subscribed (N of 25), triggers and the envelope;
+      Zapier / Make badges on their webhook endpoints.
+
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
   (postgres/postgres). Backend `.env` from `.env.example` with
