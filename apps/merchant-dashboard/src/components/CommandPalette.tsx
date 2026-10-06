@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { CornerDownLeft, Package, Plus, Search, ShoppingBag, Users, Workflow, type LucideIcon } from "lucide-react";
+import { CornerDownLeft, Package, Plus, Search, ShoppingBag, Users, Workflow, X, type LucideIcon } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import { dashboardSearch, type DashboardSearchResult } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -24,8 +24,11 @@ const STRINGS = {
     customers: "Customers",
     funnels: "Funnels",
     cmdNewProduct: "New product",
-    cmdNewOrder: "Go to orders",
-    cmdNewDiscount: "Create a discount",
+    cmdNewOrder: "New order",
+    cmdOrders: "All orders",
+    cmdConfirm: "Confirm orders",
+    cmdNewDiscount: "Discounts",
+    failed: "Search isn't working right now. Check your connection and try again.",
     cmdAllStores: "All my stores",
     cmdForms: "Form submissions",
     cmdSegments: "Contact segments",
@@ -35,27 +38,45 @@ const STRINGS = {
   },
   ar: {
     open: "بحث",
-    placeholder: "ابحث في الطلبات والمنتجات والعملاء والصفحات…",
-    hint: "اكتب رقم طلب أو موبايل أو اسم — أو الصفحة التي تريدها.",
-    searching: "جارٍ البحث…",
-    nothing: "لا توجد نتائج لـ «{q}».",
+    placeholder: "دوّر في الأوردرات والمنتجات والعملاء والصفحات…",
+    hint: "اكتب رقم أوردر، موبايل (أو آخر ٤ أرقام)، اسم — أو الصفحة اللي عايزها.",
+    searching: "بندوّر…",
+    nothing: "مفيش نتايج لـ «{q}».",
     pages: "الصفحات",
-    commands: "إجراءات",
-    orders: "الطلبات",
+    commands: "اعمل بسرعة",
+    orders: "الأوردرات",
     products: "المنتجات",
     customers: "العملاء",
     funnels: "مسارات البيع",
-    cmdNewProduct: "منتج جديد",
-    cmdNewOrder: "الذهاب إلى الطلبات",
-    cmdNewDiscount: "إنشاء خصم",
+    cmdNewProduct: "ضيف منتج",
+    cmdNewOrder: "أوردر جديد",
+    cmdOrders: "كل الأوردرات",
+    cmdConfirm: "تأكيد الأوردرات",
+    cmdNewDiscount: "الخصومات",
     cmdAllStores: "كل متاجري",
-    cmdForms: "رسائل النماذج",
-    cmdSegments: "شرائح جهات الاتصال",
-    ordersCount: "{n} طلب",
+    cmdForms: "رسايل الفورم",
+    cmdSegments: "شرايح جهات الاتصال",
+    ordersCount: "{n} أوردر",
     toSelect: "للفتح",
-    close: "إغلاق البحث",
+    close: "اقفل البحث",
+    failed: "البحث مش شغال دلوقتي. اتأكد من النت وجرّب تاني.",
   },
 } satisfies Messages;
+
+/**
+ * Lower-case, without Arabic diacritics or tatweel, and with the letters
+ * people type interchangeably folded together (أ إ آ → ا, ة → ه, ى → ي), so
+ * «اعدادات» finds «الإعدادات» (audit U-34). Latin text just lower-cases.
+ */
+function foldForSearch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .trim();
+}
 
 interface Entry {
   id: string;
@@ -86,6 +107,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DashboardSearchResult>(EMPTY);
   const [searching, setSearching] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -120,6 +142,7 @@ export function CommandPalette() {
     }
     const controller = new AbortController();
     setSearching(true);
+    setFailed(false);
     const id = window.setTimeout(() => {
       dashboardSearch(apiClient, workspaceId, term, controller.signal)
         .then((found) => {
@@ -130,6 +153,8 @@ export function CommandPalette() {
           if (!controller.signal.aborted) {
             setResults(EMPTY);
             setSearching(false);
+            // A failure is not "nothing found": say so (audit U-33).
+            setFailed(true);
           }
         });
     }, 200);
@@ -140,19 +165,23 @@ export function CommandPalette() {
   }, [open, workspaceId, term]);
 
   const entries = useMemo<Entry[]>(() => {
-    const needle = term.toLowerCase();
-    const matches = (label: string) => needle === "" || label.toLowerCase().includes(needle);
+    const needle = foldForSearch(term);
+    const matches = (label: string) => needle === "" || foldForSearch(label).includes(needle);
 
     const commands: Entry[] = [
+      { id: "cmd-order", group: t.commands, icon: Plus, title: t.cmdNewOrder, to: "/orders/new" },
       { id: "cmd-product", group: t.commands, icon: Plus, title: t.cmdNewProduct, to: "/catalog/new" },
-      { id: "cmd-discount", group: t.commands, icon: Plus, title: t.cmdNewDiscount, to: "/discounts" },
-      { id: "cmd-orders", group: t.commands, icon: ShoppingBag, title: t.cmdNewOrder, to: "/orders" },
+      { id: "cmd-confirm", group: t.commands, icon: ShoppingBag, title: t.cmdConfirm, to: "/confirmation-queue" },
+      { id: "cmd-orders", group: t.commands, icon: ShoppingBag, title: t.cmdOrders, to: "/orders" },
+      { id: "cmd-discount", group: t.commands, icon: Search, title: t.cmdNewDiscount, to: "/discounts" },
       { id: "cmd-stores", group: t.commands, icon: Search, title: t.cmdAllStores, to: "/stores" },
       { id: "cmd-forms", group: t.commands, icon: Search, title: t.cmdForms, to: "/form-submissions" },
       { id: "cmd-segments", group: t.commands, icon: Users, title: t.cmdSegments, to: "/customers?tab=segments" },
     ].filter((c) => matches(String(c.title)));
 
-    const pages: Entry[] = NAV_ITEMS.filter((item) => isNavItemVisible(item, role))
+    // A page an action already opens is listed once, as the action.
+    const commandTargets = new Set(commands.map((c) => c.to));
+    const pages: Entry[] = NAV_ITEMS.filter((item) => isNavItemVisible(item, role) && !commandTargets.has(item.to))
       .filter((item) => matches(navLabels[item.key]) || (needle !== "" && item.to.includes(needle)))
       .map((item) => ({ id: `page-${item.to}`, group: t.pages, icon: item.icon, title: navLabels[item.key], to: item.to }));
 
@@ -251,7 +280,7 @@ export function CommandPalette() {
             aria-label={t.open}
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
-            className="flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-xl"
+            className="flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-pop)] ring-1 ring-line"
           >
             <div className="flex items-center gap-3 border-b border-line px-4">
               <Search className="size-4 shrink-0 text-ink-soft" aria-hidden />
@@ -270,12 +299,21 @@ export function CommandPalette() {
                 maxLength={100}
                 className="min-h-12 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-soft"
               />
+              {/* Touch screens have no Esc key. */}
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label={t.close}
+                className="-me-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-paper-sunken hover:text-ink"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
             </div>
 
             <div ref={listRef} id="command-palette-list" role="listbox" aria-label={t.open} className="flex-1 overflow-y-auto p-2">
               {entries.length === 0 ? (
                 <p role="status" className="px-3 py-8 text-center text-sm text-ink-soft">
-                  {searching ? t.searching : term ? t.nothing.replace("{q}", term) : t.hint}
+                  {searching ? t.searching : failed ? t.failed : term ? t.nothing.replace("{q}", term) : t.hint}
                 </p>
               ) : (
                 entries.map((entry, index) => {
@@ -292,8 +330,8 @@ export function CommandPalette() {
                         onMouseMove={() => setActive(index)}
                         onClick={() => go(entry)}
                         className={cn(
-                          "flex w-full cursor-pointer items-center gap-3 rounded-[0.5rem] px-3 py-2 text-start text-sm text-ink",
-                          index === active && "bg-primary-soft text-primary-dark dark:text-primary"
+                          "flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-start text-sm text-ink",
+                          index === active && "bg-primary-soft text-primary-dark"
                         )}
                       >
                         <entry.icon className="size-4 shrink-0 text-ink-soft" aria-hidden />

@@ -68,7 +68,11 @@ are listed under *Handoff items done*.
       إعلان للأوردر»; settlements header «شركات الشحن لسه عليها X لـ N أوردر»;
       title matches the menu. PageHeader actions wrap: 38 routes checked at
       390 px, none wider than the screen.
-- [ ] S12 Command bar — next
+- [x] S12 Command bar: Arabic-insensitive matching (أ/إ/آ, ة/ه, ى/ي,
+      diacritics), a real error state instead of «no results», a close button
+      for touch, «أوردر جديد» really opens a new order, confirm-orders action,
+      no duplicate rows, Egyptian copy.
+- [ ] S13 Storefront checkout (phone) — next (with 163/164 pickers)
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - [x] Request: order search by last phone digits — placeholder + hint
