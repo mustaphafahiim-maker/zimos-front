@@ -77,6 +77,7 @@ const DropshipProviderPage = lazy(() =>
   import("@/pages/apps/DropshipProviderPage").then((m) => ({ default: m.DropshipProviderPage }))
 );
 const EmailMarketingPage = lazy(() => import("@/pages/apps/EmailMarketingPage").then((m) => ({ default: m.EmailMarketingPage })));
+const AutomationGuidePage = lazy(() => import("@/pages/apps/AutomationGuidePage").then((m) => ({ default: m.AutomationGuidePage })));
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
 const FunnelEditorPage = lazy(() =>
   import("@/pages/funnels/FunnelEditorPage").then((m) => ({ default: m.FunnelEditorPage }))
@@ -220,6 +221,8 @@ export default function App() {
                       <Route path="/apps/dropship_sandbox" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
                       <Route path="/apps/dropshipping" element={<LazyRoute><DropshipProviderPage /></LazyRoute>} />
                       <Route path="/apps/email-marketing" element={<LazyRoute><EmailMarketingPage /></LazyRoute>} />
+                      <Route path="/apps/zapier" element={<LazyRoute><AutomationGuidePage tool="zapier" /></LazyRoute>} />
+                      <Route path="/apps/make" element={<LazyRoute><AutomationGuidePage tool="make" /></LazyRoute>} />
                       <Route path="/install-app" element={<LazyRoute><InstallAppPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />

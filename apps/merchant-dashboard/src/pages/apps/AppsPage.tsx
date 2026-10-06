@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { automationGuidePath } from "./automationApps";
 
 const STRINGS = {
   en: {
@@ -227,7 +228,7 @@ export function AppsPage() {
                             </Button>
                             {app.openPath && (
                               <Button size="sm" asChild>
-                                <Link to={app.openPath}>{t.open}</Link>
+                                <Link to={automationGuidePath(app.key) ?? app.openPath}>{t.open}</Link>
                               </Button>
                             )}
                           </>

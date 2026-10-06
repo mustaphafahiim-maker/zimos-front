@@ -169,6 +169,9 @@ const STRINGS = {
     INVALID_FILE: "We couldn't read this file. Check its type and try again.",
     FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
     NO_FILE: "Choose a file first.",
+    // handoff 193/196/197
+    WEBHOOK_ENDPOINT_LIMIT:
+      "Your store already has 25 webhooks, the most it can hold — every Zapier or Make trigger is one. Remove one you no longer use, then try again.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -312,6 +315,8 @@ const STRINGS = {
     INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
     FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
     NO_FILE: "اختار ملف الأول.",
+    // handoff 193/196/197
+    WEBHOOK_ENDPOINT_LIMIT: "متجرك فيه ٢٥ webhook، وده أقصى عدد — وكل حدث في زابير أو ميك بيبقى واحد منهم. امسح واحد مش بتستخدمه وجرّب تاني.",
   },
 } satisfies Messages;
 

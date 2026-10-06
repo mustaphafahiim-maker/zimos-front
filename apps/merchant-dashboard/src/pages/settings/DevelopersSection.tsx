@@ -37,6 +37,7 @@ import { AiAssistantsPanel } from "./AiAssistantsPanel";
 import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
+import { AutomationBadge } from "./AutomationBadge";
 
 /**
  * Settings → Developers: the API keys and webhook endpoints a merchant hands
@@ -579,6 +580,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                   <code dir="ltr" className="min-w-0 flex-1 break-all font-mono text-sm text-ink">
                     {endpoint.url}
                   </code>
+                  <AutomationBadge url={endpoint.url} />
                   <StatusBadge
                     value={endpoint.isActive ? "active" : "inactive"}
                     label={endpoint.isActive ? t.active : t.paused}
