@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Card, CardContent } from "@store-builder/ui";
 import type { Variant } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -77,9 +77,11 @@ interface Props {
   onChanged: () => void;
   /** False for a product whose quantity is not tracked: no stock to show or ask for. */
   tracked?: boolean;
+  /** A warning about the SKUs, shown above the list and under the SKU when editing (handoff 181). */
+  skuNote?: ReactNode;
 }
 
-export function VariantsSection({ productId, variants, onChanged, tracked = true }: Props) {
+export function VariantsSection({ productId, variants, onChanged, tracked = true, skuNote }: Props) {
   const notTracked = useNotTrackedLabel();
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
@@ -114,6 +116,7 @@ export function VariantsSection({ productId, variants, onChanged, tracked = true
             {t.add}
           </Button>
         </div>
+        {skuNote && variants.length > 0 && <div className="mb-4">{skuNote}</div>}
 
         {variants.length === 0 ? (
           <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
@@ -201,6 +204,7 @@ export function VariantsSection({ productId, variants, onChanged, tracked = true
             productId={productId}
             tracked={tracked}
             variant={editing}
+            skuNote={skuNote}
             onCancel={() => setEditing(null)}
             onDone={() => {
               setEditing(null);

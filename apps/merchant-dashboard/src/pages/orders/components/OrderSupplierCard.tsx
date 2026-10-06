@@ -15,11 +15,12 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, humanize } from "@/lib/format";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { dropshipProviderName, isStoreProvider } from "@/pages/apps/dropshipStores";
 import { useOrderLabels } from "../orderLabels";
 
 /** System roles holding orders.manage: forwarding and asking again need it. */
@@ -55,6 +56,18 @@ const STRINGS = {
     refreshing: "Asking…",
     settings: "Forwarding and following settings",
     forbidden: "You can see this order but not send it to a supplier.",
+    // Your other store (frontend-handoff 181): Shopify and WooCommerce words.
+    sentToStore: "Sent to your store as order #{id}",
+    notInWoo: "This product isn't in your WooCommerce store",
+    ext_open: "Not shipped yet",
+    ext_partial: "Partly shipped",
+    ext_fulfilled: "Shipped",
+    ext_pending: "Pending",
+    ext_processing: "Processing",
+    "ext_on-hold": "On hold",
+    ext_completed: "Completed",
+    ext_refunded: "Refunded",
+    ext_failed: "Failed",
   },
   ar: {
     title: "المورّد",
@@ -85,6 +98,17 @@ const STRINGS = {
     refreshing: "جارٍ السؤال…",
     settings: "إعدادات الإرسال والمتابعة",
     forbidden: "تقدر تشوف الأوردر ده بس مش مسموح لك تبعته لمورّد.",
+    sentToStore: "اتبعت لمتجرك كأوردر رقم {id}",
+    notInWoo: "المنتج ده مش موجود في متجر ووكومرس بتاعك",
+    ext_open: "لسه ما اتشحنش",
+    ext_partial: "اتشحن جزء منه",
+    ext_fulfilled: "اتشحن",
+    ext_pending: "مستني",
+    ext_processing: "بيتجهّز",
+    "ext_on-hold": "متعلّق",
+    ext_completed: "خلص",
+    ext_refunded: "فلوسه رجعت",
+    ext_failed: "فشل",
   },
 } satisfies Messages;
 
@@ -104,6 +128,9 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
   const canManage = MANAGE_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { locale } = useLocale();
+  const nameOf = (code: string, fallback: string) => dropshipProviderName(code, fallback, locale);
+  const [sentBefore, sentAfter] = t.sentToStore.split("{id}");
 
   // The supplier's own word, in the teammate's language when it is one of the usual ones.
   const supplierStatus = (status: string) => {
@@ -118,16 +145,19 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
   if (state.error instanceof ApiError && state.error.status === 403) return null;
   if (!state.error && (!data || (data.refs.length === 0 && data.suppliers.length === 0))) return null;
 
-  async function run(key: string, work: () => Promise<DropshipOrderState>, done?: string) {
+  async function run(key: string, work: () => Promise<DropshipOrderState>, done?: string | ((next: DropshipOrderState) => string)) {
     setBusy(key);
     setError(null);
     try {
-      state.setData(await work());
-      if (done) toast.success(done);
+      const next = await work();
+      state.setData(next);
+      if (done) toast.success(typeof done === "function" ? done(next) : done);
       onChanged();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) setForbidden(true);
-      setError(errorMessage(err));
+      // WooCommerce names the line it does not have: «"Demo T-Shirt" is not a product of the WooCommerce store».
+      const missing = err instanceof ApiError ? /"(.+)" is not a product of the WooCommerce store/.exec(err.message)?.[1] : undefined;
+      setError(errorMessage(err, missing ? { DROPSHIP_ORDER_REJECTED: `${t.notInWoo}: «${missing}»` } : undefined));
     } finally {
       setBusy(null);
     }
@@ -138,7 +168,7 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
       title={t.title}
       description={t.description}
       actions={
-        <Link to="/apps/dropship_sandbox" className="text-sm font-medium text-primary hover:underline">
+        <Link to="/apps/dropshipping" className="text-sm font-medium text-primary hover:underline">
           {t.settings}
         </Link>
       }
@@ -158,19 +188,38 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
           {data.refs.map((ref) => (
             <div key={ref.provider} className="space-y-1 rounded-md border border-line p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-ink">
-                  {fmt(t.reference, { name: ref.providerName })}{" "}
-                  <bdi dir="ltr" className="font-mono text-xs">
-                    {ref.externalOrderId}
-                  </bdi>
-                </span>
+                {isStoreProvider(ref.provider) ? (
+                  <span className="font-medium text-ink">{nameOf(ref.provider, ref.providerName)}</span>
+                ) : (
+                  <span className="font-medium text-ink">
+                    {fmt(t.reference, { name: ref.providerName })}{" "}
+                    <bdi dir="ltr" className="font-mono text-xs">
+                      {ref.externalOrderId}
+                    </bdi>
+                  </span>
+                )}
                 <StatusBadge
                   label={t.status}
                   value={ref.externalStatus ?? "none"}
-                  tone={ref.externalStatus === "cancelled" ? "danger" : ref.externalStatus === "delivered" ? "success" : "info"}
+                  tone={
+                    ref.externalStatus === "cancelled" || ref.externalStatus === "failed"
+                      ? "danger"
+                      : ref.externalStatus === "delivered" || ref.externalStatus === "completed"
+                        ? "success"
+                        : "info"
+                  }
                   text={ref.externalStatus ? supplierStatus(ref.externalStatus) : t.status_none}
                 />
               </div>
+              {isStoreProvider(ref.provider) && (
+                <p className="text-ink">
+                  {sentBefore}
+                  <bdi dir="ltr" className="font-mono text-xs font-semibold">
+                    {ref.externalOrderId}
+                  </bdi>
+                  {sentAfter}
+                </p>
+              )}
               <p className="text-xs text-ink-soft">
                 {fmt(ref.forwardedBy === "auto" ? t.by_auto : t.by_manual, { date: formatDateTime(ref.pushedAt) })}
                 {ref.checkedAt && ` · ${fmt(t.checked, { date: formatDateTime(ref.checkedAt) })}`}
@@ -185,6 +234,14 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
             <div className="flex flex-wrap items-center gap-2">
               {data.suppliers.map((s) => {
                 const done = data.refs.some((r) => r.provider === s.code);
+                const name = nameOf(s.code, s.name);
+                // The merchant's own store answers with its order number: say it.
+                const sent = isStoreProvider(s.code)
+                  ? (next: DropshipOrderState) => {
+                      const ref = next.refs.find((r) => r.provider === s.code);
+                      return ref ? fmt(t.sentToStore, { id: ref.externalOrderId }) : fmt(t.sent, { name });
+                    }
+                  : fmt(t.sent, { name });
                 return (
                   <Button
                     key={s.code}
@@ -192,11 +249,11 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
                     size="sm"
                     className="min-h-11"
                     disabled={busy !== null}
-                    title={s.lines > 0 ? fmt(t.lines, { n: s.lines, name: s.name }) : fmt(t.noLines, { name: s.name })}
-                    onClick={() => void run(`push:${s.code}`, () => dropshipOrderPush(apiClient, workspaceId, order.id, s.code), fmt(t.sent, { name: s.name }))}
+                    title={s.lines > 0 ? fmt(t.lines, { n: s.lines, name }) : fmt(t.noLines, { name })}
+                    onClick={() => void run(`push:${s.code}`, () => dropshipOrderPush(apiClient, workspaceId, order.id, s.code), sent)}
                   >
                     <Send className="size-4" aria-hidden />
-                    {busy === `push:${s.code}` ? t.sending : done ? `${t.sendAgain} · ${s.name}` : fmt(t.send, { name: s.name })}
+                    {busy === `push:${s.code}` ? t.sending : done ? `${t.sendAgain} · ${name}` : fmt(t.send, { name })}
                     {s.isTest && <span className="text-xs opacity-80">({t.test})</span>}
                   </Button>
                 );
@@ -218,8 +275,8 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
           {canManage && data.refs.length === 0 && data.suppliers.length > 0 && (
             <p className="text-xs text-ink-soft">
               {data.suppliers[0].lines > 0
-                ? fmt(t.lines, { n: data.suppliers[0].lines, name: data.suppliers[0].name })
-                : fmt(t.noLines, { name: data.suppliers[0].name })}
+                ? fmt(t.lines, { n: data.suppliers[0].lines, name: nameOf(data.suppliers[0].code, data.suppliers[0].name) })
+                : fmt(t.noLines, { name: nameOf(data.suppliers[0].code, data.suppliers[0].name) })}
             </p>
           )}
         </div>
