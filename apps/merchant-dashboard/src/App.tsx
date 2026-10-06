@@ -116,6 +116,9 @@ const StoreDesignPage = lazy(() =>
   import("@/pages/storeDesign/StoreDesignPage").then((m) => ({ default: m.StoreDesignPage }))
 );
 const StoreTextsPage = lazy(() => import("@/pages/website/StoreTextsPage").then((m) => ({ default: m.StoreTextsPage })));
+// Marketing → Gift cards (handoff 189).
+const GiftCardsPage = lazy(() => import("@/pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
+const GiftCardDetailPage = lazy(() => import("@/pages/giftCards/GiftCardDetailPage").then((m) => ({ default: m.GiftCardDetailPage })));
 const MediaLibraryPage = lazy(() =>
   import("@/pages/media/MediaLibraryPage").then((m) => ({ default: m.MediaLibraryPage }))
 );
@@ -207,6 +210,8 @@ export default function App() {
                       <Route path="/inbox/bot" element={<LazyRoute><WaBotPage /></LazyRoute>} />
                       <Route path="/automations" element={<LazyRoute><AutomationsPage /></LazyRoute>} />
                       <Route path="/marketing" element={<LazyRoute><MarketingPage /></LazyRoute>} />
+                      <Route path="/gift-cards" element={<LazyRoute><GiftCardsPage /></LazyRoute>} />
+                      <Route path="/gift-cards/:giftCardId" element={<LazyRoute><GiftCardDetailPage /></LazyRoute>} />
                       <Route path="/profit" element={<LazyRoute><ProfitPage /></LazyRoute>} />
                       <Route path="/profit/costs" element={<LazyRoute><ProfitCostsPage /></LazyRoute>} />
                       <Route path="/ads" element={<LazyRoute><AdsPage /></LazyRoute>} />

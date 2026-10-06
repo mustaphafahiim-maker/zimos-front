@@ -169,6 +169,10 @@ const STRINGS = {
     INVALID_FILE: "We couldn't read this file. Check its type and try again.",
     FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
     NO_FILE: "Choose a file first.",
+    // handoff 189
+    GIFT_CARD_NO_EMAIL: "This card has no recipient email. Add one from “Edit details”, then send it again.",
+    GIFT_CARD_NOT_FOUND: "This gift card code is not valid.",
+    GIFT_CARD_UNUSABLE: "This gift card can't be used: it has expired, has no balance left or was disabled.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -312,6 +316,10 @@ const STRINGS = {
     INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
     FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
     NO_FILE: "اختار ملف الأول.",
+    // handoff 189
+    GIFT_CARD_NO_EMAIL: "الكارت ده مالوش إيميل مستلم. ضيفه من «عدّل البيانات» وبعدين ابعته تاني.",
+    GIFT_CARD_NOT_FOUND: "كود كارت الهدية ده مش صحيح.",
+    GIFT_CARD_UNUSABLE: "كارت الهدية ده مينفعش يتستخدم: يا إما انتهى، يا رصيده خلص، يا اتوقف.",
   },
 } satisfies Messages;
 

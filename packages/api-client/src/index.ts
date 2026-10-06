@@ -272,3 +272,5 @@ export * from "./endpoints/productLinkImport";
 export * from "./endpoints/contactImport";
 // Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
 export * from "./endpoints/shopperAccounts";
+// Gift cards: issue, list, adjust, reveal / resend, products sold as gift cards; the shopper's balance check and checkout field (handoff 189).
+export * from "./endpoints/giftCards";
