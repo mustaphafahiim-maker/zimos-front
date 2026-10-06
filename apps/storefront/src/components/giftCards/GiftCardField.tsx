@@ -7,6 +7,7 @@ import {
   giftCardRefusalOf,
   normalizeGiftCardCode,
   parseMoney,
+  prettyGiftCardCode,
   type ApiClient,
   type GiftCardBalance,
   type GiftCardCheckoutFields,
@@ -82,7 +83,7 @@ export function useGiftCard({
   total: number;
   currency: string;
 }) {
-  const { t } = useStore();
+  const { t, money } = useStore();
   const copy = t.giftCards;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -138,15 +139,24 @@ export function useGiftCard({
     });
   }
 
-  /** A refused order: when the card was the reason, it comes off with the reason beside it. */
-  function onError(err: unknown) {
+  /**
+   * A refused order: when the card was the reason (spent or switched off since
+   * it was applied), it comes off with the reason beside it, and the same
+   * words are returned for the form's own error line. Null otherwise.
+   */
+  function onError(err: unknown): string | null {
     const refusal = giftCardRefusalOf(err);
-    if (!refusal || !card) return;
+    if (!refusal || !card) return null;
+    const text = `${giftCardRefusalText(refusal, copy, card.currency)} ${copy.removedAtCheckout}`;
     setCard(null);
     setOpen(true);
-    setDraft(card.code);
-    setError(`${giftCardRefusalText(refusal, copy, card.currency)} ${copy.removedAtCheckout}`);
+    setDraft(prettyGiftCardCode(card.code));
+    setError(text);
+    return text;
   }
+
+  // The phone bar (CheckoutStickyBar) says what the courier collects once a card pays part.
+  const stickyBar = off > 0 ? { totalLabel: copy.payOnDelivery, total: money(Math.max(0, total - off), currency) } : {};
 
   return {
     open,
@@ -168,6 +178,7 @@ export function useGiftCard({
     payload,
     remember,
     onError,
+    stickyBar,
   };
 }
 
@@ -291,32 +302,35 @@ export function GiftCardCodeInput({
       <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
         {label}
       </label>
-      <div className="flex gap-2">
-        <input
-          id={id}
-          type="text"
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          dir="ltr"
-          maxLength={40}
-          placeholder="XXXX-XXXX-XXXX-XXXX"
-          value={value}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
-          onKeyDown={onKeyDown}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className={`${input} min-w-0 font-mono uppercase tracking-wider`}
-        />
-        <button type={submit ? "submit" : "button"} onClick={submit ? undefined : onApply} disabled={busy} className={`${btnSecondary} shrink-0`}>
+      {/* A full code is 19 characters: on a phone the button goes under the field (and its error) so none of it is cut off. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        <div className="min-w-0 sm:flex-1">
+          <input
+            id={id}
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            dir="ltr"
+            maxLength={40}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            value={value}
+            onChange={(e) => onChange(e.target.value.toUpperCase())}
+            onKeyDown={onKeyDown}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            className={`${input} min-w-0 font-mono uppercase tracking-wider`}
+          />
+          {error && (
+            <p id={errorId} role="alert" className="mt-1 text-xs font-medium text-danger">
+              {error}
+            </p>
+          )}
+        </div>
+        <button type={submit ? "submit" : "button"} onClick={submit ? undefined : onApply} disabled={busy} className={`${btnSecondary} sm:shrink-0`}>
           {applyLabel}
         </button>
       </div>
-      {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs font-medium text-danger">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

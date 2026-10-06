@@ -58,7 +58,7 @@ export function GiftCardBalanceCheck() {
   const stateText = result
     ? { active: copy.stateActive, empty: copy.stateEmpty, expired: copy.stateExpired, disabled: copy.stateDisabled }[result.state]
     : "";
-  const date = (iso: string) => new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" }).format(new Date(iso));
+  const date = (iso: string) => new Intl.DateTimeFormat(intlLocale, { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso));
 
   return (
     <main className={`${container} flex-1 py-8 sm:py-12`}>

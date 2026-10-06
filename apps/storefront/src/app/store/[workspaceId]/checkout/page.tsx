@@ -291,7 +291,7 @@ export default function CheckoutPage() {
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
-      giftCard.onError(err);
+      const giftCardProblem = giftCard.onError(err);
       if (isOrderBumpRefused(err)) {
         // The totals drop the add-on with it; the shopper confirms again.
         setBumpOn(false);
@@ -323,6 +323,7 @@ export default function CheckoutPage() {
         });
         scrollIntoViewSoon(FORM_ERROR_ID);
       }
+      if (giftCardProblem) setFormError(giftCardProblem);
       autosave.resume();
     }
   }
@@ -541,6 +542,7 @@ export default function CheckoutPage() {
             anchor={submitRef}
             totalLabel={t.checkout.totalEstimate}
             total={money(total, currency)}
+            {...giftCard.stickyBar}
             buttonLabel={
               redirecting
                 ? t.payment.redirecting
