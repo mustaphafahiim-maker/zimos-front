@@ -250,6 +250,17 @@ export const fr: Dictionary = {
     chooseArea: "Choisissez votre quartier",
     chooseRegionFirst: "Choisissez d'abord la région",
   },
+  addressSearch: {
+    label: "Recherchez votre adresse",
+    placeholder: "Tapez votre quartier ou votre ville",
+    placeholderStreet: "Tapez votre rue, quartier ou ville",
+    suggestions: "Suggestions d'adresse",
+    noResults: "Aucun résultat — remplissez l'adresse ci-dessous",
+    unavailable: "Suggestions indisponibles pour le moment — remplissez l'adresse ci-dessous",
+    pickFailed: "Impossible d'utiliser cette adresse — remplissez-la ci-dessous",
+    searching: "Recherche…",
+    filled: "Adresse remplie — vérifiez-la ci-dessous",
+  },
   checkoutBar: {
     label: "Récapitulatif de la commande",
     order: "Commander",

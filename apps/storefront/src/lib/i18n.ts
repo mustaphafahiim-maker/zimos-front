@@ -337,6 +337,18 @@ const en = {
     chooseArea: "Choose your area",
     chooseRegionFirst: "Choose the region first",
   },
+  /** Address suggestions at checkout (handoff 184): one search field above the address; a pick fills it. */
+  addressSearch: {
+    label: "Search your address",
+    placeholder: "Type your area or city",
+    placeholderStreet: "Type your street, area or city",
+    suggestions: "Address suggestions",
+    noResults: "No matches — fill the address below",
+    unavailable: "Suggestions aren't available right now — fill the address below",
+    pickFailed: "We couldn't use that address — fill it below",
+    searching: "Searching…",
+    filled: "Address filled in — check it below",
+  },
   /** The phone checkout's bottom bar: the total and the order button, always in reach. */
   checkoutBar: {
     label: "Order summary",
@@ -896,6 +908,17 @@ const ar: Dictionary = {
     chooseCity: "اختار مدينتك",
     chooseArea: "اختار منطقتك",
     chooseRegionFirst: "اختار المحافظة الأول",
+  },
+  addressSearch: {
+    label: "دوّر على عنوانك",
+    placeholder: "اكتب اسم الحي أو المدينة",
+    placeholderStreet: "اكتب الشارع أو الحي أو المدينة",
+    suggestions: "اقتراحات العنوان",
+    noResults: "مفيش نتايج — اكتب العنوان تحت",
+    unavailable: "الاقتراحات مش متاحة دلوقتي — اكتب العنوان تحت",
+    pickFailed: "معرفناش نستخدم العنوان ده — اكتبه تحت",
+    searching: "بندوّر…",
+    filled: "العنوان اتملى — راجعه تحت",
   },
   checkoutBar: {
     label: "ملخص الطلب",

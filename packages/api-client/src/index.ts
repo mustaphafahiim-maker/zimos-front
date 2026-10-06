@@ -258,3 +258,5 @@ export * from "./endpoints/orderEmailDesign";
 export * from "./endpoints/storefrontPlaces";
 // Live View on a world map: visitors, checkouts and orders of the last minutes by country and place (analytics/liveMap.js).
 export * from "./endpoints/liveMap";
+// Address suggestions at checkout: the shopper's search and pick, and the store's provider setting (handoff 184).
+export * from "./endpoints/addressLookup";
