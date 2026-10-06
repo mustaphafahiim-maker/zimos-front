@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { ApiError, storefrontBlogPost } from "@store-builder/api-client";
+import { ApiError, storefrontBlogPost, type BlogBlock } from "@store-builder/api-client";
 import { BlogBlocks } from "@/components/blog/BlogBlocks";
 import { BlogBreadcrumbs } from "@/components/blog/BlogBreadcrumbs";
 import { PostCard } from "@/components/blog/PostCard";
@@ -41,6 +41,16 @@ const getPost = cache(async (workspaceId: string, slug: string) => {
 
 const seoText = (value: string | undefined) => (value && value.trim() ? value.trim() : undefined);
 
+/** The post's opening words, for a post with no summary: its first paragraph, cut at a word near 160 characters. */
+function opening(blocks: BlogBlock[]): string | undefined {
+  const first = blocks.find((b): b is Extract<BlogBlock, { type: "paragraph" }> => b.type === "paragraph");
+  const text = first?.text.replace(/\s+/g, " ").trim();
+  if (!text) return undefined;
+  if (text.length <= 160) return text;
+  const cut = text.slice(0, 160);
+  return `${cut.slice(0, cut.lastIndexOf(" ") > 100 ? cut.lastIndexOf(" ") : 160)}…`;
+}
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId, slug } = await params;
   const [store, found] = await Promise.all([getStoreMeta(workspaceId), getPost(workspaceId, slugOf(slug))]);
@@ -48,7 +58,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { post } = found;
   const t = getDictionary(await getStoreLocale(store));
   const title = seoText(post.seo.title) ?? post.title;
-  const description = seoText(post.seo.description) ?? seoText(post.excerpt ?? undefined) ?? t.blog.metaDescription(store.name);
+  const description =
+    seoText(post.seo.description) ?? seoText(post.excerpt ?? undefined) ?? opening(post.blocks) ?? t.blog.metaDescription(store.name);
   const url = postHref(post.slug);
   return {
     title,
@@ -163,7 +174,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
                       href={blogHref({ tag })}
                       className={`inline-flex min-h-11 items-center rounded-full border border-line bg-paper-raised px-4 text-sm text-ink-soft transition-colors hover:border-primary hover:text-primary ${focusRing}`}
                     >
-                      #{tag}
+                      <bdi dir="auto">#{tag}</bdi>
                     </StoreLink>
                   </li>
                 ))}

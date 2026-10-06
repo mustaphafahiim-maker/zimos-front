@@ -100,7 +100,7 @@ export default async function BlogIndexPage({ params, searchParams }: { params: 
   const filtered = Boolean(category || q.tag);
 
   const chip = (active: boolean) =>
-    `zt-chip inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors ${focusRing} ${
+    `zt-chip inline-flex min-h-11 items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium transition-colors ${focusRing} ${
       active
         ? "border-primary bg-primary text-on-primary"
         : "border-line bg-paper-raised text-ink-soft hover:border-primary hover:text-primary"
@@ -118,13 +118,13 @@ export default async function BlogIndexPage({ params, searchParams }: { params: 
       {chips.length > 0 && (
         <nav aria-label={t.blog.categories} className="-mx-4 mt-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <ul className="flex gap-2 pb-1">
-            <li>
+            <li className="shrink-0">
               <StoreLink href="/blog" className={chip(!filtered)} aria-current={!filtered ? "page" : undefined}>
                 {t.blog.allPosts}
               </StoreLink>
             </li>
             {chips.map((c) => (
-              <li key={c.id}>
+              <li key={c.id} className="shrink-0">
                 <StoreLink
                   href={blogHref({ category: c.slug })}
                   className={chip(category?.slug === c.slug)}

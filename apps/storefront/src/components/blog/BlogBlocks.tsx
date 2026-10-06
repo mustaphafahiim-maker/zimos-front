@@ -64,14 +64,14 @@ export async function BlogBlocks({
             })}
           </div>
         ) : (
-          <Block key={i} block={group.block} />
+          <Block key={i} block={group.block} locale={locale} />
         )
       )}
     </div>
   );
 }
 
-function Block({ block }: { block: BlogBlock }): ReactNode {
+function Block({ block, locale }: { block: BlogBlock; locale: Locale }): ReactNode {
   switch (block.type) {
     case "heading":
       return block.level === 3 ? (
@@ -110,9 +110,15 @@ function Block({ block }: { block: BlogBlock }): ReactNode {
     case "list": {
       const List = block.ordered ? "ol" : "ul";
       return (
-        <List className={`space-y-1.5 ps-6 ${block.ordered ? "list-decimal" : "list-disc"} marker:text-primary`}>
+        // The whole list takes its words' direction, so the markers stay inside it (an Arabic post read in
+        // English); numbers in the store's own digits (١، ٢، ٣ in Arabic), as prices and dates are.
+        <List
+          dir="auto"
+          className={`space-y-1.5 ps-6 ${block.ordered ? "" : "list-disc"} marker:text-primary`}
+          style={block.ordered ? { listStyleType: locale === "ar" ? "arabic-indic" : "decimal" } : undefined}
+        >
           {block.items.map((item, i) => (
-            <li key={i} dir="auto" className="ps-1">
+            <li key={i} className="ps-1">
               {item}
             </li>
           ))}
@@ -121,8 +127,8 @@ function Block({ block }: { block: BlogBlock }): ReactNode {
     }
     case "quote":
       return (
-        <blockquote className="rounded-e-2xl border-s-4 border-primary bg-primary-soft px-5 py-4">
-          <p dir="auto" className="whitespace-pre-line text-lg font-medium text-ink">
+        <blockquote dir="auto" className="rounded-e-2xl border-s-4 border-primary bg-primary-soft px-5 py-4">
+          <p className="whitespace-pre-line text-lg font-medium text-ink">
             {block.text}
           </p>
           {block.cite && (
