@@ -274,3 +274,5 @@ export * from "./endpoints/contactImport";
 export * from "./endpoints/shopperAccounts";
 // Element display rules: between dates, by device, country or UTM source; the visitor context (pages/displayRules.js, handoff 191).
 export * from "./endpoints/displayRules";
+// Funnel template marketplace: browse, preview and use listed templates; submit, edit, resubmit and withdraw your own (marketplace/, handoff 192).
+export * from "./endpoints/marketplaceTemplates";
