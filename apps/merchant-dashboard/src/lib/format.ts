@@ -124,6 +124,7 @@ const HUMANIZE: Record<string, string> = {
   bank_transfer: "Bank transfer",
   cod: "Cash on delivery",
   valu: "valU",
+  paypal: "PayPal",
 };
 
 /**
@@ -179,6 +180,7 @@ const HUMANIZE_AR: Record<string, string> = {
   wallet: "محفظة",
   instapay: "إنستاباي",
   valu: "valU",
+  paypal: "باي بال",
 };
 
 /** "partially_paid" -> "Partially paid" (or its Arabic in the Arabic dashboard) */

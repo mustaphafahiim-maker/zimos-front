@@ -217,7 +217,7 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
                 {syncing ? t.syncing : t.sync}
               </Button>
             )}
-            {["card", "wallet", "valu", "kiosk"].includes(order.paymentMethod) &&
+            {["card", "wallet", "valu", "kiosk", "paypal"].includes(order.paymentMethod) &&
               order.financialState === "pending" &&
               !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
             {data && data.refundable > 0 && (
