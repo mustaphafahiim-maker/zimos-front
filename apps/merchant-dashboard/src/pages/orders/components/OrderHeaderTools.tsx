@@ -72,7 +72,7 @@ const STRINGS = {
     badgeArchived: "مؤرشف",
     source: "المصدر",
     source_store: "المتجر",
-    source_funnel: "فانل",
+    source_funnel: "مسار بيع",
     source_manual: "يدوي",
     source_api: "API",
     source_import: "استيراد",

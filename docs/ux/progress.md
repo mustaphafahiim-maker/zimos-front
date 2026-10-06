@@ -203,7 +203,15 @@ are listed under *Handoff items done*.
       ← → Home End (direction-aware), one sideways-scrolling row on phones
       with the current tab centred, 44 px. FilterTabs stays for list
       filters. Store settings went from 4 rows of tabs to one at 390.
-- [ ] R2-10 … R2-12 — see the plan.
+- [x] R2-10 Words pass 2 (N-14, N-21): `placeName` shows «القاهرة» not
+      «القاهرة (Cairo)» in addresses, order columns, shipments, customers and
+      contacts; the orders governorate filter is a picker of governorates
+      (the API matches the saved value exactly, so "Cairo" never matched);
+      store-text developer keys hidden (hover shows them); ~20 activity
+      areas and ~60 actions named in Arabic; «الفانل/الفانلز» → «مسار البيع
+      / مسارات البيع» (87 places); product status «شغّال» everywhere; «…»
+      quotes in Arabic strings; word list added to 06 §6.
+- [ ] R2-11 … R2-12 — see the plan.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

@@ -62,8 +62,8 @@ const STRINGS = {
     updated: "تم تحديث القسم المحفوظ. انشر الموقع لتطبيقه على كل النسخ المرتبطة.",
     detach: "فصل",
     deleted: "تم الحذف من المكتبة.",
-    onlyThisFunnel: "في هذا الفانل فقط",
-    funnelOnly: "هذا الفانل",
+    onlyThisFunnel: "في مسار البيع ده فقط",
+    funnelOnly: "مسار البيع ده",
   },
 } as const;
 

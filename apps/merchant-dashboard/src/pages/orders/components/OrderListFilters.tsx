@@ -2,14 +2,15 @@ import { useId, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, Columns3, Filter, X } from "lucide-react";
 import { Button, Input, cn } from "@store-builder/ui";
-import { ORDER_SOURCES, funnelsList, ordersListTags, type OrderListFilters, type OrderSource } from "@store-builder/api-client";
+import { ORDER_SOURCES, funnelsList, ordersListTags, ordersManualOptions, type OrderListFilters, type OrderSource } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, getLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
 import { useOrderLabels } from "../orderLabels";
+import { placeName } from "@/lib/format";
 import { useSavedOrderViews } from "./useSavedOrderViews";
 
 const STRINGS = {
@@ -95,7 +96,7 @@ const STRINGS = {
     source: "المصدر",
     payment: "طريقة الدفع",
     governorate: "المحافظة",
-    governoratePlaceholder: "مثلًا Cairo",
+    governoratePlaceholder: "مثلًا القاهرة (Cairo)",
     carrier: "شركة الشحن",
     carrierPlaceholder: "اسم شركة الشحن",
     seen: "المشاهدة",
@@ -109,7 +110,7 @@ const STRINGS = {
     archived_only: "المؤرشفة فقط",
     archived_include: "إظهار المؤرشفة أيضًا",
     source_store: "المتجر",
-    source_funnel: "فانل",
+    source_funnel: "مسار بيع",
     source_manual: "يدوي",
     source_api: "API",
     source_import: "استيراد",
@@ -146,7 +147,7 @@ const STRINGS = {
     cancel: "إلغاء",
     deleteView: "حذف «{name}»",
     product: "المنتج",
-    funnel: "الفانل",
+    funnel: "مسار البيع",
     dataQuality: "جودة البيانات",
     dq_good: "جيدة",
     dq_low: "ضعيفة",
@@ -379,6 +380,15 @@ export function OrderFilterBar({
   const [viewName, setViewName] = useState("");
   const saved = useSavedViews();
   const tags = useAsync(() => ordersListTags(apiClient, workspaceId), [workspaceId]);
+  // The governorate filter matches the saved value exactly ("القاهرة (Cairo)"), so it is picked
+  // from the list, not typed; a role that can't read the list types it as before (re-audit N-14).
+  const governorates = useAsync(
+    () =>
+      ordersManualOptions(apiClient, workspaceId)
+        .then((o) => o.governorates)
+        .catch(() => null),
+    [workspaceId]
+  );
   // For the product and funnel pickers and their chips; a failure leaves the picker with what is in the URL.
   const products = useAsync(
     () => apiClient.listProducts(workspaceId, { limit: 100 }).then((r) => r.products.map((p) => ({ id: p.id, name: p.name }))),
@@ -394,7 +404,7 @@ export function OrderFilterBar({
     tag: () => `${t.tag}: ${values.tag}`,
     source: () => `${t.source}: ${values.source ? t[`source_${values.source}`] : ""}`,
     paymentMethod: () => `${t.payment}: ${values.paymentMethod ? labels.paymentMethod(values.paymentMethod) : ""}`,
-    governorate: () => `${t.governorate}: ${values.governorate}`,
+    governorate: () => `${t.governorate}: ${placeName(values.governorate)}`,
     carrier: () => `${t.carrier}: ${values.carrier}`,
     seen: () => (values.seen === "true" ? t.seen_true : t.seen_false),
     test: () => (values.test === "true" ? t.test_true : t.test_false),
@@ -561,13 +571,32 @@ export function OrderFilterBar({
               ))}
             </Select>
           </div>
-          <DebouncedText
-            id={ids.gov}
-            label={t.governorate}
-            placeholder={t.governoratePlaceholder}
-            value={values.governorate}
-            onCommit={(v) => update({ governorate: v || null })}
-          />
+          {governorates.data && governorates.data.length > 0 ? (
+            <div>
+              <label htmlFor={ids.gov} className={label}>
+                {t.governorate}
+              </label>
+              <Select id={ids.gov} value={values.governorate} onChange={(e) => update({ governorate: e.target.value || null })} className="h-11">
+                <option value="">{t.any}</option>
+                {values.governorate && !governorates.data.some((g) => `${g.ar} (${g.en})` === values.governorate) && (
+                  <option value={values.governorate}>{placeName(values.governorate)}</option>
+                )}
+                {governorates.data.map((g) => (
+                  <option key={g.code} value={`${g.ar} (${g.en})`}>
+                    {getLocale() === "ar" ? g.ar : g.en}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : (
+            <DebouncedText
+              id={ids.gov}
+              label={t.governorate}
+              placeholder={t.governoratePlaceholder}
+              value={values.governorate}
+              onCommit={(v) => update({ governorate: v || null })}
+            />
+          )}
           <DebouncedText
             id={ids.carrier}
             label={t.carrier}

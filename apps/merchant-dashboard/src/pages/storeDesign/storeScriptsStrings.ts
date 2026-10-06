@@ -64,7 +64,7 @@ export const SCRIPT_STRINGS = {
     collection: "المجموعة",
     product: "المنتج",
     page: "الصفحات الخاصة",
-    funnel: "خطوات الفانل",
+    funnel: "خطوات مسار البيع",
     cart: "السلة",
     checkout: "إتمام الطلب",
     thank_you: "صفحة الشكر",

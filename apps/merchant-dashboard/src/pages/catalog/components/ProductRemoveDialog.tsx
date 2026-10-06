@@ -41,7 +41,7 @@ const STRINGS = {
     deletedToast: "“{name}” deleted permanently.",
   },
   ar: {
-    removeTitle: "حذف “{name}”؟",
+    removeTitle: "حذف «{name}»؟",
     removeDescription: "اختر أرشفة المنتج أو حذفه نهائيًا.",
     archiveHeading: "أرشفة",
     archiveBody:
@@ -53,7 +53,7 @@ const STRINGS = {
     deleteWarning: "لا يمكن التراجع عن ذلك.",
     deletePermanently: "حذف نهائي",
     deleting: "جارٍ الحذف…",
-    purgeTitle: "حذف “{name}” نهائيًا؟",
+    purgeTitle: "حذف «{name}» نهائيًا؟",
     purgeDescription: "سيتم حذف المنتج ومتغيراته وعروضه نهائيًا. لا يمكن التراجع عن ذلك.",
     hasOrders: "هذا المنتج عليه أوردرات، لذلك يمكن أرشفته فقط.",
     hasOrdersArchived: "هذا المنتج عليه أوردرات، لذلك لا يمكن حذفه. سيبقى مؤرشفًا.",
@@ -62,8 +62,8 @@ const STRINGS = {
     funnelFallback: "مسار بيع {n}",
     cancel: "إلغاء",
     close: "إغلاق",
-    archivedToast: "تمت أرشفة “{name}”. ستجده في تبويب المؤرشف.",
-    deletedToast: "تم حذف “{name}” نهائيًا.",
+    archivedToast: "تمت أرشفة «{name}». ستجده في تبويب المؤرشف.",
+    deletedToast: "تم حذف «{name}» نهائيًا.",
   },
 } satisfies Messages;
 

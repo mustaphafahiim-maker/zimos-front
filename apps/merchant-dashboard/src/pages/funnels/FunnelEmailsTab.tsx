@@ -6,7 +6,7 @@ const STRINGS = {
     intro: "The emails customers get about orders placed in this funnel. Each one is the store's email until you change it here — then this funnel gets its own version.",
   },
   ar: {
-    intro: "الإيميلات اللي العملاء بياخدوها عن الأوردرات اللي جاية من الفانل ده. كل إيميل زي إيميل المتجر لحد ما تغيّره هنا — ساعتها الفانل ياخد نسخة خاصة بيه.",
+    intro: "الإيميلات اللي العملاء بياخدوها عن الأوردرات اللي جاية من مسار البيع ده. كل إيميل زي إيميل المتجر لحد ما تغيّره هنا — ساعتها مسار البيع ياخد نسخة خاصة بيه.",
   },
 } satisfies Messages;
 

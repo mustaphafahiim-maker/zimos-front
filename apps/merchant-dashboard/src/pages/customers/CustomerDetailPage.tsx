@@ -14,7 +14,7 @@ import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, placeName } from "@/lib/format";
 import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
 import { ContactInsights } from "./ContactInsights";
 
@@ -489,7 +489,7 @@ function AddressesSection({
             >
               <div className="min-w-0 text-sm">
                 <p className="text-ink">
-                  {[a.addressLine, a.city, a.province, a.postalCode, a.country]
+                  {[a.addressLine, placeName(a.city), placeName(a.province), a.postalCode, a.country === "EG" ? null : a.country]
                     .filter(Boolean)
                     .join(", ")}
                 </p>

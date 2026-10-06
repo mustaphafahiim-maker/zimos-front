@@ -149,7 +149,7 @@ const STRINGS = {
     statusDraft: "مسودة",
     statusPublished: "منشور",
     statusPaused: "متوقف مؤقتًا",
-    selectAll: "حدد كل الفانلز اللي في الصفحة",
+    selectAll: "حدد كل مسارات البيع اللي في الصفحة",
     selectFunnel: "حدد {name}",
   },
 } satisfies Messages;

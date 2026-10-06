@@ -457,11 +457,9 @@ function TextRow({
     <li className="grid gap-2 py-3 first:pt-0 last:pb-0 md:grid-cols-2 md:gap-4">
       <div className="min-w-0">
         <p className="text-xs text-ink-soft">{t.default}</p>
-        <p className="mt-0.5 break-words text-sm text-ink" dir={dir}>
+        {/* The developer key (common.continueShopping) stays out of sight; hovering the default shows it (re-audit N-14). */}
+        <p className="mt-0.5 break-words text-sm text-ink" dir={dir} title={entry.key}>
           {fallback}
-        </p>
-        <p className="mt-0.5 truncate font-mono text-[11px] text-ink-soft" dir={dir}>
-          <bdi dir="ltr">{entry.key}</bdi>
         </p>
       </div>
       <div className="min-w-0 space-y-1">

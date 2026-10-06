@@ -47,7 +47,7 @@ const STRINGS = {
     delete: "حذف",
     createTitle: "إنشاء عرض",
     editTitle: "تعديل العرض",
-    deleteTitle: "حذف “{name}”؟",
+    deleteTitle: "حذف «{name}»؟",
     deleteDescription: "تتم أرشفته وليس حذفه، لذلك يحتفظ أي أوردر تم من خلال هذا العرض بسجله.",
     deleteConfirm: "أرشفة العرض",
     working: "جارٍ الأرشفة…",

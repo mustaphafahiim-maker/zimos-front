@@ -23,7 +23,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useCarrierErrorMessage, useErrorMessage } from "@/lib/errorMessages";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney, placeName } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
@@ -1209,7 +1209,7 @@ function CreateShipmentForm({
             <div>
               <p className="text-xs text-ink-soft">{t.deliverTo}</p>
               <p className="text-ink" dir="auto">
-                {address ? [address.province, address.city].filter(Boolean).join(" · ") || "—" : "—"}
+                {address ? [placeName(address.province), placeName(address.city)].filter(Boolean).join(" · ") || "—" : "—"}
               </p>
             </div>
           </div>

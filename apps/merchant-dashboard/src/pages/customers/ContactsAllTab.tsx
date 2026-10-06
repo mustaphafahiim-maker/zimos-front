@@ -16,7 +16,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, placeName } from "@/lib/format";
 import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -251,7 +251,7 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
             {contact.governorate && (
               <>
                 {" · "}
-                <bdi>{contact.governorate}</bdi>
+                <bdi>{placeName(contact.governorate)}</bdi>
               </>
             )}
           </div>

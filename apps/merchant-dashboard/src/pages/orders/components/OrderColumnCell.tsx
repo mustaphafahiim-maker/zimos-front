@@ -1,5 +1,5 @@
 import { orderListExtrasOf, type Order, type OrderStage } from "@store-builder/api-client";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, placeName } from "@/lib/format";
 import { providerName } from "@/lib/providers";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -145,13 +145,13 @@ export function OrderColumnCell({
         </td>
       );
     case "governorate":
-      return <td className="px-4 py-3 text-xs text-ink-soft">{address?.province || "—"}</td>;
+      return <td className="px-4 py-3 text-xs text-ink-soft">{placeName(address?.province) || "—"}</td>;
     case "address":
       return (
         <td className="max-w-56 px-4 py-3 text-xs text-ink-soft">
           {address ? (
             <>
-              <div className="text-ink">{[address.province, address.city].filter(Boolean).join(" · ") || "—"}</div>
+              <div className="text-ink">{[placeName(address.province), placeName(address.city)].filter(Boolean).join(" · ") || "—"}</div>
               {address.addressLine && <div className="line-clamp-2">{address.addressLine}</div>}
             </>
           ) : (

@@ -186,7 +186,7 @@ export const STORE_TEXT_GROUPS: StoreTextGroup[] = [
       { key: "checkout.discount", en: "Discount", ar: "الخصم", fr: "Remise" },
       { key: "checkout.discountCode", en: "Discount code", ar: "كود الخصم", fr: "Code promo" },
       { key: "checkout.apply", en: "Apply", ar: "تطبيق", fr: "Appliquer" },
-      { key: "checkout.discountPending", en: "Code “{code}” will be applied when your order is confirmed.", ar: "هيتم تطبيق الكود «{code}» عند تأكيد الطلب.", fr: "Le code « {code} » sera appliqué à la confirmation de votre commande.", vars: ["code"] },
+      { key: "checkout.discountPending", en: "Code «{code}» will be applied when your order is confirmed.", ar: "هيتم تطبيق الكود «{code}» عند تأكيد الطلب.", fr: "Le code « {code} » sera appliqué à la confirmation de votre commande.", vars: ["code"] },
       { key: "checkout.removeCode", en: "Remove code", ar: "إزالة الكود", fr: "Retirer le code" },
       { key: "checkout.bundleSaving", en: "Bundle saving", ar: "توفير العرض", fr: "Économie du lot" },
       { key: "checkout.total", en: "Total", ar: "الإجمالي", fr: "Total" },

@@ -136,6 +136,27 @@ classes stay in the CSS (so nothing breaks) but resolve to opaque surfaces.
 - Errors say what happened and what to do: «النت فصل. اتأكد من الاتصال
   وجرّب تاني.» Never a code, never English inside Arabic.
 
+### Word list (one word per thing; round 2, re-audit N-21)
+
+| Thing | Say | Not |
+|---|---|---|
+| Order (dashboard) | أوردر / الأوردرات | طلب، الطلبات (the storefront says «طلب» to shoppers) |
+| Funnel | مسار البيع / مسارات البيع | الفانل، الفانلز |
+| A product on sale | شغّال | نشط، مفعّل |
+| Waiting for the confirmation call | مستني تأكيد | قيد التأكيد، في انتظار التأكيد |
+| The merchant's own delivery | المندوب بتاعك | manual-courier، شحن يدوي |
+| Store name, logo, tagline | هوية المتجر | بيانات المتجر |
+| Contact details shown to shoppers | بيانات التواصل | بيانات المتجر |
+| Courier money owed | تحصيل شركات الشحن | التسويات |
+
+- Names inside a sentence are quoted «…», never “…”.
+- Numbers go through `fmt` (the viewer's digits) and counts through
+  `countOf` / `pluralOf` («دقيقتين»، «٣ أوردرات»), never a raw "{n} أوردر".
+- Place names show in the screen's language only (`placeName`): «القاهرة»,
+  not «القاهرة (Cairo)».
+- Review check: `grep -rn "فانل\|“{" apps/merchant-dashboard/src` should
+  find nothing in Arabic strings.
+
 ## 7. Adoption
 
 1. `apps/merchant-dashboard/src/index.css` imports the token file and drops
