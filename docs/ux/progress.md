@@ -117,7 +117,9 @@ are listed under *Handoff items done*.
 - [x] 170 GTM ready-made container download + dataLayer events table (+ storefront pushes)
 - [x] 178 webhook custom headers (masked, change/keep) + grouped new topics + edit dialog
 - [x] 179 «مساعدين الذكاء الاصطناعي (MCP)» panel: server URL, tools, AI key shown once, setups
-- [ ] 171 live map · 173–175 emails · 176–177 domains (agents running)
+- [x] 176 buy a domain (search, buy dialog with the API's price, price-change re-confirm, bought domains table with renew/auto-renew)
+- [x] 177 «حوّل الزوار للدومين الأساسي» switch per non-primary domain
+- [ ] 171 live map · 173–175 emails (agents running)
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
@@ -133,7 +135,7 @@ are listed under *Handoff items done*.
   platform_permissions {*} (scratch DB only).
 
 ## Backend requests
-See `backend-requests.md` (all 6 done by the backend on 2026-10-06).
+See `backend-requests.md` (first 6 done by the backend; 3 new from handoff 176).
 
 ## Decisions
 - 2026-10-06 Glass frame retired on this branch: the brief asks for a light
