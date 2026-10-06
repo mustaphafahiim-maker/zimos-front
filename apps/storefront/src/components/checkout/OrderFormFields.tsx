@@ -22,6 +22,7 @@ import { CheckoutPhotoField } from "./CheckoutPhotoField";
 import { StorePlaceFields } from "./StorePlaceFields";
 import type { StorePlacesState } from "@/lib/useStorePlaces";
 import { arOrEn } from "@/lib/i18n";
+import { AddressSearch, addressSearchSlot } from "./AddressSearch";
 
 export function fieldId(prefix: string, field: OrderFormField) {
   return `${prefix}-${field}`;
@@ -452,5 +453,8 @@ export function OrderFormFields({
     }
   }
 
-  return <div className="grid gap-4 sm:grid-cols-2">{list.map(renderField)}</div>;
+  // "Search your address" (handoff 184) goes before the form's first address field.
+  const searchAt = addressSearchSlot(list);
+  const search = <AddressSearch key="address-search" idPrefix={idPrefix} country={values.country} onChange={onChange} storePlaces={ownPlaces} />;
+  return <div className="grid gap-4 sm:grid-cols-2">{list.flatMap((f, i) => (i === searchAt ? [search, renderField(f)] : [renderField(f)]))}</div>;
 }
