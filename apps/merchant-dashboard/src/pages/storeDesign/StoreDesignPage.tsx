@@ -14,13 +14,14 @@ import { SeoTab } from "./SeoTab";
 import { CustomCodeSection } from "./CustomCodeSection";
 import { DomainsTab } from "./DomainsTab";
 import { LanguagesTab } from "./LanguagesTab";
+import { CustomerAccountsTab } from "./CustomerAccountsTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "custom-code"] as const;
+const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "custom-code", "customer-accounts"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -38,6 +39,7 @@ const STRINGS = {
     "custom-code": "Custom code",
     domains: "Domains",
     languages: "Languages",
+    "customer-accounts": "Customer accounts",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -53,6 +55,7 @@ const STRINGS = {
     "custom-code": "أكواد التخصيص",
     domains: "الدومينات",
     languages: "اللغات",
+    "customer-accounts": "حسابات العملاء",
   },
 } satisfies Messages;
 
@@ -87,6 +90,7 @@ export function StoreDesignPage() {
       {active === "custom-code" && <CustomCodeSection key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
+      {active === "customer-accounts" && <CustomerAccountsTab key={workspaceId} />}
         </div>
         <StoreLivePreview workspaceId={workspaceId} className="sticky top-24 hidden xl:block" />
       </div>
