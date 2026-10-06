@@ -9,18 +9,22 @@ are listed under *Handoff items done*.
 
 ## Phases
 - [x] 1 Understanding — `01-understanding.md`
-- [ ] 2 Feature inventory — `02-features.md`
-- [ ] 3 Priorities — `03-priorities.md`
-- [ ] 4 Audit — `04-audit.md`
-- [ ] 5 Proposal — `05-proposal.md`
+- [x] 2 Feature inventory — `02-features.md`
+- [x] 3 Priorities — `03-priorities.md`
+- [x] 4 Audit — `04-audit.md` (68 issues, against base + S1)
+- [x] 5 Proposal — `05-proposal.md`
 - [x] 6 Design system — `06-design-system.md`, tokens `packages/ui/src/tokens.css`
-- [ ] 7 Plan — `07-plan.md`
+- [x] 7 Plan — `07-plan.md`
 - [ ] 8 Implementation (steps below)
 
 ## Implementation steps
 - [x] S1 Family tokens + calm shell: neutral palette, Readex Pro, Arabic
       first, sidebar ordered by daily jobs, one word for orders (أوردر),
-      phone bottom tab bar with the waiting-call badge.
+      phone bottom tab bar with the waiting-call badge. (dc297fb)
+- [x] S2 Home answers first: to-do tile, honest profit, product behind a
+      loss, rates as "N of 10", lost orders, details folded; fixed the
+      hidden bottom menu block and the /abandoned 404. (6b57cf7)
+- [ ] S3 Words everywhere (errors, statuses, dialogs) — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - (file does not exist yet on 2026-10-06)
@@ -34,6 +38,9 @@ are listed under *Handoff items done*.
 - Dashboard: `apps/merchant-dashboard/.env` from `.env.example`;
   `npx vite --port 5173`. Screens checked with Playwright at 390 px and
   1366 px in Arabic.
+
+## Backend requests
+See `backend-requests.md` (5 open).
 
 ## Decisions
 - 2026-10-06 Glass frame retired on this branch: the brief asks for a light
