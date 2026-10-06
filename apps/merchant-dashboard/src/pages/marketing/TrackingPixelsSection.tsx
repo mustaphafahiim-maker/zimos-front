@@ -2,7 +2,10 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Pencil, Plus, Radio, Send, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
+  PINTEREST_AD_ACCOUNT_ID,
   funnelsList,
+  pinterestAdAccountIdOf,
+  pinterestPixelConfig,
   trackingPixelsCreate,
   trackingPixelsDelete,
   trackingPixelsList,
@@ -29,6 +32,7 @@ import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { PinterestCapiFields } from "./PinterestCapiFields";
 
 /**
  * What each platform's ID looks like. The patterns are the backend's
@@ -186,6 +190,8 @@ interface FormState {
   capiToken: string;
   testEventCode: string;
   adsConversionLabel: string;
+  /** Pinterest's Conversions API needs the ad account (config.adAccountId). */
+  adAccountId: string;
   scopeType: TrackingPixelScopeType;
   scopeIds: string[];
 }
@@ -198,6 +204,7 @@ const emptyForm = (): FormState => ({
   capiToken: "",
   testEventCode: "",
   adsConversionLabel: "",
+  adAccountId: "",
   scopeType: "all",
   scopeIds: [],
 });
@@ -210,6 +217,7 @@ const formOf = (p: TrackingPixelDto): FormState => ({
   capiToken: "",
   testEventCode: p.testEventCode ?? "",
   adsConversionLabel: p.config.adsConversionLabel ?? "",
+  adAccountId: pinterestAdAccountIdOf(p),
   scopeType: p.scope.type,
   scopeIds: p.scope.ids,
 });
@@ -430,6 +438,17 @@ function PixelDialog({
   const tokenSaved = Boolean(pixel?.capiTokenSet);
   const tokenMissing = form.capiEnabled && capiPossible && !tokenSaved && form.capiToken.trim() === "";
   const scopeMissing = form.scopeType !== "all" && form.scopeIds.length === 0;
+  const pinterest = form.platform === "pinterest";
+  const adAccount = form.adAccountId.trim();
+  // Checked here before saving; the server's own refusal (config.adAccountId) shows the same words.
+  const adAccountBad: "missing" | "invalid" | null = !pinterest
+    ? null
+    : adAccount !== "" && !PINTEREST_AD_ACCOUNT_ID.test(adAccount)
+      ? "invalid"
+      : form.capiEnabled && capiPossible && adAccount === ""
+        ? "missing"
+        : null;
+  const adAccountProblem = adAccountBad ?? (fieldErrors["config.adAccountId"] ? "missing" : null);
 
   // The scope lists load only when that scope is picked.
   const funnels = useAsync(
@@ -449,7 +468,7 @@ function PixelDialog({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (id === "" || idBad || tokenMissing || scopeMissing) return;
+    if (id === "" || idBad || tokenMissing || scopeMissing || adAccountBad) return;
     setSaving(true);
     setFormError(null);
     setFieldErrors({});
@@ -460,7 +479,12 @@ function PixelDialog({
       capiEnabled: form.capiEnabled && capiPossible,
       testEventCode: info?.testEventCode ? form.testEventCode.trim() || null : undefined,
       scope: { type: form.scopeType, ids: form.scopeType === "all" ? [] : form.scopeIds },
-      config: form.platform === "google" ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null } : undefined,
+      config:
+        form.platform === "google"
+          ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null }
+          : pinterest
+            ? pinterestPixelConfig(form.adAccountId)
+            : undefined,
       ...(token ? { capiToken: token } : {}),
     };
     try {
@@ -485,7 +509,11 @@ function PixelDialog({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="submit" form="tracking-pixel-form" disabled={saving || id === "" || idBad || tokenMissing || scopeMissing}>
+          <Button
+            type="submit"
+            form="tracking-pixel-form"
+            disabled={saving || id === "" || idBad || tokenMissing || scopeMissing || adAccountBad !== null}
+          >
             {saving ? t.saving : t.save}
           </Button>
         </>
@@ -536,7 +564,27 @@ function PixelDialog({
           />
         )}
 
-        {capiPossible && (
+        {capiPossible && pinterest && (
+          <PinterestCapiFields
+            enabled={form.capiEnabled}
+            onEnabledChange={(next) => set("capiEnabled", next)}
+            adAccountId={form.adAccountId}
+            onAdAccountIdChange={(next) => {
+              set("adAccountId", next);
+              setFieldErrors((prev) => ({ ...prev, "config.adAccountId": "" }));
+            }}
+            adAccountProblem={adAccountProblem}
+            token={form.capiToken}
+            onTokenChange={(next) => set("capiToken", next)}
+            tokenMissing={tokenMissing}
+            tokenError={fieldErrors.capiToken}
+            tokenMask={tokenSaved ? (pixel?.capiTokenMask ?? "••••") : null}
+            testEventCode={form.testEventCode}
+            onTestEventCodeChange={(next) => set("testEventCode", next)}
+            warning={t.capiWarning}
+          />
+        )}
+        {capiPossible && !pinterest && (
           <div className="space-y-3 rounded-[0.5rem] border border-line p-3">
             <label className="flex cursor-pointer items-start gap-3">
               <input

@@ -68,6 +68,7 @@ import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
+import { BillingAddressFields, billingFieldId, useBillingAddress } from "../checkout/BillingAddressFields";
 import { CashIcon, CheckIcon } from "../Icons";
 import { billingPlanOf, customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
 import { readPick, usePick } from "@/lib/pagePicks";
@@ -135,6 +136,7 @@ export function ProductLanding({
   const buyLabel = ps.buy_now_text || (ps.inline_checkout ? t.product.orderNow : text.buyNow);
   const quickFields = useMemo(() => quickFormFields(checkoutSettings), [checkoutSettings]);
   const { fields, reveal } = useOrderFormFields(quickFields);
+  const billing = useBillingAddress(fields);
   const basePath = useStoreBasePath();
   const router = useRouter();
   const [client] = useState(() => createStorefrontApiClient());
@@ -316,9 +318,10 @@ export function ProductLanding({
     const found = validateOrderForm(values, t, fields);
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
-    if (invalid.length > 0) {
-      setFormError(t.form.errors.summary(invalid.length));
-      document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+    const billingInvalid = billing.check();
+    if (invalid.length > 0 || billingInvalid.length > 0) {
+      setFormError(t.form.errors.summary(invalid.length + billingInvalid.length));
+      document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       return;
     }
     if (!variant || !available || !mainLine) {
@@ -349,6 +352,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...billing.payload(),
       ...shippingChoice.payload,
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -400,16 +404,18 @@ export function ProductLanding({
       }
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
-      if (invalid.length > 0) {
+      // A billing field the server named opens the billing block.
+      const billingInvalid = flushSync(() => billing.showServerErrors(err));
+      if (invalid.length > 0 || billingInvalid.length > 0) {
         // Commit first: a field the server named may be one this form was
         // hiding, and it has to exist before it can take focus.
         flushSync(() => {
           reveal(fromServer);
           setErrors(fromServer);
-          setFormError(t.form.errors.summary(invalid.length));
+          setFormError(t.form.errors.summary(invalid.length + billingInvalid.length));
           setSubmitting(false);
         });
-        document.getElementById(fieldId(FORM_PREFIX, invalid[0]))?.focus();
+        document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       } else {
         setFormError(orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
@@ -642,6 +648,7 @@ export function ProductLanding({
             fields={fields}
           />
           <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
+          <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">

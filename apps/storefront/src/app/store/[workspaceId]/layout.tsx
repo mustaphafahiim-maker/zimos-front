@@ -16,9 +16,9 @@ import { StoreAnalytics } from "@/components/StoreAnalytics";
 import { BotGuard } from "@/components/BotGuard";
 import { OtpGate } from "@/components/OtpGate";
 import { TrackingPixels } from "@/components/TrackingPixels";
-import { purchaseTimingOf, storePixelsOf } from "@/lib/adPixels";
+import { purchaseTimingOf, storeConversionEventOf, storePixelsOf } from "@/lib/adPixels";
 import {
-  resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   resolveThankYouPage,
   storefrontDesignMeta,
@@ -162,7 +162,7 @@ export default async function StoreLayout({
     languages: (store as { languages?: string[] }).languages ?? [],
     // Re-resolved rather than trusted: an older API without `checkout` must
     // still give the forms the defaults.
-    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
+    checkout: { ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>,
     thankYou: resolveThankYouPage((store as { thankYou?: unknown }).thankYou),
     legal: storefrontDesignMeta(store).legal,
     orderBump: store.orderBump ?? null,
@@ -203,7 +203,7 @@ export default async function StoreLayout({
           {pixels.length > 0 && (
             // Reads the search params to send page views on navigation.
             <Suspense fallback={null}>
-              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} />
+              <TrackingPixels pixels={pixels} purchaseTiming={purchaseTimingOf(store)} conversionEvent={storeConversionEventOf(store)} />
             </Suspense>
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its

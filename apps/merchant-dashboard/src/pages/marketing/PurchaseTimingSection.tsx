@@ -13,6 +13,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";
+import { ConversionEventChoice } from "./ConversionEventChoice";
 
 const STRINGS = {
   en: {
@@ -107,6 +108,7 @@ export function PurchaseTimingSection() {
             </div>
           )}
         </DataState>
+        {data && <ConversionEventChoice settings={data} disabled={saving} onSaved={setData} />}
       </div>
     </Card>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CheckoutFormField } from "@store-builder/api-client";
+import { isCheckoutPhotoField, type CheckoutFormField } from "@store-builder/api-client";
 import { useShippingPlaces } from "@/lib/useShippingPlaces";
 import {
   FORM_COUNTRIES,
@@ -18,6 +18,7 @@ import {
 import { useStore } from "@/lib/StoreContext";
 import { countryName } from "@/lib/storeCountry";
 import { input, label as labelClass } from "../ui";
+import { CheckoutPhotoField } from "./CheckoutPhotoField";
 import { arOrEn } from "@/lib/i18n";
 
 export function fieldId(prefix: string, field: OrderFormField) {
@@ -357,10 +358,21 @@ export function OrderFormFields({
           </Field>
         );
       default:
-        // The merchant's own fields: free text, or one of their options.
+        // The merchant's own fields: free text, one of their options, or a photo.
         return (
           <Field key={f.key} {...common} hint={help || undefined}>
-            {f.type === "choice" ? (
+            {isCheckoutPhotoField(f) ? (
+              <CheckoutPhotoField
+                id={id}
+                fieldKey={f.key}
+                label={label}
+                value={value}
+                onChange={set}
+                required={f.required}
+                invalid={Boolean(errors[field])}
+                describedBy={errors[field] ? `${id}-error` : help ? `${id}-hint` : undefined}
+              />
+            ) : f.type === "choice" ? (
               <div className="relative">
                 <select
                   {...a11y(field, !!help)}

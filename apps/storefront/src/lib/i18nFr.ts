@@ -122,6 +122,17 @@ export const fr: Dictionary = {
     summary: "Complétez les informations du produit ci-dessus.",
     photoAttached: "Photo jointe",
   },
+  checkoutExtras: {
+    uploadPhoto: "Envoyer une photo",
+    changePhoto: "Changer",
+    removePhoto: "Retirer",
+    billingSame: "Adresse de facturation identique à l'adresse de livraison",
+    billingTitle: "Adresse de facturation",
+    billingName: "Nom ou société",
+    region: "Région",
+    city: "Ville",
+    area: "Quartier",
+  },
   currency: {
     label: "Devise",
     note: "Les prix convertis sont approximatifs ; vous payez dans la devise d'origine du prix.",
@@ -216,6 +227,8 @@ export const fr: Dictionary = {
       rejected: "Désolé, nous ne pouvons pas enregistrer cette commande en ligne. Contactez la boutique, nous vous aiderons volontiers à la finaliser.",
       customFields:
         "Un produit de votre panier a une information manquante ou sa photo a expiré. Retirez-le puis ajoutez-le à nouveau depuis sa page.",
+      photoRequired: "Envoyez une photo.",
+      photoExpired: "La photo est introuvable ou a expiré — envoyez-la à nouveau",
       bumpUnavailable: "Le complément coché n'est plus disponible, nous l'avons retiré. Passez à nouveau la commande sans lui.",
       unavailable: "Ce produit est indisponible pour le moment.",
     },

@@ -1,4 +1,5 @@
 import {
+  isCheckoutPhotoField,
   resolveCheckoutForm,
   type CheckoutFieldMode,
   type CheckoutForm,
@@ -8,6 +9,7 @@ import {
   type CheckoutSettings,
 } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "./egypt";
+import { isPhotoUploading } from "./checkoutPhoto";
 import { findPlace, placesFor } from "./places";
 import type { Dictionary } from "./i18n";
 
@@ -231,7 +233,11 @@ export function validateOrderForm(
       case "note":
         break;
       default:
-        if (f.required && !value) e[field] = t.form.errors.required;
+        // A photo field waits for its upload; its answer is the upload id (components/checkout/CheckoutPhotoField).
+        if (isCheckoutPhotoField(f)) {
+          if (isPhotoUploading(f.key)) e[field] = t.custom.waitUpload;
+          else if (f.required && !value) e[field] = t.form.errors.photoRequired;
+        } else if (f.required && !value) e[field] = t.form.errors.required;
     }
   }
   return e;

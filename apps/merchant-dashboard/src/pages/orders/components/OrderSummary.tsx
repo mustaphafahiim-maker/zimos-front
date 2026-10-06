@@ -8,6 +8,7 @@ import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
 import { OrderLineThumb } from "./OrderLineThumb";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
+import { OrderBillingAddress, OrderCheckoutPhotos } from "./OrderCheckoutExtras";
 import { ShippingOptionNote } from "./ShippingOptionNote";
 
 const STRINGS = {
@@ -279,6 +280,8 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
               </p>
             )}
           </div>
+          <OrderBillingAddress order={order} />
+          <OrderCheckoutPhotos order={order} />
           <div>
             <h3 className="mb-1 font-medium text-ink">{t.payment}</h3>
             <p className="text-ink-soft">

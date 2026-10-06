@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   resolveCheckoutForm,
+  resolveCheckoutFormWithBilling,
   resolveCheckoutSettings,
   storefrontDesignMeta,
   storefrontProductPage,
@@ -229,7 +230,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             product={product}
             bump={bump}
             description={descriptionInBuyBox ? product.description : null}
-            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutForm(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
+            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
           />
         </div>
 
