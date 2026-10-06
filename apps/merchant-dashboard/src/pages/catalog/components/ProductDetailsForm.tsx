@@ -20,7 +20,7 @@ import { Field, TextField } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { WeightInput } from "@/components/WeightInput";
 import { kgInputToGrams } from "@/lib/weight";
-import { Textarea } from "@/components/Textarea";
+import { RichDescriptionField } from "./RichDescriptionField";
 import { Select } from "@/components/Select";
 import { useCatalogLabels } from "../catalogLabels";
 import { ProductImagesSection } from "./ProductImagesSection";
@@ -289,12 +289,7 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
               error={fieldErrors.description}
             >
               {({ id }) => (
-                <Textarea
-                  id={id}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t.descriptionPlaceholder}
-                />
+                <RichDescriptionField id={id} value={description} onChange={setDescription} placeholder={t.descriptionPlaceholder} />
               )}
             </Field>
             <AiDescriptionButton name={name} onWritten={(output) => setDescription(output.description)} />

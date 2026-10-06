@@ -31,6 +31,8 @@ import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { PageRenderer } from "@/components/page-renderer";
 import { RelatedProducts } from "@/components/product/RelatedProducts";
+import { richTextToPlain } from "@store-builder/api-client";
+import { RichText } from "@/components/RichText";
 
 export const revalidate = 60;
 
@@ -60,7 +62,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const description =
     seoString(product.seo, "description") ??
     (product.description
-      ? product.description.replace(/\s+/g, " ").slice(0, 160)
+      ? richTextToPlain(product.description).replace(/\s+/g, " ").slice(0, 160)
       : getDictionary(locale).meta.storeDescription(store.name));
   // The merchant's sharing image and "hide from search engines" (product form → Search engines and sharing).
   const image = seoString(product.seo, "imageUrl") ?? firstImage(product);
@@ -147,8 +149,8 @@ export default async function ProductPage({ params }: { params: Params }) {
             id: "details",
             label: t.shop.details,
             content: (
-              <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
-                {product.description}
+              <div className="rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+                <RichText text={product.description} />
               </div>
             ),
           },

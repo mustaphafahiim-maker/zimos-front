@@ -214,3 +214,5 @@ export * from "./endpoints/transferResubmit";
 export * from "./endpoints/dropshipOrders";
 // The store's address: check, change, the previous ones (workspaces/slugHistory.js).
 export * from "./endpoints/storeAddress";
+// Formatted product descriptions: the marks, parsed for each app to draw (catalog/richDescription.js).
+export * from "./endpoints/richText";

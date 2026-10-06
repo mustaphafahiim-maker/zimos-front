@@ -1,5 +1,6 @@
 import type { StorefrontProductDetail } from "@store-builder/api-client";
 import { priceOf, productImages } from "@/lib/product";
+import { richTextToPlain } from "@store-builder/api-client";
 
 /**
  * schema.org Product markup for a product page: name, images, the price as an
@@ -35,7 +36,7 @@ export function ProductJsonLd({
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
-    ...(product.description ? { description: String(product.description).slice(0, 5000) } : {}),
+    ...(product.description ? { description: richTextToPlain(String(product.description)).slice(0, 5000) } : {}),
     ...(productImages(product).length > 0 ? { image: productImages(product).slice(0, 8) } : {}),
     brand: { "@type": "Brand", name: storeName },
     url,

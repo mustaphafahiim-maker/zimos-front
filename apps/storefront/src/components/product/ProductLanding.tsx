@@ -83,6 +83,7 @@ import { OptionPicker } from "./OptionPicker";
 import { setChosenVariantImage, variantImageOf } from "@/lib/variantImage";
 import { productPageText } from "./productPageText";
 import { btnPrimary, btnPrimaryLg, card } from "../ui";
+import { RichText } from "../RichText";
 
 const FORM_PREFIX = "quick";
 
@@ -611,8 +612,8 @@ export function ProductLanding({
       <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
 
       {ps.inline_checkout && !ps.checkout_before_description && description ? (
-        <div className="whitespace-pre-line rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
-          {description}
+        <div className="rounded-2xl border border-line bg-paper-raised p-5 text-base leading-relaxed text-ink-soft sm:p-6">
+          <RichText text={description} />
         </div>
       ) : null}
 

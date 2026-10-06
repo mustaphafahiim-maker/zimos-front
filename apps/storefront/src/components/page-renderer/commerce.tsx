@@ -12,6 +12,7 @@ import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { CartSummary } from "./CartSummary";
 import type { PageRendererFunnel } from "./PageRenderer";
 import { COLUMN_CLASS, type Props, bool, num, resolveHref, str } from "./props";
+import { richTextToPlain } from "@store-builder/api-client";
 
 /** The funnel step's actions as a store link, or null outside a funnel. */
 function funnelHref(funnel: PageRendererFunnel | undefined): string | null {
@@ -250,7 +251,7 @@ export async function ProductCardElement({
             </p>
           )}
           {product.description && (
-            <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink-soft">{product.description}</p>
+            <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-ink-soft">{richTextToPlain(product.description)}</p>
           )}
           <div className="mt-auto space-y-3 pt-5">
             <StoreLink href={orderHref} className={`${btnPrimary} w-full`}>
