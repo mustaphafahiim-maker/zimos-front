@@ -30,6 +30,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { CONTACT_STRINGS, contactErrorCode, parseTagInput } from "./contactStrings";
 import { DeliveryRateBar } from "./DeliveryRateBar";
+import { ContactBulkBar } from "./ContactBulkTags";
 
 const STRINGS = {
   en: {
@@ -69,6 +70,8 @@ const STRINGS = {
     consent: "They agreed to receive marketing messages",
     added: "Contact added.",
     openExisting: "Open that contact",
+    selectAll: "Select all contacts shown",
+    selectOne: "Select {name}",
   },
   ar: {
     add: "إضافة جهة اتصال",
@@ -107,6 +110,8 @@ const STRINGS = {
     consent: "وافق على استقبال رسائل تسويقية",
     added: "تمت إضافة جهة الاتصال.",
     openExisting: "افتح جهة الاتصال",
+    selectAll: "تحديد كل جهات الاتصال المعروضة",
+    selectOne: "تحديد {name}",
   },
 } satisfies Messages;
 
@@ -168,6 +173,17 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
   const [adding, setAdding] = useState(false);
   const [exporting, setExporting] = useState(false);
   const filtered = Boolean(q || type || tag || segmentId);
+  // Contacts ticked for bulk tagging; other filters start a fresh selection.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  useEffect(() => setSelected(new Set()), [params]);
+  const allSelected = contacts.length > 0 && contacts.every((contact) => selected.has(contact.id));
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   async function loadMore() {
     const cursor = list.data?.nextCursor;
@@ -197,6 +213,29 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
   }
 
   const columns: Column<Contact>[] = [
+    {
+      key: "select",
+      header: (
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-primary"
+          checked={allSelected}
+          onChange={() => setSelected(allSelected ? new Set() : new Set(contacts.map((contact) => contact.id)))}
+          aria-label={t.selectAll}
+        />
+      ),
+      headerClassName: "w-10",
+      className: "w-10",
+      cell: (contact) => (
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-primary"
+          checked={selected.has(contact.id)}
+          onChange={() => toggle(contact.id)}
+          aria-label={fmt(t.selectOne, { name: contact.fullName || contact.phoneRaw || contact.phoneNormalized })}
+        />
+      ),
+    },
     {
       key: "contact",
       header: t.colContact,
@@ -312,6 +351,17 @@ export function ContactsAllTab({ segmentId, onSegmentChange }: { segmentId: stri
           </Button>
         </div>
       </div>
+
+      <ContactBulkBar
+        selectedIds={[...selected]}
+        tagOptions={tagOptions}
+        onClear={() => setSelected(new Set())}
+        onDone={() => {
+          setSelected(new Set());
+          void list.refresh({ silent: true });
+          void filters.refresh({ silent: true });
+        }}
+      />
 
       <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
         <Card className="p-0">

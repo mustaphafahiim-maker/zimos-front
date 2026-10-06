@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Globe } from "lucide-react";
 import { Button } from "@store-builder/ui";
@@ -6,6 +6,7 @@ import type { WebAnalyticsMetricRow, WebAnalyticsRangeParams, WebAnalyticsSeries
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useRememberedChoice } from "@/lib/rememberedChoice";
 import { formatDuration, webRangeWindow, type WebRange } from "@/lib/webAnalytics";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { Section } from "@/components/Section";
@@ -61,6 +62,7 @@ const STRINGS = {
 } satisfies Messages;
 
 type Range = Extract<WebRange, "7d" | "30d">;
+const SITE_RANGES: readonly Range[] = ["7d", "30d"];
 
 /** Change against the period before, as a signed whole percentage. Null when there is nothing to compare. */
 function change(now: number | null | undefined, before: number | null | undefined): number | null {
@@ -77,7 +79,7 @@ export function SiteAnalytics() {
   const t = useT(STRINGS);
   const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const [range, setRange] = useState<Range>("7d");
+  const [range, setRange] = useRememberedChoice<Range>("home.siteRange", "7d", SITE_RANGES);
   const params = useMemo<WebAnalyticsRangeParams>(() => ({ ...webRangeWindow(range), compare: "prev", unit: "day" }), [range]);
 
   const data = useAsync(
