@@ -622,6 +622,8 @@ const en = {
     browseAll: "Browse the store",
     video: "Video",
     embedded: "Embedded content",
+    /** The editor preview's mark on an element with display rules (handoff 191). */
+    displayRules: "Rules",
     noVideo: "Your browser can't play this video.",
     link: "Link",
     rating: (n: number) => `${n} out of 5`,
@@ -1360,6 +1362,7 @@ const ar: Dictionary = {
     browseAll: "تصفّح المتجر",
     video: "فيديو",
     embedded: "محتوى مضمّن",
+    displayRules: "شروط",
     noVideo: "المتصفح مش قادر يشغّل الفيديو ده.",
     link: "رابط",
     rating: (n) => `${n} من 5`,

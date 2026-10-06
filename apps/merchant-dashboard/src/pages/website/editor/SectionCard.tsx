@@ -6,6 +6,7 @@ import type { PageElement, PageSection } from "@store-builder/api-client";
 import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
 import { editorUi, useEditorLocale } from "./editorLocale";
 import { showcaseSummary } from "./showcaseBlocks";
+import { DisplayRulesBadge } from "./DisplayRulesPanel";
 
 /**
  * A section as it appears in the outline: a bordered card that summarises the
@@ -228,6 +229,7 @@ export function SectionCard({
                   <span className="min-w-0 flex-1">
                     <span className="text-ink-soft">{spec.label}</span>
                     {summary && <span className="ms-2 text-ink">{summary}</span>}
+                    <DisplayRulesBadge element={element} />
                   </span>
                 </span>
               );

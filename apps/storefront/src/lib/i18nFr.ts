@@ -527,6 +527,7 @@ export const fr: Dictionary = {
     browseAll: "Parcourir la boutique",
     video: "Vidéo",
     embedded: "Contenu intégré",
+    displayRules: "Règles",
     noVideo: "Votre navigateur ne peut pas lire cette vidéo.",
     link: "Lien",
     rating: (n: number) => `${n} sur 5`,

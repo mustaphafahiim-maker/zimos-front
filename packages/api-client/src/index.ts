@@ -272,3 +272,5 @@ export * from "./endpoints/productLinkImport";
 export * from "./endpoints/contactImport";
 // Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
 export * from "./endpoints/shopperAccounts";
+// Element display rules: between dates, by device, country or UTM source; the visitor context (pages/displayRules.js, handoff 191).
+export * from "./endpoints/displayRules";
