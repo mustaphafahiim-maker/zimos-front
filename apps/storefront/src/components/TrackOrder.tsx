@@ -13,6 +13,7 @@ import { TrackOrderNotes } from "./TrackOrderNotes";
 import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { TrackOrderTransfer } from "./TrackOrderTransfer";
 import { TrackOrderSubscriptions } from "./TrackOrderSubscriptions";
+import { ShopperReturns } from "./returns/ShopperReturns";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
 
 const api = createStorefrontApiClient();
@@ -106,6 +107,8 @@ export function TrackOrder() {
   // Every amount in one result is in the order's own currency, not the store's
   // current one — an order placed before a currency change still adds up.
   const currency = result?.currency;
+  // The order's signed token comes with every answer (by link or by phone + number); returns name the order by it.
+  const trackingToken = (result as (TrackResult & { trackingToken?: string }) | null)?.trackingToken ?? null;
 
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
@@ -231,6 +234,9 @@ export function TrackOrder() {
               <TrackOrderSubscriptions result={result} />
 
               <TrackOrderTransfer result={result} workspaceId={workspaceId} />
+
+              {/* Return items, when the store lets shoppers ask (handoff 186). */}
+              {trackingToken && <ShopperReturns key={trackingToken} token={trackingToken} workspaceId={workspaceId} />}
 
               <TrackOrderNotes result={result} />
 
