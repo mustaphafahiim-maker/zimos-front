@@ -14,6 +14,8 @@ const reporter = createErrorReporter({
 });
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  // A locked store's pages are refused under its gate page on purpose (components/gate, handoff 197).
+  if ((error as { code?: unknown } | null)?.code === "STORE_LOCKED") return;
   await reporter.report(error, {
     url: request.path,
     method: request.method,

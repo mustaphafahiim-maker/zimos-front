@@ -350,8 +350,8 @@ are listed under *Handoff items done*.
       with events and the order, «إعدادات الكوكيز» in both footers, events
       fired before pixels mount are replayed after accept. Open: the
       product page's phone buy bar now gets room too (the banner lifts above
-      it while the bar shows) — typechecked; the browser check waits until
-      the demo store is open again (the 197 agent is testing its gate).
+      it while the bar shows) — checked: banner ends at 772 px, bar starts
+      at 775 px on a 390 phone.
 - [x] 192 Template marketplace: /funnels/marketplace «القوالب» (search, kind,
       order, language, preview per page at phone / computer width, «استخدم
       القالب ده») and «قوالبك» (review status, reviewer's note, edit,
@@ -364,9 +364,25 @@ are listed under *Handoff items done*.
       النشر» and the imported review count; LINK_* refusal codes mapped (the
       text matching stays only for older answers). 200 (email campaigns) was
       withdrawn by the backend; nothing had been built for it.
-- [ ] 197 — interrupted by a
-      container restart (out of memory); WIP saved on the agents' branches,
-      being finished three at a time.
+- [x] 197 Store access: Store settings → «دخول المتجر» (open / password /
+      coming soon with date and sign-ups, lock funnels too, age check 13–25,
+      «العميل هيشوف إيه» with preview links, confirm before locking,
+      sign-ups list + CSV); storefront password page (30-day unlock
+      cookie), coming-soon page with countdown and sign-up, age question
+      over the store; track / orders / pay / preview routes stay open.
+      X-Store-Gate CORS is done on the backend; one nice-to-have request
+      (lockFunnels in the public gate view).
+
+## Handoff items 201–222 (backend 2026-10-06, fourth batch)
+Three agents at a time (16 GB machine), brief in the scratchpad's BATCH4.md.
+200 (email campaigns) was withdrawn by the backend.
+- [ ] 220 self-service, 221 delivery slots, 222 referral program — agent running
+- [ ] 201 gift cards online, 203 loyalty points, 204 store credit — agent running
+- [ ] 208 free gift, 214 gift wrap, 215 mix-and-match box — agent running
+- [ ] 205 price lists, 218 VIP tiers, 219 B2B quotes — next
+- [ ] 206 stock locations, 207 suppliers / purchase orders / counts — next
+- [ ] 209 customer notes, 210 size charts, 211 search analytics, 212 product Q&A — next
+- [ ] 202 scheduled reports, 213 licence alert, 216 holiday mode, 217 Google sign-in — next
 
 ## Round 3 (in progress)
 - [x] W3-1 Wording pass 3: ~250 «جارٍ …» busy labels → Egyptian present

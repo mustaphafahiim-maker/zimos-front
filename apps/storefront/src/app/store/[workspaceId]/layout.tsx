@@ -45,6 +45,7 @@ import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
 import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
 import { ThemeChrome } from "@/components/shell/ThemeChrome";
+import { StoreGate } from "@/components/gate/StoreGate";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
 function localeSource(store: UnavailableStore) {
@@ -228,6 +229,8 @@ export default async function StoreLayout({
             <DocumentLocale locale={locale} />
             <CookieConsentBanner consent={consent} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
+            {/* A password / coming-soon page or the age question in place of the store (handoff 197). */}
+            <StoreGate workspaceId={workspaceId} store={store}>
             <HideInFunnel>
               <CodeSlot name="above_header" />
               <StoreHeader store={store} locale={locale} />
@@ -258,6 +261,7 @@ export default async function StoreLayout({
             <StoreAppInstall app={storefrontStoreApp(store)} locale={arOrEn(locale)} />
             {/* The phone toolbar and floating buttons a store can switch on (themeSettings). */}
             <ThemeChrome store={store} />
+            </StoreGate>
           </div>
           </CustomCodeProvider>
         </StoreShellProvider>

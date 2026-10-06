@@ -292,3 +292,5 @@ export * from "./endpoints/blog";
 export * from "./endpoints/cookieConsent";
 // Funnel template marketplace: browse, preview and use listed templates; submit, edit, resubmit and withdraw your own (marketplace/, handoff 192).
 export * from "./endpoints/marketplaceTemplates";
+// Store gates: password, coming soon with sign-ups, age check; the storefront's unlock and sign-up (handoff 197).
+export * from "./endpoints/storeGate";
