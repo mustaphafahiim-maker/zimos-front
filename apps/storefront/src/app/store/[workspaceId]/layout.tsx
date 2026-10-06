@@ -27,7 +27,8 @@ import {
   hiddenPlacesOf,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
-import { storeCustomCode } from "@/lib/headCode";
+import { storeCode } from "@/lib/headCode";
+import { StoreScripts } from "@/components/StoreScripts";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { canonicalOrigin } from "@/lib/domains";
@@ -37,6 +38,7 @@ import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { storeThemeOf } from "@/lib/brandTheme";
+import { storeTextsOf } from "@/lib/storeTexts";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
 import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
@@ -168,6 +170,8 @@ export default async function StoreLayout({
     country: storefrontGeneralMeta(store).general.country,
     // The places it does not deliver to: left out of the checkout's list (lib/useShippingPlaces).
     hiddenPlaces: hiddenPlacesOf(store),
+    // The merchant's own wording, this language only (Website → Store texts; lib/storeTexts).
+    storefrontTexts: { [locale]: storeTextsOf(store)[locale] ?? {} },
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
@@ -176,9 +180,9 @@ export default async function StoreLayout({
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
-  // The merchant's own code slots. The API returns none to a staff preview,
-  // and components/CustomCode.tsx decides where the rest may run.
-  const customCode = await storeCustomCode(workspaceId);
+  // The merchant's own code slots and scripts. The API returns none to a staff
+  // preview, and components/CustomCode.tsx decides where the rest may run.
+  const { slots: customCode, scripts: storeScripts } = await storeCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -188,6 +192,8 @@ export default async function StoreLayout({
         <StoreShellProvider>
           <CustomCodeProvider slots={customCode}>
           <CustomCodeHead />
+          {/* The merchant's scripts by position and page type (components/StoreScripts.tsx). */}
+          <StoreScripts scripts={storeScripts} />
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />

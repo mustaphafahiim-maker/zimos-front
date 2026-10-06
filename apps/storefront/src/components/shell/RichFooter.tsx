@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { PoweredByZimos, brandingRemoved } from "@/components/PoweredByZimos";
 import { ShellLink } from "@/components/ShellLink";
 import { StoreLink } from "@/components/StoreRoute";
-import { getDictionary, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import { useDictionary } from "@/lib/StoreContext";
 import { resolveShellLinks, type FooterShell } from "@/lib/storeShell";
 import { pageAndPolicyGroups } from "@/lib/footerLinks";
 
@@ -49,7 +50,7 @@ export function RichFooter({
   year: number;
   footer: FooterShell;
 }) {
-  const t = getDictionary(locale);
+  const t = useDictionary(locale);
   const info = storefrontDesignMeta(store).storeInfo;
   const address = text(info?.address);
   const email = text(info?.email, 120);

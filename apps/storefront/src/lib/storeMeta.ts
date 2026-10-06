@@ -8,6 +8,7 @@ import {
 } from "@store-builder/api-client";
 import { brandVars } from "./brandTheme";
 import { createServerStorefrontApiClient } from "./serverApiClient";
+import { setRequestStoreTexts, storeTextsOf } from "./storeTexts";
 
 /** What the API tells an unavailable store's page: just enough to name it. */
 export interface UnavailableStore {
@@ -37,7 +38,10 @@ export function isStoreUnavailable(err: unknown): boolean {
 export const getStoreState = cache(async (workspaceId: string): Promise<StoreState> => {
   const client = await createServerStorefrontApiClient();
   try {
-    return { kind: "ok", store: await client.getStorefrontMeta(workspaceId) };
+    const store = await client.getStorefrontMeta(workspaceId);
+    // The merchant's own wording, for every getDictionary of this request (lib/storeTexts).
+    setRequestStoreTexts(storeTextsOf(store));
+    return { kind: "ok", store };
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return { kind: "missing" };
     if (isStoreUnavailable(err)) {

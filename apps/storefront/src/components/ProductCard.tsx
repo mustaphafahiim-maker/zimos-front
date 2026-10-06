@@ -4,8 +4,8 @@ import { ConvertedPrice } from "./ConvertedPrice";
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
-import { useStore } from "@/lib/StoreContext";
-import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
+import { useDictionary, useStore } from "@/lib/StoreContext";
+import { dirFor, formatPrice, type Locale } from "@/lib/i18n";
 import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
@@ -24,7 +24,7 @@ export function ProductCard({
   /** Where the card is shown (e.g. cross_sell): carried to the product page for the add-to-cart event. */
   from?: string;
 }) {
-  const t = getDictionary(locale);
+  const t = useDictionary(locale);
   // The store's currency format (lib/moneyFormat), from the store context.
   const storeFormat = useStore().store?.currencyFormat ?? null;
   const price = priceOf(product);

@@ -17,6 +17,7 @@ import {
   type Dictionary,
   type Locale,
 } from "./i18n";
+import type { StoreTexts } from "./storeTexts";
 
 export interface StoreInfo {
   /** The route segment the store was reached by — its UUID or its slug. */
@@ -45,6 +46,8 @@ export interface StoreInfo {
   country?: string | null;
   /** The place codes the store does not deliver to (GET /store/:ws `hiddenPlaces`; lib/useShippingPlaces). */
   hiddenPlaces?: string[];
+  /** The merchant's own wording in this language (GET /store/:ws `storefrontTexts`; lib/storeTexts), laid over `t`. */
+  storefrontTexts?: StoreTexts;
 }
 
 export interface StoreContextValue {
@@ -61,7 +64,8 @@ function build(locale: Locale, store: StoreInfo | null): StoreContextValue {
     locale,
     dir: dirFor(locale),
     intlLocale: intlLocaleFor(locale),
-    t: getDictionary(locale),
+    // Client components never see the server's per-request texts, so the store's are passed in.
+    t: getDictionary(locale, store?.storefrontTexts ?? null),
     store,
     money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale, store?.currencyFormat ?? null),
   };
@@ -91,6 +95,15 @@ export function StoreContextProvider({
 export function useStore(): StoreContextValue {
   const ctx = useContext(StoreContext);
   return useMemo(() => ctx ?? build(DEFAULT_LOCALE, null), [ctx]);
+}
+
+/**
+ * The dictionary for a component handed its own `locale`: the store's, with the
+ * merchant's wording, inside a store; the plain one anywhere else.
+ */
+export function useDictionary(locale: Locale): Dictionary {
+  const ctx = useContext(StoreContext);
+  return ctx && ctx.locale === locale ? ctx.t : getDictionary(locale, ctx?.store?.storefrontTexts ?? null);
 }
 
 /**

@@ -23,6 +23,7 @@ import type { PreviewTheme } from "@/lib/previewBridge";
 import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 import { ThemeGallery } from "./ThemeGallery";
+import { StoreTextsLink } from "./StoreTextsLink";
 import { TEMPLATE_COLOR_SOURCE } from "./editor/storeLook";
 import { ORIGINAL_LOOK, readThemeChoice } from "./editor/storeThemes";
 
@@ -652,7 +653,7 @@ export function WebsitePage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title={t.title} description={t.description} tutorial="website" />
+      <PageHeader title={t.title} description={t.description} tutorial="website" actions={<StoreTextsLink />} />
 
       <ExistingSites />
 

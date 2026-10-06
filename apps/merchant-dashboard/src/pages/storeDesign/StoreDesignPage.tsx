@@ -11,7 +11,7 @@ import { PoliciesTab } from "./PoliciesTab";
 import { PagesTab } from "./PagesTab";
 import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
-import { CustomCodeTab } from "./CustomCodeTab";
+import { CustomCodeSection } from "./CustomCodeSection";
 import { DomainsTab } from "./DomainsTab";
 import { LanguagesTab } from "./LanguagesTab";
 
@@ -84,7 +84,7 @@ export function StoreDesignPage() {
       {active === "pages" && <PagesTab key={workspaceId} />}
       {active === "general" && <GeneralTab key={workspaceId} />}
       {active === "seo" && <SeoTab key={workspaceId} />}
-      {active === "custom-code" && <CustomCodeTab key={workspaceId} />}
+      {active === "custom-code" && <CustomCodeSection key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
         </div>

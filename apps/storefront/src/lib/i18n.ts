@@ -1,6 +1,7 @@
 import { formatWithFormat, isCustomFormat, requestMoneyFormat, type MoneyFormat } from "./moneyFormat";
 import { formatMoney } from "@store-builder/api-client";
 import { fr } from "./i18nFr";
+import { requestStoreTexts, withStoreTexts, type StoreTexts } from "./storeTexts";
 
 /**
  * Storefront UI strings. Every customer-facing label lives here, in both
@@ -1135,7 +1136,13 @@ const ar: Dictionary = {
 
 const DICTIONARIES: Record<Locale, Dictionary> = { ar, en, fr };
 
-/** Works anywhere — server components, client components, plain modules. */
-export function getDictionary(locale: Locale): Dictionary {
-  return DICTIONARIES[locale] ?? DICTIONARIES[DEFAULT_LOCALE];
+/**
+ * Works anywhere — server components, client components, plain modules. The
+ * merchant's own wording (Website → Store texts, lib/storeTexts.ts) is laid
+ * over it: on the server from the request's store, in client components from
+ * `texts` (StoreContext passes the store's).
+ */
+export function getDictionary(locale: Locale, texts: StoreTexts | null = requestStoreTexts()): Dictionary {
+  const dict = DICTIONARIES[locale] ?? DICTIONARIES[DEFAULT_LOCALE];
+  return withStoreTexts(dict, texts, DICTIONARIES[locale] ? locale : DEFAULT_LOCALE);
 }

@@ -17,6 +17,7 @@ import { FunnelCode } from "@/components/funnel/FunnelCode";
 import { PageRenderer } from "@/components/page-renderer";
 import { FunnelSessionProvider } from "@/lib/funnelSessionContext";
 import { PageScripts } from "@/components/PageScripts";
+import { StorePageMark } from "@/components/StorePageMark";
 import { scriptsOf } from "@/lib/pageScripts";
 import { funnelErrorKind, type FunnelErrorKind } from "@/lib/funnelErrors";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
@@ -160,6 +161,8 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
         <FunnelCurrencyProvider currency={currency}>
           <FunnelOrders workspaceId={workspaceId} sessionId={sessionId} orderId={session.orderId} standalone />
         </FunnelCurrencyProvider>
+        {/* The journey's end: store scripts for thank-you pages run here too (components/StoreScripts.tsx). */}
+        <StorePageMark type="thank_you" />
       </main>
     );
   }
@@ -223,6 +226,8 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
         </StepTransition>
       </FunnelCurrencyProvider>
       <PageScripts scripts={scriptsOf(step)} />
+      {/* A thank-you step, or the journey's end: store scripts for thank-you pages run here too. */}
+      {(done || step.stepType === "thank_you") && <StorePageMark type="thank_you" />}
     </main>
   );
 }

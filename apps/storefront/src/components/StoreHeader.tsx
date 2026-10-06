@@ -5,7 +5,8 @@ import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-cl
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { brandingRemoved } from "@/components/PoweredByZimos";
-import { getDictionary, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import { useDictionary } from "@/lib/StoreContext";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { resolveShellLinks, type LogoSize, type ResolvedShellLink } from "@/lib/storeShell";
 import { AnnouncementBar } from "./AnnouncementBar";
@@ -65,7 +66,7 @@ const NAV_LINK =
   "zt-nav-link hidden min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary group-data-[overlay]/header:text-white group-data-[overlay]/header:hover:bg-white/10 group-data-[overlay]/header:hover:text-white";
 
 export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: Locale }) {
-  const t = getDictionary(locale);
+  const t = useDictionary(locale);
   const { header, announcement } = useStoreShell(store);
   const size = header.logoSize;
   const centred = header.logoAlign === "center";
