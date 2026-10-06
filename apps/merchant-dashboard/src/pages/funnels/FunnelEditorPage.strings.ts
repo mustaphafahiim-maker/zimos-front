@@ -192,6 +192,10 @@ export const STATUS_STRINGS = {
 export const PAGE_STRINGS = {
   en: {
     step: "Step",
+    previousPage: "Previous page: {name}",
+    nextPage: "Next page: {name}",
+    firstPage: "This is the first page",
+    lastPage: "This is the last page",
     backToFlow: "Back to flow",
     pageOf: "Page of “{name}”",
     pageHint: "Drag sections to reorder, click one to edit it. Saved with the rest of the funnel.",
@@ -205,6 +209,7 @@ export const PAGE_STRINGS = {
     previewHint: "Rendered by your storefront, unsaved changes included, inside your store's header and footer. Customers can't see this.",
     refresh: "Refresh preview",
     desktop: "Desktop width",
+    tablet: "Tablet width",
     mobile: "Mobile width",
     close: "Close preview",
     frameTitle: "Funnel step preview",
@@ -216,6 +221,10 @@ export const PAGE_STRINGS = {
   },
   ar: {
     step: "الخطوة",
+    previousPage: "الصفحة السابقة: {name}",
+    nextPage: "الصفحة التالية: {name}",
+    firstPage: "هذه أول صفحة",
+    lastPage: "هذه آخر صفحة",
     backToFlow: "العودة إلى المسار",
     pageOf: "صفحة «{name}»",
     pageHint: "اسحب الأقسام لترتيبها، وانقر قسمًا لتعديله. يُحفظ مع باقي المسار.",
@@ -229,6 +238,7 @@ export const PAGE_STRINGS = {
     previewHint: "يرسمها متجرك نفسه، بالتعديلات التي لم تُحفظ بعد، داخل ترويسة المتجر وتذييله. لا يراها العملاء.",
     refresh: "تحديث المعاينة",
     desktop: "عرض الكمبيوتر",
+    tablet: "عرض التابلت",
     mobile: "عرض الهاتف",
     close: "إغلاق المعاينة",
     frameTitle: "معاينة خطوة المسار",

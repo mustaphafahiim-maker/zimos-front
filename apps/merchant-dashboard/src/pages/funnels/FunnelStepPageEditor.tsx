@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Eye, PackageCheck, Redo2, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, PackageCheck, Redo2, Undo2 } from "lucide-react";
 import { Button } from "@store-builder/ui";
 import type { PageSection, PageTree } from "@store-builder/api-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -131,6 +131,10 @@ export function FunnelStepPageEditor({
   }
 
   const sections = step.tree.sections;
+  // The funnel's pages in its own order (the page list's), for the previous / next buttons.
+  const stepIndex = steps.findIndex((s) => s.key === step.key);
+  const previousStep = stepIndex > 0 ? steps[stepIndex - 1] : null;
+  const nextStep = stepIndex >= 0 && stepIndex < steps.length - 1 ? steps[stepIndex + 1] : null;
   const selected = sections.find((s) => s.id === selectedId) ?? null;
 
   const { change } = history;
@@ -250,17 +254,39 @@ export function FunnelStepPageEditor({
         <main className="min-w-0 flex-1 bg-paper p-4 md:p-6 lg:overflow-y-auto">
           <div className="mx-auto max-w-2xl">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-0 flex-1 space-y-1">
+              <div className="min-w-72 flex-1 space-y-1">
                 <label htmlFor="page-step" className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
                   {t.step}
                 </label>
-                <Select id="page-step" value={step.key} onChange={(e) => onSelectStep(e.target.value)} className="h-9 max-w-sm" dir="auto">
-                  {steps.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.name} · {STEP_TYPE_LABELS[locale][s.type]}
-                    </option>
-                  ))}
-                </Select>
+                <div className="flex max-w-sm items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={previousStep ? fmt(t.previousPage, { name: previousStep.name }) : t.firstPage}
+                    title={previousStep ? fmt(t.previousPage, { name: previousStep.name }) : t.firstPage}
+                    disabled={!previousStep}
+                    onClick={() => previousStep && onSelectStep(previousStep.key)}
+                  >
+                    <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
+                  </Button>
+                  <Select id="page-step" value={step.key} onChange={(e) => onSelectStep(e.target.value)} className="h-9 min-w-0 flex-1" dir="auto">
+                    {steps.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.name} · {STEP_TYPE_LABELS[locale][s.type]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={nextStep ? fmt(t.nextPage, { name: nextStep.name }) : t.lastPage}
+                    title={nextStep ? fmt(t.nextPage, { name: nextStep.name }) : t.lastPage}
+                    disabled={!nextStep}
+                    onClick={() => nextStep && onSelectStep(nextStep.key)}
+                  >
+                    <ChevronRight className="size-4 rtl:-scale-x-100" aria-hidden />
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button size="icon" variant="ghost" aria-label={ui.undo} title={`${ui.undo} (Ctrl+Z)`} disabled={!history.canUndo} onClick={history.undo}>
@@ -353,6 +379,7 @@ export function FunnelStepPageEditor({
               hint: t.previewHint,
               refresh: t.refresh,
               desktop: t.desktop,
+              tablet: t.tablet,
               mobile: t.mobile,
               close: t.close,
               frameTitle: t.frameTitle,
