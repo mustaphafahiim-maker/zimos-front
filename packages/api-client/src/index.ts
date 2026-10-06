@@ -256,3 +256,5 @@ export * from "./endpoints/emailSendingDomain";
 export * from "./endpoints/orderEmailDesign";
 // The checkout's place pickers: the store's own regions → cities → areas, and the quote by place (handoff 163/164).
 export * from "./endpoints/storefrontPlaces";
+// Product links from AliExpress, Etsy, CJ and YouCan beside Shopify: sources, kinds, the page price (handoff 180).
+export * from "./endpoints/productLinkImport";
