@@ -278,3 +278,5 @@ export * from "./endpoints/displayRules";
 export * from "./endpoints/wishlist";
 // Back-in-stock alerts: a shopper signs up on a sold-out variant; the merchant sees who waits (stockAlerts/, handoff 194).
 export * from "./endpoints/stockAlerts";
+// Store blog: posts as blocks, categories, the posts index and the home page's latest posts (modules/blog, handoff 190).
+export * from "./endpoints/blog";

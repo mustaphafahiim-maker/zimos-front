@@ -172,6 +172,8 @@ const STRINGS = {
     // handoff 193/196/197
     WEBHOOK_ENDPOINT_LIMIT:
       "Your store already has 25 webhooks, the most it can hold — every Zapier or Make trigger is one. Remove one you no longer use, then try again.",
+    // handoff 190
+    SLUG_TAKEN: "This link is already used. Choose another one.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -317,6 +319,8 @@ const STRINGS = {
     NO_FILE: "اختار ملف الأول.",
     // handoff 193/196/197
     WEBHOOK_ENDPOINT_LIMIT: "متجرك فيه ٢٥ webhook، وده أقصى عدد — وكل حدث في زابير أو ميك بيبقى واحد منهم. امسح واحد مش بتستخدمه وجرّب تاني.",
+    // handoff 190
+    SLUG_TAKEN: "اللينك ده مستخدم قبل كده. اختار لينك تاني.",
   },
 } satisfies Messages;
 

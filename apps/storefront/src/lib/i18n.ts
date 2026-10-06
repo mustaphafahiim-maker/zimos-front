@@ -867,6 +867,24 @@ const en = {
     playSlideshow: "Play slideshow",
     goToSlide: (n: number) => `Go to slide ${n}`,
   },
+  /** The store's blog: index, category pages, a post, the home page's latest posts (handoff 190; components/blog). */
+  blog: {
+    title: "Blog",
+    metaDescription: (store: string) => `Tips, guides and news from ${store}.`,
+    allPosts: "All posts",
+    categories: "Categories",
+    readTime: (n: number) => `${n} min read`,
+    by: (name: string) => `By ${name}`,
+    relatedPosts: "Related posts",
+    fromOurBlog: "From our blog",
+    readMore: "Read more",
+    tags: "Tags",
+    tagged: (tag: string) => `Posts tagged “${tag}”`,
+    empty: "No posts yet — check back soon.",
+    emptyCategory: "No posts in this category yet.",
+    emptyTag: "No posts with this tag yet.",
+    backToBlog: "Back to the blog",
+  },
 };
 
 export type Dictionary = typeof en;
@@ -1636,6 +1654,24 @@ const ar: Dictionary = {
     pauseSlideshow: "وقّف العرض التلقائي",
     playSlideshow: "شغّل العرض التلقائي",
     goToSlide: (n) => `روح لشريحة ${arNum(n)}`,
+  },
+  blog: {
+    title: "المدونة",
+    metaDescription: (store) => `نصايح وطرق استخدام وأخبار من ${store}.`,
+    allPosts: "كل المقالات",
+    categories: "التصنيفات",
+    readTime: (n) =>
+      n === 1 ? "قراءة دقيقة" : n === 2 ? "قراءة دقيقتين" : n <= 10 ? `قراءة ${arNum(n)} دقايق` : `قراءة ${arNum(n)} دقيقة`,
+    by: (name) => `بقلم ${name}`,
+    relatedPosts: "مقالات ذات صلة",
+    fromOurBlog: "من مدونتنا",
+    readMore: "اقرأ أكتر",
+    tags: "الوسوم",
+    tagged: (tag) => `مقالات بوسم «${tag}»`,
+    empty: "لسه مفيش مقالات — تابعنا قريب.",
+    emptyCategory: "لسه مفيش مقالات في التصنيف ده.",
+    emptyTag: "لسه مفيش مقالات بالوسم ده.",
+    backToBlog: "ارجع للمدونة",
   },
 };
 

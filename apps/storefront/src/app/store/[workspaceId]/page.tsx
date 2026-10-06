@@ -18,6 +18,7 @@ import { getStoreMeta } from "@/lib/storeMeta";
 import { getStoreBasePath } from "@/lib/storeRoute";
 import { HtmlBlocksProvider } from "@/components/HtmlBlock";
 import { htmlBlocksOf } from "@/lib/htmlBlocks";
+import { LatestPosts } from "@/components/blog/LatestPosts";
 
 export const revalidate = 60;
 
@@ -196,6 +197,9 @@ export default async function StoreHomePage({
           </div>
         )}
       </section>
+
+      {/* The three newest blog posts, when the store has any (handoff 190). */}
+      <LatestPosts workspaceId={workspaceId} t={t} locale={locale} />
     </main>
   );
 }
