@@ -99,8 +99,14 @@ are listed under *Handoff items done*.
       chips, refresh, «اعمل مجموعة كل المنتجات» empty state, 409 toast)
 - [x] 166 funnel bulk (select, publish/pause/resume/duplicate/delete, ≤50,
       results dialog for failures)
-- [ ] 160 storefront texts · 161 store scripts · 165 checkout file + billing ·
-      167 Lead instead of Purchase · 168 Pinterest CAPI
+- [x] 160 store texts: Website → «نصوص المتجر» (/website/texts) — per-language
+      overrides, default shown per row, placeholders, search, changed-only,
+      one PUT; storefront merges them over its dictionary (server + client).
+- [x] 161 store scripts: Store settings → Custom code → «السكريبتات» — table /
+      phone cards, add/edit dialog (position, pages, code ≤50k), reorder,
+      toggle, delete; storefront injects by page type with the existing guards.
+- [ ] 165 checkout file + billing · 167 Lead instead of Purchase ·
+      168 Pinterest CAPI (agent running) · 163/164 storefront pickers
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
