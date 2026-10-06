@@ -25,6 +25,7 @@ import { VariantBulkEditor } from "./components/VariantBulkEditor";
 import { ProductTestSection } from "./components/ProductTestSection";
 import { isFromStoreProvider } from "@/pages/apps/dropshipStores";
 import { StoreSkuWarning } from "@/pages/apps/StoreSkuWarning";
+import { PreorderSection } from "./components/PreorderSection";
 
 const STRINGS = {
   en: {
@@ -121,6 +122,7 @@ export function ProductEditPage() {
               skuNote={skuNote}
               onChanged={reload}
             />
+            <PreorderSection productId={data.id} />
             <OffersSection
               productId={data.id}
               offers={data.offers ?? []}

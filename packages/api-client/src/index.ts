@@ -272,3 +272,5 @@ export * from "./endpoints/productLinkImport";
 export * from "./endpoints/contactImport";
 // Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
 export * from "./endpoints/shopperAccounts";
+// Pre-orders: sold-out variants keep selling up to a limit, with a ship date (handoff 195).
+export * from "./endpoints/preorders";

@@ -13,6 +13,7 @@ import { adMatchFields } from "./adMatch";
 import { clearPageTags, pageTagFields } from "./pageTags";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
+import { saveOrderBuyNotes } from "./buyInfo";
 import type { Dictionary, Locale } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
 import { storeHref } from "./storeHref";
@@ -86,6 +87,7 @@ export function afterOrder({
   phone: string;
 }): string {
   saveOrderSnapshot(workspaceId, snapshotFromOrder(order, phone));
+  saveOrderBuyNotes(workspaceId, order);
   const q = new URLSearchParams({ number: order.orderNumber });
   return storeHref(basePath, `/orders/${order.id}?${q.toString()}`);
 }

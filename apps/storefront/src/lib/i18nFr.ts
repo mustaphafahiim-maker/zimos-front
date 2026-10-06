@@ -261,6 +261,14 @@ export const fr: Dictionary = {
     searching: "Recherche…",
     filled: "Adresse remplie — vérifiez-la ci-dessous",
   },
+  // handoff 195/198/199
+  buyInfo: {
+    preorder: "Précommander",
+    shipsBy: (date) => `Expédié avant le ${date}`,
+    preorderNote: "Épuisé — commandez-le maintenant, il sera expédié dès son retour.",
+    preorderLine: (date) => `Précommande — expédiée avant le ${date}`,
+    preorderLineNoDate: "Précommande",
+  },
   checkoutBar: {
     label: "Récapitulatif de la commande",
     order: "Commander",

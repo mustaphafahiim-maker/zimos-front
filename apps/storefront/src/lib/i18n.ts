@@ -349,6 +349,14 @@ const en = {
     searching: "Searching…",
     filled: "Address filled in — check it below",
   },
+  // handoff 195/198/199: pre-orders, purchase limits, delivery dates.
+  buyInfo: {
+    preorder: "Pre-order",
+    shipsBy: (date: string) => `Ships by ${date}`,
+    preorderNote: "Sold out — order it now and it ships as soon as it's back.",
+    preorderLine: (date: string) => `Pre-order — ships by ${date}`,
+    preorderLineNoDate: "Pre-order",
+  },
   /** The phone checkout's bottom bar: the total and the order button, always in reach. */
   checkoutBar: {
     label: "Order summary",
@@ -1093,6 +1101,14 @@ const ar: Dictionary = {
     pickFailed: "معرفناش نستخدم العنوان ده — اكتبه تحت",
     searching: "بندوّر…",
     filled: "العنوان اتملى — راجعه تحت",
+  },
+  // handoff 195/198/199
+  buyInfo: {
+    preorder: "اطلبه مسبقًا",
+    shipsBy: (date) => `هيتشحن قبل ${date}`,
+    preorderNote: "الكمية خلصت — اطلبه دلوقتي ويتشحن لك أول ما يوصل.",
+    preorderLine: (date) => `طلب مسبق — هيتشحن قبل ${date}`,
+    preorderLineNoDate: "طلب مسبق",
   },
   checkoutBar: {
     label: "ملخص الطلب",
