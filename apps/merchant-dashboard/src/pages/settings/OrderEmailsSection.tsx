@@ -1,14 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Alert, Button, cn } from "@store-builder/ui";
-import {
-  orderEmailsList,
-  orderEmailsPreview,
-  orderEmailsSendTest,
-  orderEmailsUpdate,
-  type OrderEmailKey,
-  type OrderEmailPreview,
-  type OrderEmailTemplateDto,
-} from "@store-builder/api-client";
+import { orderEmailDesignList, orderEmailDesignSave, type OrderEmailDesignTemplate, type OrderEmailKey } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -16,12 +8,10 @@ import { isPermissionError } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { Modal } from "@/components/Modal";
-import { Field, TextField } from "@/components/Field";
-import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { OrderEmailSender } from "./OrderEmailSender";
 import { SendingDomainSection } from "./SendingDomainSection";
+import { OrderEmailEditor } from "./OrderEmailEditor";
 
 /**
  * Settings → "Order emails" (SPEC §14.5): the emails customers get about
@@ -56,19 +46,8 @@ const STRINGS = {
     switchLabel: "Send “{name}”",
     edit: "Edit",
     edited: "Edited",
+    designed: "Designed",
     editTitle: "Edit “{name}”",
-    subject: "Subject",
-    body: "Message",
-    tokens: "Insert a detail:",
-    preview: "Preview with a sample order",
-    previewFrame: "Email preview",
-    restore: "Use the built-in text",
-    sendTest: "Send me a test",
-    testSent: "Test sent to {to}.",
-    testFailed: "The test could not be sent: {error}",
-    save: "Save",
-    saving: "Saving…",
-    cancel: "Cancel",
     saved: "Email saved.",
     enabled: "“{name}” is now sent to customers.",
     disabled: "“{name}” is switched off.",
@@ -98,19 +77,8 @@ const STRINGS = {
     switchLabel: "إرسال «{name}»",
     edit: "تعديل",
     edited: "معدّلة",
+    designed: "متصممة",
     editTitle: "تعديل «{name}»",
-    subject: "العنوان",
-    body: "نص الرسالة",
-    tokens: "أدرج بيانًا:",
-    preview: "معاينة على طلب تجريبي",
-    previewFrame: "معاينة الرسالة",
-    restore: "استخدام النص الأصلي",
-    sendTest: "أرسل لي رسالة تجريبية",
-    testSent: "تم إرسال الرسالة التجريبية إلى {to}.",
-    testFailed: "تعذّر إرسال الرسالة التجريبية: {error}",
-    save: "حفظ",
-    saving: "جارٍ الحفظ…",
-    cancel: "إلغاء",
     saved: "تم حفظ الرسالة.",
     enabled: "«{name}» تُرسل الآن للعملاء.",
     disabled: "تم إيقاف «{name}».",
@@ -126,17 +94,17 @@ export function OrderEmailsSection() {
   const toast = useToast();
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
-  const { data, error, loading, refresh, setData } = useAsync(() => orderEmailsList(apiClient, workspaceId), [workspaceId]);
+  const { data, error, loading, refresh, setData } = useAsync(() => orderEmailDesignList(apiClient, workspaceId), [workspaceId]);
   const [toggling, setToggling] = useState<string | null>(null);
-  const [editing, setEditing] = useState<OrderEmailTemplateDto | null>(null);
+  const [editing, setEditing] = useState<OrderEmailDesignTemplate | null>(null);
 
-  const replace = (template: OrderEmailTemplateDto) =>
+  const replace = (template: OrderEmailDesignTemplate) =>
     setData((prev) => (prev ? { ...prev, templates: prev.templates.map((x) => (x.key === template.key ? template : x)) } : (prev as never)));
 
-  async function toggle(template: OrderEmailTemplateDto) {
+  async function toggle(template: OrderEmailDesignTemplate) {
     setToggling(template.key);
     try {
-      const updated = await orderEmailsUpdate(apiClient, workspaceId, template.key, { isEnabled: !template.isEnabled });
+      const updated = await orderEmailDesignSave(apiClient, workspaceId, template.key, { isEnabled: !template.isEnabled });
       replace(updated);
       toast.success(fmt(updated.isEnabled ? t.enabled : t.disabled, { name: nameOf(t, template.key) }));
     } catch (err) {
@@ -168,7 +136,7 @@ export function OrderEmailsSection() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-ink">
                         {name}
-                        {template.isCustomised && <span className="ms-2 rounded-full bg-paper px-2 py-0.5 text-xs font-normal text-ink-soft">{t.edited}</span>}
+                        {template.isCustomised && <span className="ms-2 rounded-full bg-paper px-2 py-0.5 text-xs font-normal text-ink-soft">{template.blocks?.length ? t.designed : t.edited}</span>}
                       </p>
                       <p className="text-xs text-ink-soft">{whenOf(t, template.key)}</p>
                     </div>
@@ -206,9 +174,10 @@ export function OrderEmailsSection() {
       </div>
 
       {editing && data && (
-        <EmailEditor
+        <OrderEmailEditor
           key={editing.key}
-          t={t}
+          layout="modal"
+          title={fmt(t.editTitle, { name: nameOf(t, editing.key) })}
           template={editing}
           tokens={data.tokens}
           onClose={() => setEditing(null)}
@@ -223,154 +192,3 @@ export function OrderEmailsSection() {
   );
 }
 
-function EmailEditor({
-  t,
-  template,
-  tokens,
-  onClose,
-  onSaved,
-}: {
-  t: T;
-  template: OrderEmailTemplateDto;
-  tokens: string[];
-  onClose: () => void;
-  onSaved: (template: OrderEmailTemplateDto) => void;
-}) {
-  const toast = useToast();
-  const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
-  const [subject, setSubject] = useState(template.subject);
-  const [body, setBody] = useState(template.body);
-  const [preview, setPreview] = useState<OrderEmailPreview | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const focused = useRef<"subject" | "body">("body");
-  const name = nameOf(t, template.key);
-
-  // The preview follows the text, a moment after the merchant stops typing.
-  useEffect(() => {
-    let stale = false;
-    const id = window.setTimeout(async () => {
-      try {
-        const result = await orderEmailsPreview(apiClient, workspaceId, template.key, { subject, body });
-        if (!stale) setPreview(result);
-      } catch {
-        /* the preview is a convenience; saving reports real errors */
-      }
-    }, 400);
-    return () => {
-      stale = true;
-      window.clearTimeout(id);
-    };
-  }, [workspaceId, template.key, subject, body]);
-
-  const insert = (token: string) => {
-    const text = `{{${token}}}`;
-    if (focused.current === "subject") setSubject((v) => `${v}${text}`);
-    else setBody((v) => `${v}${text}`);
-  };
-
-  async function save() {
-    if (!subject.trim() || !body.trim()) return;
-    setSaving(true);
-    setFormError(null);
-    try {
-      onSaved(await orderEmailsUpdate(apiClient, workspaceId, template.key, { subject: subject.trim(), body: body.trim() }));
-    } catch (err) {
-      setFormError(errorMessage(err));
-      setSaving(false);
-    }
-  }
-
-  async function sendTest() {
-    setTesting(true);
-    try {
-      const result = await orderEmailsSendTest(apiClient, workspaceId, template.key, { subject: subject.trim(), body: body.trim() });
-      if (result.ok) toast.success(fmt(t.testSent, { to: result.to }));
-      else toast.error(fmt(t.testFailed, { error: result.error ?? "" }));
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  const isDefault = subject === template.defaults.subject && body === template.defaults.body;
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={fmt(t.editTitle, { name })}
-      className="max-w-3xl"
-      footer={
-        <>
-          <Button variant="ghost" onClick={() => void sendTest()} disabled={testing || saving || !subject.trim() || !body.trim()}>
-            {t.sendTest}
-          </Button>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            {t.cancel}
-          </Button>
-          <Button onClick={() => void save()} disabled={saving || !subject.trim() || !body.trim()}>
-            {saving ? t.saving : t.save}
-          </Button>
-        </>
-      }
-    >
-      <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-4">
-          {formError && <Alert variant="danger">{formError}</Alert>}
-          <TextField label={t.subject} dir="auto" maxLength={200} value={subject} onFocus={() => (focused.current = "subject")} onChange={(e) => setSubject(e.target.value)} />
-          <Field label={t.body}>
-            {({ id }) => (
-              <Textarea id={id} dir="auto" rows={10} maxLength={10000} value={body} onFocus={() => (focused.current = "body")} onChange={(e) => setBody(e.target.value)} />
-            )}
-          </Field>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-ink-soft">{t.tokens}</span>
-            {tokens.map((token) => (
-              <button
-                key={token}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insert(token)}
-                className="cursor-pointer rounded-full border border-line bg-paper px-2 py-0.5 font-mono text-ink-soft hover:border-primary hover:text-primary"
-              >
-                {token}
-              </button>
-            ))}
-          </div>
-          {!isDefault && (
-            <button
-              type="button"
-              onClick={() => {
-                setSubject(template.defaults.subject);
-                setBody(template.defaults.body);
-              }}
-              className="cursor-pointer text-xs text-primary hover:underline"
-            >
-              {t.restore}
-            </button>
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <p className="mb-1.5 text-sm font-medium text-ink">{t.preview}</p>
-          {preview && (
-            <p className="mb-2 truncate rounded bg-paper px-2 py-1 text-xs text-ink" dir="auto">
-              {preview.subject}
-            </p>
-          )}
-          {/* sandbox with no allowances: the email's HTML can neither run scripts nor reach the dashboard. */}
-          <iframe
-            title={t.previewFrame}
-            sandbox=""
-            srcDoc={preview ? `<!doctype html><html><body style="margin:12px;background:#fff">${preview.html}</body></html>` : ""}
-            className="h-80 w-full rounded-[0.5rem] border border-line bg-white"
-          />
-        </div>
-      </div>
-    </Modal>
-  );
-}

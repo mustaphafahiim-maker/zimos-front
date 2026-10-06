@@ -232,3 +232,5 @@ export * from "./endpoints/storefrontTexts";
 export * from "./endpoints/storeScripts";
 // Sending domain: customer emails from the store's own domain once its DNS records verify (emailDomains/sendingDomain.js).
 export * from "./endpoints/emailSendingDomain";
+// Order email designer: blocks instead of the plain body, previewed and saved per template (notifications/emailBlocks.js).
+export * from "./endpoints/orderEmailDesign";
