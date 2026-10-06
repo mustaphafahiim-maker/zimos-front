@@ -350,8 +350,8 @@ are listed under *Handoff items done*.
       with events and the order, «إعدادات الكوكيز» in both footers, events
       fired before pixels mount are replayed after accept. Open: the
       product page's phone buy bar now gets room too (the banner lifts above
-      it while the bar shows) — typechecked; the browser check waits until
-      the demo store is open again (the 197 agent is testing its gate).
+      it while the bar shows) — checked: banner ends at 772 px, bar starts
+      at 775 px on a 390 phone.
 - [x] 192 Template marketplace: /funnels/marketplace «القوالب» (search, kind,
       order, language, preview per page at phone / computer width, «استخدم
       القالب ده») and «قوالبك» (review status, reviewer's note, edit,
@@ -364,9 +364,14 @@ are listed under *Handoff items done*.
       النشر» and the imported review count; LINK_* refusal codes mapped (the
       text matching stays only for older answers). 200 (email campaigns) was
       withdrawn by the backend; nothing had been built for it.
-- [ ] 197 — interrupted by a
-      container restart (out of memory); WIP saved on the agents' branches,
-      being finished three at a time.
+- [x] 197 Store access: Store settings → «دخول المتجر» (open / password /
+      coming soon with date and sign-ups, lock funnels too, age check 13–25,
+      «العميل هيشوف إيه» with preview links, confirm before locking,
+      sign-ups list + CSV); storefront password page (30-day unlock
+      cookie), coming-soon page with countdown and sign-up, age question
+      over the store; track / orders / pay / preview routes stay open.
+      X-Store-Gate CORS is done on the backend; one nice-to-have request
+      (lockFunnels in the public gate view).
 
 ## Round 3 (in progress)
 - [x] W3-1 Wording pass 3: ~250 «جارٍ …» busy labels → Egyptian present
