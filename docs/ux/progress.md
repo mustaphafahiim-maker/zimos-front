@@ -193,6 +193,17 @@ are listed under *Handoff items done*.
       region → city → area and re-quotes shipping, then the street or focus;
       dashboard Shipping → المناطق card «اقتراحات العنوان في صفحة الدفع»
       (off / places list / Google with key). Store left on the places list.
+- [x] 186 Shopper returns: dashboard /returns settings card (switch, days,
+      photo-required reasons) folding to one line; «من العميل» badge and
+      photo thumbnails (large view) on the returns list and order page;
+      storefront tracking page «ارجع منتجات» with the deadline, past
+      requests, form (quantities, reason, details, up to 4 photos), shopper
+      copy in ar/en/fr. Reusable <ShopperReturns> for the account order
+      page. Signed-in variant blocked by CORS (backend request added).
+- [x] Backend answers to our 4 requests: bought-but-not-connected domain
+      notice, «جهزناه لك» for a managed www, renew dialog with a price
+      quote for 1–10 years and price-change re-confirm, funnel/website
+      plain-text email overrides that stay plain (row chip «نص بسيط»).
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
