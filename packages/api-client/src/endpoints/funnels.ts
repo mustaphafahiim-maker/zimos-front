@@ -143,6 +143,8 @@ export interface FunnelStepCreatePayload {
 }
 
 export interface FunnelStepUpdatePayload {
+  /** Only a generic page's (a custom step no edge touches): 409 FUNNEL_STEP_KEY_LOCKED otherwise. Old keys keep opening it. */
+  key?: string;
   stepType?: FunnelStepTypeDto;
   name?: string;
   builderData?: unknown;

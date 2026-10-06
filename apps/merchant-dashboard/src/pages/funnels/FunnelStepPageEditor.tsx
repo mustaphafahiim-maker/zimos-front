@@ -36,6 +36,7 @@ import { stepEdit } from "@/lib/canvasDrag";
 import { PageSettingsButton } from "../website/editor/PageSettingsDialog";
 import { PAGE_STRINGS, STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
 import type { UiStep } from "./funnelAdapter";
+import { StepDetailsForm } from "./StepDetailsForm";
 
 /**
  * The page view of one funnel step: the website editor's block library,
@@ -96,6 +97,7 @@ export function FunnelStepPageEditor({
   onSeoChange,
   onBack,
   funnelId,
+  details,
 }: {
   workspaceId: string;
   steps: UiStep[];
@@ -109,6 +111,13 @@ export function FunnelStepPageEditor({
   onBack: () => void;
   /** The funnel: its own saved sections in the library, and saving one for it only. */
   funnelId?: string;
+  /** Page settings → Details (StepDetailsForm): the title, and a generic page's address. */
+  details?: {
+    generic: boolean;
+    taken: string[];
+    pathOf: (key: string) => string;
+    onApply: (changes: { name: string; key: string }) => void;
+  };
 }) {
   const t = useT(PAGE_STRINGS);
   const { locale } = useLocale();
@@ -302,7 +311,26 @@ export function FunnelStepPageEditor({
                   {t.backToFlow}
                 </Button>
                 {onSeoChange && (
-                  <PageSettingsButton key={step.key} name={step.name} seo={step.seo} scripts={{ kind: "step", id: step.id }} onSaveSeo={onSeoChange} />
+                  <PageSettingsButton
+                    key={step.key}
+                    name={step.name}
+                    seo={step.seo}
+                    scripts={{ kind: "step", id: step.id }}
+                    onSaveSeo={onSeoChange}
+                    details={
+                      details && (
+                        <StepDetailsForm
+                          name={step.name}
+                          stepKey={step.key}
+                          type={step.type}
+                          generic={details.generic}
+                          taken={details.taken.filter((k) => k !== step.key)}
+                          pathOf={details.pathOf}
+                          onApply={details.onApply}
+                        />
+                      )
+                    }
+                  />
                 )}
                 <Button variant={previewOpen ? "secondary" : "outline"} aria-pressed={previewOpen} onClick={() => setPreviewOpen((o) => !o)}>
                   <Eye className="size-4" aria-hidden /> {t.preview}

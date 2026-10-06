@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ApiError, funnelGenericPageGet, type FunnelGenericPage } from "@store-builder/api-client";
 import { FunnelCode } from "@/components/funnel/FunnelCode";
 import { FunnelCurrencyProvider } from "@/components/funnel/FunnelCurrency";
@@ -15,6 +15,8 @@ import { scriptsOf } from "@/lib/pageScripts";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { storeHref } from "@/lib/storeHref";
+import { getStoreBasePath } from "@/lib/storeRoute";
 
 type Params = Promise<{ workspaceId: string; ref: string; key: string }>;
 
@@ -63,6 +65,10 @@ export default async function FunnelGenericPageView({ params }: { params: Params
   const { workspaceId, ref, key } = await params;
   const [store, data] = await Promise.all([getStoreMeta(workspaceId), loadPage(workspaceId, ref, key)]);
   if (!store || !data) notFound();
+  // The page was renamed: its old address answers with the page, and visitors go on to the new one.
+  if (data.step.key !== key) {
+    permanentRedirect(storeHref(await getStoreBasePath(workspaceId), `/f/${encodeURIComponent(ref)}/p/${encodeURIComponent(data.step.key)}`));
+  }
 
   const locale = await getStoreLocale(store);
   const text = pickText(TEXT, locale);

@@ -125,7 +125,7 @@ import {
 import { pageElementCount } from "./funnelPages";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
 import { GenericPagesPanel } from "./GenericPagesPanel";
-import { flowSteps, genericPageTree, isGenericStep, type GenericPreset } from "./genericPageRules";
+import { flowSteps, genericPagePath, genericPageTree, isGenericStep, type GenericPreset } from "./genericPageRules";
 import { StepChain } from "./StepChain";
 import { StepStatsLine, StepThumbnail, useFlowZoom, useStepStats } from "./FlowMapTools";
 import { LinkPoints, linkPoint, linkPointsOf, pointOfEdge, pointY, useLinkLabels, type LinkDrag, type LinkPoint } from "./FlowLinkPoints";
@@ -757,6 +757,16 @@ export function FunnelEditorPage() {
             onSeoChange={(seo) => updateStep(pageStep.key, { seo })}
             onBack={() => setView("flow")}
             funnelId={funnelId}
+            details={{
+              generic: isGenericStep(pageStep, funnel.edges),
+              // The step may go back to the key it is saved under.
+              taken: takenKeys(funnel).filter((k) => k !== baseline?.steps.find((s) => s.id && s.id === pageStep.id)?.key),
+              pathOf: (key) => genericPagePath(funnel, key),
+              onApply: ({ name, key }) => {
+                updateStep(pageStep.key, { name, key });
+                if (key !== pageStep.key) setSelectedKey(key);
+              },
+            }}
           />
         ) : (
           <p className="px-6 py-10 text-center text-sm text-ink-soft">{PAGE_STRINGS[locale].noSteps}</p>

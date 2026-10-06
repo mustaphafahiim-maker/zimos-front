@@ -276,6 +276,8 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (!before) return;
     const patch: FunnelStepUpdatePayload = {};
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
+    // A generic page's new address (page settings → Details).
+    if (s.key !== before.key) patch.key = s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
     // A step that stops having an order form loses its bump on the server by itself.
@@ -566,6 +568,7 @@ const ERROR_STRINGS = {
     suspended: "This store has been suspended by Zimos, so new funnels can't be created. Contact Zimos support.",
     notPublished: "Publish this funnel before pausing or resuming it.",
     keyTaken: "A step with this key already exists in the funnel. Reload and try again.",
+    keyLocked: "This page's address can't change: it is on the funnel map, or it has a split test.",
   },
   ar: {
     permission: "ليست لديك صلاحية لإدارة مسارات البيع أو نشرها. اطلب من مالك مساحة العمل تحديث دورك.",
@@ -574,6 +577,7 @@ const ERROR_STRINGS = {
     suspended: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء مسارات بيع جديدة. تواصل مع دعم Zimos.",
     notPublished: "انشر مسار البيع أولًا قبل إيقافه مؤقتًا أو استئنافه.",
     keyTaken: "توجد خطوة بنفس المعرّف في مسار البيع. أعد التحميل وحاول مرة أخرى.",
+    keyLocked: "عنوان الصفحة دي مينفعش يتغيّر: هي على خريطة الفانل، أو عليها اختبار A/B.",
   },
 } satisfies Messages;
 
@@ -596,6 +600,7 @@ export function useFunnelErrorMessage(): (err: unknown) => string {
       if (err.status === 403) return t.permission;
       if (err.code === "FUNNEL_NOT_PUBLISHED") return t.notPublished;
       if (err.code === "FUNNEL_STEP_KEY_TAKEN") return t.keyTaken;
+      if (err.code === "FUNNEL_STEP_KEY_LOCKED") return t.keyLocked;
     }
     return getErrorMessage(err);
   };

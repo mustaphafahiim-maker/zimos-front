@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Settings2 } from "lucide-react";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { ApiError, pageScriptsGet, pageScriptsSave, type PageScriptKind } from "@store-builder/api-client";
@@ -15,6 +15,7 @@ const STRINGS = {
   en: {
     title: "Page settings — {name}",
     tabs: "Page settings sections",
+    details: "Details",
     seo: "SEO",
     scripts: "Scripts",
     seoTitle: "Title in search results",
@@ -44,6 +45,7 @@ const STRINGS = {
   ar: {
     title: "إعدادات الصفحة — {name}",
     tabs: "أقسام إعدادات الصفحة",
+    details: "التفاصيل",
     seo: "SEO",
     scripts: "السكربتات",
     seoTitle: "العنوان في نتائج البحث",
@@ -72,7 +74,7 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-type Tab = "seo" | "scripts";
+type Tab = "details" | "seo" | "scripts";
 
 /** The builder toolbar's "Page settings" button and its dialog. */
 export function PageSettingsButton({
@@ -81,6 +83,7 @@ export function PageSettingsButton({
   onSaveSeo,
   scripts,
   compact = false,
+  details,
 }: {
   name: string;
   seo: Record<string, unknown>;
@@ -88,6 +91,8 @@ export function PageSettingsButton({
   scripts: { kind: PageScriptKind; id: string | null };
   /** Icon only (the website editor's toolbar). */
   compact?: boolean;
+  /** The Details tab (the page's title and address), shown first when given. */
+  details?: ReactNode;
 }) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
@@ -112,6 +117,7 @@ export function PageSettingsButton({
           seoHint={scripts.kind === "page" ? t.hintPage : t.hintStep}
           onSaveSeo={onSaveSeo}
           scripts={scripts}
+          details={details}
           onClose={() => setOpen(false)}
         />
       )}
@@ -121,7 +127,8 @@ export function PageSettingsButton({
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
 /**
- * A page's settings in the builder (SPEC §9.3): the SEO tab (title,
+ * A page's settings in the builder (SPEC §9.3): the Details tab when the
+ * page passes one (a funnel step's title and address), the SEO tab (title,
  * description, sharing image, and for website pages "hide from search
  * engines") and the Scripts tab (code in <head> and before </body>, kept
  * outside the page tree under the store's custom-code rules).
@@ -137,10 +144,12 @@ export function PageSettingsDialog({
   seoHint,
   onSaveSeo,
   scripts,
+  details,
   onClose,
 }: {
   name: string;
   seo: Record<string, unknown>;
+  details?: ReactNode;
   showNoindex: boolean;
   /** Where the SEO goes: "live with your next Publish" / "saved with the funnel". */
   seoHint: string;
@@ -149,12 +158,19 @@ export function PageSettingsDialog({
   onClose: () => void;
 }) {
   const t = useT(STRINGS);
-  const [tab, setTab] = useState<Tab>("seo");
+  const [tab, setTab] = useState<Tab>(details ? "details" : "seo");
+  const tabs = [
+    ...(details ? [{ value: "details" as const, label: t.details }] : []),
+    { value: "seo" as const, label: t.seo },
+    { value: "scripts" as const, label: t.scripts },
+  ];
   return (
     <Modal open onClose={onClose} title={fmt(t.title, { name })} footer={<Button variant="outline" onClick={onClose}>{t.close}</Button>}>
       <div className="space-y-4">
-        <FilterTabs label={t.tabs} value={tab} onChange={setTab} tabs={[{ value: "seo", label: t.seo }, { value: "scripts", label: t.scripts }]} />
-        {tab === "seo" ? (
+        <FilterTabs label={t.tabs} value={tab} onChange={setTab} tabs={tabs} />
+        {tab === "details" ? (
+          details
+        ) : tab === "seo" ? (
           <SeoForm seo={seo} showNoindex={showNoindex} hint={seoHint} onSave={onSaveSeo} />
         ) : (
           <ScriptsForm kind={scripts.kind} id={scripts.id} />
