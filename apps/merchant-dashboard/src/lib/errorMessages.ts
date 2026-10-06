@@ -160,6 +160,15 @@ const STRINGS = {
     // backend requests 2026-10-06
     DOMAIN_CONNECT_FAILED:
       "The domain was bought, but it couldn't be connected to your store yet. Our support team will finish connecting it — you don't need to buy it again.",
+    // handoff 180/187
+    IMPORT_SOURCE_UNREACHABLE:
+      "We couldn't read the product from that page — it may be private, blocked or too slow. Check the link and try again, or download the product as a sheet and import the file.",
+    IMPORT_SOURCE_NO_PRODUCT_DATA: "That page does not publish its product details. Download them as a sheet and import the file instead.",
+    IMPORT_LINK_NOT_HTTPS: "The link must start with https:// — copy it again from the browser's address bar.",
+    IMPORT_LINK_NOT_PRODUCT: "That isn't a product link we can read. Paste a product page link from Shopify, AliExpress, Etsy, CJ or YouCan.",
+    INVALID_FILE: "We couldn't read this file. Check its type and try again.",
+    FILE_TOO_LARGE: "The file is too large. Choose a smaller one.",
+    NO_FILE: "Choose a file first.",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -294,6 +303,15 @@ const STRINGS = {
       "{name} رفضت تلغي الشحنة لأنها لسه مفعّلتش الربط (API) لحسابك. الأوردر متلغاش. اطلب من {name} تفعّل الربط، أو الغي الشحنة من لوحة {name} الأول.",
     // backend requests 2026-10-06
     DOMAIN_CONNECT_FAILED: "الدومين اتشترى، بس لسه مقدرناش نربطه بمتجرك. فريق الدعم هيكمّل ربطه — مش محتاج تشتريه تاني.",
+    // handoff 180/187
+    IMPORT_SOURCE_UNREACHABLE:
+      "معرفناش نقرا المنتج من الصفحة دي — ممكن تكون مقفولة أو بطيئة. اتأكد من اللينك وجرّب تاني، أو نزّل المنتج كشيت واستورد الملف.",
+    IMPORT_SOURCE_NO_PRODUCT_DATA: "الصفحة دي مش بتعرض بيانات المنتج. نزّلها كشيت واستورد الملف بدل اللينك.",
+    IMPORT_LINK_NOT_HTTPS: "اللينك لازم يبدأ بـ https:// — انسخه تاني من شريط العنوان في المتصفح.",
+    IMPORT_LINK_NOT_PRODUCT: "ده مش لينك منتج نقدر نقراه. الصق لينك صفحة منتج من شوبيفاي أو علي إكسبريس أو إتسي أو CJ أو يوكان.",
+    INVALID_FILE: "معرفناش نقرا الملف ده. اتأكد من نوعه وجرّب تاني.",
+    FILE_TOO_LARGE: "الملف كبير أوي. اختار ملف أصغر.",
+    NO_FILE: "اختار ملف الأول.",
   },
 } satisfies Messages;
 
@@ -419,6 +437,36 @@ export function useCarrierErrorMessage() {
         CARRIER_SANDBOX_NOT_ALLOWED: fmt(t.carrierSandboxNamed, { name }),
         ...overrides,
       });
+    },
+    [t, errorMessage]
+  );
+}
+
+// handoff 180: the product link import's own refusals, in the merchant's words.
+/**
+ * `useErrorMessage` for a product link import. The server answers a link it
+ * cannot use with VALIDATION_ERROR on `url` (not https, not a product page)
+ * or IMPORT_SOURCE_UNREACHABLE (refused, too slow, or no product data on the
+ * page); each gets its own sentence instead of the generic form copy.
+ */
+export function useImportLinkErrorMessage() {
+  const t = useT(STRINGS);
+  const errorMessage = useErrorMessage();
+  return useCallback(
+    (err: unknown): string => {
+      const code = apiErrorCode(err);
+      const details = apiErrorDetails<unknown>(err);
+      const urlProblems = (Array.isArray(details) ? details : [])
+        .filter((d): d is { field: string; message: string } => !!d && d.field === "url" && typeof d.message === "string")
+        .map((d) => d.message);
+      if (code === "VALIDATION_ERROR" && urlProblems.length > 0) {
+        if (urlProblems.some((m) => /must start with https|full product link/i.test(m))) return t.IMPORT_LINK_NOT_HTTPS;
+        if (urlProblems.some((m) => /not a Shopify product link|can be imported/i.test(m))) return t.IMPORT_LINK_NOT_PRODUCT;
+      }
+      if (code === "IMPORT_SOURCE_UNREACHABLE" && urlProblems.some((m) => /no product data|not a shopify product/i.test(m))) {
+        return t.IMPORT_SOURCE_NO_PRODUCT_DATA;
+      }
+      return errorMessage(err);
     },
     [t, errorMessage]
   );
