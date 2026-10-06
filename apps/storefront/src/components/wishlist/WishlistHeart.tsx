@@ -29,6 +29,9 @@ export function HeartIcon({ size = 20, filled = false, ...rest }: SVGProps<SVGSV
   );
 }
 
+/** The heart whose notice is on screen: one notice at a time, the newest. */
+let dismissShown: (() => void) | null = null;
+
 const LOOKS = {
   // Over a product card's photo: round, on a light disc so it reads on any picture.
   card: `z-10 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-paper-raised/95 shadow-sm backdrop-blur transition-colors hover:text-primary ${focusRing}`,
@@ -69,6 +72,12 @@ export function WishlistHeart({
   const busy = wishlist.pending(productId);
   const label = on ? t.wishlist.remove : t.wishlist.add;
 
+  function show(next: { tone: "guest" | "error"; text: string } | null) {
+    dismissShown?.();
+    dismissShown = next ? () => setNotice(null) : null;
+    setNotice(next);
+  }
+
   async function onClick(e: MouseEvent) {
     // Cards are one big link: this tap is the heart's alone.
     e.preventDefault();
@@ -77,9 +86,9 @@ export function WishlistHeart({
     const guest = !wishlist.signedIn;
     try {
       const added = await wishlist.toggle(productId);
-      setNotice(guest && added ? { tone: "guest", text: t.wishlist.signInToKeep } : null);
+      show(guest && added ? { tone: "guest", text: t.wishlist.signInToKeep } : null);
     } catch (err) {
-      setNotice({ tone: "error", text: wishlistErrorMessage(err, t) });
+      show({ tone: "error", text: wishlistErrorMessage(err, t) });
     }
   }
 
@@ -91,7 +100,6 @@ export function WishlistHeart({
       <button
         type="button"
         onClick={onClick}
-        aria-pressed={on}
         aria-label={label}
         aria-busy={busy || undefined}
         title={label}
