@@ -225,3 +225,5 @@ export * from "./endpoints/storeFonts";
 export * from "./endpoints/confirmationCallback";
 // Store texts: the storefront's own labels reworded per language (storefront/storefrontTexts.js).
 export * from "./endpoints/storefrontTexts";
+// Store scripts: the merchant's own code by position and page type (customCode/storeScripts.js).
+export * from "./endpoints/storeScripts";

@@ -27,7 +27,8 @@ import {
   hiddenPlacesOf,
 } from "@store-builder/api-client";
 import { CodeSlot, CustomCodeHead, CustomCodeProvider } from "@/components/CustomCode";
-import { storeCustomCode } from "@/lib/headCode";
+import { storeCode } from "@/lib/headCode";
+import { StoreScripts } from "@/components/StoreScripts";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
 import { canonicalOrigin } from "@/lib/domains";
@@ -179,9 +180,9 @@ export default async function StoreLayout({
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
-  // The merchant's own code slots. The API returns none to a staff preview,
-  // and components/CustomCode.tsx decides where the rest may run.
-  const customCode = await storeCustomCode(workspaceId);
+  // The merchant's own code slots and scripts. The API returns none to a staff
+  // preview, and components/CustomCode.tsx decides where the rest may run.
+  const { slots: customCode, scripts: storeScripts } = await storeCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -191,6 +192,8 @@ export default async function StoreLayout({
         <StoreShellProvider>
           <CustomCodeProvider slots={customCode}>
           <CustomCodeHead />
+          {/* The merchant's scripts by position and page type (components/StoreScripts.tsx). */}
+          <StoreScripts scripts={storeScripts} />
           {/* Reads the search params, hence the Suspense boundary. */}
           <Suspense fallback={null}>
             <StoreAnalytics workspaceId={workspaceId} websiteId={typeof websiteId === "string" ? websiteId : undefined} />
