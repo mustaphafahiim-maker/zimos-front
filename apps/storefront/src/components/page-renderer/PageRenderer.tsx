@@ -62,6 +62,8 @@ import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHoo
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
+import { animationAttributes, animationOf, pageHasAnimation } from "./elementAnimation";
+import { EntranceAnimations } from "./EntranceAnimations";
 import { applyBindings, loadBindingData, pageProductId, type BindingData } from "./bindings";
 import { RepeaterElement } from "./repeater";
 import { HtmlBlock } from "@/components/HtmlBlock";
@@ -75,9 +77,11 @@ import { PageTagScope } from "./PageTagScope";
  */
 function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   const key = styleKey(element);
-  if (!key) return <ElementNode element={element} ctx={ctx} />;
+  // An entrance animation also needs the box (elementAnimation.ts).
+  const animation = animationOf(element);
+  if (!key && !animation) return <ElementNode element={element} ctx={ctx} />;
   return (
-    <div data-zs={key}>
+    <div data-zs={key ?? undefined} {...(animation ? animationAttributes(animation) : {})}>
       <ElementNode element={element} ctx={ctx} />
     </div>
   );
@@ -487,6 +491,7 @@ export async function PageRenderer({
     <div className="zt-sections divide-y divide-line">
       {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
+      {pageHasAnimation(tree) && <EntranceAnimations />}
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />
