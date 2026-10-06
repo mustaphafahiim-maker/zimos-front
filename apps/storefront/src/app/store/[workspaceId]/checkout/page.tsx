@@ -66,6 +66,7 @@ import { PolicyLinks } from "@/components/PolicyLinks";
 import { CodeSlot } from "@/components/CustomCode";
 import { useStorePlaces } from "@/lib/useStorePlaces";
 import { CheckoutStickyBar, scrollIntoViewSoon } from "@/components/checkout/CheckoutStickyBar";
+import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
 
 const FORM_PREFIX = "checkout";
 const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
@@ -343,6 +344,7 @@ export default function CheckoutPage() {
             </h2>
             <CodeSlot name="above_form" />
             <div className="mt-4">
+              <CheckoutSavedAddresses values={values} onChange={onFieldChange} places={places} />
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
                 values={values}
