@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDown, ArrowUp, Columns3, Filter, X } from "lucide-react";
 import { Button, Input, cn } from "@store-builder/ui";
@@ -359,7 +359,16 @@ export function useSourceLabel() {
  * the active filters as removable chips, saved views, the column chooser and
  * the page size.
  */
-export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters; prefs: OrderListPrefs }) {
+export function OrderFilterBar({
+  filters,
+  prefs,
+  leading,
+}: {
+  filters: OrderExtraFilters;
+  prefs: OrderListPrefs;
+  /** Controls drawn in the same row, after the Filters button (the orders page puts dates and sort here). */
+  leading?: ReactNode;
+}) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const workspaceId = useWorkspaceId();
@@ -416,6 +425,7 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
           <Filter className="size-4" aria-hidden />
           {filters.active.length ? fmt(t.filtersCount, { count: filters.active.length }) : t.filters}
         </Button>
+        {leading}
 
         {filters.active.map((key) => (
           <span
@@ -446,7 +456,8 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
           <Select
             id={ids.views}
             value={currentView}
-            className="h-11 w-auto min-w-40"
+            // On a phone, only once there is a saved view to pick.
+            className={cn("h-11 w-auto min-w-40", saved.views.length === 0 && "hidden md:block")}
             onChange={(e) => {
               const choice = e.target.value;
               if (choice === "__save") {
@@ -479,19 +490,20 @@ export function OrderFilterBar({ filters, prefs }: { filters: OrderExtraFilters;
             </Button>
           )}
 
-          <Button variant="outline" size="sm" className="min-h-11 gap-1.5" onClick={() => setChoosingColumns(true)}>
+          {/* Columns and page size only shape the table, which phones don't show. */}
+          <Button variant="outline" size="sm" className="hidden min-h-11 gap-1.5 md:inline-flex" onClick={() => setChoosingColumns(true)}>
             <Columns3 className="size-4" aria-hidden />
             {t.columns}
           </Button>
 
-          <label htmlFor={ids.size} className="text-sm text-ink-soft">
+          <label htmlFor={ids.size} className="hidden text-sm text-ink-soft md:inline">
             {t.perPage}
           </label>
           <Select
             id={ids.size}
             value={prefs.pageSize}
             onChange={(e) => prefs.setPageSize(Number(e.target.value))}
-            className="h-11 w-auto"
+            className="hidden h-11 w-auto md:block"
           >
             {PAGE_SIZES.map((n) => (
               <option key={n} value={n}>

@@ -30,7 +30,12 @@ are listed under *Handoff items done*.
       session-expired notice + return to the page; status words in Arabic
       (StatusBadge fallback, stages: one name «مستني تأكيد»); ConfirmDialog
       defaults; friendly error / no-permission cards; back arrow mirrors.
-- [ ] S4 Orders list — next
+- [x] S4 Orders list: search then stage chips then one toolbar row (filters,
+      date, sort); secondary tools fold behind «أدوات تانية» on phones; phone
+      cards with select, call and WhatsApp (ContactActions), name first;
+      select-all on phones; dates start at the device's midnight, not UTC;
+      a guiding empty state for a store with no orders yet.
+- [ ] S5 Order page — next
 
 ## Handoff items done (from backend `frontend-handoff.md`)
 - (file does not exist yet on 2026-10-06)
@@ -46,7 +51,7 @@ are listed under *Handoff items done*.
   1366 px in Arabic.
 
 ## Backend requests
-See `backend-requests.md` (5 open).
+See `backend-requests.md` (6 open).
 
 ## Decisions
 - 2026-10-06 Glass frame retired on this branch: the brief asks for a light
