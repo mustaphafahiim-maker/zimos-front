@@ -224,3 +224,4 @@ export * from "./endpoints/googleSheets";
 export * from "./endpoints/storeFonts";
 export * from "./endpoints/confirmationCallback";
 export * from "./endpoints/smartCollections";
+export * from "./endpoints/funnelBulk";

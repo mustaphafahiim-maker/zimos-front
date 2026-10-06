@@ -43,6 +43,7 @@ import {
 } from "./funnelAdapter";
 import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
+import { FunnelBulkBar } from "./FunnelBulkBar";
 
 const STRINGS = {
   en: {
@@ -95,6 +96,8 @@ const STRINGS = {
     statusDraft: "Draft",
     statusPublished: "Published",
     statusPaused: "Paused",
+    selectAll: "Select all funnels on this page",
+    selectFunnel: "Select {name}",
   },
   ar: {
     title: "مسارات البيع",
@@ -146,6 +149,8 @@ const STRINGS = {
     statusDraft: "مسودة",
     statusPublished: "منشور",
     statusPaused: "متوقف مؤقتًا",
+    selectAll: "حدد كل الفانلز اللي في الصفحة",
+    selectFunnel: "حدد {name}",
   },
 } satisfies Messages;
 
@@ -216,6 +221,19 @@ export function FunnelsPage() {
 
   const funnels = list.data ?? [];
   const reload = () => list.refresh({ silent: true });
+
+  // Funnels ticked for a bulk action (FunnelBulkBar); only the ones still listed count.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectedFunnels = funnels.filter((f) => selected.has(f.id));
+  const allSelected = funnels.length > 0 && funnels.every((f) => selected.has(f.id));
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(funnels.map((f) => f.id)));
 
   // The list endpoint has no step count; fetch each funnel's steps (read-only, parallel).
   const idsKey = funnels.map((f) => f.id).join(",");
@@ -364,6 +382,15 @@ export function FunnelsPage() {
           />
         </div>
 
+        <FunnelBulkBar
+          selected={selectedFunnels}
+          onClear={() => setSelected(new Set())}
+          onDone={async (response) => {
+            // The ones that did not change stay ticked, ready for another try.
+            setSelected(new Set(response.results.filter((r) => !r.ok).map((r) => r.funnelId)));
+            await reload();
+          }}
+        />
         {funnels.length === 0 ? (
           <EmptyState
             icon={<Layers />}
@@ -376,6 +403,11 @@ export function FunnelsPage() {
             <table className="w-full min-w-[960px] text-sm">
               <thead>
                 <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th scope="col" className="w-12 ps-2">
+                    <label className="flex size-11 cursor-pointer items-center justify-center">
+                      <input type="checkbox" className="size-4 cursor-pointer accent-primary" checked={allSelected} onChange={toggleAll} aria-label={t.selectAll} />
+                    </label>
+                  </th>
                   <th className="px-4 py-3 text-start font-medium">{t.colFunnel}</th>
                   <th className="px-4 py-3 text-start font-medium">{c.status}</th>
                   <th className="px-4 py-3 text-start font-medium">{t.colSteps}</th>
@@ -399,8 +431,19 @@ export function FunnelsPage() {
                     <tr
                       key={f.id}
                       onClick={() => navigate(`/funnels/${f.id}`)}
-                      className="cursor-pointer border-b border-line last:border-0 hover:bg-paper"
+                      className={cn("cursor-pointer border-b border-line last:border-0 hover:bg-paper", selected.has(f.id) && "bg-primary-soft/50")}
                     >
+                      <td className="w-12 ps-2" onClick={(e) => e.stopPropagation()}>
+                        <label className="flex size-11 cursor-pointer items-center justify-center">
+                          <input
+                            type="checkbox"
+                            className="size-4 cursor-pointer accent-primary"
+                            checked={selected.has(f.id)}
+                            onChange={() => toggleSelected(f.id)}
+                            aria-label={fmt(t.selectFunnel, { name: f.name })}
+                          />
+                        </label>
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink" dir="auto">
                           {f.name}
