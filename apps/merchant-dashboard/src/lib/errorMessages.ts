@@ -100,6 +100,11 @@ const STRINGS = {
       "The courier created the delivery, but it couldn't be saved here. Cancel it in the courier's dashboard, then book the order again.",
     SHIPPING_TIERS_REQUIRED: "Add at least one weight tier before pricing shipping by weight.",
     DEFAULT_ITEM_WEIGHT_REQUIRED: "Set a default item weight first. It's required while shipping is priced by weight tier.",
+    // handoff 184
+    ADDRESS_LOOKUP_KEY_REQUIRED: "Add your Google API key to use Google Maps suggestions.",
+    ADDRESS_LOOKUP_INVALID_KEY:
+      "Google refused this key. Check you copied it whole and that the Places API (New) is turned on for it in your Google Cloud console.",
+    ADDRESS_LOOKUP_UNAVAILABLE: "We couldn't reach Google to check the key. Try again in a few minutes.",
     GATEWAYS_NOT_CONFIGURED: "Online payments aren't available on this server yet. Please contact support.",
     GATEWAY_AUTH_FAILED: "The payment gateway rejected these keys. Copy them again from its dashboard and reconnect.",
     GATEWAY_KEYS_MODE_MISMATCH: "One key is a test key and the other a live key. Use both from the same mode.",
@@ -214,6 +219,11 @@ const STRINGS = {
       "شركة الشحن عملت الشحنة بس مقدرناش نسجلها هنا. الغيها من لوحة الشركة واحجز الأوردر تاني.",
     SHIPPING_TIERS_REQUIRED: "ضيف شريحة وزن واحدة على الأقل قبل ما تسعّر الشحن بالوزن.",
     DEFAULT_ITEM_WEIGHT_REQUIRED: "حدد وزن افتراضي للمنتج الأول. لازم طول ما الشحن متسعّر بالوزن.",
+    // handoff 184
+    ADDRESS_LOOKUP_KEY_REQUIRED: "ضيف مفتاح Google API بتاعك عشان تستخدم اقتراحات خرائط جوجل.",
+    ADDRESS_LOOKUP_INVALID_KEY:
+      "جوجل رفضت المفتاح ده. اتأكد إنك نسخته كله، وإن Places API (New) متفعّل عليه في Google Cloud console بتاعك.",
+    ADDRESS_LOOKUP_UNAVAILABLE: "مقدرناش نوصل لجوجل عشان نجرّب المفتاح. جرّب تاني بعد كام دقيقة.",
     GATEWAYS_NOT_CONFIGURED: "الدفع الأونلاين لسه مش متاح هنا. كلّم الدعم.",
     GATEWAY_AUTH_FAILED: "بوابة الدفع رفضت المفاتيح دي. انسخها تاني من لوحة البوابة واربط من جديد.",
     GATEWAY_KEYS_MODE_MISMATCH: "مفتاح منهم تجريبي والتاني حقيقي. استخدم الاتنين من نفس النوع.",
