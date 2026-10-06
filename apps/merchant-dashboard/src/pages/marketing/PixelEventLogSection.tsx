@@ -76,6 +76,7 @@ const PLATFORM_NAMES: Record<string, string> = {
   tiktok: "TikTok",
   snapchat: "Snapchat",
   google: "Google",
+  pinterest: "Pinterest",
 };
 
 /** Marketing → Tracking tools: what the server sent to the ad platforms. */

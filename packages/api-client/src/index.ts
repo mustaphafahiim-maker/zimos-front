@@ -227,3 +227,5 @@ export * from "./endpoints/confirmationCallback";
 export * from "./endpoints/checkoutUploads";
 // Report orders to the ad platforms as Lead instead of Purchase, per store and funnel (handoff 167).
 export * from "./endpoints/conversionEvent";
+// Pinterest Conversions API on a pinterest pixel: ad account id, token, test events (handoff 168).
+export * from "./endpoints/pinterestPixel";
