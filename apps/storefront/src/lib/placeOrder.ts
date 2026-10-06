@@ -13,7 +13,7 @@ import { adMatchFields } from "./adMatch";
 import { clearPageTags, pageTagFields } from "./pageTags";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
-import type { Dictionary } from "./i18n";
+import type { Dictionary, Locale } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
 import { storeHref } from "./storeHref";
 
@@ -104,6 +104,9 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
   "shippingAddress.postalCode": "postalCode",
   "shippingAddress.notes": "notes",
   "shippingAddress.country": "country",
+  // The place picked from the store's own list (lib/useStorePlaces): shown under the pickers.
+  "shippingAddress.placeId": "governorate",
+  "shippingAddress.area": "city",
   "formFields.sa_national_address": "nationalAddress",
   "formFields.custom_1": "custom1",
   "formFields.custom_2": "custom2",
@@ -119,6 +122,8 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
 export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderFormErrors {
   const out: OrderFormErrors = {};
   if (isApiErrorCode(err, "INVALID_PHONE")) out.phone = copy.phone;
+  // A place the store hid after this page loaded (a governorate, or a region / city / area of its own list).
+  if (isApiErrorCode(err, "SHIPPING_PLACE_UNAVAILABLE")) out.governorate = copy.placeUnavailable;
   for (const problem of apiFieldProblems(err)) {
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
@@ -127,22 +132,65 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
         ? copy.emailRequired
         : problem.field.startsWith("formFields.custom_") && isExpiredPhotoProblem(problem.message)
           ? copy.photoExpired
-          : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
+          : problem.field === "shippingAddress.placeId"
+            ? copy.placeUnknown
+            : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
   }
   return out;
+}
+
+/**
+ * The picked place was refused: hidden since the list was read
+ * (SHIPPING_PLACE_UNAVAILABLE) or no longer on it — the list is read again.
+ */
+export function isPlaceRefused(err: unknown): boolean {
+  return (
+    isApiErrorCode(err, "SHIPPING_PLACE_UNAVAILABLE") ||
+    apiFieldProblems(err).some((p) => p.field === "shippingAddress.placeId")
+  );
+}
+
+/** The codes the shopper's own words cover, by the sentence they get (U-03). */
+const ORDER_ERROR_COPY: Array<[keyof OrderErrorCopy, readonly string[]]> = [
+  ["placeUnavailable", ["SHIPPING_PLACE_UNAVAILABLE"]],
+  ["stock", ["INSUFFICIENT_STOCK", "OUT_OF_STOCK", "PRODUCT_NOT_FOUND", "VARIANT_NOT_FOUND", "PRODUCT_UNAVAILABLE"]],
+  ["tooMany", ["RATE_LIMITED", "TOO_MANY_ATTEMPTS", "TOO_MANY_REQUESTS"]],
+  ["minOrder", ["MIN_ORDER_NOT_MET"]],
+  ["storeClosed", ["STORE_UNAVAILABLE"]],
+  ["paymentMethod", ["PAYMENT_METHOD_UNAVAILABLE"]],
+];
+
+/** Whether a failed order was about its discount code (INVALID_DISCOUNT_CODE, DISCOUNT_*): the checkout says so beside the code too. */
+export function isDiscountRefused(err: unknown): boolean {
+  const code = err instanceof ApiError ? err.code : undefined;
+  return Boolean(code && (code === "INVALID_DISCOUNT_CODE" || code.startsWith("DISCOUNT_")));
 }
 
 /**
  * The banner for a failed order. A refused order (ORDER_REJECTED) always gets
  * the same polite, generic copy: the reason is the merchant's business, and
  * naming it would tell a fraudster which rule to dodge.
+ *
+ * Known codes get the store's own sentence. Anything else shows the server's
+ * message, which the API words in the shopper's language for the codes it
+ * knows (X-Store-Locale; the English original then rides along as
+ * `messageEn`) — but an untranslated (English) message is never shown on an
+ * Arabic or French page: the generic sentence is, in their language.
  */
-export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
+export function orderErrorMessage(err: unknown, copy: OrderErrorCopy, locale?: Locale): string {
   if (isApiErrorCode(err, "ORDER_REJECTED")) return copy.rejected;
   // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
-  if (err instanceof ApiError && err.message) return err.message;
+  if (isDiscountRefused(err)) return copy.discount;
+  const code = err instanceof ApiError ? err.code : undefined;
+  const known = code ? ORDER_ERROR_COPY.find(([, codes]) => codes.includes(code)) : undefined;
+  if (known) return copy[known[0]] as string;
+  if (err instanceof ApiError && err.message) {
+    const translated = typeof (err.details as { error?: { messageEn?: unknown } } | null)?.error?.messageEn === "string";
+    return !locale || locale === "en" || translated ? err.message : copy.generic;
+  }
+  // Our own errors carry the shopper's words already (a cancelled phone check, lib/checkoutOtp).
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;
 }

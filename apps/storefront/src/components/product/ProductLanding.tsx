@@ -35,6 +35,7 @@ import {
   orderErrorMessage,
   placeCodOrder,
   serverFieldErrors,
+  isPlaceRefused,
   type OrderLine,
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
@@ -68,6 +69,7 @@ import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
 import { OrderFormFields, fieldId } from "../checkout/OrderFormFields";
+import { useStorePlaces } from "@/lib/useStorePlaces";
 import { BillingAddressFields, billingFieldId, useBillingAddress } from "../checkout/BillingAddressFields";
 import { CashIcon, CheckIcon } from "../Icons";
 import { billingPlanOf, customFieldsDelta, storefrontProductBundle } from "@store-builder/api-client";
@@ -256,8 +258,20 @@ export function ProductLanding({
   if (bumpOn && bump) autosaveLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of productBumps.selected) autosaveLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
+  // The store's own places: region → city → area pickers, priced by the picked place (handoff 163/164).
+  const places = useStorePlaces({
+    client,
+    workspaceId,
+    country: values.country,
+    fields,
+    governorate: values.governorate,
+    city: values.city,
+    onChange: onFieldChange,
+  });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
-  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
+  const shippingChoice = useShippingChoice(
+    useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines, place: places.address })
+  );
   const shipping = shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
@@ -315,7 +329,7 @@ export function ProductLanding({
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields);
+    const found = validateOrderForm(values, t, fields, { places });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     const billingInvalid = billing.check();
@@ -351,7 +365,7 @@ export function ProductLanding({
     // A ticked bump names its offer only; the server adds it to this order.
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
-      ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...toCheckoutPayload(values, fields, { item: orderLine, place: places.address, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       ...billing.payload(),
       ...shippingChoice.payload,
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
@@ -402,6 +416,8 @@ export function ProductLanding({
         setBumpGone(true);
         productBumps.reset();
       }
+      // A place hidden since the list was read: read it again (lib/useStorePlaces).
+      if (isPlaceRefused(err)) places.reload();
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
       // A billing field the server named opens the billing block.
@@ -417,7 +433,7 @@ export function ProductLanding({
         });
         document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
+        setFormError(orderErrorMessage(err, t.form.errors, locale));
         setSubmitting(false);
       }
       autosave.resume();
@@ -646,6 +662,7 @@ export function ProductLanding({
             errors={errors}
             onChange={onFieldChange}
             fields={fields}
+            storePlaces={places}
           />
           <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
           <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />

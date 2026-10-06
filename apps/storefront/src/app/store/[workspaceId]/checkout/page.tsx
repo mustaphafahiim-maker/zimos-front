@@ -36,7 +36,15 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors } from "@/lib/placeOrder";
+import {
+  afterOrder,
+  isDiscountRefused,
+  isOrderBumpRefused,
+  isPlaceRefused,
+  orderErrorMessage,
+  placeCodOrder,
+  serverFieldErrors,
+} from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
@@ -56,8 +64,11 @@ import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { PolicyLinks } from "@/components/PolicyLinks";
 import { CodeSlot } from "@/components/CustomCode";
+import { useStorePlaces } from "@/lib/useStorePlaces";
+import { CheckoutStickyBar, scrollIntoViewSoon } from "@/components/checkout/CheckoutStickyBar";
 
 const FORM_PREFIX = "checkout";
+const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
 
 /** Which fields make up each step of the progress indicator. */
 const CONTACT_FIELDS: OrderFormField[] = ["fullName", "phone", "altPhone", "email"];
@@ -68,8 +79,9 @@ export default function CheckoutPage() {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { cart, clearCart } = useCart();
-  const { t, money, store } = useStore();
-  const [client] = useState(() => createStorefrontApiClient());
+  const { t, money, store, locale } = useStore();
+  // In the page's language, so the API words its errors for this shopper (U-03).
+  const client = useMemo(() => createStorefrontApiClient({ locale }), [locale]);
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const billing = useBillingAddress(fields);
   const { byVariant } = useCatalog(workspaceId);
@@ -96,7 +108,11 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<OrderFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // The page's own order button: the phone's bottom bar steps aside while it is on screen.
+  const submitRef = useRef<HTMLButtonElement>(null);
   const [codeInput, setCodeInput] = useState("");
+  // The server refused the code: said beside it (and in the banner).
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [appliedCode, setAppliedCode] = useState("");
   // A coupon that came with the link (?coupon=CODE) is applied without typing it.
   const linkCoupon = useStoredCoupon(workspaceId);
@@ -119,6 +135,17 @@ export default function CheckoutPage() {
   const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
   const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
   const needsTransfer = Boolean(transferMethod || deposit);
+
+  // The store's own places: region → city → area pickers, priced by the picked place (handoff 163/164).
+  const places = useStorePlaces({
+    client,
+    workspaceId,
+    country: values.country,
+    fields,
+    governorate: values.governorate,
+    city: values.city,
+    onChange: onFieldChange,
+  });
 
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
@@ -155,7 +182,9 @@ export default function CheckoutPage() {
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
-  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
+  const shippingChoice = useShippingChoice(
+    useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines, place: places.address })
+  );
   const shipping = shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
@@ -165,7 +194,7 @@ export default function CheckoutPage() {
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true, places });
   const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
@@ -185,7 +214,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, places });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     const billingInvalid = billing.check();
@@ -196,6 +225,7 @@ export default function CheckoutPage() {
     }
     if (!cart || items.length === 0) {
       setFormError(t.form.errors.emptyCart);
+      scrollIntoViewSoon(FORM_ERROR_ID);
       return;
     }
 
@@ -203,6 +233,7 @@ export default function CheckoutPage() {
       const problem = transfer ? transferProblem(transfer.method, transfer.state, transferCopy) : transferCopy.needReceipt;
       if (problem) {
         setFormError(problem);
+        scrollIntoViewSoon(FORM_ERROR_ID);
         return;
       }
     }
@@ -211,10 +242,11 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     setFormError(null);
+    setCodeError(null);
     const checkoutSessionId = await autosave.stop();
     try {
       const payload = {
-        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
+        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true, place: places.address }),
         ...billing.payload(),
         ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -259,6 +291,9 @@ export default function CheckoutPage() {
         setBumpGone(true);
         cartBumps.reset();
       }
+      // A place hidden or dropped since the list was read: read it again, so the pickers offer what is left.
+      if (isPlaceRefused(err)) places.reload();
+      if (isDiscountRefused(err)) setCodeError(orderErrorMessage(err, t.form.errors, locale));
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
       // A billing field the server named opens the billing block.
@@ -274,8 +309,12 @@ export default function CheckoutPage() {
         });
         document.getElementById(invalid.length > 0 ? fieldId(FORM_PREFIX, invalid[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0]))?.focus();
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
-        setSubmitting(false);
+        // Committed first, so the message is on the page before it is scrolled to.
+        flushSync(() => {
+          setFormError(orderErrorMessage(err, t.form.errors, locale));
+          setSubmitting(false);
+        });
+        scrollIntoViewSoon(FORM_ERROR_ID);
       }
       autosave.resume();
     }
@@ -311,6 +350,7 @@ export default function CheckoutPage() {
                 onChange={onFieldChange}
                 fields={fields}
                 showAltPhone
+                storePlaces={places}
               />
               <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
               <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
@@ -386,14 +426,15 @@ export default function CheckoutPage() {
                 {t.checkout.discountCode}
               </label>
               {appliedCode ? (
-                <div className="flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
-                  <p className="text-xs text-primary" aria-live="polite">
-                    {t.checkout.discountPending(appliedCode)}
+                <div className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${codeError ? "bg-danger-soft" : "bg-primary-soft"}`}>
+                  <p className={`text-xs ${codeError ? "font-medium text-danger" : "text-primary"}`} aria-live="polite">
+                    {codeError ?? t.checkout.discountPending(appliedCode)}
                   </p>
                   <button
                     type="button"
                     onClick={() => {
                       setAppliedCode("");
+                      setCodeError(null);
                       clearStoredCoupon(workspaceId);
                     }}
                     className="min-h-11 shrink-0 cursor-pointer px-2 text-xs font-medium text-ink-soft hover:text-danger"
@@ -469,11 +510,11 @@ export default function CheckoutPage() {
           )}
           {items.length > 0 && <ProductBumpCards state={cartBumps} idPrefix={`${FORM_PREFIX}-pb`} />}
 
-          <div role="alert" aria-live="assertive" className="empty:hidden">
+          <div id={FORM_ERROR_ID} role="alert" aria-live="assertive" className="empty:hidden">
             {formError && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm font-medium text-danger">{formError}</p>}
           </div>
 
-          <button type="submit" disabled={submitting || items.length === 0} className={btnPrimaryLg}>
+          <button ref={submitRef} type="submit" disabled={submitting || items.length === 0} className={btnPrimaryLg}>
             {redirecting
               ? t.payment.redirecting
               : submitting
@@ -483,6 +524,25 @@ export default function CheckoutPage() {
                   : t.payment.payNow}
           </button>
         </aside>
+
+        {/* Phones: the total and the order button stay in reach while the form is filled in (U-57). */}
+        {items.length > 0 && (
+          <CheckoutStickyBar
+            anchor={submitRef}
+            totalLabel={t.checkout.totalEstimate}
+            total={money(total, currency)}
+            buttonLabel={
+              redirecting
+                ? t.payment.redirecting
+                : submitting
+                  ? t.checkout.placing
+                  : method.method === "cod"
+                    ? t.checkoutBar.order
+                    : t.payment.payNow
+            }
+            disabled={submitting}
+          />
+        )}
       </form>
 
       {/* What goes with the order (Offers → Cross-sell, at checkout). */}

@@ -254,3 +254,5 @@ export * from "./endpoints/domainPurchases";
 export * from "./endpoints/emailSendingDomain";
 // Order email designer: blocks instead of the plain body, previewed and saved per template (notifications/emailBlocks.js).
 export * from "./endpoints/orderEmailDesign";
+// The checkout's place pickers: the store's own regions → cities → areas, and the quote by place (handoff 163/164).
+export * from "./endpoints/storefrontPlaces";
