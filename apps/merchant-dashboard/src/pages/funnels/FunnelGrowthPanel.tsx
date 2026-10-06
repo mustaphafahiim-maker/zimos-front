@@ -32,6 +32,7 @@ import { useFunnelErrorMessage, type UiStep } from "./funnelAdapter";
 import { FunnelCodeAndShippingFields, FunnelLinkSetting } from "./FunnelSettingsMore";
 import { FunnelConversionEventSetting } from "./FunnelConversionEventSetting";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
+import { FunnelEmailsTab } from "./FunnelEmailsTab";
 import { CONTROL_KEY, VersionSharesEditor, sharesTotal, toPayload, versionLabel, type VersionDraft } from "./SplitTestVersions";
 
 /**
@@ -52,6 +53,7 @@ const STRINGS = {
     tabTests: "Split tests",
     tabGeo: "Country redirects",
     tabSettings: "Funnel settings",
+    tabEmails: "Emails",
     close: "Close",
     // tests
     testsIntro: "Show one page in two or more versions and keep the one that sells more. A is the page as it is now; each other version starts as a copy you then change.",
@@ -119,6 +121,7 @@ const STRINGS = {
     tabTests: "اختبارات A/B",
     tabGeo: "التحويل حسب الدولة",
     tabSettings: "إعدادات المسار",
+    tabEmails: "الإيميلات",
     close: "إغلاق",
     testsIntro: "اعرض صفحة واحدة بنسختين أو أكثر واحتفظ بالتي تبيع أكثر. A هي الصفحة كما هي الآن؛ وكل نسخة تانية تبدأ كنسخة منها ثم تعدّلها.",
     noTests: "لا يوجد اختبار على هذا المسار بعد.",
@@ -179,7 +182,7 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-type Tab = "tests" | "geo" | "settings";
+type Tab = "tests" | "geo" | "settings" | "emails";
 
 export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; steps: UiStep[] }) {
   const t = useT(STRINGS);
@@ -202,12 +205,13 @@ export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; step
             </DialogClose>
           </DialogHeader>
           <div className="-mx-6 min-h-0 overflow-y-auto px-6">
-            <div className="mb-4 inline-flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
+            <div className="mb-4 inline-flex flex-wrap gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
               {(
                 [
                   ["tests", t.tabTests],
                   ["geo", t.tabGeo],
                   ["settings", t.tabSettings],
+                  ["emails", t.tabEmails],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -227,6 +231,8 @@ export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; step
             {open && tab === "tests" && <SplitTestsTab funnelId={funnelId} steps={steps} />}
             {open && tab === "geo" && <GeoTab funnelId={funnelId} />}
             {open && tab === "settings" && <SettingsTab funnelId={funnelId} />}
+            {/* The order emails for this funnel (FunnelEmailsTab.tsx, item 175). */}
+            {open && tab === "emails" && <FunnelEmailsTab funnelId={funnelId} />}
           </div>
         </DialogContent>
       </Dialog>

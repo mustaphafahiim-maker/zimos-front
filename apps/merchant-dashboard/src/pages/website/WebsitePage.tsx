@@ -24,6 +24,7 @@ import { useToast } from "@/components/Toast";
 import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
 import { ThemeGallery } from "./ThemeGallery";
 import { StoreTextsLink } from "./StoreTextsLink";
+import { WebsiteEmailsButton } from "./WebsiteEmailsButton";
 import { TEMPLATE_COLOR_SOURCE } from "./editor/storeLook";
 import { ORIGINAL_LOOK, readThemeChoice } from "./editor/storeThemes";
 
@@ -582,6 +583,8 @@ function ExistingSites() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* A website's own order emails, once there is more than one (item 175). */}
+              {list.length > 1 && <WebsiteEmailsButton site={site} />}
               <Button asChild size="sm" variant="outline">
                 <Link to={`/website/${site.id}/edit`}>
                   <Pencil className="size-4" aria-hidden />

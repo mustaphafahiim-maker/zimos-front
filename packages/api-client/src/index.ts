@@ -250,3 +250,7 @@ export * from "./endpoints/mcp";
 export * from "./endpoints/domainRedirect";
 // Buy a domain: search, purchase, auto-renew and renew (domains/purchases.js, item 176).
 export * from "./endpoints/domainPurchases";
+// Sending domain: customer emails from the store's own domain once its DNS records verify (emailDomains/sendingDomain.js).
+export * from "./endpoints/emailSendingDomain";
+// Order email designer: blocks instead of the plain body, previewed and saved per template (notifications/emailBlocks.js).
+export * from "./endpoints/orderEmailDesign";
