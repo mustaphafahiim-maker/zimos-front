@@ -19,6 +19,7 @@ import { useStore } from "@/lib/StoreContext";
 import { Notice, useAccount } from "./AccountShell";
 import { StageBadge } from "./AccountOrders";
 import { RepeatIcon } from "./accountIcons";
+import { ShopperReturns } from "@/components/returns/ShopperReturns";
 
 type Reorder =
   | { status: "idle" }
@@ -247,6 +248,8 @@ export function AccountOrder() {
                 </div>
               )}
             </div>
+            {/* «ارجع منتجات» for this order, as on the tracking page (handoff 186). */}
+            {api.token && orderId && <ShopperReturns orderId={orderId} shopperToken={api.token} workspaceId={workspaceId} />}
           </section>
         </div>
 

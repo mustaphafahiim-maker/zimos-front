@@ -238,6 +238,15 @@ are listed under *Handoff items done*.
       update/skip, tags, consent note, «راجع الملف» summary with plurals,
       matched columns, error table (cards on phones), then «استورد»; links
       from the contacts header and empty state. Checked with real CSVs.
+- [x] 185 Shopper accounts: dashboard Store settings → «حسابات العملاء»
+      (switch + SMS / email code); storefront /account (orders with paging,
+      order page with the tracking timeline and «اطلب تاني», addresses with
+      the place pickers, profile, sign out / everywhere), sign in by code
+      with countdown and every refusal in ar/en/fr; header link (in the
+      menu sheet on phones); checkout prefill + saved-address picker + «احفظ
+      العنوان ده». The account order page also carries «ارجع منتجات» (186).
+      Signed-in calls need the backend CORS fix (request filed); verified
+      with a preflight shim, one real COD order placed. Store left off.
 
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
