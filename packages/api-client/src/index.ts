@@ -270,3 +270,5 @@ export * from "./endpoints/expressCheckout";
 export * from "./endpoints/productLinkImport";
 // Import contacts from a CSV / Excel sheet: template, dry-run check and import (contacts/contactImport.js, handoff 187).
 export * from "./endpoints/contactImport";
+// Shopper accounts: sign in with a code, orders, saved addresses, reorder (shopperAccounts/, handoff 185).
+export * from "./endpoints/shopperAccounts";

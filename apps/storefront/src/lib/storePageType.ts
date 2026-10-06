@@ -30,6 +30,7 @@ const APP_ROUTES = new Set([
   "r",
   "pay",
   "preview",
+  "account",
 ]);
 
 export function pageTypesOf(pathname: string): StorePageType[] {
