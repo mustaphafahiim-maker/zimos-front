@@ -1,35 +1,46 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@store-builder/ui";
-import {
-  domainPurchaseRenew,
-  domainPurchaseSetAutoRenew,
-  domainPurchasesList,
-  type DomainPurchase,
-} from "@store-builder/api-client";
+import { Button, cn } from "@store-builder/ui";
+import { domainPurchaseSetAutoRenew, domainPurchasesList, type DomainPurchase } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate } from "@/lib/format";
-import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
+import { fmt, useT } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Field } from "@/components/Field";
-import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
-import { PURCHASE_STRINGS, placeNode, yearsLabel } from "./domainPurchaseStrings";
-
-/** Renewal lengths offered, the same as when buying (the API accepts 1–10). */
-const YEARS = [1, 2, 3, 4, 5] as const;
+import { PURCHASE_STRINGS, type PurchaseStrings } from "./domainPurchaseStrings";
+import { RenewDomainDialog } from "./RenewDomainDialog";
 
 /** Only a bought domain (active, or lapsed) renews; the API answers DOMAIN_NOT_ACTIVE otherwise. */
 const renewable = (p: DomainPurchase) => p.status === "active" || p.status === "expired";
 
-const TONE = { pending: "warning", active: "success", failed: "danger", expired: "neutral" } as const;
+/**
+ * A failed purchase the registrar did register (it has an expiry date): the
+ * domain was bought and only connecting it to the store failed (502
+ * DOMAIN_CONNECT_FAILED) — support finishes it. Not "failed" to the merchant.
+ */
+const boughtNotConnected = (p: DomainPurchase) => p.status === "failed" && p.expiresAt !== null;
+
+type ShownStatus = DomainPurchase["status"] | "not_connected";
+const shownStatus = (p: DomainPurchase): ShownStatus => (boughtNotConnected(p) ? "not_connected" : p.status);
+const TONE = { pending: "warning", active: "success", failed: "danger", expired: "neutral", not_connected: "warning" } as const;
+
+/**
+ * The purchase's last error in the merchant's words. The server's own text
+ * (`lastError`, English, meant for support) is never shown as it is.
+ */
+function issueText(t: PurchaseStrings, p: DomainPurchase): string | null {
+  if (boughtNotConnected(p)) return t.issueNotConnected;
+  if (p.status === "failed") return t.issueNotBought;
+  if (!p.lastError) return null;
+  // On a bought domain the only failure recorded later is a renewal (by hand or the daily auto-renew).
+  return renewable(p) ? t.issueRenewFailed : t.issueOther;
+}
 
 interface BoughtDomainsSectionProps {
   /** Bumped by the page after a purchase, to read the list again. */
@@ -46,14 +57,12 @@ interface BoughtDomainsSectionProps {
  */
 export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSectionProps) {
   const t = useT(PURCHASE_STRINGS);
-  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const state = useAsync(() => domainPurchasesList(apiClient, workspaceId), [workspaceId]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [renewing, setRenewing] = useState<DomainPurchase | null>(null);
-  const [renewYears, setRenewYears] = useState(1);
   const { refresh } = state;
 
   useEffect(() => {
@@ -82,10 +91,7 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
     }
   }
 
-  async function renew() {
-    const purchase = renewing;
-    if (!purchase) return;
-    const next = await domainPurchaseRenew(apiClient, workspaceId, purchase.id, renewYears);
+  function renewed(next: DomainPurchase) {
     replace(next);
     setRenewing(null);
     toast.success(fmt(t.renewedToast, { domain: next.hostname, date: formatDate(next.expiresAt) }));
@@ -106,17 +112,20 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
     {
       key: "status",
       header: t.colStatus,
-      cell: (p) => (
-        <span className="inline-flex flex-col items-end gap-1 md:items-start">
-          <StatusBadge value={p.status} tone={TONE[p.status] ?? "neutral"} text={t[`status_${p.status}`] ?? p.status} />
-          {p.lastError && (
-            // The registrar's own words, quoted as they came.
-            <span className="max-w-[16rem] text-xs text-danger">
-              {t.lastError} <bdi dir="auto">{p.lastError}</bdi>
-            </span>
-          )}
-        </span>
-      ),
+      cell: (p) => {
+        const status = shownStatus(p);
+        const issue = issueText(t, p);
+        return (
+          <span className="inline-flex flex-col items-end gap-1 md:items-start">
+            <StatusBadge value={status} tone={TONE[status] ?? "neutral"} text={t[`status_${status}`] ?? status} />
+            {issue && (
+              <span className={cn("max-w-[18rem] text-end text-xs md:text-start", status === "not_connected" ? "text-accent-dark" : "text-danger")}>
+                {issue}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: "expires",
@@ -156,10 +165,7 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
             className="min-h-11 md:min-h-0"
             aria-label={fmt(t.renewNamed, { domain: p.hostname })}
             disabled={busyId !== null}
-            onClick={() => {
-              setRenewYears(1);
-              setRenewing(p);
-            }}
+            onClick={() => setRenewing(p)}
           >
             <RefreshCw className="size-4" aria-hidden />
             {t.renewNow}
@@ -174,40 +180,15 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
         <DataTable columns={columns} rows={state.data ?? []} rowKey={(p) => p.id} minWidth="40rem" className="max-md:px-4 max-md:pb-4" />
       </DataState>
 
-      <ConfirmDialog
-        open={renewing !== null}
-        title={t.renewTitle}
-        confirmLabel={t.renewNow}
-        cancelLabel={t.cancel}
-        busyLabel={t.renewing}
-        onCancel={() => setRenewing(null)}
-        onConfirm={renew}
-      >
-        {renewing && (
-          <div className="space-y-4">
-            <p className="text-sm text-ink-soft">
-              {placeNode(
-                fmt(t.renewBody, { date: formatDate(renewing.expiresAt), domain: "{domain}" }),
-                "domain",
-                <bdi dir="ltr" className="font-medium text-ink">
-                  {renewing.hostname}
-                </bdi>
-              )}
-            </p>
-            <Field label={t.renewFor}>
-              {({ id }) => (
-                <Select id={id} value={renewYears} onChange={(e) => setRenewYears(Number(e.target.value))} className="min-h-11 sm:min-h-10">
-                  {YEARS.map((n) => (
-                    <option key={n} value={n}>
-                      {yearsLabel(t, n, intlLocale)}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-          </div>
-        )}
-      </ConfirmDialog>
+      {renewing && (
+        <RenewDomainDialog
+          key={renewing.id}
+          purchase={renewing}
+          onClose={() => setRenewing(null)}
+          onRenewed={renewed}
+          onStale={() => void state.refresh({ silent: true })}
+        />
+      )}
     </Section>
   );
 }
