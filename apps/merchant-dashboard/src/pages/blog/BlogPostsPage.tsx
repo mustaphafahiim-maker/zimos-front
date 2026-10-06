@@ -321,7 +321,8 @@ export function BlogPostsPage() {
         }
       />
 
-      <div className={nothingYet ? "hidden" : "mb-4 space-y-3"}>
+      {/* No filters over nothing: a store without posts yet, or a first load that failed (error / no permission). */}
+      <div className={nothingYet || (list.error && !list.data) ? "hidden" : "mb-4 space-y-3"}>
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <FilterTabs
             label={t.tabs}

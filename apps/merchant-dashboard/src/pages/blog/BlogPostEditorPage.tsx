@@ -251,6 +251,11 @@ export function BlogPostEditorPage() {
     ]);
     return { post, categories };
   }, [workspaceId, postId]);
+  // Used once: the browser keeps navigation state across a reload, which must load the saved post, not this copy.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (handed) navigate(location.pathname, { replace: true, state: null });
+  }, [handed, location.pathname, navigate]);
 
   const missing = state.error instanceof ApiError && state.error.status === 404;
 

@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, cn } from "@store-builder/ui";
-import { BLOG_BLOCKS_MAX, BLOG_BLOCK_TYPES, type BlogBlockType, type ProductListParams } from "@store-builder/api-client";
+import { ApiError, BLOG_BLOCKS_MAX, BLOG_BLOCK_TYPES, type BlogBlockType, type ProductListParams } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -74,7 +74,8 @@ const STRINGS = {
     productLoading: "Loading products…",
     productFailed: "We couldn't load your products. Try again in a moment.",
     productNoMatch: "No product matches.",
-    productUnknown: "A product that isn't on sale anymore",
+    productUnknown: "A product that isn't in your store anymore",
+    productOff: "{name} — not on sale now",
     productNote: "Shows with its picture, its price today and an add-to-cart button. If it stops selling, it disappears from the post.",
     buttonLabel: "Button text",
     buttonLink: "Link",
@@ -128,7 +129,8 @@ const STRINGS = {
     productLoading: "بنحمّل المنتجات…",
     productFailed: "معرفناش نحمّل منتجاتك. جرّب تاني كمان شوية.",
     productNoMatch: "مفيش منتج بالاسم ده.",
-    productUnknown: "منتج مبقاش معروض للبيع",
+    productUnknown: "منتج مبقاش في متجرك",
+    productOff: "{name} — مش معروض للبيع دلوقتي",
     productNote: "بيظهر بصورته وسعره النهارده وزرار «ضيف للسلة». لو المنتج وقف بيعه بيختفي من المقال.",
     buttonLabel: "كلام الزرار",
     buttonLink: "اللينك",
@@ -167,7 +169,7 @@ function summaryOf(t: T, b: DraftBlock, productName: (id: string) => string | nu
   if (b.type === "heading" || b.type === "paragraph" || b.type === "quote") return b.text.trim().split("\n")[0] || t.empty;
   if (b.type === "image") return b.caption.trim() || b.alt.trim() || b.url.trim().split("/").pop() || t.empty;
   if (b.type === "list") return listItems(b).join(" · ") || t.empty;
-  if (b.type === "product") return (b.productId && productName(b.productId)) || (b.productId ? t.productUnknown : t.empty);
+  if (b.type === "product") return b.productId ? (productName(b.productId) ?? "…") : t.empty;
   if (b.type === "button") return b.label.trim() || t.empty;
   return t.dividerNote;
 }
@@ -175,6 +177,12 @@ function summaryOf(t: T, b: DraftBlock, productName: (id: string) => string | nu
 interface ProductOption {
   id: string;
   name: string;
+}
+
+/** A product block's product as the editor knows it; name null: deleted from the store. */
+interface ProductName {
+  name: string | null;
+  onSale: boolean;
 }
 
 export function BlogBlockEditor({
@@ -200,17 +208,38 @@ export function BlogBlockEditor({
   const workspaceId = useWorkspaceId();
   const full = blocks.length >= BLOG_BLOCKS_MAX;
 
-  // Names for the closed product cards: the store's products, once.
-  const known = useAsync<ProductOption[]>(async () => {
-    const { products } = await apiClient.listProducts(workspaceId, { limit: 100, status: ["active", "draft", "archived"] });
-    return products.map((p) => ({ id: p.id, name: p.name }));
-  }, [workspaceId]);
-  const [picked, setPicked] = useState<Record<string, string>>({});
-  const names = useMemo(() => {
-    const map = new Map<string, string>((known.data ?? []).map((p) => [p.id, p.name]));
-    for (const [id, name] of Object.entries(picked)) map.set(id, name);
-    return map;
-  }, [known.data, picked]);
+  // Names for the product blocks, each product read once by its id (a big catalogue needs no full list).
+  // A product deleted since (404) or no longer on sale is named as such: the store leaves it out of the post.
+  const [names, setNames] = useState<Record<string, ProductName>>({});
+  const unnamed = [...new Set(blocks.flatMap((b) => (b.type === "product" && b.productId ? [b.productId] : [])))]
+    .filter((id) => !(id in names))
+    .join(",");
+  useEffect(() => {
+    if (!unnamed) return;
+    let live = true;
+    void Promise.all(
+      unnamed.split(",").map(async (id): Promise<[string, ProductName] | null> => {
+        try {
+          const product = await apiClient.getProduct(workspaceId, id);
+          return [id, { name: product.name, onSale: product.status === "active" }];
+        } catch (err) {
+          // Only a missing product is "gone"; any other failure leaves the card unnamed.
+          return err instanceof ApiError && err.status === 404 ? [id, { name: null, onSale: false }] : null;
+        }
+      })
+    ).then((found) => {
+      if (live) setNames((prev) => ({ ...prev, ...Object.fromEntries(found.filter((x) => x !== null)) }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [unnamed, workspaceId]);
+  const productName = (id: string): string | null => {
+    const known = names[id];
+    if (!known) return null;
+    if (!known.name) return t.productUnknown;
+    return known.onSale ? known.name : fmt(t.productOff, { name: known.name });
+  };
 
   const update = (id: string, patch: Partial<DraftBlock>) => onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
   const move = (index: number, delta: -1 | 1) => {
@@ -253,8 +282,8 @@ export function BlogBlockEditor({
               open={openId === block.id}
               revealProblems={revealProblems}
               serverProblems={serverProblems[block.id]}
-              productName={(id) => names.get(id) ?? null}
-              onPicked={(p) => setPicked((prev) => ({ ...prev, [p.id]: p.name }))}
+              productName={productName}
+              onPicked={(p) => setNames((prev) => ({ ...prev, [p.id]: { name: p.name, onSale: true } }))}
               disabled={disabled}
               onToggle={() => onOpen(openId === block.id ? null : block.id)}
               onChange={(patch) => update(block.id, patch)}
@@ -533,15 +562,18 @@ function ProductField({
 
   // Only products on sale: the store drops any other from the post.
   const list = useAsync<ProductOption[]>(async () => {
-    const { products } = await apiClient.listProducts(workspaceId, { limit: 50, status: ["active"], q: debounced || undefined } as ProductListParams);
+    // The catalogue's name / SKU search (q) is not in ProductListParams; the client passes it through.
+    const params: ProductListParams & { q?: string } = { limit: 50, status: ["active"], q: debounced || undefined };
+    const { products } = await apiClient.listProducts(workspaceId, params);
     return products.map((p) => ({ id: p.id, name: p.name }));
   }, [workspaceId, debounced]);
 
   const options = useMemo(() => {
     const rows = list.data ?? [];
-    if (value && !rows.some((o) => o.id === value)) return [{ id: value, name: currentName ?? t.productUnknown }, ...rows];
+    // The picked product, also while its name loads or when it is no longer on sale.
+    if (value && !rows.some((o) => o.id === value)) return [{ id: value, name: currentName ?? "…" }, ...rows];
     return rows;
-  }, [list.data, value, currentName, t.productUnknown]);
+  }, [list.data, value, currentName]);
 
   return (
     <div className="space-y-2">

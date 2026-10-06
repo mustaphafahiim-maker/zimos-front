@@ -712,7 +712,7 @@ export function ImageSource({ t, value, error, onChange }: { t: T; value: string
   );
 }
 
-export function MediaLibraryPicker({ t, selected, onPick }: { t: T; selected: string; onPick: (url: string) => void }) {
+function MediaLibraryPicker({ t, selected, onPick }: { t: T; selected: string; onPick: (url: string) => void }) {
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
   const [items, setItems] = useState<MediaAsset[]>([]);
