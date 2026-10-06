@@ -287,7 +287,8 @@ export function CommandPalette() {
               <input
                 ref={inputRef}
                 autoFocus
-                type="search"
+                type="text"
+                enterKeyHint="search"
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="command-palette-list"
@@ -349,7 +350,8 @@ export function CommandPalette() {
 
             <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-2 text-xs text-ink-soft">
               <span>{searching ? t.searching : " "}</span>
-              <span className="flex items-center gap-1.5">
+              {/* Key hints mean nothing on a touch screen (re-audit N-22). */}
+              <span className="flex items-center gap-1.5 pointer-coarse:hidden">
                 <kbd className="rounded border border-line px-1.5">↵</kbd> {t.toSelect}
                 <kbd className="ms-2 rounded border border-line px-1.5">Esc</kbd>
               </span>

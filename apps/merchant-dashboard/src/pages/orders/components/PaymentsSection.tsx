@@ -39,6 +39,7 @@ const STRINGS = {
     pendingRefunds: "Refunds in progress",
     refundable: "Can still refund",
     refund: "Refund",
+    codNotCollected: "Paid in cash on delivery. Nothing has been collected yet, so there is nothing to refund.",
     refundTitle: "Refund this order",
     refundGateway: "The money goes back to the shopper's card or wallet through the gateway.",
     refundManual: "This records a refund you hand back yourself (cash, transfer). Nothing is sent to a gateway.",
@@ -100,6 +101,7 @@ const STRINGS = {
     pendingRefunds: "استردادات جارية",
     refundable: "المتاح للاسترداد",
     refund: "استرداد",
+    codNotCollected: "الدفع كاش عند الاستلام. لسه متحصّلش حاجة، فمفيش حاجة تترد.",
     refundTitle: "استرداد مبلغ من هذا الأوردر",
     refundGateway: "المبلغ يرجع لكارت أو محفظة العميل عن طريق البوابة.",
     refundManual: "هذا يسجل استردادًا ترجّعه بنفسك (كاش أو تحويل). لا يُرسل شيء لأي بوابة.",
@@ -204,6 +206,9 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
   // The payment to refund for a "refund the extra payment" alert: the newest
   // gateway payment that still has something left.
   const lastRefundable = data ? [...data.perPayment].reverse().find((p) => p.refundable > 0) : undefined;
+  // A cash-on-delivery order with nothing collected yet has nothing to refund: no «استرداد»
+  // next to «المدفوع ٠» (re-audit N-15). Display only; the API's numbers are unchanged.
+  const codNotCollected = order.paymentMethod === "cod" && order.financialState === "pending" && (data?.amountPaid ?? 0) === 0;
 
   return (
     <Card>
@@ -220,7 +225,7 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
             {["card", "wallet", "valu", "kiosk", "paypal"].includes(order.paymentMethod) &&
               order.financialState === "pending" &&
               !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
-            {data && data.refundable > 0 && (
+            {data && data.refundable > 0 && !codNotCollected && (
               <Button variant="outline" className="min-h-11" onClick={() => setDialog({})}>
                 {t.refund}
               </Button>
@@ -277,12 +282,16 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
               <p className="text-sm text-ink-soft">{fmt(t.expiresAt, { date: formatDateTime(data.paymentExpiresAt) })}</p>
             )}
 
-            <dl className="grid gap-3 text-sm sm:grid-cols-4">
-              <Stat label={t.paid} value={money(data.amountPaid)} />
-              <Stat label={t.refunded} value={money(data.amountRefunded)} />
-              <Stat label={t.pendingRefunds} value={money(data.pendingRefunds)} />
-              <Stat label={t.refundable} value={money(data.refundable)} />
-            </dl>
+            {codNotCollected ? (
+              <p className="text-sm text-ink-soft">{t.codNotCollected}</p>
+            ) : (
+              <dl className="grid gap-3 text-sm sm:grid-cols-4">
+                <Stat label={t.paid} value={money(data.amountPaid)} />
+                <Stat label={t.refunded} value={money(data.amountRefunded)} />
+                <Stat label={t.pendingRefunds} value={money(data.pendingRefunds)} />
+                <Stat label={t.refundable} value={money(data.refundable)} />
+              </dl>
+            )}
 
             {data.attempts.length === 0 && data.refunds.length === 0 ? (
               <p className="text-sm text-ink-soft">{t.empty}</p>

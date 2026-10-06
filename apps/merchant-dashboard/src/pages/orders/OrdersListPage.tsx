@@ -21,7 +21,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoney } from "@/lib/format";
 import { useListSort } from "@/lib/listSort";
 import { providerName } from "@/lib/providers";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages, getIntlLocale } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -669,6 +669,23 @@ function usePaymentLabel() {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * The stages in the order a cash-on-delivery order lives through them; waiting
+ * for an online payment (not a COD stage) and cancelled go last (re-audit N-25).
+ */
+const COD_STAGE_ORDER: readonly OrderStage[] = [
+  "pending_confirmation",
+  "needs_follow_up",
+  "ready_to_ship",
+  "shipped",
+  "out_for_delivery",
+  "delivery_failed",
+  "delivered",
+  "returned",
+  "awaiting_payment",
+  "cancelled",
+].filter((stage): stage is OrderStage => (ORDER_STAGES as readonly string[]).includes(stage));
+
 function StageTabs({
   value,
   onChange,
@@ -691,7 +708,7 @@ function StageTabs({
 
   const tabs: Array<{ key: OrderStage | null; label: string; count: number | undefined }> = [
     { key: null, label: t.tabAll, count: pipeline?.total },
-    ...ORDER_STAGES.map((stage) => ({
+    ...COD_STAGE_ORDER.map((stage) => ({
       key: stage,
       label: labels.stage(stage),
       count: pipeline?.stages[stage],
@@ -718,7 +735,9 @@ function StageTabs({
               "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               selected
                 ? "border-primary/40 bg-primary-soft text-primary-dark dark:text-primary"
-                : "border-line bg-paper-raised text-ink-soft hover:text-ink"
+                : "border-line bg-paper-raised text-ink-soft hover:text-ink",
+              // A stage with nothing in it steps back, so the busy ones stand out.
+              !selected && tab.key !== null && tab.count === 0 && "opacity-60"
             )}
           >
             {tab.label}
@@ -729,7 +748,7 @@ function StageTabs({
                 countsLoading && "opacity-50"
               )}
             >
-              {tab.count ?? "–"}
+              {tab.count === undefined ? "–" : new Intl.NumberFormat(getIntlLocale()).format(tab.count)}
             </span>
           </button>
         );

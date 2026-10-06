@@ -72,11 +72,13 @@ const STRINGS = {
     profitCoverage: "Only {pct} of the items sold have a cost, so the real profit may be lower.",
     profitAddCosts: "Add product costs",
     profitNoCosts: "Add what each product costs you, and we will tell you what you really earned.",
-    profitBeforeCost: "Before product cost, {amount} came in {when} after shipping and fees.",
+    profitBeforeCost: "Without product cost, about {amount} is left {when} after shipping, returns, fees and ads (orders still on the way included).",
     profitOpenReport: "Open the profit report",
 
     productEyebrowLoss: "A product is losing you money",
     productEyebrowWin: "Your best earner",
+    productEyebrowTop: "Your best seller",
+    productSeeAll: "See products",
     productLoss: "“{name}” lost you {amount} {when}.",
     productLossWhy: "{returned} of its {finished} finished orders came back.",
     productWin: "“{name}” earned you the most {when}: {amount}.",
@@ -161,11 +163,13 @@ const STRINGS = {
     profitCoverage: "{pct} بس من القطع اللي اتباعت ليها تكلفة، فالربح الحقيقي ممكن يكون أقل.",
     profitAddCosts: "ضيف تكلفة المنتجات",
     profitNoCosts: "ضيف تكلفة كل منتج، وإحنا نقولك كسبت كام بجد.",
-    profitBeforeCost: "قبل تكلفة المنتج، دخلك {amount} {when} بعد الشحن والرسوم.",
+    profitBeforeCost: "من غير تكلفة المنتج: فاضلك تقريبًا {amount} {when} بعد الشحن والمرتجعات والرسوم والإعلانات (محسوب معاه اللي لسه في الطريق).",
     profitOpenReport: "افتح تقرير الربح",
 
     productEyebrowLoss: "منتج بيخسّرك",
     productEyebrowWin: "أكتر منتج بيكسّبك",
+    productEyebrowTop: "أكتر منتج اتباع",
+    productSeeAll: "شوف المنتجات",
     productLoss: "«{name}» خسّرك {amount} {when}.",
     productLossWhy: "{returned} من {finished} أوردر خلصوا رجعوا مرتجع.",
     productWin: "«{name}» أكتر منتج كسّبك {when}: {amount}.",
@@ -442,7 +446,8 @@ export function ProductTile({ pnl, overview, range }: { pnl: ProfitPnl | null; o
   const top = overview?.topProducts.find((p) => p.quantity > 0);
   if (!top) return null;
   return (
-    <BentoTile span={2} icon={TrendingUp} eyebrow={t.productEyebrowWin} action={{ to: "/catalog", label: t.productAction }}>
+    // Without enough costs this is the best seller by units, not by profit: say so (re-audit N-11).
+    <BentoTile span={2} icon={TrendingUp} eyebrow={t.productEyebrowTop} action={{ to: "/catalog", label: t.productSeeAll }}>
       <BentoAnswer>
         {fmt(t.productTop, { name: isolate(top.name ?? t.productNoName), units: formatCount(top.quantity), when })}
       </BentoAnswer>

@@ -410,7 +410,7 @@ function ProductCards({ products, t, statusLabel, renderActions, selection }: Ro
   return (
     <>
       <div className="mb-2 flex min-h-11 items-center gap-2 text-sm text-ink-soft md:hidden">
-        <SelectAllCheckbox selection={selection} products={products} />
+        <SelectAllCheckbox selection={selection} products={products} withLabel />
       </div>
       <ul className="space-y-[var(--bento-gap)] md:hidden">
         {products.map((product) => (

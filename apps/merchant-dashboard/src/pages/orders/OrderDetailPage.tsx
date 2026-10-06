@@ -39,6 +39,7 @@ const STRINGS = {
     placed: "Placed {date}",
     confirmation: "Confirmation",
     payment: "Payment",
+    payOnDelivery: "Paid on delivery",
     fulfillment: "Fulfillment",
   },
   ar: {
@@ -47,6 +48,7 @@ const STRINGS = {
     placed: "اتطلب {date}",
     confirmation: "التأكيد",
     payment: "الدفع",
+    payOnDelivery: "هيتدفع عند الاستلام",
     fulfillment: "التنفيذ",
   },
 } satisfies Messages;
@@ -107,7 +109,12 @@ export function OrderDetailPage() {
                 value={data.confirmationState}
                 text={labels.confirmation(data.confirmationState)}
               />
-              <StatusBadge label={t.payment} value={data.financialState} text={labels.financial(data.financialState)} />
+              {/* Unpaid is the normal state of a cash-on-delivery order, not a warning (re-audit N-15). */}
+              {data.paymentMethod === "cod" && data.financialState === "pending" ? (
+                <StatusBadge label={t.payment} value="cod_pending" tone="neutral" text={t.payOnDelivery} />
+              ) : (
+                <StatusBadge label={t.payment} value={data.financialState} text={labels.financial(data.financialState)} />
+              )}
               <StatusBadge
                 label={t.fulfillment}
                 value={data.fulfillmentState}

@@ -220,7 +220,16 @@ are listed under *Handoff items done*.
       the tick box gets a 44 px area, blank values ("—", empty) and a
       column's `phoneSkip(row)` lines are left out (contacts with no orders
       skip orders/paid/delivery), header-less cells sit outside the <dl>.
-- [ ] R2-12 — see the plan.
+- [x] R2-12 (part 1): N-11 the no-costs product tile says «أكتر منتج اتباع»
+      → «شوف المنتجات»; N-12 the no-costs profit line names what it holds
+      (shipping, returns, fees, ads, orders on the way); N-15 an unpaid COD
+      order shows «هيتدفع عند الاستلام» (neutral) and no «استرداد» before
+      anything is collected (display only); N-22 ⌘K input without the
+      browser's second ×, key hints hidden on touch; N-25 order stage chips
+      in COD order with empty stages dimmed and local digits, products
+      «اختار الكل» label on phones.
+- [ ] R2-12 rest: N-16 order actions, N-18 lost orders filters, N-19 store
+      texts grouping, N-20 filtered tile labels.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox
