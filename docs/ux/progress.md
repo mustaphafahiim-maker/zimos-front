@@ -190,7 +190,15 @@ are listed under *Handoff items done*.
       المتجر»; copy of both in Egyptian Arabic. Moving the identity form
       into Store settings is left for later (the shopper-accounts branch is
       adding a Store settings tab now).
-- [ ] R2-9 … R2-12 — see the plan.
+- [x] R2-9 (part) Phone shell (N-06 a–f): «المزيد» lights up on pages
+      without a tab; the menu slides in from the «المزيد» side (end edge)
+      and leaves out the bar's own pages; the header hamburger is gone (one
+      way in); tab labels 12 px; tabs follow the role (editor: home +
+      products; fulfillment: no confirm; confirmation agent / accountant: no
+      products; custom roles see all); badge digits localized. Checked at 390
+      for owner and three routed roles. Section tabs as a scrolling tablist
+      (N-17) still to do.
+- [ ] R2-9 rest (N-17), R2-10 … R2-12 — see the plan.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

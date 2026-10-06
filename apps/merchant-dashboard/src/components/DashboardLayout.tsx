@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Menu, Minimize2, Settings, X } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, Keyboard, LogOut, Maximize2, Minimize2, Settings, X } from "lucide-react";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@store-builder/ui";
 import { FOCUS_TOGGLE_EVENT, KeyboardShortcuts, SHORTCUTS_HELP_EVENT } from "@/components/KeyboardShortcuts";
 import {
@@ -23,7 +23,7 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
 import { InstallAppPrompt } from "@/components/InstallAppPrompt";
-import { MobileTabBar } from "@/components/MobileTabBar";
+import { MobileTabBar, tabRoutesFor } from "@/components/MobileTabBar";
 import { useTeammateLocale } from "@/lib/useTeammateLocale";
 
 const STRINGS = {
@@ -92,7 +92,7 @@ function readCollapsedGroups(): Record<string, boolean> {
  * (`.glass-app`, `.glass-nav` in index.css): they follow the theme, so the
  * controls inside them draw with the ordinary tokens.
  */
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, inDrawer }: { onNavigate?: () => void; inDrawer?: boolean }) {
   const { currentWorkspace } = useWorkspace();
   const location = useLocation();
   const t = useT(STRINGS);
@@ -135,7 +135,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           // A group without a heading has nothing to click, so it is never folded away.
           const isClosed = Boolean(heading && collapsed[group.id]);
           // Entries this role can't use are left out; a group left empty goes too.
-          const visible = group.items.filter((i) => isNavItemVisible(i, role));
+          // In the phone menu, the tab bar's own pages aren't listed a second time (re-audit N-06).
+          const onTabBar = inDrawer ? new Set(tabRoutesFor(role)) : null;
+          const visible = group.items.filter((i) => isNavItemVisible(i, role) && !onTabBar?.has(i.to));
           if (visible.length === 0) return null;
           const items = isClosed ? visible.filter((i) => i.to === activeTo) : visible;
 
@@ -436,17 +438,18 @@ export function DashboardLayout() {
             aria-modal="true"
             aria-label={t.navLabel}
             onMouseDown={(e) => e.stopPropagation()}
-            className="zimos-glass glass-nav animate-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto shadow-lg"
+            className="zimos-glass glass-nav animate-slide-in-end absolute inset-y-0 end-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)] shadow-lg"
           >
+            {/* Opens from the side of «المزيد» in the tab bar, so the thumb that opened it is near. */}
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label={t.closeNav}
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
+              className="absolute end-2 top-2.5 z-10 flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-primary-soft hover:text-ink"
             >
-              <X className="size-4" aria-hidden />
+              <X className="size-5" aria-hidden />
             </button>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent inDrawer onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
@@ -454,15 +457,7 @@ export function DashboardLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="zimos-glass glass-nav glass-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5 md:top-3 md:mx-3 md:mt-3">
           <div className="flex min-w-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              aria-label={t.openNav}
-              aria-expanded={mobileOpen}
-              className="shrink-0 cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink md:hidden"
-            >
-              <Menu className="size-5" aria-hidden />
-            </button>
+            {/* Phones open the menu from «المزيد» in the tab bar; one way in, not two. */}
             <Breadcrumbs />
           </div>
 

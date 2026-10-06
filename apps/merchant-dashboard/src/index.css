@@ -261,8 +261,18 @@
   animation-name: slide-in-end;
 }
 
+/* The same, for a drawer anchored to the end edge (the phone menu, next to «المزيد»). */
+.animate-slide-in-end {
+  animation: slide-in-end 180ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+[dir="rtl"] .animate-slide-in-end {
+  animation-name: slide-in-start;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-slide-in-start {
+  .animate-slide-in-start,
+  .animate-slide-in-end {
     animation: none;
   }
 }
