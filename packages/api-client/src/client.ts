@@ -1,6 +1,8 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type {
   CustomerUpload,
+  ShopperManualPayment,
+  StorefrontManualMethod,
   CustomizationInput,
   CatalogOptionName,
   CollectionReorderItem,
@@ -3392,6 +3394,43 @@ export class ApiClient {
     });
     const { upload } = (await res.json()) as { upload: CustomerUpload };
     return upload;
+  }
+
+  /** The active manual methods (InstaPay, a wallet) the checkout lists next to cash on delivery. */
+  async getStoreManualPaymentMethods(workspaceId: string) {
+    const res = await this.request<{ methods: StorefrontManualMethod[] }>(`/store/${workspaceId}/manual-payment-methods`, { auth: false });
+    return res.methods;
+  }
+
+  /** The shopper's view of an order paid by a manual method; 404 for a wrong token. */
+  async getShopperManualPayment(workspaceId: string, orderId: string, paymentToken: string) {
+    const res = await this.request<{ manualPayment: ShopperManualPayment }>(`/store/${workspaceId}/orders/${orderId}/manual-payment`, {
+      auth: false,
+      headers: { "X-Payment-Token": paymentToken },
+    });
+    return res.manualPayment;
+  }
+
+  /**
+   * The shopper's proof: the number they paid from and a screenshot (JPEG /
+   * PNG / WebP, up to 15 MB). 409 while one is under review or approved.
+   */
+  async submitManualPaymentProof(
+    workspaceId: string,
+    orderId: string,
+    paymentToken: string,
+    { payerNumber, file }: { payerNumber: string; file: File | Blob }
+  ) {
+    const form = new FormData();
+    form.append("payerNumber", payerNumber);
+    form.append("file", file, file instanceof File ? file.name : "proof");
+    const res = await this.rawFetch(`/store/${workspaceId}/orders/${orderId}/manual-payment/proof`, {
+      method: "POST",
+      body: form,
+      headers: { "X-Payment-Token": paymentToken },
+    });
+    const { manualPayment } = (await res.json()) as { manualPayment: ShopperManualPayment };
+    return manualPayment;
   }
 
   async updateCartItem(

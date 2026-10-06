@@ -45,6 +45,7 @@ import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "./confirmationRoles";
 import { ChannelPicker, WhatsAppButton, useChannelLabels } from "./confirmationChannel";
 import { CustomizationList } from "@/pages/orders/components/CustomizationList";
+import { ManualPaymentProof } from "@/pages/orders/components/ManualPaymentProof";
 
 const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
 const QUEUE_SORTS: readonly ConfirmationQueueSort[] = ["default", ...ORDER_SORTS];
@@ -546,7 +547,19 @@ export function ConfirmationQueuePage() {
 }
 
 /** Order number, items, total, risk flags and the customer's contact — every card's top half. */
-function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; aside?: ReactNode; contactAction?: ReactNode }) {
+function OrderSummary({
+  task,
+  aside,
+  contactAction,
+  onChanged,
+}: {
+  task: ConfirmationTask;
+  aside?: ReactNode;
+  contactAction?: ReactNode;
+  /** Set on an open task: approving / rejecting a manual payment updates the card. */
+  onChanged?: (task: ConfirmationTask) => void;
+}) {
+  const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const orderLabels = useOrderLabels();
   const now = useNow(60_000);
@@ -584,6 +597,24 @@ function OrderSummary({ task, aside, contactAction }: { task: ConfirmationTask; 
         </div>
         {aside}
       </div>
+
+      {/* Paid by InstaPay / a wallet: the payer's number and screenshot; confirmed only once approved. */}
+      {order.manualPayment && (
+        <div className="rounded-[0.5rem] border border-line px-4 py-3">
+          <ManualPaymentProof
+            compact
+            workspaceId={workspaceId}
+            orderId={order.id}
+            payment={order.manualPayment}
+            onChanged={(next) =>
+              onChanged?.({
+                ...task,
+                order: { ...order, manualPayment: next, financialState: next.status === "approved" ? "paid" : order.financialState },
+              })
+            }
+          />
+        </div>
+      )}
 
       {/* The customer's answers to products' custom fields — confirmed on the call too. */}
       {order.items
@@ -800,6 +831,7 @@ function OpenCard({
         task={task}
         aside={<AttemptsBadge count={task.attemptCount} />}
         contactAction={<WhatsAppButton order={order} onOpen={() => mine && !expired && pickChannel("whatsapp")} />}
+        onChanged={onChanged}
       />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
@@ -867,7 +899,8 @@ function OpenCard({
                 size="lg"
                 variant={outcome === o ? "primary" : "outline"}
                 onClick={() => setOutcome(o)}
-                disabled={busy}
+                // A manually paid order is confirmed only once its payment is approved (the server refuses too).
+                disabled={busy || (o === "confirmed" && Boolean(order.manualPayment) && order.manualPayment?.status !== "approved")}
               >
                 {outcomeLabel[o]}
               </Button>

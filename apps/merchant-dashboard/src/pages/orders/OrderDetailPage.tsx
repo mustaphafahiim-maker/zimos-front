@@ -14,6 +14,7 @@ import { OrderActions } from "./components/OrderActions";
 import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
 import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
 import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
+import { ManualPaymentProof } from "./components/ManualPaymentProof";
 import { ConfirmationPanel } from "./components/ConfirmationPanel";
 import { ShipmentsSection } from "./components/ShipmentsSection";
 import { ReturnsSection } from "./components/ReturnsSection";
@@ -120,6 +121,11 @@ export function OrderDetailPage() {
               <OrderMetaActions order={data} onChanged={reload} />
               <ResendToWebhookButton orderId={data.id} />
             </div>
+
+            {/* Paid by InstaPay / a wallet: the customer's proof, approved before the order can be confirmed. */}
+            {data.manualPayment && (
+              <ManualPaymentProof workspaceId={workspaceId} orderId={data.id} payment={data.manualPayment} onChanged={() => reload()} />
+            )}
 
             <ConfirmationPanel order={data} onChanged={reload} />
 

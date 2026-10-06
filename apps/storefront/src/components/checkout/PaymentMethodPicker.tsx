@@ -1,10 +1,13 @@
 "use client";
 
-import type { StorefrontPaymentMethod } from "@store-builder/api-client";
+import type { ReactNode } from "react";
+import type { StorefrontManualMethod, StorefrontPaymentMethod } from "@store-builder/api-client";
 import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
 import { track } from "@/lib/track";
 import { usePaymentMethodText } from "@/lib/paymentMethodText";
+import { manualPickerId } from "@/lib/manualPayments";
+import { manualCopy, ManualMethodDetails, useManualText } from "./ManualPayment";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -16,15 +19,23 @@ export function PaymentMethodPicker({
   value,
   onChange,
   idPrefix,
+  manualMethods = [],
+  children,
 }: {
   methods: StorefrontPaymentMethod[];
   value: string;
   onChange: (id: string) => void;
   idPrefix: string;
+  /** The store's own InstaPay / wallet methods, after the gateway list (ids from manualPickerId). */
+  manualMethods?: StorefrontManualMethod[];
+  /** Shown under the chosen manual method (the proof fields). */
+  children?: ReactNode;
 }) {
   const { t, store } = useStore();
   const workspaceId = store?.workspaceId ?? "";
   const more = usePaymentMethodText();
+  const manualText = useManualText();
+  const chosenManual = manualMethods.find((m) => manualPickerId(m.id) === value) ?? null;
 
   const copy = (m: StorefrontPaymentMethod) =>
     m.method === "card"
@@ -37,7 +48,7 @@ export function PaymentMethodPicker({
             ? { title: more.kiosk, hint: more.kioskHint, Icon: CashIcon }
             : { title: t.checkout.cod, hint: t.checkout.codHint, Icon: CashIcon };
 
-  if (methods.length === 1 && methods[0].method === "cod") {
+  if (methods.length === 1 && methods[0].method === "cod" && manualMethods.length === 0) {
     const { title, hint, Icon } = copy(methods[0]);
     return (
       <>
@@ -93,6 +104,44 @@ export function PaymentMethodPicker({
           </label>
         );
       })}
+      {manualMethods.map((m) => {
+        const id = manualPickerId(m.id);
+        const { title, hint } = manualCopy(m, manualText);
+        const checked = value === id;
+        return (
+          <label
+            key={id}
+            htmlFor={`${idPrefix}-pay-${id}`}
+            className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+              checked ? "border-primary bg-primary-soft" : "border-line bg-paper-raised hover:border-primary/50"
+            }`}
+          >
+            <input
+              id={`${idPrefix}-pay-${id}`}
+              type="radio"
+              name={`${idPrefix}-payment`}
+              value={id}
+              checked={checked}
+              onChange={() => {
+                track("AddPaymentInfo");
+                onChange(id);
+              }}
+              className="size-4 shrink-0 accent-primary"
+            />
+            <WalletIcon className="shrink-0 text-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">{title}</span>
+              <span className="block text-xs text-ink-soft">{hint}</span>
+            </span>
+          </label>
+        );
+      })}
+      {chosenManual && (
+        <div className="space-y-3 pt-2">
+          <ManualMethodDetails method={chosenManual} />
+          {children}
+        </div>
+      )}
     </div>
   );
 }

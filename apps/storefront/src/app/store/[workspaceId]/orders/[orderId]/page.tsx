@@ -18,6 +18,7 @@ import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
 import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
 import { ThankYouDownloads } from "@/components/ThankYouDownloads";
+import { ManualPaymentStatus } from "@/components/checkout/ManualPayment";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -96,6 +97,9 @@ function Confirmation() {
 
         {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
         <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* Paid by InstaPay / a wallet: where to pay, the proof's status, and the form while one may be sent. */}
+        <ManualPaymentStatus workspaceId={workspaceId} orderId={orderId} />
 
         {/* A paid online order's digital products, as soon as the payment is captured. */}
         <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />

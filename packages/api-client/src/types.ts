@@ -960,7 +960,9 @@ export interface CheckoutPayload {
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
    * payments are switched off platform-wide.
    */
-  paymentMethod: "cod" | OnlineMethod;
+  paymentMethod: "cod" | OnlineMethod | "bank_transfer";
+  /** With "bank_transfer": which of the store's manual methods (getStoreManualPaymentMethods). */
+  manualPaymentMethodId?: string;
   /** Which gateway, when more than one offers the method. */
   paymentProvider?: string;
   /** Online methods: where the gateway sends the shopper back to. */
@@ -1555,8 +1557,64 @@ export interface ReturnRequest {
   updatedAt: string;
 }
 
+export type ManualMethodKind = "instapay" | "wallet";
+export type ManualPaymentStatus = "awaiting_proof" | "submitted" | "approved" | "rejected";
+
+/** One of the store's own manual methods, as the merchant manages it. */
+export interface StoreManualPaymentMethod {
+  id: string;
+  kind: ManualMethodKind;
+  label: string;
+  accountNumber: string;
+  /** Null when the merchant left it empty: show nothing link-related. */
+  paymentLink: string | null;
+  instructions: string | null;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** An active manual method as the checkout lists it. */
+export type StorefrontManualMethod = Pick<StoreManualPaymentMethod, "id" | "kind" | "label" | "accountNumber" | "paymentLink" | "instructions">;
+
+/** The shopper's view of their order's manual payment (X-Payment-Token). */
+export interface ShopperManualPayment {
+  orderId: string;
+  orderNumber: string;
+  totalAmount: number;
+  currency: string;
+  status: ManualPaymentStatus;
+  rejectionReason: string | null;
+  submittedAt: string | null;
+  /** True while a (new) proof may be sent. */
+  canSubmit: boolean;
+  method: Omit<StorefrontManualMethod, "id">;
+}
+
+/** Staff view: on the order and on its confirmation task. */
+export interface OrderManualPayment {
+  id: string;
+  status: ManualPaymentStatus;
+  /** A proof waits for approve / reject. */
+  awaitingReview: boolean;
+  kind: ManualMethodKind;
+  label: string;
+  accountNumber: string;
+  payerNumber: string | null;
+  /** A short-lived signed link to the screenshot. */
+  proofUrl: string | null;
+  proofUrlExpiresAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  reviewedByUserId: string | null;
+  rejectionReason: string | null;
+}
+
 export interface Order {
   id: string;
+  /** Paid by one of the store's manual methods (paymentMethod "bank_transfer"); absent otherwise. */
+  manualPayment?: OrderManualPayment | null;
   workspaceId: string;
   websiteId: string | null;
   funnelId: string | null;
@@ -4996,6 +5054,8 @@ export interface CheckoutResult {
   };
   /** Shown once: the shopper's key to the payment status / retry / switch-to-COD endpoints. */
   paymentToken?: string;
+  /** A manual method (InstaPay, a wallet): where to pay and the proof's status. */
+  manualPayment?: ShopperManualPayment;
 }
 
 export type ShopperPaymentState = "awaiting_payment" | "paid" | "expired" | "cancelled" | "cod";

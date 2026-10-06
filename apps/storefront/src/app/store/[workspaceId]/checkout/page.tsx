@@ -30,6 +30,8 @@ import {
 } from "@/lib/orderForm";
 import { afterOrder, isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { manualIdOf, placeManualOrder, useManualMethods, type ProofDraft } from "@/lib/manualPayments";
+import { ProofFields, proofErrors, useManualText } from "@/components/checkout/ManualPayment";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
@@ -100,6 +102,13 @@ export default function CheckoutPage() {
   const payment = storeMethods;
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  // The store's own InstaPay / wallet methods; a chosen one wins over `method`.
+  const manualMethods = useManualMethods(client, workspaceId);
+  const manualId = methodId ? manualIdOf(methodId) : null;
+  const manualChosen = manualId ? manualMethods.find((m) => m.id === manualId) ?? null : null;
+  const manualText = useManualText();
+  const [proof, setProof] = useState<ProofDraft>({ payerNumber: "", file: null });
+  const [proofErrs, setProofErrs] = useState<{ payerNumber?: string; file?: string }>({});
   const [redirecting, setRedirecting] = useState(false);
 
   // --- the phone's sticky confirm bar ---------------------------------------
@@ -198,6 +207,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    // A proof filled in at checkout must be valid; an empty one is sent later from the thank-you page.
+    if (manualChosen) {
+      const found = proofErrors(proof, manualText, { required: false });
+      setProofErrs(found);
+      if (found.payerNumber || found.file) {
+        focusField(`${FORM_PREFIX}-proof-${found.payerNumber ? "payer" : "shot"}`);
+        return;
+      }
+    }
+
     const systemNotes: string[] = [];
 
     setSubmitting(true);
@@ -211,6 +230,20 @@ export default function CheckoutPage() {
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
       };
+      if (manualChosen) {
+        const { order } = await placeManualOrder({
+          client,
+          workspaceId,
+          payload: payload as CheckoutPayload,
+          manualPaymentMethodId: manualChosen.id,
+          proof,
+          cartToken: cart.guestToken,
+          visitorId: getVisitorId(workspaceId),
+        });
+        clearCart();
+        router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
+        return;
+      }
       if (method.method !== "cod") {
         const { next, external } = await placeOnlineOrder({
           client,
@@ -270,7 +303,7 @@ export default function CheckoutPage() {
     ? t.payment.redirecting
     : submitting
       ? t.checkout.placing
-      : method.method === "cod"
+      : method.method === "cod" || manualChosen
         ? t.checkout.place
         : t.payment.payNow;
   const submitDisabled = submitting || items.length === 0;
@@ -321,10 +354,14 @@ export default function CheckoutPage() {
             </h2>
             <PaymentMethodPicker
               methods={payment.methods}
-              value={method.id}
+              value={manualChosen ? (methodId as string) : method.id}
               onChange={setMethodId}
               idPrefix={FORM_PREFIX}
-            />
+              manualMethods={manualMethods}
+            >
+              <ProofFields value={proof} onChange={setProof} errors={proofErrs} idPrefix={`${FORM_PREFIX}-proof`} />
+              <p className="text-xs text-ink-soft">{manualText.laterHint}</p>
+            </PaymentMethodPicker>
           </section>
         </div>
 
