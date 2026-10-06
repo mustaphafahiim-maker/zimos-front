@@ -288,3 +288,5 @@ export * from "./endpoints/purchaseLimits";
 export * from "./endpoints/deliveryEstimates";
 // Store blog: posts as blocks, categories, the posts index and the home page's latest posts (modules/blog, handoff 190).
 export * from "./endpoints/blog";
+// Store gates: password, coming soon with sign-ups, age check; the storefront's unlock and sign-up (handoff 197).
+export * from "./endpoints/storeGate";
