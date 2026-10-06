@@ -228,8 +228,11 @@ are listed under *Handoff items done*.
       browser's second ×, key hints hidden on touch; N-25 order stage chips
       in COD order with empty stages dimmed and local digits, products
       «اختار الكل» label on phones.
-- [ ] R2-12 rest: N-16 order actions, N-18 lost orders filters, N-19 store
-      texts grouping, N-20 filtered tile labels.
+- [x] N-19 Store texts: each store page's texts fold into one line with
+      «اتغيّر ٣ من ١٢» (opened by search, a section pick or "changed only");
+      closing the tab with unsaved texts asks first. 32,677 → 1,335 px at 390.
+- [ ] R2-12 rest: N-16 order actions, N-18 lost orders filters, N-20
+      filtered tile labels.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

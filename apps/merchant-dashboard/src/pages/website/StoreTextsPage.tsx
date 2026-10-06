@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { CheckCircle2, RotateCcw, Search, Type } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ChevronDown, RotateCcw, Search, Type } from "lucide-react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   STORE_LOCALES,
@@ -18,7 +18,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterTabs } from "@/components/FilterTabs";
-import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { STORE_TEXT_GROUPS, type StoreTextEntry, type StoreTextGroupId } from "./storeTextsCatalog";
@@ -56,6 +55,8 @@ const STRINGS = {
     placeholders: "Placeholders: {list}",
     placeholdersHint: "Keep these as written; the store fills them in.",
     changedOnly: "Show changed only",
+    groupCount: "{changed} of {total} changed",
+    groupTotal: "{total} texts",
     allDefault: "All texts use the default wording",
     allDefaultHint: "Write your own text next to any default to change it. Leave it empty to keep the default.",
     noMatch: "No texts match your search",
@@ -105,6 +106,8 @@ const STRINGS = {
     placeholders: "المتغيرات: {list}",
     placeholdersHint: "سيبها زي ما هي، المتجر بيحط مكانها القيمة.",
     changedOnly: "اعرض المتغيّر بس",
+    groupCount: "اتغيّر {changed} من {total}",
+    groupTotal: "{total} نص",
     allDefault: "كل النصوص على الكلام الافتراضي",
     allDefaultHint: "اكتب النص بتاعك جنب أي نص افتراضي علشان تغيّره. سيب الخانة فاضية علشان يفضل الافتراضي.",
     noMatch: "مفيش نصوص بالكلام ده",
@@ -190,6 +193,16 @@ export function StoreTextsPage() {
   const saved = useMemo(() => state.data?.texts ?? {}, [state.data]);
   const texts = draft ?? saved;
   const dirty = draft !== null && !sameTexts(draft, saved);
+  // One save writes everything: closing the tab with unsaved texts asks first (re-audit N-19).
+  useEffect(() => {
+    if (!dirty || saving) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving]);
   const maxText = state.data?.limits.maxText ?? 500;
 
   // Arabic and English always; then the store's own language, the languages it
@@ -380,9 +393,29 @@ export function StoreTextsPage() {
               />
             )
           ) : (
-            shown.map((g) => (
-              <Section key={g.id} title={t[g.id]}>
-                <ul className="divide-y divide-line">
+            // Each page of the store folds into one line with how much was changed there, so the
+            // phone doesn't scroll through every text (re-audit N-19). Searching, picking a
+            // section or "changed only" opens them.
+            shown.map((g) => {
+              const total = STORE_TEXT_GROUPS.find((x) => x.id === g.id)?.entries.length ?? g.entries.length;
+              const changed = g.entries.filter((entry) => (current[entry.key] ?? "").trim() !== "").length;
+              const forceOpen = Boolean(needle) || changedOnly || group !== "all";
+              return (
+              <details
+                key={`${g.id}-${forceOpen ? "open" : "folded"}`}
+                open={forceOpen || undefined}
+                className="group rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line"
+              >
+                <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">{t[g.id]}</span>
+                    <span className={changed > 0 ? "block text-xs font-medium text-primary-dark" : "block text-xs text-ink-soft"}>
+                      {changed > 0 ? fmt(t.groupCount, { changed, total }) : fmt(t.groupTotal, { total })}
+                    </span>
+                  </span>
+                  <ChevronDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <ul className="divide-y divide-line border-t border-line px-4 py-3 sm:px-5">
                   {g.entries.map((entry) => (
                     <TextRow
                       key={entry.key}
@@ -398,8 +431,9 @@ export function StoreTextsPage() {
                     />
                   ))}
                 </ul>
-              </Section>
-            ))
+              </details>
+              );
+            })
           )}
 
           {dirty && (
