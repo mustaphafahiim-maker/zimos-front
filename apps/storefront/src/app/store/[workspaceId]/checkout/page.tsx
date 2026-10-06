@@ -36,7 +36,14 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { afterOrder, isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors } from "@/lib/placeOrder";
+import {
+  afterOrder,
+  isOrderBumpRefused,
+  isPlaceRefused,
+  orderErrorMessage,
+  placeCodOrder,
+  serverFieldErrors,
+} from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
@@ -56,6 +63,7 @@ import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { PolicyLinks } from "@/components/PolicyLinks";
 import { CodeSlot } from "@/components/CustomCode";
+import { useStorePlaces } from "@/lib/useStorePlaces";
 
 const FORM_PREFIX = "checkout";
 
@@ -120,6 +128,17 @@ export default function CheckoutPage() {
   const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
   const needsTransfer = Boolean(transferMethod || deposit);
 
+  // The store's own places: region → city → area pickers, priced by the picked place (handoff 163/164).
+  const places = useStorePlaces({
+    client,
+    workspaceId,
+    country: values.country,
+    fields,
+    governorate: values.governorate,
+    city: values.city,
+    onChange: onFieldChange,
+  });
+
   const currency = cart?.currency ?? "EGP";
   const items = useMemo(() => cart?.items ?? [], [cart]);
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: items });
@@ -155,7 +174,9 @@ export default function CheckoutPage() {
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
-  const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
+  const shippingChoice = useShippingChoice(
+    useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines, place: places.address })
+  );
   const shipping = shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
@@ -165,7 +186,7 @@ export default function CheckoutPage() {
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true, places });
   const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
@@ -185,7 +206,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, places });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     const billingInvalid = billing.check();
@@ -214,7 +235,7 @@ export default function CheckoutPage() {
     const checkoutSessionId = await autosave.stop();
     try {
       const payload = {
-        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
+        ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true, place: places.address }),
         ...billing.payload(),
         ...shippingChoice.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -259,6 +280,8 @@ export default function CheckoutPage() {
         setBumpGone(true);
         cartBumps.reset();
       }
+      // A place hidden or dropped since the list was read: read it again, so the pickers offer what is left.
+      if (isPlaceRefused(err)) places.reload();
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalid = FIELD_ORDER.filter((k) => fromServer[k]);
       // A billing field the server named opens the billing block.
@@ -311,6 +334,7 @@ export default function CheckoutPage() {
                 onChange={onFieldChange}
                 fields={fields}
                 showAltPhone
+                storePlaces={places}
               />
               <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
               <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />

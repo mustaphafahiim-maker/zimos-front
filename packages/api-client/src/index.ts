@@ -238,3 +238,5 @@ export * from "./endpoints/checkoutUploads";
 export * from "./endpoints/conversionEvent";
 // Pinterest Conversions API on a pinterest pixel: ad account id, token, test events (handoff 168).
 export * from "./endpoints/pinterestPixel";
+// The checkout's place pickers: the store's own regions → cities → areas, and the quote by place (handoff 163/164).
+export * from "./endpoints/storefrontPlaces";

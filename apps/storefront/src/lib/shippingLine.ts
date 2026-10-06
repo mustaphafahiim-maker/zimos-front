@@ -20,9 +20,13 @@ export type ShippingLine =
 /**
  * Whether a quote answer means "this store prices shipping". A backend from
  * before `configured` existed only priced tier-priced stores for the
- * storefront, so that is what an answer without it means.
+ * storefront, so that is what an answer without it means. A place-priced
+ * answer always prices it.
  */
 export function quotePricesShipping(quote: ShippingQuote): boolean {
+  // A city's or area's own price (frontend-handoff 164) is charged even where
+  // the store prices nothing else, so `configured` may still read false.
+  if ((quote.rule as string | undefined) === "store_place_rate") return true;
   return quote.configured ?? quote.pricingMode === "weight_tiers";
 }
 

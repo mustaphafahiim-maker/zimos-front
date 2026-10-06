@@ -231,7 +231,18 @@ export const fr: Dictionary = {
       photoExpired: "La photo est introuvable ou a expiré — envoyez-la à nouveau",
       bumpUnavailable: "Le complément coché n'est plus disponible, nous l'avons retiré. Passez à nouveau la commande sans lui.",
       unavailable: "Ce produit est indisponible pour le moment.",
+      cityChoose: "Veuillez choisir votre ville.",
+      placeUnavailable: "La boutique ne livre pas cette zone — choisissez-en une autre.",
+      placeUnknown: "Cette zone ne figure plus dans la liste de la boutique — choisissez-la à nouveau.",
     },
+  },
+  places: {
+    region: "Région",
+    city: "Ville",
+    area: "Quartier",
+    chooseCity: "Choisissez votre ville",
+    chooseArea: "Choisissez votre quartier",
+    chooseRegionFirst: "Choisissez d'abord la région",
   },
   bump: {
     title: "Ajouter à votre commande",

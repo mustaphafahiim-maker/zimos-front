@@ -317,7 +317,19 @@ const en = {
       photoExpired: "The photo is missing or has expired — upload it again",
       bumpUnavailable: "The add-on you ticked is no longer available, so we took it off. Place the order again without it.",
       unavailable: "This product is unavailable right now.",
+      cityChoose: "Please choose your city.",
+      placeUnavailable: "The store does not deliver to this area — choose another one.",
+      placeUnknown: "This area is no longer on the store's list — choose it again.",
     },
+  },
+  /** The store's own place list at checkout: region → city → area (handoff 163). */
+  places: {
+    region: "Region",
+    city: "City",
+    area: "Area",
+    chooseCity: "Choose your city",
+    chooseArea: "Choose your area",
+    chooseRegionFirst: "Choose the region first",
   },
   bump: {
     title: "Add to your order",
@@ -855,7 +867,18 @@ const ar: Dictionary = {
       photoExpired: "الصورة مش موجودة أو انتهت صلاحيتها — ارفعها تاني",
       bumpUnavailable: "الإضافة اللي اخترتها مبقتش متاحة، فشلناها من الطلب. أكّد الطلب تاني من غيرها.",
       unavailable: "المنتج غير متوفر حاليًا.",
+      cityChoose: "من فضلك اختار المدينة.",
+      placeUnavailable: "المتجر مش بيوصل للمنطقة دي — اختار منطقة تانية.",
+      placeUnknown: "المنطقة دي مبقتش في قائمة المتجر — اختارها تاني.",
     },
+  },
+  places: {
+    region: "المحافظة",
+    city: "المدينة",
+    area: "المنطقة",
+    chooseCity: "اختار مدينتك",
+    chooseArea: "اختار منطقتك",
+    chooseRegionFirst: "اختار المحافظة الأول",
   },
   bump: {
     title: "أضف لطلبك",

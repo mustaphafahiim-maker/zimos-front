@@ -104,6 +104,9 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
   "shippingAddress.postalCode": "postalCode",
   "shippingAddress.notes": "notes",
   "shippingAddress.country": "country",
+  // The place picked from the store's own list (lib/useStorePlaces): shown under the pickers.
+  "shippingAddress.placeId": "governorate",
+  "shippingAddress.area": "city",
   "formFields.sa_national_address": "nationalAddress",
   "formFields.custom_1": "custom1",
   "formFields.custom_2": "custom2",
@@ -119,6 +122,8 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
 export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderFormErrors {
   const out: OrderFormErrors = {};
   if (isApiErrorCode(err, "INVALID_PHONE")) out.phone = copy.phone;
+  // A place the store hid after this page loaded (a governorate, or a region / city / area of its own list).
+  if (isApiErrorCode(err, "SHIPPING_PLACE_UNAVAILABLE")) out.governorate = copy.placeUnavailable;
   for (const problem of apiFieldProblems(err)) {
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
@@ -127,9 +132,22 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
         ? copy.emailRequired
         : problem.field.startsWith("formFields.custom_") && isExpiredPhotoProblem(problem.message)
           ? copy.photoExpired
-          : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
+          : problem.field === "shippingAddress.placeId"
+            ? copy.placeUnknown
+            : ((copy as Record<string, unknown>)[field] as string | undefined) ?? copy.required;
   }
   return out;
+}
+
+/**
+ * The picked place was refused: hidden since the list was read
+ * (SHIPPING_PLACE_UNAVAILABLE) or no longer on it — the list is read again.
+ */
+export function isPlaceRefused(err: unknown): boolean {
+  return (
+    isApiErrorCode(err, "SHIPPING_PLACE_UNAVAILABLE") ||
+    apiFieldProblems(err).some((p) => p.field === "shippingAddress.placeId")
+  );
 }
 
 /**

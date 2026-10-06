@@ -7,6 +7,7 @@ import {
   type CheckoutFormFieldKey,
   type CheckoutPayload,
   type CheckoutSettings,
+  type CheckoutAddressWithPlace,
 } from "@store-builder/api-client";
 import { isEgyptianMobile, normalizePhone } from "./egypt";
 import { isPhotoUploading } from "./checkoutPhoto";
@@ -177,12 +178,25 @@ export function quickFormFields(settings: OrderFormFieldModes): OrderFormFieldMo
   };
 }
 
+/**
+ * The store's own place pickers (lib/useStorePlaces) as validation reads them:
+ * while `active`, the governorate field is the region picker and the city is
+ * picked from the region's cities (typed when it has none).
+ */
+export interface PlacePicks {
+  active: boolean;
+  regionId: string;
+  cityId: string;
+  hasCities: boolean;
+}
+
 export function validateOrderForm(
   values: OrderFormValues,
   t: Dictionary,
   fields: OrderFormFieldModes,
-  opts: { showAltPhone?: boolean } = {}
+  opts: { showAltPhone?: boolean; places?: PlacePicks | null } = {}
 ): OrderFormErrors {
+  const places = opts.places?.active ? opts.places : null;
   const e: OrderFormErrors = {};
   const egypt = isEgyptForm(values);
   const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : INTL_PHONE.test(normalizePhone(raw)));
@@ -215,6 +229,10 @@ export function validateOrderForm(
         if (f.required && !value) e.country = t.form.errors.country;
         break;
       case "government":
+        if (places) {
+          if (f.required && !places.regionId) e.governorate = t.form.errors.governorate;
+          break;
+        }
         if (!value) {
           if (f.required) e.governorate = t.form.errors.governorate;
         } else if (placesFor(values.country).length > 0 && !placesFor(values.country).some((p) => p.code === value)) {
@@ -222,6 +240,11 @@ export function validateOrderForm(
         }
         break;
       case "city":
+        // Picked from the region's cities; a region without any keeps the typed city.
+        if (places && (!places.regionId || places.hasCities)) {
+          if (f.required && places.regionId && !places.cityId) e.city = t.form.errors.cityChoose;
+          break;
+        }
         if (f.required && !value) e.city = t.form.errors.city;
         break;
       case "address":
@@ -271,6 +294,8 @@ export function toCheckoutPayload(
     systemNotes?: string[];
     item?: CheckoutPayload["item"];
     showAltPhone?: boolean;
+    /** The place picked from the store's own list (lib/useStorePlaces): its names and id. */
+    place?: { province: string; city?: string; area?: string; placeId: string } | null;
   } = {}
 ): CheckoutPayload {
   const shown = new Set(formOf(fields, { showAltPhone: options.showAltPhone }).map((f) => f.key));
@@ -278,7 +303,12 @@ export function toCheckoutPayload(
   // A hidden country field leaves the store's own country in the values (lib/storeCountry).
   const country = values.country || "EG";
   // A listed place goes as its names; a country without a list sends what was typed.
-  const province = placesFor(country).length > 0 ? provinceFor(read("government")) : read("government") || undefined;
+  const place = options.place ?? null;
+  const province = place
+    ? place.province
+    : placesFor(country).length > 0
+      ? provinceFor(read("government"))
+      : read("government") || undefined;
   const altPhone = read("phone_alt") ? normalizePhone(read("phone_alt")) : "";
   const email = read("email");
   const postalCode = read("postal_code");
@@ -294,6 +324,17 @@ export function toCheckoutPayload(
     }
   }
 
+  const shippingAddress: CheckoutAddressWithPlace = {
+    country,
+    ...(province ? { province } : {}),
+    city: place?.city ?? read("city"),
+    ...(place?.area ? { area: place.area } : {}),
+    ...(place ? { placeId: place.placeId } : {}),
+    addressLine: read("address"),
+    ...(postalCode ? { postalCode } : {}),
+    ...(notes ? { notes } : {}),
+  };
+
   const payload: CheckoutPayload = {
     contact: {
       fullName: values.fullName.trim(),
@@ -301,14 +342,7 @@ export function toCheckoutPayload(
       ...(altPhone ? { alternatePhone: altPhone } : {}),
       ...(email ? { email } : {}),
     },
-    shippingAddress: {
-      country,
-      ...(province ? { province } : {}),
-      city: read("city"),
-      addressLine: read("address"),
-      ...(postalCode ? { postalCode } : {}),
-      ...(notes ? { notes } : {}),
-    },
+    shippingAddress,
     paymentMethod: "cod",
     ...(allowCodes && options.discountCode?.trim() ? { discountCode: options.discountCode.trim() } : {}),
     ...(systemNotes.length ? { notes: systemNotes.join(" | ") } : {}),

@@ -17,6 +17,7 @@ import {
 import { OrderBumpCard } from "@/components/checkout/OrderBumpCard";
 import { ProductBumpCards, useProductBumps } from "@/components/offers/StoreOffers";
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
+import { useStorePlaces } from "@/lib/useStorePlaces";
 import { BillingAddressFields, billingFieldId, useBillingAddress } from "@/components/checkout/BillingAddressFields";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
@@ -61,7 +62,7 @@ import {
   type OrderFormField,
   type OrderFormValues,
 } from "@/lib/orderForm";
-import { isOrderBumpRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
+import { isOrderBumpRefused, isPlaceRefused, orderErrorMessage, placeCodOrder, serverFieldErrors, type OrderLine } from "@/lib/placeOrder";
 import { defaultOfferOf, firstImage, offerAppliesTo, variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
 import { useFunnelCurrency } from "./FunnelCurrency";
@@ -431,6 +432,16 @@ export function FunnelCheckout({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  // The store's own places: region → city → area pickers; the order is priced by the picked place (handoff 163/164).
+  const places = useStorePlaces({
+    client,
+    workspaceId,
+    country: values.country,
+    fields,
+    governorate: values.governorate,
+    city: values.city,
+    onChange: onFieldChange,
+  });
   const [bumpOn, setBumpOn] = useState(false);
   // Refused by the server since this step loaded (sold out, withdrawn): hidden.
   const [bumpGone, setBumpGone] = useState(false);
@@ -514,7 +525,7 @@ export function FunnelCheckout({
       return;
     }
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, places });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     const billingInvalid = billing.check();
@@ -540,7 +551,7 @@ export function FunnelCheckout({
     setFormError(null);
     const checkoutSessionId = await autosave.stop();
     const payload = {
-      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
+      ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, place: places.address, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       ...billing.payload(),
       funnelId,
       // The server adds the step's bump and the product's ticked ones to this order from their offers.
@@ -583,6 +594,8 @@ export function FunnelCheckout({
         setBumpGone(true);
         productBumps.reset();
       }
+      // A place hidden since the list was read: read it again (lib/useStorePlaces).
+      if (isPlaceRefused(err)) places.reload();
       const fromServer = serverFieldErrors(err, t.form.errors);
       const invalidFromServer = FIELD_ORDER.filter((k) => fromServer[k]);
       // A billing field the server named opens the billing block.
@@ -695,6 +708,7 @@ export function FunnelCheckout({
             onChange={onFieldChange}
             fields={fields}
             showAltPhone
+            storePlaces={places}
           />
           <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
         </fieldset>
