@@ -124,6 +124,19 @@ are listed under *Handoff items done*.
 - [x] 175 emails per funnel (funnel settings → Emails) and per website (when >1)
 - [ ] 171 live map (agent running)
 
+## Round 2 (plan: `09-plan-round2.md`, from the re-audit `08-reaudit.md`)
+- [x] R2-1 Phone cards in DataTable (before the re-audit).
+- [x] R2-2 Home tells the truth: queue/pipeline/recent orders keep error,
+      no-permission (403 → tile hidden) and zero apart; error tile with
+      «جرّب تاني» stays on top; partial failure shows the rows that loaded +
+      «جزء من القايمة مجاش»; a store with 0 orders gets «لسه مفيش أوردرات»
+      (recent-orders tile hidden then); only due calls count (home + tab
+      badge), «ومكالمتين متأجلين لبعدين» under the list; to-do rows outlined
+      so white text sits on the full brand fill (N-09). Checked at 390/1366
+      with the API forced to 500, 403 and an empty store.
+- [ ] R2-3 Storefront checkout (S13 + 163/164 pickers) — agent branch to merge.
+- [ ] R2-4 … R2-12 — see the plan.
+
 ## Local verification setup (any new session)
 - Postgres 16: `pg_ctlcluster 16 main start`; scratch DB `zimos_scratch`
   (postgres/postgres). Backend `.env` from `.env.example` with

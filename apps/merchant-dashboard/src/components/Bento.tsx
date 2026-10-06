@@ -36,7 +36,7 @@ const TONE: Record<BentoTone, string> = {
 
 const EYEBROW_TONE: Record<BentoTone, string> = {
   default: "text-ink-soft",
-  brand: "text-primary-foreground/85",
+  brand: "text-primary-foreground",
   attention: "text-accent-dark",
   success: "text-success",
   danger: "text-danger",

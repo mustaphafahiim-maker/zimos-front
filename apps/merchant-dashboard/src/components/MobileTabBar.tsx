@@ -40,14 +40,14 @@ export function MobileTabBar({ onMore, moreOpen }: { onMore: () => void; moreOpe
   const workspaceId = useWorkspaceId();
   const [waiting, setWaiting] = useState<number | null>(null);
 
-  // Orders waiting for a call. A role that can't read the queue gets no badge.
+  // Calls that are due now (not ones booked for later). A role that can't read the queue gets no badge.
   useEffect(() => {
     if (!workspaceId) return;
     let alive = true;
     const load = () =>
       apiClient
         .getConfirmationQueueCounts(workspaceId)
-        .then((counts) => alive && setWaiting(counts.pending))
+        .then((counts) => alive && setWaiting(counts.pendingDue))
         .catch(() => alive && setWaiting(null));
     void load();
     const timer = window.setInterval(() => {

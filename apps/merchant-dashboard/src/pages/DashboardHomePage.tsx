@@ -60,6 +60,7 @@ const STRINGS = {
     recentTitle: "Latest orders",
     viewAll: "All orders",
     noOrders: "No orders yet. The first one shows up here the moment it arrives.",
+    recentError: "We couldn't load your latest orders.",
     shareStore: "Share your store link",
     channelStore: "Store",
     channelFunnel: "Funnel",
@@ -88,6 +89,7 @@ const STRINGS = {
     recentTitle: "آخر الأوردرات",
     viewAll: "كل الأوردرات",
     noOrders: "لسه مفيش أوردرات. أول ما ييجي أوردر هيظهر هنا على طول.",
+    recentError: "معرفناش نجيب آخر الأوردرات.",
     shareStore: "شارك لينك متجرك",
     channelStore: "المتجر",
     channelFunnel: "مسار بيع",
@@ -154,12 +156,13 @@ export function DashboardHomePage() {
     if (websiteId && websiteChoices.data && !websiteChoices.data.some((w) => w.id === websiteId)) setWebsiteId("");
   }, [websiteId, websiteChoices.data, setWebsiteId]);
 
+  // null means "this role can't see it"; any other failure stays an error, never a zero (audit N-01).
   const queue = useAsync<ConfirmationQueueCounts | null>(
-    () => apiClient.getConfirmationQueueCounts(workspaceId).catch(() => null),
+    () => apiClient.getConfirmationQueueCounts(workspaceId).catch(nullIfDenied),
     [workspaceId]
   );
   const pipeline = useAsync<OrderPipeline | null>(
-    () => apiClient.getOrderPipeline(workspaceId).catch(() => null),
+    () => apiClient.getOrderPipeline(workspaceId).catch(nullIfDenied),
     [workspaceId]
   );
   const overview = useAsync<HomeOverview | null>(
@@ -190,7 +193,7 @@ export function DashboardHomePage() {
       apiClient
         .listOrders(workspaceId, { limit: 5 })
         .then((page) => page.orders as Order[])
-        .catch(() => null),
+        .catch(nullIfDenied),
     [workspaceId]
   );
 
@@ -209,8 +212,12 @@ export function DashboardHomePage() {
   // Work waiting beats the setup checklist: with orders to handle, the to-do tile comes first.
   const stages = pipeline.data?.stages;
   const hasTodo = Boolean(
-    (queue.data?.pending ?? 0) > 0 || stages?.ready_to_ship || stages?.delivery_failed || stages?.needs_follow_up
+    (queue.data?.pendingDue ?? 0) > 0 || stages?.ready_to_ship || stages?.delivery_failed || stages?.needs_follow_up
   );
+  const noOrdersYet = pipeline.data?.total === 0;
+  // A failed to-do list may hide work, so it keeps the top spot like a full one.
+  const todoFailed = Boolean(queue.error || pipeline.error);
+  const todoFirst = hasTodo || todoFailed;
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl">
@@ -306,11 +313,23 @@ export function DashboardHomePage() {
         </div>
       )}
 
-      {!todoLoading && !hasTodo && <SetupGuideCard />}
+      {!todoLoading && !todoFirst && <SetupGuideCard />}
 
       <Bento>
-        {todoLoading ? <BentoSkeleton span={2} /> : <NeedsYouTile queue={queue.data} pipeline={pipeline.data} />}
-        {!todoLoading && hasTodo && (
+        {todoLoading ? (
+          <BentoSkeleton span={2} />
+        ) : (
+          <NeedsYouTile
+            queue={queue.error ? null : queue.data}
+            pipeline={pipeline.error ? null : pipeline.data}
+            failed={todoFailed}
+            onRetry={() => {
+              if (queue.error) void queue.refresh();
+              if (pipeline.error) void pipeline.refresh();
+            }}
+          />
+        )}
+        {!todoLoading && todoFirst && (
           <div className="order-last col-span-2 lg:col-span-4">
             <SetupGuideCard className="" />
           </div>
@@ -358,7 +377,10 @@ export function DashboardHomePage() {
             </>
           ))}
 
-        <RecentOrdersTile orders={recent.data} loading={recent.loading} />
+        {/* With no orders at all, the to-do tile already says so and points at the store link. */}
+        {!(noOrdersYet && recent.data?.length === 0) && (
+          <RecentOrdersTile orders={recent.data} loading={recent.loading} error={recent.error} onRetry={() => void recent.refresh()} />
+        )}
       </Bento>
 
       {analyticsAllowed && <Details />}
@@ -369,10 +391,41 @@ export function DashboardHomePage() {
   );
 }
 
-function RecentOrdersTile({ orders, loading }: { orders: Order[] | null; loading: boolean }) {
+/** A 403 means this role can't see it (null, the tile hides); anything else stays an error. */
+function nullIfDenied(err: unknown): null {
+  if (isPermissionError(err)) return null;
+  throw err;
+}
+
+function RecentOrdersTile({
+  orders,
+  loading,
+  error,
+  onRetry,
+}: {
+  orders: Order[] | null;
+  loading: boolean;
+  error: unknown;
+  onRetry: () => void;
+}) {
   const t = useT(STRINGS);
+  const common = useCommon();
   const labels = useOrderLabels();
   if (loading) return <BentoSkeleton span={4} />;
+  if (error) {
+    return (
+      <BentoTile span={4} eyebrow={t.recentTitle} icon={ShoppingCart}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink">{t.recentError}</p>
+          <Button variant="outline" className="min-h-11" onClick={onRetry}>
+            {common.retry}
+          </Button>
+        </div>
+      </BentoTile>
+    );
+  }
+  // A role without order access: no tile, rather than a false "no orders yet".
+  if (!orders) return null;
   return (
     <BentoTile span={4} eyebrow={t.recentTitle} icon={ShoppingCart} action={orders?.length ? { to: "/orders", label: t.viewAll } : undefined}>
       {!orders || orders.length === 0 ? (

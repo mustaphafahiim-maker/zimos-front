@@ -41,6 +41,16 @@ const STRINGS = {
     needsAllClear: "Nothing is waiting for you right now",
     needsAllClearBody: "Every order is confirmed and on its way. Share your store link to bring in the next ones.",
     needsAllClearAction: "See all orders",
+    needsQueueClear: "No calls are waiting for you right now",
+    needsFirst: "No orders yet",
+    needsFirstBody: "Your first order will show up here with its next step. Share your store link to bring it in.",
+    needsFirstAction: "Share your store link",
+    needsFailed: "We couldn't load what's waiting for you",
+    needsFailedBody: "This isn't an all-clear: try again in a moment.",
+    needsPartFailed: "Part of this list didn't load.",
+    needsRetry: "Try again",
+    later_one: "1 more call is booked for later",
+    later_other: "{n} more calls are booked for later",
     confirm_one: "1 order is waiting for a confirmation call",
     confirm_other: "{n} orders are waiting for a confirmation call",
     confirmCta: "Start calling",
@@ -110,6 +120,18 @@ const STRINGS = {
     needsAllClear: "مفيش حاجة مستنياك دلوقتي",
     needsAllClearBody: "كل الأوردرات اتأكدت وفي طريقها. شارك لينك متجرك عشان تجيب الأوردرات الجاية.",
     needsAllClearAction: "شوف كل الأوردرات",
+    needsQueueClear: "مفيش مكالمات مستنياك دلوقتي",
+    needsFirst: "لسه مفيش أوردرات",
+    needsFirstBody: "أول أوردر هيظهر هنا ومعاه الخطوة الجاية. شارك لينك متجرك عشان ييجي.",
+    needsFirstAction: "شارك لينك متجرك",
+    needsFailed: "معرفناش نجيب اللي مستنياك",
+    needsFailedBody: "ده مش معناه إن مفيش حاجة: جرّب تاني كمان شوية.",
+    needsPartFailed: "جزء من القايمة مجاش.",
+    needsRetry: "جرّب تاني",
+    later_one: "ومكالمة واحدة متأجلة لبعدين",
+    later_two: "ومكالمتين متأجلين لبعدين",
+    later_few: "و{n} مكالمات متأجلة لبعدين",
+    later_other: "و{n} مكالمة متأجلة لبعدين",
     confirm_one: "أوردر واحد مستني مكالمة تأكيد",
     confirm_two: "أوردرين مستنيين مكالمة تأكيد",
     confirm_few: "{n} أوردرات مستنية مكالمة تأكيد",
@@ -204,20 +226,27 @@ const MIN_COST_COVERAGE = 80;
 /* ------------------------------------------------------------------ */
 
 interface NeedsYouProps {
+  /** null: this role can't see the confirmation queue. */
   queue: ConfirmationQueueCounts | null;
+  /** null: this role can't see orders. */
   pipeline: OrderPipeline | null;
+  /** The queue or the pipeline failed to load: never read that as "nothing to do" (audit N-01). */
+  failed: boolean;
+  onRetry: () => void;
 }
 
 /**
  * The hero tile: what is waiting for the merchant, as a short to-do list,
- * each line one tap from the screen that clears it.
+ * each line one tap from the screen that clears it. Only calls that are due
+ * count; calls booked for later are a quiet note under the list (N-05).
  */
-export function NeedsYouTile({ queue, pipeline }: NeedsYouProps) {
+export function NeedsYouTile({ queue, pipeline, failed, onRetry }: NeedsYouProps) {
   const t = useStrings();
   const rows: { key: string; icon: LucideIcon; text: string; cta: string; to: string }[] = [];
-  const pending = queue?.pending ?? 0;
-  if (pending > 0)
-    rows.push({ key: "confirm", icon: ClipboardCheck, text: pluralOf(t, "confirm", pending), cta: t.confirmCta, to: "/confirmation-queue" });
+  const due = queue?.pendingDue ?? 0;
+  const later = Math.max(0, (queue?.pending ?? 0) - due);
+  if (due > 0)
+    rows.push({ key: "confirm", icon: ClipboardCheck, text: pluralOf(t, "confirm", due), cta: t.confirmCta, to: "/confirmation-queue" });
   const stages = pipeline?.stages;
   if (stages?.ready_to_ship)
     rows.push({ key: "ship", icon: Truck, text: pluralOf(t, "ship", stages.ready_to_ship), cta: t.shipCta, to: "/orders?stage=ready_to_ship" });
@@ -225,12 +254,35 @@ export function NeedsYouTile({ queue, pipeline }: NeedsYouProps) {
     rows.push({ key: "failed", icon: PackageX, text: pluralOf(t, "failed", stages.delivery_failed), cta: t.failedCta, to: "/orders?stage=delivery_failed" });
   if (stages?.needs_follow_up)
     rows.push({ key: "follow", icon: AlertTriangle, text: pluralOf(t, "follow", stages.needs_follow_up), cta: t.followCta, to: "/orders?stage=needs_follow_up" });
+  const laterNote = later > 0 ? <p className="mt-2 text-sm leading-6">{pluralOf(t, "later", later)}</p> : null;
+
+  // Nothing loaded: say so, with a retry — an error must not look like an all-clear.
+  if (failed && rows.length === 0) {
+    return (
+      <BentoTile span={2} tone="attention" icon={AlertTriangle} eyebrow={t.needsEyebrow}>
+        <BentoAnswer className="text-ink">{t.needsFailed}</BentoAnswer>
+        <p className="mt-1 text-sm leading-6 text-ink-soft">{t.needsFailedBody}</p>
+        <RetryButton onClick={onRetry} label={t.needsRetry} />
+      </BentoTile>
+    );
+  }
+  // A role that sees neither the queue nor orders has nothing to do here.
+  if (!queue && !pipeline) return null;
 
   if (rows.length === 0) {
+    if (pipeline && pipeline.total === 0) {
+      return (
+        <BentoTile span={2} tone="brand" icon={Sparkles} eyebrow={t.needsEyebrow} action={{ to: "/store-settings", label: t.needsFirstAction }}>
+          <p className="text-xl leading-8 font-semibold">{t.needsFirst}</p>
+          <p className="mt-1 text-sm leading-6">{t.needsFirstBody}</p>
+        </BentoTile>
+      );
+    }
     return (
-      <BentoTile span={2} tone="brand" icon={BadgeCheck} eyebrow={t.needsEyebrow} action={{ to: "/orders", label: t.needsAllClearAction }}>
-        <p className="text-xl leading-8 font-semibold">{t.needsAllClear}</p>
-        <p className="mt-1 text-sm leading-6 text-primary-foreground/85">{t.needsAllClearBody}</p>
+      <BentoTile span={2} tone="brand" icon={BadgeCheck} eyebrow={t.needsEyebrow} action={pipeline ? { to: "/orders", label: t.needsAllClearAction } : undefined}>
+        <p className="text-xl leading-8 font-semibold">{pipeline ? t.needsAllClear : t.needsQueueClear}</p>
+        {pipeline && <p className="mt-1 text-sm leading-6">{t.needsAllClearBody}</p>}
+        {laterNote}
       </BentoTile>
     );
   }
@@ -240,9 +292,10 @@ export function NeedsYouTile({ queue, pipeline }: NeedsYouProps) {
       <ul className="-mx-1 space-y-1.5">
         {rows.map((row) => (
           <li key={row.key}>
+            {/* An outline, not a white wash: white text stays on the full brand fill (≥ 4.5:1, audit N-09). */}
             <Link
               to={row.to}
-              className="flex min-h-12 items-center gap-3 rounded-xl bg-primary-foreground/10 px-3 py-2 transition-colors hover:bg-primary-foreground/20"
+              className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 ring-1 ring-primary-foreground/30 transition-shadow ring-inset hover:ring-2 hover:ring-primary-foreground/70"
             >
               <row.icon className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />
               <span className="min-w-0 flex-1 text-[15px] leading-6 font-medium">{row.text}</span>
@@ -255,7 +308,28 @@ export function NeedsYouTile({ queue, pipeline }: NeedsYouProps) {
           </li>
         ))}
       </ul>
+      {laterNote}
+      {failed && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 text-sm">
+          <span>{t.needsPartFailed}</span>
+          <button type="button" onClick={onRetry} className="min-h-11 cursor-pointer font-semibold underline underline-offset-4">
+            {t.needsRetry}
+          </button>
+        </div>
+      )}
     </BentoTile>
+  );
+}
+
+function RetryButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-3 inline-flex min-h-11 cursor-pointer items-center self-start rounded-full bg-paper-raised px-4 text-sm font-semibold text-ink ring-1 ring-line-strong transition-colors hover:bg-paper-sunken"
+    >
+      {label}
+    </button>
   );
 }
 
