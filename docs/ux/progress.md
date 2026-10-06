@@ -235,7 +235,11 @@ are listed under *Handoff items done*.
       confirm / fulfil) stays in view, the everyday tools (edit address,
       waybill, edit items, copy link, invoice, test, archive, resend) fold
       under «أكتر», and «إلغاء الأوردر» sits last, at the far end.
-- [ ] R2-12 rest: N-18 lost orders filters, N-20 filtered tile labels.
+- [x] N-20 Home filter: the to-do tile (and the setup guide) come first
+      for the whole store; the product / store filter sits under them, above
+      the numbers it changes, with the heading «أرقامك» / «أرقام Demo
+      T-Shirt» and a note that latest orders stay store-wide.
+- [ ] R2-12 rest: N-18 lost orders filters.
 
 ## Handoff items 180–187 (backend 2026-10-06, second batch)
 - [x] 184 Address suggestions at checkout: «دوّر على عنوانك» combobox

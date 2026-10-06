@@ -70,7 +70,9 @@ const STRINGS = {
     allProducts: "All products",
     allStores: "All stores",
     clearFilters: "Clear filters",
-    filteredNote: "Filtered: profit by product shows on the profit report.",
+    filteredNote: "Only the numbers below are filtered; latest orders are for the whole store, and profit by product is on the profit report.",
+    numbers: "Your numbers",
+    numbersFor: "Numbers for {name}",
     detailsHint: "Visits, funnel, offers, sources and every metric of the period.",
   },
   ar: {
@@ -99,7 +101,9 @@ const STRINGS = {
     allProducts: "كل المنتجات",
     allStores: "كل المتاجر",
     clearFilters: "امسح الفلاتر",
-    filteredNote: "متفلتر: ربح كل منتج تلاقيه في تقرير الأرباح.",
+    filteredNote: "الأرقام اللي تحت بس اتفلترت؛ آخر الأوردرات للمتجر كله، وربح كل منتج في تقرير الأرباح.",
+    numbers: "أرقامك",
+    numbersFor: "أرقام {name}",
     detailsHint: "الزيارات، مسار الشراء، العروض، المصادر وكل مؤشرات الفترة.",
   },
 } satisfies Messages;
@@ -147,6 +151,14 @@ export function DashboardHomePage() {
         : Promise.resolve([]),
     [workspaceId, analyticsAllowed]
   );
+
+  // The heading over the numbers names what they are filtered to («أرقام Demo T-Shirt»).
+  const filterName = [
+    productChoices.data?.find((p) => p.id === productId)?.name,
+    websiteChoices.data?.find((w) => w.id === websiteId)?.name,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   // A remembered product or store that no longer exists falls back to all (the API would refuse it).
   useEffect(() => {
@@ -262,8 +274,34 @@ export function DashboardHomePage() {
         </div>
       </div>
 
+      {!todoLoading && !todoFirst && <SetupGuideCard />}
+
+      {/* What's waiting is for the whole store, so it comes before the product / store filter,
+          which only changes the numbers below it (re-audit N-20). */}
+      <Bento className="lg:grid-cols-2">
+        {todoLoading ? (
+          <BentoSkeleton span={2} />
+        ) : (
+          <NeedsYouTile
+            queue={queue.error ? null : queue.data}
+            pipeline={pipeline.error ? null : pipeline.data}
+            failed={todoFailed}
+            onRetry={() => {
+              if (queue.error) void queue.refresh();
+              if (pipeline.error) void pipeline.refresh();
+            }}
+          />
+        )}
+        {!todoLoading && todoFirst && (
+          <div className="order-last col-span-2">
+            <SetupGuideCard className="" />
+          </div>
+        )}
+      </Bento>
+
       {analyticsAllowed && ((productChoices.data?.length ?? 0) > 0 || (websiteChoices.data?.length ?? 0) > 1) && (
-        <div className="mb-[var(--bento-gap)] flex flex-wrap items-center gap-2">
+        <div className="my-[var(--bento-gap)] flex flex-wrap items-center gap-2">
+          <h2 className="me-auto text-sm font-semibold text-ink">{filtered ? fmt(t.numbersFor, { name: filterName }) : t.numbers}</h2>
           {(productChoices.data?.length ?? 0) > 0 && (
             <Select
               aria-label={t.product}
@@ -313,27 +351,9 @@ export function DashboardHomePage() {
         </div>
       )}
 
-      {!todoLoading && !todoFirst && <SetupGuideCard />}
+      {analyticsAllowed && !((productChoices.data?.length ?? 0) > 0 || (websiteChoices.data?.length ?? 0) > 1) && <div className="h-[var(--bento-gap)]" />}
 
       <Bento>
-        {todoLoading ? (
-          <BentoSkeleton span={2} />
-        ) : (
-          <NeedsYouTile
-            queue={queue.error ? null : queue.data}
-            pipeline={pipeline.error ? null : pipeline.data}
-            failed={todoFailed}
-            onRetry={() => {
-              if (queue.error) void queue.refresh();
-              if (pipeline.error) void pipeline.refresh();
-            }}
-          />
-        )}
-        {!todoLoading && todoFirst && (
-          <div className="order-last col-span-2 lg:col-span-4">
-            <SetupGuideCard className="" />
-          </div>
-        )}
 
         {analyticsAllowed &&
           (numbersLoading && !ov ? (
