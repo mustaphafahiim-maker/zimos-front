@@ -30,6 +30,7 @@ import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { useFunnelErrorMessage, type UiStep } from "./funnelAdapter";
 import { FunnelCodeAndShippingFields, FunnelLinkSetting } from "./FunnelSettingsMore";
+import { FunnelConversionEventSetting } from "./FunnelConversionEventSetting";
 import { FunnelStepPageEditor } from "./FunnelStepPageEditor";
 import { CONTROL_KEY, VersionSharesEditor, sharesTotal, toPayload, versionLabel, type VersionDraft } from "./SplitTestVersions";
 
@@ -756,6 +757,7 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
       <div className="space-y-4">
         <p className="text-sm text-ink-soft">{t.settingsIntro}</p>
         <FunnelLinkSetting funnelId={funnelId} />
+        <FunnelConversionEventSetting funnelId={funnelId} />
         <div className="grid gap-3 sm:grid-cols-2">
           {field("title", t.seoTitle, { maxLength: 200 })}
           {field("currency", t.currency, { dir: "ltr", maxLength: 3 })}

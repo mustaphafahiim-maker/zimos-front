@@ -225,3 +225,5 @@ export * from "./endpoints/storeFonts";
 export * from "./endpoints/confirmationCallback";
 // Checkout photo field and optional billing address (checkout/checkoutForm.js, handoff 165).
 export * from "./endpoints/checkoutUploads";
+// Report orders to the ad platforms as Lead instead of Purchase, per store and funnel (handoff 167).
+export * from "./endpoints/conversionEvent";

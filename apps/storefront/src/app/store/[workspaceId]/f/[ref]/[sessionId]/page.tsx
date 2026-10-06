@@ -3,7 +3,9 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import {
   ApiError,
+  conversionEventOf,
   funnelRuntimeGetStep,
+  type FunnelSettingsWithConversion,
   type FunnelRuntimeState,
   type PageTree,
   type StorefrontProduct,
@@ -14,6 +16,7 @@ import { FUNNEL_ACTIONS_ID, FunnelOrders, FunnelStepActions } from "@/components
 import { FunnelUnavailable } from "@/components/funnel/FunnelUnavailable";
 import { StepTransition } from "@/components/funnel/StepTransition";
 import { FunnelCode } from "@/components/funnel/FunnelCode";
+import { FunnelConversionEvent } from "@/components/funnel/FunnelConversionEvent";
 import { PageRenderer } from "@/components/page-renderer";
 import { FunnelSessionProvider } from "@/lib/funnelSessionContext";
 import { PageScripts } from "@/components/PageScripts";
@@ -179,6 +182,11 @@ export default async function FunnelStepPage({ params }: { params: Params }) {
     <main className="flex-1">
       {/* The funnel's own scripts (funnel settings → code). */}
       <FunnelCode headCode={data.funnel?.settings?.headCode} bodyCode={data.funnel?.settings?.bodyCode} />
+      {/* Its "Report orders as" for the ad pixels; null = the store's. */}
+      <FunnelConversionEvent
+        funnelId={ref}
+        conversionEvent={conversionEventOf((data.funnel?.settings as FunnelSettingsWithConversion | undefined)?.conversionEvent)}
+      />
       {!done && <FunnelProgress completed={session.path.length} />}
       <FunnelCurrencyProvider currency={currency}>
         <StepTransition key={stepKey}>
