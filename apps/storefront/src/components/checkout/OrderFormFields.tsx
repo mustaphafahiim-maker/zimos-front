@@ -115,8 +115,11 @@ export function OrderFormFields({
   fields: OrderFormFieldModes;
   showAltPhone?: boolean;
 }) {
-  const { t, locale } = useStore();
+  const { t, locale, store } = useStore();
   const egypt = isEgyptForm(values);
+  // A store that delivers itself lists only the governorates it serves.
+  const served = store?.delivery?.servedGovernorates;
+  const governorates = served && served.length > 0 ? GOVERNORATES.filter((g) => served.includes(g.code)) : GOVERNORATES;
   const list = formOf(fields, { showAltPhone });
   const shownKeys = new Set(list.map((f) => f.key));
 
@@ -257,7 +260,7 @@ export function OrderFormFields({
                   className={`${input} cursor-pointer appearance-none pe-10`}
                 >
                   <option value="">{t.form.chooseGovernorate}</option>
-                  {GOVERNORATES.map((g) => (
+                  {governorates.map((g) => (
                     <option key={g.code} value={g.code}>
                       {g[arOrEn(locale)]}
                     </option>

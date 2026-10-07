@@ -2347,6 +2347,8 @@ export interface ShippingSettings {
   governorateRates: Record<string, number>;
   /** "manual" or a courier code; null = no preference. */
   defaultCarrierCode: string | null;
+  /** The only governorates the store delivers to; [] = everywhere. Older servers leave it out. */
+  servedGovernorates?: string[];
 }
 
 export interface ShippingGovernorate {
@@ -2368,6 +2370,8 @@ export type UpdateShippingSettingsPayload = Partial<{
   freeShippingThresholdAmount: number | null;
   governorateRates: Record<string, number>;
   defaultCarrierCode: string | null;
+  /** [] or null = deliver everywhere. */
+  servedGovernorates: string[] | null;
 }>;
 
 export interface CreateShippingRatePayload {

@@ -114,6 +114,8 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
 export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderFormErrors {
   const out: OrderFormErrors = {};
   if (isApiErrorCode(err, "INVALID_PHONE")) out.phone = copy.phone;
+  // The store does not deliver there: said once, on the governorate, not as "required".
+  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return { ...out, governorate: copy.areaNotServed };
   for (const problem of apiFieldProblems(err)) {
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
@@ -135,6 +137,9 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
+  // Self delivery: below the store's minimum, or outside the governorates it delivers to.
+  if (isApiErrorCode(err, "MIN_ORDER_NOT_MET")) return copy.minOrder;
+  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;

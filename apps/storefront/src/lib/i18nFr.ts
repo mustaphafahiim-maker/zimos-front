@@ -217,6 +217,8 @@ export const fr: Dictionary = {
       customFields:
         "Un produit de votre panier a une information manquante ou sa photo a expiré. Retirez-le puis ajoutez-le à nouveau depuis sa page.",
       bumpUnavailable: "Le complément coché n'est plus disponible, nous l'avons retiré. Passez à nouveau la commande sans lui.",
+      minOrder: "Cette commande est en dessous du minimum de la boutique. Ajoutez quelques articles pour continuer.",
+      areaNotServed: "Désolé, la boutique ne livre pas encore dans ce gouvernorat.",
       unavailable: "Ce produit est indisponible pour le moment.",
     },
   },

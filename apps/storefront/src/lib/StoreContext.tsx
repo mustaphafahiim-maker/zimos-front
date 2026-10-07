@@ -43,6 +43,14 @@ export interface StoreInfo {
   orderBump: StorefrontOrderBump | null;
   /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
   country?: string | null;
+  /** Self delivery (GET /store/:ws `delivery`); absent from older APIs. */
+  delivery?: StoreDelivery | null;
+}
+
+/** How a store that delivers itself takes orders (GET /store/:ws `delivery`). */
+export interface StoreDelivery {
+  /** The only governorate codes the store delivers to; null = everywhere. */
+  servedGovernorates?: string[] | null;
 }
 
 export interface StoreContextValue {

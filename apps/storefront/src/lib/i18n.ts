@@ -301,6 +301,8 @@ const en = {
       customFields:
         "A product in your cart is missing a detail, or its photo expired. Remove it and add it again from its page.",
       bumpUnavailable: "The add-on you ticked is no longer available, so we took it off. Place the order again without it.",
+      minOrder: "This order is below the store's minimum. Add a few more items to continue.",
+      areaNotServed: "Sorry, the store doesn't deliver to this governorate yet.",
       unavailable: "This product is unavailable right now.",
     },
   },
@@ -825,6 +827,8 @@ const ar: Dictionary = {
       rejected: "عذرًا، مش قادرين نكمّل الطلب ده أونلاين. تواصل مع المتجر وهيساعدوك تكمّله بكل سرور.",
       customFields: "منتج في السلة ناقصه بيانات أو صورته انتهت صلاحيتها. شيله وضيفه تاني من صفحته.",
       bumpUnavailable: "الإضافة اللي اخترتها مبقتش متاحة، فشلناها من الطلب. أكّد الطلب تاني من غيرها.",
+      minOrder: "الطلب أقل من الحد الأدنى للمتجر. زوّد كام منتج عشان تكمل.",
+      areaNotServed: "آسفين، المتجر مش بيوصّل للمحافظة دي حالياً.",
       unavailable: "المنتج غير متوفر حاليًا.",
     },
   },
