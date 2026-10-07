@@ -35,7 +35,6 @@ import {
   STARTER_TEMPLATE_IDS,
   createFunnelFromStarter,
   duplicateFunnel,
-  funnelPublicUrl,
   starterPlan,
   useFunnelErrorMessage,
   type StarterTemplateId,
@@ -43,6 +42,7 @@ import {
 } from "./funnelAdapter";
 import { STARTER_TEMPLATE_TEXT } from "./FunnelEditorPage.strings";
 import { StepChain } from "./StepChain";
+import { funnelPreviewUrl, useStoreBaseUrl } from "./FunnelPublicLink";
 
 const STRINGS = {
   en: {
@@ -208,6 +208,7 @@ export function FunnelsPage() {
   const { intlLocale } = useLocale();
   const describeError = useFunnelErrorMessage();
   const list = useAsync(() => funnelsList(apiClient, workspaceId), [workspaceId]);
+  const storeBase = useStoreBaseUrl();
 
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<FunnelDto | null>(null);
@@ -391,7 +392,7 @@ export function FunnelsPage() {
               <tbody>
                 {funnels.map((f) => {
                   const busy = busyId === f.id;
-                  const url = funnelPublicUrl(f.subdomain);
+                  const url = funnelPreviewUrl(storeBase, f);
                   const count = stepCounts.data?.get(f.id);
                   const row = statsById.get(f.id);
                   return (

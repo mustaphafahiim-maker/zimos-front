@@ -4,6 +4,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { Modal } from "./Modal";
 import { OverlayRoot } from "./overlayRoot";
 import { Popover } from "./Popover";
+import { DashboardLayout } from "./DashboardLayout";
+import { renderWithProviders } from "@/test/renderWithProviders";
+import { testWorkspace } from "@/test/mocks";
 import css from "../index.css?raw";
 import dashboardLayout from "./DashboardLayout.tsx?raw";
 import editorLayout from "./EditorLayout.tsx?raw";
@@ -100,5 +103,26 @@ describe("what the overlay root sits in", () => {
     for (const selector of [".glass-app", ".glass-app main", ".glass-editor"]) {
       for (const body of rulesFor(selector)) expect(body, selector).not.toMatch(CONTAINING_BLOCK);
     }
+  });
+});
+
+describe("sidebar store switcher", () => {
+  it("lists the stores in the overlay root, over the phone drawer, with its own glass look", async () => {
+    const { user } = renderWithProviders(<DashboardLayout />, {
+      workspace: { workspaces: [testWorkspace, { ...testWorkspace, id: "ws_2", name: "Delta Store" }] },
+    });
+    const [trigger] = screen.getAllByRole("button", { name: "Switch store" });
+    await user.click(trigger);
+
+    const list = screen.getByTestId("store-switcher-list");
+    expect(trigger.closest("aside")).not.toContainElement(list);
+    expect(document.querySelector("[data-overlay-root]")).toContainElement(list);
+    expect(list).toHaveTextContent("Delta Store");
+    const panel = list.closest("[data-popover]");
+    expect(panel).toHaveClass("z-[60]", "zimos-glass", "rounded-xl", "shadow-xl");
+    expect(panel).not.toHaveClass("bg-paper-raised");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("store-switcher-list")).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@store-builder/ui";
 
@@ -24,7 +25,10 @@ export function Modal({ open, onClose, title, description, children, footer, cla
 
   if (!open) return null;
 
-  return (
+// Drawn in <body>, like SignOutDialog: a backdrop-blur or an entrance
+// transform on any ancestor (the sticky header, a Drawer around a Modal) would
+// otherwise make position: fixed follow that box instead of the window.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-primary-dark/40 dark:bg-black/60 p-4 py-12 backdrop-blur-[2px]"
       onMouseDown={onClose}
@@ -60,6 +64,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
