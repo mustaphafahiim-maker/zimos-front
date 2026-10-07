@@ -57,7 +57,7 @@ import {
   UpsellActionElement,
 } from "./builderElements";
 import { ShowcaseElement } from "./showcase";
-import { columnClasses, heroSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
+import { columnClasses, heroSectionIndex, openingSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
 import { pageStyleSheet, styleKey } from "./elementStyle";
@@ -126,6 +126,11 @@ interface Ctx {
   data: BindingData | null;
   /** The page's product, for product elements that name none; "" when the page has none. */
   pageProductId: string;
+  /**
+   * Set for the page's opening section only: its pictures are what a shopper
+   * sees first, so they load at once and ahead of the rest instead of lazily.
+   */
+  opening?: boolean;
 }
 
 /** Elements whose empty `productId` means "the page's product". */
@@ -149,7 +154,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "rich_text":
       return <TextElement props={props} large />;
     case "image":
-      return <ImageElement props={props} />;
+      return <ImageElement props={props} eager={ctx.opening === true} />;
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
@@ -281,7 +286,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
         <ShowcaseElement
           type={element.type}
           props={props}
-          ctx={{ workspaceId: ctx.workspaceId, currency: ctx.currency, locale: ctx.locale, editable: ctx.editable === true }}
+          ctx={{ workspaceId: ctx.workspaceId, currency: ctx.currency, locale: ctx.locale, editable: ctx.editable === true, eager: ctx.opening === true }}
         />
       );
   }
@@ -448,6 +453,8 @@ export async function PageRenderer({
     pageProductId: pageProductId(tree),
   };
   const hero = heroSectionIndex(sections);
+  const opening = openingSectionIndex(sections);
+  const openingCtx: Ctx = { ...ctx, opening: true };
   const css = pageStyleSheet(tree, siteStyles);
 
   // `zt-sections` lets a store theme restyle the rules between sections.
@@ -457,9 +464,9 @@ export async function PageRenderer({
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
       {sections.map((section, index) =>
         editable ? (
-          <EditableSectionNode key={section.id} section={section} index={index} ctx={ctx} hero={index === hero} />
+          <EditableSectionNode key={section.id} section={section} index={index} ctx={index === opening ? openingCtx : ctx} hero={index === hero} />
         ) : (
-          <SectionNode key={section.id} section={section} ctx={ctx} hero={index === hero} />
+          <SectionNode key={section.id} section={section} ctx={index === opening ? openingCtx : ctx} hero={index === hero} />
         )
       )}
     </div>

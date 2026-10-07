@@ -11,6 +11,7 @@ import {
   SECTION_WIDTH,
   columnClasses,
   heroSectionIndex,
+  openingSectionIndex,
   rowClasses,
   sectionClasses,
   sectionHooks,
@@ -161,5 +162,23 @@ describe("theme hooks", () => {
     // Junk nodes are skipped, not thrown on.
     assert.equal(heroSectionIndex([null, { rows: "x" }, section([heading(1)])]), -1);
     assert.equal(heroSectionIndex([{ rows: [{ columns: [{ elements: [null, { type: "heading", props: { level: "1" } }] }] }] }]), 0);
+  });
+});
+
+describe("openingSectionIndex", () => {
+  const section = (rows) => ({ id: "s", type: "section", rows });
+  const row = { id: "r", type: "row", columns: [] };
+
+  it("is the first section that has rows", () => {
+    assert.equal(openingSectionIndex([section([row]), section([row])]), 0);
+    // An empty section draws nothing on the store, so the next one is the top.
+    assert.equal(openingSectionIndex([section([]), section([row])]), 1);
+    assert.equal(openingSectionIndex([null, { rows: "x" }, section([row])]), 2);
+  });
+
+  it("is -1 when nothing draws", () => {
+    assert.equal(openingSectionIndex([]), -1);
+    assert.equal(openingSectionIndex(undefined), -1);
+    assert.equal(openingSectionIndex([section([])]), -1);
   });
 });

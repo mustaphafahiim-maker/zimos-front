@@ -14,7 +14,7 @@ export function PoweredByZimos({ label }: { label: string }) {
       className="inline-flex min-h-11 items-center gap-2 rounded-lg px-1 text-xs text-ink-soft transition-opacity hover:opacity-80"
     >
       <span>{label}</span>
-      <ZimosLogo height={18} />
+      <ZimosLogo height={18} loading="lazy" />
     </a>
   );
 }

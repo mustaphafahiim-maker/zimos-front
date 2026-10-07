@@ -24,7 +24,7 @@ import type { StoreThemeKey } from "@/lib/brandTheme";
  * `next/font/google` downloads each family at build time and serves it from
  * this app's own `/_next/static/media` — the shopper's browser never talks to
  * Google, so a blocked or slow font CDN can't take a theme's type away. (The
- * original look keeps the Google Fonts link in the root layout it always had.)
+ * original look's families load the same way, from baseFonts.ts.)
  *
  * Nothing here is preloaded: every store page imports this module, and only
  * the active theme's two or three families are ever drawn, so a preload tag

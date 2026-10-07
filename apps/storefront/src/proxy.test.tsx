@@ -168,3 +168,28 @@ describe("behind the Cloudflare Worker (X-Forwarded-Host + X-Zimos-Edge)", () =>
     expect((await proxy(forged)).headers.get("x-middleware-request-x-real-ip")).not.toBe("203.0.113.7");
   });
 });
+
+describe("proxy: CDN caching of public store pages (STOREFRONT_EDGE_CACHE)", () => {
+  it("leaves every response as it was while off (the default)", async () => {
+    const res = await proxy(request("shop.zimos.co", "/"));
+    expect(res.headers.get("cache-control")).toBeNull();
+  });
+
+  it("marks a public page cacheable when on, and nothing personal", async () => {
+    vi.stubEnv("STOREFRONT_EDGE_CACHE", "true");
+    const home = await proxy(request("shop.zimos.co", "/"));
+    expect(home.headers.get("cache-control")).toContain("s-maxage=60");
+    expect(new URL(rewriteOf(home)!).pathname).toBe("/store/shop");
+
+    const checkout = await proxy(request("shop.zimos.co", "/checkout"));
+    expect(checkout.headers.get("cache-control")).toBeNull();
+
+    const chosen = new NextRequest("http://shop.zimos.co/", { headers: { host: "shop.zimos.co", cookie: "zimos_store_locale=en" } });
+    expect((await proxy(chosen)).headers.get("cache-control")).toBeNull();
+
+    const platform = await proxy(request("zimos.co"));
+    expect(platform.status).toBe(307);
+    expect(platform.headers.get("cache-control")).toBeNull();
+  });
+});
+
