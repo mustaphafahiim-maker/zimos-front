@@ -56,6 +56,7 @@ import { OrderBumpsPage, UpsellsPage } from "@/pages/offers/OrderBumpsPage";
 import { CrossSellPage } from "@/pages/offers/CrossSellPage";
 import { ExitDownsellPage } from "@/pages/offers/ExitDownsellPage";
 import { OrderRulesPage } from "@/pages/offers/OrderRulesPage";
+import { FreeGiftsPage } from "@/pages/offers/FreeGiftsPage";
 import { NewsletterPage, ReferralLinksPage, SocialProofPage } from "@/pages/offers/EngagementPages";
 import { ProductFeedPage } from "@/pages/offers/ProductFeedPage";
 import { ShippingTaxPage } from "@/pages/shipping/ShippingTaxPage";
@@ -193,6 +194,7 @@ export default function App() {
                       <Route path="/offers/upsells" element={<UpsellsPage />} />
                       <Route path="/offers/exit-popup" element={<ExitDownsellPage />} />
                       <Route path="/offers/order-rules" element={<OrderRulesPage />} />
+                      <Route path="/offers/free-gifts" element={<FreeGiftsPage />} />
                       <Route path="/offers/social-proof" element={<SocialProofPage />} />
                       <Route path="/offers/newsletter" element={<NewsletterPage />} />
                       <Route path="/offers/referrals" element={<ReferralLinksPage />} />

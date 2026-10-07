@@ -17,13 +17,14 @@ import { LanguagesTab } from "./LanguagesTab";
 import { SectionTabs } from "@/components/SectionTabs";
 import { CustomerAccountsTab } from "./CustomerAccountsTab";
 import { PrivacyTab } from "./PrivacyTab";
+import { GiftOptionsTab } from "./GiftOptionsTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "store-access", "custom-code", "customer-accounts", "privacy"] as const;
+const TABS = ["general", "checkout-form", "gift-options", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "store-access", "custom-code", "customer-accounts", "privacy"] as const;
 type TabKey = (typeof TABS)[number];
 
 const STRINGS = {
@@ -32,6 +33,7 @@ const STRINGS = {
     description: "What shoppers fill in, read and see in your store.",
     tabsLabel: "Store settings sections",
     "checkout-form": "Purchase form",
+    "gift-options": "Gift options",
     "thank-you": "Thank-you page",
     "store-info": "Contact details",
     policies: "Policies",
@@ -50,6 +52,7 @@ const STRINGS = {
     description: "اللي العميل بيملاه ويقراه ويشوفه في متجرك.",
     tabsLabel: "أقسام إعدادات المتجر",
     "checkout-form": "نموذج الشراء",
+    "gift-options": "خيارات الهدايا",
     "thank-you": "صفحة الشكر",
     "store-info": "بيانات التواصل",
     policies: "السياسات",
@@ -86,6 +89,7 @@ export function StoreDesignPage() {
         <div className="min-w-0">
       {/* Keyed by workspace so a store switch never shows the previous store's draft. */}
       {active === "checkout-form" && <CheckoutFormTab key={workspaceId} />}
+      {active === "gift-options" && <GiftOptionsTab key={workspaceId} />}
       {active === "thank-you" && <ThankYouTab key={workspaceId} />}
       {active === "store-info" && <StoreInfoTab key={workspaceId} />}
       {active === "policies" && <PoliciesTab key={workspaceId} />}

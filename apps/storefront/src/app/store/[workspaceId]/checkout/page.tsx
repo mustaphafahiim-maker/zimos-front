@@ -71,6 +71,9 @@ import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddres
 import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
 import { DeliveryEstimateLine } from "@/components/DeliveryEstimateLine";
+import { CartFreeGifts } from "@/components/gifts/CartFreeGifts";
+import { CartBoxSavings } from "@/components/gifts/CartBoxSavings";
+import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts/GiftOptionsField";
 
 const FORM_PREFIX = "checkout";
 const FORM_ERROR_ID = `${FORM_PREFIX}-form-error`;
@@ -183,10 +186,13 @@ export default function CheckoutPage() {
   // A ticked bump is not a cart line: the server adds it to the order.
   const bumpInTotals = (bumpOn && bump ? bump.priceAmount : 0) + cartBumps.selected.reduce((sum, b) => sum + b.priceAmount, 0);
   const subtotal = cart?.subtotal ?? 0;
+  // Gift wrap and message (handoff 214): a chosen wrap rides the quote and the estimate like a ticked bump.
+  const gift = useGiftChoice({ client, workspaceId });
   // The bump counts toward the parcel's weight as soon as it's ticked.
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
+  if (gift.quoteLine) quoteLines.push(gift.quoteLine);
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(
     useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines, place: places.address })
@@ -194,7 +200,7 @@ export default function CheckoutPage() {
   const shipping = shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
-  const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
+  const total = subtotal + bumpInTotals + gift.wrapAmount + shipping.amount - automaticOff;
   const giftCard = useGiftCard({ client, workspaceId, method, total, currency });
 
   // --- progress ------------------------------------------------------------
@@ -257,6 +263,7 @@ export default function CheckoutPage() {
         ...billing.payload(),
         ...shippingChoice.payload,
         ...giftCard.payload,
+        ...gift.payload,
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
@@ -328,6 +335,8 @@ export default function CheckoutPage() {
         scrollIntoViewSoon(FORM_ERROR_ID);
       }
       if (giftCardProblem) setFormError(giftCardProblem);
+      const giftChoiceProblem = gift.onError(err);
+      if (giftChoiceProblem) setFormError(giftChoiceProblem);
       autosave.resume();
     }
   }
@@ -371,6 +380,8 @@ export default function CheckoutPage() {
             </div>
             <CodeSlot name="below_form" />
           </section>
+
+          <GiftOptionsField state={gift} idPrefix={FORM_PREFIX} />
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
             <h2 id="payment-title" className="text-lg font-semibold text-ink">
@@ -433,6 +444,8 @@ export default function CheckoutPage() {
                 })}
               </ul>
             )}
+            {items.length > 0 && <CartFreeGifts cart={cart} progress={false} className="mt-3" />}
+            {items.length > 0 && <CartBoxSavings cart={cart} className="mt-3" />}
 
             {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
             {formOptions.allow_discount_codes && (
@@ -497,6 +510,7 @@ export default function CheckoutPage() {
                   <dd className="text-ink">{money(b.priceAmount, currency)}</dd>
                 </div>
               ))}
+              <GiftWrapRow state={gift} currency={currency} />
               {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>

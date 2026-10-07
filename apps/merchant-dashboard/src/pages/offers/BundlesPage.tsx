@@ -23,6 +23,7 @@ import { Modal } from "@/components/Modal";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { BundleEditorDialog } from "./BundleEditorDialog";
+import { MixAndMatchNote } from "./MixAndMatchParts";
 import { OfferNumbers, useOfferStats } from "./OfferNumbers";
 
 /**
@@ -163,6 +164,7 @@ export function BundlesPage() {
                     <p className="mt-0.5 text-sm text-ink-soft">
                       {bundle.productCount > 0 ? fmt(t.products, { count: bundle.productCount }) : t.noProducts}
                     </p>
+                    <MixAndMatchNote bundle={bundle} />
                     <OfferNumbers stat={stats?.bundles[bundle.id]} />
                   </div>
                   <StatusBadge

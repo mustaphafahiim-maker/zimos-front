@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Rss, BellRing, Link2, Mail, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag } from "lucide-react";
+import { ChevronRight, Rss, BellRing, Link2, Mail, Truck, DoorOpen, Layers, PackagePlus, Shuffle, Sparkles, Tag, Gift } from "lucide-react";
 import { Card } from "@store-builder/ui";
 import { offersSummaryGet } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -33,6 +33,8 @@ const STRINGS = {
     exitHint: "A last offer with a coupon for a visitor who is leaving.",
     rules: "Minimum order and free shipping",
     rulesHint: "A floor under small orders, and a bar that shows what is left for free shipping.",
+    freeGifts: "Free gifts",
+    freeGiftsHint: "A gift added at no charge when the order reaches an amount or has a product.",
     social: "Sales notifications",
     socialHint: "“Ahmed from Mansoura bought this” — from real orders only.",
     newsletter: "Newsletter sign-up",
@@ -66,6 +68,8 @@ const STRINGS = {
     exitHint: "عرض أخير بكوبون لزائر يغادر.",
     rules: "الحد الأدنى للطلب والشحن المجاني",
     rulesHint: "حد أدنى للأوردرات الصغيرة، وشريط يوضح المتبقي للشحن المجاني.",
+    freeGifts: "هدايا مع الأوردر",
+    freeGiftsHint: "هدية بتتضاف ببلاش لما الأوردر يوصل لمبلغ معيّن أو يكون فيه منتج معيّن.",
     social: "إشعارات المبيعات",
     socialHint: "«أحمد من المنصورة اشترى هذا» — من أوردرات حقيقية فقط.",
     newsletter: "الاشتراك في النشرة",
@@ -150,6 +154,7 @@ export function OffersPage() {
     },
     { to: "/offers/exit-popup", icon: <DoorOpen />, title: t.exit, hint: t.exitHint },
     { to: "/offers/order-rules", icon: <Truck />, title: t.rules, hint: t.rulesHint },
+    { to: "/offers/free-gifts", icon: <Gift />, title: t.freeGifts, hint: t.freeGiftsHint },
     { to: "/offers/social-proof", icon: <BellRing />, title: t.social, hint: t.socialHint },
     {
       to: "/offers/newsletter",

@@ -294,3 +294,5 @@ export * from "./endpoints/cookieConsent";
 export * from "./endpoints/marketplaceTemplates";
 // Store gates: password, coming soon with sign-ups, age check; the storefront's unlock and sign-up (handoff 197).
 export * from "./endpoints/storeGate";
+// Free gifts with purchase, gift wrap and message, mix-and-match boxes: rules, settings, cart and order readers (handoffs 208, 214, 215).
+export * from "./endpoints/giftsAndBoxes";

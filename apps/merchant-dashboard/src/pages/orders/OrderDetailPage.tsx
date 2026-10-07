@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
+import { OrderGiftCard } from "./components/OrderGiftCard";
 import { OrderHero } from "./components/OrderHero";
 import { OrderActions } from "./components/OrderActions";
 import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
@@ -167,6 +168,7 @@ export function OrderDetailPage() {
                   <ConfirmationPanel order={data} onChanged={reload} />
                 </div>
 
+                <OrderGiftCard order={data} />
                 <OrderSummary order={data} onChanged={reload} />
 
                 <div id="order-shipments" className="scroll-mt-24">
