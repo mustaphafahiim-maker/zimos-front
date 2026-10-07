@@ -331,14 +331,16 @@
 [dir="rtl"] .animate-slide-in-start {
   animation-name: slide-in-end;
 }
+/* backwards, not both: a transform left on a modal, drawer or menu once it
+   has played would make it the box that position: fixed inside it follows. */
 .animate-slide-up {
-  animation: slide-up var(--dur-base) var(--ease-brisk) both;
+  animation: slide-up var(--dur-base) var(--ease-brisk) backwards;
 }
 .animate-slide-in-end {
-  animation: slide-in-end var(--dur-base) var(--ease-brisk) both;
+  animation: slide-in-end var(--dur-base) var(--ease-brisk) backwards;
 }
 .animate-slide-in-start {
-  animation: slide-in-start var(--dur-base) var(--ease-brisk) both;
+  animation: slide-in-start var(--dur-base) var(--ease-brisk) backwards;
 }
 
 /* Range input tinted with the brand primary. */
