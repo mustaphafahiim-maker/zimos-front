@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import type { FunnelDetailDto, FunnelEdgeDto, FunnelStepDto } from "@store-builder/api-client";
 import { api, fake, testWorkspace } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { FunnelEditorPage } from "./FunnelEditorPage";
 import { stepPageTree } from "./funnelPages";
+import { funnelPreviewUrl } from "./FunnelPublicLink";
 
 function step(key: string, stepType: FunnelStepDto["stepType"], name: string, i: number, offerId: string | null = null): FunnelStepDto {
   return fake<FunnelStepDto>({
@@ -73,6 +74,23 @@ describe("FunnelEditorPage", () => {
     expect(open).toHaveAttribute("href", "https://nile.zimos.co/f/headphones");
     expect(open).toHaveAttribute("target", "_blank");
     expect(open).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("Preview opens the published funnel on its store when no base URL is configured", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    serve(liveFunnel);
+    renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug });
+
+    (await screen.findByRole("button", { name: "Preview" })).click();
+    expect(open).toHaveBeenCalledWith("https://nile.zimos.co/f/headphones", "_blank", "noopener");
+  });
+
+  it("hides Preview on a draft funnel", async () => {
+    serve(emptyFunnel);
+    renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug });
+
+    await screen.findByTestId("funnel-link-hint");
+    expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
   });
 
   it("asks to publish a draft before it has a link", async () => {
@@ -156,5 +174,25 @@ describe("FunnelEditorPage", () => {
     expect(screen.getByRole("button", { name: "عرض إضافي بنقرة" })).toBeInTheDocument();
     // Its upsell still needs an offer before it can go live.
     expect(screen.getByText("لم تختر عرضًا بعد")).toBeInTheDocument();
+  });
+});
+
+describe("funnelPreviewUrl", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const base = "https://nile.zimos.co";
+  const published = { id: "f1", subdomain: "headphones", status: "published" as const };
+
+  it("uses the store link, by subdomain or id, for a published funnel only", () => {
+    expect(funnelPreviewUrl(base, published)).toBe("https://nile.zimos.co/f/headphones");
+    expect(funnelPreviewUrl(base, { ...published, subdomain: null })).toBe("https://nile.zimos.co/f/f1");
+    expect(funnelPreviewUrl(base, { ...published, status: "draft" })).toBeNull();
+    expect(funnelPreviewUrl(base, { ...published, status: "paused" })).toBeNull();
+    expect(funnelPreviewUrl(null, published)).toBeNull();
+  });
+
+  it("keeps VITE_FUNNEL_PUBLIC_BASE_URL when it is set", () => {
+    vi.stubEnv("VITE_FUNNEL_PUBLIC_BASE_URL", "https://{subdomain}.funnels.example");
+    expect(funnelPreviewUrl(base, published)).toBe("https://headphones.funnels.example");
+    expect(funnelPreviewUrl(base, { ...published, status: "draft" })).toBe("https://headphones.funnels.example");
   });
 });

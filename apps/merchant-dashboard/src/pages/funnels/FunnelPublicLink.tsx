@@ -10,6 +10,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { CopyButton } from "@/components/CopyButton";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { funnelEntryPath } from "./genericPageRules";
+import { funnelPublicUrl } from "./funnelAdapter";
 
 const STRINGS = {
   en: {
@@ -55,6 +56,21 @@ export function useStoreBaseUrl(): string | null {
 /** A funnel's public address on its store: <store>/f/<subdomain or id>. */
 export function funnelShareUrl(base: string, funnel: { id: string; subdomain: string | null }): string {
   return `${base}${funnelEntryPath(funnel)}`;
+}
+
+/**
+ * The address Preview and the funnels list open or copy. A configured
+ * VITE_FUNNEL_PUBLIC_BASE_URL wins, as before; otherwise the store link
+ * above, only for a published funnel (a draft one does not answer yet).
+ */
+export function funnelPreviewUrl(
+  base: string | null,
+  funnel: { id: string; subdomain: string | null; status: FunnelStatus }
+): string | null {
+  const configured = funnelPublicUrl(funnel.subdomain);
+  if (configured) return configured;
+  if (funnel.status !== "published" || !base) return null;
+  return funnelShareUrl(base, funnel);
 }
 
 /**

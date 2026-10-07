@@ -73,7 +73,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FunnelDraftBanner, useFunnelDraft } from "./FunnelDraft";
 import { FunnelIssuesButton } from "./FunnelIssues";
 import { FunnelGrowthButton } from "./FunnelGrowthPanel";
-import { FunnelPublicLink } from "./FunnelPublicLink";
+import { FunnelPublicLink, funnelPreviewUrl, useStoreBaseUrl } from "./FunnelPublicLink";
 import { Popover } from "@/components/Popover";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OfferPicker } from "@/components/OfferPicker";
@@ -83,7 +83,6 @@ import { fmt, useCommon, useLocale, useT, type Locale } from "@/i18n/LocaleConte
 import {
   CARD_GAP_X,
   STARTER_TEMPLATE_IDS,
-  funnelPublicUrl,
   loadUiFunnel,
   saveFunnelDiff,
   starterPlan,
@@ -327,7 +326,9 @@ export function FunnelEditorPage() {
 
   const selected = funnel?.steps.find((s) => s.key === selectedKey) ?? null;
   const entryKeys = useMemo(() => (funnel ? entryKeysOf(funnel) : []), [funnel]);
-  const publicUrl = funnel ? funnelPublicUrl(funnel.subdomain) : null;
+  const storeBase = useStoreBaseUrl();
+  // Preview opens the live funnel, so only once it is published.
+  const publicUrl = funnel && funnel.status === "published" ? funnelPreviewUrl(storeBase, funnel) : null;
   const offerIndex = useMemo(() => indexOffers(catalog.data), [catalog.data]);
 
   // What would stop a publish right now, re-checked on every edit, plus what
