@@ -51,6 +51,8 @@ export interface StoreInfo {
 export interface StoreDelivery {
   /** The only governorate codes the store delivers to; null = everywhere. */
   servedGovernorates?: string[] | null;
+  /** Pickup from the store, or null while the store does not offer it. */
+  pickup?: { address: string; phone: string; note: string } | null;
 }
 
 export interface StoreContextValue {

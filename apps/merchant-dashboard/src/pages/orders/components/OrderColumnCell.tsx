@@ -12,6 +12,7 @@ import { useSourceLabel, type OrderColumn } from "./OrderListFilters";
 const STRINGS = {
   en: {
     phoneLabel: "Phone",
+    pickup: "Pickup from the store",
     dq_good: "Good",
     dq_low: "Poor data",
     noShipment: "Not shipped",
@@ -19,6 +20,7 @@ const STRINGS = {
   },
   ar: {
     phoneLabel: "الهاتف",
+    pickup: "استلام من المتجر",
     dq_good: "جيدة",
     dq_low: "بيانات ضعيفة",
     noShipment: "لم يُشحن",
@@ -104,11 +106,13 @@ export function OrderColumnCell({
     case "source":
       return <td className="px-4 py-3 text-xs text-ink-soft">{sourceLabel(meta.source)}</td>;
     case "governorate":
-      return <td className="px-4 py-3 text-xs text-ink-soft">{address?.province || "—"}</td>;
+      return <td className="px-4 py-3 text-xs text-ink-soft">{order.deliveryMethod === "pickup" ? t.pickup : address?.province || "—"}</td>;
     case "address":
       return (
         <td className="max-w-56 px-4 py-3 text-xs text-ink-soft">
-          {address ? (
+          {order.deliveryMethod === "pickup" ? (
+            <div className="font-medium text-ink">{t.pickup}</div>
+          ) : address ? (
             <>
               <div className="text-ink">{[address.province, address.city].filter(Boolean).join(" · ") || "—"}</div>
               {address.addressLine && <div className="line-clamp-2">{address.addressLine}</div>}

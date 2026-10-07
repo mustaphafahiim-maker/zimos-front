@@ -43,6 +43,12 @@ const STRINGS = {
     areasOnly: "Only deliver to the governorates I tick",
     areasNone: "Tick at least one governorate, or switch this off.",
     minimumNote: "A minimum order amount is set in Offers → Order rules.",
+    pickup: "Pickup from the store",
+    pickupOn: "Let customers pick up their order from the store",
+    pickupHint: "The checkout offers pickup with no delivery fee and no address. Mark the order delivered when the customer collects it.",
+    pickupAddress: "Store address shown to the customer",
+    pickupPhone: "Store phone",
+    pickupNote: "Pickup note (for example: ready in 20 minutes)",
   },
   ar: {
     title: "أسعار الشحن",
@@ -72,6 +78,12 @@ const STRINGS = {
     areasOnly: "التوصيل إلى المحافظات التي أحددها فقط",
     areasNone: "حدّد محافظة واحدة على الأقل، أو أوقف هذا الخيار.",
     minimumNote: "يُضبط الحد الأدنى للطلب من العروض ← قواعد الطلب.",
+    pickup: "الاستلام من المتجر",
+    pickupOn: "السماح للعملاء باستلام الطلب من المتجر",
+    pickupHint: "تعرض صفحة الدفع خيار الاستلام بدون رسوم توصيل وبدون عنوان. حدِّد الطلب كمُسلَّم عندما يستلمه العميل.",
+    pickupAddress: "عنوان المتجر الذي يظهر للعميل",
+    pickupPhone: "هاتف المتجر",
+    pickupNote: "ملاحظة الاستلام (مثال: جاهز خلال 20 دقيقة)",
   },
 } satisfies Messages;
 
@@ -132,6 +144,7 @@ function SettingsForm({
   const [carrier, setCarrier] = useState(settings.defaultCarrierCode ?? "");
   const [areasOnly, setAreasOnly] = useState((settings.servedGovernorates ?? []).length > 0);
   const [served, setServed] = useState<string[]>(settings.servedGovernorates ?? []);
+  const [pickup, setPickup] = useState(settings.storePickup ?? { enabled: false, address: "", phone: "", note: "" });
   const [rates, setRates] = useState<Record<string, string>>(() =>
     Object.fromEntries(governorates.map((g) => [g.code, minorToMajorInput(settings.governorateRates[g.code])]))
   );
@@ -167,6 +180,7 @@ function SettingsForm({
         governorateRates,
         defaultCarrierCode: carrier || null,
         servedGovernorates: areasOnly ? governorates.map((g) => g.code).filter((code) => served.includes(code)) : [],
+        storePickup: { ...pickup, address: pickup.address.trim(), phone: pickup.phone.trim(), note: pickup.note.trim() },
       });
       toast.success(t.saved);
       await onSaved(saved);
@@ -258,6 +272,57 @@ function SettingsForm({
         )}
         {fieldErrors.servedGovernorates && <p className="text-xs font-medium text-danger">{fieldErrors.servedGovernorates}</p>}
         <p className="text-xs text-ink-soft">{t.minimumNote}</p>
+      </fieldset>
+
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-medium text-ink">{t.pickup}</legend>
+        <p className="text-xs text-ink-soft">{t.pickupHint}</p>
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={pickup.enabled} onChange={(e) => setPickup({ ...pickup, enabled: e.target.checked })} />
+          {t.pickupOn}
+        </label>
+        {pickup.enabled && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t.pickupAddress} error={fieldErrors["storePickup.address"]}>
+              {({ id, ...aria }) => (
+                <input
+                  id={id}
+                  {...aria}
+                  maxLength={300}
+                  value={pickup.address}
+                  onChange={(e) => setPickup({ ...pickup, address: e.target.value })}
+                  className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink"
+                />
+              )}
+            </Field>
+            <Field label={t.pickupPhone} error={fieldErrors["storePickup.phone"]}>
+              {({ id, ...aria }) => (
+                <input
+                  id={id}
+                  {...aria}
+                  dir="ltr"
+                  inputMode="tel"
+                  maxLength={32}
+                  value={pickup.phone}
+                  onChange={(e) => setPickup({ ...pickup, phone: e.target.value })}
+                  className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink"
+                />
+              )}
+            </Field>
+            <Field label={t.pickupNote} error={fieldErrors["storePickup.note"]} className="sm:col-span-2">
+              {({ id, ...aria }) => (
+                <input
+                  id={id}
+                  {...aria}
+                  maxLength={300}
+                  value={pickup.note}
+                  onChange={(e) => setPickup({ ...pickup, note: e.target.value })}
+                  className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm text-ink"
+                />
+              )}
+            </Field>
+          </div>
+        )}
       </fieldset>
 
       <p className="text-xs text-ink-soft">{t.productNote}</p>

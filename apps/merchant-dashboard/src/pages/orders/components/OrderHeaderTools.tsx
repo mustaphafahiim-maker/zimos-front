@@ -38,6 +38,7 @@ const STRINGS = {
     testOn: "Marked as a test order. It no longer counts as a sale.",
     testOff: "No longer a test order.",
     badgeTest: "Test order",
+    badgePickup: "Pickup from the store",
     badgeArchived: "Archived",
     source: "Source",
     source_store: "Store",
@@ -69,6 +70,7 @@ const STRINGS = {
     testOn: "تم تعليمه كأوردر تجريبي ولن يُحسب ضمن المبيعات.",
     testOff: "لم يعد أوردرًا تجريبيًا.",
     badgeTest: "أوردر تجريبي",
+    badgePickup: "استلام من المتجر",
     badgeArchived: "مؤرشف",
     source: "المصدر",
     source_store: "المتجر",
@@ -101,6 +103,7 @@ export function OrderMetaBadges({ order }: { order: Order }) {
     <>
       <StatusBadge label={t.source} value={meta.source} tone="neutral" text={t[`source_${meta.source}`]} />
       {meta.isTest && <StatusBadge value="test" tone="warning" text={t.badgeTest} />}
+      {order.deliveryMethod === "pickup" && <StatusBadge value="pickup" tone="info" text={t.badgePickup} />}
       {meta.archivedAt && <StatusBadge value="archived" tone="neutral" text={t.badgeArchived} />}
     </>
   );

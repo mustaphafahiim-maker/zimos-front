@@ -73,6 +73,7 @@ const STRINGS = {
     attemptsOther: "{n} previous attempts",
     unnamedCustomer: "Unnamed customer",
     noPhone: "No phone number",
+    pickup: "Pickup from the store — no delivery",
     claiming: "Claiming…",
     claimAndCall: "Claim & call",
     takeOver: "Take over",
@@ -173,6 +174,7 @@ const STRINGS = {
     attemptsOther: "{n} محاولات سابقة",
     unnamedCustomer: "عميل بدون اسم",
     noPhone: "لا يوجد رقم هاتف",
+    pickup: "استلام من المتجر — بدون توصيل",
     claiming: "جارٍ الاستلام…",
     claimAndCall: "استلام واتصال",
     takeOver: "استلام بدلًا منه",
@@ -640,7 +642,11 @@ function OrderSummary({
           </p>
           {contactAction}
         </div>
-        <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
+        {order.deliveryMethod === "pickup" ? (
+          <p className="mt-1 text-sm font-medium text-ink">{t.pickup}</p>
+        ) : (
+          <p className="mt-1 text-sm text-ink-soft">{formatAddress(order.shippingAddressSnapshot)}</p>
+        )}
       </div>
     </>
   );

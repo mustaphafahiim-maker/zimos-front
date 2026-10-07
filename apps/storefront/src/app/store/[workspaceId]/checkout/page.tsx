@@ -165,7 +165,10 @@ export default function CheckoutPage() {
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
-  const shipping = shippingChoice.state;
+  // Pickup from the store (when offered): no delivery fee; the server charges none either.
+  const storePickup = store?.delivery?.pickup ?? null;
+  const pickingUp = Boolean(storePickup) && values.deliveryMethod === "pickup";
+  const shipping = pickingUp ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } } : shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
@@ -225,7 +228,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
-        ...shippingChoice.payload,
+        ...(pickingUp ? {} : shippingChoice.payload),
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
@@ -343,8 +346,9 @@ export default function CheckoutPage() {
                 onChange={onFieldChange}
                 fields={fields}
                 showAltPhone
+                pickup={storePickup}
               />
-              <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
+              {!pickingUp && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
             </div>
           </section>
 

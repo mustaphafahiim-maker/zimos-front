@@ -8,8 +8,10 @@ import {
   FORM_FIELD_OF,
   NOTES_MAX,
   POSTAL_CODE_MAX,
+  PICKUP_SKIPS,
   formOf,
   isEgyptForm,
+  isPickupForm,
   type OrderFormErrors,
   type OrderFormField,
   type OrderFormFieldModes,
@@ -107,6 +109,7 @@ export function OrderFormFields({
   onChange,
   fields,
   showAltPhone = false,
+  pickup = null,
 }: {
   idPrefix: string;
   values: OrderFormValues;
@@ -114,13 +117,18 @@ export function OrderFormFields({
   onChange: (field: OrderFormField, value: string) => void;
   fields: OrderFormFieldModes;
   showAltPhone?: boolean;
+  /** The store's pickup point when the form may offer pickup; null = delivery only. */
+  pickup?: { address: string; phone: string; note: string } | null;
 }) {
   const { t, locale, store } = useStore();
   const egypt = isEgyptForm(values);
   // A store that delivers itself lists only the governorates it serves.
   const served = store?.delivery?.servedGovernorates;
   const governorates = served && served.length > 0 ? GOVERNORATES.filter((g) => served.includes(g.code)) : GOVERNORATES;
-  const list = formOf(fields, { showAltPhone });
+  const picking = Boolean(pickup) && isPickupForm(values);
+  const method = values.deliveryMethod ?? "";
+  // Pickup leaves the address fields out (lib/orderForm PICKUP_SKIPS).
+  const list = formOf(fields, { showAltPhone }).filter((f) => !picking || !PICKUP_SKIPS.has(f.key));
   const shownKeys = new Set(list.map((f) => f.key));
 
   const a11y = (field: OrderFormField, hasHint = false) => {
@@ -400,5 +408,54 @@ export function OrderFormFields({
     }
   }
 
-  return <div className="grid gap-4 sm:grid-cols-2">{list.map(renderField)}</div>;
+  // Delivery or pickup, offered only when the store has pickup on and the page passes it.
+  const chooser = pickup ? (
+    <fieldset className="sm:col-span-2">
+      <legend className={labelClass}>{t.form.deliveryMethod}</legend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {(["", "pickup"] as const).map((option) => (
+          <label
+            key={option || "delivery"}
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+              method === option ? "border-primary text-ink" : "border-line text-ink-soft"
+            }`}
+          >
+            <input
+              type="radio"
+              name={`${idPrefix}-delivery-method`}
+              value={option}
+              checked={method === option}
+              onChange={() => onChange("deliveryMethod", option)}
+            />
+            {option === "pickup" ? t.form.pickupOption : t.form.deliveryOption}
+          </label>
+        ))}
+      </div>
+      {picking && pickup && (
+        <div className="mt-3 rounded-md border border-line p-3 text-sm text-ink-soft">
+          <p className="font-medium text-ink">{t.form.pickupFree}</p>
+          {pickup.address && (
+            <p className="mt-1">
+              <span className="text-ink">{t.form.pickupAddress}: </span>
+              {pickup.address}
+            </p>
+          )}
+          {pickup.phone && (
+            <p className="mt-1">
+              <span className="text-ink">{t.form.pickupPhone}: </span>
+              <bdi dir="ltr">{pickup.phone}</bdi>
+            </p>
+          )}
+          {pickup.note && <p className="mt-1">{pickup.note}</p>}
+        </div>
+      )}
+    </fieldset>
+  ) : null;
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {chooser}
+      {list.map(renderField)}
+    </div>
+  );
 }

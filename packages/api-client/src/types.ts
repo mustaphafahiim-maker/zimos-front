@@ -955,6 +955,8 @@ export interface CheckoutAddress {
 export interface CheckoutPayload {
   contact: CheckoutContact;
   shippingAddress?: CheckoutAddress;
+  /** "pickup" when the store offers it: no address and no shipping fee (server-enforced). */
+  deliveryMethod?: "delivery" | "pickup";
   /**
    * 'card' / 'wallet' only when the store offers them (getStorefrontPaymentMethods);
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
@@ -1634,6 +1636,8 @@ export interface Order {
   amountRefunded: string;
   contactSnapshot: OrderContactSnapshot;
   shippingAddressSnapshot: OrderAddressSnapshot | null;
+  /** 'pickup': collected from the store (no address, no fee); null/absent = delivered. */
+  deliveryMethod?: "delivery" | "pickup" | null;
   discountsSnapshot: Array<Record<string, unknown>>;
   notes: string | null;
   riskFlags: string[];
@@ -2349,6 +2353,15 @@ export interface ShippingSettings {
   defaultCarrierCode: string | null;
   /** The only governorates the store delivers to; [] = everywhere. Older servers leave it out. */
   servedGovernorates?: string[];
+  /** Pickup from the store; enabled false = off. Older servers leave it out. */
+  storePickup?: StorePickupSettings;
+}
+
+export interface StorePickupSettings {
+  enabled: boolean;
+  address: string;
+  phone: string;
+  note: string;
 }
 
 export interface ShippingGovernorate {
@@ -2372,6 +2385,7 @@ export type UpdateShippingSettingsPayload = Partial<{
   defaultCarrierCode: string | null;
   /** [] or null = deliver everywhere. */
   servedGovernorates: string[] | null;
+  storePickup: StorePickupSettings | null;
 }>;
 
 export interface CreateShippingRatePayload {
