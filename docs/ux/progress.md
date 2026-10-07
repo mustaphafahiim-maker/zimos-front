@@ -378,8 +378,18 @@ Three agents at a time (16 GB machine), brief in the scratchpad's BATCH4.md.
 200 (email campaigns) was withdrawn by the backend.
 - [ ] 220 self-service, 221 delivery slots, 222 referral program — agent running
 - [ ] 201 gift cards online, 203 loyalty points, 204 store credit — agent running
-- [ ] 208 free gift, 214 gift wrap, 215 mix-and-match box — agent running
-- [ ] 205 price lists, 218 VIP tiers, 219 B2B quotes — next
+- [x] 208 Free gift: /offers/free-gifts (card in the Offers hub); cart drawer,
+      cart page and checkout show the earned gift as a free line and an
+      "add X more" nudge with a progress bar.
+- [x] 214 Gift wrap and message: Store settings → «خيارات الهدايا»; checkout
+      «ده هدية؟» block adds the wrap to the summary; order page «الأوردر ده
+      هدية» card; waybill prints it (backend PDF).
+- [x] 215 Mix-and-match box: «اخلط واختار» switch in the bundle editor, badge
+      and «انسخ لينك البوكس» on bundles; storefront /box/:id builder from
+      «كوّن البوكس بتاعك» on the product page, priced by the server. Three
+      real COD orders. Three backend requests (emoji on the waybill, gift
+      product in the cart data, box tier prices).
+- [ ] 205 price lists, 218 VIP tiers, 219 B2B quotes — agent running
 - [ ] 206 stock locations, 207 suppliers / purchase orders / counts — next
 - [ ] 209 customer notes, 210 size charts, 211 search analytics, 212 product Q&A — next
 - [ ] 202 scheduled reports, 213 licence alert, 216 holiday mode, 217 Google sign-in — next

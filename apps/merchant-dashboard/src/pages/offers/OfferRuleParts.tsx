@@ -28,7 +28,7 @@ const STRINGS = {
     search: "ابحث في المنتجات",
     noMatch: "مفيش منتجات مطابقة.",
     selected: "اخترت {count}",
-    active: "مفعّل",
+    active: "شغّال",
     inactive: "متوقف",
     edit: "تعديل",
     delete: "حذف",
