@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   ORDER_STAGES,
+  couriersList,
   ordersBulk,
   type OrderBulkAction,
   type OrderBulkPayload,
@@ -28,6 +29,8 @@ const STRINGS = {
     action: "Bulk action",
     choose: "Choose an action…",
     a_set_status: "Change status",
+    bulkCourier: "Courier (optional)",
+    bulkCourierNone: "— No courier —",
     a_add_tag: "Add a tag",
     a_remove_tag: "Remove a tag",
     a_ship: "Ship with a courier",
@@ -60,6 +63,8 @@ const STRINGS = {
     action: "إجراء جماعي",
     choose: "اختر إجراء…",
     a_set_status: "تغيير الحالة",
+    bulkCourier: "المندوب (اختياري)",
+    bulkCourierNone: "— بدون مندوب —",
     a_add_tag: "إضافة تاج",
     a_remove_tag: "حذف تاج",
     a_ship: "شحن مع شركة شحن",
@@ -122,6 +127,9 @@ export function OrderBulkBar({
   const [tag, setTag] = useState("");
   const [courier, setCourier] = useState("");
   const [courierName, setCourierName] = useState("");
+  // The store's own couriers, for orders sent out together with one of them.
+  const storeCouriers = useAsync(() => couriersList(apiClient, workspaceId).then((list) => list.filter((c) => c.active)), [workspaceId]);
+  const [bulkCourierId, setBulkCourierId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OrderBulkResponse | null>(null);
@@ -137,7 +145,10 @@ export function OrderBulkBar({
   if (selectedIds.length === 0 && !result) return null;
 
   function payload(): OrderBulkPayload | null {
-    if (action === "set_status") return { status, reason: reason.trim() || undefined };
+    if (action === "set_status") {
+      const courierStage = status === "shipped" || status === "out_for_delivery" || status === "delivered";
+      return { status, reason: reason.trim() || undefined, ...(courierStage && bulkCourierId ? { courierId: bulkCourierId } : {}) };
+    }
     if (action === "add_tag" || action === "remove_tag") return tag.trim() ? { tags: [tag.trim()] } : null;
     if (action === "ship") {
       const code = courier || courierName.trim();
@@ -229,6 +240,20 @@ export function OrderBulkBar({
                   </Select>
                 )}
               </Field>
+              {(status === "shipped" || status === "out_for_delivery" || status === "delivered") && (storeCouriers.data ?? []).length > 0 && (
+                <Field label={t.bulkCourier}>
+                  {({ id }) => (
+                    <Select id={id} value={bulkCourierId} onChange={(e) => setBulkCourierId(e.target.value)} className="h-11">
+                      <option value="">{t.bulkCourierNone}</option>
+                      {(storeCouriers.data ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+              )}
               <TextField label={t.reason} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
             </>
           )}

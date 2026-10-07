@@ -43,6 +43,30 @@ export interface StoreInfo {
   orderBump: StorefrontOrderBump | null;
   /** The country the store sells in (GET /store/:ws `general.country`), ISO 3166 alpha-2; null when unset. */
   country?: string | null;
+  /** Self delivery (GET /store/:ws `delivery`); absent from older APIs. */
+  delivery?: StoreDelivery | null;
+}
+
+/** How a store that delivers itself takes orders (GET /store/:ws `delivery`). */
+export interface StoreDelivery {
+  /** The only governorate codes the store delivers to; null = everywhere. */
+  servedGovernorates?: string[] | null;
+  /** Pickup from the store, or null while the store does not offer it. */
+  pickup?: { address: string; phone: string; note: string } | null;
+  /** The store's delivery areas while it prices by them, else null. Fees are minor units. */
+  zones?: StoreDeliveryZone[] | null;
+  /** Opening hours while the store uses them, with whether it is open right now; else null. */
+  hours?: { openNow: boolean; reason: "manual" | "hours" | null; message: string | null } | null;
+  /** The usual delivery time in minutes, or null. */
+  etaMinutes?: number | null;
+}
+
+export interface StoreDeliveryZone {
+  id: string;
+  name: string;
+  feeAmount: number;
+  minOrderAmount: number | null;
+  etaMinutes: number | null;
 }
 
 export interface StoreContextValue {

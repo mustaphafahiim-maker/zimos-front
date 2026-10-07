@@ -54,6 +54,7 @@ import { focusField } from "@/lib/focusField";
 import { useStoreBasePath } from "../StoreRoute";
 import { StickyActionBar } from "../StickyActionBar";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
+import { MenuOptionPicker, useMenuOptions } from "./MenuOptionPicker";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
@@ -175,6 +176,9 @@ export function ProductLanding({
   const tier = tiers.find((x) => x.id === tierId);
   // The product's custom fields: answered here, sent with the order line.
   const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
+  // The product's menu options (Size, Extras): picked here, priced by the server.
+  const menu = useMenuOptions(product.optionGroups ?? []);
+  const hasMenu = menu.groups.length > 0;
   const unit = variantUnitPrice(product, variant);
   const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
@@ -223,13 +227,20 @@ export function ProductLanding({
   const autosave = useCheckoutAutosave({ client, workspaceId, values, lines: autosaveLines });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
-  const shipping = shippingChoice.state;
+  // Delivery zones (when the store prices by them): the chosen area's fee, unless the free-shipping
+  // threshold is reached. Display only — the server prices the order from the zone itself.
+  const storeZones = store?.delivery?.zones ?? null;
+  const zoneChosen = storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
+  const zoneFee = zoneChosen ? (shippingChoice.state.freeShipping?.qualified ? 0 : zoneChosen.feeAmount) : 0;
+  const shipping = zoneChosen
+    ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
+    : shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
   const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
   // Priced fields the shopper filled in, on every unit of the line they ride on (as the server charges them).
-  const fieldsExtra = customFieldsDelta(product.customFields, custom.toInput()) * (mainLine?.quantity ?? 0);
+  const fieldsExtra = (customFieldsDelta(product.customFields, custom.toInput()) + menu.deltaPerUnit) * (mainLine?.quantity ?? 0);
   const total =
     pricing.total +
     fieldsExtra +
@@ -280,7 +291,7 @@ export function ProductLanding({
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields);
+    const found = validateOrderForm(values, t, fields, { requireZone: Boolean(storeZones && storeZones.length > 0) });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -296,10 +307,15 @@ export function ProductLanding({
       setFormError(t.custom.summary);
       return;
     }
+    if (!menu.check()) {
+      setFormError(t.menu.summary);
+      return;
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
-    const orderLine: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const withAnswers: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const orderLine: OrderLine = hasMenu ? { ...withAnswers, options: menu.toInput() } : withAnswers;
     const visitorId = getVisitorId(workspaceId);
 
     setSubmitting(true);
@@ -309,7 +325,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
-      ...shippingChoice.payload,
+      ...(storeZones ? {} : shippingChoice.payload),
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -392,6 +408,7 @@ export function ProductLanding({
   async function buyNow() {
     if (!mainLine || !available || buying) return;
     if (custom.fields.length > 0 && !custom.check()) return;
+    if (hasMenu && !menu.check()) return;
     setBuying(true);
     setBuyError(null);
     try {
@@ -399,7 +416,8 @@ export function ProductLanding({
         mainLine.variantId,
         mainLine.offerId,
         mainLine.quantity,
-        custom.fields.length > 0 ? custom.toInput() : undefined
+        custom.fields.length > 0 ? custom.toInput() : undefined,
+        hasMenu ? menu.toInput() : undefined
       );
       for (const line of bundleExtraLines) await cart.addItem(line.variantId, undefined, line.quantity);
       // skip_cart: straight to the checkout; otherwise the cart, to review first.
@@ -531,6 +549,7 @@ export function ProductLanding({
       )}
 
       {/* What the shopper fills in for this product (engraving, a note, their photo). */}
+      <MenuOptionPicker state={menu} />
       <CustomFieldInputs state={custom} />
 
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
@@ -548,7 +567,7 @@ export function ProductLanding({
         >
           {buying ? text.buying : buyLabel}
         </button>
-        {bundleChoice && custom.fields.length === 0 ? (
+        {bundleChoice && custom.fields.length === 0 && !hasMenu ? (
           <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
         ) : (
         <AddToCartButton
@@ -558,7 +577,10 @@ export function ProductLanding({
           defaultQuantity={mainLine?.quantity ?? 1}
           disabled={!available}
           customizations={custom.fields.length > 0 ? custom.toInput() : undefined}
-          beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
+          options={hasMenu ? menu.toInput() : undefined}
+          beforeAdd={
+            custom.fields.length > 0 || hasMenu ? () => (custom.fields.length === 0 || custom.check()) && (!hasMenu || menu.check()) : undefined
+          }
           onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
         )}
@@ -593,8 +615,9 @@ export function ProductLanding({
             errors={errors}
             onChange={onFieldChange}
             fields={fields}
+            zones={storeZones}
           />
-          <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
+          {!storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">

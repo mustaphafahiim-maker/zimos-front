@@ -248,7 +248,9 @@ export function SettlementsPage() {
     if (lines.length === 0) return;
     setCreating(carrier);
     try {
-      const created = await apiClient.createSettlement(workspaceId, { carrierCode: carrier, lines });
+      // A group of the store's own courier settles under their id too.
+      const courierId = (unsettled.data?.carriers ?? []).find((c) => c.carrierCode === carrier)?.courierId ?? null;
+      const created = await apiClient.createSettlement(workspaceId, { carrierCode: carrier, ...(courierId ? { courierId } : {}), lines });
       toast.success(t.draftCreated);
       setRows((prev) => {
         const next = { ...prev };

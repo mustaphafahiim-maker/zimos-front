@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   LineChart,
   LifeBuoy,
+  Lightbulb,
   Megaphone,
   MessageCircle,
   Package,
@@ -73,6 +74,7 @@ export type NavKey =
   | "subscription"
   | "settings"
   | "support"
+  | "suggestions"
   | "settlements"
   | "inbox"
   | "automations"
@@ -215,6 +217,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "services", to: "/services", icon: Handshake },
       { key: "referrals", to: "/referrals", icon: HeartHandshake },
       { key: "support", to: "/support", icon: LifeBuoy },
+      { key: "suggestions", to: "/suggestions", icon: Lightbulb },
     ],
   },
 ];
@@ -271,6 +274,7 @@ export const NAV_LABELS = {
     activity: "Activity log",
     settings: "Settings",
     support: "Contact support",
+    suggestions: "Suggest a feature",
     settlements: "COD settlements",
     inbox: "WhatsApp inbox",
     automations: "Automations",
@@ -312,6 +316,7 @@ export const NAV_LABELS = {
     activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
+    suggestions: "اقترح ميزة",
     settlements: "تحصيل الشحن",
     inbox: "صندوق واتساب",
     automations: "الأتمتة",

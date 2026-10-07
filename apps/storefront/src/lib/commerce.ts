@@ -1,5 +1,7 @@
 import { lineContentId } from "./contentId";
 import {
+  menuOptionsLabel,
+  type MenuOptionsSnapshot,
   parseMoney,
   type FunnelRuntimeMergedOrder,
   type Order,
@@ -139,6 +141,8 @@ export interface OrderSnapshot {
   shippingAmount: number;
   totalAmount: number;
   items: { name: string; options: string; quantity: number; lineTotal: number }[];
+  /** The estimated delivery time the order was placed with, minutes (shipping snapshot). */
+  etaMinutes?: number | null;
   productIds: string[];
   /** The pixels' ids for the lines (lib/contentId): the feed's item ids. */
   contentIds?: string[];
@@ -156,9 +160,11 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
     discountAmount: parseMoney(order.discountAmount),
     shippingAmount: parseMoney(order.shippingAmount),
     totalAmount: parseMoney(order.totalAmount),
+    etaMinutes: (order as { shippingSnapshot?: { etaMinutes?: number | null } }).shippingSnapshot?.etaMinutes ?? null,
     items: (order.items ?? []).map((item) => ({
       name: item.productNameSnapshot,
-      options: Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "),
+      // The variant's options, then the menu options it was sold with.
+      options: [Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "), menuOptionsLabel((item as { optionsSnapshot?: MenuOptionsSnapshot | null }).optionsSnapshot)].filter(Boolean).join(" · "),
       quantity: item.quantity,
       lineTotal: parseMoney(item.lineTotalAmount),
     })),
@@ -185,7 +191,8 @@ export function mergeIntoOrderSnapshot(workspaceId: string, merged: FunnelRuntim
     totalAmount: parseMoney(merged.totalAmount),
     items: merged.items.map((item) => ({
       name: item.productNameSnapshot,
-      options: Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "),
+      // The variant's options, then the menu options it was sold with.
+      options: [Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "), menuOptionsLabel((item as { optionsSnapshot?: MenuOptionsSnapshot | null }).optionsSnapshot)].filter(Boolean).join(" · "),
       quantity: item.quantity,
       lineTotal: parseMoney(item.lineTotalAmount),
     })),

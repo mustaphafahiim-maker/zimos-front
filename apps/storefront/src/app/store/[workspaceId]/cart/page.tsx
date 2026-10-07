@@ -17,6 +17,7 @@ import { lineImage } from "@/lib/variantImage";
 import { useStore } from "@/lib/StoreContext";
 import { useCatalog } from "@/lib/useCatalog";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { LineOptions } from "@/components/LineOptions";
 
 export default function CartPage() {
   // Still needed for the catalogue lookup — the links go through StoreLink,
@@ -123,6 +124,7 @@ export default function CartPage() {
                             <span className="text-sm font-semibold text-ink">{options || t.cart.item}</span>
                           )}
                           {product && options && <p className="mt-0.5 text-xs text-ink-soft">{options}</p>}
+                          <LineOptions options={line.options} />
                           <LineCustomizations customizations={line.customizations} />
                         </div>
                         <button

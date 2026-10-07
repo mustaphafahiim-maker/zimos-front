@@ -11,7 +11,8 @@ export type NotificationType =
   | "payment_failed"
   | "support_ticket"
   | "referral_signup"
-  | "user_suspended";
+  | "user_suspended"
+  | "suggestion";
 
 export const NOTIFICATION_TYPES: NotificationType[] = [
   "user_signup",
@@ -24,6 +25,7 @@ export const NOTIFICATION_TYPES: NotificationType[] = [
   "support_ticket",
   "referral_signup",
   "user_suspended",
+  "suggestion",
 ];
 
 export interface ConsoleNotification {

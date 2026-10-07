@@ -15,6 +15,7 @@ import { QuantityStepper } from "./QuantityStepper";
 import { StoreImage } from "./StoreImage";
 import { backdrop, btnPrimaryLg, btnSecondary, focusRing, iconBtn, modalLayer, sheet, skeleton } from "./ui";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { LineOptions } from "@/components/LineOptions";
 
 /**
  * The cart as a slide-over, opened by "add to cart" anywhere in the store and
@@ -185,6 +186,7 @@ export function CartDrawer() {
                             <span className={`${skeleton} block h-4 w-32`} />
                           )}
                           {product && options && <p className="mt-0.5 text-xs text-ink-soft">{options}</p>}
+                          <LineOptions options={line.options} />
                           <LineCustomizations customizations={line.customizations} />
                           <p className="mt-0.5 text-xs text-ink-soft">{t.cart.perUnit(money(line.currentUnitPrice, currency))}</p>
                         </div>

@@ -165,6 +165,8 @@ export default async function StoreLayout({
     orderBump: store.orderBump ?? null,
     // The order form's country (lib/storeCountry).
     country: storefrontGeneralMeta(store).general.country,
+    // Self delivery: served governorates (and more as the API grows it); absent from older APIs.
+    delivery: (store as { delivery?: StoreInfo["delivery"] }).delivery ?? null,
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.

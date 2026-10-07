@@ -29,6 +29,10 @@ export interface OrderFormValues {
   custom3: string;
   custom4: string;
   custom5: string;
+  /** "pickup" when the shopper collects the order from the store; "" = delivery. */
+  deliveryMethod: string;
+  /** The store's delivery area (when it prices by zones); "" = none chosen. */
+  deliveryZoneId: string;
 }
 
 export type OrderFormField = keyof OrderFormValues;
@@ -51,6 +55,8 @@ export const EMPTY_ORDER_FORM: OrderFormValues = {
   custom3: "",
   custom4: "",
   custom5: "",
+  deliveryMethod: "",
+  deliveryZoneId: "",
 };
 
 /** Field order for "focus the first invalid field". */
@@ -174,17 +180,26 @@ export function quickFormFields(settings: OrderFormFieldModes): OrderFormFieldMo
   };
 }
 
+/** The address fields a pickup order leaves out. */
+export const PICKUP_SKIPS = new Set<string>(["country", "government", "city", "address", "postal_code", "sa_national_address"]);
+
+export const isPickupForm = (values: OrderFormValues) => values.deliveryMethod === "pickup";
+
 export function validateOrderForm(
   values: OrderFormValues,
   t: Dictionary,
   fields: OrderFormFieldModes,
-  opts: { showAltPhone?: boolean } = {}
+  opts: { showAltPhone?: boolean; requireZone?: boolean } = {}
 ): OrderFormErrors {
   const e: OrderFormErrors = {};
+  // A store that prices by delivery zones needs the shopper's area (not for pickup).
+  if (opts.requireZone && !isPickupForm(values) && !values.deliveryZoneId) e.deliveryZoneId = t.form.errors.zone;
   const egypt = isEgyptForm(values);
   const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : INTL_PHONE.test(normalizePhone(raw)));
 
   for (const f of formOf(fields, opts)) {
+    // A pickup order has no address: its fields are not asked for.
+    if (isPickupForm(values) && PICKUP_SKIPS.has(f.key)) continue;
     const field = FORM_FIELD_OF[f.key];
     const value = values[field].trim();
     switch (f.key) {
@@ -285,6 +300,25 @@ export function toCheckoutPayload(
     }
   }
 
+  // Pickup: no address goes out; the shopper's note joins the order's notes instead.
+  if (isPickupForm(values)) {
+    const pickupNotes = [notes, ...systemNotes].filter(Boolean);
+    const pickupPayload: CheckoutPayload = {
+      contact: {
+        fullName: values.fullName.trim(),
+        phone: normalizePhone(values.phone),
+        ...(altPhone ? { alternatePhone: altPhone } : {}),
+        ...(email ? { email } : {}),
+      },
+      deliveryMethod: "pickup",
+      paymentMethod: "cod",
+      ...(allowCodes && options.discountCode?.trim() ? { discountCode: options.discountCode.trim() } : {}),
+      ...(pickupNotes.length ? { notes: pickupNotes.join(" | ") } : {}),
+      ...(options.item ? { item: options.item } : {}),
+    };
+    return Object.keys(formFields).length > 0 ? ({ ...pickupPayload, formFields } as CheckoutPayload) : pickupPayload;
+  }
+
   const payload: CheckoutPayload = {
     contact: {
       fullName: values.fullName.trim(),
@@ -300,6 +334,7 @@ export function toCheckoutPayload(
       ...(postalCode ? { postalCode } : {}),
       ...(notes ? { notes } : {}),
     },
+    ...(values.deliveryZoneId ? { deliveryZoneId: values.deliveryZoneId } : {}),
     paymentMethod: "cod",
     ...(allowCodes && options.discountCode?.trim() ? { discountCode: options.discountCode.trim() } : {}),
     ...(systemNotes.length ? { notes: systemNotes.join(" | ") } : {}),

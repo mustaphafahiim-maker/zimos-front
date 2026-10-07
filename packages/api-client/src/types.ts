@@ -757,6 +757,8 @@ export interface StorefrontProduct {
   offers: StorefrontOffer[];
   /** Fields the shopper fills in when ordering; absent on older responses. */
   customFields?: CustomField[];
+  /** Menu options (Size, Extras): active groups and choices; absent on older responses. */
+  optionGroups?: import("./endpoints/menuOptions").StorefrontOptionGroup[];
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -869,6 +871,8 @@ export interface CartLine {
   isOrderBump: boolean;
   /** The shopper's answers to the product's custom fields; null when none. */
   customizations?: Customization[] | null;
+  /** The menu options picked, with current names and prices; null when none. */
+  options?: import("./endpoints/menuOptions").MenuOptionsSnapshot | null;
 }
 
 // ---------------------------------------------------------------------
@@ -955,6 +959,10 @@ export interface CheckoutAddress {
 export interface CheckoutPayload {
   contact: CheckoutContact;
   shippingAddress?: CheckoutAddress;
+  /** "pickup" when the store offers it: no address and no shipping fee (server-enforced). */
+  deliveryMethod?: "delivery" | "pickup";
+  /** The store's delivery area while it prices by zones; the fee comes from the server. */
+  deliveryZoneId?: string;
   /**
    * 'card' / 'wallet' only when the store offers them (getStorefrontPaymentMethods);
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
@@ -980,7 +988,7 @@ export interface CheckoutPayload {
    */
   checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
-  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
+  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput; options?: import("./endpoints/menuOptions").MenuOptionsInput };
   /**
    * The shopper ticked the order bump. Accepted only when it is the bump this
    * checkout offers (422 ORDER_BUMP_INVALID otherwise); 409
@@ -1389,6 +1397,8 @@ export interface OrderItem {
   unitWeightGrams?: number | null;
   /** The shopper's answers to the product's custom fields; photos carry a short-lived `url` for staff. */
   customizations?: Customization[] | null;
+  /** The menu options the line was sold with: names and prices as charged. */
+  optionsSnapshot?: import("./endpoints/menuOptions").MenuOptionsSnapshot | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1634,6 +1644,8 @@ export interface Order {
   amountRefunded: string;
   contactSnapshot: OrderContactSnapshot;
   shippingAddressSnapshot: OrderAddressSnapshot | null;
+  /** 'pickup': collected from the store (no address, no fee); null/absent = delivered. */
+  deliveryMethod?: "delivery" | "pickup" | null;
   discountsSnapshot: Array<Record<string, unknown>>;
   notes: string | null;
   riskFlags: string[];
@@ -2347,6 +2359,32 @@ export interface ShippingSettings {
   governorateRates: Record<string, number>;
   /** "manual" or a courier code; null = no preference. */
   defaultCarrierCode: string | null;
+  /** The only governorates the store delivers to; [] = everywhere. Older servers leave it out. */
+  servedGovernorates?: string[];
+  /** Pickup from the store; enabled false = off. Older servers leave it out. */
+  storePickup?: StorePickupSettings;
+  /** Checkout prices delivery by the store's delivery zones. Older servers leave it out. */
+  deliveryZonesEnabled?: boolean;
+  /** Opening hours in Africa/Cairo. Older servers leave it out. */
+  storeHours?: StoreHoursSettings;
+  /** The usual delivery time in minutes; null = not shown. */
+  deliveryEtaMinutes?: number | null;
+}
+
+export interface StoreHoursSettings {
+  enabled: boolean;
+  /** The "accepting orders" switch. */
+  override: "auto" | "open" | "closed";
+  /** Sunday first; a close at or before the open runs past midnight. */
+  days: Array<{ closed: boolean; open: string; close: string }>;
+  message: string;
+}
+
+export interface StorePickupSettings {
+  enabled: boolean;
+  address: string;
+  phone: string;
+  note: string;
 }
 
 export interface ShippingGovernorate {
@@ -2368,6 +2406,12 @@ export type UpdateShippingSettingsPayload = Partial<{
   freeShippingThresholdAmount: number | null;
   governorateRates: Record<string, number>;
   defaultCarrierCode: string | null;
+  /** [] or null = deliver everywhere. */
+  servedGovernorates: string[] | null;
+  storePickup: StorePickupSettings | null;
+  deliveryZonesEnabled: boolean | null;
+  storeHours: StoreHoursSettings | null;
+  deliveryEtaMinutes: number | null;
 }>;
 
 export interface CreateShippingRatePayload {
@@ -5509,6 +5553,8 @@ export interface UnsettledOrder {
 
 export interface UnsettledCarrier {
   carrierCode: string;
+  /** One of the store's own couriers; carrierCode is then their name. */
+  courierId?: string | null;
   orders: number;
   dueAmount: number;
 }
@@ -5567,6 +5613,8 @@ export interface SettlementLinePayload {
 
 export interface CreateSettlementPayload {
   carrierCode: string;
+  /** The store's own courier whose cash this is. */
+  courierId?: string | null;
   reference?: string | null;
   periodStart?: string | null;
   periodEnd?: string | null;

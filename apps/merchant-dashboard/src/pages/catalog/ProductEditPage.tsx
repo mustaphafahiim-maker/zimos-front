@@ -15,6 +15,7 @@ import { VariantsSection } from "./components/VariantsSection";
 import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
 import { CustomFieldsSection } from "./components/CustomFieldsSection";
+import { MenuOptionsSection } from "./components/MenuOptionsSection";
 import type { CatalogProduct } from "@store-builder/api-client";
 import { ProductPageSettingsSection } from "./components/ProductPageSettingsSection";
 import { ProductSeoSection } from "./components/ProductSeoSection";
@@ -125,6 +126,7 @@ export function ProductEditPage() {
               memberships={data.collections ?? []}
               onChanged={reload}
             />
+            <MenuOptionsSection productId={data.id} />
             <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
             <ProductTestSection productId={data.id} variants={data.variants ?? []} media={data.media ?? []} onProductChanged={reload} />
             {/* The same product, read with the page fields added. */}

@@ -1,5 +1,6 @@
 import {
   ApiError,
+  apiErrorDetails,
   apiFieldProblems,
   isApiErrorCode,
   type ApiClient,
@@ -21,6 +22,8 @@ export interface OrderLine {
   quantity: number;
   /** Answers to the product's custom fields (photos by upload id). */
   customizations?: CustomizationInput;
+  /** Menu options picked (Size, Extras); the server prices them. */
+  options?: import("@store-builder/api-client").MenuOptionsInput;
 }
 
 /**
@@ -114,6 +117,10 @@ const SERVER_FIELDS: Record<string, OrderFormField> = {
 export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderFormErrors {
   const out: OrderFormErrors = {};
   if (isApiErrorCode(err, "INVALID_PHONE")) out.phone = copy.phone;
+  // The store does not deliver there: said once, on the governorate, not as "required".
+  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return { ...out, governorate: copy.areaNotServed };
+  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return { ...out, deliveryZoneId: copy.zone };
+  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return { ...out, deliveryZoneId: copy.zoneInvalid };
   for (const problem of apiFieldProblems(err)) {
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
@@ -135,6 +142,17 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
+  // Self delivery: below the store's minimum, or outside the governorates it delivers to.
+  if (isApiErrorCode(err, "MIN_ORDER_NOT_MET")) return copy.minOrder;
+  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
+  // Closed (opening hours or the "accepting orders" switch): the store's own message when it wrote one.
+  if (isApiErrorCode(err, "STORE_CLOSED")) {
+    const details = apiErrorDetails<Array<{ field?: string; message?: string }>>(err);
+    const detail = Array.isArray(details) ? details.find((p) => p && p.field === "store") : undefined;
+    return detail && detail.message && detail.message !== "The store is closed" ? detail.message : copy.storeClosed;
+  }
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;

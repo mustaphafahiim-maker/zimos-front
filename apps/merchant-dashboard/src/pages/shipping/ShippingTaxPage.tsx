@@ -31,6 +31,9 @@ import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
 import { ShippingSettingsSection } from "./ShippingSettingsSection";
+import { CouriersSection } from "./CouriersSection";
+import { DeliveryZonesSection } from "./DeliveryZonesSection";
+import { StoreHoursSection } from "./StoreHoursSection";
 import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
@@ -413,6 +416,12 @@ function ShippingTaxBody() {
       <ShippingTabsBar value={tab} onChange={setTab} />
 
       {tab === "rates" && <ShippingSettingsSection onSaved={refreshWorkspace} />}
+
+      {tab === "rates" && <DeliveryZonesSection currency={currentWorkspace?.defaultCurrency ?? "EGP"} />}
+
+      {tab === "rates" && <CouriersSection />}
+
+      {tab === "rates" && <StoreHoursSection />}
 
       {tab === "rates" && <ShippingProfilesSection />}
 

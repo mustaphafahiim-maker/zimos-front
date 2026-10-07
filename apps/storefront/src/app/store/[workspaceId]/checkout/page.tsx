@@ -48,6 +48,7 @@ import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { LineOptions } from "@/components/LineOptions";
 import { PolicyLinks } from "@/components/PolicyLinks";
 
 const FORM_PREFIX = "checkout";
@@ -165,7 +166,19 @@ export default function CheckoutPage() {
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
-  const shipping = shippingChoice.state;
+  // Pickup from the store (when offered): no delivery fee; the server charges none either.
+  const storePickup = store?.delivery?.pickup ?? null;
+  const pickingUp = Boolean(storePickup) && values.deliveryMethod === "pickup";
+  // Delivery zones (when the store prices by them): the chosen area's fee, unless the store's free-shipping
+  // threshold is reached. Display only — the server prices the order from the zone itself.
+  const storeZones = store?.delivery?.zones ?? null;
+  const zoneChosen = !pickingUp && storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
+  const zoneFee = zoneChosen ? (shippingChoice.state.freeShipping?.qualified ? 0 : zoneChosen.feeAmount) : 0;
+  const shipping = pickingUp
+    ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } }
+    : zoneChosen
+      ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
+      : shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
@@ -174,7 +187,7 @@ export default function CheckoutPage() {
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true, requireZone: Boolean(storeZones && storeZones.length > 0) });
   const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
@@ -194,7 +207,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, requireZone: Boolean(storeZones && storeZones.length > 0) });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -225,7 +238,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
-        ...shippingChoice.payload,
+        ...(pickingUp || storeZones ? {} : shippingChoice.payload),
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
@@ -306,7 +319,11 @@ export default function CheckoutPage() {
       : method.method === "cod" || manualChosen
         ? t.checkout.place
         : t.payment.payNow;
-  const submitDisabled = submitting || items.length === 0;
+  // Opening hours: while the store is closed the order cannot be placed (the server refuses it too).
+  const storeClosed = store?.delivery?.hours ? !store.delivery.hours.openNow : false;
+  const submitDisabled = submitting || items.length === 0 || storeClosed;
+  // The estimated delivery time: the chosen zone's, else the store's.
+  const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
 
   return (
     <main className={`${container} flex-1 py-8 sm:py-10`}>
@@ -331,6 +348,13 @@ export default function CheckoutPage() {
         className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]"
       >
         <div className="space-y-6">
+          {storeClosed && (
+            <div role="status" className={`${card} p-5`}>
+              <p className="font-semibold text-ink">{t.checkout.closedTitle}</p>
+              <p className="mt-1 text-sm text-ink-soft">{store?.delivery?.hours?.message || t.checkout.closedText}</p>
+            </div>
+          )}
+          {etaMinutes ? <p className="text-sm text-ink-soft">{t.checkout.eta(etaMinutes)}</p> : null}
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="shipping-title">
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
               {t.checkout.shipping}
@@ -343,8 +367,10 @@ export default function CheckoutPage() {
                 onChange={onFieldChange}
                 fields={fields}
                 showAltPhone
+                pickup={storePickup}
+                zones={storeZones}
               />
-              <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />
+              {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
             </div>
           </section>
 
@@ -382,7 +408,8 @@ export default function CheckoutPage() {
                       <span className="min-w-0 text-ink-soft">
                         <span className="line-clamp-2 text-ink">{product?.name ?? (options || t.cart.item)}</span>
                         {product && options && <span className="block text-xs">{options}</span>}
-                        <LineCustomizations customizations={line.customizations} />
+                        <LineOptions options={line.options} />
+                          <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>
