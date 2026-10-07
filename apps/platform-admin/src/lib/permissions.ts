@@ -28,6 +28,8 @@ export const P = {
   ANNOUNCEMENTS_MANAGE: "announcements.manage",
   SERVICE_LISTINGS_VIEW: "service_listings.view",
   SUPPORT_VIEW: "support.view",
+  // Answering suggestions (backend platformPermissions SUPPORT_MANAGE).
+  SUPPORT_MANAGE: "support.manage",
   AUDIT_LOG_VIEW: "audit_log.view",
   ADMINS_VIEW: "admins.view",
   ADMINS_MANAGE: "admins.manage",

@@ -31,6 +31,7 @@ export const NOTIFICATION_STRINGS = {
     type_support_ticket: "Support ticket",
     type_referral_signup: "Referral sign-up",
     type_user_suspended: "Account suspended",
+    type_suggestion: "New suggestion",
   },
   ar: {
     title: "الإشعارات",
@@ -61,6 +62,7 @@ export const NOTIFICATION_STRINGS = {
     type_support_ticket: "تذكرة دعم",
     type_referral_signup: "تسجيل بإحالة",
     type_user_suspended: "إيقاف حساب",
+    type_suggestion: "اقتراح جديد",
   },
 };
 

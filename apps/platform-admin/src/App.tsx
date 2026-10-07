@@ -28,6 +28,7 @@ import { ThemesPage } from "@/pages/ThemesPage";
 import { FraudSignalsPage } from "@/pages/FraudSignalsPage";
 import { BlocklistPage } from "@/pages/BlocklistPage";
 import { TicketsPage } from "@/pages/TicketsPage";
+import { SuggestionsPage } from "@/pages/SuggestionsPage";
 import { TicketDetailPage } from "@/pages/TicketDetailPage";
 import { AnnouncementsPage } from "@/pages/AnnouncementsPage";
 import { ServiceListingsPage } from "@/pages/ServiceListingsPage";
@@ -90,6 +91,7 @@ export default function App() {
                   <Route path="/fraud-signals" element={gated(P.RISK_VIEW, <FraudSignalsPage />)} />
                   <Route path="/blocklist" element={gated(P.RISK_VIEW, <BlocklistPage />)} />
                   <Route path="/tickets" element={gated(P.SUPPORT_VIEW, <TicketsPage />)} />
+                  <Route path="/suggestions" element={gated(P.SUPPORT_VIEW, <SuggestionsPage />)} />
                   <Route path="/tickets/:id" element={gated(P.SUPPORT_VIEW, <TicketDetailPage />)} />
                   <Route path="/announcements" element={gated(P.ANNOUNCEMENTS_VIEW, <AnnouncementsPage />)} />
                   <Route path="/service-listings" element={gated(P.SERVICE_LISTINGS_VIEW, <ServiceListingsPage />)} />

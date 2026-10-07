@@ -126,6 +126,8 @@ export * from "./endpoints/couriers";
 export * from "./endpoints/deliveryZones";
 // A product's menu options (catalog/menuOptions.js).
 export * from "./endpoints/menuOptions";
+// A store's suggestions to the platform (suggestions/suggestionService.js).
+export * from "./endpoints/suggestions";
 // Shipping options the shopper chooses between (shipping/shippingOptions.js).
 export * from "./endpoints/shippingOptions";
 // Each teammate's saved list views (workspaces/savedViews.js).

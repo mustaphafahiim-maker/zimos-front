@@ -59,6 +59,7 @@ import { WebsitePage } from "@/pages/website/WebsitePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { SubscriptionPage } from "@/pages/subscription/SubscriptionPage";
 import { SupportPage, SupportTicketPage } from "@/pages/support/SupportPage";
+import { SuggestionsPage } from "@/pages/help/SuggestionsPage";
 
 // Analytics screens and the two editors are code-split: their charts, block
 // library and preview plumbing load only when a merchant opens them, not
@@ -201,6 +202,7 @@ export default function App() {
                       <Route path="/activity" element={<LazyRoute><ActivityLogPage /></LazyRoute>} />
                       <Route path="/support" element={<SupportPage />} />
                       <Route path="/support/:ticketId" element={<SupportTicketPage />} />
+                      <Route path="/suggestions" element={<SuggestionsPage />} />
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
 
