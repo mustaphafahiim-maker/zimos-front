@@ -8,7 +8,8 @@
  */
 import type { ApiClient } from "../client";
 import { apiFieldProblems } from "../errors";
-import type { Cart } from "../types";
+import type { Cart, StorefrontProduct } from "../types";
+import type { BundleDto, BundlePayload, StorefrontBundleTier } from "./bundles";
 
 // ------------------------------------------------------- 208 free gifts --
 
@@ -168,4 +169,69 @@ export interface OrderGiftOptions {
 export function orderGiftOptionsOf(order: unknown): OrderGiftOptions | null {
   const value = (order as { giftOptions?: OrderGiftOptions | null } | null | undefined)?.giftOptions;
   return value && typeof value === "object" ? value : null;
+}
+
+// ------------------------------------------------ 215 mix-and-match box --
+
+/**
+ * A quantity bundle with `mixAndMatch` (POST / PATCH /workspaces/:ws/bundles
+ * take it, default false): all its products are priced together — "any 3
+ * of these for EGP 400" is a tier { quantity: 3, discountType: "fixed_price",
+ * discountValue: 40000 }. Products are attached as before.
+ */
+export type MixAndMatchBundlePayload = BundlePayload & { mixAndMatch?: boolean };
+
+/** Whether a bundle prices its products together (false on an older response). */
+export function bundleIsMixAndMatch(bundle: BundleDto | null | undefined): boolean {
+  return Boolean((bundle as (BundleDto & { mixAndMatch?: boolean }) | null | undefined)?.mixAndMatch);
+}
+
+/** The box's bundle on the storefront; its tiers carry no per-variant prices here. */
+export interface StoreBoxBundle {
+  id: string;
+  name: string;
+  displayStyle: string;
+  mixAndMatch: true;
+  tiers: StorefrontBundleTier[];
+}
+
+export interface StoreBoxProduct {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  variants: { id: string; optionValues: Record<string, string> | null; priceAmount: string; currency: string; available: boolean }[];
+}
+
+/**
+ * GET /store/:ws/bundles/:bundleId/products — what can go in the box (404
+ * unless the bundle is active and mix-and-match). The shopper adds the
+ * pieces as ordinary cart lines; the cart and the order price them together.
+ */
+export async function storeBoxGet(client: ApiClient, workspaceId: string, bundleId: string): Promise<{ bundle: StoreBoxBundle; products: StoreBoxProduct[] }> {
+  return client.request<{ bundle: StoreBoxBundle; products: StoreBoxProduct[] }>(`/store/${workspaceId}/bundles/${bundleId}/products`, { auth: false });
+}
+
+/** The box a public product belongs to (its `bundle` with `mixAndMatch`), or null. */
+export function productBoxOf(product: StorefrontProduct): { id: string; name: string } | null {
+  const bundle = (product as StorefrontProduct & { bundle?: { id?: string; name?: string; mixAndMatch?: boolean } | null }).bundle;
+  return bundle && bundle.mixAndMatch && bundle.id ? { id: bundle.id, name: bundle.name ?? "" } : null;
+}
+
+/** One bundle's saving in the cart (`cart.bundles`): its lines already carry it. */
+export interface CartBundleSaving {
+  bundleId: string;
+  name: string;
+  productId: string | null;
+  mixAndMatch?: boolean;
+  productIds?: string[];
+  /** Minor units taken off the covered lines. */
+  amount: number;
+  freeShipping: boolean;
+}
+
+/** The cart's bundle savings, [] on an older response or none. */
+export function cartBundleSavingsOf(cart: Cart | null | undefined): CartBundleSaving[] {
+  const list = (cart as (Cart & { bundles?: unknown }) | null | undefined)?.bundles;
+  return Array.isArray(list) ? (list as CartBundleSaving[]).filter((b) => b && Number(b.amount) > 0) : [];
 }

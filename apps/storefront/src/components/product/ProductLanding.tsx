@@ -81,6 +81,7 @@ import { track } from "@/lib/track";
 import { contentIdOf } from "@/lib/contentId";
 import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { BundleAddToCartButton, BundlePicker, useBundleSelection } from "./BundlePicker";
+import { BoxBuilderEntry } from "../gifts/BoxBuilderEntry";
 import { ProductBumpCards, useProductBumps } from "../offers/StoreOffers";
 import { DiscountRows, MinimumOrderNotice, discountOff, useCouponPreview, useStoredCoupon } from "../offers/CouponBits";
 import { OfferCountdown } from "./OfferCountdown";
@@ -540,6 +541,7 @@ export function ProductLanding({
       ))}
 
       {bundleChoice && <BundlePicker selection={bundleChoice} product={product} mainVariant={variant} />}
+      <BoxBuilderEntry product={product} />
 
       {/* Bundle / quantity offer */}
       {tiers.length > 1 && (

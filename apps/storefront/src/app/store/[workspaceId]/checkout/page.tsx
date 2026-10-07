@@ -72,6 +72,7 @@ import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
 import { DeliveryEstimateLine } from "@/components/DeliveryEstimateLine";
 import { CartFreeGifts } from "@/components/gifts/CartFreeGifts";
+import { CartBoxSavings } from "@/components/gifts/CartBoxSavings";
 import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts/GiftOptionsField";
 
 const FORM_PREFIX = "checkout";
@@ -444,6 +445,7 @@ export default function CheckoutPage() {
               </ul>
             )}
             {items.length > 0 && <CartFreeGifts cart={cart} progress={false} className="mt-3" />}
+            {items.length > 0 && <CartBoxSavings cart={cart} className="mt-3" />}
 
             {/* Discount code — validated by the backend at checkout (no public preview endpoint). */}
             {formOptions.allow_discount_codes && (

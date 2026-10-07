@@ -15,6 +15,7 @@ import { QuantityStepper } from "./QuantityStepper";
 import { backdrop, btnPrimaryLg, btnSecondary, focusRing, iconBtn, modalLayer, sheet, skeleton } from "./ui";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { CartFreeGifts } from "@/components/gifts/CartFreeGifts";
+import { CartBoxSavings } from "@/components/gifts/CartBoxSavings";
 
 /**
  * The cart as a slide-over, opened by "add to cart" anywhere in the store and
@@ -221,6 +222,7 @@ export function CartDrawer() {
         {!isEmpty && cart && (
           <div className="shrink-0 border-t border-line bg-paper-raised px-4 py-4 sm:px-5">
             <CartFreeGifts cart={cart} className="mb-3" />
+            <CartBoxSavings cart={cart} className="mb-3" />
             <CartShippingSummary workspaceId={workspaceId} cart={cart} enabled={isDrawerOpen} />
             <div className="mt-4 grid gap-2">
               <StoreLink href="/checkout" className={btnPrimaryLg} data-autofocus="">

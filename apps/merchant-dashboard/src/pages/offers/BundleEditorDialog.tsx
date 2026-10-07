@@ -6,6 +6,7 @@ import {
   BUNDLE_DISPLAY_STYLES,
   BUNDLE_MAX_TIERS,
   bundlesCreate,
+  bundleIsMixAndMatch,
   bundlesPreview,
   bundlesUpdate,
   type BundleDiscountType,
@@ -22,6 +23,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { MixAndMatchToggle } from "./MixAndMatchParts";
 
 /**
  * Creating or editing a quantity bundle (SPEC §10.1): the name, a starting
@@ -226,6 +228,8 @@ export function BundleEditorDialog({
   const [name, setName] = useState(bundle?.name ?? "");
   const [displayStyle, setDisplayStyle] = useState<BundleDisplayStyle>(bundle?.displayStyle ?? "cards");
   const [isActive, setIsActive] = useState(bundle?.isActive ?? true);
+  // All its products priced together, "any 3 of these" (handoff 215).
+  const [mixAndMatch, setMixAndMatch] = useState(() => bundleIsMixAndMatch(bundle));
   const [tiers, setTiers] = useState<TierDraft[]>(() => (bundle ? bundle.tiers.map(draftOf) : TEMPLATES.percentage()));
   const [samplePrice, setSamplePrice] = useState("250");
   const [preview, setPreview] = useState<BundlePreviewTier[] | null>(null);
@@ -276,7 +280,7 @@ export function BundleEditorDialog({
     }
     setBusy(true);
     setError(null);
-    const payload = { name: name.trim(), displayStyle, isActive, tiers: inputs as BundleTierInput[] };
+    const payload = { name: name.trim(), displayStyle, isActive, mixAndMatch, tiers: inputs as BundleTierInput[] };
     try {
       const saved = bundle
         ? await bundlesUpdate(apiClient, workspaceId, bundle.id, payload)
@@ -346,6 +350,7 @@ export function BundleEditorDialog({
               />
               {t.active}
             </label>
+            <MixAndMatchToggle checked={mixAndMatch} onChange={setMixAndMatch} disabled={busy} />
           </div>
 
           {!bundle && (
