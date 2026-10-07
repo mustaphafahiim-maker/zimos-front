@@ -171,7 +171,16 @@ const STRINGS = {
 
 type Tab = "tests" | "geo" | "settings";
 
-export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; steps: UiStep[] }) {
+export function FunnelGrowthButton({
+  funnelId,
+  steps,
+  onLinkChanged,
+}: {
+  funnelId: string;
+  steps: UiStep[];
+  /** The funnel's link (subdomain) was changed from the settings tab. */
+  onLinkChanged?: (subdomain: string) => void;
+}) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("tests");
@@ -207,7 +216,7 @@ export function FunnelGrowthButton({ funnelId, steps }: { funnelId: string; step
         </div>
         {open && tab === "tests" && <SplitTestsTab funnelId={funnelId} steps={steps} />}
         {open && tab === "geo" && <GeoTab funnelId={funnelId} />}
-        {open && tab === "settings" && <SettingsTab funnelId={funnelId} />}
+        {open && tab === "settings" && <SettingsTab funnelId={funnelId} onLinkChanged={onLinkChanged} />}
       </Modal>
     </>
   );
@@ -648,7 +657,7 @@ function GeoTab({ funnelId }: { funnelId: string }) {
 
 // --- funnel settings --------------------------------------------------------
 
-function SettingsTab({ funnelId }: { funnelId: string }) {
+function SettingsTab({ funnelId, onLinkChanged }: { funnelId: string; onLinkChanged?: (subdomain: string) => void }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -669,7 +678,7 @@ function SettingsTab({ funnelId }: { funnelId: string }) {
     <DataState loading={loaded.loading} error={loaded.error} onRetry={() => void loaded.refresh()}>
       <div className="space-y-4">
         <p className="text-sm text-ink-soft">{t.settingsIntro}</p>
-        <FunnelLinkSetting funnelId={funnelId} />
+        <FunnelLinkSetting funnelId={funnelId} onSaved={onLinkChanged} />
         <div className="grid gap-3 sm:grid-cols-2">
           {field("title", t.seoTitle, { maxLength: 200 })}
           {field("currency", t.currency, { dir: "ltr", maxLength: 3 })}

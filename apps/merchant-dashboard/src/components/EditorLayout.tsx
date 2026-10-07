@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AccessBanner } from "@/components/AccessBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { OverlayRoot } from "@/components/overlayRoot";
 
 /**
  * The frame for the full-screen editors (website, funnel): no sidebar or
@@ -24,6 +25,7 @@ export function EditorLayout() {
           <Outlet />
         </RouteErrorBoundary>
       </div>
+      <OverlayRoot />
     </div>
   );
 }

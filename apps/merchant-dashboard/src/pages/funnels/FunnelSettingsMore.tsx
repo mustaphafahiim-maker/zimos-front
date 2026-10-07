@@ -9,6 +9,7 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useFunnelErrorMessage } from "./funnelAdapter";
+import { FunnelPublicLink } from "./FunnelPublicLink";
 
 const STRINGS = {
   en: {
@@ -44,7 +45,7 @@ const STRINGS = {
 const LINK = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 /** The funnel's link (SPEC §9.7 "domain or subdomain"): /f/<subdomain>, changeable. */
-export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
+export function FunnelLinkSetting({ funnelId, onSaved }: { funnelId: string; onSaved?: (subdomain: string) => void }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -68,6 +69,7 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
       await funnelsUpdate(apiClient, workspaceId, funnelId, { subdomain: next });
       await loaded.refresh({ silent: true });
       setDraft(null);
+      onSaved?.(next);
       toast.success(t.linkSaved);
     } catch (err) {
       setError(isApiErrorCode(err, "FUNNEL_SUBDOMAIN_TAKEN") ? t.linkTaken : describeError(err));
@@ -101,6 +103,7 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
       <p id="fs-link-hint" className={error ? "text-sm text-danger" : "text-xs text-ink-soft"} role={error ? "alert" : undefined}>
         {error ?? t.linkHint}
       </p>
+      {loaded.data && <FunnelPublicLink funnel={loaded.data.funnel} />}
     </div>
   );
 }

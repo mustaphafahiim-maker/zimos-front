@@ -1,5 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@store-builder/ui";
+import { overlayTarget } from "./overlayRoot";
 
 interface ModalProps {
   open: boolean;
@@ -11,7 +13,15 @@ interface ModalProps {
   className?: string;
 }
 
+/**
+ * Drawn in the layout's overlay root (overlayRoot.tsx), not where it is used:
+ * a bar, panel or dialog around it with backdrop-filter or a transform would
+ * otherwise hold the fixed backdrop to its own box and cut the dialog off.
+ * The target is picked once per instance, on first open, so the dialog's
+ * content is never remounted under the merchant.
+ */
 export function Modal({ open, onClose, title, description, children, footer, className }: ModalProps) {
+  const target = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -22,8 +32,9 @@ export function Modal({ open, onClose, title, description, children, footer, cla
   }, [open, onClose]);
 
   if (!open) return null;
+  target.current ??= overlayTarget();
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 py-12"
       onMouseDown={onClose}
@@ -49,6 +60,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    target.current
   );
 }

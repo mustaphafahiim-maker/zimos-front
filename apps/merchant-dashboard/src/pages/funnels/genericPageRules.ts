@@ -21,9 +21,17 @@ export function flowSteps<T extends Pick<UiStep, "key" | "type">>(steps: T[], ed
   return flow.length > 0 ? flow : steps;
 }
 
+/**
+ * Where a funnel opens on its store (storefront app/store/[workspaceId]/f/[ref]):
+ * /f/<ref>, the ref being its link (subdomain) or, without one, its id.
+ */
+export function funnelEntryPath(funnel: Pick<UiFunnel, "id" | "subdomain">): string {
+  return `/f/${funnel.subdomain || funnel.id}`;
+}
+
 /** Where a generic page opens: store-relative, as a merchant writes a link, and in full for sharing. */
 export function genericPagePath(funnel: Pick<UiFunnel, "id" | "subdomain">, key: string): string {
-  return `/f/${funnel.subdomain || funnel.id}/p/${key}`;
+  return `${funnelEntryPath(funnel)}/p/${key}`;
 }
 
 export type GenericPreset = "contact" | "about" | "policies" | "blank";
