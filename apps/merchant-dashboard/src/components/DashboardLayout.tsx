@@ -19,7 +19,8 @@ import { useAuth } from "@/context/AuthContext";
 import { AccessBanner } from "@/components/AccessBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useCommon, useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { Popover } from "@/components/Popover";
 import { StoreLinkBar } from "@/components/StoreLinkBar";
 import { ZimosLogo } from "@/components/ZimosLogo";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -290,7 +291,9 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
   const { currentWorkspace, workspaces, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const t = useT(STRINGS);
+  const c = useCommon();
   const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
   const name = currentWorkspace?.name ?? t.selectStore;
 
   function go(to: string) {
@@ -299,8 +302,10 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
     navigate(to);
   }
 
+  // The list is a Popover: drawn outside the sidebar's glass (and, on a phone,
+  // over the navigation drawer), so nothing traps or clips it.
   return (
-    <div className="relative">
+    <div ref={anchor}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -314,44 +319,49 @@ function StoreSwitcher({ onNavigate }: { onNavigate?: () => void }) {
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{name}</span>
         <ChevronsUpDown className="size-4 shrink-0 text-ink-soft" aria-hidden />
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onMouseDown={() => setOpen(false)} aria-hidden />
-          <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto zimos-glass rounded-xl py-1 shadow-xl">
-            {workspaces.map((workspace) => (
-              <button
-                key={workspace.id}
-                onClick={() => {
-                  selectWorkspace(workspace.id);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink",
-                  workspace.id === currentWorkspace?.id && "font-semibold text-ink"
-                )}
-              >
-                <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-                {workspace.id === currentWorkspace?.id && (
-                  <Check className="size-4 shrink-0 text-accent" aria-hidden />
-                )}
-              </button>
-            ))}
-            <div className="my-1 border-t border-line" />
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={anchor}
+        closeLabel={c.close}
+        matchWidth
+        layerClassName="z-[60]"
+        surfaceClassName="zimos-glass rounded-xl shadow-xl"
+      >
+        <div className="max-h-72 overflow-y-auto py-1" data-testid="store-switcher-list">
+          {workspaces.map((workspace) => (
             <button
-              onClick={() => go("/stores")}
-              className="block w-full cursor-pointer px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
+              key={workspace.id}
+              onClick={() => {
+                selectWorkspace(workspace.id);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink",
+                workspace.id === currentWorkspace?.id && "font-semibold text-ink"
+              )}
             >
-              {t.allStores}
+              <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+              {workspace.id === currentWorkspace?.id && (
+                <Check className="size-4 shrink-0 text-accent" aria-hidden />
+              )}
             </button>
-            <button
-              onClick={() => go("/workspaces")}
-              className="block w-full cursor-pointer px-3 py-2 text-start text-sm font-medium text-ink hover:bg-primary-soft"
-            >
-              {t.newStore}
-            </button>
-          </div>
-        </>
-      )}
+          ))}
+          <div className="my-1 border-t border-line" />
+          <button
+            onClick={() => go("/stores")}
+            className="block w-full cursor-pointer px-3 py-2 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
+          >
+            {t.allStores}
+          </button>
+          <button
+            onClick={() => go("/workspaces")}
+            className="block w-full cursor-pointer px-3 py-2 text-start text-sm font-medium text-ink hover:bg-primary-soft"
+          >
+            {t.newStore}
+          </button>
+        </div>
+      </Popover>
     </div>
   );
 }

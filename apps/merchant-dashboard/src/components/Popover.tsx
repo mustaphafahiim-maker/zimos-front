@@ -10,14 +10,23 @@ const MARGIN = 8;
  * A menu anchored to a button, drawn in the overlay root so no bar or panel
  * around the button can clip it or hold it under the next pane. It opens
  * below the button (above when there is more room there), lines up with the
- * button's end edge, stays inside the window, and scrolls inside itself when
+ * button's end edge (start edge with align="start"), stays inside the window, and scrolls inside itself when
  * the window is short. A click outside or Escape closes it.
+ * `matchWidth` makes it as wide as the anchor; `layerClassName` lifts it over
+ * a higher layer (the phone navigation drawer is z-50); `surfaceClassName`
+ * replaces the default card look.
  */
+const SURFACE = "rounded-2xl border border-line bg-paper-raised shadow-lg";
+
 export function Popover({
   open,
   onClose,
   anchorRef,
   closeLabel,
+  align = "end",
+  matchWidth = false,
+  layerClassName = "z-40",
+  surfaceClassName = SURFACE,
   className,
   children,
 }: {
@@ -25,6 +34,10 @@ export function Popover({
   onClose: () => void;
   anchorRef: RefObject<HTMLElement | null>;
   closeLabel: string;
+  align?: "start" | "end";
+  matchWidth?: boolean;
+  layerClassName?: string;
+  surfaceClassName?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -42,15 +55,16 @@ export function Popover({
       const a = anchor.getBoundingClientRect();
       const vw = document.documentElement.clientWidth || window.innerWidth;
       const vh = window.innerHeight;
-      const width = Math.min(panel.offsetWidth, vw - 2 * MARGIN);
+      const width = Math.min(matchWidth ? a.width : panel.offsetWidth, vw - 2 * MARGIN);
       const rtl = getComputedStyle(anchor).direction === "rtl";
-      const ideal = rtl ? a.left : a.right - width;
+      const ideal = (align === "start") !== rtl ? a.left : a.right - width;
       const left = Math.max(MARGIN, Math.min(ideal, vw - width - MARGIN));
       const below = vh - a.bottom - GAP - MARGIN;
       const above = a.top - GAP - MARGIN;
       const up = below < Math.min(panel.scrollHeight, 240) && above > below;
       setStyle({
         left,
+        ...(matchWidth ? { width } : {}),
         maxWidth: vw - 2 * MARGIN,
         maxHeight: Math.max(120, up ? above : below),
         ...(up ? { bottom: vh - a.top + GAP } : { top: a.bottom + GAP }),
@@ -68,17 +82,17 @@ export function Popover({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, anchorRef]);
+  }, [open, anchorRef, align, matchWidth]);
 
   if (!open) return null;
   return createPortal(
     <>
-      <button type="button" aria-label={closeLabel} className="fixed inset-0 z-40 cursor-default" onClick={onClose} />
+      <button type="button" aria-label={closeLabel} className={cn("fixed inset-0 cursor-default", layerClassName)} onClick={onClose} />
       <div
         ref={panelRef}
         data-popover=""
         style={style}
-        className={cn("fixed z-40 overflow-y-auto rounded-2xl border border-line bg-paper-raised shadow-lg", className)}
+        className={cn("fixed overflow-y-auto", layerClassName, surfaceClassName, className)}
       >
         {children}
       </div>

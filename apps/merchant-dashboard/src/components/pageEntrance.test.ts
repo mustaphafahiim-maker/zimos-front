@@ -32,3 +32,12 @@ describe(".page-in entrance", () => {
     expect(body).not.toMatch(/\b(transform|translate|will-change|filter|contain)\s*:/);
   });
 });
+
+describe("phone navigation drawer entrance", () => {
+  it("slides in and leaves no transform behind (the store switcher and dialogs sit in it)", () => {
+    const body = ruleBody(".animate-slide-in-start");
+    expect(body).toMatch(/animation:\s*slide-in-start\b/);
+    expect(body).not.toMatch(/\b(both|forwards)\b/);
+    expect(body).toMatch(/\bbackwards\b/);
+  });
+});

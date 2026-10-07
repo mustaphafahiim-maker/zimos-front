@@ -1198,6 +1198,9 @@ function FlowCanvas({
   const c = useCommon();
   const { locale, dir } = useLocale();
   const [menu, setMenu] = useState<CanvasMenu | null>(null);
+  // A point on the map where the step-type menu opens; the menu itself is a
+  // Popover, so the zoom transform neither scales nor traps it.
+  const menuAnchor = useRef<HTMLSpanElement>(null);
   const [linkDrag, setLinkDrag] = useState<LinkDrag | null>(null);
   const pointLabels = useLinkLabels();
 
@@ -1495,21 +1498,28 @@ function FlowCanvas({
             ))}
 
             {menu && (
-              <>
-                <button type="button" aria-label={c.close} className="fixed inset-0 z-20 cursor-default" onClick={() => setMenu(null)} />
-                <div
-                  dir={dir}
-                  className="absolute z-30 w-52 overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-lg"
-                  style={{ left: Math.max(4, menu.x), top: menu.y }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setMenu(null);
-                  }}
-                >
-                  <p className="border-b border-line px-3 py-2 text-xs font-semibold text-ink-soft">{t.pickType}</p>
-                  <StepTypeList onPick={pick} />
-                </div>
-              </>
+              <span
+                ref={menuAnchor}
+                aria-hidden
+                data-testid="canvas-menu-anchor"
+                className="pointer-events-none absolute size-px"
+                style={{ left: Math.max(4, menu.x), top: menu.y }}
+              />
             )}
+            <Popover
+              key={menu ? `${menu.x},${menu.y}` : "closed"}
+              open={menu !== null}
+              onClose={() => setMenu(null)}
+              anchorRef={menuAnchor}
+              closeLabel={c.close}
+              align="start"
+              className="w-52"
+            >
+              <div dir={dir}>
+                <p className="border-b border-line px-3 py-2 text-xs font-semibold text-ink-soft">{t.pickType}</p>
+                <StepTypeList onPick={pick} />
+              </div>
+            </Popover>
           </div>
           </div>
         )}

@@ -93,6 +93,21 @@ describe("FunnelEditorPage", () => {
     expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
   });
 
+  it("opens the step-type menu outside the map's zoom, where the transform cannot trap it", async () => {
+    serve(liveFunnel);
+    const { user } = renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug });
+
+    await user.click(await screen.findByRole("button", { name: "Add a step after Product page" }));
+    const menu = screen.getByText("Add which step?");
+    const zoomed = screen.getByTestId("canvas-menu-anchor").parentElement!;
+    expect(zoomed.style.transform).toMatch(/scale\(/);
+    expect(zoomed).not.toContainElement(menu);
+    expect(menu.closest("[data-popover]")).not.toBeNull();
+
+    await user.click(screen.getAllByRole("button", { name: "Close" }).at(-1)!);
+    expect(screen.queryByText("Add which step?")).not.toBeInTheDocument();
+  });
+
   it("asks to publish a draft before it has a link", async () => {
     serve(emptyFunnel);
     renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug, locale: "ar" });
