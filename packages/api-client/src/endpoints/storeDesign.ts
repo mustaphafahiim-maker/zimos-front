@@ -646,12 +646,16 @@ export async function storefrontCustomCode(
 // ------------------------------------------------------------- domains ----
 // Backend: src/modules/domains (domainsService.js + domainSettings.js),
 // under /workspaces/:workspaceId/domains — permission domain.manage.
-// Codes: DOMAIN_TAKEN (409), STORE_NOT_SET_UP (409), DOMAIN_NOT_VERIFIED
-// (400 on verify, 409 on primary / certificate), FUNNEL_NOT_PUBLISHED (409),
-// CERTIFICATE_PROVIDER_ERROR (502).
+// Closed (404 ROUTE_NOT_FOUND) unless the backend's CUSTOM_DOMAINS_ENABLED.
+// Codes: DOMAIN_TAKEN (409), DOMAIN_ALREADY_ADDED (409), DOMAIN_LIMIT_REACHED
+// (409), DOMAIN_VERIFICATION_EXPIRED (409), APEX_NOT_SUPPORTED (400, details
+// { suggestion: "www.<domain>" }), DOMAIN_NOT_ALLOWED (400), STORE_NOT_SET_UP
+// (409), DOMAIN_NOT_VERIFIED (400 on verify, 409 on primary / certificate),
+// FUNNEL_NOT_PUBLISHED (409), CERTIFICATE_PROVIDER_ERROR (502).
 
 export type StoreDomainStatus = "pending_verification" | "verified" | "active" | "failed";
-export type StoreDomainSslStatus = "none" | "pending" | "issued" | "failed";
+/** moved: the domain's CNAME no longer points at the platform. */
+export type StoreDomainSslStatus = "none" | "pending" | "issued" | "failed" | "moved";
 
 export interface StoreDomainRecord {
   type: "TXT" | "CNAME";
@@ -670,6 +674,11 @@ export interface StoreDomain {
   sslStatus: StoreDomainSslStatus;
   sslProvider: string | null;
   sslCheckedAt: string | null;
+  /** The provider's reason when the certificate failed. */
+  sslDetail?: string | null;
+  /** Not served while the store is suspended or its plan lacks custom domains. */
+  suspended?: boolean;
+  suspendedReason?: "store_suspended" | "plan" | null;
   homeFunnel: { id: string; name: string; status: string } | null;
   records: StoreDomainRecord[];
 }
@@ -678,13 +687,15 @@ export interface StoreDomainsOverview {
   domains: StoreDomain[];
   /** What a merchant's CNAME points at. */
   cnameTarget: string;
-  /** The certificate provider in use ("sandbox" until a real one is configured), or null. */
+  /** The certificate provider in use ("cloudflare"), or null. */
   certificateProvider: string | null;
+  /** How many domains one store may connect. */
+  maxPerStore?: number;
 }
 
 export interface StoreDomainDnsCheck {
   hostname: string;
-  txt: { expected: string; found: boolean; values: string[] };
+  txt: { name?: string; expected: string; found: boolean; values: string[] };
   cname: { expected: string; found: boolean; values: string[] };
   checkedAt: string;
 }

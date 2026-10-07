@@ -17,6 +17,7 @@ import {
 } from "@/lib/storePreview";
 import { resolveCustomHost, type ResolvedHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
+import { EDGE_CLIENT_IP_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHost } from "@/lib/edgeHost";
 
 /**
  * Merchant-owned domains (`shop.example.com`) are off unless the server's
@@ -25,14 +26,43 @@ import { STORE_REF_HEADER } from "@/lib/documentLocale";
  * store metadata rewrite. On, a lookup that fails or takes longer than
  * RESOLVE_TIMEOUT_MS falls back to that same routing, so a host is never
  * answered with an error because the API was slow or down.
+ *
+ * On, a merchant domain arrives through the Cloudflare Worker with the
+ * visitor's host in X-Forwarded-Host, trusted only with the Worker's secret
+ * (lib/edgeHost). Off, that header is never read.
  */
 export async function proxy(request: NextRequest) {
   if (process.env.CUSTOM_DOMAINS_ENABLED !== "true") return platformProxy(request);
+  const visitor = visitorHost(request.headers);
   try {
-    return await customDomainProxy(request);
+    return await customDomainProxy(request, visitor);
   } catch {
-    return platformProxy(request);
+    return platformProxy(request, visitor);
   }
+}
+
+/**
+ * The Worker's own headers never reach the app; behind it, the shopper's IP
+ * it sent replaces x-real-ip (Cloudflare's address there).
+ */
+function passEdgeHeaders(headers: Headers, visitor: VisitorHost) {
+  headers.delete(EDGE_SECRET_HEADER);
+  headers.delete(EDGE_CLIENT_IP_HEADER);
+  if (visitor.forwarded && visitor.clientIp) headers.set("x-real-ip", visitor.clientIp);
+}
+
+/**
+ * A redirect target on the visitor's own host. Behind the Worker,
+ * request.nextUrl carries our Railway host, which the visitor must never be
+ * sent to; the Worker serves https only.
+ */
+function publicUrl(request: NextRequest, visitor: VisitorHost) {
+  const url = request.nextUrl.clone();
+  if (visitor.forwarded && visitor.host) {
+    url.protocol = "https:";
+    url.host = visitor.host;
+  }
+  return url;
 }
 
 const RESOLVE_TIMEOUT_MS = 1500;
@@ -98,7 +128,7 @@ function isPassThrough(pathname: string): boolean {
  *   • anything else — plain `localhost`, an IP, the platform's own health
  *     checks — left alone so development and deploys keep working.
  */
-function platformProxy(request: NextRequest) {
+function platformProxy(request: NextRequest, visitor: VisitorHost = { host: request.headers.get("host"), forwarded: false, clientIp: null }) {
   const { pathname } = request.nextUrl;
   if (isPassThrough(pathname)) return NextResponse.next();
 
@@ -111,6 +141,7 @@ function platformProxy(request: NextRequest) {
   const preview = fromLink ?? (isTokenShaped(stored) ? stored : null);
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
+  passEdgeHeaders(headers, visitor);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -119,7 +150,7 @@ function platformProxy(request: NextRequest) {
   };
   const next = () => keep(NextResponse.next({ request: { headers } }));
 
-  const host = request.headers.get("host");
+  const host = visitor.host;
   const slug = storeSlugFromHost(host);
 
   // The internal shape, reached directly: deep links that predate subdomains,
@@ -133,7 +164,7 @@ function platformProxy(request: NextRequest) {
       // of its own, so send the shopper to the same page's public URL instead.
       const prefix = `/store/${slug}`;
       if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-        const url = request.nextUrl.clone();
+        const url = publicUrl(request, visitor);
         url.pathname = pathname.slice(prefix.length) || "/";
         return keep(NextResponse.redirect(url));
       }
@@ -167,9 +198,9 @@ const STORE_FILES = new Set(["/robots.txt", "/sitemap.xml", "/manifest.webmanife
  * instead of the store home (the domain's "home funnel"), and a visit on a
  * non-primary merchant domain moves to the store's primary one.
  */
-async function customDomainProxy(request: NextRequest) {
+async function customDomainProxy(request: NextRequest, visitor: VisitorHost) {
   const { pathname } = request.nextUrl;
-  const host = request.headers.get("host");
+  const host = visitor.host;
   const platformSlug = storeSlugFromHost(host);
 
   // On a store's own host these are the store's (app/store/[workspaceId]/…).
@@ -186,7 +217,7 @@ async function customDomainProxy(request: NextRequest) {
   if (isPassThrough(pathname)) return NextResponse.next();
   const custom = platformSlug ? null : await resolveWithin(host);
   // Not a merchant domain: exactly the platform's routing.
-  if (!custom) return platformProxy(request);
+  if (!custom) return platformProxy(request, visitor);
 
   // A merchant domain. Same preview handling as platformProxy.
   const linked = request.nextUrl.searchParams.get(STORE_PREVIEW_PARAM) ?? request.nextUrl.searchParams.get(PAYMENTS_PREVIEW_PARAM);
@@ -196,6 +227,7 @@ async function customDomainProxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
   headers.delete(STORE_REF_HEADER);
+  passEdgeHeaders(headers, visitor);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -207,7 +239,7 @@ async function customDomainProxy(request: NextRequest) {
   if (isInternalPath) {
     const prefix = `/store/${custom.slug}`;
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      const url = request.nextUrl.clone();
+      const url = publicUrl(request, visitor);
       url.pathname = pathname.slice(prefix.length) || "/";
       return keep(NextResponse.redirect(url));
     }
