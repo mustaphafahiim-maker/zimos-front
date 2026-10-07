@@ -15,7 +15,7 @@ import { fr } from "./i18nFr";
 export type Locale = "ar" | "en" | "fr";
 export const LOCALES: readonly Locale[] = ["ar", "en", "fr"] as const;
 export const DEFAULT_LOCALE: Locale = "ar";
-export const LOCALE_COOKIE = "zimos_store_locale";
+export { LOCALE_COOKIE } from "./localeCookie";
 
 export function isLocale(value: unknown): value is Locale {
   return value === "ar" || value === "en" || value === "fr";

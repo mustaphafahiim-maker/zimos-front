@@ -278,6 +278,19 @@ export function heroSectionIndex(sections: unknown): number {
   return -1;
 }
 
+/**
+ * The first section that draws anything — the top of the page a shopper lands
+ * on, whose pictures are worth fetching before the rest. A section without
+ * rows renders nothing on the store, so it is passed over. -1 when no section
+ * has rows.
+ */
+export function openingSectionIndex(sections: unknown): number {
+  if (!Array.isArray(sections)) return -1;
+  return sections.findIndex(
+    (s) => !!s && typeof s === "object" && Array.isArray((s as { rows?: unknown }).rows) && (s as { rows: unknown[] }).rows.length > 0
+  );
+}
+
 export function rowClasses(settings: unknown): string {
   return `grid ${settingClass(settings, "gap", ROW_GAP, "normal")} md:grid-cols-12`;
 }

@@ -74,7 +74,11 @@ const IMAGE_MAX_WIDTH: Record<string, string> = {
   icon: "5.5rem",
 };
 
-export function ImageElement({ props }: { props: Props }) {
+/**
+ * `eager`: the picture sits in the page's opening section, so it is fetched
+ * straight away and first (often the page's largest paint) rather than lazily.
+ */
+export function ImageElement({ props, eager = false }: { props: Props; eager?: boolean }) {
   const src = safeUrl(str(props, "src"));
   if (!src) return null;
   const alt = str(props, "alt");
@@ -94,7 +98,8 @@ export function ImageElement({ props }: { props: Props }) {
       alt={alt}
       width={1200}
       height={800}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : undefined}
       decoding="async"
       className="zt-img h-auto w-full rounded-2xl object-cover"
     />

@@ -18,6 +18,7 @@ import {
 import { resolveCustomHost, type ResolvedHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
 import { EDGE_CLIENT_IP_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHost } from "@/lib/edgeHost";
+import { edgeCacheControl } from "@/lib/edgeCache";
 
 /**
  * Merchant-owned domains (`shop.example.com`) are off unless the server's
@@ -32,6 +33,10 @@ import { EDGE_CLIENT_IP_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHos
  * (lib/edgeHost). Off, that header is never read.
  */
 export async function proxy(request: NextRequest) {
+  return withEdgeCache(request, await route(request));
+}
+
+async function route(request: NextRequest) {
   if (process.env.CUSTOM_DOMAINS_ENABLED !== "true") return platformProxy(request);
   const visitor = visitorHost(request.headers);
   try {
@@ -39,6 +44,26 @@ export async function proxy(request: NextRequest) {
   } catch {
     return platformProxy(request, visitor);
   }
+}
+
+/**
+ * A public store page may be kept by the CDN for a minute (lib/edgeCache).
+ * Off unless STOREFRONT_EDGE_CACHE is exactly "true"; off, the response is
+ * untouched.
+ */
+function withEdgeCache(request: NextRequest, response: NextResponse) {
+  const linked = request.nextUrl.searchParams.get(STORE_PREVIEW_PARAM) ?? request.nextUrl.searchParams.get(PAYMENTS_PREVIEW_PARAM);
+  const value = edgeCacheControl({
+    enabled: process.env.STOREFRONT_EDGE_CACHE === "true",
+    method: request.method,
+    pathname: request.nextUrl.pathname,
+    cookieNames: request.cookies.getAll().map((c) => c.name),
+    previewLink: linked !== null,
+    status: response.status,
+    redirected: response.headers.has("location"),
+  });
+  if (value) response.headers.set("Cache-Control", value);
+  return response;
 }
 
 /**

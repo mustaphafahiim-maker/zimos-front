@@ -49,6 +49,8 @@ export interface ShowcaseCtx {
   currency: string;
   locale: Locale;
   editable: boolean;
+  /** In the page's opening section: its picture loads at once rather than lazily. */
+  eager?: boolean;
 }
 
 interface ElementProps extends ShowcaseCtx {
@@ -766,7 +768,7 @@ async function ProductCardsElement(ctx: ElementProps) {
 
 // --- image_banner -------------------------------------------------------------------------
 
-function ImageBannerElement({ props, locale, editable }: ElementProps) {
+function ImageBannerElement({ props, locale, editable, eager = false }: ElementProps) {
   const image = safeUrl(str(props, "image"));
   if (!image) return <Empty editable={editable} message={showcaseCopy(locale).emptyBanner} />;
 
@@ -791,7 +793,7 @@ function ImageBannerElement({ props, locale, editable }: ElementProps) {
           {mobileImage ? <source media="(max-width: 767px)" srcSet={mobileImage} /> : null}
           {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt={str(props, "alt")} width={2600} height={1114} loading="lazy" decoding="async" />
+          <img src={image} alt={str(props, "alt")} width={2600} height={1114} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} decoding="async" />
         </picture>
         {hasCopy ? <span className="zs-banner__overlay" aria-hidden /> : null}
       </div>

@@ -32,6 +32,12 @@ interface ZimosLogoProps {
   basePath?: string;
   className?: string;
   alt?: string;
+  /**
+   * "lazy" for a mark below the fold (the store footer): neither file is
+   * fetched until it is near, and the variant the other surface hides never
+   * is. Left out, both load at once as they always did.
+   */
+  loading?: "lazy";
 }
 
 export function ZimosLogo({
@@ -40,6 +46,7 @@ export function ZimosLogo({
   basePath = "/brand",
   className,
   alt = "ZIMOS",
+  loading,
 }: ZimosLogoProps) {
   // Both exports are cropped to the identical ink bounding box, so one height
   // gives both the same optical size — no per-variant nudging.
@@ -56,6 +63,7 @@ export function ZimosLogo({
         src={`${basePath}/zimos-logo-light.png`}
         alt=""
         draggable={false}
+        loading={loading}
         style={{ height }}
       />
       <img
@@ -63,6 +71,7 @@ export function ZimosLogo({
         src={`${basePath}/zimos-logo-dark.png`}
         alt=""
         draggable={false}
+        loading={loading}
         style={{ height }}
       />
     </span>
@@ -75,6 +84,12 @@ interface ZimosMarkProps {
   basePath?: string;
   className?: string;
   alt?: string;
+  /**
+   * "lazy" for a mark below the fold (the store footer): neither file is
+   * fetched until it is near, and the variant the other surface hides never
+   * is. Left out, both load at once as they always did.
+   */
+  loading?: "lazy";
 }
 
 /** Icon-only mark on its app-icon tile — compact nav, favicons, avatars. */
