@@ -145,6 +145,7 @@ function ContactDetails({ locale }: { locale: Locale }) {
         <dl className="mt-3">
           {row(legal.legalName, company.legalName)}
           {row(legal.registration, company.registration)}
+          {row(legal.taxRegistration, <span dir="ltr">{company.taxRegistration}</span>)}
         </dl>
       </section>
     </div>

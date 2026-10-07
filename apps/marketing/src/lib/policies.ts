@@ -8,9 +8,12 @@ import type { Locale } from "@/i18n/config";
  * brackets there; scripts/check-policy-placeholders.mjs refuses a production
  * build while any is left.
  *
- * `{email}`, `{phone}`, `{address}`, `{legalName}`, `{registration}` and
- * `{governingLaw}` in the text are filled in from the company details, so
- * each is written once.
+ * The tax registration number is the one company detail kept here instead
+ * (TAX_REGISTRATION_NUMBER): it is the same in both languages.
+ *
+ * `{email}`, `{phone}`, `{address}`, `{legalName}`, `{registration}`,
+ * `{taxRegistration}` and `{governingLaw}` in the text are filled in from the
+ * company details, so each is written once.
  */
 
 export type PolicySlug = "refund-policy" | "terms" | "privacy" | "contact";
@@ -33,6 +36,7 @@ export interface CompanyDetails {
   brand: string;
   legalName: string;
   registration: string;
+  taxRegistration: string;
   address: string;
   email: string;
   phone: string;
@@ -43,8 +47,11 @@ export interface CompanyDetails {
 /** The date on the pages ("last updated"). The backend stores it with each acceptance (TERMS_VERSION). */
 export const POLICIES_LAST_UPDATED: string = content.lastUpdated;
 
+/** ZIMOS's tax registration number, shown in the footer and the contact page's entity details. */
+export const TAX_REGISTRATION_NUMBER = "783-889-615";
+
 export function companyDetails(locale: Locale): CompanyDetails {
-  return content.company[locale];
+  return { ...content.company[locale], taxRegistration: TAX_REGISTRATION_NUMBER };
 }
 
 function fill(text: string, company: CompanyDetails): string {
