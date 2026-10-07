@@ -73,6 +73,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { FunnelDraftBanner, useFunnelDraft } from "./FunnelDraft";
 import { FunnelIssuesButton } from "./FunnelIssues";
 import { FunnelGrowthButton } from "./FunnelGrowthPanel";
+import { FunnelPublicLink } from "./FunnelPublicLink";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OfferPicker } from "@/components/OfferPicker";
 import { Select } from "@/components/Select";
@@ -612,6 +613,7 @@ export function FunnelEditorPage() {
                   </Button>
                 </div>
               </div>
+              <FunnelPublicLink funnel={funnel} className="mt-1 px-1" />
               {/* Tools on their own, quieter row: how you look at the funnel and what is wrong
                   with it at the start, the less frequent actions at the end. */}
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
@@ -655,7 +657,15 @@ export function FunnelEditorPage() {
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <FunnelGrowthButton funnelId={funnelId} steps={funnel.steps} />
+                  <FunnelGrowthButton
+                    funnelId={funnelId}
+                    steps={funnel.steps}
+                    onLinkChanged={(subdomain) => {
+                      // Saved straight to the server (not part of the map's Save), so the baseline moves with it.
+                      setFunnel((f) => (f ? { ...f, subdomain } : f));
+                      setBaseline((b) => (b ? { ...b, subdomain } : b));
+                    }}
+                  />
                   <HistoryMenu
                     workspaceId={workspaceId}
                     funnel={funnel}

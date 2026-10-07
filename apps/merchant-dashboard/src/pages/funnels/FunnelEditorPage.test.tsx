@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import type { FunnelDetailDto, FunnelEdgeDto, FunnelStepDto } from "@store-builder/api-client";
-import { api, fake } from "@/test/mocks";
+import { api, fake, testWorkspace } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { FunnelEditorPage } from "./FunnelEditorPage";
 import { stepPageTree } from "./funnelPages";
@@ -59,7 +59,30 @@ function serve(detail: FunnelDetailDto) {
 const renderEditor = (locale: "en" | "ar" = "en") =>
   renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", locale });
 
+const withSlug = { currentWorkspace: { ...testWorkspace, slug: "nile" } };
+
 describe("FunnelEditorPage", () => {
+  it("shows a published funnel's public link on its store, with Copy and Open", async () => {
+    serve(liveFunnel);
+    renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug });
+
+    const link = await screen.findByTestId("funnel-link-url");
+    expect(link).toHaveTextContent("https://nile.zimos.co/f/headphones");
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    const open = screen.getByRole("link", { name: "Open the funnel in a new tab" });
+    expect(open).toHaveAttribute("href", "https://nile.zimos.co/f/headphones");
+    expect(open).toHaveAttribute("target", "_blank");
+    expect(open).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("asks to publish a draft before it has a link", async () => {
+    serve(emptyFunnel);
+    renderWithProviders(<FunnelEditorPage />, { route: "/funnels/f1", path: "/funnels/:funnelId", workspace: withSlug, locale: "ar" });
+
+    expect(await screen.findByTestId("funnel-link-hint")).toHaveTextContent("انشر الفانل للحصول على الرابط.");
+    expect(screen.queryByTestId("funnel-link-url")).not.toBeInTheDocument();
+  });
+
   it("says the funnel is live and puts each publish problem on its step", async () => {
     serve(liveFunnel);
     const { user } = renderEditor();
