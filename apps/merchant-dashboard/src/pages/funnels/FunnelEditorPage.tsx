@@ -74,6 +74,7 @@ import { FunnelDraftBanner, useFunnelDraft } from "./FunnelDraft";
 import { FunnelIssuesButton } from "./FunnelIssues";
 import { FunnelGrowthButton } from "./FunnelGrowthPanel";
 import { FunnelPublicLink } from "./FunnelPublicLink";
+import { Popover } from "@/components/Popover";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OfferPicker } from "@/components/OfferPicker";
 import { Select } from "@/components/Select";
@@ -929,6 +930,7 @@ function HistoryMenu({ workspaceId, funnel, version, onRolledBack }: { workspace
   const toast = useToast();
   const describeError = useFunnelErrorMessage();
   const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
   const [target, setTarget] = useState<FunnelRevisionDto | null>(null);
   const revisions = useAsync<FunnelRevisionDto[] | null>(
     () => (open ? funnelsListRevisions(apiClient, workspaceId, funnel.id) : Promise.resolve(null)),
@@ -950,14 +952,11 @@ function HistoryMenu({ workspaceId, funnel, version, onRolledBack }: { workspace
   }
 
   return (
-    <div className="relative">
+    <div ref={anchor} className="relative">
       <Button variant="outline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <History className="size-4" aria-hidden /> {t.history}
       </Button>
-      {open && (
-        <>
-          <button type="button" aria-label={c.close} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute end-0 z-20 mt-1 w-80 overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-lg">
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchor} closeLabel={c.close} className="w-80">
             <p className="border-b border-line px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">{t.historyTitle}</p>
             <div className="max-h-80 overflow-y-auto p-2">
               <DataState
@@ -993,9 +992,7 @@ function HistoryMenu({ workspaceId, funnel, version, onRolledBack }: { workspace
                 </ul>
               </DataState>
             </div>
-          </div>
-        </>
-      )}
+      </Popover>
       <ConfirmDialog
         open={target !== null}
         title={target ? fmt(t.rollbackTitle, { n: target.revisionNumber }) : t.history}
@@ -1012,26 +1009,22 @@ function HistoryMenu({ workspaceId, funnel, version, onRolledBack }: { workspace
 
 function AddStepMenu({ onAdd }: { onAdd: (type: UiStepType) => void }) {
   const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLDivElement>(null);
   const t = useT(LIST_STRINGS);
   const c = useCommon();
   return (
-    <div className="relative">
+    <div ref={anchor} className="relative">
       <Button size="xs" variant="outline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Plus className="size-3" aria-hidden /> {t.addStep}
       </Button>
-      {open && (
-        <>
-          <button type="button" aria-label={c.close} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute end-0 z-20 mt-1 w-52 overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-lg">
-            <StepTypeList
-              onPick={(type) => {
-                onAdd(type);
-                setOpen(false);
-              }}
-            />
-          </div>
-        </>
-      )}
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchor} closeLabel={c.close} className="w-52">
+        <StepTypeList
+          onPick={(type) => {
+            onAdd(type);
+            setOpen(false);
+          }}
+        />
+      </Popover>
     </div>
   );
 }

@@ -26,6 +26,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { SidebarShortcuts } from "@/components/SidebarShortcuts";
+import { OverlayRoot } from "@/components/overlayRoot";
 
 const STRINGS = {
   en: {
@@ -518,6 +519,7 @@ export function DashboardLayout() {
               <Outlet />
             </div>
           </RouteErrorBoundary>
+          <OverlayRoot />
         </main>
       </div>
     </div>
