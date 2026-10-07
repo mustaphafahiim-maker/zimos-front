@@ -174,6 +174,7 @@ export interface Dictionary {
     entityHeading: string;
     legalName: string;
     registration: string;
+    taxRegistration: string;
     relatedHeading: string;
     /** Above the social accounts on the contact page. */
     socialHeading: string;
@@ -199,6 +200,7 @@ export interface Dictionary {
     rights: string;
     languageLabel: string;
     registration: string;
+    taxRegistration: string;
   };
 }
 

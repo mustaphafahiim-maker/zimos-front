@@ -315,6 +315,7 @@ export const en: Dictionary = {
     entityHeading: "Legal entity",
     legalName: "Name",
     registration: "Commercial registration",
+    taxRegistration: "Tax registration no.",
     relatedHeading: "Related pages",
     socialHeading: "Follow us and get in touch",
   },
@@ -401,5 +402,6 @@ export const en: Dictionary = {
     rights: "All rights reserved.",
     languageLabel: "Language",
     registration: "Commercial registration",
+    taxRegistration: "Tax registration no.",
   },
 };

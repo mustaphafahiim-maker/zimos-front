@@ -314,6 +314,7 @@ export const ar: Dictionary = {
     entityHeading: "الكيان القانوني",
     legalName: "الاسم",
     registration: "السجل التجاري",
+    taxRegistration: "رقم التسجيل الضريبي",
     relatedHeading: "صفحات ذات صلة",
     socialHeading: "تابعنا وتواصل معنا",
   },
@@ -400,5 +401,6 @@ export const ar: Dictionary = {
     rights: "جميع الحقوق محفوظة.",
     languageLabel: "اللغة",
     registration: "السجل التجاري",
+    taxRegistration: "رقم التسجيل الضريبي",
   },
 };

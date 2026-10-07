@@ -10,7 +10,8 @@ import { ZimosLogo } from "./zimos-logo";
  * Logo, tagline, ZIMOS's social accounts (packages/ui/src/social-links), the
  * link columns — pricing, contact and the refund, terms and privacy pages
  * among them — the language switch, and the legal entity
- * (name and commercial registration, from src/content/policies.json). Every
+ * (name and commercial registration from src/content/policies.json, tax
+ * registration number from src/lib/policies.ts). Every
  * link is prefixed with the active locale; `#section` links go to the home
  * page's sections. The © year is computed at render.
  */
@@ -66,7 +67,8 @@ export function SiteFooter({
             © {year} {brand.name} · {copy.rights}
           </p>
           <p>
-            {company.legalName} · {copy.registration}: <span dir="ltr">{company.registration}</span>
+            {company.legalName} · {copy.registration}: <span dir="ltr">{company.registration}</span> ·{" "}
+            {copy.taxRegistration}: <span dir="ltr">{company.taxRegistration}</span>
           </p>
         </div>
       </div>
