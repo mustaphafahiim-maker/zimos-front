@@ -33,6 +33,7 @@ import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
 import { ShippingSettingsSection } from "./ShippingSettingsSection";
 import { CouriersSection } from "./CouriersSection";
 import { DeliveryZonesSection } from "./DeliveryZonesSection";
+import { StoreHoursSection } from "./StoreHoursSection";
 import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
@@ -419,6 +420,8 @@ function ShippingTaxBody() {
       {tab === "rates" && <DeliveryZonesSection currency={currentWorkspace?.defaultCurrency ?? "EGP"} />}
 
       {tab === "rates" && <CouriersSection />}
+
+      {tab === "rates" && <StoreHoursSection />}
 
       {tab === "rates" && <ShippingProfilesSection />}
 

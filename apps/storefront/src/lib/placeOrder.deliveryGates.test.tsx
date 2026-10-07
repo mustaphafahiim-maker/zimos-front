@@ -21,4 +21,13 @@ describe("self delivery checkout errors", () => {
     expect(orderErrorMessage(err, ar)).toBe(ar.areaNotServed);
     expect(serverFieldErrors(err, ar)).toEqual({ governorate: ar.areaNotServed });
   });
+
+  it("shows the store's own closed message, else a generic one", () => {
+    // ApiError.details is the response body, as the client builds it.
+    const body = (message: string, reason: string) => ({ error: { code: "STORE_CLOSED", details: [{ field: "store", message, reason }] } });
+    const own = new ApiError("closed", 422, "STORE_CLOSED", body("مقفولين النهارده", "hours"));
+    expect(orderErrorMessage(own, ar)).toBe("مقفولين النهارده");
+    const plain = new ApiError("closed", 422, "STORE_CLOSED", body("The store is closed", "manual"));
+    expect(orderErrorMessage(plain, ar)).toBe(ar.storeClosed);
+  });
 });

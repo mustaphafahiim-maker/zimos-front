@@ -139,6 +139,8 @@ export interface OrderSnapshot {
   shippingAmount: number;
   totalAmount: number;
   items: { name: string; options: string; quantity: number; lineTotal: number }[];
+  /** The estimated delivery time the order was placed with, minutes (shipping snapshot). */
+  etaMinutes?: number | null;
   productIds: string[];
   /** The pixels' ids for the lines (lib/contentId): the feed's item ids. */
   contentIds?: string[];
@@ -156,6 +158,7 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
     discountAmount: parseMoney(order.discountAmount),
     shippingAmount: parseMoney(order.shippingAmount),
     totalAmount: parseMoney(order.totalAmount),
+    etaMinutes: (order as { shippingSnapshot?: { etaMinutes?: number | null } }).shippingSnapshot?.etaMinutes ?? null,
     items: (order.items ?? []).map((item) => ({
       name: item.productNameSnapshot,
       options: Object.values(item.variantOptionsSnapshot ?? {}).filter(Boolean).join(" / "),

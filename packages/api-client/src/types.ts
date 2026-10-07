@@ -2359,6 +2359,19 @@ export interface ShippingSettings {
   storePickup?: StorePickupSettings;
   /** Checkout prices delivery by the store's delivery zones. Older servers leave it out. */
   deliveryZonesEnabled?: boolean;
+  /** Opening hours in Africa/Cairo. Older servers leave it out. */
+  storeHours?: StoreHoursSettings;
+  /** The usual delivery time in minutes; null = not shown. */
+  deliveryEtaMinutes?: number | null;
+}
+
+export interface StoreHoursSettings {
+  enabled: boolean;
+  /** The "accepting orders" switch. */
+  override: "auto" | "open" | "closed";
+  /** Sunday first; a close at or before the open runs past midnight. */
+  days: Array<{ closed: boolean; open: string; close: string }>;
+  message: string;
 }
 
 export interface StorePickupSettings {
@@ -2391,6 +2404,8 @@ export type UpdateShippingSettingsPayload = Partial<{
   servedGovernorates: string[] | null;
   storePickup: StorePickupSettings | null;
   deliveryZonesEnabled: boolean | null;
+  storeHours: StoreHoursSettings | null;
+  deliveryEtaMinutes: number | null;
 }>;
 
 export interface CreateShippingRatePayload {

@@ -55,6 +55,10 @@ export interface StoreDelivery {
   pickup?: { address: string; phone: string; note: string } | null;
   /** The store's delivery areas while it prices by them, else null. Fees are minor units. */
   zones?: StoreDeliveryZone[] | null;
+  /** Opening hours while the store uses them, with whether it is open right now; else null. */
+  hours?: { openNow: boolean; reason: "manual" | "hours" | null; message: string | null } | null;
+  /** The usual delivery time in minutes, or null. */
+  etaMinutes?: number | null;
 }
 
 export interface StoreDeliveryZone {

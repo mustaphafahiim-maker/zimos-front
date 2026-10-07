@@ -230,6 +230,7 @@ export const fr: Dictionary = {
       areaNotServed: "Désolé, la boutique ne livre pas encore dans ce gouvernorat.",
       zone: "Choisissez votre zone de livraison.",
       zoneInvalid: "La boutique ne livre pas cette zone pour le moment. Choisissez-en une autre.",
+      storeClosed: "La boutique est fermée et ne prend pas de commandes pour le moment.",
       unavailable: "Ce produit est indisponible pour le moment.",
     },
   },
@@ -260,6 +261,9 @@ export const fr: Dictionary = {
     shipToPlaceholder: "Choisissez votre région",
   },
   checkout: {
+    eta: (minutes: number) => `Livraison estimée : environ ${minutes} minutes`,
+    closedTitle: "La boutique est fermée pour le moment",
+    closedText: "Vous pouvez parcourir, mais les commandes reprendront à la réouverture.",
     title: "Commande",
     backToCart: "Retour au panier",
     contact: "Coordonnées",

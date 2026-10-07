@@ -90,6 +90,7 @@ function Confirmation() {
     <main className={`${container} flex-1 py-10 sm:py-14`}>
       <div className="mx-auto max-w-2xl">
         <ConfirmationHeading orderNumber={orderNumber} phone={snapshot?.phone} />
+        {snapshot?.etaMinutes ? <p className="mt-3 text-center text-sm text-ink-soft">{t.checkout.eta(snapshot.etaMinutes)}</p> : null}
         {shortMessage && <p className="mt-4 text-center text-sm font-medium text-ink">{shortMessage}</p>}
         {thanks && (
           <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />

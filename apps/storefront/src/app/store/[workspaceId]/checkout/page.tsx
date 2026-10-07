@@ -318,7 +318,11 @@ export default function CheckoutPage() {
       : method.method === "cod" || manualChosen
         ? t.checkout.place
         : t.payment.payNow;
-  const submitDisabled = submitting || items.length === 0;
+  // Opening hours: while the store is closed the order cannot be placed (the server refuses it too).
+  const storeClosed = store?.delivery?.hours ? !store.delivery.hours.openNow : false;
+  const submitDisabled = submitting || items.length === 0 || storeClosed;
+  // The estimated delivery time: the chosen zone's, else the store's.
+  const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
 
   return (
     <main className={`${container} flex-1 py-8 sm:py-10`}>
@@ -343,6 +347,13 @@ export default function CheckoutPage() {
         className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]"
       >
         <div className="space-y-6">
+          {storeClosed && (
+            <div role="status" className={`${card} p-5`}>
+              <p className="font-semibold text-ink">{t.checkout.closedTitle}</p>
+              <p className="mt-1 text-sm text-ink-soft">{store?.delivery?.hours?.message || t.checkout.closedText}</p>
+            </div>
+          )}
+          {etaMinutes ? <p className="text-sm text-ink-soft">{t.checkout.eta(etaMinutes)}</p> : null}
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="shipping-title">
             <h2 id="shipping-title" className="text-lg font-semibold text-ink">
               {t.checkout.shipping}

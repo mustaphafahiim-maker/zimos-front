@@ -1,5 +1,6 @@
 import {
   ApiError,
+  apiErrorDetails,
   apiFieldProblems,
   isApiErrorCode,
   type ApiClient,
@@ -144,6 +145,12 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
   if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
   if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
+  // Closed (opening hours or the "accepting orders" switch): the store's own message when it wrote one.
+  if (isApiErrorCode(err, "STORE_CLOSED")) {
+    const details = apiErrorDetails<Array<{ field?: string; message?: string }>>(err);
+    const detail = Array.isArray(details) ? details.find((p) => p && p.field === "store") : undefined;
+    return detail && detail.message && detail.message !== "The store is closed" ? detail.message : copy.storeClosed;
+  }
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;
