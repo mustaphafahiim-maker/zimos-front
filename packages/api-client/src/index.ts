@@ -122,6 +122,8 @@ export * from "./endpoints/storefrontDownloads";
 export * from "./endpoints/shippingProfiles";
 // A store's own couriers (couriers/couriersService.js).
 export * from "./endpoints/couriers";
+// Delivery zones inside a city (shipping/deliveryZones.js).
+export * from "./endpoints/deliveryZones";
 // Shipping options the shopper chooses between (shipping/shippingOptions.js).
 export * from "./endpoints/shippingOptions";
 // Each teammate's saved list views (workspaces/savedViews.js).

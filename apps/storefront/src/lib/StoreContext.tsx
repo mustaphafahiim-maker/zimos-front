@@ -53,6 +53,16 @@ export interface StoreDelivery {
   servedGovernorates?: string[] | null;
   /** Pickup from the store, or null while the store does not offer it. */
   pickup?: { address: string; phone: string; note: string } | null;
+  /** The store's delivery areas while it prices by them, else null. Fees are minor units. */
+  zones?: StoreDeliveryZone[] | null;
+}
+
+export interface StoreDeliveryZone {
+  id: string;
+  name: string;
+  feeAmount: number;
+  minOrderAmount: number | null;
+  etaMinutes: number | null;
 }
 
 export interface StoreContextValue {

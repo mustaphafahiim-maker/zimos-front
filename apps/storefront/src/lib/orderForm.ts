@@ -31,6 +31,8 @@ export interface OrderFormValues {
   custom5: string;
   /** "pickup" when the shopper collects the order from the store; "" = delivery. */
   deliveryMethod: string;
+  /** The store's delivery area (when it prices by zones); "" = none chosen. */
+  deliveryZoneId: string;
 }
 
 export type OrderFormField = keyof OrderFormValues;
@@ -54,6 +56,7 @@ export const EMPTY_ORDER_FORM: OrderFormValues = {
   custom4: "",
   custom5: "",
   deliveryMethod: "",
+  deliveryZoneId: "",
 };
 
 /** Field order for "focus the first invalid field". */
@@ -186,9 +189,11 @@ export function validateOrderForm(
   values: OrderFormValues,
   t: Dictionary,
   fields: OrderFormFieldModes,
-  opts: { showAltPhone?: boolean } = {}
+  opts: { showAltPhone?: boolean; requireZone?: boolean } = {}
 ): OrderFormErrors {
   const e: OrderFormErrors = {};
+  // A store that prices by delivery zones needs the shopper's area (not for pickup).
+  if (opts.requireZone && !isPickupForm(values) && !values.deliveryZoneId) e.deliveryZoneId = t.form.errors.zone;
   const egypt = isEgyptForm(values);
   const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : INTL_PHONE.test(normalizePhone(raw)));
 
@@ -329,6 +334,7 @@ export function toCheckoutPayload(
       ...(postalCode ? { postalCode } : {}),
       ...(notes ? { notes } : {}),
     },
+    ...(values.deliveryZoneId ? { deliveryZoneId: values.deliveryZoneId } : {}),
     paymentMethod: "cod",
     ...(allowCodes && options.discountCode?.trim() ? { discountCode: options.discountCode.trim() } : {}),
     ...(systemNotes.length ? { notes: systemNotes.join(" | ") } : {}),

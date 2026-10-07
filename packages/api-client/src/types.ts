@@ -957,6 +957,8 @@ export interface CheckoutPayload {
   shippingAddress?: CheckoutAddress;
   /** "pickup" when the store offers it: no address and no shipping fee (server-enforced). */
   deliveryMethod?: "delivery" | "pickup";
+  /** The store's delivery area while it prices by zones; the fee comes from the server. */
+  deliveryZoneId?: string;
   /**
    * 'card' / 'wallet' only when the store offers them (getStorefrontPaymentMethods);
    * otherwise 422 PAYMENT_METHOD_UNAVAILABLE, or VALIDATION_ERROR while online
@@ -2355,6 +2357,8 @@ export interface ShippingSettings {
   servedGovernorates?: string[];
   /** Pickup from the store; enabled false = off. Older servers leave it out. */
   storePickup?: StorePickupSettings;
+  /** Checkout prices delivery by the store's delivery zones. Older servers leave it out. */
+  deliveryZonesEnabled?: boolean;
 }
 
 export interface StorePickupSettings {
@@ -2386,6 +2390,7 @@ export type UpdateShippingSettingsPayload = Partial<{
   /** [] or null = deliver everywhere. */
   servedGovernorates: string[] | null;
   storePickup: StorePickupSettings | null;
+  deliveryZonesEnabled: boolean | null;
 }>;
 
 export interface CreateShippingRatePayload {

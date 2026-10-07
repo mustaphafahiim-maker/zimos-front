@@ -168,7 +168,16 @@ export default function CheckoutPage() {
   // Pickup from the store (when offered): no delivery fee; the server charges none either.
   const storePickup = store?.delivery?.pickup ?? null;
   const pickingUp = Boolean(storePickup) && values.deliveryMethod === "pickup";
-  const shipping = pickingUp ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } } : shippingChoice.state;
+  // Delivery zones (when the store prices by them): the chosen area's fee, unless the store's free-shipping
+  // threshold is reached. Display only — the server prices the order from the zone itself.
+  const storeZones = store?.delivery?.zones ?? null;
+  const zoneChosen = !pickingUp && storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
+  const zoneFee = zoneChosen ? (shippingChoice.state.freeShipping?.qualified ? 0 : zoneChosen.feeAmount) : 0;
+  const shipping = pickingUp
+    ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } }
+    : zoneChosen
+      ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
+      : shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
@@ -177,7 +186,7 @@ export default function CheckoutPage() {
   // Contact → Address → Confirm above the form, from the same validation the
   // submit runs (with this store's field settings): a step is done once none
   // of its fields has an error. Display only; the form is still one page.
-  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true });
+  const liveErrors = validateOrderForm(values, t, fields, { showAltPhone: true, requireZone: Boolean(storeZones && storeZones.length > 0) });
   const formOptions = formOptionsOf(fields);
   const contactDone = CONTACT_FIELDS.every((f) => !liveErrors[f]);
   const addressDone = ADDRESS_FIELDS.every((f) => !liveErrors[f]);
@@ -197,7 +206,7 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (submitting) return;
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, requireZone: Boolean(storeZones && storeZones.length > 0) });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -228,7 +237,7 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...toCheckoutPayload(values, fields, { discountCode: appliedCode, systemNotes, showAltPhone: true }),
-        ...(pickingUp ? {} : shippingChoice.payload),
+        ...(pickingUp || storeZones ? {} : shippingChoice.payload),
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
@@ -347,8 +356,9 @@ export default function CheckoutPage() {
                 fields={fields}
                 showAltPhone
                 pickup={storePickup}
+                zones={storeZones}
               />
-              {!pickingUp && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
+              {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
             </div>
           </section>
 

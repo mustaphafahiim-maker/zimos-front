@@ -110,6 +110,7 @@ export function OrderFormFields({
   fields,
   showAltPhone = false,
   pickup = null,
+  zones = null,
 }: {
   idPrefix: string;
   values: OrderFormValues;
@@ -119,8 +120,10 @@ export function OrderFormFields({
   showAltPhone?: boolean;
   /** The store's pickup point when the form may offer pickup; null = delivery only. */
   pickup?: { address: string; phone: string; note: string } | null;
+  /** The store's delivery areas when it prices by them; the shopper picks one for delivery. */
+  zones?: Array<{ id: string; name: string; feeAmount: number; etaMinutes: number | null }> | null;
 }) {
-  const { t, locale, store } = useStore();
+  const { t, locale, store, money } = useStore();
   const egypt = isEgyptForm(values);
   // A store that delivers itself lists only the governorates it serves.
   const served = store?.delivery?.servedGovernorates;
@@ -452,9 +455,43 @@ export function OrderFormFields({
     </fieldset>
   ) : null;
 
+  // The delivery area, when the store prices by zones (not for pickup).
+  const zoneId = fieldId(idPrefix, "deliveryZoneId");
+  const zonePicker =
+    zones && zones.length > 0 && !picking ? (
+      <div className="sm:col-span-2">
+        <label htmlFor={zoneId} className={labelClass}>
+          {t.form.zone}
+        </label>
+        <div className="relative">
+          <select
+            {...a11y("deliveryZoneId")}
+            required
+            value={values.deliveryZoneId ?? ""}
+            onChange={(e) => onChange("deliveryZoneId", e.target.value)}
+            className={`${input} cursor-pointer appearance-none pe-10`}
+          >
+            <option value="">{t.form.chooseZone}</option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name} — {z.feeAmount > 0 ? money(z.feeAmount) : t.form.zoneFree}
+              </option>
+            ))}
+          </select>
+          <Chevron />
+        </div>
+        {errors.deliveryZoneId && (
+          <p id={`${zoneId}-error`} className="mt-1 text-sm text-danger">
+            {errors.deliveryZoneId}
+          </p>
+        )}
+      </div>
+    ) : null;
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {chooser}
+      {zonePicker}
       {list.map(renderField)}
     </div>
   );

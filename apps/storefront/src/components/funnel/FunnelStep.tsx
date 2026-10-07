@@ -490,7 +490,8 @@ export function FunnelCheckout({
       return;
     }
 
-    const found = validateOrderForm(values, t, fields, { showAltPhone: true });
+    // A store that prices by delivery zones needs the area here too (the server requires it).
+    const found = validateOrderForm(values, t, fields, { showAltPhone: true, requireZone: Boolean(store?.delivery?.zones?.length) });
     setErrors(found);
     const invalid = FIELD_ORDER.filter((k) => found[k]);
     if (invalid.length > 0) {
@@ -653,6 +654,7 @@ export function FunnelCheckout({
             onChange={onFieldChange}
             fields={fields}
             showAltPhone
+            zones={store?.delivery?.zones ?? null}
           />
         </fieldset>
 

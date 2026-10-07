@@ -116,6 +116,8 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
   if (isApiErrorCode(err, "INVALID_PHONE")) out.phone = copy.phone;
   // The store does not deliver there: said once, on the governorate, not as "required".
   if (isApiErrorCode(err, "AREA_NOT_SERVED")) return { ...out, governorate: copy.areaNotServed };
+  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return { ...out, deliveryZoneId: copy.zone };
+  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return { ...out, deliveryZoneId: copy.zoneInvalid };
   for (const problem of apiFieldProblems(err)) {
     const field = SERVER_FIELDS[problem.field];
     if (!field || out[field]) continue;
@@ -140,6 +142,8 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   // Self delivery: below the store's minimum, or outside the governorates it delivers to.
   if (isApiErrorCode(err, "MIN_ORDER_NOT_MET")) return copy.minOrder;
   if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;
