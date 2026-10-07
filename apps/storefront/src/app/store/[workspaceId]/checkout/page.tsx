@@ -48,6 +48,7 @@ import { useShipTo } from "@/lib/shipTo";
 import { useFreshCheckoutSettings, useOrderFormFields } from "@/lib/useOrderFormFields";
 import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
+import { LineOptions } from "@/components/LineOptions";
 import { PolicyLinks } from "@/components/PolicyLinks";
 
 const FORM_PREFIX = "checkout";
@@ -407,7 +408,8 @@ export default function CheckoutPage() {
                       <span className="min-w-0 text-ink-soft">
                         <span className="line-clamp-2 text-ink">{product?.name ?? (options || t.cart.item)}</span>
                         {product && options && <span className="block text-xs">{options}</span>}
-                        <LineCustomizations customizations={line.customizations} />
+                        <LineOptions options={line.options} />
+                          <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>

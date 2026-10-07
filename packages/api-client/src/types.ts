@@ -757,6 +757,8 @@ export interface StorefrontProduct {
   offers: StorefrontOffer[];
   /** Fields the shopper fills in when ordering; absent on older responses. */
   customFields?: CustomField[];
+  /** Menu options (Size, Extras): active groups and choices; absent on older responses. */
+  optionGroups?: import("./endpoints/menuOptions").StorefrontOptionGroup[];
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -869,6 +871,8 @@ export interface CartLine {
   isOrderBump: boolean;
   /** The shopper's answers to the product's custom fields; null when none. */
   customizations?: Customization[] | null;
+  /** The menu options picked, with current names and prices; null when none. */
+  options?: import("./endpoints/menuOptions").MenuOptionsSnapshot | null;
 }
 
 // ---------------------------------------------------------------------
@@ -984,7 +988,7 @@ export interface CheckoutPayload {
    */
   checkoutSessionId?: string;
   /** "Buy Now" — a single item straight to an order, no cart. Ignored when a cart token is sent. */
-  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput };
+  item?: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput; options?: import("./endpoints/menuOptions").MenuOptionsInput };
   /**
    * The shopper ticked the order bump. Accepted only when it is the bump this
    * checkout offers (422 ORDER_BUMP_INVALID otherwise); 409
@@ -1393,6 +1397,8 @@ export interface OrderItem {
   unitWeightGrams?: number | null;
   /** The shopper's answers to the product's custom fields; photos carry a short-lived `url` for staff. */
   customizations?: Customization[] | null;
+  /** The menu options the line was sold with: names and prices as charged. */
+  optionsSnapshot?: import("./endpoints/menuOptions").MenuOptionsSnapshot | null;
   createdAt: string;
   updatedAt: string;
 }

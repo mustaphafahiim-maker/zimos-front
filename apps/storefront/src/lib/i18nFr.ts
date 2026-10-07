@@ -98,6 +98,14 @@ export const fr: Dictionary = {
     noSuggestions: "Aucun produit correspondant — appuyez sur Entrée pour rechercher quand même.",
     suggestionsCount: (n: number) => (n === 1 ? "1 suggestion" : `${n} suggestions`),
   },
+  menu: {
+    required: "Obligatoire",
+    optional: "Facultatif",
+    pickOne: "Choisissez-en un",
+    pickAtLeast: (n: number) => `Choisissez-en au moins ${n}`,
+    upTo: (n: number) => `Jusqu'à ${n}`,
+    summary: "Choisissez les options obligatoires ci-dessus.",
+  },
   custom: {
     counter: (n: number, max: number) => `${n}/${max}`,
     adds: (amount: string) => `+${amount}`,

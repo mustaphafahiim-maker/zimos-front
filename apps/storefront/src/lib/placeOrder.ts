@@ -22,6 +22,8 @@ export interface OrderLine {
   quantity: number;
   /** Answers to the product's custom fields (photos by upload id). */
   customizations?: CustomizationInput;
+  /** Menu options picked (Size, Extras); the server prices them. */
+  options?: import("@store-builder/api-client").MenuOptionsInput;
 }
 
 /**

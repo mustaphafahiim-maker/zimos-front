@@ -3366,7 +3366,7 @@ export class ApiClient {
   async addCartItem(
     workspaceId: string,
     cartToken: string,
-    payload: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput },
+    payload: { variantId: string; offerId?: string; quantity?: number; customizations?: CustomizationInput; options?: import("./endpoints/menuOptions").MenuOptionsInput },
     opts: { visitorId?: string } = {}
   ) {
     return this.request<Cart>(`/store/${workspaceId}/cart/items`, {

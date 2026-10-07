@@ -54,6 +54,7 @@ import { focusField } from "@/lib/focusField";
 import { useStoreBasePath } from "../StoreRoute";
 import { StickyActionBar } from "../StickyActionBar";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
+import { MenuOptionPicker, useMenuOptions } from "./MenuOptionPicker";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
@@ -175,6 +176,9 @@ export function ProductLanding({
   const tier = tiers.find((x) => x.id === tierId);
   // The product's custom fields: answered here, sent with the order line.
   const custom = useCustomFieldAnswers(workspaceId, product.id, product.customFields);
+  // The product's menu options (Size, Extras): picked here, priced by the server.
+  const menu = useMenuOptions(product.optionGroups ?? []);
+  const hasMenu = menu.groups.length > 0;
   const unit = variantUnitPrice(product, variant);
   const pricing = bundleChoice ? bundleChoice.pricing : bundlePricing(unit, quantity, tier);
   const compareAtUnit =
@@ -236,7 +240,7 @@ export function ProductLanding({
   const linkCoupon = useStoredCoupon(workspaceId);
   const coupon = useCouponPreview(client, workspaceId, formOptionsOf(fields).allow_discount_codes ? linkCoupon : "", autosaveLines);
   // Priced fields the shopper filled in, on every unit of the line they ride on (as the server charges them).
-  const fieldsExtra = customFieldsDelta(product.customFields, custom.toInput()) * (mainLine?.quantity ?? 0);
+  const fieldsExtra = (customFieldsDelta(product.customFields, custom.toInput()) + menu.deltaPerUnit) * (mainLine?.quantity ?? 0);
   const total =
     pricing.total +
     fieldsExtra +
@@ -303,10 +307,15 @@ export function ProductLanding({
       setFormError(t.custom.summary);
       return;
     }
+    if (!menu.check()) {
+      setFormError(t.menu.summary);
+      return;
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
-    const orderLine: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const withAnswers: OrderLine = customizations ? { ...mainLine, customizations } : mainLine;
+    const orderLine: OrderLine = hasMenu ? { ...withAnswers, options: menu.toInput() } : withAnswers;
     const visitorId = getVisitorId(workspaceId);
 
     setSubmitting(true);
@@ -399,6 +408,7 @@ export function ProductLanding({
   async function buyNow() {
     if (!mainLine || !available || buying) return;
     if (custom.fields.length > 0 && !custom.check()) return;
+    if (hasMenu && !menu.check()) return;
     setBuying(true);
     setBuyError(null);
     try {
@@ -406,7 +416,8 @@ export function ProductLanding({
         mainLine.variantId,
         mainLine.offerId,
         mainLine.quantity,
-        custom.fields.length > 0 ? custom.toInput() : undefined
+        custom.fields.length > 0 ? custom.toInput() : undefined,
+        hasMenu ? menu.toInput() : undefined
       );
       for (const line of bundleExtraLines) await cart.addItem(line.variantId, undefined, line.quantity);
       // skip_cart: straight to the checkout; otherwise the cart, to review first.
@@ -538,6 +549,7 @@ export function ProductLanding({
       )}
 
       {/* What the shopper fills in for this product (engraving, a note, their photo). */}
+      <MenuOptionPicker state={menu} />
       <CustomFieldInputs state={custom} />
 
       {/* Primary CTA scrolls to the form; add-to-cart is the secondary path. */}
@@ -555,7 +567,7 @@ export function ProductLanding({
         >
           {buying ? text.buying : buyLabel}
         </button>
-        {bundleChoice && custom.fields.length === 0 ? (
+        {bundleChoice && custom.fields.length === 0 && !hasMenu ? (
           <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
         ) : (
         <AddToCartButton
@@ -565,7 +577,10 @@ export function ProductLanding({
           defaultQuantity={mainLine?.quantity ?? 1}
           disabled={!available}
           customizations={custom.fields.length > 0 ? custom.toInput() : undefined}
-          beforeAdd={custom.fields.length > 0 ? custom.check : undefined}
+          options={hasMenu ? menu.toInput() : undefined}
+          beforeAdd={
+            custom.fields.length > 0 || hasMenu ? () => (custom.fields.length === 0 || custom.check()) && (!hasMenu || menu.check()) : undefined
+          }
           onAddError={custom.fields.length > 0 ? custom.showServerProblems : undefined}
         />
         )}

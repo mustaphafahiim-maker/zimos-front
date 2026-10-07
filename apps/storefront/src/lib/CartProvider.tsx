@@ -61,7 +61,14 @@ export interface CartContextValue {
   /** Sum of every line's quantity. */
   itemCount: number;
   /** `customizations` answers the product's custom fields (photos by upload id). */
-  addItem: (variantId: string, offerId?: string, quantity?: number, customizations?: CustomizationInput) => Promise<void>;
+  addItem: (
+    variantId: string,
+    offerId?: string,
+    quantity?: number,
+    customizations?: CustomizationInput,
+    /** Menu options picked; the server checks and prices them. */
+    options?: import("@store-builder/api-client").MenuOptionsInput
+  ) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   refreshCart: () => Promise<void>;
@@ -151,13 +158,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [workspaceId, client]);
 
   const addItem = useCallback(
-    async (variantId: string, offerId?: string, quantity = 1, customizations?: CustomizationInput) => {
+    async (variantId: string, offerId?: string, quantity = 1, customizations?: CustomizationInput, options?: import("@store-builder/api-client").MenuOptionsInput) => {
       if (!workspaceId) return;
       const token = await ensureToken();
       const next = await client.addCartItem(
         workspaceId,
         token,
-        { variantId, offerId, quantity, ...(customizations ? { customizations } : {}) },
+        { variantId, offerId, quantity, ...(customizations ? { customizations } : {}), ...(options && options.length ? { options } : {}) },
         // The visitor owns any photo among the answers.
         { visitorId: getVisitorId(workspaceId) }
       );

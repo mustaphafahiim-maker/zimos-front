@@ -17,6 +17,7 @@ export function AddToCartButton({
   variant = "primary",
   className = "",
   customizations,
+  options,
   beforeAdd,
   onAddError,
 }: {
@@ -29,6 +30,8 @@ export function AddToCartButton({
   className?: string;
   /** Answers to the product's custom fields, sent with the line. */
   customizations?: CustomizationInput;
+  /** Menu options picked (Size, Extras). */
+  options?: import("@store-builder/api-client").MenuOptionsInput;
   /** Runs first; false stops the add (e.g. a required custom field is empty — it says so itself). */
   beforeAdd?: () => boolean;
   /** Gets a failed add first; true when it showed the problem itself. */
@@ -47,7 +50,7 @@ export function AddToCartButton({
     setStatus("loading");
     setError(null);
     try {
-      await addItem(variantId, offerId, defaultQuantity, customizations);
+      await addItem(variantId, offerId, defaultQuantity, customizations, options);
       setStatus("added");
       // The drawer is the confirmation: the line, the subtotal and the way to
       // checkout, without leaving the page. The button still says "added"

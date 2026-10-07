@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@store-builder/ui";
-import type { Order, ShippingRule } from "@store-builder/api-client";
+import { menuOptionsLabel, type Order, type ShippingRule } from "@store-builder/api-client";
 import { formatMoney, formatOptions } from "@/lib/format";
 import { providerName } from "@/lib/providers";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
@@ -156,6 +156,10 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                         <div className="text-xs text-ink-soft">
                           {formatOptions(item.variantOptionsSnapshot)}
                         </div>
+                      )}
+                      {/* Menu options the line was sold with (Size, Extras). */}
+                      {menuOptionsLabel(item.optionsSnapshot) && (
+                        <div className="text-xs font-medium text-ink">{menuOptionsLabel(item.optionsSnapshot)}</div>
                       )}
                       {item.offerNameSnapshot && (
                         <div className="text-xs text-ink-soft">

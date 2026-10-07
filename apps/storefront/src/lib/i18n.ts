@@ -182,6 +182,14 @@ const en = {
     noSuggestions: "No matching products — press Enter to search anyway.",
     suggestionsCount: (n: number) => (n === 1 ? "1 suggestion" : `${n} suggestions`),
   },
+  menu: {
+    required: "Required",
+    optional: "Optional",
+    pickOne: "Pick one",
+    pickAtLeast: (n: number) => `Pick at least ${n}`,
+    upTo: (n: number) => (n === 1 ? "Up to 1" : `Up to ${n}`),
+    summary: "Choose the required options above.",
+  },
   custom: {
     counter: (n: number, max: number) => `${n}/${max}`,
     adds: (amount: string) => `+${amount}`,
@@ -723,6 +731,14 @@ const ar: Dictionary = {
     seeAll: (q: string) => `شوف كل النتايج لـ «${q}»`,
     noSuggestions: "مفيش منتجات مطابقة — دوس Enter عشان تدوّر برضه.",
     suggestionsCount: (n: number) => (n === 1 ? "اقتراح واحد" : `${arNum(n)} اقتراحات`),
+  },
+  menu: {
+    required: "إجباري",
+    optional: "اختياري",
+    pickOne: "اختار واحد",
+    pickAtLeast: (n: number) => `اختار ${n} على الأقل`,
+    upTo: (n: number) => `لحد ${n}`,
+    summary: "اختار الاختيارات الإجبارية اللي فوق.",
   },
   custom: {
     counter: (n: number, max: number) => `${arNum(n)}/${arNum(max)}`,
