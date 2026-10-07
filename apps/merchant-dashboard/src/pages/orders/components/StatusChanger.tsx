@@ -8,7 +8,9 @@ import {
   type OrderStage,
   type OrderStatusChangePayload,
 } from "@store-builder/api-client";
+import { couriersList } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
+import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
@@ -37,6 +39,8 @@ const STRINGS = {
     courier: "Courier name",
     courierHint: "This order has no shipment yet, so one is recorded for it.",
     courierPlaceholder: "Own delivery",
+    courierPick: "Courier",
+    courierNone: "— Choose a courier —",
     waybill: "Tracking number (optional)",
     note_cancelled: "Releases the reserved stock. Refunding a paid order is a separate step.",
     note_reopen: "Takes the stock again and, for cash on delivery, puts the order back in the confirmation queue.",
@@ -64,6 +68,8 @@ const STRINGS = {
     courier: "اسم شركة الشحن أو المندوب",
     courierHint: "هذا الأوردر ليس له شحنة بعد، وسيتم تسجيل شحنة له.",
     courierPlaceholder: "توصيل خاص",
+    courierPick: "المندوب",
+    courierNone: "— اختر المندوب —",
     waybill: "رقم التتبع (اختياري)",
     note_cancelled: "يحرر المخزون المحجوز. استرداد قيمة أوردر مدفوع خطوة منفصلة.",
     note_reopen: "يحجز المخزون من جديد، وأوردر الدفع عند الاستلام يرجع لقائمة التأكيد.",
@@ -137,13 +143,20 @@ function StatusDialog({
   const [reason, setReason] = useState("");
   const [followUp, setFollowUp] = useState<"unreachable" | "postponed">("unreachable");
   const [courier, setCourier] = useState("");
+  // The store's own couriers (Shipping → Your couriers): picked from a list when there are any.
+  const couriers = useAsync(() => couriersList(apiClient, workspaceId), [workspaceId]);
+  const activeCouriers = (couriers.data ?? []).filter((c) => c.active);
+  const [courierId, setCourierId] = useState("");
   const [waybill, setWaybill] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reopening = order.stage === "cancelled";
   const hasLiveShipment = (order.shipments ?? []).some((s) => s.status !== "cancelled" && s.status !== "returned");
-  const needsCourier = SHIPPING_STAGES.includes(target) && !hasLiveShipment;
+  const isPickup = order.deliveryMethod === "pickup";
+  const needsCourier = SHIPPING_STAGES.includes(target) && !hasLiveShipment && !isPickup;
+  // A store courier can also take over a live own-delivery parcel when it goes out.
+  const offersCourierList = activeCouriers.length > 0 && !isPickup && (needsCourier || target === "out_for_delivery");
   const reasonRequired = target === "cancelled";
 
   const note = reopening
@@ -163,7 +176,7 @@ function StatusDialog({
       status: target,
       reason: reason.trim() || undefined,
       ...(target === "needs_follow_up" ? { followUp } : {}),
-      ...(needsCourier && courier.trim() ? { carrierCode: courier.trim() } : {}),
+      ...(offersCourierList && courierId ? { courierId } : needsCourier && courier.trim() ? { carrierCode: courier.trim() } : {}),
       ...(needsCourier && waybill.trim() ? { waybillNumber: waybill.trim() } : {}),
       ...(acknowledgeManualCancel ? { acknowledgeManualCancel: true } : {}),
     };
@@ -244,16 +257,46 @@ function StatusDialog({
             </Field>
           )}
 
+          {offersCourierList && !needsCourier && (
+            <Field label={t.courierPick}>
+              {({ id }) => (
+                <Select id={id} value={courierId} onChange={(e) => setCourierId(e.target.value)} className="h-11">
+                  <option value="">{t.courierNone}</option>
+                  {activeCouriers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          )}
+
           {needsCourier && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <TextField
-                label={t.courier}
-                hint={t.courierHint}
-                value={courier}
-                maxLength={100}
-                placeholder={t.courierPlaceholder}
-                onChange={(e) => setCourier(e.target.value)}
-              />
+              {offersCourierList ? (
+                <Field label={t.courierPick} hint={t.courierHint}>
+                  {({ id }) => (
+                    <Select id={id} value={courierId} onChange={(e) => setCourierId(e.target.value)} className="h-11">
+                      <option value="">{t.courierNone}</option>
+                      {activeCouriers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+              ) : (
+                <TextField
+                  label={t.courier}
+                  hint={t.courierHint}
+                  value={courier}
+                  maxLength={100}
+                  placeholder={t.courierPlaceholder}
+                  onChange={(e) => setCourier(e.target.value)}
+                />
+              )}
               <TextField
                 label={t.waybill}
                 value={waybill}

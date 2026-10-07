@@ -120,6 +120,8 @@ export * from "./endpoints/whatsappTemplates";
 export * from "./endpoints/storefrontDownloads";
 // Shipping groups: products with their own shipping prices (shipping/shippingProfiles.js).
 export * from "./endpoints/shippingProfiles";
+// A store's own couriers (couriers/couriersService.js).
+export * from "./endpoints/couriers";
 // Shipping options the shopper chooses between (shipping/shippingOptions.js).
 export * from "./endpoints/shippingOptions";
 // Each teammate's saved list views (workspaces/savedViews.js).

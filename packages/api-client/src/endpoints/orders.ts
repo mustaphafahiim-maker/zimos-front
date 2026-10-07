@@ -53,6 +53,8 @@ export interface OrderStatusChangePayload {
   acknowledgeManualCancel?: boolean;
   /** A shipping stage on an order with no shipment yet: the manual shipment created for it. */
   carrierCode?: string;
+  /** One of the store's own couriers (couriersList); wins over carrierCode. */
+  courierId?: string;
   waybillNumber?: string;
   trackingUrl?: string;
 }
@@ -277,6 +279,8 @@ export interface OrderBulkPayload {
   tags?: string[];
   /** ship: a connected courier's code, or a name for a manual shipment. */
   carrierCode?: string;
+  /** set_status to a shipping stage: the store's courier who takes the orders. */
+  courierId?: string;
   notes?: string;
 }
 

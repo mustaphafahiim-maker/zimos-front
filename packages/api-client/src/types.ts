@@ -5527,6 +5527,8 @@ export interface UnsettledOrder {
 
 export interface UnsettledCarrier {
   carrierCode: string;
+  /** One of the store's own couriers; carrierCode is then their name. */
+  courierId?: string | null;
   orders: number;
   dueAmount: number;
 }
@@ -5585,6 +5587,8 @@ export interface SettlementLinePayload {
 
 export interface CreateSettlementPayload {
   carrierCode: string;
+  /** The store's own courier whose cash this is. */
+  courierId?: string | null;
   reference?: string | null;
   periodStart?: string | null;
   periodEnd?: string | null;
