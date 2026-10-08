@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
 import type {
   BillingCycle,
@@ -27,13 +27,22 @@ import { WALLET_STRINGS } from "./walletStrings";
 /** The Invoices tab with its Pay dialog open (SubscriptionPage). */
 const PAY_NOW_LINK = "/subscription?tab=invoices&pay=1";
 
+/** The Usage tab, where the prepaid balance is topped up. */
+const TOP_UP_LINK = "/subscription?tab=usage";
+
 /** What a card offers, from the subscription's state (see the backend's merchantPlansService). */
-type CardAction = "trial" | "choose" | "support" | "current" | "none";
+type CardAction = "trial" | "choose" | "move" | "movePay" | "support" | "current" | "none";
 
 function actionFor(plan: SubscriptionPlan, view: SubscriptionPlans): CardAction {
   if (view.trial.available && plan.trialDays > 0 && (plan.isPublic || plan.isCurrent)) return "trial";
   if (plan.isCurrent) return "current";
   if (!plan.isPublic) return "none";
+  // A store on pay per order moves by itself; while a move waits, only its plan's card leads to paying it.
+  const move = view.move;
+  if (move?.available) {
+    if (move.pending) return move.pending.planId === plan.id ? "movePay" : "none";
+    return "move";
+  }
   return view.planChange === "immediate" ? "choose" : "support";
 }
 
@@ -66,6 +75,7 @@ export function PlansTab({
   const bt = useT(BILLING_STRINGS);
   const [cycle, setCycle] = useState<BillingCycle>(view.subscription.billingCycle);
   const code = view.referralCode;
+  const move = view.move?.available ? view.move : null;
   const paidPlan = billing?.subscription.plan;
   // The next charge, for the current plan's card — not while a paid period
   // runs (that renews from the Invoices tab). Read again after a plan change.
@@ -81,7 +91,7 @@ export function PlansTab({
           {t.trialNote} {t.trialEndNote}
         </Alert>
       )}
-      {view.planChange === "support" && <p className="text-sm text-ink-soft">{t.paidNote}</p>}
+      {move ? <MoveNotice move={move} /> : view.planChange === "support" && <p className="text-sm text-ink-soft">{t.paidNote}</p>}
 
       {code && (
         <p className="text-sm text-ink" dir="auto">
@@ -91,7 +101,7 @@ export function PlansTab({
         </p>
       )}
 
-      {view.planChange === "support" && billing && paidPlan && paidPlan.monthlyPrice > 0 ? (
+      {!move && view.planChange === "support" && billing && paidPlan && paidPlan.monthlyPrice > 0 ? (
         <BillingCycleChoice billing={billing} onChange={onBillingChange} />
       ) : (
         <CycleSwitch value={cycle} onChange={setCycle} />
@@ -103,7 +113,7 @@ export function PlansTab({
             key={plan.id}
             plan={plan}
             view={view}
-            cycle={view.planChange === "support" ? view.subscription.billingCycle : cycle}
+            cycle={move?.pending ? move.pending.billingCycle : view.planChange === "support" && !move ? view.subscription.billingCycle : cycle}
             due={due}
             onPlansChange={onPlansChange}
             onChanged={onChanged}
@@ -136,10 +146,12 @@ function PlanCard({
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const navigate = useNavigate();
   const errorMessage = useErrorMessage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const action = actionFor(plan, view);
+  const moveBlocked = action === "move" && ((view.move?.debt ?? 0) > 0 || Boolean(view.move?.otherChargeOpen));
   const price = priceFor(plan.prices, cycle);
   const yearlySaving = plan.prices.monthly.net * 12 - plan.prices.yearly.net;
   const titleId = useId();
@@ -158,6 +170,14 @@ function PlanCard({
         noteWentLive();
         onPlansChange(await apiClient.getSubscriptionPlans(workspaceId));
         toast.success(t.trialStarted);
+      } else if (action === "move") {
+        // One charge for the new plan; the store switches once it is paid.
+        const { plans } = await apiClient.requestPlanMove(workspaceId, { planId: plan.id, billingCycle: cycle });
+        onPlansChange(plans);
+        toast.success(t.moveRequested);
+        onChanged();
+        navigate(PAY_NOW_LINK);
+        return;
       } else {
         const { plans } = await apiClient.changeSubscriptionPlan(workspaceId, { planId: plan.id, billingCycle: cycle });
         onPlansChange(plans);
@@ -170,8 +190,9 @@ function PlanCard({
         errorMessage(err, {
           TRIAL_NOT_AVAILABLE: reason === "no_trial" ? t.noTrial : t.trialUsed,
           PLAN_NOT_AVAILABLE: t.planNotAvailable,
-          OPEN_CHARGE_EXISTS: t.openCharge,
+          OPEN_CHARGE_EXISTS: action === "move" ? t.moveOtherCharge : t.openCharge,
           PLAN_CHANGE_NEEDS_SUPPORT: t.needsSupport,
+          WALLET_DEBT_OUTSTANDING: t.moveDebtError,
         })
       );
     } finally {
@@ -197,7 +218,11 @@ function PlanCard({
         {!plan.isPublic && !plan.isCurrent && <span className="text-xs text-ink-soft">{t.notOffered}</span>}
       </div>
 
-      <PlanSummary plan={{ ...plan, monthlyPrice: plan.prices.monthly.net, yearlyPrice: plan.prices.yearly.net }} billingCycle={cycle} />
+      <PlanSummary
+        // A move off pay per order never starts a trial, so a plan's own isn't shown then.
+        plan={{ ...plan, monthlyPrice: plan.prices.monthly.net, yearlyPrice: plan.prices.yearly.net, trialDays: view.move?.available ? 0 : plan.trialDays }}
+        billingCycle={cycle}
+      />
       {price.discount > 0 && (
         <p className="mt-1 text-xs text-ink-soft">
           <span className="line-through">{fmt(t.insteadOf, { price: formatMinorMoney(price.gross, plan.currency) })}</span>
@@ -222,6 +247,16 @@ function PlanCard({
             {action === "trial" ? fmt(t.startTrial, { days: formatDays(plan.trialDays, locale) }) : t.choosePlan}
           </Button>
         )}
+        {action === "move" && (
+          <Button type="button" className="min-h-11 w-full" disabled={busy || moveBlocked} onClick={() => void act()}>
+            {t.moveChoose}
+          </Button>
+        )}
+        {action === "movePay" && (
+          <Button asChild className="min-h-11 w-full">
+            <Link to={PAY_NOW_LINK}>{t.movePay}</Link>
+          </Button>
+        )}
         {action === "support" && (
           <Button asChild variant="outline" className="min-h-11 w-full">
             <Link to="/support">{t.contactSupport}</Link>
@@ -237,6 +272,44 @@ function PlanCard({
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * The move off pay per order, above the cards: no free trial, the balance
+ * (it stays in the wallet), a debt to clear first, or the move waiting for
+ * its payment.
+ */
+function MoveNotice({ move }: { move: NonNullable<SubscriptionPlans["move"]> }) {
+  const t = useT(SUBSCRIPTION_STRINGS);
+  const pending = move.pending;
+  return (
+    <section aria-labelledby="move-title" className="space-y-2 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+      <h2 id="move-title" className="font-display text-base font-medium text-ink">
+        {t.moveTitle}
+      </h2>
+      {pending ? (
+        <Alert role="status">
+          {fmt(t.movePending, {
+            plan: pending.planName ?? "",
+            cycle: pending.billingCycle === "yearly" ? t.cycleYearly : t.cycleMonthly,
+            amount: formatMinorMoney(pending.amountDue, pending.currency),
+          })}
+        </Alert>
+      ) : (
+        <p className="text-sm text-ink">{t.moveNote}</p>
+      )}
+      {move.debt > 0 ? (
+        <Alert variant="danger" role="alert">
+          {fmt(t.moveDebt, { debt: formatMinorMoney(move.debt, move.currency) })}{" "}
+          <Link to={TOP_UP_LINK} className="font-medium underline">
+            {t.moveTopUp}
+          </Link>
+        </Alert>
+      ) : (
+        <p className="text-sm text-ink-soft">{fmt(t.moveBalance, { balance: formatMinorMoney(move.balance, move.currency) })}</p>
+      )}
+    </section>
   );
 }
 

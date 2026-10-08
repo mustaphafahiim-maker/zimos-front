@@ -16,6 +16,7 @@ import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatDateTime, formatMinorMoneyExact, minorUnitDigits } from "@/lib/format";
 import { P } from "@/lib/permissions";
 import { describeDiscount } from "@/lib/referrals";
+import { planMoveLabel } from "@/lib/planMove";
 
 /**
  * A workspace's subscription charges, on its Subscription tab.
@@ -598,6 +599,7 @@ function ChargesTable({
               <TableRow key={c.id}>
                 <Td className="whitespace-nowrap text-sm">
                   {formatDate(c.periodStart)} – {formatDate(c.periodEnd)}
+                  {planMoveLabel(c) && <span className="block text-xs font-medium text-primary">{planMoveLabel(c)}</span>}
                 </Td>
                 <Td className="text-end whitespace-nowrap">
                   <span className="font-medium tabular">{formatMinorMoneyExact(due, c.currency)}</span>

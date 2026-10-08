@@ -3750,6 +3750,32 @@ export interface SubscriptionPlans {
   plans: SubscriptionPlan[];
   /** The pay-per-order card: `available` while it can be chosen; `current` when the store is on it. Absent from an older API. */
   payPerOrder?: { available: boolean; current: boolean; plan: { id: string; name: string; fee: number; currency: string } | null };
+  /** A store on pay per order moving to one of `plans` by itself; null for any other store, absent from an older API. */
+  move?: PlanMove | null;
+}
+
+/** The move off pay per order (`POST /workspaces/:id/billing/plan-move`). */
+export interface PlanMove {
+  available: boolean;
+  /** Always false: a move never starts a free trial. */
+  trial: boolean;
+  /** The prepaid balance (minor units, may be below zero); it stays in the wallet. */
+  balance: number;
+  /** What the balance owes below zero; it must be cleared before a move. */
+  debt: number;
+  currency: string;
+  /** The move waiting for its charge to be paid; the plan switches only then. */
+  pending: {
+    invoiceId: string;
+    planId: string;
+    planName: string | null;
+    billingCycle: BillingCycle;
+    amountDue: number;
+    currency: string;
+    createdAt: string;
+  } | null;
+  /** Another charge (not a move) is open and must be settled first. */
+  otherChargeOpen: boolean;
 }
 
 /** `POST /workspaces/:id/billing/code-preview` — what a code would take off each listed plan. */
@@ -3772,6 +3798,9 @@ export interface MerchantInvoice {
   paidAt: string | null;
   paymentSource: "gateway" | "manual" | null;
   createdAt: string;
+  /** A pay-per-order store's move: the plan and cycle it switches to when paid. */
+  targetPlanId?: string | null;
+  targetBillingCycle?: BillingCycle | null;
 }
 
 /** `GET /workspaces/:id/billing/invoices` — newest first. */
@@ -4085,6 +4114,10 @@ export interface AdminCharge {
   paymentRecordedAt: string | null;
   /** Priced with this special-terms price override. */
   specialTermsId: string | null;
+  /** A pay-per-order store's move: the plan (and cycle) it switches to when this is paid. */
+  targetPlanId?: string | null;
+  targetBillingCycle?: "monthly" | "yearly" | null;
+  targetPlanName?: string | null;
   failureReason: string | null;
   externalReference: string | null;
   paymentNote: string | null;

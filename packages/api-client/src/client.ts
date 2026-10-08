@@ -34,6 +34,7 @@ import type {
   GoLiveResult,
   SubscriptionPlans,
   ReferralCodePreview,
+  MerchantInvoice,
   MerchantInvoicePage,
   PublicPlan,
   SignupOptions,
@@ -1097,6 +1098,18 @@ export class ApiClient {
    * trial). 409 PLAN_CHANGE_NEEDS_SUPPORT once paid, OPEN_CHARGE_EXISTS; 422
    * PLAN_NOT_AVAILABLE. Takes no price: the server prices the plan.
    */
+  /**
+   * A store on pay per order moves to `planId`: one charge for it, and the
+   * plan switches when that is paid. 201 created, 200 the same move again;
+   * 422 WALLET_DEBT_OUTSTANDING, 409 OPEN_CHARGE_EXISTS / PLAN_CHANGE_NEEDS_SUPPORT.
+   */
+  async requestPlanMove(workspaceId: string, payload: { planId: string; billingCycle: BillingCycle }) {
+    return this.request<{ created: boolean; invoice: MerchantInvoice; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan-move`, {
+      method: "POST",
+      body: payload,
+    });
+  }
+
   async changeSubscriptionPlan(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle }) {
     return this.request<{ changed: boolean; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan`, {
       method: "POST",
