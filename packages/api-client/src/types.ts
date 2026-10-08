@@ -3610,6 +3610,8 @@ export interface WalletSummary extends WalletState {
   debtLimit?: number | null;
   /** Something was ever written to this store's balance. */
   hasEntries?: boolean;
+  /** The latest card top-ups, newest first. */
+  onlineTopups?: OnlinePayment[];
 }
 
 export type WalletEntryType =
@@ -3804,6 +3806,8 @@ export type OnlinePaymentStatus =
 /** One online checkout of the merchant's subscription charge. Amounts in minor units. */
 export interface OnlinePayment {
   id: string;
+  /** invoice: a subscription charge; topup: the prepaid balance (an API from before sends nothing). */
+  purpose?: "invoice" | "topup";
   status: OnlinePaymentStatus;
   amount: number;
   currency: string;
@@ -3820,7 +3824,8 @@ export interface OnlinePayment {
 /** `GET /workspaces/:id/billing/payments/:paymentId`. */
 export interface OnlinePaymentResult {
   payment: OnlinePayment;
-  chargeStatus: "pending" | "paid" | "failed";
+  /** null for a top-up, which has no charge: its payment's status says whether the balance was credited. */
+  chargeStatus: "pending" | "paid" | "failed" | null;
 }
 
 /**

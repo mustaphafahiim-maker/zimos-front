@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
-import type { BillingPaymentMethod, BillingPaymentProof, WalletLedgerEntry, WalletSummary } from "@store-builder/api-client";
+import type { BillingPaymentMethod, BillingPaymentProof, OnlinePayment, WalletLedgerEntry, WalletSummary } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -8,6 +9,7 @@ import { formatDate, formatDateTime, formatMinorMoney } from "@/lib/format";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { TransferPay } from "./PayDialog";
 import { PAY_STRINGS } from "./payStrings";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
@@ -30,6 +32,13 @@ export function WalletSection() {
   const summary = useAsync(() => apiClient.getWallet(workspaceId), [workspaceId]);
   const ledger = useAsync(() => apiClient.getWalletLedger(workspaceId, { page, pageSize: PAGE_SIZE }), [workspaceId, page]);
   const proofs = useAsync(() => apiClient.listBillingPaymentProofs(workspaceId), [workspaceId]);
+  // Back from a card top-up's payment page: ask the API (the redirect proves nothing).
+  const [params] = useSearchParams();
+  const returned = params.get("topup");
+  const cardResult = useAsync(
+    () => (returned ? apiClient.getOnlinePayment(workspaceId, returned).catch(() => null) : Promise.resolve(null)),
+    [workspaceId, returned]
+  );
   const w = summary.data;
   if (!w || !w.enabled) return null;
   // Only a store on the pay-per-order plan, or one that has a balance from
@@ -57,6 +66,7 @@ export function WalletSection() {
         )}
       </div>
 
+      {cardResult.data && <CardResult payment={cardResult.data.payment} t={t} />}
       <PhaseNotice wallet={w} t={t} />
 
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -89,6 +99,7 @@ export function WalletSection() {
       </dl>
 
       {topups.length > 0 && <TopupList proofs={topups} />}
+      {(w.onlineTopups ?? []).length > 0 && <CardTopupList payments={w.onlineTopups ?? []} t={t} />}
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-ink">{t.ledgerTitle}</h3>
@@ -114,6 +125,58 @@ export function WalletSection() {
         }}
       />
     </section>
+  );
+}
+
+type CardState = "paid" | "open" | "failed" | "problem";
+
+function cardState(payment: OnlinePayment): CardState {
+  if (payment.status === "paid") return "paid";
+  if (payment.status === "mismatch" || payment.status === "paid_duplicate") return "problem";
+  if (["created", "open", "pending", "superseded"].includes(payment.status)) return "open";
+  return "failed";
+}
+
+function CardResult({ payment, t }: { payment: OnlinePayment; t: WalletText }) {
+  if (payment.purpose && payment.purpose !== "topup") return null;
+  const state = cardState(payment);
+  if (state === "paid") return <Alert role="status">{t.cardPaid}</Alert>;
+  if (state === "open") return <Alert role="status">{t.cardPending}</Alert>;
+  if (state === "problem") return <Alert variant="danger">{t.cardProblem}</Alert>;
+  return <Alert variant="danger">{t.cardFailed}</Alert>;
+}
+
+function CardTopupList({ payments, t }: { payments: OnlinePayment[]; t: WalletText }) {
+  const label: Record<CardState, string> = {
+    paid: t.cardStatusPaid,
+    open: t.cardStatusOpen,
+    failed: t.cardStatusFailed,
+    problem: t.cardStatusProblem,
+  };
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-ink">{t.cardTopupsTitle}</h3>
+      <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line bg-paper-raised">
+        {payments.map((payment) => {
+          const state = cardState(payment);
+          return (
+            <li key={payment.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
+              <p className="tabular text-sm text-ink">
+                {formatMinorMoney(payment.amount, payment.currency)} · {formatDate(payment.createdAt)}
+              </p>
+              <span
+                className={cn(
+                  "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+                  state === "paid" ? "bg-success-soft text-success" : state === "open" ? "bg-accent-soft text-ink" : "bg-danger-soft text-danger"
+                )}
+              >
+                {label[state]}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -264,6 +327,9 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
   const amountId = useId();
   const methods = useAsync(() => apiClient.getPaymentMethods(workspaceId), [workspaceId]);
   const manual: BillingPaymentMethod[] = (methods.data?.methods ?? []).filter((m) => m.kind === "manual");
+  // A card through a gateway of Zimos's own, for a store on the pay-per-order plan.
+  const cards: BillingPaymentMethod[] = wallet.onFeePlan ? (methods.data?.methods ?? []).filter((m) => m.kind === "gateway") : [];
+  const offered = [...cards, ...manual];
   const [text, setText] = useState("");
   const [amount, setAmount] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -282,7 +348,7 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
     setAmount(minor);
   }
 
-  if (methods.data && manual.length === 0) return <Alert variant="danger">{t.noManualMethod}</Alert>;
+  if (methods.data && offered.length === 0) return <Alert variant="danger">{t.noManualMethod}</Alert>;
 
   if (amount === null) {
     return (
@@ -312,7 +378,7 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
     );
   }
 
-  const chosen = manual.find((m) => m.code === code) ?? manual[0] ?? null;
+  const chosen = offered.find((m) => m.code === code) ?? offered[0] ?? null;
   const formatted = formatMinorMoney(amount, wallet.currency);
   return (
     <div className="space-y-4">
@@ -328,7 +394,7 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
       <fieldset className="space-y-2">
         <legend className="mb-1 text-sm font-medium text-ink">{p.chooseMethod}</legend>
         <div role="radiogroup" className="grid gap-2">
-          {manual.map((m) => (
+          {offered.map((m) => (
             <label
               key={m.code}
               className={cn(
@@ -342,7 +408,8 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
           ))}
         </div>
       </fieldset>
-      {chosen && (
+      {chosen && chosen.kind === "gateway" && <CardTopup key={chosen.code} method={chosen} amount={amount} formatted={formatted} />}
+      {chosen && chosen.kind === "manual" && (
         <TransferPay
           key={chosen.code}
           method={chosen}
@@ -361,6 +428,49 @@ function TopupBody({ wallet, onClose, onSent }: { wallet: WalletSummary; onClose
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** A card top-up: the gateway's hosted page for `amount`; the balance moves once the API confirms it. */
+function CardTopup({ method, amount, formatted }: { method: BillingPaymentMethod; amount: number; formatted: string }) {
+  const t = useT(WALLET_STRINGS);
+  const { locale } = useLocale();
+  const workspaceId = useWorkspaceId();
+  const errorMessage = useErrorMessage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function go() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { payment } = await apiClient.startWalletTopupOnline(workspaceId, { amount, lang: locale === "en" ? "en" : "ar", method: method.code });
+      if (!payment.checkoutUrl) throw new Error("no checkout");
+      window.location.assign(payment.checkoutUrl);
+    } catch (err) {
+      setError(
+        errorMessage(err, {
+          WALLET_NOT_ON_PLAN: t.cardNotOnPlan,
+          WALLET_DISABLED: t.topupDisabled,
+          PAYMENT_METHOD_NOT_AVAILABLE: t.cardStartFailed,
+          ONLINE_BILLING_DISABLED: t.cardStartFailed,
+          ONLINE_BILLING_UNAVAILABLE: t.cardStartFailed,
+          ONLINE_PAYMENT_START_FAILED: t.cardStartFailed,
+          PAYMENT_STARTING: t.cardPending,
+        })
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-ink-soft">{fmt(t.cardHint, { amount: formatted, name: method.label[locale] || method.label.en })}</p>
+      <Button type="button" onClick={() => void go()} disabled={busy} className="min-h-11 w-full sm:w-auto">
+        {busy ? t.cardOpening : t.cardPay}
+      </Button>
+      {error && <Alert variant="danger">{error}</Alert>}
     </div>
   );
 }

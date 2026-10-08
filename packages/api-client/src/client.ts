@@ -962,6 +962,21 @@ export class ApiClient {
     });
   }
 
+  /**
+   * A card top-up of the prepaid balance: a checkout for `amount` (minor
+   * units) through a gateway the store is offered. 409 WALLET_NOT_ON_PLAN,
+   * 422 TOPUP_AMOUNT_OUT_OF_RANGE, 404 WALLET_DISABLED / PAYMENT_METHOD_NOT_AVAILABLE.
+   */
+  async startWalletTopupOnline(
+    workspaceId: string,
+    body: { amount: number; lang: "ar" | "en"; method?: string }
+  ): Promise<{ payment: OnlinePayment; reused: boolean }> {
+    return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/wallet/topups/online`, {
+      method: "POST",
+      body,
+    });
+  }
+
   /** The ways this store can pay its charges now (never cached). */
   async getPaymentMethods(workspaceId: string): Promise<BillingPaymentMethodList> {
     return this.request<BillingPaymentMethodList>(`/workspaces/${workspaceId}/billing/payment-methods`);
