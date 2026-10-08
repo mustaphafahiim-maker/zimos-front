@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Table, TableBody, TableHeader, TableRow, cn } from "@store-builder/ui";
-import type { WalletLedgerEntry } from "@store-builder/api-client";
+import type { WalletLedgerEntry, WalletRefundBreakdown } from "@store-builder/api-client";
 import { Panel, Td, Th } from "@/components/Panel";
 import { DataState } from "@/components/DataState";
 import { Status } from "@/components/StatusBadge";
@@ -24,6 +24,10 @@ const TYPE_LABEL: Record<string, string> = {
   order_fee_recharge: "Fee charged again",
   free_orders_grant: "Free orders granted",
   adjustment: "Correction by hand",
+  gift: "Gift (not refundable)",
+  refund_hold: "Refund requested (held)",
+  refund_release: "Refund released",
+  refund_paid: "Refund paid out",
 };
 
 function entryLabel(e: WalletLedgerEntry): string {
@@ -71,7 +75,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
             )}
             {can(P.PAYMENTS_RECORD) && (
               <Button size="sm" variant="outline" onClick={() => setDialog("adjust")}>
-                Correct balance
+                Add credit or correct
               </Button>
             )}
           </div>
@@ -124,6 +128,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
                 </dd>
               </div>
             </dl>
+            {data?.refunds && <RefundRoom refunds={data.refunds} currency={w.currency} />}
             {entries.length === 0 ? (
               <p className="border-t border-line px-5 py-4 text-sm text-ink-soft">No movements yet.</p>
             ) : (
@@ -143,7 +148,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
                       <Td className="whitespace-nowrap text-sm">{formatDateTime(e.createdAt)}</Td>
                       <Td className="text-sm">
                         {entryLabel(e)}
-                        {e.note && (e.type === "adjustment" || e.type === "free_orders_grant") && (
+                        {e.note && ["adjustment", "free_orders_grant", "gift", "refund_paid"].includes(e.type) && (
                           <span className="block text-xs text-ink-soft">{e.note}</span>
                         )}
                       </Td>
@@ -209,6 +214,67 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+/**
+ * What can still come back as a refund: each paid top-up with its ceiling
+ * (75% by default), what was refunded or is held, and what is left; and the
+ * store's totals. Gifts and corrections are not top-ups, so not here.
+ */
+function RefundRoom({ refunds, currency }: { refunds: WalletRefundBreakdown; currency: string }) {
+  const money = (minor: number) => formatMinorMoneyExact(minor, currency);
+  const share = `${refunds.ceilingBp / 100}%`;
+  return (
+    <div className="border-t border-line">
+      <dl className="grid gap-4 px-5 py-4 text-sm sm:grid-cols-4">
+        <div>
+          <dt className="text-xs text-ink-soft">Paid top-ups (lifetime)</dt>
+          <dd className="tabular text-ink">{money(refunds.lifetimeToppedUp)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-ink-soft">Still refundable ({share} of each)</dt>
+          <dd className="tabular text-ink">{money(refunds.refundable)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-ink-soft">Refunded so far</dt>
+          <dd className="tabular text-ink">{money(refunds.refunded)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-ink-soft">Refund pending</dt>
+          <dd className="tabular text-ink">{money(refunds.pending)}</dd>
+        </div>
+      </dl>
+      {refunds.topups.length > 0 && (
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <Th>Top-up</Th>
+              <Th className="text-end">Amount</Th>
+              <Th className="text-end">Ceiling ({share})</Th>
+              <Th className="text-end">Refunded</Th>
+              <Th className="text-end">Held</Th>
+              <Th className="text-end">Remaining</Th>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {refunds.topups.map((t) => (
+              <TableRow key={t.entryId}>
+                <Td className="whitespace-nowrap text-sm">
+                  {formatDateTime(t.createdAt)}
+                  <span className="block text-xs text-ink-soft">{t.source === "card" ? "Card" : "Transfer"}</span>
+                </Td>
+                <Td className="tabular text-end text-sm">{money(t.amount)}</Td>
+                <Td className="tabular text-end text-sm">{money(t.ceiling)}</Td>
+                <Td className="tabular text-end text-sm">{money(t.refunded)}</Td>
+                <Td className="tabular text-end text-sm">{money(t.held)}</Td>
+                <Td className="tabular text-end text-sm font-medium">{money(t.remaining)}</Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
+}
+
 /** EGP as typed (pounds, a minus sign allowed) → piastres, or null. */
 function toMinorSigned(text: string): number | null {
   const t = text.trim().replace(/,/g, "");
@@ -241,11 +307,11 @@ function WalletEntryDialog({
     <Modal
       open={kind !== null}
       onClose={onClose}
-      title={kind === "grant" ? "Grant free orders" : "Correct the balance"}
+      title={kind === "grant" ? "Grant free orders" : "Add credit or correct the balance"}
       description={
         kind === "grant"
           ? "Used before the balance, after the plan's own free orders. Audited with the reason."
-          : "Adds to or takes from the balance (a minus sign takes). Not a top-up. Audited with the reason."
+          : "A gift only adds; a correction adds or takes (a minus sign takes). Neither is a top-up, so neither can be refunded. Audited with the reason."
       }
     >
       {kind && <WalletEntryForm key={kind} kind={kind} workspaceId={workspaceId} currency={currency} onClose={onClose} onDone={onDone} />}
@@ -270,6 +336,8 @@ function WalletEntryForm({
   const [requestId] = useState(() => crypto.randomUUID());
   const [value, setValue] = useState("");
   const [reason, setReason] = useState("");
+  const [creditKind, setCreditKind] = useState<"gift" | "correction">("gift");
+  const [notify, setNotify] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -293,13 +361,17 @@ function WalletEntryForm({
         toast.success(`${count} free orders granted.`);
       } else {
         const amount = toMinorSigned(value);
-        if (amount === null || amount === 0 || Math.abs(amount) > 2000000) {
-          setError(`Enter an amount in ${currency}, not 0, at most 20,000 either way.`);
+        if (amount === null || amount === 0 || Math.abs(amount) > 2000000 || (creditKind === "gift" && amount < 0)) {
+          setError(
+            creditKind === "gift"
+              ? `Enter the gift in ${currency}, more than 0, at most 20,000.`
+              : `Enter an amount in ${currency}, not 0, at most 20,000 either way.`
+          );
           setBusy(false);
           return;
         }
-        await adminApi.adjustWallet(workspaceId, { amount, reason: reason.trim(), requestId });
-        toast.success("The balance was corrected.");
+        await adminApi.adjustWallet(workspaceId, { amount, reason: reason.trim(), requestId, kind: creditKind, notifyMerchant: notify });
+        toast.success(creditKind === "gift" ? "The gift was added." : "The balance was corrected.");
       }
       onDone();
     } catch (err) {
@@ -311,6 +383,17 @@ function WalletEntryForm({
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       {error && <Alert variant="danger">{error}</Alert>}
+      {kind === "adjust" && (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-ink">What is it?</legend>
+          {(["gift", "correction"] as const).map((k) => (
+            <label key={k} className="flex items-center gap-2 text-sm text-ink">
+              <input type="radio" name="credit-kind" value={k} checked={creditKind === k} onChange={() => setCreditKind(k)} />
+              {k === "gift" ? "Gift: adds credit, never refundable" : "Correction: adds or takes, never refundable"}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <TextField
         label={kind === "grant" ? "Free orders" : `Amount (${currency})`}
         inputMode={kind === "grant" ? "numeric" : "decimal"}
@@ -320,6 +403,12 @@ function WalletEntryForm({
         required
       />
       <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} required />
+      {kind === "adjust" && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+          Tell the store in its notifications
+        </label>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
           Cancel

@@ -250,6 +250,12 @@ import type {
   AdminPaymentProofPage,
   AdminPaymentProofReview,
   WalletConsoleEntryResult,
+  WalletRefundBreakdown,
+  WalletRefundOverview,
+  WalletRefundRequest,
+  WalletRefundStatus,
+  AdminWalletRefund,
+  AdminWalletRefundPage,
   WalletLedgerPage,
   WalletSummary,
   AccountChangeRequest,
@@ -975,6 +981,34 @@ export class ApiClient {
     return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/wallet/topups/online`, {
       method: "POST",
       body,
+    });
+  }
+
+  /** What the store may ask back from its prepaid balance, and its requests (WALLET_ENABLED). */
+  async getWalletRefunds(workspaceId: string): Promise<WalletRefundOverview> {
+    return this.request<WalletRefundOverview>(`/workspaces/${workspaceId}/billing/wallet/refunds`);
+  }
+
+  /**
+   * Asks for `amount` (minor units) back; the same `requestId` again is the
+   * same request. 422 REFUND_AMOUNT_TOO_LOW / _TOO_HIGH / REFUND_REQUEST_OPEN /
+   * WALLET_DEBT_OUTSTANDING, 409 WALLET_NOT_ON_PLAN.
+   */
+  async requestWalletRefund(
+    workspaceId: string,
+    body: { amount: number; payoutMethod?: string; payoutAccount?: string; requestId: string }
+  ): Promise<{ request: WalletRefundRequest; created: boolean }> {
+    return this.request<{ request: WalletRefundRequest; created: boolean }>(`/workspaces/${workspaceId}/billing/wallet/refunds`, {
+      method: "POST",
+      body,
+    });
+  }
+
+  /** While it waits for review: the held amount goes back to the balance. */
+  async cancelWalletRefund(workspaceId: string, refundId: string): Promise<{ request: WalletRefundRequest; changed: boolean }> {
+    return this.request<{ request: WalletRefundRequest; changed: boolean }>(`/workspaces/${workspaceId}/billing/wallet/refunds/${refundId}/cancel`, {
+      method: "POST",
+      body: {},
     });
   }
 
@@ -1988,8 +2022,8 @@ export class ApiClient {
   async adminGetWorkspaceWallet(
     workspaceId: string,
     { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {}
-  ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
-    return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage }>(
+  ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }> {
+    return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }>(
       `/admin/workspaces/${workspaceId}/wallet?page=${page}&pageSize=${pageSize}`
     );
   }
@@ -2006,9 +2040,39 @@ export class ApiClient {
   }
 
   /** The balance corrected by hand, either way (minor units, never 0), with a reason. */
+  /** The console's refund requests, newest first (`payments.record`). */
+  async adminListWalletRefunds({ status, page = 1, pageSize = 20 }: { status?: WalletRefundStatus; page?: number; pageSize?: number } = {}) {
+    const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize), ...(status ? { status } : {}) });
+    return this.request<AdminWalletRefundPage>(`/admin/wallet-refunds?${query.toString()}`);
+  }
+
+  async adminApproveWalletRefund(refundId: string, note?: string) {
+    return this.request<{ request: AdminWalletRefund; changed: boolean }>(`/admin/wallet-refunds/${refundId}/approve`, {
+      method: "POST",
+      body: note ? { note } : {},
+    });
+  }
+
+  /** The held amount goes back to the store's balance; the note is required and shown to the merchant. */
+  async adminRejectWalletRefund(refundId: string, note: string) {
+    return this.request<{ request: AdminWalletRefund; changed: boolean }>(`/admin/wallet-refunds/${refundId}/reject`, {
+      method: "POST",
+      body: { note },
+    });
+  }
+
+  /** The transfer was made by hand; once only (a second call changes nothing). */
+  async adminMarkWalletRefundPaid(refundId: string, body: { payoutReference: string; note?: string }) {
+    return this.request<{ request: AdminWalletRefund; changed: boolean }>(`/admin/wallet-refunds/${refundId}/mark-paid`, {
+      method: "POST",
+      body,
+    });
+  }
+
+  /** A correction either way (`kind: "correction"`), or a gift that only adds; neither is ever refundable. */
   async adminAdjustWallet(
     workspaceId: string,
-    body: { amount: number; reason: string; requestId: string }
+    body: { amount: number; reason: string; requestId: string; kind?: "correction" | "gift"; notifyMerchant?: boolean }
   ): Promise<WalletConsoleEntryResult> {
     return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/adjustments`, {
       method: "POST",

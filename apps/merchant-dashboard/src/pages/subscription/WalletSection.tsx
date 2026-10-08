@@ -14,6 +14,7 @@ import { TransferPay } from "./PayDialog";
 import { PAY_STRINGS } from "./payStrings";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
 import { WALLET_STRINGS, type WalletText } from "./walletStrings";
+import { WalletRefunds } from "./WalletRefunds";
 
 const PAGE_SIZE = 10;
 
@@ -100,6 +101,13 @@ export function WalletSection() {
 
       {topups.length > 0 && <TopupList proofs={topups} />}
       {(w.onlineTopups ?? []).length > 0 && <CardTopupList payments={w.onlineTopups ?? []} t={t} />}
+
+      <WalletRefunds
+        onChanged={() => {
+          void summary.refresh({ silent: true });
+          void ledger.refresh({ silent: true });
+        }}
+      />
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-ink">{t.ledgerTitle}</h3>
@@ -293,7 +301,7 @@ function Pages({ page, pages, onPage }: { page: number; pages: number; onPage: (
 }
 
 /** EGP pounds as typed → piastres, or null when it isn't an amount. */
-function toMinor(text: string): number | null {
+export function toMinor(text: string): number | null {
   const normalised = text.trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/,/g, "");
   if (!/^\d+(\.\d{1,2})?$/.test(normalised)) return null;
   const [whole, fraction = ""] = normalised.split(".");

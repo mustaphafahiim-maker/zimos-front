@@ -3620,7 +3620,94 @@ export type WalletEntryType =
   | "order_fee_reversal"
   | "order_fee_recharge"
   | "free_orders_grant"
-  | "adjustment";
+  | "adjustment"
+  | "gift"
+  | "refund_hold"
+  | "refund_release"
+  | "refund_paid";
+
+/** One paid top-up and how much of it can still come back as a refund. */
+export interface WalletRefundTopup {
+  entryId: string;
+  amount: number;
+  /** The most it gives back (its share, 75% by default). */
+  ceiling: number;
+  refunded: number;
+  held: number;
+  remaining: number;
+  source: "transfer" | "card";
+  createdAt: string;
+}
+
+export type WalletRefundStatus = "requested" | "approved" | "rejected" | "cancelled" | "paid";
+
+/** A refund request of the prepaid balance. */
+export interface WalletRefundRequest {
+  id: string;
+  amount: number;
+  currency: string;
+  status: WalletRefundStatus;
+  /** Where the merchant asked for it to go. */
+  payoutMethod: string | null;
+  payoutAccount: string | null;
+  /** The console's reference for the transfer it made. */
+  payoutReference: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+  paidAt: string | null;
+}
+
+/** What may be asked for now (minor units). */
+export interface WalletRefundQuote {
+  balance: number;
+  debt: number;
+  /** What the paid top-ups' ceilings still allow, before the balance. */
+  refundableFromTopups: number;
+  max: number;
+  min: number;
+  /** Each top-up's share that can come back (7500 = 75%). */
+  ceilingBp: number;
+  allocation: "newest_first" | "oldest_first";
+  currency: string;
+  open: boolean;
+  canRequest: boolean;
+}
+
+/** `GET /workspaces/:id/billing/wallet/refunds`. */
+export interface WalletRefundOverview {
+  /** On pay per order, or holding a balance. */
+  eligible: boolean;
+  quote: WalletRefundQuote;
+  requests: WalletRefundRequest[];
+}
+
+/** A refund request as the console sees it. */
+export interface AdminWalletRefund extends WalletRefundRequest {
+  workspaceId: string;
+  workspace: { id: string; name: string; slug: string } | null;
+  allocations: { topupEntryId: string; amount: number }[];
+}
+
+export interface AdminWalletRefundPage {
+  requests: AdminWalletRefund[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** The console's view of a store's refund room (`GET /admin/workspaces/:id/wallet` → refunds). */
+export interface WalletRefundBreakdown {
+  ceilingBp: number;
+  allocation: "newest_first" | "oldest_first";
+  topups: WalletRefundTopup[];
+  lifetimeToppedUp: number;
+  refundable: number;
+  refunded: number;
+  pending: number;
+}
 
 /** The console's own entry: free orders granted, or the balance corrected by hand. */
 export interface WalletConsoleEntryResult {

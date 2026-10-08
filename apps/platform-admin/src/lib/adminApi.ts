@@ -9,6 +9,9 @@
  */
 import type {
   WalletConsoleEntryResult,
+  WalletRefundBreakdown,
+  WalletRefundStatus,
+  AdminWalletRefundPage,
   WalletLedgerPage,
   WalletSummary,
   AdminPaymentMethod,
@@ -459,7 +462,7 @@ export function markCommissionPaid(commissionId: string, note?: string): Promise
 export function getWorkspaceWallet(
   workspaceId: string,
   params: { page?: number; pageSize?: number } = {}
-): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
+): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }> {
   return apiClient.adminGetWorkspaceWallet(workspaceId, params);
 }
 
@@ -470,9 +473,25 @@ export function grantWalletFreeOrders(
   return apiClient.adminGrantWalletFreeOrders(workspaceId, body);
 }
 
+export function listWalletRefunds(params: { status?: WalletRefundStatus; page?: number; pageSize?: number } = {}): Promise<AdminWalletRefundPage> {
+  return apiClient.adminListWalletRefunds(params);
+}
+
+export function approveWalletRefund(refundId: string, note?: string) {
+  return apiClient.adminApproveWalletRefund(refundId, note);
+}
+
+export function rejectWalletRefund(refundId: string, note: string) {
+  return apiClient.adminRejectWalletRefund(refundId, note);
+}
+
+export function markWalletRefundPaid(refundId: string, body: { payoutReference: string; note?: string }) {
+  return apiClient.adminMarkWalletRefundPaid(refundId, body);
+}
+
 export function adjustWallet(
   workspaceId: string,
-  body: { amount: number; reason: string; requestId: string }
+  body: { amount: number; reason: string; requestId: string; kind?: "correction" | "gift"; notifyMerchant?: boolean }
 ): Promise<WalletConsoleEntryResult> {
   return apiClient.adminAdjustWallet(workspaceId, body);
 }

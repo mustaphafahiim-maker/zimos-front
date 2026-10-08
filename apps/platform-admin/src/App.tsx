@@ -17,6 +17,7 @@ import { UserDetailPage } from "@/pages/UserDetailPage";
 import { SubscriptionsPage } from "@/pages/SubscriptionsPage";
 import { PlansPage } from "@/pages/PlansPage";
 import { PaymentProofsPage } from "@/pages/PaymentProofsPage";
+import { WalletRefundsPage } from "@/pages/WalletRefundsPage";
 import { PaymentProofPage } from "@/pages/PaymentProofPage";
 import { PaymentMethodsPage } from "@/pages/PaymentMethodsPage";
 import { TemplatesPage } from "@/pages/TemplatesPage";
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/site-traffic" element={gated(P.OVERVIEW_VIEW, <SiteTrafficPage />)} />
                   <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
                   <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
+                  <Route path="/wallet-refunds" element={gated(P.PAYMENTS_RECORD, <WalletRefundsPage />)} />
                   <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofPage />)} />
                   <Route path="/payment-methods" element={gated(P.PAYMENTS_RECORD, <PaymentMethodsPage />)} />
                   <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
