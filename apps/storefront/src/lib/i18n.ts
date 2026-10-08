@@ -189,6 +189,7 @@ const en = {
     pickAtLeast: (n: number) => `Pick at least ${n}`,
     upTo: (n: number) => (n === 1 ? "Up to 1" : `Up to ${n}`),
     summary: "Choose the required options above.",
+    none: "None",
   },
   custom: {
     counter: (n: number, max: number) => `${n}/${max}`,
@@ -743,6 +744,7 @@ const ar: Dictionary = {
     pickAtLeast: (n: number) => `اختار ${n} على الأقل`,
     upTo: (n: number) => `لحد ${n}`,
     summary: "اختار الاختيارات الإجبارية اللي فوق.",
+    none: "بدون",
   },
   custom: {
     counter: (n: number, max: number) => `${arNum(n)}/${arNum(max)}`,

@@ -23,6 +23,12 @@ export function useMenuOptions(groups: StorefrontOptionGroup[]) {
     0
   );
 
+  /** An optional group back to no pick (its "None" choice); a required group keeps its pick. */
+  function clear(group: StorefrontOptionGroup) {
+    if (group.minSelect >= 1) return;
+    setPicked((prev) => ({ ...prev, [group.id]: [] }));
+  }
+
   function toggle(group: StorefrontOptionGroup, choiceId: string) {
     setPicked((prev) => {
       const current = prev[group.id] ?? [];
@@ -37,6 +43,7 @@ export function useMenuOptions(groups: StorefrontOptionGroup[]) {
     groups,
     picked,
     toggle,
+    clear,
     missing,
     showErrors,
     deltaPerUnit,
@@ -62,6 +69,8 @@ export function MenuOptionPicker({ state }: { state: MenuOptionsState }) {
         const single = g.maxSelect === 1;
         const short = state.showErrors && state.missing.includes(g.id);
         const hint = g.minSelect >= 1 ? (single ? t.menu.pickOne : t.menu.pickAtLeast(g.minSelect)) : t.menu.upTo(g.maxSelect);
+        // An optional one-choice group: a radio cannot be unticked, so "None" comes first and clears it.
+        const noneChoice = single && g.minSelect === 0;
         return (
           <fieldset key={g.id} aria-invalid={short || undefined}>
             <legend className="flex flex-wrap items-baseline gap-2 text-sm font-semibold text-ink">
@@ -69,6 +78,16 @@ export function MenuOptionPicker({ state }: { state: MenuOptionsState }) {
               <span className="text-xs font-normal text-ink-soft">{g.minSelect >= 1 ? `${t.menu.required} · ${hint}` : `${t.menu.optional} · ${hint}`}</span>
             </legend>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {noneChoice && (
+                <label
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                    chosen.length === 0 ? "border-primary text-ink" : "border-line text-ink-soft"
+                  }`}
+                >
+                  <input type="radio" name={`menu-${g.id}`} checked={chosen.length === 0} onChange={() => state.clear(g)} />
+                  {t.menu.none}
+                </label>
+              )}
               {g.choices.map((c) => {
                 const on = chosen.includes(c.id);
                 const full = !single && !on && chosen.length >= g.maxSelect;

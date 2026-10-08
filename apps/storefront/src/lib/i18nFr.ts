@@ -105,6 +105,7 @@ export const fr: Dictionary = {
     pickAtLeast: (n: number) => `Choisissez-en au moins ${n}`,
     upTo: (n: number) => `Jusqu'à ${n}`,
     summary: "Choisissez les options obligatoires ci-dessus.",
+    none: "Aucun",
   },
   custom: {
     counter: (n: number, max: number) => `${n}/${max}`,
