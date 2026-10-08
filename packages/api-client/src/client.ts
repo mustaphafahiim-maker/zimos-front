@@ -248,6 +248,7 @@ import type {
   AdminPaymentMethods,
   AdminPaymentProofPage,
   AdminPaymentProofReview,
+  WalletConsoleEntryResult,
   WalletLedgerPage,
   WalletSummary,
   AccountChangeRequest,
@@ -1963,6 +1964,28 @@ export class ApiClient {
     return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage }>(
       `/admin/workspaces/${workspaceId}/wallet?page=${page}&pageSize=${pageSize}`
     );
+  }
+
+  /** Free orders for one store, with a reason; `requestId` makes a retry write nothing twice. */
+  async adminGrantWalletFreeOrders(
+    workspaceId: string,
+    body: { count: number; reason: string; requestId: string }
+  ): Promise<WalletConsoleEntryResult> {
+    return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/free-orders`, {
+      method: "POST",
+      body,
+    });
+  }
+
+  /** The balance corrected by hand, either way (minor units, never 0), with a reason. */
+  async adminAdjustWallet(
+    workspaceId: string,
+    body: { amount: number; reason: string; requestId: string }
+  ): Promise<WalletConsoleEntryResult> {
+    return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/adjustments`, {
+      method: "POST",
+      body,
+    });
   }
 
   /** Every payment method, and the gateways with an adapter but no row yet (payments.record). */

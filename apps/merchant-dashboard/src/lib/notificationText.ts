@@ -18,6 +18,13 @@ export const NOTIFICATION_STRINGS = {
     type_announcement: "Announcements from Zimos",
     type_automation: "Alerts from your automations",
     type_plan_limit_reached: "Plan limits reached",
+    type_wallet_low: "Low Zimos balance",
+    type_wallet_limit_reached: "Zimos balance limit reached",
+    walletLowTitle: "Your Zimos balance is running low",
+    walletZeroTitle: "Your Zimos balance is at or below zero",
+    walletLowBody: "Top it up from Subscription so new orders keep coming.",
+    walletLimitTitle: "Your Zimos balance reached its limit: new orders are paused",
+    walletLimitBody: "Your store stays open. Top up your balance from Subscription to take orders again.",
     limitLeadsTitle: "Your plan's new leads for this month are used up ({allowed})",
     limitLeadsBody: "Forms and the newsletter won't add new contacts until next month or a plan change. People you already know can still sign up.",
     limitStorageTitle: "Your plan's file storage is full",
@@ -50,6 +57,13 @@ export const NOTIFICATION_STRINGS = {
     type_announcement: "إعلانات زيموس",
     type_automation: "تنبيهات الأتمتة",
     type_plan_limit_reached: "الوصول لحدود الباقة",
+    type_wallet_low: "رصيد Zimos منخفض",
+    type_wallet_limit_reached: "بلوغ حد رصيد Zimos",
+    walletLowTitle: "رصيد Zimos يقترب من النفاد",
+    walletZeroTitle: "رصيد Zimos أصبح صفرًا أو أقل",
+    walletLowBody: "اشحنه من صفحة الاشتراك حتى تستمر الطلبات الجديدة.",
+    walletLimitTitle: "بلغ رصيد Zimos الحد: الطلبات الجديدة متوقفة",
+    walletLimitBody: "متجرك يبقى مفتوحًا. اشحن رصيدك من صفحة الاشتراك لتعود الطلبات.",
     limitLeadsTitle: "خلص عدد العملاء المحتملين الجدد في باقتك للشهر ده ({allowed})",
     limitLeadsBody: "النماذج والنشرة البريدية مش هتضيف عملاء جدد لحد الشهر الجاي أو تغيير الباقة. اللي تعرفهم قبل كده يقدروا يشتركوا عادي.",
     limitStorageTitle: "مساحة الملفات في باقتك اتملت",
@@ -125,6 +139,10 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       if (d.limit === "leads") return { title: fmt(t.limitLeadsTitle, { allowed: str(d.allowed) }), body: t.limitLeadsBody };
       if (d.limit === "storage_bytes") return { title: t.limitStorageTitle, body: t.limitStorageBody };
       break;
+    case "wallet.low":
+      return { title: Number(d.balance) <= 0 ? t.walletZeroTitle : t.walletLowTitle, body: t.walletLowBody };
+    case "wallet.limit_reached":
+      return { title: t.walletLimitTitle, body: t.walletLimitBody };
     case "export.ready":
       if (!d.name) break;
       if (d.failed) return { title: fmt(t.exportFailedTitle, { name: str(d.name) }), body: t.exportFailedBody };

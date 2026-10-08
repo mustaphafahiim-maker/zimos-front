@@ -8,6 +8,7 @@
  * `<ComingLater />` and show no data at all.
  */
 import type {
+  WalletConsoleEntryResult,
   WalletLedgerPage,
   WalletSummary,
   AdminPaymentMethod,
@@ -460,6 +461,20 @@ export function getWorkspaceWallet(
   params: { page?: number; pageSize?: number } = {}
 ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
   return apiClient.adminGetWorkspaceWallet(workspaceId, params);
+}
+
+export function grantWalletFreeOrders(
+  workspaceId: string,
+  body: { count: number; reason: string; requestId: string }
+): Promise<WalletConsoleEntryResult> {
+  return apiClient.adminGrantWalletFreeOrders(workspaceId, body);
+}
+
+export function adjustWallet(
+  workspaceId: string,
+  body: { amount: number; reason: string; requestId: string }
+): Promise<WalletConsoleEntryResult> {
+  return apiClient.adminAdjustWallet(workspaceId, body);
 }
 
 export function listPaymentMethods(): Promise<AdminPaymentMethods> {

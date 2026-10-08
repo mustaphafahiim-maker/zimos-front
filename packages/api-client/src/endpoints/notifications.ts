@@ -20,6 +20,8 @@ export type MerchantNotificationType =
   | "integration.failed"
   | "export.ready"
   | "shipping.batch_done"
+  | "wallet.low"
+  | "wallet.limit_reached"
   | "announcement"
   | "automation";
 

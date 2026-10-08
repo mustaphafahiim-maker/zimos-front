@@ -32,6 +32,11 @@ export function WalletSection() {
   const proofs = useAsync(() => apiClient.listBillingPaymentProofs(workspaceId), [workspaceId]);
   const w = summary.data;
   if (!w || !w.enabled) return null;
+  // Only a store on the pay-per-order plan, or one that has a balance from
+  // before (an API without hasEntries keeps showing it, as it did).
+  if (!w.onFeePlan && w.hasEntries === false) return null;
+  const free = w.freeOrders;
+  const freeTotal = free ? free.allowance + free.granted : 0;
 
   const topups = (proofs.data?.proofs ?? []).filter((p) => p.purpose === "topup").slice(0, 5);
   const pages = ledger.data ? Math.max(1, Math.ceil(ledger.data.total / PAGE_SIZE)) : 1;
@@ -45,15 +50,28 @@ export function WalletSection() {
           </h2>
           <p className="text-sm text-ink-soft">{w.onFeePlan ? t.walletBody : t.notOnFeePlan}</p>
         </div>
-        <Button type="button" onClick={() => setTopping(true)} className="min-h-11">
-          {t.topUp}
-        </Button>
+        {(w.onFeePlan || w.balance < 0) && (
+          <Button type="button" onClick={() => setTopping(true)} className="min-h-11">
+            {t.topUp}
+          </Button>
+        )}
       </div>
 
       <PhaseNotice wallet={w} t={t} />
 
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={t.balance} value={formatMinorMoney(w.balance, w.currency)} danger={w.balance < 0} />
+        {w.policy === "debt_limit" && (w.debt ?? 0) > 0 && (
+          <Stat
+            label={t.debt}
+            value={formatMinorMoney(w.debt ?? 0, w.currency)}
+            note={fmt(t.debtNote, { limit: formatMinorMoney(w.overdraft, w.currency) })}
+            danger
+          />
+        )}
+        {w.onFeePlan && free && freeTotal > 0 && (
+          <Stat label={t.freeOrdersLeft} value={fmt(t.freeOrdersLeftValue, { left: free.left, total: freeTotal })} />
+        )}
         {w.onFeePlan && w.fee !== null && (
           <>
             <Stat label={t.feePerOrder} value={formatMinorMoney(w.fee, w.currency)} />
@@ -101,6 +119,13 @@ export function WalletSection() {
 
 function PhaseNotice({ wallet, t }: { wallet: WalletSummary; t: WalletText }) {
   if (!wallet.onFeePlan || wallet.phase === "ok") return null;
+  if (wallet.policy === "debt_limit") {
+    // The plan's own limit: the store stays open, only new orders stop.
+    if (wallet.phase === "exhausted") return <Alert variant="danger">{t.phaseLimitReached}</Alert>;
+    if (wallet.phase === "overdraft") {
+      return <Alert role="status">{fmt(t.phaseDebt, { limit: formatMinorMoney(wallet.overdraft, wallet.currency) })}</Alert>;
+    }
+  }
   if (wallet.phase === "exhausted") return <Alert variant="danger">{t.phaseExhausted}</Alert>;
   if (wallet.phase === "overdraft") {
     return <Alert role="status">{fmt(t.phaseOverdraft, { overdraft: formatMinorMoney(wallet.overdraft, wallet.currency) })}</Alert>;
@@ -118,8 +143,16 @@ function Stat({ label, value, note, danger = false }: { label: string; value: st
   );
 }
 
+function entryLabel(entry: WalletLedgerEntry, t: WalletText): string {
+  const free = entry.freeOrders ?? 0;
+  if (free < 0 && entry.type !== "free_orders_grant") return t.freeOrder;
+  if (free > 0 && entry.type === "order_fee_reversal") return t.freeOrderReturned;
+  return t[`type_${entry.type}` as keyof WalletText] ?? entry.type;
+}
+
 function EntryRow({ entry, t }: { entry: WalletLedgerEntry; t: WalletText }) {
-  const label = t[`type_${entry.type}` as keyof WalletText] ?? entry.type;
+  const label = entryLabel(entry, t);
+  const free = entry.freeOrders ?? 0;
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
       <div className="min-w-0">
@@ -128,12 +161,17 @@ function EntryRow({ entry, t }: { entry: WalletLedgerEntry; t: WalletText }) {
           {formatDateTime(entry.createdAt)}
           {entry.orderNumber ? ` · ${fmt(t.orderRef, { number: entry.orderNumber })}` : ""}
         </p>
+        {entry.type === "adjustment" && entry.note && <p className="text-xs text-ink-soft">{entry.note}</p>}
       </div>
       <div className="text-end">
-        <p className={cn("tabular text-sm font-medium", entry.amount < 0 ? "text-ink" : "text-success")} dir="ltr">
-          {entry.amount > 0 ? "+" : ""}
-          {formatMinorMoney(entry.amount, entry.currency)}
-        </p>
+        {entry.amount === 0 && free !== 0 ? (
+          <p className="tabular text-sm font-medium text-ink">{fmt(t.freeOrdersValue, { count: Math.abs(free) })}</p>
+        ) : (
+          <p className={cn("tabular text-sm font-medium", entry.amount < 0 ? "text-ink" : "text-success")} dir="ltr">
+            {entry.amount > 0 ? "+" : ""}
+            {formatMinorMoney(entry.amount, entry.currency)}
+          </p>
+        )}
         <p className="tabular text-xs text-ink-soft">{formatMinorMoney(entry.balanceAfter, entry.currency)}</p>
       </div>
     </li>

@@ -11,6 +11,7 @@ import {
   PlugZap,
   ShoppingBag,
   Truck,
+  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -74,6 +75,8 @@ const ICONS: Record<string, LucideIcon> = {
   "integration.failed": PlugZap,
   "export.ready": Download,
   "shipping.batch_done": Truck,
+  "wallet.low": Wallet,
+  "wallet.limit_reached": Wallet,
   announcement: Megaphone,
   automation: Megaphone,
 };

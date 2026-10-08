@@ -72,6 +72,8 @@ const STRINGS = {
     errDisplayOrder: "Display order must be a whole number from 0 to 10000.",
     errFee: "The fee per order must be a number, 0 for none.",
     errFeePlan: "A fee per order is only for a plan priced 0 a month, in EGP. Set the monthly price to 0, or the fee to 0.",
+    errFreeOrders: "Free orders must be a whole number, 0 for none.",
+    errDebtLimit: "The debt limit must be an amount, or empty for the fixed overdraft.",
     editNamed: "Edit {name}",
     cancel: "Cancel",
     saving: "Saving…",
@@ -104,6 +106,13 @@ const STRINGS = {
     feePerOrderField: "Fee per order ({currency})",
     feePerOrderHint:
       "Pay per order: taken from the store's prepaid balance for each order (WALLET_ENABLED). Only on a plan priced 0 a month, in EGP. 0 = no fee.",
+    freeOrdersField: "Free orders per store",
+    freeOrdersHint: "Orders a store places before any fee is taken. Extra ones can be granted per store from its page.",
+    debtLimitField: "Debt limit ({currency})",
+    debtLimitHint:
+      "How far below zero the balance may go; past it, new orders are refused and the store stays open. Empty = the fixed overdraft (EGP 10) and the store stops selling. Suggested: 5 × the fee ({suggested}).",
+    freeOrdersRow: "Free orders",
+    debtLimitRow: "Debt limit",
     activeHint: "Inactive plans stay on existing workspaces but can't be chosen for new ones.",
   },
   ar: {
@@ -149,6 +158,8 @@ const STRINGS = {
     errDisplayOrder: "يجب أن يكون ترتيب العرض عددًا صحيحًا من 0 إلى 10000.",
     errFee: "يجب أن تكون الرسوم لكل طلب رقمًا، و0 لعدم وجود رسوم.",
     errFeePlan: "الرسوم لكل طلب متاحة فقط لخطة سعرها 0 شهريًا بالجنيه المصري. اجعل السعر الشهري 0، أو الرسوم 0.",
+    errFreeOrders: "يجب أن تكون الطلبات المجانية عددًا صحيحًا، و0 لعدم وجودها.",
+    errDebtLimit: "يجب أن يكون حد المديونية مبلغًا، أو فارغًا للسحب على المكشوف الثابت.",
     editNamed: "تعديل {name}",
     cancel: "إلغاء",
     saving: "جارٍ الحفظ…",
@@ -181,6 +192,13 @@ const STRINGS = {
     feePerOrderField: "الرسوم لكل طلب ({currency})",
     feePerOrderHint:
       "الدفع لكل طلب: تُخصم من الرصيد المدفوع مسبقًا للمتجر عن كل طلب (WALLET_ENABLED). فقط لخطة سعرها 0 شهريًا بالجنيه المصري. 0 = بلا رسوم.",
+    freeOrdersField: "الطلبات المجانية لكل متجر",
+    freeOrdersHint: "طلبات يضعها المتجر قبل خصم أي رسوم. يمكن منح المزيد لكل متجر من صفحته.",
+    debtLimitField: "حد المديونية ({currency})",
+    debtLimitHint:
+      "إلى أي حد يمكن أن ينزل الرصيد تحت الصفر؛ بعده تُرفض الطلبات الجديدة ويبقى المتجر مفتوحًا. فارغ = السحب على المكشوف الثابت (10 ج.م.) ويتوقف المتجر عن البيع. المقترح: 5 × الرسوم ({suggested}).",
+    freeOrdersRow: "الطلبات المجانية",
+    debtLimitRow: "حد المديونية",
     activeHint: "تبقى الخطط غير النشطة على المتاجر الحالية لكن لا يمكن اختيارها لمتاجر جديدة.",
   },
 } satisfies Messages;
@@ -210,6 +228,10 @@ interface PlanForm {
   displayOrder: string;
   /** The pay-per-order fee in whole currency units as typed (0.50); "0" = none. */
   perOrderFee: string;
+  /** Pay per order: free orders per store, as typed. */
+  walletFreeOrders: string;
+  /** Pay per order: the debt limit in whole currency units; "" = the fixed overdraft. */
+  walletDebtLimit: string;
 }
 
 // A new plan is priced in the platform currency (EGP, also the API's default
@@ -235,6 +257,9 @@ const EMPTY: PlanForm = {
   isPublic: false,
   displayOrder: "0",
   perOrderFee: "0",
+  // Used only once the plan has a fee per order.
+  walletFreeOrders: "10",
+  walletDebtLimit: "",
 };
 
 function toForm(p: Plan): PlanForm {
@@ -258,6 +283,8 @@ function toForm(p: Plan): PlanForm {
     isPublic: Boolean(p.isPublic),
     displayOrder: String(p.displayOrder ?? 0),
     perOrderFee: String(toMajorAmount(p.perOrderFee ?? 0, p.currency)),
+    walletFreeOrders: String(p.walletFreeOrders ?? 0),
+    walletDebtLimit: p.walletDebtLimit === null || p.walletDebtLimit === undefined ? "" : String(toMajorAmount(p.walletDebtLimit, p.currency)),
   };
 }
 
@@ -346,6 +373,14 @@ export function PlansPage() {
                     <>
                       <dt className="text-ink-soft">{t.feePerOrder}</dt>
                       <dd className="text-end text-ink">{formatMinorMoneyExact(p.perOrderFee ?? 0, p.currency)}</dd>
+                      <dt className="text-ink-soft">{t.freeOrdersRow}</dt>
+                      <dd className="text-end text-ink">{formatNumber(p.walletFreeOrders ?? 0)}</dd>
+                      {p.walletDebtLimit !== null && p.walletDebtLimit !== undefined && (
+                        <>
+                          <dt className="text-ink-soft">{t.debtLimitRow}</dt>
+                          <dd className="text-end text-ink">{formatMinorMoneyExact(p.walletDebtLimit, p.currency)}</dd>
+                        </>
+                      )}
                     </>
                   )}
                 </dl>
@@ -474,6 +509,17 @@ function PlanEditor({
       setError(t.errFeePlan);
       return;
     }
+    const freeOrders = wholeNumber(form.walletFreeOrders.trim() === "" ? "0" : form.walletFreeOrders, 0, 100000);
+    if (freeOrders === null) {
+      setError(t.errFreeOrders);
+      return;
+    }
+    const debtText = form.walletDebtLimit.trim();
+    const debt = debtText === "" ? null : Number(debtText);
+    if (debt !== null && (!Number.isFinite(debt) || debt < 0)) {
+      setError(t.errDebtLimit);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -496,6 +542,8 @@ function PlanEditor({
         isPublic: form.isPublic,
         displayOrder,
         perOrderFee: feeMinor,
+        walletFreeOrders: freeOrders,
+        walletDebtLimit: debt === null ? null : toMinorAmount(debt, form.currency),
       });
       onSaved(saved);
     } catch (err) {
@@ -635,6 +683,24 @@ function PlanEditor({
           value={form.perOrderFee}
           onChange={(e) => set("perOrderFee", e.target.value)}
         />
+        {Number(form.perOrderFee) > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label={t.freeOrdersField}
+              inputMode="numeric"
+              hint={t.freeOrdersHint}
+              value={form.walletFreeOrders}
+              onChange={(e) => set("walletFreeOrders", e.target.value)}
+            />
+            <TextField
+              label={fmt(t.debtLimitField, { currency: form.currency })}
+              inputMode="decimal"
+              hint={fmt(t.debtLimitHint, { suggested: String(Number(form.perOrderFee) * 5) })}
+              value={form.walletDebtLimit}
+              onChange={(e) => set("walletDebtLimit", e.target.value)}
+            />
+          </div>
+        )}
 
         <Toggle label={t.active} description={t.activeHint} checked={form.active} onChange={(v) => set("active", v)} />
       </form>

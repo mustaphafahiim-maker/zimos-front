@@ -115,6 +115,35 @@ describe("the prepaid balance on the Usage tab", () => {
   });
 });
 
+describe("free orders and debt", () => {
+  it("is not shown to a store on another plan that never had a balance", async () => {
+    setupUsage({ w: wallet({ onFeePlan: false, fee: null, balance: 0, hasEntries: false }) });
+    expect(await screen.findByText("Stores")).toBeInTheDocument();
+    await waitFor(() => expect(api.getWallet).toHaveBeenCalled());
+    expect(screen.queryByText("Prepaid balance")).not.toBeInTheDocument();
+  });
+
+  it("shows free orders left, what is owed under the plan's limit, and the limit notice", async () => {
+    setupUsage({
+      w: wallet({
+        phase: "exhausted",
+        policy: "debt_limit",
+        balance: -2000,
+        debt: 2000,
+        overdraft: 2000,
+        freeOrdersLeft: 0,
+        freeOrders: { allowance: 10, granted: 2, used: 12, left: 0 },
+        debtLimit: 2000,
+        hasEntries: true,
+      }),
+    });
+    expect(await screen.findByRole("heading", { name: "Prepaid balance" })).toBeInTheDocument();
+    expect(screen.getByText("0 of 12")).toBeInTheDocument();
+    expect(screen.getByText("Owed")).toBeInTheDocument();
+    expect(screen.getByText(/new orders are refused\. Your store stays open/)).toBeInTheDocument();
+  });
+});
+
 describe("the pay-per-order card", () => {
   const card = (overrides: Partial<SubscriptionPlan> = {}) =>
     fake<SubscriptionPlan>({ id: "plan_basic", name: "Basic", currency: "EGP", monthlyPrice: 30000, yearlyPrice: 300000, trialDays: 14, maxStores: 1, maxFunnelsPerMonth: 5, softOrderQuota: null, features: [], isCurrent: true, isPublic: true, prices: { monthly: { gross: 30000, discount: 0, net: 30000 }, yearly: { gross: 300000, discount: 0, net: 300000 } }, ...overrides });
