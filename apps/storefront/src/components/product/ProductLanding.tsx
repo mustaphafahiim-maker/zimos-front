@@ -30,6 +30,7 @@ import {
 import {
   afterOrder,
   isOrderBumpRefused,
+  cartErrorMessage,
   orderErrorMessage,
   placeCodOrder,
   serverFieldErrors,
@@ -429,7 +430,7 @@ export function ProductLanding({
       router.push(storeHref(basePath, ps.skip_cart ? "/checkout" : "/cart"));
     } catch (err) {
       if (!custom.showServerProblems(err)) {
-        setBuyError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+        setBuyError(cartErrorMessage(err, t.form.errors, t.product.addFailed));
       }
       setBuying(false);
     }

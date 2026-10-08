@@ -133,6 +133,36 @@ export function serverFieldErrors(err: unknown, copy: OrderErrorCopy): OrderForm
 }
 
 /**
+ * Self delivery and menu refusals (422), in the shopper's language; null for any other error.
+ * Shared by the order forms and the cart (add, change quantity).
+ */
+function knownRefusal(err: unknown, copy: OrderErrorCopy): string | null {
+  // Below the store's minimum, or outside the governorates it delivers to.
+  if (isApiErrorCode(err, "MIN_ORDER_NOT_MET")) return copy.minOrder;
+  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
+  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
+  if (isApiErrorCode(err, "PICKUP_NOT_AVAILABLE")) return copy.pickupUnavailable;
+  // Menu options missing, changed or no longer offered.
+  if (isApiErrorCode(err, "OPTIONS_INVALID")) return copy.optionsInvalid;
+  // Closed (opening hours or the "accepting orders" switch): the store's own message when it wrote one.
+  if (isApiErrorCode(err, "STORE_CLOSED")) {
+    const details = apiErrorDetails<Array<{ field?: string; message?: string }>>(err);
+    const detail = Array.isArray(details) ? details.find((p) => p && p.field === "store") : undefined;
+    return detail && detail.message && detail.message !== "The store is closed" ? detail.message : copy.storeClosed;
+  }
+  return null;
+}
+
+/**
+ * A failed cart action (add a product, change a quantity): the refusals above
+ * in the shopper's language; anything else as before — the server's text, else `fallback`.
+ */
+export function cartErrorMessage(err: unknown, copy: OrderErrorCopy, fallback: string): string {
+  return knownRefusal(err, copy) ?? (err instanceof Error && err.message ? err.message : fallback);
+}
+
+/**
  * The banner for a failed order. A refused order (ORDER_REJECTED) always gets
  * the same polite, generic copy: the reason is the merchant's business, and
  * naming it would tell a fraudster which rule to dodge.
@@ -142,17 +172,8 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy): string {
   // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
-  // Self delivery: below the store's minimum, or outside the governorates it delivers to.
-  if (isApiErrorCode(err, "MIN_ORDER_NOT_MET")) return copy.minOrder;
-  if (isApiErrorCode(err, "AREA_NOT_SERVED")) return copy.areaNotServed;
-  if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
-  if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
-  // Closed (opening hours or the "accepting orders" switch): the store's own message when it wrote one.
-  if (isApiErrorCode(err, "STORE_CLOSED")) {
-    const details = apiErrorDetails<Array<{ field?: string; message?: string }>>(err);
-    const detail = Array.isArray(details) ? details.find((p) => p && p.field === "store") : undefined;
-    return detail && detail.message && detail.message !== "The store is closed" ? detail.message : copy.storeClosed;
-  }
+  const known = knownRefusal(err, copy);
+  if (known) return known;
   if (err instanceof ApiError && err.message) return err.message;
   if (err instanceof Error && err.message && !/fetch/i.test(err.message)) return err.message;
   return copy.generic;

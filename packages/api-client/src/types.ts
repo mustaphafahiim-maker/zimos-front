@@ -759,6 +759,8 @@ export interface StorefrontProduct {
   customFields?: CustomField[];
   /** Menu options (Size, Extras): active groups and choices; absent on older responses. */
   optionGroups?: import("./endpoints/menuOptions").StorefrontOptionGroup[];
+  /** Whether it has menu options to pick (lists carry this, not the groups); absent on older responses. */
+  hasOptionGroups?: boolean;
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {

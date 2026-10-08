@@ -47,6 +47,18 @@ export function defaultOfferOf(product: StorefrontProduct): StorefrontOffer | un
   return product.offers.find((o) => o.isDefault) ?? product.offers[0];
 }
 
+/**
+ * Something to fill in or pick before it goes into the cart — custom fields or
+ * menu options — so a one-tap add sends the shopper to the product page instead.
+ */
+export function needsProductPage(product: Pick<StorefrontProduct, "customFields" | "optionGroups" | "hasOptionGroups">): boolean {
+  return Boolean(
+    (product.customFields && product.customFields.length > 0) ||
+      product.hasOptionGroups ||
+      (product.optionGroups && product.optionGroups.length > 0)
+  );
+}
+
 /** An offer with no lines is product-wide; otherwise it must name the variant. */
 export function offerAppliesTo(offer: StorefrontOffer, variantId: string | undefined): boolean {
   if (!variantId) return true;

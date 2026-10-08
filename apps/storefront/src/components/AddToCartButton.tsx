@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CustomizationInput } from "@store-builder/api-client";
 import { useCart } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
+import { cartErrorMessage } from "@/lib/placeOrder";
 import { CartGlyph, CheckIcon } from "./Icons";
 import { btnPrimary, btnSecondary } from "./ui";
 
@@ -63,7 +64,7 @@ export function AddToCartButton({
         return;
       }
       setStatus("error");
-      setError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+      setError(cartErrorMessage(err, t.form.errors, t.product.addFailed));
     }
   }
 
