@@ -10,6 +10,8 @@
 import type {
   WalletConsoleEntryResult,
   WalletRefundBreakdown,
+  WalletRefundStatus,
+  AdminWalletRefundPage,
   WalletLedgerPage,
   WalletSummary,
   AdminPaymentMethod,
@@ -469,6 +471,22 @@ export function grantWalletFreeOrders(
   body: { count: number; reason: string; requestId: string }
 ): Promise<WalletConsoleEntryResult> {
   return apiClient.adminGrantWalletFreeOrders(workspaceId, body);
+}
+
+export function listWalletRefunds(params: { status?: WalletRefundStatus; page?: number; pageSize?: number } = {}): Promise<AdminWalletRefundPage> {
+  return apiClient.adminListWalletRefunds(params);
+}
+
+export function approveWalletRefund(refundId: string, note?: string) {
+  return apiClient.adminApproveWalletRefund(refundId, note);
+}
+
+export function rejectWalletRefund(refundId: string, note: string) {
+  return apiClient.adminRejectWalletRefund(refundId, note);
+}
+
+export function markWalletRefundPaid(refundId: string, body: { payoutReference: string; note?: string }) {
+  return apiClient.adminMarkWalletRefundPaid(refundId, body);
 }
 
 export function adjustWallet(

@@ -22,6 +22,8 @@ export type MerchantNotificationType =
   | "shipping.batch_done"
   | "wallet.low"
   | "wallet.limit_reached"
+  | "wallet.refund"
+  | "wallet.credit"
   | "announcement"
   | "automation";
 

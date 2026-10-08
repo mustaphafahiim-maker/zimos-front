@@ -20,6 +20,15 @@ export const NOTIFICATION_STRINGS = {
     type_plan_limit_reached: "Plan limits reached",
     type_wallet_low: "Low Zimos balance",
     type_wallet_limit_reached: "Zimos balance limit reached",
+    type_wallet_refund: "Balance refunds",
+    type_wallet_credit: "Credit from Zimos",
+    walletRefundTitle_requested: "Your refund request was received",
+    walletRefundTitle_approved: "Your refund was approved",
+    walletRefundTitle_rejected: "Your refund was rejected: the amount is back on your balance",
+    walletRefundTitle_cancelled: "Your refund request was cancelled: the amount is back on your balance",
+    walletRefundTitle_paid: "Your refund was sent to you",
+    walletCreditGift: "Zimos added a gift to your balance",
+    walletCreditCorrection: "Zimos corrected your balance",
     walletLowTitle: "Your Zimos balance is running low",
     walletZeroTitle: "Your Zimos balance is at or below zero",
     walletLowBody: "Top it up from Subscription so new orders keep coming.",
@@ -59,6 +68,15 @@ export const NOTIFICATION_STRINGS = {
     type_plan_limit_reached: "الوصول لحدود الباقة",
     type_wallet_low: "رصيد Zimos منخفض",
     type_wallet_limit_reached: "بلوغ حد رصيد Zimos",
+    type_wallet_refund: "استرداد الرصيد",
+    type_wallet_credit: "رصيد من Zimos",
+    walletRefundTitle_requested: "تم استلام طلب الاسترداد",
+    walletRefundTitle_approved: "تمت الموافقة على الاسترداد",
+    walletRefundTitle_rejected: "رُفض الاسترداد وعاد المبلغ إلى رصيدك",
+    walletRefundTitle_cancelled: "أُلغي طلب الاسترداد وعاد المبلغ إلى رصيدك",
+    walletRefundTitle_paid: "تم تحويل الاسترداد إليك",
+    walletCreditGift: "أضاف فريق Zimos هدية إلى رصيدك",
+    walletCreditCorrection: "عدّل فريق Zimos رصيدك",
     walletLowTitle: "رصيد Zimos يقترب من النفاد",
     walletZeroTitle: "رصيد Zimos أصبح صفرًا أو أقل",
     walletLowBody: "اشحنه من صفحة الاشتراك حتى تستمر الطلبات الجديدة.",
@@ -143,6 +161,13 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       return { title: Number(d.balance) <= 0 ? t.walletZeroTitle : t.walletLowTitle, body: t.walletLowBody };
     case "wallet.limit_reached":
       return { title: t.walletLimitTitle, body: t.walletLimitBody };
+    case "wallet.refund": {
+      const title = t[`walletRefundTitle_${str(d.status)}` as keyof NotificationStrings];
+      if (!title) break;
+      return { title, body: str(d.status) === "rejected" && d.note ? str(d.note) : null };
+    }
+    case "wallet.credit":
+      return { title: d.kind === "gift" ? t.walletCreditGift : t.walletCreditCorrection, body: d.reason ? str(d.reason) : null };
     case "export.ready":
       if (!d.name) break;
       if (d.failed) return { title: fmt(t.exportFailedTitle, { name: str(d.name) }), body: t.exportFailedBody };

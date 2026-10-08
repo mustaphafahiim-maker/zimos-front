@@ -77,6 +77,8 @@ const ICONS: Record<string, LucideIcon> = {
   "shipping.batch_done": Truck,
   "wallet.low": Wallet,
   "wallet.limit_reached": Wallet,
+  "wallet.refund": Wallet,
+  "wallet.credit": Wallet,
   announcement: Megaphone,
   automation: Megaphone,
 };
