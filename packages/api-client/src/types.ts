@@ -2858,13 +2858,27 @@ export interface AdminPlan {
   displayOrder: number;
   /** The pay-per-order fee for one order, minor units; 0 = none. An API from before it sends nothing. */
   perOrderFee?: number;
+  /** Pay per order: orders free before any fee (0 = none). */
+  walletFreeOrders?: number;
+  /** Pay per order: how far below zero the balance may go, minor units; null = the fixed overdraft (the store stops). */
+  walletDebtLimit?: number | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type AdminPlanInput = Omit<
   AdminPlan,
-  "id" | "currency" | "createdAt" | "updatedAt" | "maxStores" | "maxFunnelsPerMonth" | "isPublic" | "displayOrder" | "perOrderFee"
+  | "id"
+  | "currency"
+  | "createdAt"
+  | "updatedAt"
+  | "maxStores"
+  | "maxFunnelsPerMonth"
+  | "isPublic"
+  | "displayOrder"
+  | "perOrderFee"
+  | "walletFreeOrders"
+  | "walletDebtLimit"
 > & {
   id?: string;
   currency?: string;
@@ -2874,6 +2888,8 @@ export type AdminPlanInput = Omit<
   displayOrder?: number;
   /** Only on a plan priced 0 a month, in EGP (422 PER_ORDER_FEE_NOT_ALLOWED). */
   perOrderFee?: number;
+  walletFreeOrders?: number;
+  walletDebtLimit?: number | null;
 };
 
 export type SubscriptionStatus =
@@ -3570,6 +3586,12 @@ export interface WalletState {
   ordersLeft: number | null;
   ordersBeforeOverdraft: number | null;
   overdraft: number;
+  /** What the balance owes below zero (0 when it's positive). */
+  debt?: number;
+  /** Free orders still to use before any fee. */
+  freeOrdersLeft?: number;
+  /** overdraft: the fixed overdraft and the store stops; debt_limit: the plan's own limit, new orders refused (422). */
+  policy?: "overdraft" | "debt_limit";
   currency: string;
 }
 
@@ -3582,15 +3604,38 @@ export interface WalletSummary extends WalletState {
   /** This calendar month in Cairo: fees net of those given back, and the orders behind them. */
   month: { fees: number; orders: number; timeZone: string };
   limits: { minTopup: number; maxTopup: number; maxOpenTopups: number; lowOrders: number };
+  /** The plan's free orders, the console's grants, those used and those left (an API from before has none). */
+  freeOrders?: { allowance: number; granted: number; used: number; left: number };
+  /** The plan's own debt limit in minor units; null = the fixed overdraft. */
+  debtLimit?: number | null;
+  /** Something was ever written to this store's balance. */
+  hasEntries?: boolean;
+  /** The latest card top-ups, newest first. */
+  onlineTopups?: OnlinePayment[];
 }
 
-export type WalletEntryType = "topup" | "order_fee" | "order_fee_reversal" | "order_fee_recharge";
+export type WalletEntryType =
+  | "topup"
+  | "order_fee"
+  | "order_fee_reversal"
+  | "order_fee_recharge"
+  | "free_orders_grant"
+  | "adjustment";
+
+/** The console's own entry: free orders granted, or the balance corrected by hand. */
+export interface WalletConsoleEntryResult {
+  entry: WalletLedgerEntry;
+  /** The same requestId was sent before: nothing was written again. */
+  replayed: boolean;
+}
 
 export interface WalletLedgerEntry {
   id: string;
   type: WalletEntryType;
   /** Signed: a fee is negative. */
   amount: number;
+  /** Free orders taken (-1), given back (+1) or granted (+n); 0 or missing otherwise. */
+  freeOrders?: number;
   balanceAfter: number;
   currency: string;
   orderId: string | null;
@@ -3761,6 +3806,8 @@ export type OnlinePaymentStatus =
 /** One online checkout of the merchant's subscription charge. Amounts in minor units. */
 export interface OnlinePayment {
   id: string;
+  /** invoice: a subscription charge; topup: the prepaid balance (an API from before sends nothing). */
+  purpose?: "invoice" | "topup";
   status: OnlinePaymentStatus;
   amount: number;
   currency: string;
@@ -3777,7 +3824,8 @@ export interface OnlinePayment {
 /** `GET /workspaces/:id/billing/payments/:paymentId`. */
 export interface OnlinePaymentResult {
   payment: OnlinePayment;
-  chargeStatus: "pending" | "paid" | "failed";
+  /** null for a top-up, which has no charge: its payment's status says whether the balance was credited. */
+  chargeStatus: "pending" | "paid" | "failed" | null;
 }
 
 /**

@@ -248,6 +248,7 @@ import type {
   AdminPaymentMethods,
   AdminPaymentProofPage,
   AdminPaymentProofReview,
+  WalletConsoleEntryResult,
   WalletLedgerPage,
   WalletSummary,
   AccountChangeRequest,
@@ -958,6 +959,21 @@ export class ApiClient {
       method: "POST",
       // Without `method` the API uses Fawaterak, as before payment methods.
       body: method ? { lang, method } : { lang },
+    });
+  }
+
+  /**
+   * A card top-up of the prepaid balance: a checkout for `amount` (minor
+   * units) through a gateway the store is offered. 409 WALLET_NOT_ON_PLAN,
+   * 422 TOPUP_AMOUNT_OUT_OF_RANGE, 404 WALLET_DISABLED / PAYMENT_METHOD_NOT_AVAILABLE.
+   */
+  async startWalletTopupOnline(
+    workspaceId: string,
+    body: { amount: number; lang: "ar" | "en"; method?: string }
+  ): Promise<{ payment: OnlinePayment; reused: boolean }> {
+    return this.request<{ payment: OnlinePayment; reused: boolean }>(`/workspaces/${workspaceId}/billing/wallet/topups/online`, {
+      method: "POST",
+      body,
     });
   }
 
@@ -1963,6 +1979,28 @@ export class ApiClient {
     return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage }>(
       `/admin/workspaces/${workspaceId}/wallet?page=${page}&pageSize=${pageSize}`
     );
+  }
+
+  /** Free orders for one store, with a reason; `requestId` makes a retry write nothing twice. */
+  async adminGrantWalletFreeOrders(
+    workspaceId: string,
+    body: { count: number; reason: string; requestId: string }
+  ): Promise<WalletConsoleEntryResult> {
+    return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/free-orders`, {
+      method: "POST",
+      body,
+    });
+  }
+
+  /** The balance corrected by hand, either way (minor units, never 0), with a reason. */
+  async adminAdjustWallet(
+    workspaceId: string,
+    body: { amount: number; reason: string; requestId: string }
+  ): Promise<WalletConsoleEntryResult> {
+    return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/adjustments`, {
+      method: "POST",
+      body,
+    });
   }
 
   /** Every payment method, and the gateways with an adapter but no row yet (payments.record). */

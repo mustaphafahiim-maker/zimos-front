@@ -44,6 +44,8 @@ const STRINGS = {
     walletLow: "Your prepaid balance is running low: fewer than 20 orders are left before the overdraft.",
     walletOverdraft: "Your prepaid balance is at or below zero. Your store keeps selling until the overdraft runs out.",
     walletExhausted: "Your prepaid balance has run out, so your store has stopped taking orders. Top it up to reopen it.",
+    walletDebt: "Your prepaid balance is below zero. New orders keep coming until the debt limit is reached. Top it up now.",
+    walletLimit: "Your prepaid balance has reached its limit, so new orders are refused. Your store stays open. Top it up to take orders again.",
   },
   ar: {
     expiring: "ينتهي اشتراكك في {date}. جدّده حتى يستمر متجرك في العمل.",
@@ -63,6 +65,8 @@ const STRINGS = {
     walletLow: "رصيدك المدفوع مسبقًا يقترب من النفاد: تبقّى أقل من 20 طلبًا قبل السحب على المكشوف.",
     walletOverdraft: "رصيدك المدفوع مسبقًا صفر أو أقل. يواصل متجرك البيع حتى ينفد السحب على المكشوف.",
     walletExhausted: "نفد رصيدك المدفوع مسبقًا، فتوقّف متجرك عن استقبال الطلبات. اشحنه لإعادة فتحه.",
+    walletDebt: "رصيدك المدفوع مسبقًا أقل من صفر. تستمر الطلبات الجديدة حتى يُبلغ حد المديونية. اشحنه الآن.",
+    walletLimit: "بلغ رصيدك المدفوع مسبقًا الحد، لذلك تُرفض الطلبات الجديدة. يبقى متجرك مفتوحًا. اشحنه لتعود الطلبات.",
   },
 } satisfies Messages;
 
@@ -95,11 +99,13 @@ function noticeFor(access: WorkspaceAccess, t: Record<keyof (typeof STRINGS)["en
   }
   // The pay-per-order balance (absent from an API from before it).
   const wallet = access.wallet;
+  // A plan with its own debt limit keeps the store open: only new orders stop.
+  const debtLimit = wallet?.policy === "debt_limit";
   if (wallet && wallet.phase === "exhausted") {
-    return { key: "wallet_exhausted", tone: "danger", text: t.walletExhausted, dismissible: false, billing: true };
+    return { key: "wallet_exhausted", tone: "danger", text: debtLimit ? t.walletLimit : t.walletExhausted, dismissible: false, billing: true };
   }
   if (wallet && wallet.phase === "overdraft") {
-    return { key: "wallet_overdraft", tone: "warning", text: t.walletOverdraft, dismissible: true, billing: true };
+    return { key: "wallet_overdraft", tone: "warning", text: debtLimit ? t.walletDebt : t.walletOverdraft, dismissible: true, billing: true };
   }
   if (wallet && wallet.phase === "low") {
     return { key: "wallet_low", tone: "warning", text: t.walletLow, dismissible: true, billing: true };

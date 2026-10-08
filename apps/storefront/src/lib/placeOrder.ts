@@ -143,6 +143,8 @@ function knownRefusal(err: unknown, copy: OrderErrorCopy): string | null {
   if (isApiErrorCode(err, "DELIVERY_ZONE_REQUIRED")) return copy.zone;
   if (isApiErrorCode(err, "DELIVERY_ZONE_INVALID")) return copy.zoneInvalid;
   if (isApiErrorCode(err, "PICKUP_NOT_AVAILABLE")) return copy.pickupUnavailable;
+  // The store's Zimos balance reached its plan's limit: new orders wait, the store stays open.
+  if (isApiErrorCode(err, "WALLET_LIMIT_REACHED")) return copy.ordersPaused;
   // Menu options missing, changed or no longer offered.
   if (isApiErrorCode(err, "OPTIONS_INVALID")) return copy.optionsInvalid;
   // Closed (opening hours or the "accepting orders" switch): the store's own message when it wrote one.

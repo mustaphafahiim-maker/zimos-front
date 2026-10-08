@@ -240,6 +240,7 @@ export const fr: Dictionary = {
       zone: "Choisissez votre zone de livraison.",
       zoneInvalid: "La boutique ne livre pas cette zone pour le moment. Choisissez-en une autre.",
       storeClosed: "La boutique est fermée et ne prend pas de commandes pour le moment.",
+      ordersPaused: "Cette boutique ne peut pas prendre de nouvelles commandes pour le moment. Réessayez plus tard.",
       optionsInvalid: "Les options de ce produit ont changé ou sont incomplètes. Choisissez-les à nouveau sur la page du produit.",
       pickupUnavailable: "Le retrait en boutique n'est pas disponible pour le moment. Choisissez la livraison.",
       unavailable: "Ce produit est indisponible pour le moment.",
