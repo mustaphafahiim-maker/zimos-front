@@ -1144,6 +1144,14 @@ export class ApiClient {
     });
   }
 
+  /** Drops the move waiting for its payment: its charge is void, the store stays as it is. */
+  async cancelPlanMove(workspaceId: string) {
+    return this.request<{ cancelled: boolean; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan-move/cancel`, {
+      method: "POST",
+      body: {},
+    });
+  }
+
   async changeSubscriptionPlan(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle }) {
     return this.request<{ changed: boolean; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan`, {
       method: "POST",

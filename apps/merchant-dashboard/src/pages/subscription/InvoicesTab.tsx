@@ -255,7 +255,13 @@ function InvoiceRow({
   onPay: (() => void) | null;
 }) {
   const status =
-    invoice.status === "paid" ? t.statusPaid : invoice.status === "pending" ? t.statusPending : t.statusFailed;
+    invoice.status === "paid"
+      ? t.statusPaid
+      : invoice.status === "pending"
+        ? t.statusPending
+        : invoice.status === "void"
+          ? t[`statusVoid_${invoice.voidReason ?? "cancelled"}` as keyof SubscriptionText] ?? t.statusVoid_cancelled
+          : t.statusFailed;
   const amount = invoice.status === "paid" && invoice.amountPaid != null ? invoice.amountPaid : invoice.amountDue;
   const underReview = invoice.status === "pending" && proof?.status === "pending";
   const rejected = invoice.status === "pending" && proof?.status === "rejected" ? proof : null;
@@ -280,7 +286,9 @@ function InvoiceRow({
               ? "bg-success-soft text-success"
               : invoice.status === "pending"
                 ? "bg-accent-soft text-ink"
-                : "bg-danger-soft text-danger"
+                : invoice.status === "void"
+                  ? "border border-line text-ink-soft"
+                  : "bg-danger-soft text-danger"
           )}
         >
           {underReview ? p.transferUnderReview : status}

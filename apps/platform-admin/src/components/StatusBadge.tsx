@@ -74,6 +74,8 @@ const STATUS_TONES: Record<string, Tone> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
+  // A move's charge that no longer asks for money.
+  void: "neutral",
   // apps
   live: "success",
   beta: "info",
