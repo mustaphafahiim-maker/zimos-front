@@ -357,6 +357,8 @@ const en = {
   checkout: {
     title: "Checkout",
     eta: (minutes: number) => `Estimated delivery: about ${minutes} minutes`,
+    opensAt: ({ inDays, day, time }: { inDays: number; day: string; time: string }) =>
+      inDays === 0 ? `Opens today at ${time}` : inDays === 1 ? `Opens tomorrow at ${time}` : `Opens on ${day} at ${time}`,
     closedTitle: "The store is closed right now",
     closedText: "You can browse, but orders can't be placed until it opens again.",
     backToCart: "Back to cart",
@@ -908,6 +910,8 @@ const ar: Dictionary = {
   checkout: {
     title: "إتمام الطلب",
     eta: (minutes) => `التوصيل في حوالي ${minutes} دقيقة`,
+    opensAt: ({ inDays, day, time }) =>
+      inDays === 0 ? `هيفتح النهارده الساعة ${time}` : inDays === 1 ? `هيفتح بكرة الساعة ${time}` : `هيفتح يوم ${day} الساعة ${time}`,
     closedTitle: "المتجر مقفول دلوقتي",
     closedText: "تقدر تتفرج، بس مش هينفع تطلب غير لما يفتح تاني.",
     backToCart: "الرجوع للسلة",

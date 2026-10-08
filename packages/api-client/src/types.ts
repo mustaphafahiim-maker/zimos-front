@@ -2377,9 +2377,17 @@ export interface StoreHoursSettings {
   enabled: boolean;
   /** The "accepting orders" switch. */
   override: "auto" | "open" | "closed";
-  /** Sunday first; a close at or before the open runs past midnight. */
-  days: Array<{ closed: boolean; open: string; close: string }>;
+  /**
+   * Sunday first; a close at or before the open runs past midnight. `periods`:
+   * up to 3 a day (open/close mirror the first); older servers leave it out.
+   */
+  days: Array<{ closed: boolean; open: string; close: string; periods?: StoreHoursPeriod[] }>;
   message: string;
+}
+
+export interface StoreHoursPeriod {
+  open: string;
+  close: string;
 }
 
 export interface StorePickupSettings {
