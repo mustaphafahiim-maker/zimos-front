@@ -3620,7 +3620,35 @@ export type WalletEntryType =
   | "order_fee_reversal"
   | "order_fee_recharge"
   | "free_orders_grant"
-  | "adjustment";
+  | "adjustment"
+  | "gift"
+  | "refund_hold"
+  | "refund_release"
+  | "refund_paid";
+
+/** One paid top-up and how much of it can still come back as a refund. */
+export interface WalletRefundTopup {
+  entryId: string;
+  amount: number;
+  /** The most it gives back (its share, 75% by default). */
+  ceiling: number;
+  refunded: number;
+  held: number;
+  remaining: number;
+  source: "transfer" | "card";
+  createdAt: string;
+}
+
+/** The console's view of a store's refund room (`GET /admin/workspaces/:id/wallet` → refunds). */
+export interface WalletRefundBreakdown {
+  ceilingBp: number;
+  allocation: "newest_first" | "oldest_first";
+  topups: WalletRefundTopup[];
+  lifetimeToppedUp: number;
+  refundable: number;
+  refunded: number;
+  pending: number;
+}
 
 /** The console's own entry: free orders granted, or the balance corrected by hand. */
 export interface WalletConsoleEntryResult {

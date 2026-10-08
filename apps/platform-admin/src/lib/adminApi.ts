@@ -9,6 +9,7 @@
  */
 import type {
   WalletConsoleEntryResult,
+  WalletRefundBreakdown,
   WalletLedgerPage,
   WalletSummary,
   AdminPaymentMethod,
@@ -459,7 +460,7 @@ export function markCommissionPaid(commissionId: string, note?: string): Promise
 export function getWorkspaceWallet(
   workspaceId: string,
   params: { page?: number; pageSize?: number } = {}
-): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
+): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }> {
   return apiClient.adminGetWorkspaceWallet(workspaceId, params);
 }
 
@@ -472,7 +473,7 @@ export function grantWalletFreeOrders(
 
 export function adjustWallet(
   workspaceId: string,
-  body: { amount: number; reason: string; requestId: string }
+  body: { amount: number; reason: string; requestId: string; kind?: "correction" | "gift"; notifyMerchant?: boolean }
 ): Promise<WalletConsoleEntryResult> {
   return apiClient.adminAdjustWallet(workspaceId, body);
 }

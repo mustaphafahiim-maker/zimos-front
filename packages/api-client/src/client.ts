@@ -250,6 +250,7 @@ import type {
   AdminPaymentProofPage,
   AdminPaymentProofReview,
   WalletConsoleEntryResult,
+  WalletRefundBreakdown,
   WalletLedgerPage,
   WalletSummary,
   AccountChangeRequest,
@@ -1988,8 +1989,8 @@ export class ApiClient {
   async adminGetWorkspaceWallet(
     workspaceId: string,
     { page = 1, pageSize = 20 }: { page?: number; pageSize?: number } = {}
-  ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage }> {
-    return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage }>(
+  ): Promise<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }> {
+    return this.request<{ wallet: WalletSummary; ledger: WalletLedgerPage; refunds?: WalletRefundBreakdown }>(
       `/admin/workspaces/${workspaceId}/wallet?page=${page}&pageSize=${pageSize}`
     );
   }
@@ -2006,9 +2007,10 @@ export class ApiClient {
   }
 
   /** The balance corrected by hand, either way (minor units, never 0), with a reason. */
+  /** A correction either way (`kind: "correction"`), or a gift that only adds; neither is ever refundable. */
   async adminAdjustWallet(
     workspaceId: string,
-    body: { amount: number; reason: string; requestId: string }
+    body: { amount: number; reason: string; requestId: string; kind?: "correction" | "gift"; notifyMerchant?: boolean }
   ): Promise<WalletConsoleEntryResult> {
     return this.request<WalletConsoleEntryResult>(`/admin/workspaces/${workspaceId}/wallet/adjustments`, {
       method: "POST",
