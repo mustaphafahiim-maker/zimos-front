@@ -15,6 +15,7 @@ import { useCart } from "@/lib/CartProvider";
 import { variantLabel } from "@/lib/product";
 import { lineImage } from "@/lib/variantImage";
 import { useStore } from "@/lib/StoreContext";
+import { cartErrorMessage } from "@/lib/placeOrder";
 import { useCatalog } from "@/lib/useCatalog";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { LineOptions } from "@/components/LineOptions";
@@ -40,7 +41,7 @@ export default function CartPage() {
     try {
       await action();
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : fallback);
+      setError(cartErrorMessage(err, t.form.errors, fallback));
     } finally {
       setPendingId(null);
     }

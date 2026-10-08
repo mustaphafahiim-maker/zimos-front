@@ -759,6 +759,8 @@ export interface StorefrontProduct {
   customFields?: CustomField[];
   /** Menu options (Size, Extras): active groups and choices; absent on older responses. */
   optionGroups?: import("./endpoints/menuOptions").StorefrontOptionGroup[];
+  /** Whether it has menu options to pick (lists carry this, not the groups); absent on older responses. */
+  hasOptionGroups?: boolean;
 }
 
 export interface StorefrontProductDetail extends StorefrontProduct {
@@ -2375,9 +2377,17 @@ export interface StoreHoursSettings {
   enabled: boolean;
   /** The "accepting orders" switch. */
   override: "auto" | "open" | "closed";
-  /** Sunday first; a close at or before the open runs past midnight. */
-  days: Array<{ closed: boolean; open: string; close: string }>;
+  /**
+   * Sunday first; a close at or before the open runs past midnight. `periods`:
+   * up to 3 a day (open/close mirror the first); older servers leave it out.
+   */
+  days: Array<{ closed: boolean; open: string; close: string; periods?: StoreHoursPeriod[] }>;
   message: string;
+}
+
+export interface StoreHoursPeriod {
+  open: string;
+  close: string;
 }
 
 export interface StorePickupSettings {

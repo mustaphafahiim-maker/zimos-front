@@ -5,9 +5,9 @@ import { AddToCartButton } from "@/components/AddToCartButton";
 import { BoxIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
-import { btnPrimary } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/ui";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, defaultOfferOf, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
+import { compareAtOf, defaultOfferOf, firstImage, needsProductPage, offerAppliesTo, priceOf } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { CartSummary } from "./CartSummary";
 import type { PageRendererFunnel } from "./PageRenderer";
@@ -257,7 +257,12 @@ export async function ProductCardElement({
               {t.product.orderNow}
             </StoreLink>
             {/* Add-to-cart leads to the cart, off the funnel's path. */}
-            {bool(props, "showBuyButton", true) && !next ? (
+            {bool(props, "showBuyButton", true) && !next && needsProductPage(product) ? (
+              // Options or fields to fill in first: they are on the product page.
+              <StoreLink href={href} className={`${btnSecondary} w-full`}>
+                {t.shop.chooseOptions}
+              </StoreLink>
+            ) : bool(props, "showBuyButton", true) && !next ? (
               <AddToCartButton
                 variant="secondary"
                 variantId={variant?.id}

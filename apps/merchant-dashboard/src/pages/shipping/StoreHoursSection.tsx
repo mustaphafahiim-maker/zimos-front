@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
-import type { StoreHoursSettings } from "@store-builder/api-client";
+import type { StoreHoursPeriod, StoreHoursSettings } from "@store-builder/api-client";
+import { hoursProblem, MAX_PERIODS, periodsOf, toSavedDay } from "./storeHoursPeriods";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -25,6 +26,11 @@ const STRINGS = {
     open: "Opens",
     close: "Closes",
     overnightHint: "A closing time at or before the opening time runs past midnight.",
+    periodsHint: "Up to 3 periods a day, for example morning and evening. Periods must not overlap.",
+    addPeriod: "Add a period",
+    removePeriod: "Remove this period",
+    copyToAll: "Copy to all days",
+    overlap: "The periods on {day} overlap. Fix them before saving.",
     message: "Message while closed (optional)",
     eta: "Usual delivery time in minutes (optional)",
     etaHint: "Shown at checkout and after the order. A delivery zone's own time wins.",
@@ -53,6 +59,11 @@ const STRINGS = {
     open: "يفتح",
     close: "يغلق",
     overnightHint: "إذا كان وقت الإغلاق قبل وقت الفتح أو مساويًا له فإنه يمتد بعد منتصف الليل.",
+    periodsHint: "حتى 3 فترات في اليوم، مثل فترة صباحية وأخرى مسائية. يجب ألا تتداخل الفترات.",
+    addPeriod: "إضافة فترة",
+    removePeriod: "حذف هذه الفترة",
+    copyToAll: "نسخ إلى كل الأيام",
+    overlap: "فترات يوم {day} متداخلة. صحّحها قبل الحفظ.",
     message: "رسالة أثناء الإغلاق (اختياري)",
     eta: "وقت التوصيل المعتاد بالدقائق (اختياري)",
     etaHint: "يظهر عند الدفع وبعد الطلب. وقت منطقة التوصيل له الأولوية.",
@@ -116,16 +127,31 @@ function HoursForm({ initialHours, initialEta, onSaved }: { initialHours: StoreH
 
   const setDay = (index: number, patch: Partial<StoreHoursSettings["days"][number]>) =>
     setHours((prev) => ({ ...prev, days: prev.days.map((d, i) => (i === index ? { ...d, ...patch } : d)) }));
+  // Every day edited as its list of periods (a day saved with one open/close is one period).
+  const setPeriods = (index: number, periods: StoreHoursPeriod[]) => setDay(index, { periods, open: periods[0].open, close: periods[0].close });
+  const setPeriod = (index: number, at: number, patch: Partial<StoreHoursPeriod>) =>
+    setPeriods(index, periodsOf(hours.days[index]).map((p, j) => (j === at ? { ...p, ...patch } : p)));
+  const copyToAll = (index: number) =>
+    setHours((prev) => {
+      const from = prev.days[index];
+      const periods = periodsOf(from);
+      return { ...prev, days: prev.days.map(() => ({ closed: from.closed, open: periods[0].open, close: periods[0].close, periods })) };
+    });
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (saving) return;
     const minutes = eta.trim() ? Number(eta) : null;
     if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440)) return setError(t.invalidEta);
+    const bad = hours.enabled ? hoursProblem(hours.days) : null;
+    if (bad !== null) return setError(t.overlap.replace("{day}", t[DAY_KEYS[bad]]));
     setSaving(true);
     setError(null);
     try {
-      await apiClient.updateShippingSettings(workspaceId, { storeHours: { ...hours, message: hours.message.trim() }, deliveryEtaMinutes: minutes });
+      await apiClient.updateShippingSettings(workspaceId, {
+        storeHours: { ...hours, days: hours.days.map(toSavedDay), message: hours.message.trim() },
+        deliveryEtaMinutes: minutes,
+      });
       toast.success(t.saved);
       await onSaved();
     } catch (err) {
@@ -153,28 +179,49 @@ function HoursForm({ initialHours, initialEta, onSaved }: { initialHours: StoreH
               </Select>
             )}
           </Field>
-          <div className="space-y-2">
-            {hours.days.map((d, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-3 text-sm text-ink">
-                <span className="w-24">{t[DAY_KEYS[i]]}</span>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={d.closed} onChange={(e) => setDay(i, { closed: e.target.checked })} />
-                  {t.closed}
-                </label>
-                {!d.closed && (
-                  <>
-                    <label className="flex items-center gap-2">
-                      {t.open}
-                      <input type="time" dir="ltr" className={timeInput} value={d.open} onChange={(e) => setDay(i, { open: e.target.value })} />
-                    </label>
-                    <label className="flex items-center gap-2">
-                      {t.close}
-                      <input type="time" dir="ltr" className={timeInput} value={d.close} onChange={(e) => setDay(i, { close: e.target.value })} />
-                    </label>
-                  </>
-                )}
-              </div>
-            ))}
+          <div className="space-y-3">
+            {hours.days.map((d, i) => {
+              const periods = periodsOf(d);
+              return (
+                <div key={i} className="flex flex-wrap items-start gap-3 border-b border-line pb-3 text-sm text-ink last:border-b-0">
+                  <span className="flex h-11 w-24 items-center">{t[DAY_KEYS[i]]}</span>
+                  <label className="flex h-11 items-center gap-2">
+                    <input type="checkbox" checked={d.closed} onChange={(e) => setDay(i, { closed: e.target.checked })} />
+                    {t.closed}
+                  </label>
+                  {!d.closed && (
+                    <div className="space-y-2">
+                      {periods.map((p, j) => (
+                        <div key={j} className="flex flex-wrap items-center gap-3">
+                          <label className="flex items-center gap-2">
+                            {t.open}
+                            <input type="time" dir="ltr" className={timeInput} value={p.open} onChange={(e) => setPeriod(i, j, { open: e.target.value })} />
+                          </label>
+                          <label className="flex items-center gap-2">
+                            {t.close}
+                            <input type="time" dir="ltr" className={timeInput} value={p.close} onChange={(e) => setPeriod(i, j, { close: e.target.value })} />
+                          </label>
+                          {periods.length > 1 && (
+                            <Button type="button" size="sm" variant="outline" onClick={() => setPeriods(i, periods.filter((_, k) => k !== j))}>
+                              {t.removePeriod}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {periods.length < MAX_PERIODS && (
+                        <Button type="button" size="sm" variant="outline" onClick={() => setPeriods(i, [...periods, { open: "18:00", close: "23:00" }])}>
+                          {t.addPeriod}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <Button type="button" size="sm" variant="outline" className="ms-auto" onClick={() => copyToAll(i)}>
+                    {t.copyToAll}
+                  </Button>
+                </div>
+              );
+            })}
+            <p className="text-xs text-ink-soft">{t.periodsHint}</p>
             <p className="text-xs text-ink-soft">{t.overnightHint}</p>
           </div>
           <TextField label={t.message} value={hours.message} maxLength={300} onChange={(e) => setHours({ ...hours, message: e.target.value })} />

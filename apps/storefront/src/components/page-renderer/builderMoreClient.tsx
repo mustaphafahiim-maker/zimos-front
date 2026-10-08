@@ -51,6 +51,7 @@ export function CartActionButton({
   label,
   className,
   editable,
+  productHref = null,
 }: {
   productId: string;
   variants: ActionVariant[];
@@ -59,6 +60,8 @@ export function CartActionButton({
   label: string;
   className: string;
   editable: boolean;
+  /** Set when the product has options or fields to fill in first: the tap opens its page instead. */
+  productHref?: string | null;
 }) {
   const { addItem, openDrawer } = useCart();
   const { locale } = useStore();
@@ -76,6 +79,10 @@ export function CartActionButton({
 
   async function run() {
     if (editable || busy || !variant || soldOut) return;
+    if (productHref) {
+      router.push(storeHref(basePath, productHref));
+      return;
+    }
     setBusy(true);
     setError(false);
     try {

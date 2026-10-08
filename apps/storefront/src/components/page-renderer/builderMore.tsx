@@ -1,7 +1,7 @@
 import { parseMoney, type StorefrontProductDetail } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { formatPrice, type Locale } from "@/lib/i18n";
-import { variantUnitPrice } from "@/lib/product";
+import { needsProductPage, variantUnitPrice } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { CartActionButton, type PriceTag } from "./builderMoreClient";
 import { BUTTON_CLASS } from "./elements";
@@ -103,6 +103,7 @@ export async function ProductActionElement({
       productId={product.id}
       variants={product.variants.map((v) => ({ id: v.id, inStock: v.inStock }))}
       variantId={str(props, "variantId")}
+      productHref={needsProductPage(product) ? `/products/${product.slug}` : null}
       mode={mode}
       label={label}
       className={BUTTON_CLASS[variant] ?? BUTTON_CLASS.primary}

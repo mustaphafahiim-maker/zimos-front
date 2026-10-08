@@ -239,6 +239,8 @@ export const fr: Dictionary = {
       zone: "Choisissez votre zone de livraison.",
       zoneInvalid: "La boutique ne livre pas cette zone pour le moment. Choisissez-en une autre.",
       storeClosed: "La boutique est fermée et ne prend pas de commandes pour le moment.",
+      optionsInvalid: "Les options de ce produit ont changé ou sont incomplètes. Choisissez-les à nouveau sur la page du produit.",
+      pickupUnavailable: "Le retrait en boutique n'est pas disponible pour le moment. Choisissez la livraison.",
       unavailable: "Ce produit est indisponible pour le moment.",
     },
   },
@@ -270,6 +272,8 @@ export const fr: Dictionary = {
   },
   checkout: {
     eta: (minutes: number) => `Livraison estimée : environ ${minutes} minutes`,
+    opensAt: ({ inDays, day, time }: { inDays: number; day: string; time: string }) =>
+      inDays === 0 ? `Ouvre aujourd'hui à ${time}` : inDays === 1 ? `Ouvre demain à ${time}` : `Ouvre ${day} à ${time}`,
     closedTitle: "La boutique est fermée pour le moment",
     closedText: "Vous pouvez parcourir, mais les commandes reprendront à la réouverture.",
     title: "Commande",

@@ -34,6 +34,7 @@ import { manualIdOf, placeManualOrder, useManualMethods, type ProofDraft } from 
 import { ProofFields, proofErrors, useManualText } from "@/components/checkout/ManualPayment";
 import { variantLabel } from "@/lib/product";
 import { useStore } from "@/lib/StoreContext";
+import { nextOpeningText } from "@/lib/storeHours";
 import { getVisitorId } from "@/lib/visitorId";
 import { track } from "@/lib/track";
 import { contentIdOf } from "@/lib/contentId";
@@ -62,7 +63,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const basePath = useStoreBasePath();
   const { cart, clearCart } = useCart();
-  const { t, money, store } = useStore();
+  const { t, money, store, locale } = useStore();
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
@@ -321,6 +322,8 @@ export default function CheckoutPage() {
         : t.payment.payNow;
   // Opening hours: while the store is closed the order cannot be placed (the server refuses it too).
   const storeClosed = store?.delivery?.hours ? !store.delivery.hours.openNow : false;
+  // Closed by the weekly hours: when it opens next (lib/storeHours).
+  const nextOpen = storeClosed ? (store?.delivery?.hours?.nextOpen ?? null) : null;
   const submitDisabled = submitting || items.length === 0 || storeClosed;
   // The estimated delivery time: the chosen zone's, else the store's.
   const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
@@ -352,6 +355,7 @@ export default function CheckoutPage() {
             <div role="status" className={`${card} p-5`}>
               <p className="font-semibold text-ink">{t.checkout.closedTitle}</p>
               <p className="mt-1 text-sm text-ink-soft">{store?.delivery?.hours?.message || t.checkout.closedText}</p>
+              {nextOpen && <p className="mt-1 text-sm font-medium text-ink">{nextOpeningText(nextOpen, t, locale)}</p>}
             </div>
           )}
           {etaMinutes ? <p className="text-sm text-ink-soft">{t.checkout.eta(etaMinutes)}</p> : null}

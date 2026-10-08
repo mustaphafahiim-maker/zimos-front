@@ -323,6 +323,8 @@ const en = {
       zone: "Choose your delivery area.",
       zoneInvalid: "The store doesn't deliver to this area right now. Choose another one.",
       storeClosed: "The store is closed right now and isn't taking orders.",
+      optionsInvalid: "This product's options changed or are incomplete. Choose them again on the product page.",
+      pickupUnavailable: "Pickup from the store isn't available right now. Choose delivery instead.",
       unavailable: "This product is unavailable right now.",
     },
   },
@@ -355,6 +357,8 @@ const en = {
   checkout: {
     title: "Checkout",
     eta: (minutes: number) => `Estimated delivery: about ${minutes} minutes`,
+    opensAt: ({ inDays, day, time }: { inDays: number; day: string; time: string }) =>
+      inDays === 0 ? `Opens today at ${time}` : inDays === 1 ? `Opens tomorrow at ${time}` : `Opens on ${day} at ${time}`,
     closedTitle: "The store is closed right now",
     closedText: "You can browse, but orders can't be placed until it opens again.",
     backToCart: "Back to cart",
@@ -872,6 +876,8 @@ const ar: Dictionary = {
       zone: "اختار منطقة التوصيل.",
       zoneInvalid: "المتجر مش بيوصّل للمنطقة دي دلوقتي. اختار منطقة تانية.",
       storeClosed: "المتجر مقفول دلوقتي ومش بيستقبل طلبات.",
+      optionsInvalid: "اختيارات المنتج اتغيّرت أو ناقصة. اختارها تاني من صفحة المنتج.",
+      pickupUnavailable: "الاستلام من المحل مش متاح دلوقتي. اختار التوصيل.",
       unavailable: "المنتج غير متوفر حاليًا.",
     },
   },
@@ -904,6 +910,8 @@ const ar: Dictionary = {
   checkout: {
     title: "إتمام الطلب",
     eta: (minutes) => `التوصيل في حوالي ${minutes} دقيقة`,
+    opensAt: ({ inDays, day, time }) =>
+      inDays === 0 ? `هيفتح النهارده الساعة ${time}` : inDays === 1 ? `هيفتح بكرة الساعة ${time}` : `هيفتح يوم ${day} الساعة ${time}`,
     closedTitle: "المتجر مقفول دلوقتي",
     closedText: "تقدر تتفرج، بس مش هينفع تطلب غير لما يفتح تاني.",
     backToCart: "الرجوع للسلة",

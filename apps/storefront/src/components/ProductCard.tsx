@@ -5,7 +5,7 @@ import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { useStore } from "@/lib/StoreContext";
 import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
+import { compareAtOf, defaultOfferOf, discountPercent, needsProductPage, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
@@ -40,8 +40,8 @@ export function ProductCard({
   // One variant and it is in stock: nothing to choose, so the card adds it in
   // one tap. Anything with options sends the shopper to the product page.
   const only = product.variants.length === 1 ? product.variants[0] : undefined;
-  // A product with custom fields is answered on its own page, never quick-added.
-  const quickAdd = only && only.inStock && !(product.customFields && product.customFields.length > 0) ? only : undefined;
+  // Custom fields or menu options are filled in on the product page, never quick-added.
+  const quickAdd = only && only.inStock && !needsProductPage(product) ? only : undefined;
   const offer = quickAdd ? defaultOfferOf(product) : undefined;
 
   // --- image carousel: every real photo, not just the first ----------------

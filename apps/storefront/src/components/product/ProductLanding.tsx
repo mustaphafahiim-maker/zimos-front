@@ -30,13 +30,16 @@ import {
 import {
   afterOrder,
   isOrderBumpRefused,
+  cartErrorMessage,
   orderErrorMessage,
   placeCodOrder,
   serverFieldErrors,
   type OrderLine,
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { manualIdOf, placeManualOrder, useManualMethods, type ProofDraft } from "@/lib/manualPayments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { ProofFields, proofErrors, useManualText } from "@/components/checkout/ManualPayment";
 import type { CheckoutPayload } from "@store-builder/api-client";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useOrderFormFields } from "@/lib/useOrderFormFields";
@@ -218,6 +221,13 @@ export function ProductLanding({
   const payment = storeMethods;
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  // The store's own InstaPay / wallet methods, as on /checkout; a chosen one wins over `method`.
+  const manualMethods = useManualMethods(client, workspaceId);
+  const manualId = methodId ? manualIdOf(methodId) : null;
+  const manualChosen = manualId ? (manualMethods.find((m) => m.id === manualId) ?? null) : null;
+  const manualText = useManualText();
+  const [proof, setProof] = useState<ProofDraft>({ payerNumber: "", file: null });
+  const [proofErrs, setProofErrs] = useState<{ payerNumber?: string; file?: string }>({});
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
@@ -229,12 +239,17 @@ export function ProductLanding({
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
   // Delivery zones (when the store prices by them): the chosen area's fee, unless the free-shipping
   // threshold is reached. Display only — the server prices the order from the zone itself.
+  // Pickup from the store (when offered): no delivery fee; the server charges none either.
+  const storePickup = store?.delivery?.pickup ?? null;
+  const pickingUp = Boolean(storePickup) && values.deliveryMethod === "pickup";
   const storeZones = store?.delivery?.zones ?? null;
-  const zoneChosen = storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
+  const zoneChosen = !pickingUp && storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
   const zoneFee = zoneChosen ? (shippingChoice.state.freeShipping?.qualified ? 0 : zoneChosen.feeAmount) : 0;
-  const shipping = zoneChosen
-    ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
-    : shippingChoice.state;
+  const shipping = pickingUp
+    ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } }
+    : zoneChosen
+      ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
+      : shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
@@ -311,6 +326,15 @@ export function ProductLanding({
       setFormError(t.menu.summary);
       return;
     }
+    // A proof filled in here must be valid; an empty one is sent later from the thank-you page.
+    if (manualChosen) {
+      const found = proofErrors(proof, manualText, { required: false });
+      setProofErrs(found);
+      if (found.payerNumber || found.file) {
+        focusField(`${FORM_PREFIX}-proof-${found.payerNumber ? "payer" : "shot"}`);
+        return;
+      }
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
@@ -325,7 +349,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
-      ...(storeZones ? {} : shippingChoice.payload),
+      ...(pickingUp || storeZones ? {} : shippingChoice.payload),
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -334,6 +358,19 @@ export function ProductLanding({
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
+      if (manualChosen) {
+        // Placed unpaid like cash on delivery; the server prices it and keeps the payment token.
+        const { order } = await placeManualOrder({
+          client,
+          workspaceId,
+          payload: payload as CheckoutPayload,
+          manualPaymentMethodId: manualChosen.id,
+          proof,
+          visitorId,
+        });
+        router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
+        return;
+      }
       if (method.method !== "cod") {
         const { next, external } = await placeOnlineOrder({
           client,
@@ -424,7 +461,7 @@ export function ProductLanding({
       router.push(storeHref(basePath, ps.skip_cart ? "/checkout" : "/cart"));
     } catch (err) {
       if (!custom.showServerProblems(err)) {
-        setBuyError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+        setBuyError(cartErrorMessage(err, t.form.errors, t.product.addFailed));
       }
       setBuying(false);
     }
@@ -615,9 +652,10 @@ export function ProductLanding({
             errors={errors}
             onChange={onFieldChange}
             fields={fields}
+            pickup={storePickup}
             zones={storeZones}
           />
-          {!storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
+          {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
@@ -668,13 +706,17 @@ export function ProductLanding({
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
           <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
-          {payment.methods.length > 1 && (
+          {(payment.methods.length > 1 || manualMethods.length > 0) && (
             <PaymentMethodPicker
               methods={payment.methods}
-              value={method.id}
+              value={manualChosen ? (methodId as string) : method.id}
               onChange={setMethodId}
               idPrefix={FORM_PREFIX}
-            />
+              manualMethods={manualMethods}
+            >
+              <ProofFields value={proof} onChange={setProof} errors={proofErrs} idPrefix={`${FORM_PREFIX}-proof`} />
+              <p className="text-xs text-ink-soft">{manualText.laterHint}</p>
+            </PaymentMethodPicker>
           )}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
@@ -688,9 +730,9 @@ export function ProductLanding({
               ? t.payment.redirecting
               : submitting
                 ? t.form.submitting
-                : `${method.method === "cod" ? t.form.submit : t.payment.payNow} — ${money(total)}`}
+                : `${method.method === "cod" || manualChosen ? t.form.submit : t.payment.payNow} — ${money(total)}`}
           </button>
-          {method.method === "cod" && (
+          {method.method === "cod" && !manualChosen && (
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
               <CashIcon size={16} />
               {t.checkout.codHint}

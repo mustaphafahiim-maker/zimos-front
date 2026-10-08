@@ -2,7 +2,7 @@ import { ApiError, type StorefrontProduct } from "@store-builder/api-client";
 import type { CSSProperties, ReactNode } from "react";
 import { StoreLink } from "@/components/StoreRoute";
 import { formatPrice, getDictionary, type Locale } from "@/lib/i18n";
-import { compareAtOf, defaultOfferOf, discountPercent, firstImage, offerAppliesTo, priceOf } from "@/lib/product";
+import { compareAtOf, defaultOfferOf, discountPercent, firstImage, needsProductPage, offerAppliesTo, priceOf } from "@/lib/product";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { type Props, bool, num, resolveHref, safeUrl, str } from "../props";
 import { CartButton } from "./CartButton";
@@ -145,7 +145,7 @@ export function ProductAction({
   const text = label.trim() || t.product.addToCart;
   const anyInStock = product.variants.some((v) => v.inStock);
   const only = product.variants.length === 1 ? product.variants[0] : undefined;
-  const quick = only && only.inStock && !(product.customFields && product.customFields.length > 0) ? only : undefined;
+  const quick = only && only.inStock && !needsProductPage(product) ? only : undefined;
   const offer = quick ? defaultOfferOf(product) : undefined;
 
   if (quick) {
