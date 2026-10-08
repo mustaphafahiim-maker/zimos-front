@@ -19,6 +19,8 @@ import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields"
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import type { CheckoutPayload } from "@store-builder/api-client";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { manualIdOf, placeManualOrder, useManualMethods, type ProofDraft } from "@/lib/manualPayments";
+import { ManualPaymentStatus, ProofFields, proofErrors, useManualText } from "@/components/checkout/ManualPayment";
 import { getVisitorId } from "@/lib/visitorId";
 import { BoxIcon, CashIcon } from "@/components/Icons";
 import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
@@ -432,7 +434,14 @@ export function FunnelCheckout({
   const payment = funnelMethods;
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
-  const onlyCod = payment.methods.length === 1 && payment.methods[0].method === "cod";
+  // The store's own InstaPay / wallet methods, as on /checkout; a chosen one wins over `method`.
+  const manualMethods = useManualMethods(client, workspaceId);
+  const manualId = methodId ? manualIdOf(methodId) : null;
+  const manualChosen = manualId ? (manualMethods.find((m) => m.id === manualId) ?? null) : null;
+  const manualText = useManualText();
+  const [proof, setProof] = useState<ProofDraft>({ payerNumber: "", file: null });
+  const [proofErrs, setProofErrs] = useState<{ payerNumber?: string; file?: string }>({});
+  const onlyCod = payment.methods.length === 1 && payment.methods[0].method === "cod" && manualMethods.length === 0;
 
   const variants = useMemo(() => product?.variants ?? [], [product]);
   const [variantId, setVariantId] = useState(() => (variants.find((v) => v.inStock) ?? variants[0])?.id ?? "");
@@ -503,6 +512,15 @@ export function FunnelCheckout({
       setFormError(t.form.errors.unavailable);
       return;
     }
+    // A proof filled in here must be valid; an empty one is sent later from the funnel's last page.
+    if (manualChosen) {
+      const badProof = proofErrors(proof, manualText, { required: false });
+      setProofErrs(badProof);
+      if (badProof.payerNumber || badProof.file) {
+        focusField(`${FORM_PREFIX}-proof-${badProof.payerNumber ? "payer" : "shot"}`);
+        return;
+      }
+    }
 
     submittingRef.current = true;
     setSubmitting(true);
@@ -517,7 +535,18 @@ export function FunnelCheckout({
     };
     let order;
     try {
-      if (method && method.method !== "cod") {
+      if (manualChosen) {
+        // Unpaid like cash on delivery, priced by the server; the funnel goes on, and the
+        // payment block (where to pay, the proof) waits on the funnel's last page and the order page.
+        ({ order } = await placeManualOrder({
+          client,
+          workspaceId,
+          payload: payload as CheckoutPayload,
+          manualPaymentMethodId: manualChosen.id,
+          proof,
+          visitorId: getVisitorId(workspaceId),
+        }));
+      } else if (method && method.method !== "cod") {
         // Paid online: the gateway's page, then the payment page, which sends the
         // shopper back here to go on (the server moves a card order on once paid).
         const { result, next } = await placeOnlineOrder({
@@ -533,13 +562,14 @@ export function FunnelCheckout({
         // The gateway's page, or our payment page when the gateway could not start (already store-prefixed).
         window.location.assign(next);
         return;
+      } else {
+        order = await placeCodOrder({
+          client,
+          workspaceId,
+          payload: payload as CheckoutPayload,
+          visitorId: getVisitorId(workspaceId),
+        });
       }
-      order = await placeCodOrder({
-        client,
-        workspaceId,
-        payload: payload as CheckoutPayload,
-        visitorId: getVisitorId(workspaceId),
-      });
     } catch (err) {
       submittingRef.current = false;
       if (isOrderBumpRefused(err)) {
@@ -671,7 +701,16 @@ export function FunnelCheckout({
         ) : (
           <fieldset className="mt-5" disabled={!!placed || busy}>
             <legend className={labelClass}>{t.checkout.payment}</legend>
-            <PaymentMethodPicker methods={payment.methods} value={method.id} onChange={setMethodId} idPrefix={FORM_PREFIX} />
+            <PaymentMethodPicker
+              methods={payment.methods}
+              value={manualChosen ? (methodId as string) : method.id}
+              onChange={setMethodId}
+              idPrefix={FORM_PREFIX}
+              manualMethods={manualMethods}
+            >
+              <ProofFields value={proof} onChange={setProof} errors={proofErrs} idPrefix={`${FORM_PREFIX}-proof`} />
+              <p className="text-xs text-ink-soft">{manualText.laterHint}</p>
+            </PaymentMethodPicker>
           </fieldset>
         )}
         <p className="mt-2 text-xs text-ink-soft">{t.checkout.finalNote}</p>
@@ -1028,6 +1067,9 @@ export function FunnelOrders({
     <section id={FUNNEL_ACTIONS_ID} className={`${island} pb-16 pt-6`}>
       <div className="mx-auto max-w-2xl">
         <ConfirmationHeading as={Title} orderNumber={orderNumber} phone={snapshot?.phone} />
+
+        {/* Paid by InstaPay / a wallet: where to pay, the proof's status, and the form while one may be sent. */}
+        <ManualPaymentStatus workspaceId={workspaceId} orderId={orderId} />
 
         {followOns.length > 0 && (
           <FunnelOrderList

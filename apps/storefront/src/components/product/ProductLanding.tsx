@@ -37,7 +37,9 @@ import {
   type OrderLine,
 } from "@/lib/placeOrder";
 import { placeOnlineOrder, usePaymentMethods } from "@/lib/payments";
+import { manualIdOf, placeManualOrder, useManualMethods, type ProofDraft } from "@/lib/manualPayments";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import { ProofFields, proofErrors, useManualText } from "@/components/checkout/ManualPayment";
 import type { CheckoutPayload } from "@store-builder/api-client";
 import { useCheckoutAutosave } from "@/lib/useCheckoutAutosave";
 import { useOrderFormFields } from "@/lib/useOrderFormFields";
@@ -219,6 +221,13 @@ export function ProductLanding({
   const payment = storeMethods;
   const [methodId, setMethodId] = useState<string | null>(null);
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
+  // The store's own InstaPay / wallet methods, as on /checkout; a chosen one wins over `method`.
+  const manualMethods = useManualMethods(client, workspaceId);
+  const manualId = methodId ? manualIdOf(methodId) : null;
+  const manualChosen = manualId ? (manualMethods.find((m) => m.id === manualId) ?? null) : null;
+  const manualText = useManualText();
+  const [proof, setProof] = useState<ProofDraft>({ payerNumber: "", file: null });
+  const [proofErrs, setProofErrs] = useState<{ payerNumber?: string; file?: string }>({});
   const [redirecting, setRedirecting] = useState(false);
 
   // The hook keys on the lines' content, so a fresh array each render is fine.
@@ -317,6 +326,15 @@ export function ProductLanding({
       setFormError(t.menu.summary);
       return;
     }
+    // A proof filled in here must be valid; an empty one is sent later from the thank-you page.
+    if (manualChosen) {
+      const found = proofErrors(proof, manualText, { required: false });
+      setProofErrs(found);
+      if (found.payerNumber || found.file) {
+        focusField(`${FORM_PREFIX}-proof-${found.payerNumber ? "payer" : "shot"}`);
+        return;
+      }
+    }
     // The answers ride on the line that places the order only: the shipping
     // quote and the autosave above key on the lines and must not re-run per keystroke.
     const customizations = custom.toInput();
@@ -340,6 +358,19 @@ export function ProductLanding({
       ...(checkoutSessionId ? { checkoutSessionId } : {}),
     };
     try {
+      if (manualChosen) {
+        // Placed unpaid like cash on delivery; the server prices it and keeps the payment token.
+        const { order } = await placeManualOrder({
+          client,
+          workspaceId,
+          payload: payload as CheckoutPayload,
+          manualPaymentMethodId: manualChosen.id,
+          proof,
+          visitorId,
+        });
+        router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
+        return;
+      }
       if (method.method !== "cod") {
         const { next, external } = await placeOnlineOrder({
           client,
@@ -675,13 +706,17 @@ export function ProductLanding({
           {bump && <OrderBumpCard bump={bump} checked={bumpOn} onChange={setBumpOn} idPrefix={FORM_PREFIX} />}
           <ProductBumpCards state={productBumps} idPrefix={FORM_PREFIX} />
 
-          {payment.methods.length > 1 && (
+          {(payment.methods.length > 1 || manualMethods.length > 0) && (
             <PaymentMethodPicker
               methods={payment.methods}
-              value={method.id}
+              value={manualChosen ? (methodId as string) : method.id}
               onChange={setMethodId}
               idPrefix={FORM_PREFIX}
-            />
+              manualMethods={manualMethods}
+            >
+              <ProofFields value={proof} onChange={setProof} errors={proofErrs} idPrefix={`${FORM_PREFIX}-proof`} />
+              <p className="text-xs text-ink-soft">{manualText.laterHint}</p>
+            </PaymentMethodPicker>
           )}
 
           <div role="alert" aria-live="assertive" className="empty:hidden">
@@ -695,9 +730,9 @@ export function ProductLanding({
               ? t.payment.redirecting
               : submitting
                 ? t.form.submitting
-                : `${method.method === "cod" ? t.form.submit : t.payment.payNow} — ${money(total)}`}
+                : `${method.method === "cod" || manualChosen ? t.form.submit : t.payment.payNow} — ${money(total)}`}
           </button>
-          {method.method === "cod" && (
+          {method.method === "cod" && !manualChosen && (
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-ink-soft">
               <CashIcon size={16} />
               {t.checkout.codHint}
