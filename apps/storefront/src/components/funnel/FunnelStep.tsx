@@ -654,6 +654,7 @@ export function FunnelCheckout({
             onChange={onFieldChange}
             fields={fields}
             showAltPhone
+            pickup={store?.delivery?.pickup ?? null}
             zones={store?.delivery?.zones ?? null}
           />
         </fieldset>

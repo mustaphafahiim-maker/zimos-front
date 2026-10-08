@@ -229,12 +229,17 @@ export function ProductLanding({
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: autosaveLines }));
   // Delivery zones (when the store prices by them): the chosen area's fee, unless the free-shipping
   // threshold is reached. Display only — the server prices the order from the zone itself.
+  // Pickup from the store (when offered): no delivery fee; the server charges none either.
+  const storePickup = store?.delivery?.pickup ?? null;
+  const pickingUp = Boolean(storePickup) && values.deliveryMethod === "pickup";
   const storeZones = store?.delivery?.zones ?? null;
-  const zoneChosen = storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
+  const zoneChosen = !pickingUp && storeZones ? (storeZones.find((z) => z.id === values.deliveryZoneId) ?? null) : null;
   const zoneFee = zoneChosen ? (shippingChoice.state.freeShipping?.qualified ? 0 : zoneChosen.feeAmount) : 0;
-  const shipping = zoneChosen
-    ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
-    : shippingChoice.state;
+  const shipping = pickingUp
+    ? { ...shippingChoice.state, amount: 0, line: { kind: "free" as const } }
+    : zoneChosen
+      ? { ...shippingChoice.state, amount: zoneFee, line: zoneFee > 0 ? { kind: "amount" as const, amount: zoneFee } : { kind: "free" as const } }
+      : shippingChoice.state;
 
   // A coupon from the link (?coupon=CODE), previewed by the server; with none, the store's automatic discount.
   const linkCoupon = useStoredCoupon(workspaceId);
@@ -325,7 +330,7 @@ export function ProductLanding({
     const payload = {
       // Only a coupon the server said applies is sent: a stale link must not fail the order.
       ...toCheckoutPayload(values, fields, { item: orderLine, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
-      ...(storeZones ? {} : shippingChoice.payload),
+      ...(pickingUp || storeZones ? {} : shippingChoice.payload),
       ...(bundleExtraLines.length > 0 ? { extraItems: bundleExtraLines } : {}),
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
       ...(productBumps.selected.length > 0
@@ -615,9 +620,10 @@ export function ProductLanding({
             errors={errors}
             onChange={onFieldChange}
             fields={fields}
+            pickup={storePickup}
             zones={storeZones}
           />
-          {!storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
+          {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
 
           <dl className="space-y-2 rounded-xl bg-paper p-4 text-sm ">
             <div className="flex justify-between gap-3">
