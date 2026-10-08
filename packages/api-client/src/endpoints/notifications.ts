@@ -24,6 +24,7 @@ export type MerchantNotificationType =
   | "wallet.limit_reached"
   | "wallet.refund"
   | "wallet.credit"
+  | "wallet.fallback"
   | "announcement"
   | "automation";
 

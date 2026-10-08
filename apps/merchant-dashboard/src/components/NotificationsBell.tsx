@@ -79,6 +79,7 @@ const ICONS: Record<string, LucideIcon> = {
   "wallet.limit_reached": Wallet,
   "wallet.refund": Wallet,
   "wallet.credit": Wallet,
+  "wallet.fallback": Wallet,
   announcement: Megaphone,
   automation: Megaphone,
 };
