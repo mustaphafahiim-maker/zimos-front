@@ -106,7 +106,24 @@ describe("moving off pay per order", () => {
     setup(move({ pending: { invoiceId: "inv_1", planId: "plan_pro", planName: "Pro", billingCycle: "yearly", amountDue: 600000, currency: "EGP", createdAt: "2030-01-02T10:00:00Z" } }));
     expect(await screen.findByText(/Your move to Pro \(annual\) is waiting for its payment/)).toBeInTheDocument();
     expect(within(await cardOf("Pro")).getByText("Pay to switch").closest("a")).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
-    expect(within(await cardOf("Starter")).queryByRole("button", { name: "Move to this plan" })).not.toBeInTheDocument();
+    // Another plan replaces the waiting move (migration 224); the banner pays or cancels it.
+    expect(within(await cardOf("Starter")).getByRole("button", { name: "Choose this plan instead" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Cancel this move" })).toBeInTheDocument();
+    expect(screen.getByText(/Or choose another plan below/)).toBeInTheDocument();
+  });
+
+  it("cancels the waiting move from the banner, and the plans come back without it", async () => {
+    const pending = { invoiceId: "inv_1", planId: "plan_pro", planName: "Pro", billingCycle: "monthly" as const, amountDue: 60000, currency: "EGP", createdAt: "2030-01-02T10:00:00Z" };
+    const { user, view } = setup(move({ pending }));
+    api.cancelPlanMove.mockImplementation(async () => {
+      // From here the server lists the plans without the move.
+      api.getSubscriptionPlans.mockResolvedValue({ ...view, move: move() });
+      return { cancelled: true, plans: { ...view, move: move() } };
+    });
+    await user.click(await screen.findByRole("button", { name: "Cancel this move" }));
+    await waitFor(() => expect(api.cancelPlanMove).toHaveBeenCalledWith("ws_1"));
+    expect(await screen.findByText(/The move was cancelled/)).toBeInTheDocument();
+    expect(screen.queryByText(/is waiting for its payment/)).not.toBeInTheDocument();
   });
 
   it("is in Arabic", async () => {

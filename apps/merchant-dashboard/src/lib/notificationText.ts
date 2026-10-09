@@ -22,6 +22,9 @@ export const NOTIFICATION_STRINGS = {
     type_wallet_limit_reached: "Zimos balance limit reached",
     type_wallet_refund: "Balance refunds",
     type_wallet_credit: "Credit from Zimos",
+    type_wallet_fallback: "Moved to pay per order",
+    walletFallbackTitle: "Your subscription ended: your store is now on pay per order",
+    walletFallbackBody: "Your store keeps selling, and each order's fee comes from your prepaid balance. You can choose a subscription again at any time.",
     walletRefundTitle_requested: "Your refund request was received",
     walletRefundTitle_approved: "Your refund was approved",
     walletRefundTitle_rejected: "Your refund was rejected: the amount is back on your balance",
@@ -70,6 +73,9 @@ export const NOTIFICATION_STRINGS = {
     type_wallet_limit_reached: "بلوغ حد رصيد Zimos",
     type_wallet_refund: "استرداد الرصيد",
     type_wallet_credit: "رصيد من Zimos",
+    type_wallet_fallback: "الانتقال إلى الدفع لكل طلب",
+    walletFallbackTitle: "انتهى اشتراكك: متجرك الآن على الدفع لكل طلب",
+    walletFallbackBody: "يستمر متجرك في البيع، ويُخصم رسم كل طلب من رصيدك المدفوع مسبقًا. يمكنك اختيار اشتراك مجددًا في أي وقت.",
     walletRefundTitle_requested: "تم استلام طلب الاسترداد",
     walletRefundTitle_approved: "تمت الموافقة على الاسترداد",
     walletRefundTitle_rejected: "رُفض الاسترداد وعاد المبلغ إلى رصيدك",
@@ -166,6 +172,8 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       if (!title) break;
       return { title, body: str(d.status) === "rejected" && d.note ? str(d.note) : null };
     }
+    case "wallet.fallback":
+      return { title: t.walletFallbackTitle, body: t.walletFallbackBody };
     case "wallet.credit":
       return { title: d.kind === "gift" ? t.walletCreditGift : t.walletCreditCorrection, body: d.reason ? str(d.reason) : null };
     case "export.ready":

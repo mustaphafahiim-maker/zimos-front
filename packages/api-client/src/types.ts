@@ -3624,7 +3624,8 @@ export type WalletEntryType =
   | "gift"
   | "refund_hold"
   | "refund_release"
-  | "refund_paid";
+  | "refund_paid"
+  | "move_payment_credit";
 
 /** One paid top-up and how much of it can still come back as a refund. */
 export interface WalletRefundTopup {
@@ -3874,7 +3875,8 @@ export interface ReferralCodePreview {
 /** A subscription charge as the merchant sees it. */
 export interface MerchantInvoice {
   id: string;
-  status: "pending" | "paid" | "failed";
+  /** "void": a plan move's charge that no longer asks for money (see voidReason). */
+  status: "pending" | "paid" | "failed" | "void";
   periodStart: string;
   periodEnd: string;
   grossAmount: number;
@@ -3888,6 +3890,8 @@ export interface MerchantInvoice {
   /** A pay-per-order store's move: the plan and cycle it switches to when paid. */
   targetPlanId?: string | null;
   targetBillingCycle?: BillingCycle | null;
+  /** Why a void move charge stopped asking for money. */
+  voidReason?: "cancelled" | "replaced" | "expired" | null;
 }
 
 /** `GET /workspaces/:id/billing/invoices` — newest first. */
@@ -4061,7 +4065,7 @@ export interface AdminPaymentProofReview {
   proof: AdminPaymentProof;
   invoice: {
     id: string;
-    status: "pending" | "paid" | "failed";
+    status: "pending" | "paid" | "failed" | "void";
     amountDue: number;
     currency: string;
     periodStart: string;
@@ -4174,7 +4178,7 @@ export type CommissionPayoutStatus = "pending" | "marked_paid";
 // Platform admin — subscription charges (/admin/workspaces/:id/charges)
 // ---------------------------------------------------------------------------
 
-export type AdminChargeStatus = "pending" | "paid" | "failed";
+export type AdminChargeStatus = "pending" | "paid" | "failed" | "void";
 
 /**
  * One subscription charge (a billing invoice). Amounts in minor units of
@@ -4205,6 +4209,9 @@ export interface AdminCharge {
   targetPlanId?: string | null;
   targetBillingCycle?: "monthly" | "yearly" | null;
   targetPlanName?: string | null;
+  /** A move's charge that no longer asks for money, and why. */
+  voidedAt?: string | null;
+  voidReason?: "cancelled" | "replaced" | "expired" | null;
   failureReason: string | null;
   externalReference: string | null;
   paymentNote: string | null;

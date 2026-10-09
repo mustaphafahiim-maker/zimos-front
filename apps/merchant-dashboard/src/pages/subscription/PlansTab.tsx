@@ -40,7 +40,8 @@ function actionFor(plan: SubscriptionPlan, view: SubscriptionPlans): CardAction 
   // A store on pay per order moves by itself; while a move waits, only its plan's card leads to paying it.
   const move = view.move;
   if (move?.available) {
-    if (move.pending) return move.pending.planId === plan.id ? "movePay" : "none";
+    // Another plan replaces the waiting move (the server voids it).
+    if (move.pending) return move.pending.planId === plan.id ? "movePay" : "move";
     return "move";
   }
   return view.planChange === "immediate" ? "choose" : "support";
@@ -91,7 +92,11 @@ export function PlansTab({
           {t.trialNote} {t.trialEndNote}
         </Alert>
       )}
-      {move ? <MoveNotice move={move} /> : view.planChange === "support" && <p className="text-sm text-ink-soft">{t.paidNote}</p>}
+      {move ? (
+        <MoveNotice move={move} onPlansChange={onPlansChange} onChanged={onChanged} />
+      ) : (
+        view.planChange === "support" && <p className="text-sm text-ink-soft">{t.paidNote}</p>
+      )}
 
       {code && (
         <p className="text-sm text-ink" dir="auto">
@@ -113,7 +118,7 @@ export function PlansTab({
             key={plan.id}
             plan={plan}
             view={view}
-            cycle={move?.pending ? move.pending.billingCycle : view.planChange === "support" && !move ? view.subscription.billingCycle : cycle}
+            cycle={view.planChange === "support" && !move ? view.subscription.billingCycle : cycle}
             due={due}
             onPlansChange={onPlansChange}
             onChanged={onChanged}
@@ -249,7 +254,7 @@ function PlanCard({
         )}
         {action === "move" && (
           <Button type="button" className="min-h-11 w-full" disabled={busy || moveBlocked} onClick={() => void act()}>
-            {t.moveChoose}
+            {view.move?.pending ? t.moveInstead : t.moveChoose}
           </Button>
         )}
         {action === "movePay" && (
@@ -280,22 +285,67 @@ function PlanCard({
  * (it stays in the wallet), a debt to clear first, or the move waiting for
  * its payment.
  */
-function MoveNotice({ move }: { move: NonNullable<SubscriptionPlans["move"]> }) {
+function MoveNotice({
+  move,
+  onPlansChange,
+  onChanged,
+}: {
+  move: NonNullable<SubscriptionPlans["move"]>;
+  onPlansChange: (next: SubscriptionPlans) => void;
+  onChanged: () => void;
+}) {
   const t = useT(SUBSCRIPTION_STRINGS);
+  const workspaceId = useWorkspaceId();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const pending = move.pending;
+
+  async function cancel() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { plans } = await apiClient.cancelPlanMove(workspaceId);
+      onPlansChange(plans);
+      toast.success(t.moveCancelled);
+      onChanged();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section aria-labelledby="move-title" className="space-y-2 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
       <h2 id="move-title" className="font-display text-base font-medium text-ink">
         {t.moveTitle}
       </h2>
       {pending ? (
-        <Alert role="status">
-          {fmt(t.movePending, {
-            plan: pending.planName ?? "",
-            cycle: pending.billingCycle === "yearly" ? t.cycleYearly : t.cycleMonthly,
-            amount: formatMinorMoney(pending.amountDue, pending.currency),
-          })}
-        </Alert>
+        <div className="space-y-2">
+          <Alert role="status">
+            {fmt(t.movePending, {
+              plan: pending.planName ?? "",
+              cycle: pending.billingCycle === "yearly" ? t.cycleYearly : t.cycleMonthly,
+              amount: formatMinorMoney(pending.amountDue, pending.currency),
+            })}
+          </Alert>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild className="min-h-11">
+              <Link to={PAY_NOW_LINK}>{t.movePay}</Link>
+            </Button>
+            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => void cancel()}>
+              {t.moveCancel}
+            </Button>
+          </div>
+          <p className="text-xs text-ink-soft">{t.moveOrOther}</p>
+          {error && (
+            <Alert variant="danger" role="alert">
+              {error}
+            </Alert>
+          )}
+        </div>
       ) : (
         <p className="text-sm text-ink">{t.moveNote}</p>
       )}

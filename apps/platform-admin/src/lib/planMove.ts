@@ -8,9 +8,14 @@ export function planMoveLabel(charge: {
   targetPlanId?: string | null;
   targetPlanName?: string | null;
   targetBillingCycle?: "monthly" | "yearly" | null;
+  voidReason?: "cancelled" | "replaced" | "expired" | null;
 }): string | null {
   if (!charge.targetPlanId) return null;
   const cycle = charge.targetBillingCycle === "yearly" ? "annual" : "monthly";
   const label = `Move from pay per order to ${charge.targetPlanName ?? "another plan"} (${cycle})`;
-  return charge.status === "pending" ? `${label} — switches when paid` : label;
+  if (charge.status === "pending") return `${label} — switches when paid`;
+  if (charge.status === "void") return `${label} — ${VOID_REASON[charge.voidReason ?? "cancelled"]}, not due`;
+  return label;
 }
+
+const VOID_REASON = { cancelled: "cancelled by the store", replaced: "replaced by another move", expired: "expired unpaid" } as const;
